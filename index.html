@@ -1,586 +1,174 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="wi dth=device-width, initial-scale=1.0" />
-    <meta
-      name="description"
-      content="H.A.R.A Labs é uma iniciativa independente focada na evolução de arquiteturas de sistemas e na organização de ambientes operacionais complexos."
-    />
-    <meta name="theme-color" content="#0f172a" />
-    <title>H.A.R.A Labs</title>
-    <style>
-      :root {
-        --bg: #0b1020;
-        --bg-soft: #121a2f;
-        --panel: rgba(18, 26, 47, 0.78);
-        --panel-strong: rgba(15, 23, 42, 0.92);
-        --text: #e5e7eb;
-        --muted: #94a3b8;
-        --line: rgba(148, 163, 184, 0.18);
-        --accent: #60a5fa;
-        --accent-soft: rgba(96, 165, 250, 0.14);
-        --max: 1100px;
-        --radius: 20px;
-        --shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
-      }
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>H.A.R.A Labs</title>
+  <meta name="description" content="H.A.R.A Labs é uma iniciativa independente focada na evolução de arquiteturas de sistemas e na organização de ambientes operacionais complexos." />
+  <meta name="theme-color" content="#0b0b0d" />
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/images/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/images/favicon-16.png" />
+  <link rel="apple-touch-icon" sizes="192x192" href="assets/images/favicon-192.png" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container nav-wrap">
+      <a class="brand" href="#inicio" aria-label="H.A.R.A Labs">
+        <img src="assets/images/hara-mark-square.webp" alt="Símbolo H.A.R.A Labs" class="brand-mark" />
+        <span class="brand-name">H.A.R.A Labs</span>
+      </a>
 
-      * {
-        box-sizing: border-box;
-      }
+      <nav class="site-nav" aria-label="Navegação principal">
+        <a href="#sobre">Sobre</a>
+        <a href="#missao">Missão</a>
+        <a href="#atuacao">Atuação</a>
+        <a href="#contato">Contato</a>
+      </nav>
 
-      html {
-        scroll-behavior: smooth;
-      }
+      <a class="button button-gold button-small" href="mailto:contato@haralabs.com.br">Falar com especialista</a>
+    </div>
+  </header>
 
-      body {
-        margin: 0;
-        font-family:
-          Inter,
-          ui-sans-serif,
-          system-ui,
-          -apple-system,
-          BlinkMacSystemFont,
-          "Segoe UI",
-          sans-serif;
-        background:
-          radial-gradient(
-            circle at top left,
-            rgba(96, 165, 250, 0.12),
-            transparent 32%
-          ),
-          radial-gradient(
-            circle at top right,
-            rgba(148, 163, 184, 0.08),
-            transparent 24%
-          ),
-          linear-gradient(180deg, #08101f 0%, #0b1020 100%);
-        color: var(--text);
-        line-height: 1.65;
-        min-height: 100vh;
-      }
-
-      a {
-        color: inherit;
-        text-decoration: none;
-      }
-
-      .shell {
-        width: min(100% - 32px, var(--max));
-        margin: 0 auto;
-      }
-
-      .topbar {
-        position: sticky;
-        top: 0;
-        z-index: 20;
-        backdrop-filter: blur(12px);
-        background: rgba(8, 16, 31, 0.72);
-        border-bottom: 1px solid var(--line);
-      }
-
-      .topbar-inner {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 20px;
-        padding: 16px 0;
-      }
-
-      .brand {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        font-weight: 700;
-        letter-spacing: 0.04em;
-      }
-
-      .brand-mark {
-        width: 40px;
-        height: 40px;
-        border-radius: 14px;
-        display: grid;
-        place-items: center;
-        background: linear-gradient(
-          135deg,
-          rgba(96, 165, 250, 0.25),
-          rgba(15, 23, 42, 0.95)
-        );
-        border: 1px solid rgba(96, 165, 250, 0.28);
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
-        font-size: 0.95rem;
-      }
-
-      .nav {
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-      }
-
-      .nav a {
-        color: var(--muted);
-        font-size: 0.95rem;
-        padding: 8px 12px;
-        border-radius: 999px;
-        transition: 0.2s ease;
-      }
-
-      .nav a:hover {
-        color: var(--text);
-        background: rgba(148, 163, 184, 0.08);
-      }
-
-      .hero {
-        padding: 84px 0 48px;
-      }
-
-      .hero-grid {
-        display: grid;
-        grid-template-columns: 1.2fr 0.8fr;
-        gap: 28px;
-        align-items: stretch;
-      }
-
-      .hero-card,
-      .panel {
-        background: var(--panel);
-        border: 1px solid var(--line);
-        border-radius: var(--radius);
-        box-shadow: var(--shadow);
-      }
-
-      .hero-card {
-        padding: 34px;
-      }
-
-      .eyebrow {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px 12px;
-        background: var(--accent-soft);
-        border: 1px solid rgba(96, 165, 250, 0.16);
-        border-radius: 999px;
-        color: #bfdbfe;
-        font-size: 0.86rem;
-        margin-bottom: 20px;
-      }
-
-      h1,
-      h2,
-      h3 {
-        margin: 0 0 14px;
-        line-height: 1.1;
-        letter-spacing: -0.02em;
-      }
-
-      h1 {
-        font-size: clamp(2.4rem, 5vw, 4.5rem);
-        max-width: 12ch;
-      }
-
-      .hero p {
-        margin: 0;
-        color: var(--muted);
-        font-size: 1.05rem;
-        max-width: 62ch;
-      }
-
-      .hero-actions {
-        display: flex;
-        gap: 14px;
-        flex-wrap: wrap;
-        margin-top: 28px;
-      }
-
-      .button {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 10px;
-        padding: 14px 18px;
-        border-radius: 14px;
-        font-weight: 600;
-        border: 1px solid transparent;
-        transition:
-          transform 0.2s ease,
-          border-color 0.2s ease,
-          background 0.2s ease;
-      }
-
-      .button:hover {
-        transform: translateY(-1px);
-      }
-
-      .button.primary {
-        background: #e5e7eb;
-        color: #0f172a;
-      }
-
-      .button.secondary {
-        background: rgba(148, 163, 184, 0.08);
-        color: var(--text);
-        border-color: var(--line);
-      }
-
-      .hero-side {
-        padding: 24px;
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-        justify-content: space-between;
-      }
-
-      .mini-card {
-        background: var(--panel-strong);
-        border: 1px solid var(--line);
-        border-radius: 18px;
-        padding: 18px;
-      }
-
-      .mini-card strong {
-        display: block;
-        margin-bottom: 8px;
-        font-size: 0.96rem;
-      }
-
-      .mini-card p {
-        margin: 0;
-        font-size: 0.95rem;
-        color: var(--muted);
-      }
-
-      section {
-        padding: 22px 0;
-      }
-
-      .section-head {
-        margin-bottom: 18px;
-      }
-
-      .section-head p {
-        margin: 0;
-        color: var(--muted);
-        max-width: 68ch;
-      }
-
-      .content-grid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 18px;
-      }
-
-      .card {
-        padding: 24px;
-        background: var(--panel);
-        border: 1px solid var(--line);
-        border-radius: 20px;
-        box-shadow: var(--shadow);
-      }
-
-      .card p,
-      .card li {
-        color: var(--muted);
-      }
-
-      ul.clean {
-        padding-left: 18px;
-        margin: 0;
-      }
-
-      .areas {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 16px;
-      }
-
-      .area-item {
-        padding: 20px;
-        border-radius: 18px;
-        border: 1px solid var(--line);
-        background: rgba(15, 23, 42, 0.6);
-      }
-
-      .area-item h3 {
-        font-size: 1.04rem;
-        margin-bottom: 10px;
-      }
-
-      .area-item p {
-        margin: 0;
-        color: var(--muted);
-        font-size: 0.96rem;
-      }
-
-      .contact {
-        padding: 28px;
-        display: grid;
-        grid-template-columns: 1fr auto;
-        gap: 18px;
-        align-items: center;
-      }
-
-      .contact p {
-        margin: 0;
-        color: var(--muted);
-      }
-
-      footer {
-        padding: 34px 0 48px;
-        color: var(--muted);
-        font-size: 0.94rem;
-      }
-
-      .footer-line {
-        border-top: 1px solid var(--line);
-        padding-top: 22px;
-        display: flex;
-        justify-content: space-between;
-        gap: 16px;
-        flex-wrap: wrap;
-      }
-
-      @media (max-width: 900px) {
-        .hero-grid,
-        .content-grid,
-        .areas,
-        .contact {
-          grid-template-columns: 1fr;
-        }
-
-        .topbar-inner {
-          align-items: flex-start;
-          flex-direction: column;
-        }
-
-        .hero {
-          padding-top: 56px;
-        }
-      }
-
-      @media (max-width: 640px) {
-        .shell {
-          width: min(100% - 20px, var(--max));
-        }
-
-        .hero-card,
-        .card,
-        .contact,
-        .hero-side {
-          padding: 20px;
-        }
-
-        h1 {
-          max-width: none;
-        }
-
-        .button {
-          width: 100%;
-        }
-      }
-    </style>
-  </head>
-  <body>
-    <header class="topbar">
-      <div class="shell topbar-inner">
-        <a href="#inicio" class="brand" aria-label="H.A.R.A Labs">
-          <span class="brand-mark">H</span>
-          <span>H.A.R.A Labs</span>
-        </a>
-        <nav class="nav" aria-label="Navegação principal">
-          <a href="#sobre">Sobre</a>
-          <a href="#missao">Missão</a>
-          <a href="#atuacao">Atuação</a>
-          <a href="#contato">Contato</a>
-        </nav>
-      </div>
-    </header>
-
-    <main id="inicio" class="shell">
-      <section class="hero">
-        <div class="hero-grid">
-          <div class="hero-card">
-            <div class="eyebrow">
-              Arquitetura de sistemas, dados e coerência operacional
-            </div>
-            <h1>Estrutura para ambientes complexos.</h1>
-            <p>
-              A H.A.R.A Labs é uma iniciativa independente focada na evolução de
-              arquiteturas de sistemas e na organização de ambientes
-              operacionais complexos. O trabalho parte de problemas reais:
-              sistemas desconectados, dados inconsistentes e operações frágeis.
-            </p>
-            <div class="hero-actions">
-              <a class="button primary" href="#contato">Entrar em contato</a>
-              <a
-                class="button secondary"
-                href="https://www.linkedin.com"
-                target="_blank"
-                rel="noreferrer"
-                >LinkedIn</a
-              >
-            </div>
-          </div>
-
-          <aside class="hero-side panel" aria-label="Resumo institucional">
-            <div class="mini-card">
-              <strong>Princípio</strong>
-              <p>Escalabilidade sem estrutura gera fragilidade.</p>
-            </div>
-            <div class="mini-card">
-              <strong>Direção</strong>
-              <p>
-                Integrar legados e camadas modernas com foco em continuidade,
-                rastreabilidade e base sólida para decisão.
-              </p>
-            </div>
-            <div class="mini-card">
-              <strong>Presença pública</strong>
-              <p>
-                Camada institucional simples, estável e independente da
-                infraestrutura operacional interna.
-              </p>
-            </div>
-          </aside>
-        </div>
-      </section>
-
-      <section id="sobre">
-        <div class="section-head">
-          <h2>Sobre</h2>
-          <p>
-            A atuação é direcionada à integração entre sistemas legados e
-            camadas modernas de processamento, com ênfase em estruturação de
-            dados, automação operacional e criação de bases sólidas para análise
-            e tomada de decisão.
+  <main id="inicio">
+    <section class="hero">
+      <div class="container hero-grid">
+        <div class="hero-copy">
+          <p class="eyebrow">Arquitetura de sistemas, dados e coerência operacional</p>
+          <h1>
+            Escalabilidade
+            <span>sem estrutura</span>
+            gera fragilidade.
+          </h1>
+          <p class="hero-text">
+            Projetamos soluções de dados e arquitetura com clareza, governança e eficiência
+            para sustentar o que importa: decisões melhores.
           </p>
-        </div>
-        <div class="content-grid">
-          <article class="card">
-            <h3>Identidade</h3>
-            <p>
-              A H.A.R.A Labs busca construir fundamentos antes de sofisticação:
-              organização de fluxos, padronização de dados e coerência
-              operacional entre sistemas.
-            </p>
-          </article>
-          <article class="card" id="missao">
-            <h3>Missão</h3>
-            <p>
-              Estruturar ambientes operacionais complexos por meio de
-              arquiteturas mais sólidas, fluxos mais claros e dados mais
-              confiáveis.
-            </p>
-          </article>
-        </div>
-      </section>
 
-      <section>
-        <div class="content-grid">
-          <article class="card">
-            <h3>Visão</h3>
-            <p>
-              Evoluir de integrações e automações pontuais para bases
-              arquiteturais capazes de sustentar observabilidade, continuidade
-              operacional e apoio qualificado à decisão.
-            </p>
-          </article>
-          <article class="card">
-            <h3>Forma de atuação</h3>
-            <ul class="clean">
-              <li>Estrutura antes de escala</li>
-              <li>Clareza antes de complexidade</li>
-              <li>Evolução incremental com base verificável</li>
-              <li>Separação entre presença pública e execução interna</li>
-            </ul>
-          </article>
-        </div>
-      </section>
-
-      <section id="atuacao">
-        <div class="section-head">
-          <h2>Frentes de atuação</h2>
-          <p>
-            O foco está na construção de fundamentos técnicos e operacionais que
-            permitam evolução com menor fragilidade.
-          </p>
-        </div>
-        <div class="areas">
-          <article class="area-item">
-            <h3>Estruturação de pipelines de dados</h3>
-            <p>
-              Ingestão, normalização, categorização e persistência com coerência
-              operacional.
-            </p>
-          </article>
-          <article class="area-item">
-            <h3>Sanitização e padronização</h3>
-            <p>
-              Tratamento de dados oriundos de múltiplas fontes para reduzir
-              ruído e inconsistência.
-            </p>
-          </article>
-          <article class="area-item">
-            <h3>Integração progressiva</h3>
-            <p>
-              Conexão entre ambientes legados e arquiteturas modernas sem
-              ruptura desnecessária.
-            </p>
-          </article>
-          <article class="area-item">
-            <h3>Suporte à decisão</h3>
-            <p>
-              Organização de fluxos informacionais para ampliar clareza,
-              rastreabilidade e governança.
-            </p>
-          </article>
-          <article class="area-item">
-            <h3>Observabilidade e rastreabilidade</h3>
-            <p>
-              Prototipação de mecanismos para leitura do ambiente,
-              acompanhamento operacional e evidência técnica.
-            </p>
-          </article>
-          <article class="area-item">
-            <h3>Evolução arquitetural</h3>
-            <p>
-              Construção de bases capazes de sustentar continuidade operacional,
-              governança e crescimento consistente.
-            </p>
-          </article>
-        </div>
-      </section>
-
-      <section id="contato">
-        <div class="card contact">
-          <div>
-            <h2>Contato</h2>
-            <p>
-              Para contato institucional, conversas profissionais ou
-              acompanhamento da evolução pública do trabalho:
-            </p>
-          </div>
           <div class="hero-actions">
-            <a class="button primary" href="mailto:contato@haralabs.com.br"
-              >contato@haralabs.com.br</a
-            >
-            <a
-              class="button secondary"
-              href="https://www.linkedin.com"
-              target="_blank"
-              rel="noreferrer"
-              >LinkedIn</a
-            >
+            <a class="button button-gold" href="mailto:contato@haralabs.com.br">Falar com especialista</a>
+            <a class="button button-ghost" href="#atuacao">Conhecer soluções</a>
           </div>
         </div>
-      </section>
-    </main>
 
-    <footer>
-      <div class="shell footer-line">
-        <span>© 2026 H.A.R.A Labs</span>
-        <span>Presença institucional mínima, profissional e estável.</span>
+        <div class="hero-visual">
+          <img src="assets/images/hara-logo-premium.webp" alt="Logo premium H.A.R.A Labs" class="hero-logo" />
+        </div>
       </div>
-    </footer>
-  </body>
+    </section>
+
+    <section class="pillars">
+      <div class="container pillars-grid">
+        <article class="pillar">
+          <h2>Arquitetura de Dados</h2>
+          <p>Modelagem, integração e estruturas escaláveis e sustentáveis.</p>
+        </article>
+        <article class="pillar">
+          <h2>Governança</h2>
+          <p>Qualidade, segurança e consistência em todo o ciclo de dados.</p>
+        </article>
+        <article class="pillar">
+          <h2>BI &amp; Analytics</h2>
+          <p>Dashboards, métricas e análises que geram clareza e ação.</p>
+        </article>
+        <article class="pillar">
+          <h2>Cloud &amp; Infraestrutura</h2>
+          <p>Ambientes modernos, seguros e prontos para crescer.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="sobre">
+      <div class="container section-grid">
+        <div class="section-copy">
+          <p class="section-kicker">Sobre</p>
+          <h2>Fundação antes de sofisticação.</h2>
+          <p>
+            A H.A.R.A Labs é uma iniciativa independente focada na evolução de arquiteturas
+            de sistemas e na organização de ambientes operacionais complexos.
+          </p>
+          <p>
+            A atuação é direcionada à integração entre sistemas legados e camadas modernas de
+            processamento, com ênfase em estruturação de dados, automação operacional e criação
+            de bases sólidas para análise e tomada de decisão.
+          </p>
+        </div>
+
+        <div class="panel-stack">
+          <article class="panel">
+            <h3>Princípio</h3>
+            <p>Escalabilidade sem estrutura gera fragilidade.</p>
+          </article>
+          <article class="panel">
+            <h3>Direção</h3>
+            <p>Integrar legados e camadas modernas com foco em continuidade, rastreabilidade e base sólida para decisão.</p>
+          </article>
+          <article class="panel">
+            <h3>Presença pública</h3>
+            <p>Camada institucional simples, estável e independente da infraestrutura operacional interna.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section dark-section" id="missao">
+      <div class="container narrow">
+        <p class="section-kicker">Missão</p>
+        <h2>Organizar sistemas e dados para gerar valor real antes da escala.</h2>
+        <p class="lead">
+          O trabalho parte de problemas reais: sistemas desconectados, dados inconsistentes e operações frágeis.
+          Por isso, o foco está na construção de fundamentos: organização de fluxos, padronização de dados e coerência operacional entre sistemas.
+        </p>
+      </div>
+    </section>
+
+    <section class="section" id="atuacao">
+      <div class="container">
+        <p class="section-kicker">Frentes de atuação</p>
+        <div class="cards-grid">
+          <article class="card">
+            <h3>Estruturação de pipelines de dados</h3>
+            <p>Ingestão, normalização, categorização e persistência com coerência operacional.</p>
+          </article>
+          <article class="card">
+            <h3>Sanitização e padronização</h3>
+            <p>Tratamento de dados oriundos de múltiplas fontes para reduzir ruído e inconsistência.</p>
+          </article>
+          <article class="card">
+            <h3>Integração progressiva</h3>
+            <p>Conexão entre ambientes legados e arquiteturas modernas sem ruptura desnecessária.</p>
+          </article>
+          <article class="card">
+            <h3>Suporte à decisão</h3>
+            <p>Organização de fluxos informacionais para ampliar clareza, rastreabilidade e governança.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section contact-section" id="contato">
+      <div class="container contact-box">
+        <div>
+          <p class="section-kicker">Contato</p>
+          <h2>Presença mínima, profissional e estável.</h2>
+          <p>
+            Para contato institucional, conversas profissionais ou acompanhamento da evolução pública do trabalho,
+            utilize os canais abaixo.
+          </p>
+        </div>
+        <div class="contact-actions">
+          <a class="button button-gold" href="mailto:contato@haralabs.com.br">contato@haralabs.com.br</a>
+          <a class="button button-ghost" href="https://www.linkedin.com/in/tiagosartori" target="_blank" rel="noreferrer">LinkedIn</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-wrap">
+      <span>© 2026 H.A.R.A Labs</span>
+      <span>Arquitetura · Dados · Escalabilidade</span>
+    </div>
+  </footer>
+</body>
 </html>
