@@ -45,79 +45,84 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function setupHeroCarousel() {
+    const slides = Array.from(document.querySelectorAll(".slide"));
+    if (!slides.length) return;
+
     const root =
-      document.querySelector(".visual-card") ||
-      document.querySelector(".hero-visual") ||
-      document.querySelector(".hero-showcase");
+      slides[0].closest(".visual-card") ||
+      slides[0].closest(".hero-visual") ||
+      slides[0].closest(".hero-showcase") ||
+      slides[0].parentElement;
 
     if (!root) return;
 
-    const slides = [
+    root.classList.add("manual-hero-carousel");
+
+    const slideConfig = [
       {
-        image: "assets/images/hero-ia.png",
-        title: "Percepção simplificada",
-        description: "Muita gente imagina IA como um atalho direto entre dados e valor.",
-        infographic: true,
-        alt: "Percepção simplificada sobre IA: dados, IA e valor"
+        image: "assets/images/hero-ia-realidade.png",
+        title: "Arquitetura operacional",
+        description: "Valor real exige dados, engenharia, modelagem e operacionalização.",
+        infographic: true
       },
       {
-        image: "assets/images/hero-ia-realidade-sep.png",
-        title: "Arquitetura operacional",
-        description: "Valor real exige dados, engenharia, modelagem, restrições e operacionalização.",
-        infographic: true,
-        alt: "Fluxo real para gerar valor com IA: dados, ciência de dados, restrições e operacionalização"
+        image: "assets/images/hero-ia-realidade.png",
+        title: "Ciência de dados aplicada",
+        description: "Entre dados e valor existem critérios, restrições, validação e operação.",
+        infographic: true
       },
       {
         image: "assets/images/hara-logo-premium.webp",
         title: "IA como parte do fluxo",
         description: "IA amplifica estrutura. Não corrige desorganização.",
-        infographic: false,
-        alt: "H.A.R.A Labs"
+        infographic: false
       }
     ];
 
-    root.classList.add("manual-hero-carousel", "hero-carousel-clean");
+    slides.forEach((slide, index) => {
+      const config = slideConfig[index] || slideConfig[index % slideConfig.length];
+      const img = slide.querySelector("img");
+      const title = slide.querySelector("h3");
+      const desc = slide.querySelector("p");
 
-    // Ponto central da correção:
-    // limpa somente o painel visual para remover duplicações antigas.
-    root.innerHTML = "";
+      if (img) {
+        img.src = config.image;
+        img.alt = config.title;
+        img.classList.toggle("is-infographic", Boolean(config.infographic));
+      }
 
-    const viewport = document.createElement("div");
-    viewport.className = "hero-carousel-viewport";
-
-    const slideElements = slides.map(function (slide, index) {
-      const article = document.createElement("article");
-      article.className = "slide";
-      if (index === 0) article.classList.add("active");
-
-      const frame = document.createElement("div");
-      frame.className = "hero-slide-frame";
-
-      const img = document.createElement("img");
-      img.src = slide.image;
-      img.alt = slide.alt;
-      img.className = slide.infographic ? "is-infographic" : "is-logo";
-
-      frame.appendChild(img);
-
-      const copy = document.createElement("div");
-      copy.className = "hero-slide-copy";
-
-      const h3 = document.createElement("h3");
-      h3.textContent = slide.title;
-
-      const p = document.createElement("p");
-      p.textContent = slide.description;
-
-      copy.appendChild(h3);
-      copy.appendChild(p);
-
-      article.appendChild(frame);
-      article.appendChild(copy);
-
-      viewport.appendChild(article);
-      return article;
+      if (title) title.textContent = config.title;
+      if (desc) desc.textContent = config.description;
     });
+
+    let current = 0;
+
+    let dots = Array.from(root.querySelectorAll(".dot"));
+    let dotsWrap =
+      root.querySelector(".dots") ||
+      root.querySelector(".hero-dots") ||
+      root.querySelector(".slider-dots") ||
+      root.querySelector(".carousel-dots");
+
+    if (!dotsWrap) {
+      dotsWrap = document.createElement("div");
+      dotsWrap.className = "hero-dots";
+      root.appendChild(dotsWrap);
+    }
+
+    if (!dots.length) {
+      dotsWrap.innerHTML = "";
+      slides.forEach(function (_, index) {
+        const dot = document.createElement("button");
+        dot.type = "button";
+        dot.className = "dot";
+        dot.setAttribute("aria-label", `Ir para slide ${index + 1}`);
+        dotsWrap.appendChild(dot);
+      });
+      dots = Array.from(root.querySelectorAll(".dot"));
+    }
+
+    root.querySelectorAll(".hero-nav").forEach((item) => item.remove());
 
     const prevBtn = document.createElement("button");
     prevBtn.type = "button";
@@ -131,35 +136,17 @@ document.addEventListener("DOMContentLoaded", function () {
     nextBtn.setAttribute("aria-label", "Próximo slide");
     nextBtn.textContent = "›";
 
-    viewport.appendChild(prevBtn);
-    viewport.appendChild(nextBtn);
-
-    const dotsWrap = document.createElement("div");
-    dotsWrap.className = "dots";
-
-    const dots = slides.map(function (_, index) {
-      const dot = document.createElement("button");
-      dot.type = "button";
-      dot.className = "dot";
-      if (index === 0) dot.classList.add("active");
-      dot.setAttribute("aria-label", `Ir para slide ${index + 1}`);
-      dotsWrap.appendChild(dot);
-      return dot;
-    });
-
-    root.appendChild(viewport);
-    root.appendChild(dotsWrap);
-
-    let current = 0;
+    root.appendChild(prevBtn);
+    root.appendChild(nextBtn);
 
     function showSlide(index) {
       current = index;
 
-      slideElements.forEach(function (slide, i) {
+      slides.forEach((slide, i) => {
         slide.classList.toggle("active", i === current);
       });
 
-      dots.forEach(function (dot, i) {
+      dots.forEach((dot, i) => {
         dot.classList.toggle("active", i === current);
       });
     }
@@ -172,13 +159,12 @@ document.addEventListener("DOMContentLoaded", function () {
       showSlide((current + 1) % slides.length);
     });
 
-    dots.forEach(function (dot, index) {
+    dots.forEach((dot, index) => {
       dot.addEventListener("click", function () {
         showSlide(index);
       });
     });
 
-    // Sem autoplay.
     showSlide(0);
   }
 
