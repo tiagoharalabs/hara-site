@@ -564,3 +564,14 @@ button:disabled,
   cursor: not-allowed;
   transform: none;
 }
+
+/* H.A.R.A v1.4 — imagem institucional do painel principal */
+.slide img.process-graphic,
+.hero-visual img.process-graphic,
+.visual-card img.process-graphic {
+  object-fit: contain;
+  background:
+    radial-gradient(circle at center, rgba(240, 180, 41, 0.08), transparent 55%),
+    #050505;
+  padding: 10px;
+}
