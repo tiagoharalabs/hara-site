@@ -1214,3 +1214,97 @@ body {
     object-fit: contain !important;
   }
 }
+
+/* =========================================================
+   H.A.R.A Site v1.4 — correção final para visualização 100%
+   Objetivo: dar mais palco ao infográfico no desktop sem mexer na imagem.
+   ========================================================= */
+
+@media (min-width: 1180px) {
+  /* Alarga somente a seção que contém o painel visual do hero */
+  .container:has(.manual-hero-carousel),
+  section:has(.manual-hero-carousel) .container,
+  .hero-grid:has(.manual-hero-carousel) {
+    width: min(1480px, calc(100vw - 56px)) !important;
+    max-width: min(1480px, calc(100vw - 56px)) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  /* Dá mais prioridade para a caixa visual da direita */
+  .hero-grid:has(.manual-hero-carousel),
+  .hero-layout:has(.manual-hero-carousel),
+  .hero-content:has(.manual-hero-carousel) {
+    grid-template-columns: minmax(500px, 0.9fr) minmax(650px, 1.1fr) !important;
+    gap: 26px !important;
+    align-items: stretch !important;
+  }
+
+  /* Caixa mãe da direita */
+  .visual-card.manual-hero-carousel,
+  .hero-visual.manual-hero-carousel,
+  .hero-showcase.manual-hero-carousel {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 720px !important;
+    padding: 18px !important;
+    overflow: hidden !important;
+  }
+
+  /* Área do slide */
+  .visual-card.manual-hero-carousel .slide.active,
+  .hero-visual.manual-hero-carousel .slide.active,
+  .hero-showcase.manual-hero-carousel .slide.active {
+    width: 100% !important;
+    min-height: 640px !important;
+  }
+
+  /* Infográfico: usa o máximo da largura disponível */
+  .visual-card.manual-hero-carousel .slide img[src*="hero-ia-realidade"],
+  .hero-visual.manual-hero-carousel .slide img[src*="hero-ia-realidade"],
+  .hero-showcase.manual-hero-carousel .slide img[src*="hero-ia-realidade"],
+  .visual-card.manual-hero-carousel .slide img.is-infographic,
+  .hero-visual.manual-hero-carousel .slide img.is-infographic,
+  .hero-showcase.manual-hero-carousel .slide img.is-infographic {
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    object-fit: contain !important;
+    object-position: center !important;
+    padding: 0 !important;
+    background: #050505 !important;
+  }
+
+  /* Terceiro slide: capivara/logo volta a preencher bem */
+  .visual-card.manual-hero-carousel .slide img[src*="hara-logo-premium"],
+  .hero-visual.manual-hero-carousel .slide img[src*="hara-logo-premium"],
+  .hero-showcase.manual-hero-carousel .slide img[src*="hara-logo-premium"] {
+    width: 100% !important;
+    height: 455px !important;
+    min-height: 455px !important;
+    max-height: 455px !important;
+    object-fit: cover !important;
+    object-position: center !important;
+    padding: 0 !important;
+  }
+
+  .hero-nav {
+    top: 36% !important;
+  }
+}
+
+@media (min-width: 1500px) {
+  .container:has(.manual-hero-carousel),
+  section:has(.manual-hero-carousel) .container,
+  .hero-grid:has(.manual-hero-carousel) {
+    width: min(1560px, calc(100vw - 72px)) !important;
+    max-width: min(1560px, calc(100vw - 72px)) !important;
+  }
+
+  .hero-grid:has(.manual-hero-carousel),
+  .hero-layout:has(.manual-hero-carousel),
+  .hero-content:has(.manual-hero-carousel) {
+    grid-template-columns: minmax(520px, 0.88fr) minmax(720px, 1.12fr) !important;
+  }
+}
