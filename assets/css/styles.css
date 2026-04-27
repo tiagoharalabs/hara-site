@@ -1117,3 +1117,148 @@ button:disabled,
     max-width: 100% !important;
   }
 }
+
+
+/* =========================================================
+   H.A.R.A Site — HERO SPLIT FINAL LIMPO
+   ========================================================= */
+
+html,
+body {
+  overflow-x: hidden !important;
+}
+
+.manual-hero-carousel {
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.manual-hero-carousel .slide {
+  display: none !important;
+  overflow: hidden !important;
+}
+
+.manual-hero-carousel .slide.active {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.manual-hero-carousel img[src*="hero-ia.png"],
+.manual-hero-carousel img[src*="hero-ia-realidade-sep.png"],
+.manual-hero-carousel img.is-infographic {
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  object-fit: contain !important;
+  object-position: center center !important;
+  margin: 0 auto !important;
+  padding: 0 !important;
+  background: #050505 !important;
+  border-radius: 14px !important;
+  transform: none !important;
+}
+
+.manual-hero-carousel img[src*="hara-logo-premium"] {
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 420px !important;
+  min-height: 420px !important;
+  max-height: 420px !important;
+  object-fit: cover !important;
+  object-position: center center !important;
+  margin: 0 auto !important;
+  padding: 0 !important;
+  background: #050505 !important;
+  border-radius: 14px !important;
+}
+
+.hero-nav {
+  position: absolute !important;
+  top: 42% !important;
+  transform: translateY(-50%) !important;
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(240, 180, 41, 0.45) !important;
+  background: rgba(5, 5, 5, 0.78) !important;
+  color: #f0b429 !important;
+  cursor: pointer !important;
+  z-index: 8 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 24px !important;
+  line-height: 1 !important;
+}
+
+.hero-nav.prev {
+  left: 10px !important;
+}
+
+.hero-nav.next {
+  right: 10px !important;
+}
+
+.manual-hero-carousel .dots,
+.manual-hero-carousel .hero-dots,
+.manual-hero-carousel .slider-dots,
+.manual-hero-carousel .carousel-dots {
+  display: flex !important;
+  justify-content: center !important;
+  gap: 10px !important;
+  margin-top: 14px !important;
+}
+
+.manual-hero-carousel .dot {
+  width: 10px !important;
+  height: 10px !important;
+  border-radius: 999px !important;
+  border: 0 !important;
+  background: rgba(255, 255, 255, 0.25) !important;
+  cursor: pointer !important;
+  padding: 0 !important;
+}
+
+.manual-hero-carousel .dot.active {
+  background: #f0b429 !important;
+  box-shadow: 0 0 0 4px rgba(240, 180, 41, 0.12) !important;
+}
+
+@media (min-width: 1180px) {
+  .hero-grid:has(.manual-hero-carousel),
+  .hero-layout:has(.manual-hero-carousel),
+  .hero-content:has(.manual-hero-carousel) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+    gap: 28px !important;
+    align-items: stretch !important;
+  }
+
+  .hero-grid:has(.manual-hero-carousel) > *,
+  .hero-layout:has(.manual-hero-carousel) > *,
+  .hero-content:has(.manual-hero-carousel) > * {
+    min-width: 0 !important;
+  }
+
+  .visual-card.manual-hero-carousel,
+  .hero-visual.manual-hero-carousel,
+  .hero-showcase.manual-hero-carousel {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    min-height: 610px !important;
+    padding: 18px !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .manual-hero-carousel img[src*="hara-logo-premium"] {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    object-fit: contain !important;
+  }
+}

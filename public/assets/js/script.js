@@ -45,30 +45,24 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function setupHeroCarousel() {
-    const slides = Array.from(document.querySelectorAll(".slide"));
-    if (!slides.length) return;
-
     const root =
-      slides[0].closest(".visual-card") ||
-      slides[0].closest(".hero-visual") ||
-      slides[0].closest(".hero-showcase") ||
-      slides[0].parentElement;
+      document.querySelector(".visual-card") ||
+      document.querySelector(".hero-visual") ||
+      document.querySelector(".hero-showcase");
 
     if (!root) return;
 
-    root.classList.add("manual-hero-carousel");
-
     const slideConfig = [
       {
-        image: "assets/images/hero-ia-realidade.png",
-        title: "Arquitetura operacional",
-        description: "Valor real exige dados, engenharia, modelagem e operacionalização.",
+        image: "assets/images/hero-ia.png",
+        title: "Percepção simplificada",
+        description: "Muita gente imagina IA como um atalho direto entre dados e valor.",
         infographic: true
       },
       {
-        image: "assets/images/hero-ia-realidade.png",
-        title: "Ciência de dados aplicada",
-        description: "Entre dados e valor existem critérios, restrições, validação e operação.",
+        image: "assets/images/hero-ia-realidade-sep.png",
+        title: "Arquitetura operacional",
+        description: "Valor real exige dados, engenharia, modelagem, restrições e operacionalização.",
         infographic: true
       },
       {
@@ -79,25 +73,85 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     ];
 
-    slides.forEach((slide, index) => {
-      const config = slideConfig[index] || slideConfig[index % slideConfig.length];
-      const img = slide.querySelector("img");
-      const title = slide.querySelector("h3");
-      const desc = slide.querySelector("p");
+    root.classList.add("manual-hero-carousel");
 
-      if (img) {
-        img.src = config.image;
-        img.alt = config.title;
-        img.classList.toggle("is-infographic", Boolean(config.infographic));
+    let slides = Array.from(root.querySelectorAll(".slide"));
+
+    if (!slides.length) {
+      const existingImg = root.querySelector("img");
+
+      if (existingImg) {
+        const existingContainer = existingImg.closest("article") || existingImg.parentElement;
+        existingContainer.classList.add("slide");
+        slides = [existingContainer];
+      }
+    }
+
+    while (slides.length < slideConfig.length) {
+      const slide = document.createElement("article");
+      slide.className = "slide";
+
+      const img = document.createElement("img");
+      const h3 = document.createElement("h3");
+      const p = document.createElement("p");
+
+      slide.appendChild(img);
+      slide.appendChild(h3);
+      slide.appendChild(p);
+
+      const dots =
+        root.querySelector(".dots") ||
+        root.querySelector(".hero-dots") ||
+        root.querySelector(".slider-dots") ||
+        root.querySelector(".carousel-dots");
+
+      if (dots) {
+        root.insertBefore(slide, dots);
+      } else {
+        root.appendChild(slide);
       }
 
-      if (title) title.textContent = config.title;
-      if (desc) desc.textContent = config.description;
+      slides.push(slide);
+    }
+
+    slides = slides.slice(0, slideConfig.length);
+
+    slides.forEach(function (slide, index) {
+      const config = slideConfig[index];
+
+      slide.classList.add("slide");
+
+      let img = slide.querySelector("img");
+      let title = slide.querySelector("h3");
+      let desc = slide.querySelector("p");
+
+      if (!img) {
+        img = document.createElement("img");
+        slide.prepend(img);
+      }
+
+      if (!title) {
+        title = document.createElement("h3");
+        slide.appendChild(title);
+      }
+
+      if (!desc) {
+        desc = document.createElement("p");
+        slide.appendChild(desc);
+      }
+
+      img.src = config.image;
+      img.alt = config.title;
+      img.classList.toggle("is-infographic", Boolean(config.infographic));
+
+      title.textContent = config.title;
+      desc.textContent = config.description;
     });
 
-    let current = 0;
+    root.querySelectorAll(".hero-nav").forEach(function (item) {
+      item.remove();
+    });
 
-    let dots = Array.from(root.querySelectorAll(".dot"));
     let dotsWrap =
       root.querySelector(".dots") ||
       root.querySelector(".hero-dots") ||
@@ -106,23 +160,20 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (!dotsWrap) {
       dotsWrap = document.createElement("div");
-      dotsWrap.className = "hero-dots";
+      dotsWrap.className = "dots";
       root.appendChild(dotsWrap);
     }
 
-    if (!dots.length) {
-      dotsWrap.innerHTML = "";
-      slides.forEach(function (_, index) {
-        const dot = document.createElement("button");
-        dot.type = "button";
-        dot.className = "dot";
-        dot.setAttribute("aria-label", `Ir para slide ${index + 1}`);
-        dotsWrap.appendChild(dot);
-      });
-      dots = Array.from(root.querySelectorAll(".dot"));
-    }
+    dotsWrap.innerHTML = "";
 
-    root.querySelectorAll(".hero-nav").forEach((item) => item.remove());
+    const dots = slideConfig.map(function (_, index) {
+      const dot = document.createElement("button");
+      dot.type = "button";
+      dot.className = "dot";
+      dot.setAttribute("aria-label", `Ir para slide ${index + 1}`);
+      dotsWrap.appendChild(dot);
+      return dot;
+    });
 
     const prevBtn = document.createElement("button");
     prevBtn.type = "button";
@@ -139,14 +190,16 @@ document.addEventListener("DOMContentLoaded", function () {
     root.appendChild(prevBtn);
     root.appendChild(nextBtn);
 
+    let current = 0;
+
     function showSlide(index) {
       current = index;
 
-      slides.forEach((slide, i) => {
+      slides.forEach(function (slide, i) {
         slide.classList.toggle("active", i === current);
       });
 
-      dots.forEach((dot, i) => {
+      dots.forEach(function (dot, i) {
         dot.classList.toggle("active", i === current);
       });
     }
@@ -159,7 +212,7 @@ document.addEventListener("DOMContentLoaded", function () {
       showSlide((current + 1) % slides.length);
     });
 
-    dots.forEach((dot, index) => {
+    dots.forEach(function (dot, index) {
       dot.addEventListener("click", function () {
         showSlide(index);
       });
