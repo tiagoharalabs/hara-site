@@ -428,6 +428,16 @@
       </section>
 
   
+    <section>
+      <div class="quote-card">
+        <p>
+          Não se controla o que não se mede. Não se mede o que não tem critério.
+          Sem critério, o escopo se expande, a responsabilidade se dilui e a operação é drenada pelo ruído.
+        </p>
+      </div>
+    </section>
+
+
     <section id="diagnostico">
       <div class="section-head">
         <h2>Diagnóstico inicial</h2>
@@ -458,12 +468,12 @@
 
             <div class="field">
               <label for="cargo">Cargo / função</label>
-              <input id="cargo" name="cargo" type="text" maxlength="120" />
+              <input id="cargo" name="cargo" type="text" maxlength="120" required />
             </div>
 
             <div class="field">
               <label for="tipoEmpresa">Perfil da empresa</label>
-              <select id="tipoEmpresa" name="tipoEmpresa">
+              <select id="tipoEmpresa" name="tipoEmpresa" required>
                 <option value="">Selecione</option>
                 <option>Empresa nacional</option>
                 <option>Multinacional com sede no Brasil</option>
@@ -474,7 +484,7 @@
 
             <div class="field">
               <label for="colaboradores">Quantidade de colaboradores</label>
-              <select id="colaboradores" name="colaboradores">
+              <select id="colaboradores" name="colaboradores" required>
                 <option value="">Selecione</option>
                 <option>1 a 20</option>
                 <option>21 a 100</option>
@@ -486,7 +496,7 @@
 
             <div class="field">
               <label for="decisao">Origem das decisões de TI</label>
-              <select id="decisao" name="decisao">
+              <select id="decisao" name="decisao" required>
                 <option value="">Selecione</option>
                 <option>Principalmente locais</option>
                 <option>Regionais</option>
@@ -498,12 +508,12 @@
 
             <div class="field">
               <label for="sede">País da sede / matriz</label>
-              <input id="sede" name="sede" type="text" maxlength="120" />
+              <input id="sede" name="sede" type="text" maxlength="120" required />
             </div>
 
             <div class="field">
               <label for="objetivo">Objetivo principal</label>
-              <select id="objetivo" name="objetivo">
+              <select id="objetivo" name="objetivo" required>
                 <option value="">Selecione</option>
                 <option>Reduzir dependência de planilhas</option>
                 <option>Organizar dados</option>
@@ -518,7 +528,7 @@
 
             <div class="field">
               <label for="urgencia">Urgência</label>
-              <select id="urgencia" name="urgencia">
+              <select id="urgencia" name="urgencia" required>
                 <option value="">Selecione</option>
                 <option>Exploração inicial</option>
                 <option>Próximos 3 meses</option>
@@ -530,7 +540,7 @@
 
             <div class="field">
               <label for="sponsor">Patrocinador interno</label>
-              <select id="sponsor" name="sponsor">
+              <select id="sponsor" name="sponsor" required>
                 <option value="">Selecione</option>
                 <option>Diretoria</option>
                 <option>TI</option>
@@ -544,7 +554,7 @@
 
             <div class="field">
               <label for="documentacao">Documentação dos processos</label>
-              <select id="documentacao" name="documentacao">
+              <select id="documentacao" name="documentacao" required>
                 <option value="">Selecione</option>
                 <option>Bem documentados</option>
                 <option>Parcialmente documentados</option>
@@ -556,7 +566,7 @@
 
             <div class="field">
               <label for="donoDados">Dono dos dados</label>
-              <select id="donoDados" name="donoDados">
+              <select id="donoDados" name="donoDados" required>
                 <option value="">Selecione</option>
                 <option>Sim, responsáveis definidos</option>
                 <option>Parcialmente definidos</option>
@@ -567,7 +577,7 @@
 
             <div class="field">
               <label for="maturidade">Maturidade percebida</label>
-              <select id="maturidade" name="maturidade">
+              <select id="maturidade" name="maturidade" required>
                 <option value="">Selecione</option>
                 <option>Inicial</option>
                 <option>Em organização</option>
@@ -579,7 +589,7 @@
 
             <div class="field">
               <label for="erp">ERP principal</label>
-              <select id="erp" name="erp">
+              <select id="erp" name="erp" required>
                 <option value="">Selecione</option>
                 <option>SAP</option>
                 <option>Oracle / JD Edwards</option>
@@ -594,7 +604,7 @@
 
             <div class="field">
               <label for="crm">CRM principal</label>
-              <select id="crm" name="crm">
+              <select id="crm" name="crm" required>
                 <option value="">Selecione</option>
                 <option>Salesforce</option>
                 <option>HubSpot</option>
@@ -744,7 +754,7 @@
           </p>
 
           <div class="hero-actions">
-            <button class="button button-gold" type="submit">Enviar diagnóstico</button>
+            <button class="button button-gold" type="submit">Enviar formulário</button>
             <a class="button button-ghost" href="mailto:contato@haralabs.com.br">
               Preferir contato direto
             </a>

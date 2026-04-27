@@ -427,337 +427,344 @@
         </div>
       </section>
 
-      <section id="diagnostico">
-        <div class="section-head">
-          <h2>Diagnóstico inicial</h2>
-          <p>
-            Antes de propor qualquer solução, avaliamos o tamanho do gap entre
-            sistemas, dados, processos, governança e uso real de IA.
-          </p>
-        </div>
+  
+    <section>
+      <div class="quote-card">
+        <p>
+          Não se controla o que não se mede. Não se mede o que não tem critério.
+          Sem critério, o escopo se expande, a responsabilidade se dilui e a operação é drenada pelo ruído.
+        </p>
+      </div>
+    </section>
 
-        <div class="card">
-          <form class="diagnostic-form" id="diagnosticForm">
-            <div style="display: none">
-              <label for="website">Website</label>
+
+    <section id="diagnostico">
+      <div class="section-head">
+        <h2>Diagnóstico inicial</h2>
+        <p>
+          Antes de propor qualquer solução, avaliamos o tamanho do gap entre sistemas,
+          dados, processos, governança e uso real de IA. O objetivo é entender contexto,
+          maturidade e complexidade — sem expor informações sensíveis.
+        </p>
+      </div>
+
+      <div class="card">
+        <form class="diagnostic-form" id="diagnosticForm">
+          <div class="form-grid">
+            <div class="field">
+              <label for="nome">Nome</label>
+              <input id="nome" name="nome" type="text" maxlength="120" required />
+            </div>
+
+            <div class="field">
+              <label for="email">E-mail</label>
+              <input id="email" name="email" type="email" maxlength="160" required />
+            </div>
+
+            <div class="field">
+              <label for="empresa">Empresa</label>
+              <input id="empresa" name="empresa" type="text" maxlength="160" required />
+            </div>
+
+            <div class="field">
+              <label for="cargo">Cargo / função</label>
+              <input id="cargo" name="cargo" type="text" maxlength="120" required />
+            </div>
+
+            <div class="field">
+              <label for="tipoEmpresa">Perfil da empresa</label>
+              <select id="tipoEmpresa" name="tipoEmpresa" required>
+                <option value="">Selecione</option>
+                <option>Empresa nacional</option>
+                <option>Multinacional com sede no Brasil</option>
+                <option>Multinacional com sede fora do Brasil</option>
+                <option>Grupo regional / LATAM</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="colaboradores">Quantidade de colaboradores</label>
+              <select id="colaboradores" name="colaboradores" required>
+                <option value="">Selecione</option>
+                <option>1 a 20</option>
+                <option>21 a 100</option>
+                <option>101 a 500</option>
+                <option>501 a 2.000</option>
+                <option>Acima de 2.000</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="decisao">Origem das decisões de TI</label>
+              <select id="decisao" name="decisao" required>
+                <option value="">Selecione</option>
+                <option>Principalmente locais</option>
+                <option>Regionais</option>
+                <option>Globais</option>
+                <option>Mistas</option>
+                <option>Não está claro</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="sede">País da sede / matriz</label>
+              <input id="sede" name="sede" type="text" maxlength="120" required />
+            </div>
+
+            <div class="field">
+              <label for="objetivo">Objetivo principal</label>
+              <select id="objetivo" name="objetivo" required>
+                <option value="">Selecione</option>
+                <option>Reduzir dependência de planilhas</option>
+                <option>Organizar dados</option>
+                <option>Integrar sistemas</option>
+                <option>Implantar IA com segurança</option>
+                <option>Melhorar governança</option>
+                <option>Automatizar processos</option>
+                <option>Criar dashboards / indicadores</option>
+                <option>Diagnosticar ambiente antes de decidir</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="urgencia">Urgência</label>
+              <select id="urgencia" name="urgencia" required>
+                <option value="">Selecione</option>
+                <option>Exploração inicial</option>
+                <option>Próximos 3 meses</option>
+                <option>Próximos 6 meses</option>
+                <option>Já existe dor crítica</option>
+                <option>Projeto já em andamento</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="sponsor">Patrocinador interno</label>
+              <select id="sponsor" name="sponsor" required>
+                <option value="">Selecione</option>
+                <option>Diretoria</option>
+                <option>TI</option>
+                <option>Operações</option>
+                <option>Dados / BI</option>
+                <option>Financeiro</option>
+                <option>Área de negócio</option>
+                <option>Ainda não definido</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="documentacao">Documentação dos processos</label>
+              <select id="documentacao" name="documentacao" required>
+                <option value="">Selecione</option>
+                <option>Bem documentados</option>
+                <option>Parcialmente documentados</option>
+                <option>Espalhados em planilhas/e-mails</option>
+                <option>Dependem de pessoas específicas</option>
+                <option>Não estão documentados</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="donoDados">Dono dos dados</label>
+              <select id="donoDados" name="donoDados" required>
+                <option value="">Selecione</option>
+                <option>Sim, responsáveis definidos</option>
+                <option>Parcialmente definidos</option>
+                <option>Não existem responsáveis claros</option>
+                <option>Não sabemos informar</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="maturidade">Maturidade percebida</label>
+              <select id="maturidade" name="maturidade" required>
+                <option value="">Selecione</option>
+                <option>Inicial</option>
+                <option>Em organização</option>
+                <option>Intermediária</option>
+                <option>Avançada</option>
+                <option>Não sei avaliar</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="erp">ERP principal</label>
+              <select id="erp" name="erp" required>
+                <option value="">Selecione</option>
+                <option>SAP</option>
+                <option>Oracle / JD Edwards</option>
+                <option>Totvs</option>
+                <option>Senior</option>
+                <option>Sankhya</option>
+                <option>Microsoft Dynamics</option>
+                <option>Outro</option>
+                <option>Não possui ERP estruturado</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="crm">CRM principal</label>
+              <select id="crm" name="crm" required>
+                <option value="">Selecione</option>
+                <option>Salesforce</option>
+                <option>HubSpot</option>
+                <option>Microsoft Dynamics CRM</option>
+                <option>Outro</option>
+                <option>Não utiliza</option>
+              </select>
+            </div>
+
+            <div class="field full">
+              <label>Tecnologias / plataformas já utilizadas</label>
+              <div class="checkbox-grid">
+                <label><input type="checkbox" name="tech" value="AWS" /> AWS</label>
+                <label><input type="checkbox" name="tech" value="Azure" /> Azure</label>
+                <label><input type="checkbox" name="tech" value="Google Cloud" /> Google Cloud</label>
+                <label><input type="checkbox" name="tech" value="IBM Cloud" /> IBM Cloud</label>
+                <label><input type="checkbox" name="tech" value="Oracle Cloud" /> Oracle Cloud</label>
+                <label><input type="checkbox" name="tech" value="Salesforce" /> Salesforce</label>
+                <label><input type="checkbox" name="tech" value="SAP Cloud" /> SAP Cloud</label>
+                <label><input type="checkbox" name="tech" value="Microsoft 365" /> Microsoft 365</label>
+                <label><input type="checkbox" name="tech" value="Google Workspace" /> Google Workspace</label>
+                <label><input type="checkbox" name="tech" value="ServiceNow" /> ServiceNow</label>
+                <label><input type="checkbox" name="tech" value="Power BI" /> Power BI</label>
+                <label><input type="checkbox" name="tech" value="Tableau" /> Tableau</label>
+                <label><input type="checkbox" name="tech" value="Snowflake" /> Snowflake</label>
+                <label><input type="checkbox" name="tech" value="Databricks" /> Databricks</label>
+              </div>
+            </div>
+
+            <div class="field full">
+              <label for="techOutro">Outras tecnologias</label>
               <input
-                id="website"
-                name="website"
+                id="techOutro"
+                name="techOutro"
                 type="text"
-                autocomplete="off"
-                tabindex="-1"
+                maxlength="240"
+                placeholder="Ex.: SharePoint, TOTVS Fluig, Qlik, DocuSign..."
               />
             </div>
-            <div class="form-grid">
-              <div class="field">
-                <label for="nome">Nome</label>
-                <input
-                  id="nome"
-                  name="nome"
-                  type="text"
-                  maxlength="120"
-                  required
-                />
-              </div>
 
-              <div class="field">
-                <label for="email">E-mail</label>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  maxlength="160"
-                  required
-                />
-              </div>
-
-              <div class="field">
-                <label for="empresa">Empresa</label>
-                <input
-                  id="empresa"
-                  name="empresa"
-                  type="text"
-                  maxlength="160"
-                  required
-                />
-              </div>
-
-              <div class="field">
-                <label for="cargo">Cargo / função</label>
-                <input id="cargo" name="cargo" type="text" maxlength="120" />
-              </div>
-
-              <div class="field">
-                <label for="tipoEmpresa">Perfil da empresa</label>
-                <select id="tipoEmpresa" name="tipoEmpresa">
-                  <option value="">Selecione</option>
-                  <option>Empresa nacional</option>
-                  <option>Multinacional com sede no Brasil</option>
-                  <option>Multinacional com sede fora do Brasil</option>
-                  <option>Grupo regional / LATAM</option>
-                </select>
-              </div>
-
-              <div class="field">
-                <label for="colaboradores">Quantidade de colaboradores</label>
-                <select id="colaboradores" name="colaboradores">
-                  <option value="">Selecione</option>
-                  <option>1 a 20</option>
-                  <option>21 a 100</option>
-                  <option>101 a 500</option>
-                  <option>501 a 2.000</option>
-                  <option>Acima de 2.000</option>
-                </select>
-              </div>
-
-              <div class="field">
-                <label for="decisao">Origem das decisões de TI</label>
-                <select id="decisao" name="decisao">
-                  <option value="">Selecione</option>
-                  <option>Principalmente locais</option>
-                  <option>Regionais</option>
-                  <option>Globais</option>
-                  <option>Mistas</option>
-                  <option>Não está claro</option>
-                </select>
-              </div>
-
-              <div class="field">
-                <label for="sede">País da sede / matriz</label>
-                <input id="sede" name="sede" type="text" maxlength="120" />
-              </div>
-
-              <div class="field">
-                <label for="erp">ERP principal</label>
-                <select id="erp" name="erp">
-                  <option value="">Selecione</option>
-                  <option>SAP</option>
-                  <option>Oracle / JD Edwards</option>
-                  <option>Totvs</option>
-                  <option>Senior</option>
-                  <option>Sankhya</option>
-                  <option>Microsoft Dynamics</option>
-                  <option>Outro</option>
-                  <option>Não possui ERP estruturado</option>
-                </select>
-              </div>
-
-              <div class="field">
-                <label for="crm">CRM principal</label>
-                <select id="crm" name="crm">
-                  <option value="">Selecione</option>
-                  <option>Salesforce</option>
-                  <option>HubSpot</option>
-                  <option>Microsoft Dynamics CRM</option>
-                  <option>Outro</option>
-                  <option>Não utiliza</option>
-                </select>
-              </div>
-
-              <div class="field full">
-                <label>Tecnologias / plataformas já utilizadas</label>
-                <div class="checkbox-grid">
-                  <label
-                    ><input type="checkbox" name="tech" value="AWS" />
-                    AWS</label
-                  >
-                  <label
-                    ><input type="checkbox" name="tech" value="Azure" />
-                    Azure</label
-                  >
-                  <label
-                    ><input type="checkbox" name="tech" value="Google Cloud" />
-                    Google Cloud</label
-                  >
-                  <label
-                    ><input type="checkbox" name="tech" value="IBM Cloud" /> IBM
-                    Cloud</label
-                  >
-                  <label
-                    ><input type="checkbox" name="tech" value="Oracle Cloud" />
-                    Oracle Cloud</label
-                  >
-                  <label
-                    ><input type="checkbox" name="tech" value="Salesforce" />
-                    Salesforce</label
-                  >
-                  <label
-                    ><input type="checkbox" name="tech" value="SAP Cloud" /> SAP
-                    Cloud</label
-                  >
-                  <label
-                    ><input type="checkbox" name="tech" value="Microsoft 365" />
-                    Microsoft 365</label
-                  >
-                  <label
-                    ><input
-                      type="checkbox"
-                      name="tech"
-                      value="Google Workspace"
-                    />
-                    Google Workspace</label
-                  >
-                  <label
-                    ><input type="checkbox" name="tech" value="ServiceNow" />
-                    ServiceNow</label
-                  >
-                  <label
-                    ><input type="checkbox" name="tech" value="Power BI" />
-                    Power BI</label
-                  >
-                  <label
-                    ><input type="checkbox" name="tech" value="Tableau" />
-                    Tableau</label
-                  >
-                  <label
-                    ><input type="checkbox" name="tech" value="Snowflake" />
-                    Snowflake</label
-                  >
-                  <label
-                    ><input type="checkbox" name="tech" value="Databricks" />
-                    Databricks</label
-                  >
-                </div>
-              </div>
-
-              <div class="field full">
-                <label for="techOutro">Outras tecnologias</label>
-                <input
-                  id="techOutro"
-                  name="techOutro"
-                  type="text"
-                  maxlength="240"
-                  placeholder="Ex.: SharePoint, TOTVS Fluig, Qlik, DocuSign..."
-                />
-              </div>
-
-              <div class="field full">
-                <label>Onde os dados / documentos vivem hoje?</label>
-                <div class="checkbox-grid">
-                  <label
-                    ><input
-                      type="checkbox"
-                      name="dadosBase"
-                      value="Planilhas"
-                    />
-                    Planilhas</label
-                  >
-                  <label
-                    ><input
-                      type="checkbox"
-                      name="dadosBase"
-                      value="SharePoint"
-                    />
-                    SharePoint</label
-                  >
-                  <label
-                    ><input
-                      type="checkbox"
-                      name="dadosBase"
-                      value="Banco SQL"
-                    />
-                    Banco SQL</label
-                  >
-                  <label
-                    ><input
-                      type="checkbox"
-                      name="dadosBase"
-                      value="Data warehouse"
-                    />
-                    Data warehouse</label
-                  >
-                  <label
-                    ><input
-                      type="checkbox"
-                      name="dadosBase"
-                      value="Data lake"
-                    />
-                    Data lake</label
-                  >
-                  <label
-                    ><input
-                      type="checkbox"
-                      name="dadosBase"
-                      value="Pastas locais"
-                    />
-                    Pastas locais</label
-                  >
-                  <label
-                    ><input
-                      type="checkbox"
-                      name="dadosBase"
-                      value="Sistemas legados"
-                    />
-                    Sistemas legados</label
-                  >
-                  <label
-                    ><input
-                      type="checkbox"
-                      name="dadosBase"
-                      value="SaaS dispersos"
-                    />
-                    SaaS dispersos</label
-                  >
-                </div>
-              </div>
-
-              <div class="field full">
-                <label for="dadosOutro"
-                  >Outras fontes / contexto de dados</label
-                >
-                <textarea
-                  id="dadosOutro"
-                  name="dadosOutro"
-                  maxlength="800"
-                  placeholder="Descreva outras fontes, repositórios ou dependências importantes."
-                ></textarea>
-              </div>
-
-              <div class="field full">
-                <label for="dores"
-                  >Principais dores / sinais de fragilidade</label
-                >
-                <textarea
-                  id="dores"
-                  name="dores"
-                  maxlength="1000"
-                  placeholder="Ex.: dados inconsistentes, planilhas paralelas, integração manual, baixa rastreabilidade, pouca clareza de dono, processos não documentados..."
-                ></textarea>
-              </div>
-
-              <div class="field full">
-                <label for="ia">Uso atual ou interesse em IA</label>
-                <textarea
-                  id="ia"
-                  name="ia"
-                  maxlength="1000"
-                  placeholder="Ex.: já usam ChatGPT/Copilot? há política interna? dados sensíveis podem ir para SaaS? existe interesse em IA local, nuvem ou híbrida?"
-                ></textarea>
+            <div class="field full">
+              <label>Sensibilidade dos dados</label>
+              <div class="checkbox-grid">
+                <label><input type="checkbox" name="sensibilidade" value="Dados pessoais" /> Dados pessoais</label>
+                <label><input type="checkbox" name="sensibilidade" value="Dados financeiros" /> Dados financeiros</label>
+                <label><input type="checkbox" name="sensibilidade" value="Dados fiscais" /> Dados fiscais</label>
+                <label><input type="checkbox" name="sensibilidade" value="Dados industriais" /> Dados industriais</label>
+                <label><input type="checkbox" name="sensibilidade" value="Dados de saúde" /> Dados de saúde</label>
+                <label><input type="checkbox" name="sensibilidade" value="Dados estratégicos/comerciais" /> Dados estratégicos/comerciais</label>
+                <label><input type="checkbox" name="sensibilidade" value="Não sei informar" /> Não sei informar</label>
               </div>
             </div>
 
-            <p class="form-note">
-              Este diagnóstico inicial serve para leitura preliminar do
-              ambiente. O envio abre o cliente de e-mail do usuário já com os
-              dados preenchidos.
-            </p>
-
-            <div class="hero-actions">
-              <button class="button button-gold" type="submit">
-                Enviar diagnóstico por e-mail
-              </button>
-              <a
-                class="button button-ghost"
-                href="mailto:contato@haralabs.com.br"
-              >
-                Preferir contato direto
-              </a>
+            <div class="field full">
+              <label>Requisitos de compliance / governança</label>
+              <div class="checkbox-grid">
+                <label><input type="checkbox" name="compliance" value="LGPD" /> LGPD</label>
+                <label><input type="checkbox" name="compliance" value="SOX" /> SOX</label>
+                <label><input type="checkbox" name="compliance" value="ISO 27001" /> ISO 27001</label>
+                <label><input type="checkbox" name="compliance" value="Políticas globais internas" /> Políticas globais internas</label>
+                <label><input type="checkbox" name="compliance" value="Auditoria externa" /> Auditoria externa</label>
+                <label><input type="checkbox" name="compliance" value="Contratos com fornecedores globais" /> Contratos com fornecedores globais</label>
+                <label><input type="checkbox" name="compliance" value="Não sei informar" /> Não sei informar</label>
+              </div>
             </div>
-          </form>
-        </div>
-      </section>
 
-      <section id="contato">
+            <div class="field full">
+              <label>Onde está a maior dor?</label>
+              <div class="checkbox-grid">
+                <label><input type="checkbox" name="maiorDor" value="Muitos sistemas desconectados" /> Muitos sistemas desconectados</label>
+                <label><input type="checkbox" name="maiorDor" value="Muitas planilhas" /> Muitas planilhas</label>
+                <label><input type="checkbox" name="maiorDor" value="Dados duplicados" /> Dados duplicados</label>
+                <label><input type="checkbox" name="maiorDor" value="Dados sem dono" /> Dados sem dono</label>
+                <label><input type="checkbox" name="maiorDor" value="Baixa rastreabilidade" /> Baixa rastreabilidade</label>
+                <label><input type="checkbox" name="maiorDor" value="Integrações manuais" /> Integrações manuais</label>
+                <label><input type="checkbox" name="maiorDor" value="Decisões sem indicador confiável" /> Decisões sem indicador confiável</label>
+              </div>
+            </div>
+
+            <div class="field full">
+              <label>Arquitetura aceitável</label>
+              <div class="checkbox-grid">
+                <label><input type="checkbox" name="arquitetura" value="Local" /> Local</label>
+                <label><input type="checkbox" name="arquitetura" value="Nuvem" /> Nuvem</label>
+                <label><input type="checkbox" name="arquitetura" value="Híbrida" /> Híbrida</label>
+                <label><input type="checkbox" name="arquitetura" value="Precisa seguir diretriz global" /> Precisa seguir diretriz global</label>
+                <label><input type="checkbox" name="arquitetura" value="Ainda não definido" /> Ainda não definido</label>
+              </div>
+            </div>
+
+            <div class="field full">
+              <label>Onde os dados / documentos vivem hoje?</label>
+              <div class="checkbox-grid">
+                <label><input type="checkbox" name="dadosBase" value="Planilhas" /> Planilhas</label>
+                <label><input type="checkbox" name="dadosBase" value="SharePoint" /> SharePoint</label>
+                <label><input type="checkbox" name="dadosBase" value="Banco SQL" /> Banco SQL</label>
+                <label><input type="checkbox" name="dadosBase" value="Data warehouse" /> Data warehouse</label>
+                <label><input type="checkbox" name="dadosBase" value="Data lake" /> Data lake</label>
+                <label><input type="checkbox" name="dadosBase" value="Pastas locais" /> Pastas locais</label>
+                <label><input type="checkbox" name="dadosBase" value="Sistemas legados" /> Sistemas legados</label>
+                <label><input type="checkbox" name="dadosBase" value="SaaS dispersos" /> SaaS dispersos</label>
+              </div>
+            </div>
+
+            <div class="field full">
+              <label for="dadosOutro">Outras fontes / contexto de dados</label>
+              <textarea
+                id="dadosOutro"
+                name="dadosOutro"
+                maxlength="800"
+                placeholder="Descreva outras fontes, repositórios ou dependências importantes."
+              ></textarea>
+            </div>
+
+            <div class="field full">
+              <label for="dores">Principais dores / sinais de fragilidade</label>
+              <textarea
+                id="dores"
+                name="dores"
+                maxlength="1000"
+                placeholder="Ex.: dados inconsistentes, planilhas paralelas, integração manual, baixa rastreabilidade, pouca clareza de dono, processos não documentados..."
+              ></textarea>
+            </div>
+
+            <div class="field full">
+              <label for="ia">Uso atual ou interesse em IA</label>
+              <textarea
+                id="ia"
+                name="ia"
+                maxlength="1000"
+                placeholder="Ex.: já usam ChatGPT/Copilot? há política interna? dados sensíveis podem ir para SaaS? existe interesse em IA local, nuvem ou híbrida?"
+              ></textarea>
+            </div>
+
+            <div class="field full">
+              <label class="legal-check">
+                <input id="legalConfirm" name="legalConfirm" type="checkbox" required />
+                Confirmo que este diagnóstico inicial não contém credenciais, documentos internos,
+                dados pessoais de terceiros, dados sensíveis detalhados ou informações confidenciais.
+              </label>
+            </div>
+          </div>
+
+          <p class="form-note">
+            Não envie dados sensíveis, credenciais, documentos internos, informações pessoais de terceiros ou dados confidenciais neste diagnóstico inicial.
+            O objetivo é entender contexto, maturidade e estrutura geral do ambiente. A avaliação de aderência e score é feita internamente pela H.A.R.A Labs.
+          </p>
+
+          <div class="hero-actions">
+            <button class="button button-gold" type="submit">Enviar formulário</button>
+            <a class="button button-ghost" href="mailto:contato@haralabs.com.br">
+              Preferir contato direto
+            </a>
+          </div>
+        </form>
+      </div>
+    </section>
+
+
+    <section id="contato">
         <div class="card contact-card">
           <div>
             <span class="eyebrow">Contato</span>

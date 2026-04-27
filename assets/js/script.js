@@ -54,84 +54,129 @@
       .slice(0, maxLength);
   }
 
-  function getCheckedValues(name) {
+  function getCheckedArray(name) {
     return Array.from(document.querySelectorAll(`input[name="${name}"]:checked`))
-      .map((item) => item.value)
-      .join(", ");
+      .map((item) => item.value);
+  }
+
+  function hasValue(id) {
+    const element = document.getElementById(id);
+    return element && cleanText(element.value).length > 0;
+  }
+
+  function validateRequiredGroups(payload) {
+    const missing = [];
+
+    if (!payload.tech.length && !payload.techOutro) {
+      missing.push("Tecnologias / plataformas ou Outras tecnologias");
+    }
+
+    if (!payload.sensibilidade.length) missing.push("Sensibilidade dos dados");
+    if (!payload.compliance.length) missing.push("Requisitos de compliance / governança");
+    if (!payload.maiorDor.length) missing.push("Onde está a maior dor");
+    if (!payload.arquitetura.length) missing.push("Arquitetura aceitável");
+    if (!payload.dadosBase.length) missing.push("Onde os dados / documentos vivem hoje");
+
+    return missing;
   }
 
   const form = document.getElementById("diagnosticForm");
 
   if (form) {
-    form.addEventListener("submit", function (event) {
+    form.addEventListener("submit", async function (event) {
       event.preventDefault();
 
       const data = new FormData(form);
-      const legalConfirm = document.getElementById("legalConfirm");
+      const submitButton = form.querySelector('button[type="submit"]');
 
-      const nome = cleanText(data.get("nome"), 120);
-      const email = cleanText(data.get("email"), 160);
-      const empresa = cleanText(data.get("empresa"), 160);
+      const requiredIds = [
+        "nome", "email", "empresa", "cargo",
+        "tipoEmpresa", "colaboradores", "decisao", "sede",
+        "objetivo", "urgencia", "sponsor", "documentacao",
+        "donoDados", "maturidade", "erp", "crm"
+      ];
 
-      if (!nome || !email || !empresa) {
-        alert("Por favor, preencha pelo menos nome, e-mail e empresa.");
+      const missingFields = requiredIds.filter((id) => !hasValue(id));
+
+      if (missingFields.length) {
+        alert("Preencha todos os campos obrigatórios antes de enviar.");
         return;
       }
+
+      const legalConfirm = document.getElementById("legalConfirm");
 
       if (legalConfirm && !legalConfirm.checked) {
         alert("Confirme que o diagnóstico inicial não contém dados sensíveis ou confidenciais.");
         return;
       }
 
-      const lines = [
-        "Diagnóstico inicial H.A.R.A Labs",
-        "",
-        "AVISO:",
-        "O remetente confirmou que este diagnóstico inicial não contém credenciais, documentos internos, dados pessoais de terceiros, dados sensíveis detalhados ou informações confidenciais.",
-        "",
-        `Nome: ${nome}`,
-        `E-mail: ${email}`,
-        `Empresa: ${empresa}`,
-        `Cargo / função: ${cleanText(data.get("cargo"), 120) || "Não informado"}`,
-        `Perfil da empresa: ${cleanText(data.get("tipoEmpresa"), 120) || "Não informado"}`,
-        `Quantidade de colaboradores: ${cleanText(data.get("colaboradores"), 80) || "Não informado"}`,
-        `Origem das decisões de TI: ${cleanText(data.get("decisao"), 120) || "Não informado"}`,
-        `País da sede / matriz: ${cleanText(data.get("sede"), 120) || "Não informado"}`,
-        "",
-        `Objetivo principal: ${cleanText(data.get("objetivo"), 160) || "Não informado"}`,
-        `Urgência: ${cleanText(data.get("urgencia"), 120) || "Não informado"}`,
-        `Patrocinador interno: ${cleanText(data.get("sponsor"), 120) || "Não informado"}`,
-        `Documentação dos processos: ${cleanText(data.get("documentacao"), 160) || "Não informado"}`,
-        `Dono dos dados: ${cleanText(data.get("donoDados"), 160) || "Não informado"}`,
-        `Maturidade percebida: ${cleanText(data.get("maturidade"), 120) || "Não informado"}`,
-        "",
-        `ERP principal: ${cleanText(data.get("erp"), 120) || "Não informado"}`,
-        `CRM principal: ${cleanText(data.get("crm"), 120) || "Não informado"}`,
-        "",
-        `Tecnologias / plataformas: ${getCheckedValues("tech") || "Não informado"}`,
-        `Outras tecnologias: ${cleanText(data.get("techOutro"), 240) || "Não informado"}`,
-        "",
-        `Sensibilidade dos dados: ${getCheckedValues("sensibilidade") || "Não informado"}`,
-        `Requisitos de compliance / governança: ${getCheckedValues("compliance") || "Não informado"}`,
-        `Onde está a maior dor: ${getCheckedValues("maiorDor") || "Não informado"}`,
-        `Arquitetura aceitável: ${getCheckedValues("arquitetura") || "Não informado"}`,
-        "",
-        `Bases / repositórios de dados: ${getCheckedValues("dadosBase") || "Não informado"}`,
-        "Outras fontes / contexto de dados:",
-        cleanTextarea(data.get("dadosOutro"), 800) || "Não informado",
-        "",
-        "Principais dores / sinais de fragilidade:",
-        cleanTextarea(data.get("dores"), 1000) || "Não informado",
-        "",
-        "Uso atual ou interesse em IA:",
-        cleanTextarea(data.get("ia"), 1000) || "Não informado"
-      ];
+      const payload = {
+        nome: cleanText(data.get("nome"), 120),
+        email: cleanText(data.get("email"), 160),
+        empresa: cleanText(data.get("empresa"), 160),
+        cargo: cleanText(data.get("cargo"), 120),
+        tipoEmpresa: cleanText(data.get("tipoEmpresa"), 120),
+        colaboradores: cleanText(data.get("colaboradores"), 80),
+        decisao: cleanText(data.get("decisao"), 120),
+        sede: cleanText(data.get("sede"), 120),
+        objetivo: cleanText(data.get("objetivo"), 160),
+        urgencia: cleanText(data.get("urgencia"), 120),
+        sponsor: cleanText(data.get("sponsor"), 120),
+        documentacao: cleanText(data.get("documentacao"), 160),
+        donoDados: cleanText(data.get("donoDados"), 160),
+        maturidade: cleanText(data.get("maturidade"), 120),
+        erp: cleanText(data.get("erp"), 120),
+        crm: cleanText(data.get("crm"), 120),
+        tech: getCheckedArray("tech"),
+        techOutro: cleanText(data.get("techOutro"), 240),
+        sensibilidade: getCheckedArray("sensibilidade"),
+        compliance: getCheckedArray("compliance"),
+        maiorDor: getCheckedArray("maiorDor"),
+        arquitetura: getCheckedArray("arquitetura"),
+        dadosBase: getCheckedArray("dadosBase"),
+        dadosOutro: cleanTextarea(data.get("dadosOutro"), 800),
+        dores: cleanTextarea(data.get("dores"), 1000),
+        ia: cleanTextarea(data.get("ia"), 1000),
+        legalConfirm: Boolean(legalConfirm && legalConfirm.checked)
+      };
 
-      const subject = encodeURIComponent(`Diagnóstico inicial H.A.R.A Labs - ${empresa}`);
-      const body = encodeURIComponent(lines.join("\n"));
+      const missingGroups = validateRequiredGroups(payload);
 
-      window.location.href =
-        `mailto:contato@haralabs.com.br?subject=${subject}&body=${body}`;
+      if (missingGroups.length) {
+        alert("Preencha também: " + missingGroups.join(", "));
+        return;
+      }
+
+      try {
+        if (submitButton) {
+          submitButton.disabled = true;
+          submitButton.textContent = "Enviando...";
+        }
+
+        const response = await fetch("/api/diagnostico", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || !result.ok) {
+          throw new Error(result.message || "Falha ao enviar formulário.");
+        }
+
+        alert("Formulário enviado com sucesso. Obrigado.");
+        form.reset();
+      } catch (error) {
+        alert(error.message || "Não foi possível enviar agora. Tente contato direto por e-mail.");
+      } finally {
+        if (submitButton) {
+          submitButton.disabled = false;
+          submitButton.textContent = "Enviar formulário";
+        }
+      }
     });
   }
 })();

@@ -18,17 +18,43 @@ function cleanText(value, maxLength = 1000) {
 }
 
 function cleanArray(value, maxLength = 700) {
-  if (!Array.isArray(value)) return cleanText(value, maxLength);
+  if (!Array.isArray(value)) return [];
 
   return value
     .map((item) => cleanText(item, 80))
     .filter(Boolean)
+    .slice(0, 40)
     .join(", ")
     .slice(0, maxLength);
 }
 
 function isLikelyEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
+}
+
+function missingRequired(payload) {
+  const required = [
+    ["nome", "Nome"],
+    ["email", "E-mail"],
+    ["empresa", "Empresa"],
+    ["cargo", "Cargo / função"],
+    ["tipoEmpresa", "Perfil da empresa"],
+    ["colaboradores", "Quantidade de colaboradores"],
+    ["decisao", "Origem das decisões de TI"],
+    ["sede", "País da sede / matriz"],
+    ["objetivo", "Objetivo principal"],
+    ["urgencia", "Urgência"],
+    ["sponsor", "Patrocinador interno"],
+    ["documentacao", "Documentação dos processos"],
+    ["donoDados", "Dono dos dados"],
+    ["maturidade", "Maturidade percebida"],
+    ["erp", "ERP principal"],
+    ["crm", "CRM principal"]
+  ];
+
+  return required
+    .filter(([key]) => !payload[key])
+    .map(([, label]) => label);
 }
 
 async function handleDiagnostico(request) {
@@ -70,10 +96,13 @@ async function handleDiagnostico(request) {
     legalConfirm: Boolean(raw.legalConfirm)
   };
 
-  if (!payload.nome || !payload.email || !payload.empresa) {
+  const missing = missingRequired(payload);
+
+  if (missing.length) {
     return json({
       ok: false,
-      message: "Nome, e-mail e empresa são obrigatórios."
+      message: "Campos obrigatórios ausentes.",
+      missing
     }, 400);
   }
 
@@ -81,6 +110,33 @@ async function handleDiagnostico(request) {
     return json({
       ok: false,
       message: "E-mail inválido."
+    }, 400);
+  }
+
+  if (!payload.tech && !payload.techOutro) {
+    return json({
+      ok: false,
+      message: "Informe ao menos uma tecnologia/plataforma ou preencha Outras tecnologias."
+    }, 400);
+  }
+
+  const groupChecks = [
+    ["sensibilidade", "Sensibilidade dos dados"],
+    ["compliance", "Requisitos de compliance / governança"],
+    ["maiorDor", "Onde está a maior dor"],
+    ["arquitetura", "Arquitetura aceitável"],
+    ["dadosBase", "Onde os dados / documentos vivem hoje"]
+  ];
+
+  const missingGroups = groupChecks
+    .filter(([key]) => !payload[key])
+    .map(([, label]) => label);
+
+  if (missingGroups.length) {
+    return json({
+      ok: false,
+      message: "Grupos obrigatórios ausentes.",
+      missing: missingGroups
     }, 400);
   }
 
@@ -93,7 +149,7 @@ async function handleDiagnostico(request) {
 
   return json({
     ok: true,
-    message: "Diagnóstico recebido e sanitizado. Score e análise são processados internamente.",
+    message: "Formulário recebido e sanitizado. Score e análise são processados internamente.",
     received_at: new Date().toISOString(),
     payload
   });
