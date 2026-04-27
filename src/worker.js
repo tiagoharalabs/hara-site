@@ -32,6 +32,16 @@ function isLikelyEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
 }
 
+function slugify(value) {
+  return String(value || "empresa")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60) || "empresa";
+}
+
 async function verifyTurnstile(token, secret, remoteIp) {
   if (!secret) {
     return {
@@ -92,6 +102,51 @@ function missingRequired(payload) {
   return required
     .filter(([key]) => !payload[key])
     .map(([, label]) => label);
+}
+
+async function saveDiagnosticToR2(env, payload, request) {
+  if (!env.DIAGNOSTICS_BUCKET) {
+    throw new Error("DIAGNOSTICS_BUCKET não configurado.");
+  }
+
+  const now = new Date();
+  const iso = now.toISOString();
+  const day = iso.slice(0, 10);
+  const safeCompany = slugify(payload.empresa);
+  const randomPart = crypto.randomUUID();
+
+  const key =
+    `diagnosticos/raw/${day}/` +
+    `${iso.replace(/[:.]/g, "-")}_${safeCompany}_${randomPart}.json`;
+
+  const record = {
+    schema_version: "hara_diagnostic_v1",
+    source: "hara-site",
+    received_at: iso,
+    request: {
+      cf_ray: request.headers.get("CF-Ray") || "",
+      ip_country: request.headers.get("CF-IPCountry") || "",
+      user_agent: cleanText(request.headers.get("User-Agent") || "", 240)
+    },
+    payload
+  };
+
+  await env.DIAGNOSTICS_BUCKET.put(
+    key,
+    JSON.stringify(record, null, 2),
+    {
+      httpMetadata: {
+        contentType: "application/json; charset=utf-8"
+      },
+      customMetadata: {
+        source: "hara-site",
+        schema: "hara_diagnostic_v1",
+        empresa: safeCompany
+      }
+    }
+  );
+
+  return key;
 }
 
 async function handleDiagnostico(request, env) {
@@ -208,11 +263,23 @@ async function handleDiagnostico(request, env) {
     }, 400);
   }
 
+  let objectKey;
+
+  try {
+    objectKey = await saveDiagnosticToR2(env, payload, request);
+  } catch (error) {
+    return json({
+      ok: false,
+      message: "Formulário validado, mas falhou ao armazenar o diagnóstico.",
+      detail: cleanText(error.message, 240)
+    }, 500);
+  }
+
   return json({
     ok: true,
-    message: "Formulário recebido e sanitizado. Score e análise são processados internamente.",
+    message: "Formulário recebido e armazenado. Score e análise são processados internamente.",
     received_at: new Date().toISOString(),
-    payload
+    key: objectKey
   });
 }
 
