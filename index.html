@@ -357,6 +357,62 @@
         align-items: center;
       }
 
+      .diagnostic-form {
+        display: grid;
+        gap: 18px;
+      }
+
+      .form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .field {
+        display: grid;
+        gap: 7px;
+      }
+
+      .field.full {
+        grid-column: 1 / -1;
+      }
+
+      label {
+        color: var(--text);
+        font-size: 0.9rem;
+        font-weight: 700;
+      }
+
+      input,
+      select,
+      textarea {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: rgba(8, 12, 22, 0.74);
+        color: var(--text);
+        padding: 12px 13px;
+        font: inherit;
+        outline: none;
+      }
+
+      textarea {
+        min-height: 120px;
+        resize: vertical;
+      }
+
+      input:focus,
+      select:focus,
+      textarea:focus {
+        border-color: rgba(217, 164, 65, 0.55);
+        box-shadow: 0 0 0 3px rgba(217, 164, 65, 0.12);
+      }
+
+      .form-note {
+        font-size: 0.92rem;
+        color: var(--muted);
+      }
+
       footer {
         padding: 34px 0 46px;
         color: var(--muted);
@@ -412,6 +468,10 @@
         .button {
           width: 100%;
         }
+
+        .form-grid {
+          grid-template-columns: 1fr;
+        }
       }
     </style>
   </head>
@@ -442,6 +502,7 @@
           <a href="#atuacao">Atuação</a>
           <a href="#compliance">Compliance</a>
           <a href="#dados">Dados críticos</a>
+          <a href="#diagnostico">Diagnóstico</a>
           <a href="#contato">Contato</a>
         </nav>
       </div>
@@ -727,6 +788,178 @@
         </div>
       </section>
 
+      <section id="diagnostico">
+        <div class="section-head">
+          <h2>Diagnóstico inicial</h2>
+          <p>
+            Antes de propor qualquer solução, avaliamos o contexto operacional
+            da empresa: estrutura, sistemas, dados, contratos de nuvem,
+            governança, integração, maturidade de processos e grau de
+            dependência entre decisões locais e globais.
+          </p>
+        </div>
+
+        <div class="card">
+          <form class="diagnostic-form" id="diagnosticForm">
+            <div class="form-grid">
+              <div class="field">
+                <label for="nome">Nome</label>
+                <input
+                  id="nome"
+                  name="nome"
+                  type="text"
+                  placeholder="Seu nome"
+                  required
+                />
+              </div>
+
+              <div class="field">
+                <label for="email">E-mail</label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  placeholder="seu@email.com"
+                  required
+                />
+              </div>
+
+              <div class="field">
+                <label for="empresa">Empresa</label>
+                <input
+                  id="empresa"
+                  name="empresa"
+                  type="text"
+                  placeholder="Nome da empresa"
+                  required
+                />
+              </div>
+
+              <div class="field">
+                <label for="colaboradores">Quantidade de colaboradores</label>
+                <select id="colaboradores" name="colaboradores">
+                  <option value="Não informado">Selecione</option>
+                  <option>1 a 20</option>
+                  <option>21 a 100</option>
+                  <option>101 a 500</option>
+                  <option>501 a 2.000</option>
+                  <option>Acima de 2.000</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="tipoEmpresa">Perfil da empresa</label>
+                <select id="tipoEmpresa" name="tipoEmpresa">
+                  <option value="Não informado">Selecione</option>
+                  <option>Empresa nacional</option>
+                  <option>Multinacional com sede no Brasil</option>
+                  <option>Multinacional com sede fora do Brasil</option>
+                  <option>Grupo regional / LATAM</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="decisao">Origem das decisões de TI</label>
+                <select id="decisao" name="decisao">
+                  <option value="Não informado">Selecione</option>
+                  <option>Principalmente locais</option>
+                  <option>Regionais</option>
+                  <option>Globais</option>
+                  <option>Mistas</option>
+                  <option>Não está claro</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="sede">País da sede / matriz</label>
+                <input
+                  id="sede"
+                  name="sede"
+                  type="text"
+                  placeholder="Ex.: Brasil, EUA, Alemanha, Japão"
+                />
+              </div>
+
+              <div class="field">
+                <label for="erp">ERP principal</label>
+                <select id="erp" name="erp">
+                  <option value="Não informado">Selecione</option>
+                  <option>SAP</option>
+                  <option>Oracle / JD Edwards</option>
+                  <option>Totvs</option>
+                  <option>Senior</option>
+                  <option>Sankhya</option>
+                  <option>Microsoft Dynamics</option>
+                  <option>Outro</option>
+                  <option>Não possui ERP estruturado</option>
+                </select>
+              </div>
+
+              <div class="field full">
+                <label for="saas"
+                  >SaaS, nuvem e plataformas já utilizadas</label
+                >
+                <textarea
+                  id="saas"
+                  name="saas"
+                  placeholder="Ex.: AWS, Azure, Google Cloud, IBM, Oracle Cloud, Salesforce, SAP Cloud, Microsoft 365, Google Workspace, ServiceNow, Power BI, Tableau, Snowflake, Databricks..."
+                ></textarea>
+              </div>
+
+              <div class="field full">
+                <label for="dados"
+                  >Onde os dados e documentos vivem hoje?</label
+                >
+                <textarea
+                  id="dados"
+                  name="dados"
+                  placeholder="Ex.: bancos estruturados, planilhas, SharePoint, pastas locais, data warehouse, data lake, sistemas legados, documentos soltos..."
+                ></textarea>
+              </div>
+
+              <div class="field full">
+                <label for="maturidade"
+                  >Principais dores ou sinais de fragilidade</label
+                >
+                <textarea
+                  id="maturidade"
+                  name="maturidade"
+                  placeholder="Ex.: dados inconsistentes, integração manual, dependência de planilhas, falta de rastreabilidade, processos não documentados, decisões sem evidência, dificuldade com IA ou automação..."
+                ></textarea>
+              </div>
+
+              <div class="field full">
+                <label for="ia">Uso atual ou interesse em IA</label>
+                <textarea
+                  id="ia"
+                  name="ia"
+                  placeholder="Ex.: já usam ChatGPT/Copilot? existe política interna? dados sensíveis podem ir para SaaS? há interesse em IA local, nuvem ou híbrida?"
+                ></textarea>
+              </div>
+            </div>
+
+            <p class="form-note">
+              Este diagnóstico inicial não substitui uma avaliação técnica
+              completa. Ele serve para entender o tamanho do gap entre sistemas,
+              dados, processos, governança e uso real de IA antes de propor
+              qualquer arquitetura.
+            </p>
+
+            <div class="hero-actions">
+              <button class="button button-gold" type="submit">
+                Enviar diagnóstico por e-mail
+              </button>
+              <a
+                class="button button-ghost"
+                href="mailto:contato@haralabs.com.br?subject=Diagnóstico%20inicial%20H.A.R.A%20Labs"
+              >
+                Preferir contato direto
+              </a>
+            </div>
+          </form>
+        </div>
+      </section>
+
       <section>
         <div class="quote-card">
           <p>Não vendemos tecnologia. Organizamos como ela deve funcionar.</p>
@@ -776,5 +1009,45 @@
         <span>Arquitetura operacional, dados, compliance e IA aplicada.</span>
       </div>
     </footer>
+    <script>
+          const diagnosticForm = document.getElementById('diagnosticForm');
+
+          if (diagnosticForm) {
+            diagnosticForm.addEventListener('submit', function (event) {
+              event.preventDefault();
+
+              const data = new FormData(diagnosticForm);
+              const lines = [
+                'Diagnóstico inicial H.A.R.A Labs',
+                '',
+                'Nome: ' + (data.get('nome') || ''),
+                'E-mail: ' + (data.get('email') || ''),
+                'Empresa: ' + (data.get('empresa') || ''),
+                'Quantidade de colaboradores: ' + (data.get('colaboradores') || ''),
+                'Perfil da empresa: ' + (data.get('tipoEmpresa') || ''),
+                'Origem das decisões de TI: ' + (data.get('decisao') || ''),
+                'País da sede / matriz: ' + (data.get('sede') || ''),
+                'ERP principal: ' + (data.get('erp') || ''),
+                '',
+                'SaaS, nuvem e plataformas:',
+                data.get('saas') || '',
+                '',
+                'Dados e documentação:',
+                data.get('dados') || '',
+                '',
+                'Principais dores / fragilidades:',
+                data.get('maturidade') || '',
+                '',
+                'Uso atual ou interesse em IA:',
+                data.get('ia') || ''
+              ];
+
+              const subject = encodeURIComponent('Diagnóstico inicial H.A.R.A Labs - ' + (data.get('empresa') || 'empresa'));
+              const body = encodeURIComponent(lines.join('
+      '));
+              window.location.href = 'mailto:contato@haralabs.com.br?subject=' + subject + '&body=' + body;
+            });
+          }
+    </script>
   </body>
 </html>
