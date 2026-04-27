@@ -575,3 +575,146 @@ button:disabled,
     #050505;
   padding: 10px;
 }
+
+/* ===== H.A.R.A Site v1.4 — hero final refinado ===== */
+
+.visual-card.manual-hero-carousel,
+.hero-visual.manual-hero-carousel,
+.hero-showcase.manual-hero-carousel {
+  position: relative;
+}
+
+.visual-card.manual-hero-carousel .slide,
+.hero-visual.manual-hero-carousel .slide,
+.hero-showcase.manual-hero-carousel .slide {
+  display: none;
+}
+
+.visual-card.manual-hero-carousel .slide.active,
+.hero-visual.manual-hero-carousel .slide.active,
+.hero-showcase.manual-hero-carousel .slide.active {
+  display: flex;
+  flex-direction: column;
+}
+
+.visual-card.manual-hero-carousel .slide img,
+.hero-visual.manual-hero-carousel .slide img,
+.hero-showcase.manual-hero-carousel .slide img {
+  width: 100%;
+  height: auto;
+  min-height: 360px;
+  max-height: 430px;
+  object-fit: contain;
+  display: block;
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at center, rgba(240, 180, 41, 0.08), transparent 52%),
+    #050505;
+  padding: 6px;
+}
+
+.visual-card.manual-hero-carousel .slide img.is-infographic,
+.hero-visual.manual-hero-carousel .slide img.is-infographic,
+.hero-showcase.manual-hero-carousel .slide img.is-infographic {
+  object-fit: contain;
+  object-position: center;
+  background: #050505;
+  padding: 4px;
+}
+
+.visual-card.manual-hero-carousel .slide h3,
+.hero-visual.manual-hero-carousel .slide h3,
+.hero-showcase.manual-hero-carousel .slide h3 {
+  margin-top: 18px;
+}
+
+.visual-card.manual-hero-carousel .slide p,
+.hero-visual.manual-hero-carousel .slide p,
+.hero-showcase.manual-hero-carousel .slide p {
+  color: rgba(246, 241, 222, 0.78);
+}
+
+.hero-nav {
+  position: absolute;
+  top: 42%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border: 1px solid rgba(240, 180, 41, 0.42);
+  background: rgba(5, 5, 5, 0.86);
+  color: #f0b429;
+  cursor: pointer;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  line-height: 1;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.42);
+}
+
+.hero-nav:hover {
+  background: rgba(18, 18, 18, 0.96);
+  border-color: rgba(255, 207, 77, 0.72);
+}
+
+.hero-nav.prev {
+  left: 12px;
+}
+
+.hero-nav.next {
+  right: 12px;
+}
+
+.visual-card.manual-hero-carousel .dots,
+.visual-card.manual-hero-carousel .hero-dots,
+.hero-visual.manual-hero-carousel .dots,
+.hero-visual.manual-hero-carousel .hero-dots,
+.hero-showcase.manual-hero-carousel .dots,
+.hero-showcase.manual-hero-carousel .hero-dots {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.visual-card.manual-hero-carousel .dot,
+.visual-card.manual-hero-carousel .hero-dot,
+.hero-visual.manual-hero-carousel .dot,
+.hero-visual.manual-hero-carousel .hero-dot,
+.hero-showcase.manual-hero-carousel .dot,
+.hero-showcase.manual-hero-carousel .hero-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  border: 0;
+  background: rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  padding: 0;
+}
+
+.visual-card.manual-hero-carousel .dot.active,
+.visual-card.manual-hero-carousel .hero-dot.active,
+.hero-visual.manual-hero-carousel .dot.active,
+.hero-visual.manual-hero-carousel .hero-dot.active,
+.hero-showcase.manual-hero-carousel .dot.active,
+.hero-showcase.manual-hero-carousel .hero-dot.active {
+  background: #f0b429;
+  box-shadow: 0 0 0 4px rgba(240, 180, 41, 0.12);
+}
+
+@media (max-width: 900px) {
+  .visual-card.manual-hero-carousel .slide img,
+  .hero-visual.manual-hero-carousel .slide img,
+  .hero-showcase.manual-hero-carousel .slide img {
+    min-height: 260px;
+    max-height: 340px;
+  }
+
+  .hero-nav {
+    width: 34px;
+    height: 34px;
+    font-size: 22px;
+  }
+}

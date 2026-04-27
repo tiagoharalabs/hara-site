@@ -1,40 +1,4 @@
-(function () {
-  const slides = Array.from(document.querySelectorAll(".slide"));
-  const dots = Array.from(document.querySelectorAll(".dot"));
-  let current = 0;
-  let intervalId = null;
-
-  function showSlide(index) {
-    slides.forEach((slide, i) => slide.classList.toggle("active", i === index));
-    dots.forEach((dot, i) => dot.classList.toggle("active", i === index));
-    current = index;
-  }
-
-  function nextSlide() {
-    if (!slides.length) return;
-    showSlide((current + 1) % slides.length);
-  }
-
-  function startSlider() {
-    if (slides.length <= 1) return;
-    intervalId = setInterval(nextSlide, 4500);
-  }
-
-  function resetSlider() {
-    if (intervalId) clearInterval(intervalId);
-    startSlider();
-  }
-
-  dots.forEach((dot, index) => {
-    dot.addEventListener("click", function () {
-      showSlide(index);
-      resetSlider();
-    });
-  });
-
-  showSlide(0);
-  startSlider();
-
+document.addEventListener("DOMContentLoaded", function () {
   function cleanText(value, maxLength = 1000) {
     return String(value || "")
       .replace(/[<>{}[\]\\`]/g, "")
@@ -80,9 +44,134 @@
     return missing;
   }
 
-  const form = document.getElementById("diagnosticForm");
+  function setupHeroCarousel() {
+    const slides = Array.from(document.querySelectorAll(".slide"));
+    if (!slides.length) return;
 
-  if (form) {
+    const root =
+      slides[0].closest(".visual-card") ||
+      slides[0].closest(".hero-visual") ||
+      slides[0].closest(".hero-showcase") ||
+      slides[0].parentElement;
+
+    if (!root) return;
+
+    root.classList.add("manual-hero-carousel");
+
+    const slideConfig = [
+      {
+        image: "assets/images/hero-ia-realidade.png",
+        title: "Arquitetura operacional",
+        description: "Valor real exige dados, engenharia, modelagem e operacionalização.",
+        infographic: true
+      },
+      {
+        image: "assets/images/hara-logo-premium.webp",
+        title: "Governança de dados",
+        description: "Origem, dono, qualidade e confiança antes da automação.",
+        infographic: false
+      },
+      {
+        image: "assets/images/capivara-01.webp",
+        title: "IA como parte do fluxo",
+        description: "IA amplifica estrutura. Não corrige desorganização.",
+        infographic: false
+      }
+    ];
+
+    slides.forEach((slide, index) => {
+      const config = slideConfig[index] || slideConfig[index % slideConfig.length];
+      const img = slide.querySelector("img");
+      const title = slide.querySelector("h3");
+      const desc = slide.querySelector("p");
+
+      if (img) {
+        img.src = config.image;
+        img.alt = config.title;
+        img.classList.toggle("is-infographic", Boolean(config.infographic));
+      }
+
+      if (title) title.textContent = config.title;
+      if (desc) desc.textContent = config.description;
+    });
+
+    let current = 0;
+
+    let dots = Array.from(root.querySelectorAll(".dot"));
+    let dotsWrap =
+      root.querySelector(".dots") ||
+      root.querySelector(".hero-dots") ||
+      root.querySelector(".slider-dots") ||
+      root.querySelector(".carousel-dots");
+
+    if (!dotsWrap) {
+      dotsWrap = document.createElement("div");
+      dotsWrap.className = "hero-dots";
+      root.appendChild(dotsWrap);
+    }
+
+    if (!dots.length) {
+      dotsWrap.innerHTML = "";
+      slides.forEach(function (_, index) {
+        const dot = document.createElement("button");
+        dot.type = "button";
+        dot.className = "dot";
+        dot.setAttribute("aria-label", `Ir para slide ${index + 1}`);
+        dotsWrap.appendChild(dot);
+      });
+      dots = Array.from(root.querySelectorAll(".dot"));
+    }
+
+    root.querySelectorAll(".hero-nav").forEach((item) => item.remove());
+
+    const prevBtn = document.createElement("button");
+    prevBtn.type = "button";
+    prevBtn.className = "hero-nav prev";
+    prevBtn.setAttribute("aria-label", "Slide anterior");
+    prevBtn.textContent = "‹";
+
+    const nextBtn = document.createElement("button");
+    nextBtn.type = "button";
+    nextBtn.className = "hero-nav next";
+    nextBtn.setAttribute("aria-label", "Próximo slide");
+    nextBtn.textContent = "›";
+
+    root.appendChild(prevBtn);
+    root.appendChild(nextBtn);
+
+    function showSlide(index) {
+      current = index;
+
+      slides.forEach((slide, i) => {
+        slide.classList.toggle("active", i === current);
+      });
+
+      dots.forEach((dot, i) => {
+        dot.classList.toggle("active", i === current);
+      });
+    }
+
+    prevBtn.addEventListener("click", function () {
+      showSlide((current - 1 + slides.length) % slides.length);
+    });
+
+    nextBtn.addEventListener("click", function () {
+      showSlide((current + 1) % slides.length);
+    });
+
+    dots.forEach((dot, index) => {
+      dot.addEventListener("click", function () {
+        showSlide(index);
+      });
+    });
+
+    showSlide(0);
+  }
+
+  function setupDiagnosticForm() {
+    const form = document.getElementById("diagnosticForm");
+    if (!form) return;
+
     form.addEventListener("submit", async function (event) {
       event.preventDefault();
 
@@ -193,4 +282,7 @@
       }
     });
   }
-})();
+
+  setupHeroCarousel();
+  setupDiagnosticForm();
+});
