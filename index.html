@@ -16,7 +16,9 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="assets/css/styles.css" />
-  </head>
+    <link rel="preconnect" href="https://challenges.cloudflare.com" />
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+</head>
   <body>
     <header class="topbar">
       <div class="shell topbar-inner">
@@ -752,6 +754,19 @@
             Não envie dados sensíveis, credenciais, documentos internos, informações pessoais de terceiros ou dados confidenciais neste diagnóstico inicial.
             O objetivo é entender contexto, maturidade e estrutura geral do ambiente. A avaliação de aderência e score é feita internamente pela H.A.R.A Labs.
           </p>
+
+            <div class="field full">
+              <label>Verificação de segurança</label>
+              <div class="turnstile-box">
+                <div
+                  class="cf-turnstile"
+                  data-sitekey="0x4AAAAAADEZ6ZEdazOVA7aH"
+                  data-theme="dark"
+                  data-size="flexible"
+                  data-action="diagnostic"
+                ></div>
+              </div>
+            </div>
 
           <div class="hero-actions">
             <button class="button button-gold" type="submit">Enviar formulário</button>

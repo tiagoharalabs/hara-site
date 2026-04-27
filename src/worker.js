@@ -32,6 +32,43 @@ function isLikelyEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
 }
 
+async function verifyTurnstile(token, secret, remoteIp) {
+  if (!secret) {
+    return {
+      success: false,
+      "error-codes": ["turnstile-secret-not-configured"]
+    };
+  }
+
+  try {
+    const response = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        secret,
+        response: token,
+        remoteip: remoteIp
+      })
+    });
+
+    if (!response.ok) {
+      return {
+        success: false,
+        "error-codes": [`siteverify-http-${response.status}`]
+      };
+    }
+
+    return await response.json();
+  } catch (_error) {
+    return {
+      success: false,
+      "error-codes": ["siteverify-request-failed"]
+    };
+  }
+}
+
 function missingRequired(payload) {
   const required = [
     ["nome", "Nome"],
@@ -57,13 +94,37 @@ function missingRequired(payload) {
     .map(([, label]) => label);
 }
 
-async function handleDiagnostico(request) {
+async function handleDiagnostico(request, env) {
   let raw;
 
   try {
     raw = await request.json();
   } catch (_error) {
     return json({ ok: false, message: "JSON inválido." }, 400);
+  }
+
+  const turnstileToken = cleanText(raw.turnstileToken || raw["cf-turnstile-response"], 2048);
+
+  if (!turnstileToken) {
+    return json({
+      ok: false,
+      message: "Verificação de segurança obrigatória."
+    }, 400);
+  }
+
+  const remoteIp = request.headers.get("CF-Connecting-IP") || undefined;
+  const turnstile = await verifyTurnstile(
+    turnstileToken,
+    env.TURNSTILE_SECRET_KEY,
+    remoteIp
+  );
+
+  if (!turnstile.success) {
+    return json({
+      ok: false,
+      message: "Falha na verificação de segurança.",
+      turnstile_errors: turnstile["error-codes"] || []
+    }, 403);
   }
 
   const payload = {
@@ -168,7 +229,7 @@ export default {
     }
 
     if (url.pathname === "/api/diagnostico" && request.method === "POST") {
-      return handleDiagnostico(request);
+      return handleDiagnostico(request, env);
     }
 
     if (url.pathname.startsWith("/api/")) {

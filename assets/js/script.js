@@ -137,8 +137,14 @@
         dadosOutro: cleanTextarea(data.get("dadosOutro"), 800),
         dores: cleanTextarea(data.get("dores"), 1000),
         ia: cleanTextarea(data.get("ia"), 1000),
-        legalConfirm: Boolean(legalConfirm && legalConfirm.checked)
+        legalConfirm: Boolean(legalConfirm && legalConfirm.checked),
+        turnstileToken: cleanText(data.get("cf-turnstile-response"), 2048)
       };
+
+      if (!payload.turnstileToken) {
+        alert("Conclua a verificação de segurança antes de enviar.");
+        return;
+      }
 
       const missingGroups = validateRequiredGroups(payload);
 
@@ -169,8 +175,16 @@
 
         alert("Formulário enviado com sucesso. Obrigado.");
         form.reset();
+
+        if (window.turnstile) {
+          window.turnstile.reset();
+        }
       } catch (error) {
         alert(error.message || "Não foi possível enviar agora. Tente contato direto por e-mail.");
+
+        if (window.turnstile) {
+          window.turnstile.reset();
+        }
       } finally {
         if (submitButton) {
           submitButton.disabled = false;
