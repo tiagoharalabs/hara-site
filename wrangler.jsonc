@@ -11,5 +11,11 @@
   },
   "vars": {
     "TURNSTILE_SITE_KEY": "0x4AAAAAADEZ6ZEdazOVA7aH"
-  }
+  },
+  "r2_buckets": [
+    {
+      "binding": "DIAGNOSTICS_BUCKET",
+      "bucket_name": "hara-site-diagnostics-inbox"
+    }
+  ]
 }
