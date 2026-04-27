@@ -880,3 +880,123 @@ button:disabled,
     max-height: 485px;
   }
 }
+
+/* =========================================================
+   HERO DESKTOP EXPANSION — H.A.R.A Labs
+   Ajuste fino para monitores 2K / desktop largo
+   ========================================================= */
+
+@media (min-width: 1280px) {
+  /* container geral do hero */
+  .hero .container,
+  .hero-section .container,
+  .hero-container,
+  .hero-shell,
+  .hero-wrapper {
+    width: min(1500px, calc(100vw - 56px));
+    max-width: 1500px;
+  }
+
+  /* grid principal: texto + painel */
+  .hero-grid,
+  .hero-layout,
+  .hero-content,
+  .hero-main-grid {
+    grid-template-columns: minmax(620px, 1.08fr) minmax(560px, 1fr);
+    gap: 28px;
+    align-items: stretch;
+  }
+
+  /* caixas principais */
+  .hero-card,
+  .hero-copy,
+  .hero-copy-card,
+  .hero-panel,
+  .hero-panel-card,
+  .hero-visual-card {
+    min-height: 760px;
+  }
+
+  /* painel da direita */
+  .hero-panel,
+  .hero-panel-card,
+  .hero-visual-card,
+  .hero-slider-card {
+    padding: 14px 14px 18px;
+  }
+
+  /* área da mídia / imagem dentro do painel */
+  .hero-media,
+  .hero-panel-media,
+  .hero-visual-media,
+  .hero-slide-media,
+  .hero-image-stage,
+  .hero-showcase-media {
+    min-height: 430px;
+    height: clamp(430px, 33vw, 560px);
+    padding: 10px;
+  }
+
+  /* imagem do painel */
+  .hero-media img,
+  .hero-panel-media img,
+  .hero-visual-media img,
+  .hero-slide-media img,
+  .hero-image-stage img,
+  .hero-showcase-media img,
+  .hero-slide-image,
+  .hero-panel-image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: center;
+    display: block;
+  }
+
+  /* legenda / texto inferior do slide */
+  .hero-panel-caption,
+  .hero-slide-caption,
+  .hero-panel-text,
+  .hero-slide-content {
+    padding-top: 14px;
+  }
+}
+
+@media (min-width: 1600px) {
+  .hero .container,
+  .hero-section .container,
+  .hero-container,
+  .hero-shell,
+  .hero-wrapper {
+    width: min(1580px, calc(100vw - 64px));
+    max-width: 1580px;
+  }
+
+  .hero-grid,
+  .hero-layout,
+  .hero-content,
+  .hero-main-grid {
+    grid-template-columns: minmax(660px, 1.08fr) minmax(620px, 1fr);
+    gap: 32px;
+  }
+
+  .hero-media,
+  .hero-panel-media,
+  .hero-visual-media,
+  .hero-slide-media,
+  .hero-image-stage,
+  .hero-showcase-media {
+    height: clamp(460px, 34vw, 620px);
+  }
+}
+
+@media (max-width: 1279px) {
+  .hero .container,
+  .hero-section .container,
+  .hero-container,
+  .hero-shell,
+  .hero-wrapper {
+    width: min(100%, calc(100vw - 32px));
+  }
+}
+
