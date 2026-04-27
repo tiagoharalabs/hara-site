@@ -49,14 +49,25 @@ async function handleDiagnostico(request) {
     colaboradores: cleanText(raw.colaboradores, 80),
     decisao: cleanText(raw.decisao, 120),
     sede: cleanText(raw.sede, 120),
+    objetivo: cleanText(raw.objetivo, 160),
+    urgencia: cleanText(raw.urgencia, 120),
+    sponsor: cleanText(raw.sponsor, 120),
+    documentacao: cleanText(raw.documentacao, 160),
+    donoDados: cleanText(raw.donoDados, 160),
+    maturidade: cleanText(raw.maturidade, 120),
     erp: cleanText(raw.erp, 120),
     crm: cleanText(raw.crm, 120),
     tech: cleanArray(raw.tech, 700),
     techOutro: cleanText(raw.techOutro, 240),
+    sensibilidade: cleanArray(raw.sensibilidade, 700),
+    compliance: cleanArray(raw.compliance, 700),
+    maiorDor: cleanArray(raw.maiorDor, 700),
+    arquitetura: cleanArray(raw.arquitetura, 700),
     dadosBase: cleanArray(raw.dadosBase, 700),
     dadosOutro: cleanText(raw.dadosOutro, 800),
     dores: cleanText(raw.dores, 1000),
-    ia: cleanText(raw.ia, 1000)
+    ia: cleanText(raw.ia, 1000),
+    legalConfirm: Boolean(raw.legalConfirm)
   };
 
   if (!payload.nome || !payload.email || !payload.empresa) {
@@ -73,9 +84,16 @@ async function handleDiagnostico(request) {
     }, 400);
   }
 
+  if (!payload.legalConfirm) {
+    return json({
+      ok: false,
+      message: "Confirmação jurídica obrigatória não informada."
+    }, 400);
+  }
+
   return json({
     ok: true,
-    message: "Diagnóstico recebido e sanitizado.",
+    message: "Diagnóstico recebido e sanitizado. Score e análise são processados internamente.",
     received_at: new Date().toISOString(),
     payload
   });
