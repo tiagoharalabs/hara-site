@@ -1074,3 +1074,46 @@ button:disabled,
     grid-template-columns: minmax(0, 0.96fr) minmax(0, 1.16fr) !important;
   }
 }
+
+/* =========================================================
+   H.A.R.A Site — no-crop final do infográfico hero
+   Mantém a imagem inteira dentro do painel.
+   ========================================================= */
+
+.manual-hero-carousel {
+  overflow: hidden !important;
+}
+
+.manual-hero-carousel .slide {
+  overflow: hidden !important;
+}
+
+.manual-hero-carousel img[src*="hero-ia-realidade"],
+.manual-hero-carousel img.is-infographic {
+  display: block !important;
+  width: 94% !important;
+  max-width: 94% !important;
+  height: auto !important;
+  max-height: none !important;
+  object-fit: contain !important;
+  object-position: center center !important;
+  margin: 0 auto !important;
+  padding: 0 !important;
+  transform: none !important;
+}
+
+@media (min-width: 1180px) {
+  .manual-hero-carousel img[src*="hero-ia-realidade"],
+  .manual-hero-carousel img.is-infographic {
+    width: 96% !important;
+    max-width: 96% !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .manual-hero-carousel img[src*="hero-ia-realidade"],
+  .manual-hero-carousel img.is-infographic {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
