@@ -791,3 +791,92 @@ button:disabled,
     min-height: 430px;
   }
 }
+
+/* ===== H.A.R.A Site v1.4 — ajuste desktop final do hero ===== */
+/* Aumenta a caixa visual da direita só em telas grandes, sem afetar mobile. */
+
+@media (min-width: 1100px) {
+  main,
+  .site-main {
+    overflow-x: hidden;
+  }
+
+  .hero,
+  .hero-section,
+  .hero-grid {
+    max-width: min(1280px, calc(100vw - 64px));
+  }
+
+  .hero-grid,
+  .hero-layout,
+  .hero-content {
+    grid-template-columns: minmax(520px, 1.08fr) minmax(480px, 0.92fr);
+    align-items: stretch;
+  }
+
+  .hero-visual,
+  .visual-card,
+  .hero-showcase {
+    min-height: 680px;
+  }
+
+  .visual-card.manual-hero-carousel,
+  .hero-visual.manual-hero-carousel,
+  .hero-showcase.manual-hero-carousel {
+    min-height: 680px;
+  }
+
+  .visual-card.manual-hero-carousel .slide.active,
+  .hero-visual.manual-hero-carousel .slide.active,
+  .hero-showcase.manual-hero-carousel .slide.active {
+    min-height: 600px;
+  }
+
+  .visual-card.manual-hero-carousel .slide img.is-infographic,
+  .hero-visual.manual-hero-carousel .slide img.is-infographic,
+  .hero-showcase.manual-hero-carousel .slide img.is-infographic {
+    height: 430px;
+    min-height: 430px;
+    max-height: 430px;
+    width: 100%;
+    object-fit: contain;
+  }
+
+  .visual-card.manual-hero-carousel .slide img:not(.is-infographic),
+  .hero-visual.manual-hero-carousel .slide img:not(.is-infographic),
+  .hero-showcase.manual-hero-carousel .slide img:not(.is-infographic) {
+    height: 460px;
+    min-height: 460px;
+    max-height: 460px;
+    width: 100%;
+    object-fit: cover;
+  }
+
+  .hero-nav {
+    top: 37%;
+  }
+}
+
+@media (min-width: 1400px) {
+  .hero,
+  .hero-section,
+  .hero-grid {
+    max-width: 1320px;
+  }
+
+  .visual-card.manual-hero-carousel .slide img.is-infographic,
+  .hero-visual.manual-hero-carousel .slide img.is-infographic,
+  .hero-showcase.manual-hero-carousel .slide img.is-infographic {
+    height: 455px;
+    min-height: 455px;
+    max-height: 455px;
+  }
+
+  .visual-card.manual-hero-carousel .slide img:not(.is-infographic),
+  .hero-visual.manual-hero-carousel .slide img:not(.is-infographic),
+  .hero-showcase.manual-hero-carousel .slide img:not(.is-infographic) {
+    height: 485px;
+    min-height: 485px;
+    max-height: 485px;
+  }
+}
