@@ -535,3 +535,32 @@ footer {
     width: 100%;
   }
 }
+
+.turnstile-box {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 78px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.legal-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.legal-check input {
+  width: auto;
+  margin-top: 4px;
+}
+
+button:disabled,
+.button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+}
