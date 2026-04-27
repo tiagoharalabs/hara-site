@@ -1002,429 +1002,75 @@ button:disabled,
 
 
 /* =========================================================
-   H.A.R.A Site v1.4 — ajuste final da área de exibição
-   Objetivo: aumentar o palco do painel direito sem trocar imagem
+   H.A.R.A Site v1.5 — ajuste seguro do hero sem corte
+   Objetivo: aumentar a área útil do painel direito
+   sem estourar o container da página.
    ========================================================= */
 
 @media (min-width: 1180px) {
-  /* abre um pouco o bloco principal da landing */
-  .hero,
-  .hero-section,
-  .hero-grid {
-    max-width: min(1360px, calc(100vw - 56px)) !important;
-  }
-
-  /* dá um pouco mais de espaço para o painel visual da direita */
   .hero-grid,
   .hero-layout,
   .hero-content {
-    grid-template-columns: minmax(540px, 0.96fr) minmax(540px, 1.04fr) !important;
-    gap: 28px !important;
-    align-items: stretch !important;
-  }
-
-  /* aumenta a caixa mãe do painel visual */
-  .visual-card.manual-hero-carousel,
-  .hero-visual.manual-hero-carousel,
-  .hero-showcase.manual-hero-carousel {
-    min-height: 720px !important;
-    padding: 18px !important;
-  }
-
-  /* aumenta a área útil do slide ativo */
-  .visual-card.manual-hero-carousel .slide.active,
-  .hero-visual.manual-hero-carousel .slide.active,
-  .hero-showcase.manual-hero-carousel .slide.active {
-    min-height: 635px !important;
-  }
-
-  /* aumenta especificamente o infográfico */
-  .visual-card.manual-hero-carousel .slide img.is-infographic,
-  .hero-visual.manual-hero-carousel .slide img.is-infographic,
-  .hero-showcase.manual-hero-carousel .slide img.is-infographic {
-    height: 500px !important;
-    min-height: 500px !important;
-    max-height: 500px !important;
-    width: 100% !important;
-    object-fit: contain !important;
-    object-position: center !important;
-    padding: 0 !important;
-  }
-
-  /* mantém a capivara/logo preenchendo bonito quando chegar no último slide */
-  .visual-card.manual-hero-carousel .slide img:not(.is-infographic),
-  .hero-visual.manual-hero-carousel .slide img:not(.is-infographic),
-  .hero-showcase.manual-hero-carousel .slide img:not(.is-infographic) {
-    height: 500px !important;
-    min-height: 500px !important;
-    max-height: 500px !important;
-    width: 100% !important;
-    object-fit: cover !important;
-    object-position: center !important;
-    padding: 0 !important;
-  }
-
-  /* reposiciona setas para acompanhar o novo palco */
-  .hero-nav {
-    top: 38% !important;
-  }
-}
-
-@media (min-width: 1500px) {
-  .hero,
-  .hero-section,
-  .hero-grid {
-    max-width: min(1440px, calc(100vw - 72px)) !important;
-  }
-
-  .visual-card.manual-hero-carousel,
-  .hero-visual.manual-hero-carousel,
-  .hero-showcase.manual-hero-carousel {
-    min-height: 760px !important;
-  }
-
-  .visual-card.manual-hero-carousel .slide img.is-infographic,
-  .hero-visual.manual-hero-carousel .slide img.is-infographic,
-  .hero-showcase.manual-hero-carousel .slide img.is-infographic,
-  .visual-card.manual-hero-carousel .slide img:not(.is-infographic),
-  .hero-visual.manual-hero-carousel .slide img:not(.is-infographic),
-  .hero-showcase.manual-hero-carousel .slide img:not(.is-infographic) {
-    height: 535px !important;
-    min-height: 535px !important;
-    max-height: 535px !important;
-  }
-}
-
-/* =========================================================
-   H.A.R.A Site v1.4 — correção segura do hero
-   Corrige crop/estouro sem trocar imagem nem reabrir layout.
-   ========================================================= */
-
-html,
-body {
-  overflow-x: hidden;
-}
-
-@media (min-width: 1100px) {
-  .hero,
-  .hero-section,
-  .hero-grid {
-    width: min(1240px, calc(100vw - 48px)) !important;
-    max-width: min(1240px, calc(100vw - 48px)) !important;
-    margin-left: auto !important;
-    margin-right: auto !important;
-  }
-
-  .hero-grid,
-  .hero-layout,
-  .hero-content {
-    grid-template-columns: minmax(0, 1.03fr) minmax(0, 0.97fr) !important;
+    grid-template-columns: minmax(0, 0.98fr) minmax(0, 1.12fr) !important;
     gap: 24px !important;
     align-items: stretch !important;
   }
 
+  .hero-grid > *,
+  .hero-layout > *,
+  .hero-content > * {
+    min-width: 0 !important;
+  }
+
+  .manual-hero-carousel,
   .visual-card.manual-hero-carousel,
   .hero-visual.manual-hero-carousel,
   .hero-showcase.manual-hero-carousel {
-    min-width: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
-    min-height: 660px !important;
-    padding: 18px !important;
+    min-width: 0 !important;
+    padding: 14px !important;
     overflow: hidden !important;
   }
 
-  .visual-card.manual-hero-carousel .slide.active,
-  .hero-visual.manual-hero-carousel .slide.active,
-  .hero-showcase.manual-hero-carousel .slide.active {
-    min-height: auto !important;
+  .manual-hero-carousel .slide,
+  .manual-hero-carousel .slide.active {
     width: 100% !important;
-    max-width: 100% !important;
+    min-width: 0 !important;
   }
 
-  /* Fluxo: nunca cortar. Sempre preencher a largura útil mantendo proporção. */
-  .visual-card.manual-hero-carousel .slide img[src*="hero-ia-realidade"],
-  .hero-visual.manual-hero-carousel .slide img[src*="hero-ia-realidade"],
-  .hero-showcase.manual-hero-carousel .slide img[src*="hero-ia-realidade"],
-  .visual-card.manual-hero-carousel .slide img.is-infographic,
-  .hero-visual.manual-hero-carousel .slide img.is-infographic,
-  .hero-showcase.manual-hero-carousel .slide img.is-infographic {
+  .manual-hero-carousel img[src*="hero-ia-realidade"] {
     display: block !important;
     width: 100% !important;
+    max-width: 100% !important;
     height: auto !important;
-    min-height: 0 !important;
-    max-height: none !important;
     object-fit: contain !important;
-    object-position: center !important;
-    padding: 0 !important;
-    background: #050505 !important;
-    border-radius: 12px !important;
+    object-position: center top !important;
+    margin: 0 auto !important;
   }
 
-  /* Capivara/logo: volta a preencher bonito no terceiro slide. */
-  .visual-card.manual-hero-carousel .slide img[src*="hara-logo-premium"],
-  .hero-visual.manual-hero-carousel .slide img[src*="hara-logo-premium"],
-  .hero-showcase.manual-hero-carousel .slide img[src*="hara-logo-premium"] {
+  .manual-hero-carousel img[src*="hara-logo-premium"],
+  .manual-hero-carousel img[src*="capivara"],
+  .manual-hero-carousel img[src*="hero-capivara"] {
     display: block !important;
     width: 100% !important;
     height: 420px !important;
-    min-height: 420px !important;
-    max-height: 420px !important;
+    max-width: 100% !important;
     object-fit: cover !important;
     object-position: center !important;
-    padding: 0 !important;
-    background: #050505 !important;
-    border-radius: 14px !important;
+    margin: 0 auto !important;
   }
 
   .hero-nav {
-    top: 34% !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
   }
 }
 
 @media (min-width: 1400px) {
-  .hero,
-  .hero-section,
-  .hero-grid {
-    width: min(1320px, calc(100vw - 64px)) !important;
-    max-width: min(1320px, calc(100vw - 64px)) !important;
-  }
-
-  .visual-card.manual-hero-carousel,
-  .hero-visual.manual-hero-carousel,
-  .hero-showcase.manual-hero-carousel {
-    min-height: 690px !important;
-  }
-
-  .visual-card.manual-hero-carousel .slide img[src*="hara-logo-premium"],
-  .hero-visual.manual-hero-carousel .slide img[src*="hara-logo-premium"],
-  .hero-showcase.manual-hero-carousel .slide img[src*="hara-logo-premium"] {
-    height: 450px !important;
-    min-height: 450px !important;
-    max-height: 450px !important;
-  }
-}
-
-@media (max-width: 1099px) {
-  .visual-card.manual-hero-carousel .slide img[src*="hero-ia-realidade"],
-  .hero-visual.manual-hero-carousel .slide img[src*="hero-ia-realidade"],
-  .hero-showcase.manual-hero-carousel .slide img[src*="hero-ia-realidade"] {
-    width: 100% !important;
-    height: auto !important;
-    object-fit: contain !important;
-  }
-}
-
-/* =========================================================
-   H.A.R.A Site v1.4 — correção final para visualização 100%
-   Objetivo: dar mais palco ao infográfico no desktop sem mexer na imagem.
-   ========================================================= */
-
-@media (min-width: 1180px) {
-  /* Alarga somente a seção que contém o painel visual do hero */
-  .container:has(.manual-hero-carousel),
-  section:has(.manual-hero-carousel) .container,
-  .hero-grid:has(.manual-hero-carousel) {
-    width: min(1480px, calc(100vw - 56px)) !important;
-    max-width: min(1480px, calc(100vw - 56px)) !important;
-    margin-left: auto !important;
-    margin-right: auto !important;
-  }
-
-  /* Dá mais prioridade para a caixa visual da direita */
-  .hero-grid:has(.manual-hero-carousel),
-  .hero-layout:has(.manual-hero-carousel),
-  .hero-content:has(.manual-hero-carousel) {
-    grid-template-columns: minmax(500px, 0.9fr) minmax(650px, 1.1fr) !important;
-    gap: 26px !important;
-    align-items: stretch !important;
-  }
-
-  /* Caixa mãe da direita */
-  .visual-card.manual-hero-carousel,
-  .hero-visual.manual-hero-carousel,
-  .hero-showcase.manual-hero-carousel {
-    width: 100% !important;
-    max-width: 100% !important;
-    min-height: 720px !important;
-    padding: 18px !important;
-    overflow: hidden !important;
-  }
-
-  /* Área do slide */
-  .visual-card.manual-hero-carousel .slide.active,
-  .hero-visual.manual-hero-carousel .slide.active,
-  .hero-showcase.manual-hero-carousel .slide.active {
-    width: 100% !important;
-    min-height: 640px !important;
-  }
-
-  /* Infográfico: usa o máximo da largura disponível */
-  .visual-card.manual-hero-carousel .slide img[src*="hero-ia-realidade"],
-  .hero-visual.manual-hero-carousel .slide img[src*="hero-ia-realidade"],
-  .hero-showcase.manual-hero-carousel .slide img[src*="hero-ia-realidade"],
-  .visual-card.manual-hero-carousel .slide img.is-infographic,
-  .hero-visual.manual-hero-carousel .slide img.is-infographic,
-  .hero-showcase.manual-hero-carousel .slide img.is-infographic {
-    width: 100% !important;
-    height: auto !important;
-    max-height: none !important;
-    min-height: 0 !important;
-    object-fit: contain !important;
-    object-position: center !important;
-    padding: 0 !important;
-    background: #050505 !important;
-  }
-
-  /* Terceiro slide: capivara/logo volta a preencher bem */
-  .visual-card.manual-hero-carousel .slide img[src*="hara-logo-premium"],
-  .hero-visual.manual-hero-carousel .slide img[src*="hara-logo-premium"],
-  .hero-showcase.manual-hero-carousel .slide img[src*="hara-logo-premium"] {
-    width: 100% !important;
-    height: 455px !important;
-    min-height: 455px !important;
-    max-height: 455px !important;
-    object-fit: cover !important;
-    object-position: center !important;
-    padding: 0 !important;
-  }
-
-  .hero-nav {
-    top: 36% !important;
-  }
-}
-
-@media (min-width: 1500px) {
-  .container:has(.manual-hero-carousel),
-  section:has(.manual-hero-carousel) .container,
-  .hero-grid:has(.manual-hero-carousel) {
-    width: min(1560px, calc(100vw - 72px)) !important;
-    max-width: min(1560px, calc(100vw - 72px)) !important;
-  }
-
-  .hero-grid:has(.manual-hero-carousel),
-  .hero-layout:has(.manual-hero-carousel),
-  .hero-content:has(.manual-hero-carousel) {
-    grid-template-columns: minmax(520px, 0.88fr) minmax(720px, 1.12fr) !important;
-  }
-}
-
-/* =========================================================
-   H.A.R.A Site v1.4 — correção segura do hero
-   Corrige crop/estouro sem trocar imagem nem reabrir layout.
-   ========================================================= */
-
-html,
-body {
-  overflow-x: hidden;
-}
-
-@media (min-width: 1100px) {
-  .hero,
-  .hero-section,
-  .hero-grid {
-    width: min(1240px, calc(100vw - 48px)) !important;
-    max-width: min(1240px, calc(100vw - 48px)) !important;
-    margin-left: auto !important;
-    margin-right: auto !important;
-  }
-
   .hero-grid,
   .hero-layout,
   .hero-content {
-    grid-template-columns: minmax(0, 1.03fr) minmax(0, 0.97fr) !important;
-    gap: 24px !important;
-    align-items: stretch !important;
-  }
-
-  .visual-card.manual-hero-carousel,
-  .hero-visual.manual-hero-carousel,
-  .hero-showcase.manual-hero-carousel {
-    min-width: 0 !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    min-height: 660px !important;
-    padding: 18px !important;
-    overflow: hidden !important;
-  }
-
-  .visual-card.manual-hero-carousel .slide.active,
-  .hero-visual.manual-hero-carousel .slide.active,
-  .hero-showcase.manual-hero-carousel .slide.active {
-    min-height: auto !important;
-    width: 100% !important;
-    max-width: 100% !important;
-  }
-
-  /* Fluxo: nunca cortar. Sempre preencher a largura útil mantendo proporção. */
-  .visual-card.manual-hero-carousel .slide img[src*="hero-ia-realidade"],
-  .hero-visual.manual-hero-carousel .slide img[src*="hero-ia-realidade"],
-  .hero-showcase.manual-hero-carousel .slide img[src*="hero-ia-realidade"],
-  .visual-card.manual-hero-carousel .slide img.is-infographic,
-  .hero-visual.manual-hero-carousel .slide img.is-infographic,
-  .hero-showcase.manual-hero-carousel .slide img.is-infographic {
-    display: block !important;
-    width: 100% !important;
-    height: auto !important;
-    min-height: 0 !important;
-    max-height: none !important;
-    object-fit: contain !important;
-    object-position: center !important;
-    padding: 0 !important;
-    background: #050505 !important;
-    border-radius: 12px !important;
-  }
-
-  /* Capivara/logo: volta a preencher bonito no terceiro slide. */
-  .visual-card.manual-hero-carousel .slide img[src*="hara-logo-premium"],
-  .hero-visual.manual-hero-carousel .slide img[src*="hara-logo-premium"],
-  .hero-showcase.manual-hero-carousel .slide img[src*="hara-logo-premium"] {
-    display: block !important;
-    width: 100% !important;
-    height: 420px !important;
-    min-height: 420px !important;
-    max-height: 420px !important;
-    object-fit: cover !important;
-    object-position: center !important;
-    padding: 0 !important;
-    background: #050505 !important;
-    border-radius: 14px !important;
-  }
-
-  .hero-nav {
-    top: 34% !important;
-  }
-}
-
-@media (min-width: 1400px) {
-  .hero,
-  .hero-section,
-  .hero-grid {
-    width: min(1320px, calc(100vw - 64px)) !important;
-    max-width: min(1320px, calc(100vw - 64px)) !important;
-  }
-
-  .visual-card.manual-hero-carousel,
-  .hero-visual.manual-hero-carousel,
-  .hero-showcase.manual-hero-carousel {
-    min-height: 690px !important;
-  }
-
-  .visual-card.manual-hero-carousel .slide img[src*="hara-logo-premium"],
-  .hero-visual.manual-hero-carousel .slide img[src*="hara-logo-premium"],
-  .hero-showcase.manual-hero-carousel .slide img[src*="hara-logo-premium"] {
-    height: 450px !important;
-    min-height: 450px !important;
-    max-height: 450px !important;
-  }
-}
-
-@media (max-width: 1099px) {
-  .visual-card.manual-hero-carousel .slide img[src*="hero-ia-realidade"],
-  .hero-visual.manual-hero-carousel .slide img[src*="hero-ia-realidade"],
-  .hero-showcase.manual-hero-carousel .slide img[src*="hero-ia-realidade"] {
-    width: 100% !important;
-    height: auto !important;
-    object-fit: contain !important;
+    grid-template-columns: minmax(0, 0.96fr) minmax(0, 1.16fr) !important;
   }
 }
