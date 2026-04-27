@@ -718,3 +718,76 @@ button:disabled,
     font-size: 22px;
   }
 }
+
+/* ===== H.A.R.A Site v1.4 — ajuste final do painel hero ===== */
+
+/* infográfico: maior, sóbrio, sem ficar espremido demais */
+.visual-card.manual-hero-carousel .slide img.is-infographic,
+.hero-visual.manual-hero-carousel .slide img.is-infographic,
+.hero-showcase.manual-hero-carousel .slide img.is-infographic {
+  width: 100%;
+  height: 390px;
+  min-height: 390px;
+  max-height: 390px;
+  object-fit: contain;
+  object-position: center;
+  padding: 0;
+  background: #050505;
+  border-radius: 12px;
+}
+
+/* capivara/logo: volta a preencher o painel como card visual, não miniatura */
+.visual-card.manual-hero-carousel .slide img:not(.is-infographic),
+.hero-visual.manual-hero-carousel .slide img:not(.is-infographic),
+.hero-showcase.manual-hero-carousel .slide img:not(.is-infographic) {
+  width: 100%;
+  height: 430px;
+  min-height: 430px;
+  max-height: 430px;
+  object-fit: cover;
+  object-position: center;
+  padding: 0;
+  background: #050505;
+  border-radius: 14px;
+}
+
+/* deixa a área visual mais estável entre fluxo e capivara */
+.visual-card.manual-hero-carousel .slide.active,
+.hero-visual.manual-hero-carousel .slide.active,
+.hero-showcase.manual-hero-carousel .slide.active {
+  min-height: 520px;
+}
+
+/* setas mais discretas, sem roubar o foco do infográfico */
+.hero-nav {
+  top: 39%;
+  width: 36px;
+  height: 36px;
+  font-size: 24px;
+  background: rgba(5, 5, 5, 0.72);
+}
+
+/* mobile */
+@media (max-width: 900px) {
+  .visual-card.manual-hero-carousel .slide img.is-infographic,
+  .hero-visual.manual-hero-carousel .slide img.is-infographic,
+  .hero-showcase.manual-hero-carousel .slide img.is-infographic {
+    height: 300px;
+    min-height: 300px;
+    max-height: 300px;
+  }
+
+  .visual-card.manual-hero-carousel .slide img:not(.is-infographic),
+  .hero-visual.manual-hero-carousel .slide img:not(.is-infographic),
+  .hero-showcase.manual-hero-carousel .slide img:not(.is-infographic) {
+    height: 320px;
+    min-height: 320px;
+    max-height: 320px;
+  }
+
+  .visual-card.manual-hero-carousel .slide.active,
+  .hero-visual.manual-hero-carousel .slide.active,
+  .hero-showcase.manual-hero-carousel .slide.active {
+    min-height: 430px;
+  }
+}

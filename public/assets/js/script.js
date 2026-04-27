@@ -66,13 +66,13 @@ document.addEventListener("DOMContentLoaded", function () {
         infographic: true
       },
       {
-        image: "assets/images/hara-logo-premium.webp",
-        title: "Governança de dados",
-        description: "Origem, dono, qualidade e confiança antes da automação.",
-        infographic: false
+        image: "assets/images/hero-ia-realidade.png",
+        title: "Ciência de dados aplicada",
+        description: "Entre dados e valor existem critérios, restrições, validação e operação.",
+        infographic: true
       },
       {
-        image: "assets/images/capivara-01.webp",
+        image: "assets/images/hara-logo-premium.webp",
         title: "IA como parte do fluxo",
         description: "IA amplifica estrutura. Não corrige desorganização.",
         infographic: false
