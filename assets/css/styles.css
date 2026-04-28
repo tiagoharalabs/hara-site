@@ -1117,3 +1117,8 @@ button:disabled,
     max-width: 100% !important;
   }
 }
+
+/* H.A.R.A — ajuste de âncora para menu fixo */
+section[id] {
+  scroll-margin-top: 110px;
+}
