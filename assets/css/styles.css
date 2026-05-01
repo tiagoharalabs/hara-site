@@ -1,15 +1,15 @@
 :root {
-  --bg: #070707;
-  --bg-soft: #111111;
-  --panel: rgba(18, 18, 18, 0.92);
-  --panel-strong: rgba(10, 10, 10, 0.96);
-  --text: #f6f1de;
-  --muted: #c9c1a9;
-  --line: rgba(255, 202, 40, 0.18);
+  --bg: #161616;
+  --bg-soft: #1d1d1d;
+  --panel: rgba(34, 34, 34, 0.94);
+  --panel-strong: rgba(29, 29, 29, 0.96);
+  --text: #f3f3f3;
+  --muted: #cfcfcf;
+  --line: rgba(240, 180, 41, 0.20);
   --gold: #f0b429;
-  --gold-strong: #ffcf4d;
-  --gold-soft: rgba(240, 180, 41, 0.12);
-  --shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
+  --gold-strong: #ffd15c;
+  --gold-soft: rgba(240, 180, 41, 0.10);
+  --shadow: 0 18px 55px rgba(0, 0, 0, 0.34);
   --radius: 22px;
   --max: 1180px;
 }
@@ -26,9 +26,9 @@ body {
   margin: 0;
   font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   background:
-    radial-gradient(circle at top left, rgba(240, 180, 41, 0.10), transparent 28%),
-    radial-gradient(circle at 90% 10%, rgba(240, 180, 41, 0.08), transparent 22%),
-    linear-gradient(180deg, #050505 0%, #0a0a0a 50%, #060606 100%);
+    radial-gradient(circle at top left, rgba(240, 180, 41, 0.08), transparent 30%),
+    radial-gradient(circle at 90% 10%, rgba(240, 180, 41, 0.06), transparent 24%),
+    linear-gradient(180deg, #121212 0%, #161616 52%, #141414 100%);
   color: var(--text);
   line-height: 1.65;
   min-height: 100vh;
@@ -53,7 +53,7 @@ img {
   position: sticky;
   top: 0;
   z-index: 50;
-  background: rgba(8, 8, 8, 0.82);
+  background: rgba(22, 22, 22, 0.86);
   backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--line);
 }
@@ -80,7 +80,7 @@ img {
   height: 44px;
   border-radius: 14px;
   border: 1px solid rgba(240, 180, 41, 0.26);
-  background: linear-gradient(135deg, rgba(240, 180, 41, 0.18), rgba(25, 25, 25, 0.9));
+  background: linear-gradient(135deg, rgba(240, 180, 41, 0.14), rgba(34, 34, 34, 0.94));
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
 }
 
@@ -220,7 +220,7 @@ p {
 
 .button-ghost {
   color: var(--text);
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.045);
   border-color: var(--line);
 }
 
@@ -235,7 +235,7 @@ p {
   padding: 14px;
   border-radius: 16px;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(255, 255, 255, 0.045);
 }
 
 .metric strong {
@@ -269,7 +269,7 @@ p {
   width: 100%;
   aspect-ratio: 1 / 1;
   object-fit: cover;
-  background: #151515;
+  background: #1d1d1d;
 }
 
 .slide-caption {
@@ -349,7 +349,7 @@ section {
   min-height: 150px;
   border-radius: 18px;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.025);
+  background: rgba(255, 255, 255, 0.035);
 }
 
 .area-item p {
@@ -410,7 +410,7 @@ textarea {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 14px;
-  background: rgba(0, 0, 0, 0.35);
+  background: rgba(18, 18, 18, 0.65);
   color: var(--text);
   padding: 12px 13px;
   font: inherit;
@@ -436,7 +436,7 @@ textarea:focus {
   padding: 14px;
   border: 1px solid var(--line);
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(255, 255, 255, 0.045);
 }
 
 .checkbox-grid label {
@@ -544,7 +544,7 @@ footer {
   padding: 14px;
   border: 1px solid var(--line);
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.025);
+  background: rgba(255, 255, 255, 0.035);
 }
 
 .legal-check {
