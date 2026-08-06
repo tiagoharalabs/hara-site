@@ -283,9 +283,74 @@ async function handleDiagnostico(request, env) {
   });
 }
 
+
+async function observabilityPayload(payload) {
+  const generatedAt = Date.parse(payload.generated_at_utc || "");
+  const ageSeconds = Number.isFinite(generatedAt)
+    ? Math.max(0, Math.floor((Date.now() - generatedAt) / 1000))
+    : null;
+
+  return {
+    ...payload,
+    freshness: {
+      ...(payload.freshness || {}),
+      seconds: ageSeconds,
+      state:
+        ageSeconds !== null &&
+        ageSeconds <= Number(payload.freshness?.maximum_expected_seconds || 180)
+          ? "fresh"
+          : "stale"
+    }
+  };
+}
+
+async function handleObservabilityStatus(request, env) {
+  const key = "observability/public/status/current.json";
+
+  try {
+    if (env.DIAGNOSTICS_BUCKET) {
+      const object = await env.DIAGNOSTICS_BUCKET.get(key);
+
+      if (object) {
+        const payload = JSON.parse(await object.text());
+        return json(await observabilityPayload(payload));
+      }
+    }
+  } catch (_error) {
+    // A static sanitized fallback remains available with the deployment.
+  }
+
+  const fallbackUrl = new URL("/observabilidade/status.json", request.url);
+  const fallback = await env.ASSETS.fetch(new Request(fallbackUrl, request));
+
+  if (!fallback.ok) {
+    return json({
+      ok: false,
+      message: "Snapshot de observabilidade indisponível."
+    }, 503);
+  }
+
+  try {
+    const payload = await fallback.json();
+    return json(await observabilityPayload(payload));
+  } catch (_error) {
+    return json({
+      ok: false,
+      message: "Snapshot de observabilidade inválido."
+    }, 503);
+  }
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+
+    if (
+      url.pathname === "/api/observabilidade/status" &&
+      request.method === "GET"
+    ) {
+      return handleObservabilityStatus(request, env);
+    }
 
     if (url.pathname === "/api/ping") {
       return json({

@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Cockpit público sanitizado de observabilidade da H.A.R.A Labs." />
+  <meta name="theme-color" content="#111315" />
+  <title>Observabilidade | H.A.R.A Labs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/observabilidade/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">
+      <img src="/assets/images/hara-logo-premium.webp" alt="H.A.R.A Labs" />
+      <span>H.A.R.A Labs</span>
+    </a>
+    <div class="live-indicator" aria-live="polite">
+      <span id="liveDot" class="dot neutral"></span>
+      <span id="liveLabel">Carregando estado</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <p class="eyebrow">H.A.R.A Observability Cockpit</p>
+      <h1>Estado operacional com contexto, não ruído.</h1>
+      <p class="lead">
+        Uma visão pública e sanitizada da saúde da plataforma. Sem endereços
+        privados, endpoints internos ou exposição do Prometheus bruto.
+      </p>
+      <div class="hero-meta">
+        <span>Atualização: <strong id="generatedAt">—</strong></span>
+        <span>Frescor: <strong id="freshness">—</strong></span>
+        <button id="refreshButton" type="button">Atualizar agora</button>
+      </div>
+    </section>
+
+    <section class="summary-grid" aria-label="Resumo operacional">
+      <article class="summary-card emphasis">
+        <span class="label">Estado geral</span>
+        <strong id="overallState">—</strong>
+        <p id="overallMessage">Aguardando snapshot.</p>
+      </article>
+      <article class="summary-card">
+        <span class="label">Alvos monitorados</span>
+        <strong><span id="targetsUp">—</span>/<span id="targetsTotal">—</span></strong>
+        <p>Saúde consolidada pelo plano de observação.</p>
+      </article>
+      <article class="summary-card">
+        <span class="label">Observer</span>
+        <strong id="observerState">—</strong>
+        <p id="observerDetail">Telemetria e snapshot operacional.</p>
+      </article>
+      <article class="summary-card">
+        <span class="label">Governança</span>
+        <strong id="governanceState">—</strong>
+        <p id="governanceDetail">Lane, evidência e rastreabilidade.</p>
+      </article>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <p class="eyebrow">Sinais essenciais</p>
+          <h2>O que sustenta o estado geral</h2>
+        </div>
+      </div>
+      <div id="signalsGrid" class="signals-grid"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <p class="eyebrow">Componentes</p>
+          <h2>Visão por domínio</h2>
+        </div>
+      </div>
+      <div id="componentsGrid" class="components-grid"></div>
+    </section>
+
+    <section class="principles">
+      <article><strong>Sanitizado por desenho</strong><p>Somente sinais agregados e não sensíveis.</p></article>
+      <article><strong>Evidência antes de narrativa</strong><p>Cada estado deriva de probes e receipts.</p></article>
+      <article><strong>Falha explícita</strong><p>Dados vencidos aparecem como degradados, nunca saudáveis.</p></article>
+    </section>
+  </main>
+
+  <footer>
+    <span>H.A.R.A Labs</span>
+    <span>Firmus. Serenus. Ex Principio.</span>
+  </footer>
+
+  <script src="/observabilidade/app.js" defer></script>
+</body>
+</html>
