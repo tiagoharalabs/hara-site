@@ -26,7 +26,7 @@
     "seconds": 0,
     "state": "fresh"
   },
-  "generated_at_utc": "2026-08-06T17:57:32.791268Z",
+  "generated_at_utc": "2026-08-06T18:24:10.077229Z",
   "governance": {
     "direct_main_push": 0,
     "force_push": 0,
@@ -40,10 +40,10 @@
   "signals": {
     "disk": {
       "detail": "Uso agregado, sem publicar volumes ou caminhos.",
-      "display": "74.2% usado",
+      "display": "74.3% usado",
       "label": "Disco raiz do Observer",
       "state": "healthy",
-      "value": 0.74245355
+      "value": 0.74258143
     },
     "failed_units": {
       "detail": "Contagem sanitizada no Observer.",
@@ -68,10 +68,10 @@
     },
     "snapshot": {
       "detail": "Idade da última coleta própria do Observer.",
-      "display": "113 s",
+      "display": "85 s",
       "label": "Frescor do snapshot",
       "state": "healthy",
-      "value": 113.79124307632446
+      "value": 85.07718896865845
     },
     "targets": {
       "detail": "Saúde agregada dos alvos esperados.",

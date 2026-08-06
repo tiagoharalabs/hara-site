@@ -305,11 +305,11 @@ async function observabilityPayload(payload) {
 }
 
 async function handleObservabilityStatus(request, env) {
-  const key = "public/status/current.json";
+  const key = "observability/public/status/current.json";
 
   try {
-    if (env.OBSERVABILITY_BUCKET) {
-      const object = await env.OBSERVABILITY_BUCKET.get(key);
+    if (env.DIAGNOSTICS_BUCKET) {
+      const object = await env.DIAGNOSTICS_BUCKET.get(key);
 
       if (object) {
         const payload = JSON.parse(await object.text());
