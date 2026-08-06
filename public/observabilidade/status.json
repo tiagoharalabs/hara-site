@@ -1,0 +1,85 @@
+{
+  "components": [
+    {
+      "name": "Plano de observação",
+      "state": "degraded",
+      "summary": "3 de 9 alvos essenciais saudáveis."
+    },
+    {
+      "name": "Observer",
+      "state": "healthy",
+      "summary": "Telemetria local endurecida, snapshot próprio e scrape ativo."
+    },
+    {
+      "name": "Evidência operacional",
+      "state": "healthy",
+      "summary": "Receipts e projeções sanitizadas seguem publicação governada."
+    },
+    {
+      "name": "Site de observabilidade",
+      "state": "healthy",
+      "summary": "Cockpit consome somente snapshot sanitizado em R2."
+    }
+  ],
+  "freshness": {
+    "maximum_expected_seconds": 180,
+    "seconds": 0,
+    "state": "fresh"
+  },
+  "generated_at_utc": "2026-08-06T17:57:32.791268Z",
+  "governance": {
+    "direct_main_push": 0,
+    "force_push": 0,
+    "merge": 0,
+    "state": "healthy",
+    "summary": "Lane livre, ordem single-use e rollback habilitado."
+  },
+  "overall_message": "Um ou mais sinais exigem acompanhamento operacional.",
+  "overall_state": "degraded",
+  "schema": "hara.public-observability.v1",
+  "signals": {
+    "disk": {
+      "detail": "Uso agregado, sem publicar volumes ou caminhos.",
+      "display": "74.2% usado",
+      "label": "Disco raiz do Observer",
+      "state": "healthy",
+      "value": 0.74245355
+    },
+    "failed_units": {
+      "detail": "Contagem sanitizada no Observer.",
+      "display": "2",
+      "label": "Unidades systemd falhas",
+      "state": "degraded",
+      "value": 2.0
+    },
+    "journal_errors": {
+      "detail": "Eventos de prioridade erro nos últimos cinco minutos.",
+      "display": "0",
+      "label": "Erros recentes",
+      "state": "healthy",
+      "value": 0.0
+    },
+    "observer": {
+      "detail": "Exporter loopback, snapshot recente e scrape ativo.",
+      "display": "Ativo",
+      "label": "Observer",
+      "state": "healthy",
+      "value": 1
+    },
+    "snapshot": {
+      "detail": "Idade da última coleta própria do Observer.",
+      "display": "113 s",
+      "label": "Frescor do snapshot",
+      "state": "healthy",
+      "value": 113.79124307632446
+    },
+    "targets": {
+      "detail": "Saúde agregada dos alvos esperados.",
+      "display": "3/9",
+      "label": "Alvos essenciais",
+      "state": "degraded",
+      "total": 9,
+      "up": 3
+    }
+  }
+}
