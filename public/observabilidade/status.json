@@ -1,24 +1,32 @@
 {
+  "assimilation": {
+    "identity_proven": true,
+    "mode": "manual-controlled",
+    "node": "Ninja Blue",
+    "primary_transport": "wired",
+    "secondary_interface_count": 1,
+    "secondary_scrape_count": 0
+  },
   "components": [
     {
-      "name": "Plano de observação",
+      "name": "Plano de observa\u00e7\u00e3o",
       "state": "degraded",
-      "summary": "3 de 9 alvos essenciais saudáveis."
+      "summary": "4 de 10 alvos essenciais saud\u00e1veis."
+    },
+    {
+      "name": "Ninja Blue",
+      "state": "healthy",
+      "summary": "N\u00f3 assimilado manualmente com exporter em loopback e t\u00fanel SSH governado."
     },
     {
       "name": "Observer",
       "state": "healthy",
-      "summary": "Telemetria local endurecida, snapshot próprio e scrape ativo."
-    },
-    {
-      "name": "Evidência operacional",
-      "state": "healthy",
-      "summary": "Receipts e projeções sanitizadas seguem publicação governada."
+      "summary": "Prometheus central recebeu o novo alvo sem exposi\u00e7\u00e3o da LAN."
     },
     {
       "name": "Site de observabilidade",
       "state": "healthy",
-      "summary": "Cockpit consome somente snapshot sanitizado em R2."
+      "summary": "Snapshot sanitizado atualizado por publica\u00e7\u00e3o Git-native."
     }
   ],
   "freshness": {
@@ -26,16 +34,26 @@
     "seconds": 0,
     "state": "fresh"
   },
-  "generated_at_utc": "2026-08-06T18:24:10.077229Z",
+  "generated_at_utc": "2026-08-06T21:20:20.825656Z",
   "governance": {
     "direct_main_push": 0,
     "force_push": 0,
-    "merge": 0,
+    "merge": 1,
     "state": "healthy",
-    "summary": "Lane livre, ordem single-use e rollback habilitado."
+    "summary": "Assimila\u00e7\u00e3o manual, ordem single-use, backup e rollback habilitados."
   },
-  "overall_message": "Um ou mais sinais exigem acompanhamento operacional.",
+  "missing_expected_jobs": [
+    "hara-fleet-n150-node",
+    "hara-fleet-sentinela-a-node",
+    "hara-fleet-sentinela-b-node",
+    "hara-fleet-sentinela-c-node",
+    "hara-fleet-sentinela-d-node",
+    "hara-fleet-storage-node"
+  ],
+  "overall_message": "A frota ganhou um novo n\u00f3 assimilado com identidade e telemetria governadas.",
   "overall_state": "degraded",
+  "present_but_down_jobs": [],
+  "release_id": "ninja-blue-controlled-assimilation-v112-20260806t212000976507z",
   "schema": "hara.public-observability.v1",
   "signals": {
     "disk": {
@@ -43,7 +61,7 @@
       "display": "74.3% usado",
       "label": "Disco raiz do Observer",
       "state": "healthy",
-      "value": 0.74258143
+      "value": 0.74287145
     },
     "failed_units": {
       "detail": "Contagem sanitizada no Observer.",
@@ -53,33 +71,33 @@
       "value": 2.0
     },
     "journal_errors": {
-      "detail": "Eventos de prioridade erro nos últimos cinco minutos.",
-      "display": "0",
+      "detail": "Eventos de prioridade erro nos \u00faltimos cinco minutos.",
+      "display": "1",
       "label": "Erros recentes",
-      "state": "healthy",
-      "value": 0.0
+      "state": "degraded",
+      "value": 1.0
     },
     "observer": {
-      "detail": "Exporter loopback, snapshot recente e scrape ativo.",
+      "detail": "Exporter loopback, snapshot e scrape central ativos.",
       "display": "Ativo",
       "label": "Observer",
       "state": "healthy",
       "value": 1
     },
     "snapshot": {
-      "detail": "Idade da última coleta própria do Observer.",
-      "display": "85 s",
+      "detail": "Idade da \u00faltima coleta pr\u00f3pria do Observer.",
+      "display": "50 s",
       "label": "Frescor do snapshot",
       "state": "healthy",
-      "value": 85.07718896865845
+      "value": 50.825650691986084
     },
     "targets": {
-      "detail": "Saúde agregada dos alvos esperados.",
-      "display": "3/9",
+      "detail": "Sa\u00fade agregada dos alvos esperados.",
+      "display": "4/10",
       "label": "Alvos essenciais",
       "state": "degraded",
-      "total": 9,
-      "up": 3
+      "total": 10,
+      "up": 4
     }
   }
 }
