@@ -1,0 +1,20 @@
+{
+  "schema": "hara.site-current-pointer.v1",
+  "governance_authority": "TORRE_CONTROLE_HARA_V10",
+  "repository_role": "PUBLIC_INSTITUTIONAL_SITE_SOURCE_AND_SITE_DEPLOYMENT_LANE",
+  "repository": "tiagoharalabs/hara-site",
+  "default_branch": "main",
+  "deployment_target": "CLOUDFLARE",
+  "publication_lane": "SITE_DEPLOYMENT",
+  "deployment_policy_path": "HARA_SITE_DEPLOYMENT_POLICY.md",
+  "technical_platform_repository": "tiagoharalabs/hara-platform",
+  "evidence_repository": "tiagoharalabs/hara-ops-evidence",
+  "direct_main_push_allowed": false,
+  "force_push_allowed": false,
+  "auto_merge_allowed": false,
+  "git_push_alone_is_deployment_proof": false,
+  "runtime_authority": false,
+  "integrated_in_main": false,
+  "source_branch": "governance/tower-v10-site-publication-standard-v1",
+  "updated_at_utc": "2026-08-06T04:25:00Z"
+}
