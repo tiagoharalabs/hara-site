@@ -44,6 +44,88 @@ document.addEventListener("DOMContentLoaded", function () {
     return missing;
   }
 
+  function setupPlatformSection() {
+    if (document.getElementById("plataforma")) return;
+
+    const mission = document.getElementById("missao");
+    if (!mission) return;
+
+    const section = document.createElement("section");
+    section.id = "plataforma";
+    section.innerHTML = `
+      <div class="section-head">
+        <span class="eyebrow">Tecnologia própria em operação</span>
+        <h2>H.A.R.A. como plataforma operacional</h2>
+        <p>
+          Além da atuação consultiva, a H.A.R.A. Labs desenvolve uma plataforma distribuída
+          para coordenar dados, automação e IA com governança, evidência e responsabilidade operacional.
+        </p>
+      </div>
+
+      <div class="content-grid">
+        <article class="card highlight">
+          <h3>Arquitetura distribuída</h3>
+          <p>
+            Núcleo, serviços de controle, nós de execução e observação trabalham com papéis separados.
+            Cada ação relevante exige escopo, autoridade, verificação e registro do resultado.
+          </p>
+        </article>
+
+        <article class="card">
+          <h3>Local, híbrido ou nuvem</h3>
+          <p>
+            Modelos, dados e integrações podem operar localmente ou em arquiteturas híbridas,
+            respeitando criticidade, privacidade, continuidade e a infraestrutura existente.
+          </p>
+        </article>
+      </div>
+
+      <div class="areas">
+        <article class="area-item">
+          <h3>Control plane</h3>
+          <p>Coordenação de funções, tarefas, filas, permissões e estados sem misturar governança com execução.</p>
+        </article>
+
+        <article class="area-item">
+          <h3>Execução governada</h3>
+          <p>Pacotes autocontidos, escopo exato, trilha de mutação, verificação posterior e rollback.</p>
+        </article>
+
+        <article class="area-item">
+          <h3>Observabilidade independente</h3>
+          <p>Observação e verificação separadas da autoridade que executa ou modifica o ambiente.</p>
+        </article>
+
+        <article class="area-item">
+          <h3>Evidência rastreável</h3>
+          <p>Receipts, hashes e projeções sanitizadas documentam o que ocorreu sem expor segredos ou dados brutos.</p>
+        </article>
+
+        <article class="area-item">
+          <h3>IA aplicada</h3>
+          <p>Agentes e modelos locais são conectados a processos reais, contratos de uso e critérios de qualidade.</p>
+        </article>
+
+        <article class="area-item">
+          <h3>Continuidade operacional</h3>
+          <p>Estado durável, recuperação conhecida e separação de responsabilidades reduzem dependências frágeis.</p>
+        </article>
+      </div>
+    `;
+
+    mission.insertAdjacentElement("afterend", section);
+
+    const nav = document.querySelector(".nav");
+    if (nav && !nav.querySelector('a[href="#plataforma"]')) {
+      const link = document.createElement("a");
+      link.href = "#plataforma";
+      link.textContent = "Plataforma";
+
+      const diagnosticLink = nav.querySelector('a[href="#diagnostico"]');
+      nav.insertBefore(link, diagnosticLink || null);
+    }
+  }
+
   function setupHeroCarousel() {
     const slides = Array.from(document.querySelectorAll(".slide"));
     if (!slides.length) return;
@@ -283,6 +365,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
+  setupPlatformSection();
   setupHeroCarousel();
   setupDiagnosticForm();
 });
