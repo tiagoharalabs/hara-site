@@ -1,26 +1,28 @@
-# H.A.R.A Labs — Site Institucional Premium
+# H.A.R.A. Paradox — site único
 
-Pacote estático pronto para teste local e publicação automática via Git + Cloudflare.
+Este repositório contém a projeção pública sanitizada do Paradox: uma única superfície para observabilidade, drift control e doc controls.
 
-## Estrutura
-- `index.html`
-- `styles.css`
-- `assets/images/`
-
-## Imagens incluídas
-- `hara-logo-premium.webp`
-- `hara-logo-premium.png`
-- `hara-mark-square.webp`
-- `hara-mark-square.png`
-- favicons em PNG
-
-## Publicação
-Na pasta do projeto, rode:
-
-```bash
-git add .
-git commit -m "premium brand update"
-git push
+```text
+AUTHORITY=TORRE_CONTROLE_HARA_V12
+CURRENT=CURRENT.json
+PRODUCT=PARADOX
+MODEL=ONE_PRODUCT_ONE_SITE_ONE_UI_SHELL
+RUNTIME_AUTHORITY=FALSE
 ```
 
-A Cloudflare publica automaticamente após o push.
+## Estado atual
+
+A raiz institucional e a rota `/observabilidade/` vivem no mesmo repositório e deployment, mas ainda não estão convergidas em um único shell. A próxima etapa é inventário exato read-only e convergência de source; esta branch não executa deployment.
+
+## Estrutura relevante
+
+- `index.html` e `public/index.html`: raiz atual.
+- `public/observabilidade/`: cockpit atual e snapshot sanitizado.
+- `src/worker.js`: APIs públicas e entrega de assets.
+- `CURRENT.json`: ponteiro de governança do site.
+- `HARA_PARADOX_UNIFIED_SITE_HANDOFF.md`: sequência da frente.
+- `HARA_SITE_DEPLOYMENT_POLICY.md`: política V12.
+
+## Publicação governada
+
+Não use push direto em `main`. Toda publicação exige branch de revisão, validação, PR draft, decisão explícita de integração, deployment readback e receipt. Secrets, topologia privada, logs brutos e evidência operacional crua não pertencem ao site público.
