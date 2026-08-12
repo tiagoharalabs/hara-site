@@ -1,7 +1,8 @@
 {
   "schema": "hara.site.current.v2",
-  "authority": "TORRE_CONTROLE_HARA_V12",
-  "state": "PARADOX_UNIFIED_FRONT_GIT_HANDOFF_READY_NO_DEPLOY",
+  "authority": "TORRE_CONTROLE_HARA_V13",
+  "authority_predecessor": "TORRE_CONTROLE_HARA_V12",
+  "state": "PARADOX_P1_TERMINAL_READ_ONLY_PASS_NO_DEPLOY_P2_AUTH_REQUIRED",
   "front": "HARA_PARADOX_UNIFIED_DRIFT_OBSERVABILITY_DOC_CONTROLS_FRONT_V1",
   "product": "PARADOX",
   "presentation": "PARADOX_PRO",
@@ -11,16 +12,26 @@
   "platform_handoff": {
     "repository": "tiagoharalabs/hara-platform",
     "pull_request": 97,
-    "head_at_site_handoff": "ac2dd8f2b0e7deaa3e2ab6f3c70c7b7f800a3c13",
+    "p1_terminal_path": "governance/paradox/P1_TERMINAL_ADJUDICATION_20260812T002939Z.json",
+    "p1_readback_sha256": "0a163d29ffac6d233b65b9068545602649bcb0b3f6906c09df1f16581c0fe06e",
+    "p1_return_bundle_sha256": "7d0f5f1cd6209893321a8ba05126d96d35d999fa40951d186d29c48035f0b910",
     "current_path": "governance/paradox/CURRENT.json",
     "authorization": "HARA_USER_AUTH_PARADOX_UNIFIED_DRIFT_OBSERVABILITY_DOC_CONTROLS_V1_0_0_20260811T143141Z"
+  },
+  "runtime_readback": {
+    "local_9475": "LIVE_ACTIVE_ENABLED_PRESENTATION_RUNTIME",
+    "local_9475_asset_identity": "PASS_9_OF_9_SERVED_HASHES_MATCH_LOCAL_RELEASE",
+    "local_8787": "ABSENT_CONNECTION_REFUSED_LEGACY_UNIT_DISABLED_INACTIVE_CONDITION_NO",
+    "local_8787_disposition": "RETIRE_LATER_CANDIDATE_NOT_AUTHORIZED_NOW",
+    "local_9475_and_public_observabilidade_route_identical": false
   },
   "current_source_shape": {
     "root_site": true,
     "observability_route": "/observabilidade/",
     "status_api": "/api/observabilidade/status",
     "single_repository": true,
-    "single_shell_converged": false
+    "single_shell_converged": false,
+    "source_mutation_by_p1": false
   },
   "target_source_shape": {
     "site_count": 1,
@@ -43,6 +54,6 @@
     "force_push_allowed": false,
     "source_branch_delete_allowed": false
   },
-  "next_gate": "PLATFORM_PARADOX_P1_EXACT_RUNTIME_AND_SITE_ASSET_INVENTORY_READ_ONLY",
-  "updated_at_utc": "2026-08-11T14:33:33Z"
+  "next_gate": "P2_REQUIRES_SEPARATE_TOWER_V13_AUTHORIZATION_NO_AUTOMATIC_SOURCE_APPLY_OR_DEPLOY",
+  "updated_at_utc": "2026-08-12T00:41:00Z"
 }
