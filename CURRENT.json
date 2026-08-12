@@ -2,7 +2,7 @@
   "schema": "hara.site.current.v2",
   "authority": "TORRE_CONTROLE_HARA_V13",
   "authority_predecessor": "TORRE_CONTROLE_HARA_V12",
-  "state": "PARADOX_P2_PREPARATION_AUTHORIZED_NO_SOURCE_APPLY_NO_DEPLOY",
+  "state": "PARADOX_P2_PREPARATION_AUTHORIZED_NO_SOURCE_APPLY_NO_PRODUCTION_DEPLOY",
   "front": "HARA_PARADOX_UNIFIED_DRIFT_OBSERVABILITY_DOC_CONTROLS_FRONT_V1",
   "product": "PARADOX",
   "presentation": "PARADOX_PRO",
@@ -49,7 +49,15 @@
     "mutation_preflight_materialization": "AUTHORIZED_NO_EXECUTION",
     "source_apply": "NOT_AUTHORIZED",
     "merge": "NOT_AUTHORIZED",
-    "deployment": "NOT_AUTHORIZED"
+    "production_deployment": "NOT_AUTHORIZED"
+  },
+  "observed_deployment_behavior": {
+    "external_branch_preview_deployment_observed": true,
+    "provider": "CLOUDFLARE_WORKERS_GIT_INTEGRATION",
+    "observed_preview_commit": "b224dbf6116cdbe931c1de04537684292081254d",
+    "preview_is_production_promotion": false,
+    "preview_is_p2_authorization": false,
+    "front_authorized_production_deployment_count": 0
   },
   "authority_boundary": {
     "runtime_authority": false,
@@ -63,11 +71,11 @@
   },
   "publication": {
     "merge_authorized": false,
-    "cloudflare_deployment_authorized": false,
+    "cloudflare_production_deployment_authorized": false,
     "direct_main_push_allowed": false,
     "force_push_allowed": false,
     "source_branch_delete_allowed": false
   },
   "next_gate": "P2_PREPARATION_EXACT_DESIGN_AND_MUTATION_PREFLIGHT_READY_FOR_SEPARATE_APPLY_AUTHORIZATION",
-  "updated_at_utc": "2026-08-12T00:54:00Z"
+  "updated_at_utc": "2026-08-12T00:56:00Z"
 }
