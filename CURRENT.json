@@ -1,0 +1,81 @@
+{
+  "schema": "hara.site.current.v2",
+  "authority": "TORRE_CONTROLE_HARA_V13",
+  "authority_predecessor": "TORRE_CONTROLE_HARA_V12",
+  "state": "PARADOX_P2_PREPARATION_AUTHORIZED_NO_SOURCE_APPLY_NO_PRODUCTION_DEPLOY",
+  "front": "HARA_PARADOX_UNIFIED_DRIFT_OBSERVABILITY_DOC_CONTROLS_FRONT_V1",
+  "product": "PARADOX",
+  "presentation": "PARADOX_PRO",
+  "canonical_repository": "tiagoharalabs/hara-site",
+  "canonical_root_route": "/",
+  "current_main_sha": "ca35c89e2fe712538f31deb36280b1475553cb70",
+  "platform_handoff": {
+    "repository": "tiagoharalabs/hara-platform",
+    "pull_request": 97,
+    "p1_terminal_path": "governance/paradox/P1_TERMINAL_ADJUDICATION_20260812T002939Z.json",
+    "p1_readback_sha256": "0a163d29ffac6d233b65b9068545602649bcb0b3f6906c09df1f16581c0fe06e",
+    "p1_return_bundle_sha256": "7d0f5f1cd6209893321a8ba05126d96d35d999fa40951d186d29c48035f0b910",
+    "p2_preparation_authorization": "governance/paradox/P2_PREPARATION_AUTHORIZATION_20260812T005400Z.json",
+    "p2_authorization_id": "HARA_USER_AUTH_PARADOX_P2_PREPARATION_AND_CONVERGENCE_DESIGN_V1_0_0_20260812T005400Z",
+    "current_path": "governance/paradox/CURRENT.json"
+  },
+  "runtime_readback": {
+    "local_9475": "LIVE_ACTIVE_ENABLED_PRESENTATION_RUNTIME",
+    "local_9475_asset_identity": "PASS_9_OF_9_SERVED_HASHES_MATCH_LOCAL_RELEASE",
+    "local_8787": "ABSENT_CONNECTION_REFUSED_LEGACY_UNIT_DISABLED_INACTIVE_CONDITION_NO",
+    "local_8787_disposition": "RETIRE_LATER_CANDIDATE_NOT_AUTHORIZED_NOW",
+    "local_9475_and_public_observabilidade_route_identical": false
+  },
+  "current_source_shape": {
+    "root_site": true,
+    "observability_route": "/observabilidade/",
+    "status_api": "/api/observabilidade/status",
+    "single_repository": true,
+    "single_shell_converged": false,
+    "source_mutation_by_p1": false,
+    "source_mutation_by_p2_preparation": false
+  },
+  "target_source_shape": {
+    "site_count": 1,
+    "product_identity_count": 1,
+    "ui_shell_count": 1,
+    "compatibility_route": "/observabilidade/",
+    "compatibility_route_target": "REDIRECT_OR_EMBED_AFTER_SOURCE_CONVERGENCE"
+  },
+  "p2_preparation_scope": {
+    "one_shell_convergence_design": "AUTHORIZED",
+    "source_diff_plan": "AUTHORIZED_PREPARATION_ONLY",
+    "8787_retirement_dependency_plan": "AUTHORIZED_PREPARATION_ONLY",
+    "mutation_preflight_materialization": "AUTHORIZED_NO_EXECUTION",
+    "source_apply": "NOT_AUTHORIZED",
+    "merge": "NOT_AUTHORIZED",
+    "production_deployment": "NOT_AUTHORIZED"
+  },
+  "observed_deployment_behavior": {
+    "external_branch_preview_deployment_observed": true,
+    "provider": "CLOUDFLARE_WORKERS_GIT_INTEGRATION",
+    "observed_preview_commit": "b224dbf6116cdbe931c1de04537684292081254d",
+    "preview_is_production_promotion": false,
+    "preview_is_p2_authorization": false,
+    "front_authorized_production_deployment_count": 0
+  },
+  "authority_boundary": {
+    "runtime_authority": false,
+    "runtime_mutation_authority": false,
+    "site_source_mutation_authority": false,
+    "decision_authority": false,
+    "dispatch_authority": false,
+    "queue_authority": false,
+    "raw_evidence_publication": false,
+    "retire_8787_authorized": false
+  },
+  "publication": {
+    "merge_authorized": false,
+    "cloudflare_production_deployment_authorized": false,
+    "direct_main_push_allowed": false,
+    "force_push_allowed": false,
+    "source_branch_delete_allowed": false
+  },
+  "next_gate": "P2_PREPARATION_EXACT_DESIGN_AND_MUTATION_PREFLIGHT_READY_FOR_SEPARATE_APPLY_AUTHORIZATION",
+  "updated_at_utc": "2026-08-12T00:56:00Z"
+}
