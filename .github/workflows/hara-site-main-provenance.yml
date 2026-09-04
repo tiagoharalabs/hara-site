@@ -116,3 +116,82 @@ jobs:
             'GENERIC_GIT_ADD_A=DENY' \
             'RUNTIME_MUTATION=0' \
             'DEPLOYMENT_PERFORMED_BY_THIS_WORKFLOW=0'
+
+      - name: Enforce public repository sanitization
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 - <<'PY'
+          import re
+          import subprocess
+          from pathlib import Path
+
+          tracked = subprocess.check_output(['git', 'ls-files'], text=True).splitlines()
+
+          def forbidden_local_secret_path(path: str) -> bool:
+              name = Path(path).name
+              if name == '.dev.vars':
+                  return True
+              if name.startswith('.dev.vars.') and name != '.dev.vars.example':
+                  return True
+              if name == '.env':
+                  return True
+              if name.startswith('.env.') and name != '.env.example':
+                  return True
+              if name in {'id_rsa', 'id_ed25519'}:
+                  return True
+              if name.endswith(('.pem', '.p12', '.pfx')):
+                  return True
+              return False
+
+          leaked_paths = [p for p in tracked if forbidden_local_secret_path(p)]
+          if leaked_paths:
+              raise SystemExit('TRACKED_LOCAL_SECRET_FILE=' + ','.join(leaked_paths))
+
+          deployable = []
+          for path in tracked:
+              p = Path(path)
+              if path in {'index.html', 'styles.css', 'wrangler.jsonc'} or path.startswith(('public/', 'src/')):
+                  try:
+                      if p.stat().st_size <= 2_000_000:
+                          deployable.append(path)
+                  except OSError:
+                      pass
+
+          patterns = {
+              'PERSONAL_HOME_PATH': re.compile(r'/home/[A-Za-z0-9._-]+/'),
+              'HARA_INTERNAL_RUNTIME_PATH': re.compile(r'/(?:srv/hara|tmp_hara)(?:/|$)'),
+              'RFC1918_IPV4': re.compile(r'(?<![0-9])(?:10[.](?:[0-9]{1,3}[.]){2}[0-9]{1,3}|192[.]168[.](?:[0-9]{1,3}[.])[0-9]{1,3}|172[.](?:1[6-9]|2[0-9]|3[01])[.](?:[0-9]{1,3}[.])[0-9]{1,3})(?![0-9])'),
+              'PRIVATE_KEY_HEADER': re.compile('-----BEGIN ' + '(?:RSA |EC |OPENSSH )?' + 'PRIVATE KEY-----'),
+              'GITHUB_TOKEN': re.compile(r'(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}'),
+              'AWS_ACCESS_KEY': re.compile(r'AKIA[0-9A-Z]{16}'),
+          }
+
+          findings = []
+          for path in deployable:
+              try:
+                  text = Path(path).read_text(encoding='utf-8')
+              except (UnicodeDecodeError, OSError):
+                  continue
+              for label, pattern in patterns.items():
+                  if pattern.search(text):
+                      findings.append(f'{label}:{path}')
+
+          static_status = Path('public/observabilidade/status.json')
+          if static_status.exists():
+              text = static_status.read_text(encoding='utf-8')
+              topology_patterns = {
+                  'PUBLIC_FLEET_NODE_ID': re.compile(r'(?i)(nucleo-a|sentinela-[abcd]|ninja[ -]blue|hara-fleet-(?:n150|storage|sentinela-[abcd])-node)'),
+                  'PUBLIC_SSH_TOPOLOGY': re.compile(r'(?i)(túnel ssh|ssh tunnel|loopback)'),
+              }
+              for label, pattern in topology_patterns.items():
+                  if pattern.search(text):
+                      findings.append(f'{label}:{static_status}')
+
+          if findings:
+              raise SystemExit('PUBLIC_SANITIZATION_FINDINGS=' + ','.join(sorted(set(findings))))
+
+          print('HARA_SITE_PUBLIC_SANITIZATION=PASS')
+          print('TRACKED_LOCAL_SECRET_FILE_COUNT=0')
+          print('PUBLIC_SENSITIVE_PATTERN_COUNT=0')
+          PY

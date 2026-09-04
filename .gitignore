@@ -1,4 +1,18 @@
+# dependencies
+node_modules/
 
-logs
+# Cloudflare local/runtime state
+.wrangler/
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
 
-logs
+# local environment files
+.env
+.env.*
+!.env.example
+
+# logs and local artifacts
+logs/
+*.log
+.DS_Store

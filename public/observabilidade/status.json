@@ -1,32 +1,19 @@
 {
-  "assimilation": {
-    "identity_proven": true,
-    "mode": "manual-controlled",
-    "node": "Ninja Blue",
-    "primary_transport": "wired",
-    "secondary_interface_count": 1,
-    "secondary_scrape_count": 0
-  },
   "components": [
     {
-      "name": "Plano de observa\u00e7\u00e3o",
+      "name": "Plano de observação",
       "state": "degraded",
-      "summary": "4 de 10 alvos essenciais saud\u00e1veis."
+      "summary": "4 de 10 alvos essenciais saudáveis."
     },
     {
-      "name": "Ninja Blue",
+      "name": "Coleta de telemetria",
       "state": "healthy",
-      "summary": "N\u00f3 assimilado manualmente com exporter em loopback e t\u00fanel SSH governado."
-    },
-    {
-      "name": "Observer",
-      "state": "healthy",
-      "summary": "Prometheus central recebeu o novo alvo sem exposi\u00e7\u00e3o da LAN."
+      "summary": "Telemetria agregada disponível sem expor identidade ou transporte interno."
     },
     {
       "name": "Site de observabilidade",
       "state": "healthy",
-      "summary": "Snapshot sanitizado atualizado por publica\u00e7\u00e3o Git-native."
+      "summary": "Snapshot público sanitizado disponível."
     }
   ],
   "freshness": {
@@ -40,59 +27,49 @@
     "force_push": 0,
     "merge": 1,
     "state": "healthy",
-    "summary": "Assimila\u00e7\u00e3o manual, ordem single-use, backup e rollback habilitados."
+    "summary": "Publicação governada por revisão e validação antes do merge."
   },
-  "missing_expected_jobs": [
-    "hara-fleet-n150-node",
-    "hara-fleet-sentinela-a-node",
-    "hara-fleet-sentinela-b-node",
-    "hara-fleet-sentinela-c-node",
-    "hara-fleet-sentinela-d-node",
-    "hara-fleet-storage-node"
-  ],
-  "overall_message": "A frota ganhou um novo n\u00f3 assimilado com identidade e telemetria governadas.",
+  "overall_message": "Sinais agregados de disponibilidade e saúde operacional.",
   "overall_state": "degraded",
-  "present_but_down_jobs": [],
-  "release_id": "ninja-blue-controlled-assimilation-v112-20260806t212000976507z",
   "schema": "hara.public-observability.v1",
   "signals": {
     "disk": {
-      "detail": "Uso agregado, sem publicar volumes ou caminhos.",
+      "detail": "Uso agregado, sem publicar volumes, caminhos ou identidade de host.",
       "display": "74.3% usado",
-      "label": "Disco raiz do Observer",
+      "label": "Uso de armazenamento observado",
       "state": "healthy",
       "value": 0.74287145
     },
     "failed_units": {
-      "detail": "Contagem sanitizada no Observer.",
+      "detail": "Contagem agregada e sanitizada.",
       "display": "2",
-      "label": "Unidades systemd falhas",
+      "label": "Unidades com falha",
       "state": "degraded",
       "value": 2.0
     },
     "journal_errors": {
-      "detail": "Eventos de prioridade erro nos \u00faltimos cinco minutos.",
+      "detail": "Contagem agregada de eventos recentes de prioridade erro.",
       "display": "1",
       "label": "Erros recentes",
       "state": "degraded",
       "value": 1.0
     },
     "observer": {
-      "detail": "Exporter loopback, snapshot e scrape central ativos.",
+      "detail": "Telemetria agregada disponível.",
       "display": "Ativo",
-      "label": "Observer",
+      "label": "Coleta de telemetria",
       "state": "healthy",
       "value": 1
     },
     "snapshot": {
-      "detail": "Idade da \u00faltima coleta pr\u00f3pria do Observer.",
+      "detail": "Idade da última coleta pública sanitizada.",
       "display": "50 s",
       "label": "Frescor do snapshot",
       "state": "healthy",
       "value": 50.825650691986084
     },
     "targets": {
-      "detail": "Sa\u00fade agregada dos alvos esperados.",
+      "detail": "Saúde agregada dos alvos esperados, sem identificação individual.",
       "display": "4/10",
       "label": "Alvos essenciais",
       "state": "degraded",
