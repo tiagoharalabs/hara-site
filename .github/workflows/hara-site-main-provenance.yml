@@ -1,0 +1,118 @@
+name: HARA Site Main Provenance Guard
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: hara-site-main-provenance-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate reviewed site landing and main provenance
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact revision without external actions
+        shell: bash
+        env:
+          HARA_GIT_TOKEN: ${{ github.token }}
+          HARA_REPOSITORY: ${{ github.repository }}
+          HARA_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -Eeuo pipefail
+          test -n "$HARA_GIT_TOKEN"
+          test -n "$HARA_REPOSITORY"
+          test -n "$HARA_HEAD_SHA"
+          HARA_BASIC_AUTH="$(printf 'x-access-token:%s' "$HARA_GIT_TOKEN" | base64 -w0)"
+          git init --quiet .
+          git remote add origin "https://github.com/${HARA_REPOSITORY}.git"
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic ${HARA_BASIC_AUTH}" \
+            fetch --quiet --no-tags --depth=1 origin "$HARA_HEAD_SHA"
+          git checkout --quiet --detach FETCH_HEAD
+          test "$(git rev-parse HEAD)" = "$HARA_HEAD_SHA"
+          unset HARA_GIT_TOKEN HARA_BASIC_AUTH
+          printf 'CHECKOUT_EXACT_SHA=PASS:%s\n' "$HARA_HEAD_SHA"
+
+      - name: Verify main push came from merged pull request
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HARA_REPOSITORY: ${{ github.repository }}
+          HARA_HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -Eeuo pipefail
+          merged_prs=()
+          for attempt in 1 2 3 4 5 6; do
+            mapfile -t merged_prs < <(
+              gh api "repos/${HARA_REPOSITORY}/commits/${HARA_HEAD_SHA}/pulls" \
+                --jq '.[] | select(.merged_at != null and .base.ref == "main") | .number'
+            )
+            if (( ${#merged_prs[@]} == 1 )); then
+              break
+            fi
+            if (( ${#merged_prs[@]} > 1 )); then
+              break
+            fi
+            if (( attempt < 6 )); then
+              sleep 2
+            fi
+          done
+          if (( ${#merged_prs[@]} != 1 )); then
+            printf 'DIRECT_MAIN_PUSH_DETECTED=TRUE\n' >&2
+            printf 'MAIN_PUSH_SHA=%s\n' "$HARA_HEAD_SHA" >&2
+            printf 'ASSOCIATED_MERGED_MAIN_PR_COUNT=%s\n' "${#merged_prs[@]}" >&2
+            printf 'REMEDIATION=REVERT_OR_SUPERSEDE_THROUGH_REVIEWED_PR_DO_NOT_NORMALIZE_DIRECT_PUSH\n' >&2
+            exit 1
+          fi
+          printf 'MAIN_PUSH_PROVENANCE=MERGED_PR\n'
+          printf 'MAIN_PUSH_PR=%s\n' "${merged_prs[0]}"
+          printf 'MAIN_PUSH_SHA=%s\n' "$HARA_HEAD_SHA"
+
+      - name: Enforce site publication hygiene
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          test -f README.md
+          test -f index.html
+          test -f package.json
+          test -f wrangler.jsonc
+
+          if grep -Eq 'git[[:space:]]+add[[:space:]]+\.' README.md; then
+            printf 'GENERIC_GIT_ADD_A_DOCUMENTATION_FORBIDDEN=TRUE\n' >&2
+            exit 1
+          fi
+
+          subject="$(git log -1 --format=%s HEAD)"
+          normalized_subject="$(printf '%s' "$subject" | tr '[:upper:]' '[:lower:]' | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')"
+          case "$normalized_subject" in
+            x|noop|tmp|wip|scratch|test)
+              printf 'TRIVIAL_COMMIT_SUBJECT_FORBIDDEN=%s\n' "$subject" >&2
+              exit 1
+              ;;
+          esac
+
+          python3 - <<'PY'
+          import json
+          with open('package.json', encoding='utf-8') as h:
+              p = json.load(h)
+          assert p.get('private') is True
+          assert isinstance(p.get('scripts'), dict)
+          print('SITE_PACKAGE_PRIVATE=TRUE')
+          PY
+
+          printf '%s\n' \
+            'HARA_SITE_PUBLICATION_HYGIENE=PASS' \
+            'DIRECT_MAIN_PUSH_POLICY=DENY' \
+            'GENERIC_GIT_ADD_A=DENY' \
+            'RUNTIME_MUTATION=0' \
+            'DEPLOYMENT_PERFORMED_BY_THIS_WORKFLOW=0'
