@@ -32,14 +32,96 @@ function isLikelyEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
 }
 
-function slugify(value) {
-  return String(value || "empresa")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 60) || "empresa";
+function publicText(value, maxLength = 240) {
+  const internalPathPattern = new RegExp('/(?:srv' + '/hara|tmp_' + 'hara)(?:/[^\\s]*)?', 'gi');
+  const privateIpPattern = new RegExp(
+    '(?:10[.](?:[0-9]{1,3}[.]){2}[0-9]{1,3}|' +
+      '192[.]' + '168[.](?:[0-9]{1,3}[.])[0-9]{1,3}|' +
+      '172[.](?:1[6-9]|2[0-9]|3[01])[.](?:[0-9]{1,3}[.])[0-9]{1,3})',
+    'g'
+  );
+
+  return cleanText(value, maxLength)
+    .replace(/\bnucleo-a\b/gi, "Nó observado")
+    .replace(/\bsentinela-[a-d]\b/gi, "Nó observado")
+    .replace(/\bninja[ -]blue\b/gi, "Infraestrutura observada")
+    .replace(/\bhara-fleet-[a-z0-9-]+-node\b/gi, "Alvo observado")
+    .replace(/\bObserver\b/gi, "Coleta de telemetria")
+    .replace(/\b(?:túnel SSH|SSH tunnel|loopback)\b/gi, "transporte interno")
+    .replace(internalPathPattern, "[caminho interno]")
+    .replace(privateIpPattern, "[endereço interno]");
+}
+
+function publicSignal(signal = {}, fallbackLabel = "Sinal") {
+  const projected = {
+    label: publicText(signal.label || fallbackLabel, 80),
+    state: publicText(signal.state || "unknown", 40),
+    display: publicText(signal.display ?? signal.value ?? "—", 80),
+    detail: publicText(signal.detail || "", 240)
+  };
+
+  if (typeof signal.value === "number" && Number.isFinite(signal.value)) {
+    projected.value = signal.value;
+  }
+  if (typeof signal.total === "number" && Number.isFinite(signal.total)) {
+    projected.total = signal.total;
+  }
+  if (typeof signal.up === "number" && Number.isFinite(signal.up)) {
+    projected.up = signal.up;
+  }
+
+  return projected;
+}
+
+function publicObservabilityProjection(payload = {}) {
+  const signals = payload.signals || {};
+  const projectedSignals = {};
+  const allowedSignals = {
+    disk: "Uso de armazenamento observado",
+    failed_units: "Unidades com falha",
+    journal_errors: "Erros recentes",
+    observer: "Coleta de telemetria",
+    snapshot: "Frescor do snapshot",
+    targets: "Alvos essenciais"
+  };
+
+  for (const [key, fallbackLabel] of Object.entries(allowedSignals)) {
+    if (signals[key] && typeof signals[key] === "object") {
+      projectedSignals[key] = publicSignal(signals[key], fallbackLabel);
+    }
+  }
+
+  const components = Array.isArray(payload.components)
+    ? payload.components.slice(0, 12).map((component) => ({
+        name: publicText(component?.name || "Componente", 80),
+        state: publicText(component?.state || "unknown", 40),
+        summary: publicText(component?.summary || "", 240)
+      }))
+    : [];
+
+  const governance = payload.governance || {};
+  const freshness = payload.freshness || {};
+
+  return {
+    schema: "hara.public-observability.v1",
+    generated_at_utc: cleanText(payload.generated_at_utc || "", 80),
+    overall_state: publicText(payload.overall_state || "unknown", 40),
+    overall_message: publicText(payload.overall_message || "Snapshot público sanitizado.", 240),
+    freshness: {
+      maximum_expected_seconds: Number.isFinite(Number(freshness.maximum_expected_seconds))
+        ? Math.max(30, Math.min(3600, Number(freshness.maximum_expected_seconds)))
+        : 180
+    },
+    governance: {
+      state: publicText(governance.state || "unknown", 40),
+      summary: publicText(governance.summary || "Governança sem detalhe público.", 240),
+      direct_main_push: Number(governance.direct_main_push || 0),
+      force_push: Number(governance.force_push || 0),
+      merge: Number(governance.merge || 0)
+    },
+    components,
+    signals: projectedSignals
+  };
 }
 
 async function verifyTurnstile(token, secret, remoteIp) {
@@ -112,12 +194,10 @@ async function saveDiagnosticToR2(env, payload, request) {
   const now = new Date();
   const iso = now.toISOString();
   const day = iso.slice(0, 10);
-  const safeCompany = slugify(payload.empresa);
   const randomPart = crypto.randomUUID();
-
   const key =
     `diagnosticos/raw/${day}/` +
-    `${iso.replace(/[:.]/g, "-")}_${safeCompany}_${randomPart}.json`;
+    `${iso.replace(/[:.]/g, "-")}_${randomPart}.json`;
 
   const record = {
     schema_version: "hara_diagnostic_v1",
@@ -125,8 +205,7 @@ async function saveDiagnosticToR2(env, payload, request) {
     received_at: iso,
     request: {
       cf_ray: request.headers.get("CF-Ray") || "",
-      ip_country: request.headers.get("CF-IPCountry") || "",
-      user_agent: cleanText(request.headers.get("User-Agent") || "", 240)
+      ip_country: request.headers.get("CF-IPCountry") || ""
     },
     payload
   };
@@ -140,13 +219,10 @@ async function saveDiagnosticToR2(env, payload, request) {
       },
       customMetadata: {
         source: "hara-site",
-        schema: "hara_diagnostic_v1",
-        empresa: safeCompany
+        schema: "hara_diagnostic_v1"
       }
     }
   );
-
-  return key;
 }
 
 async function handleDiagnostico(request, env) {
@@ -177,8 +253,7 @@ async function handleDiagnostico(request, env) {
   if (!turnstile.success) {
     return json({
       ok: false,
-      message: "Falha na verificação de segurança.",
-      turnstile_errors: turnstile["error-codes"] || []
+      message: "Falha na verificação de segurança."
     }, 403);
   }
 
@@ -263,41 +338,38 @@ async function handleDiagnostico(request, env) {
     }, 400);
   }
 
-  let objectKey;
-
   try {
-    objectKey = await saveDiagnosticToR2(env, payload, request);
-  } catch (error) {
+    await saveDiagnosticToR2(env, payload, request);
+  } catch (_error) {
+    console.error("diagnostic_storage_failed");
     return json({
       ok: false,
-      message: "Formulário validado, mas falhou ao armazenar o diagnóstico.",
-      detail: cleanText(error.message, 240)
+      message: "Formulário validado, mas falhou ao armazenar o diagnóstico."
     }, 500);
   }
 
   return json({
     ok: true,
     message: "Formulário recebido e armazenado. Score e análise são processados internamente.",
-    received_at: new Date().toISOString(),
-    key: objectKey
+    received_at: new Date().toISOString()
   });
 }
 
-
 async function observabilityPayload(payload) {
-  const generatedAt = Date.parse(payload.generated_at_utc || "");
+  const projected = publicObservabilityProjection(payload);
+  const generatedAt = Date.parse(projected.generated_at_utc || "");
   const ageSeconds = Number.isFinite(generatedAt)
     ? Math.max(0, Math.floor((Date.now() - generatedAt) / 1000))
     : null;
 
   return {
-    ...payload,
+    ...projected,
     freshness: {
-      ...(payload.freshness || {}),
+      ...projected.freshness,
       seconds: ageSeconds,
       state:
         ageSeconds !== null &&
-        ageSeconds <= Number(payload.freshness?.maximum_expected_seconds || 180)
+        ageSeconds <= Number(projected.freshness?.maximum_expected_seconds || 180)
           ? "fresh"
           : "stale"
     }
