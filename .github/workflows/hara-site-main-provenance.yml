@@ -160,11 +160,11 @@ jobs:
 
           patterns = {
               'PERSONAL_HOME_PATH': re.compile(r'/home/[A-Za-z0-9._-]+/'),
-              'HARA_INTERNAL_RUNTIME_PATH': re.compile(r'/(?:srv/hara|tmp_hara)(?:/|\\b)'),
-              'RFC1918_IPV4': re.compile(r'(?<!\\d)(?:10\\.(?:\\d{1,3}\\.){2}\\d{1,3}|192\\.168\\.(?:\\d{1,3}\\.)\\d{1,3}|172\\.(?:1[6-9]|2\\d|3[01])\\.(?:\\d{1,3}\\.)\\d{1,3})(?!\\d)'),
+              'HARA_INTERNAL_RUNTIME_PATH': re.compile(r'/(?:srv/hara|tmp_hara)(?:/|$)'),
+              'RFC1918_IPV4': re.compile(r'(?<![0-9])(?:10[.](?:[0-9]{1,3}[.]){2}[0-9]{1,3}|192[.]168[.](?:[0-9]{1,3}[.])[0-9]{1,3}|172[.](?:1[6-9]|2[0-9]|3[01])[.](?:[0-9]{1,3}[.])[0-9]{1,3})(?![0-9])'),
               'PRIVATE_KEY_HEADER': re.compile('-----BEGIN ' + '(?:RSA |EC |OPENSSH )?' + 'PRIVATE KEY-----'),
-              'GITHUB_TOKEN': re.compile(r'\\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{20,}\\b|\\bgithub_pat_[A-Za-z0-9_]{20,}\\b'),
-              'AWS_ACCESS_KEY': re.compile(r'\\bAKIA[0-9A-Z]{16}\\b'),
+              'GITHUB_TOKEN': re.compile(r'(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}'),
+              'AWS_ACCESS_KEY': re.compile(r'AKIA[0-9A-Z]{16}'),
           }
 
           findings = []
@@ -181,8 +181,8 @@ jobs:
           if static_status.exists():
               text = static_status.read_text(encoding='utf-8')
               topology_patterns = {
-                  'PUBLIC_FLEET_NODE_ID': re.compile(r'(?i)\\b(?:nucleo-a|sentinela-[abcd]|ninja[ -]blue|hara-fleet-(?:n150|storage|sentinela-[abcd])-node)\\b'),
-                  'PUBLIC_SSH_TOPOLOGY': re.compile(r'(?i)\\b(?:túnel ssh|ssh tunnel|loopback)\\b'),
+                  'PUBLIC_FLEET_NODE_ID': re.compile(r'(?i)(nucleo-a|sentinela-[abcd]|ninja[ -]blue|hara-fleet-(?:n150|storage|sentinela-[abcd])-node)'),
+                  'PUBLIC_SSH_TOPOLOGY': re.compile(r'(?i)(túnel ssh|ssh tunnel|loopback)'),
               }
               for label, pattern in topology_patterns.items():
                   if pattern.search(text):
