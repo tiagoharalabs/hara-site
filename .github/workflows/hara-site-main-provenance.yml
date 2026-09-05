@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   validate:
-    name: Validate reviewed site landing and public sanitization
+    name: Validate reviewed site landing and main provenance
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
