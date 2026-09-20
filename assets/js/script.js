@@ -72,7 +72,7 @@ document.addEventListener("DOMContentLoaded", function () {
         infographic: true
       },
       {
-        image: "assets/images/hara-logo-premium.webp",
+        image: "assets/images/hara-commander-logo.png",
         title: "IA como parte do fluxo",
         description: "IA amplifica estrutura. Não corrige desorganização.",
         infographic: false
