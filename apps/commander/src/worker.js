@@ -399,6 +399,18 @@ export default {
         OIDC_STATE_EXPIRED: 400,
         OIDC_PROVIDER_ERROR: 400,
       };
+
+      if (url?.pathname === "/auth/callback") {
+        const safeCode = /^[A-Z0-9_]{1,80}$/.test(code) ? code : "AUTH_CALLBACK_FAILED";
+        return new Response(null, {
+          status: 302,
+          headers: {
+            location: "/?auth_error=" + encodeURIComponent(safeCode) + "#login",
+            "cache-control": "no-store",
+          },
+        });
+      }
+
       return json({ ok: false, code }, statusMap[code] || 500);
     }
   }
