@@ -53,22 +53,35 @@ export async function pkceChallenge(verifier) {
   return sha256(verifier);
 }
 
+function formUrlEncodeComponent(value) {
+  return new URLSearchParams([["v", String(value)]]).toString().slice(2);
+}
+
 export async function exchangeAuthorizationCode({ metadata, clientId, clientSecret, code, verifier, redirectUri }) {
   const form = new URLSearchParams({
     grant_type: "authorization_code",
-    client_id: clientId,
     code,
     code_verifier: verifier,
     redirect_uri: redirectUri,
   });
-  if (clientSecret) form.set("client_secret", clientSecret);
+
+  const headers = {
+    "content-type": "application/x-www-form-urlencoded",
+    accept: "application/json",
+  };
+
+  if (clientSecret) {
+    const basic = btoa(
+      formUrlEncodeComponent(clientId) + ":" + formUrlEncodeComponent(clientSecret),
+    );
+    headers.authorization = "Basic " + basic;
+  } else {
+    form.set("client_id", clientId);
+  }
 
   const response = await fetch(metadata.token_endpoint, {
     method: "POST",
-    headers: {
-      "content-type": "application/x-www-form-urlencoded",
-      accept: "application/json",
-    },
+    headers,
     body: form.toString(),
   });
   const payload = await response.json().catch(() => ({}));
