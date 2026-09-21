@@ -74,8 +74,8 @@
           </div>
 
           <div class="metric-grid">
-            <article><span>Plano</span><strong>Standard</strong><small>Demo</small></article>
-            <article><span>Uso</span><strong>2.184</strong><small>de 10.000</small></article>
+            <article><span>Plano</span><strong id="landingPlan">Standard</strong><small>Demo</small></article>
+            <article><span>Uso</span><strong id="landingUsage">0</strong><small id="landingLimit">de 10.000</small></article>
             <article><span>Conexões</span><strong>1</strong><small>ChatGPT</small></article>
             <article><span>Receipts</span><strong>2.184</strong><small>auditáveis</small></article>
           </div>
@@ -224,10 +224,10 @@
 
           <div class="summary-grid">
             <article class="summary-card accent">
-              <span>Plano atual</span><strong>Standard</strong><small>Preview comercial</small>
+              <span>Plano atual</span><strong id="dashboardPlan">Standard</strong><small>Preview comercial</small>
             </article>
             <article class="summary-card">
-              <span>Uso do período</span><strong>2.184 <em>/ 10.000</em></strong><small>21,84% utilizado</small>
+              <span>Uso do período</span><strong><span id="dashboardConsumed">0</span> <em id="dashboardLimit">/ 10.000</em></strong><small id="dashboardPercent">0% utilizado</small>
             </article>
             <article class="summary-card">
               <span>Conexões</span><strong>1 ativa</strong><small>ChatGPT</small>
@@ -240,7 +240,7 @@
           <div class="dashboard-grid">
             <article class="panel usage-panel">
               <div class="panel-head">
-                <div><span>Uso governado</span><h2>2.184 invokes</h2></div>
+                <div><span>Uso governado</span><h2><span id="dashboardInvokes">0</span> invokes</h2></div>
                 <button class="link-button" data-app-go="usage">Ver detalhes →</button>
               </div>
               <div class="big-chart" aria-label="Gráfico ilustrativo de uso">
@@ -278,13 +278,13 @@
           <div class="quota-hero">
             <div>
               <span>Quota do período</span>
-              <strong>2.184 <em>de 10.000</em></strong>
-              <div class="progress"><i style="width:21.84%"></i></div>
-              <small>7.816 unidades disponíveis</small>
+              <strong><span id="usageConsumed">0</span> <em id="usageLimit">de 10.000</em></strong>
+              <div class="progress"><i id="usageProgress" style="width:0%"></i></div>
+              <small id="usageRemaining">10.000 unidades disponíveis</small>
             </div>
             <div class="quota-meta">
               <span><small>Meter</small><b>Governed Invoke</b></span>
-              <span><small>Renovação</small><b>01 Out 2026</b></span>
+              <span><small>Período</small><b id="usagePeriod">—</b></span>
               <span><small>Idempotência</small><b>Ativa</b></span>
             </div>
           </div>
@@ -315,7 +315,7 @@
           <div class="plan-grid">
             <article class="plan-card">
               <span class="plan-label">TRIAL</span><h2>Experimentar</h2><p>Para homologar o fluxo do Commander antes de contratar.</p>
-              <strong>1.000 <small>invokes</small></strong>
+              <strong>1.000 <small>invokes / período</small></strong>
               <ul><li>1 workspace</li><li>Receipts auditáveis</li><li>Read-only V1</li><li>Suporte padrão</li></ul>
               <button class="btn btn-secondary btn-block" data-demo-toast="Plano Trial é apenas conceito visual nesta fase.">Começar trial</button>
             </article>
