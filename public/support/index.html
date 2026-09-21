@@ -1,53 +1,81 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#161616" />
-  <link rel="stylesheet" href="/assets/css/styles.css" />
-  <link rel="icon" type="image/png" href="/assets/images/favicon-32.png?v=20260921a" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#F4F8FB">
+<meta name="description" content="Suporte para H.A.R.A Labs, H.A.R.A Identity e H.A.R.A Commander.">
+<link rel="canonical" href="https://www.haralabs.com.br/support/">
 <title>Suporte — H.A.R.A Labs</title>
-<meta name="description" content="Suporte e contato para H.A.R.A Labs e H.A.R.A. Commander." />
+<link rel="icon" href="/assets/images/hara-logo-web.webp" type="image/webp">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/css/styles.css?v=20260921-v12">
+<link rel="stylesheet" href="/assets/css/legal.css?v=20260921-legal1">
 </head>
-<body>
-<header class="topbar">
-  <div class="shell topbar-inner">
-    <a href="/" class="brand" aria-label="H.A.R.A Labs">
-      <img class="brand-logo" src="/assets/images/hara-brand-flat-matte.png?v=20260921a" alt="H.A.R.A Labs" />
-      <span class="brand-text">H.A.R.A Labs</span>
+<body class="legal-body">
+<header class="site-header" id="top">
+  <div class="nav-shell">
+    <a class="brand" href="/" aria-label="H.A.R.A Labs">
+      <img src="/assets/images/hara-logo-web.webp" alt="" class="brand-logo">
+      <span class="brand-word">H.A.R.A <b>Labs</b></span>
     </a>
-    <nav class="nav" aria-label="Navegação">
+    <nav class="main-nav" aria-label="Navegação principal">
       <a href="/">Início</a>
       <a href="/#commander">Commander</a>
+      <a href="/legal/termos/">Termos</a>
+      <a href="/legal/privacidade/">Privacidade</a>
       <a href="/support/">Suporte</a>
     </nav>
+    <a class="nav-cta" href="mailto:contato@haralabs.com.br">Contato <span>→</span></a>
+    <button class="menu-button" aria-label="Abrir menu" aria-expanded="false"><span></span><span></span></button>
+  </div>
+  <div class="mobile-menu" aria-hidden="true">
+    <a href="/">Início</a><a href="/#commander">Commander</a><a href="/legal/termos/">Termos</a><a href="/legal/privacidade/">Privacidade</a><a href="/support/">Suporte</a>
   </div>
 </header>
-<main class="shell legal-page">
+<main>
+<section class="legal-hero">
+  <div class="page-shell">
+    <div class="legal-kicker">H.A.R.A Labs · H.A.R.A Commander</div>
+    <h1>Suporte</h1>
+    <p>Um canal único para acesso, identidade, conectividade, quotas, segurança e dúvidas de produto.</p>
+    <div class="legal-meta"><span><i></i>Canal principal: contato@haralabs.com.br</span><span><i></i>Não há SLA público nesta página</span></div>
+  </div>
+</section>
+<section class="legal-main">
+  <div class="page-shell">
+    <div class="support-contact">
+      <div><h2>Como podemos ajudar?</h2><p>Envie uma descrição objetiva do contexto, do comportamento observado e, quando possível, do horário aproximado do evento. Não envie segredos ou credenciais.</p></div>
+      <a class="button primary" href="mailto:contato@haralabs.com.br">contato@haralabs.com.br <span>→</span></a>
+    </div>
 
-<section class="card">
-  <span class="eyebrow">Suporte</span>
-  <h1>Suporte H.A.R.A.</h1>
-  <p>Para suporte do site, integrações ou H.A.R.A. Commander, utilize o canal abaixo.</p>
+    <div class="support-grid">
+      <article class="support-card"><span>ACESSO</span><h3>Acesso / login</h3><p>Dificuldade de autenticação, sessão, redirecionamento ou entrada no serviço.</p></article>
+      <article class="support-card"><span>IDENTIDADE</span><h3>Conta / identidade</h3><p>Conta, organização, perfil, autorização e fluxos relacionados ao H.A.R.A Identity.</p></article>
+      <article class="support-card"><span>COMMANDER</span><h3>Conectividade Commander</h3><p>Conexão, disponibilidade, integração e comportamento do H.A.R.A Commander.</p></article>
+      <article class="support-card"><span>USO</span><h3>Planos / quotas</h3><p>Dúvidas sobre limites técnicos, quotas disponíveis e condições apresentadas no produto.</p></article>
+      <article class="support-card"><span>SEGURANÇA</span><h3>Incidente de segurança</h3><p>Suspeita de comprometimento, acesso indevido, abuso ou comportamento de segurança inesperado.</p></article>
+      <article class="support-card"><span>PRODUTO</span><h3>Dúvida geral</h3><p>Arquitetura, funcionalidades, integração, uso do produto ou orientação institucional.</p></article>
+    </div>
 
-  <h2>Contato</h2>
-  <p><a class="button button-gold" href="mailto:contato@haralabs.com.br">contato@haralabs.com.br</a></p>
-
-  <h2>Ao solicitar suporte</h2>
-  <p>Informe uma descrição objetiva do problema, horário aproximado e contexto suficiente para diagnóstico. Não envie senhas, tokens, chaves privadas ou outros segredos.</p>
-
-  <h2>Segurança</h2>
-  <p>Relatos de segurança também podem ser encaminhados pelo e-mail acima com o assunto “Security”. Evite incluir material sensível além do estritamente necessário para reproduzir o problema.</p>
+    <article class="legal-card">
+      <div class="danger-box"><strong>Nunca envie por e-mail</strong><p>Senhas, Client Secrets, recovery codes, tokens, chaves privadas, cookies de sessão ou outras credenciais sensíveis.</p></div>
+      <section><h2>Ao abrir uma solicitação</h2><p>Inclua apenas o contexto necessário para diagnóstico. Capturas de tela e identificadores técnicos podem ajudar, desde que não revelem segredos, dados pessoais desnecessários ou conteúdo confidencial.</p></section>
+      <section><h2>Incidentes de segurança</h2><p>Use o mesmo endereço <a href="mailto:contato@haralabs.com.br">contato@haralabs.com.br</a> e indique no assunto que se trata de segurança. Não existe nesta página promessa de prazo de resposta ou SLA.</p></section>
+      <section><h2>Links úteis</h2><p><a href="/">H.A.R.A Labs</a> · <a href="/legal/termos/">Termos de Uso</a> · <a href="/legal/privacidade/">Política de Privacidade</a></p></section>
+    </article>
+  </div>
 </section>
 </main>
 <footer>
-  <div class="shell footer-line">
-    <span>© 2026 H.A.R.A Labs</span>
-    <span class="legal-links"><a href="/privacy/">Privacidade</a><a href="/terms/">Termos</a><a href="/support/">Suporte</a></span>
+  <div class="page-shell footer-grid">
+    <div class="footer-brand"><img src="/assets/images/hara-logo-web.webp" alt=""><div><strong>H.A.R.A <b>Labs</b></strong><small>IA com propósito. Sob seu controle.</small><div class="legal-entity">Irmãos Sartori Tecnologia da Informação Ltda<br>CNPJ 18.061.774/0001-98</div></div></div>
+    <nav class="legal-footer-links"><a href="/">Início</a><a href="/legal/termos/">Termos</a><a href="/legal/privacidade/">Privacidade</a><a href="/support/">Suporte</a></nav>
+    <small>© 2026 H.A.R.A Labs<br>Todos os direitos reservados.</small>
   </div>
 </footer>
+<script src="/assets/js/script.js?v=20260921-v12"></script>
 </body>
 </html>
