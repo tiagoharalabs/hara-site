@@ -1,0 +1,74 @@
+{
+  "timestamp_utc": "2026-09-21T23:12:00Z",
+  "status": "WAITING_HARA_SITE_EXTERNAL_LINKS",
+  "identity": {
+    "public_ready": true,
+    "issuer": "https://auth.haralabs.com.br",
+    "instance_name": "ZITADEL",
+    "target_instance_name": "HARA Identity",
+    "org_name": "HARA Labs",
+    "org_id": "391782241182744579",
+    "primary_domain": "haralabs.com.br",
+    "secondary_domain": "hara-labs.auth.haralabs.com.br",
+    "default_language": "pt",
+    "human_user_count": 1,
+    "smtp": {
+      "active": true,
+      "host": "smtp.zoho.com:587",
+      "tls": true,
+      "sender": "identity@haralabs.com.br",
+      "sender_name": "HARA Identity",
+      "reply_to": "contato@haralabs.com.br"
+    },
+    "login_policy": {
+      "local_auth": true,
+      "registration": true,
+      "external_login": false,
+      "force_mfa": false,
+      "hide_password_reset": false,
+      "domain_discovery": false,
+      "ignore_unknown_usernames": true,
+      "disable_email_login": false,
+      "disable_phone_login": true,
+      "default_redirect_uri": "https://hara-commander-dev-v2.tiago-sartori.workers.dev/"
+    },
+    "password_complexity": {
+      "min_length": 8,
+      "target_min_length": 12,
+      "lowercase": true,
+      "uppercase": true,
+      "symbol": true,
+      "number": true
+    },
+    "lockout": {
+      "max_password_attempts": 5,
+      "max_otp_attempts": 5
+    },
+    "external_links_configured": false
+  },
+  "commander": {
+    "url": "https://hara-commander-dev-v2.tiago-sartori.workers.dev",
+    "auth_configured": true,
+    "provider": "HARA Identity",
+    "login_http": 302,
+    "deployed_worker_version": "dacd7e33-6946-4740-b18e-1b13b87d7090",
+    "runtime_code_commit": "98b0a0d652115863579b30391af0a303c175b3ef",
+    "last_valid_invite_state": "ACTIVE",
+    "last_valid_invite_claimed": false,
+    "last_valid_portal_sessions": 0
+  },
+  "blockers": [
+    "HARA Site legal/support pages not deployed yet",
+    "Wrangler D1 recheck currently fails Cloudflare API 7403; reauthorize intended account before next D1 CLI operation",
+    "Normal human Commander user not created yet"
+  ],
+  "next": [
+    "Receive HARA Site URLs and HTTP 200 evidence",
+    "Configure External Links",
+    "Raise password minimum length to 12",
+    "Create and verify normal human user",
+    "Run private-browser Commander E2E",
+    "Verify invite CLAIMED/session/dashboard/logout",
+    "Add Google IdP only after local E2E PASS"
+  ]
+}
