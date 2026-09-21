@@ -81,3 +81,7 @@ Do not:
 - merge solely because automated visual gates pass;
 - bypass the main provenance guard;
 - rewrite canonical branding in a visual front that does not own branding.
+
+## Repository cleanliness
+
+This contract is documentation-only. It does not create or retain DEV/HOMOLOG release directories inside the repository; local publication artifacts remain ignored and disposable.
