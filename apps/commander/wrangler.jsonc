@@ -1,0 +1,33 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "hara-commander-dev",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-09-21",
+  "vars": {
+    "ENVIRONMENT": "DEV",
+    "MCP_BASE_URL": "https://mcp.haralabs.com.br/mcp"
+  },
+  "d1_databases": [
+    {
+      "binding": "PRODUCT_DB",
+      "database_name": "hara-commander-product-dev",
+      "database_id": "00000000-0000-0000-0000-000000000851",
+      "preview_database_id": "hara-commander-product-dev",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "TENANT_QUOTA",
+        "class_name": "TenantQuota"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["TenantQuota"]
+    }
+  ]
+}
