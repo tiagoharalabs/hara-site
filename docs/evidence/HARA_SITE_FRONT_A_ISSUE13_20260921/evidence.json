@@ -1,0 +1,44 @@
+{
+  "evidence_id": "HARA_SITE_FRONT_A_ISSUE13_20260921",
+  "captured_at_utc": "2026-09-21T03:41:05Z",
+  "issue": 13,
+  "implementation_pr": 17,
+  "implementation_merge_sha": "c9b7bbc3e2f7605dcf8bca3e4093c4abc19314ec",
+  "implementation_pr_head_sha": "0ec4404439bf4dcfaeea612413bf87c21004d988",
+  "implementation_ci": {
+    "workflow": "HARA Site Main Provenance Guard",
+    "pr_run": 35558198206,
+    "pr_conclusion": "success",
+    "main_push_run": 35558224225,
+    "main_push_conclusion": "success"
+  },
+  "canonical_source": {
+    "path": "brand/hara-capybara-flat-matte-source.png",
+    "sha256": "17d877bf28825f172eca2371ccd046d0214c6c2268f05bfadf63b616b916b9d8",
+    "dimensions": "1254x1254",
+    "policy": "flat/matte, non-mirrored, full capybara+triangle"
+  },
+  "active_derivative": {
+    "path": "public/assets/images/hara-brand-flat-matte.png",
+    "sha256": "b65b11d97ed10a2cf5b00948d6e14520e4c8250b2ff6471d22d27db9f8d3efcc",
+    "dimensions": "512x512",
+    "rendering": "object-fit: contain"
+  },
+  "live": {
+    "apex_url": "https://haralabs.com.br/",
+    "apex_http": 200,
+    "www_url": "https://www.haralabs.com.br/",
+    "www_http": 200,
+    "asset_http_both": 200,
+    "asset_sha256_both": "b65b11d97ed10a2cf5b00948d6e14520e4c8250b2ff6471d22d27db9f8d3efcc",
+    "asset_apex_www_parity": "PASS",
+    "active_legacy_references": 0
+  },
+  "screenshots": {
+    "live-apex-home.png": "7c14e280cb7cf0eb0b05b373d8db89c2e1801af8219095f157e393ac5c816527",
+    "live-apex-commander.png": "887a936c6ea276ba61fddb43afe4adf506e9f5423440cbbc74cef887d5b69bc0",
+    "live-www-home.png": "4f37e851e9e2c4847790b66b218fe4a639559ad0fb2af1f9082fd8f4ac6bfb43"
+  },
+  "technical_closeout": "PASS",
+  "operator_visual_signoff": "PENDING_OPERATOR_READBACK"
+}
