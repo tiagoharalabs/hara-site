@@ -11,7 +11,9 @@
   const params = new URLSearchParams(location.search);
   const localHost = location.hostname === "127.0.0.1" || location.hostname === "localhost";
   const scenario = String(params.get("scenario") || "").trim().toLowerCase();
+  const remotePortal = !localHost;
   let retryAction = null;
+  let authProviderConfigured = false;
 
   function validApiBase(value) {
     if (!value) return null;
@@ -23,7 +25,59 @@
     return null;
   }
 
-  const apiBase = validApiBase(params.get("api")) || (localHost ? "http://127.0.0.1:9192" : null);
+  const apiBase = validApiBase(params.get("api")) || (localHost ? "http://127.0.0.1:9192" : location.origin);
+  const dashboardPath = localHost ? "/api/dev/dashboard" : "/api/portal/dashboard";
+
+  function startRemoteAuth(signup = false) {
+    if (!remotePortal) {
+      route(signup ? "signup" : "login");
+      return;
+    }
+    if (!authProviderConfigured) {
+      showToast("O provedor OIDC DEV ainda não está configurado.");
+      return;
+    }
+    const target = "/auth/login?return_to=" + encodeURIComponent("/#dashboard") + (signup ? "&screen_hint=signup" : "");
+    location.assign(target);
+  }
+
+  async function configureAuthUi() {
+    if (!remotePortal) return;
+    try {
+      const response = await fetch("/api/portal/auth-config", { cache: "no-store" });
+      const config = await response.json();
+      authProviderConfigured = Boolean(response.ok && config.configured);
+
+      document.querySelectorAll("[data-auth-form]").forEach((form) => {
+        form.querySelectorAll("input").forEach((input) => {
+          input.disabled = true;
+          input.setAttribute("aria-disabled", "true");
+        });
+        const submit = form.querySelector('button[type="submit"]');
+        if (submit) {
+          submit.disabled = !authProviderConfigured;
+          submit.textContent = form.dataset.authForm === "signup"
+            ? "Continuar para cadastro seguro"
+            : "Continuar para login seguro";
+        }
+      });
+
+      document.querySelectorAll(".dev-note").forEach((node) => {
+        node.textContent = authProviderConfigured
+          ? "DEV: a autenticação acontece no provedor OIDC. O H.A.R.A. não recebe nem armazena sua senha."
+          : "DEV: o portal está pronto para OIDC, mas o provedor ainda não foi configurado.";
+      });
+    } catch (_error) {
+      authProviderConfigured = false;
+    }
+  }
+
+  async function logoutRemote() {
+    if (remotePortal) {
+      await fetch("/auth/logout", { method: "POST", cache: "no-store" }).catch(() => null);
+    }
+    route("landing");
+  }
 
   function number(value) {
     return new Intl.NumberFormat("pt-BR").format(Number(value || 0));
@@ -113,7 +167,7 @@
     }
     if (name === "auth-expired") {
       setState("Sessão expirada", "Autenticação necessária");
-      showBanner("danger", "Sessão expirada", "Sua sessão DEV expirou. Entre novamente para continuar.", "Entrar novamente", () => route("login"));
+      showBanner("danger", "Sessão expirada", "Sua sessão DEV expirou. Entre novamente para continuar.", "Entrar novamente", () => startRemoteAuth(false));
       return;
     }
     if (name === "entitlement-suspended") {
@@ -171,7 +225,7 @@
     }
 
     try {
-      const response = await fetch(apiBase + "/api/dev/dashboard", { cache: "no-store" });
+      const response = await fetch(apiBase + dashboardPath, { cache: "no-store", credentials: "same-origin" });
       if (response.status === 401) {
         applyScenario("auth-expired", null);
         return;
@@ -209,7 +263,7 @@
     document.body.classList.toggle("workspace-mode", appViews.has(next));
     if (push && location.hash !== "#" + next) history.pushState(null, "", "#" + next);
     window.scrollTo({ top: 0, behavior: "instant" });
-    if (next === "landing" || next === "dashboard" || next === "usage") loadProductDashboard();
+    if (next === "dashboard" || next === "usage" || (next === "landing" && localHost)) loadProductDashboard();
   }
 
   copySidebars();
@@ -235,6 +289,13 @@
       return;
     }
 
+    const logout = event.target.closest("[data-logout]");
+    if (logout) {
+      event.preventDefault();
+      logoutRemote();
+      return;
+    }
+
     const demo = event.target.closest("[data-demo-toast]");
     if (demo) {
       event.preventDefault();
@@ -245,6 +306,10 @@
   document.querySelectorAll("[data-auth-form]").forEach((form) => {
     form.addEventListener("submit", (event) => {
       event.preventDefault();
+      if (remotePortal) {
+        startRemoteAuth(form.dataset.authForm === "signup");
+        return;
+      }
       const label = form.dataset.authForm === "signup"
         ? "Workspace DEV criado localmente. Nenhuma credencial foi persistida."
         : "Login DEV simulado. Nenhuma credencial foi enviada.";
@@ -257,6 +322,7 @@
   window.addEventListener("popstate", () => route(location.hash.slice(1) || "landing", false));
   window.addEventListener("hashchange", () => route(location.hash.slice(1) || "landing", false));
 
+  configureAuthUi();
   route(location.hash.slice(1) || "landing", false);
-  loadProductDashboard();
+  if (localHost) loadProductDashboard();
 })();

@@ -1,4 +1,11 @@
 import { DurableObject } from "cloudflare:workers";
+import {
+  authStatus,
+  beginLogin,
+  finishLogin,
+  logout,
+  resolvePortalSession,
+} from "./auth.js";
 
 const DEMO_TENANT = "HARA-TENANT-DEMO-0001";
 
@@ -214,6 +221,58 @@ async function dashboard(env, tenantId) {
   };
 }
 
+async function dashboardForSubject(env, subjectId, tenantId) {
+  const ent = await env.PRODUCT_DB.prepare(
+    `SELECT
+       t.tenant_id,
+       t.display_name AS tenant_name,
+       t.state AS tenant_state,
+       e.entitlement_id,
+       e.state AS entitlement_state,
+       e.subject_id AS entitlement_subject_id,
+       p.plan_code,
+       p.display_name AS plan_name,
+       p.meter_id,
+       p.period_kind,
+       p.unit_limit
+     FROM tenants t
+     JOIN entitlements e ON e.tenant_id = t.tenant_id
+     JOIN plans p ON p.plan_code = e.plan_code
+    WHERE t.tenant_id = ?
+      AND t.state = 'ACTIVE'
+      AND e.state = 'ACTIVE'
+      AND p.state = 'ACTIVE'
+      AND (e.subject_id IS NULL OR e.subject_id = ?)
+    ORDER BY CASE WHEN e.subject_id = ? THEN 0 ELSE 1 END
+    LIMIT 1`
+  ).bind(tenantId, subjectId, subjectId).first();
+
+  if (!ent) return null;
+  const quota = env.TENANT_QUOTA.getByName(tenantId);
+  const periodKey = ent.period_kind === "CALENDAR_MONTH" ? monthKey() : "LIFETIME";
+  const limit = ent.period_kind === "NONE" ? null : Number(ent.unit_limit);
+  const usage = await quota.status(periodKey, limit);
+
+  return {
+    schema: "hara.commander-portal-dashboard-dev.v1",
+    tenant: {
+      tenant_id: ent.tenant_id,
+      display_name: ent.tenant_name,
+      state: ent.tenant_state
+    },
+    entitlement: {
+      entitlement_id: ent.entitlement_id,
+      state: ent.entitlement_state,
+      plan_code: ent.plan_code,
+      plan_name: ent.plan_name,
+      meter_id: ent.meter_id,
+      period_kind: ent.period_kind,
+      unit_limit: limit
+    },
+    usage
+  };
+}
+
 export default {
   async fetch(request, env) {
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: json({}).headers });
@@ -221,7 +280,6 @@ export default {
     try {
       requireDev(env);
       const url = new URL(request.url);
-      if (url.pathname !== "/api/dev/health") requireRemoteDevToken(request, env);
 
       if (url.pathname === "/api/dev/health" && request.method === "GET") {
         return json({
@@ -230,9 +288,58 @@ export default {
           environment: env.ENVIRONMENT,
           product_db: env.STORAGE_MODE === "REMOTE_DEV" ? "D1_REMOTE_DEV" : "D1_LOCAL",
           quota_store: env.STORAGE_MODE === "REMOTE_DEV" ? "DURABLE_OBJECT_SQLITE_REMOTE_DEV" : "DURABLE_OBJECT_SQLITE_LOCAL",
+          auth: authStatus(env),
           production_mutation: false
         });
       }
+
+      if (url.pathname === "/api/portal/auth-config" && request.method === "GET") {
+        return json(authStatus(env));
+      }
+
+      if (url.pathname === "/auth/login" && request.method === "GET") {
+        return await beginLogin(request, env);
+      }
+
+      if (url.pathname === "/auth/callback" && request.method === "GET") {
+        return await finishLogin(request, env);
+      }
+
+      if (url.pathname === "/auth/logout" && request.method === "POST") {
+        return await logout(request, env);
+      }
+
+      if (url.pathname === "/api/portal/session" && request.method === "GET") {
+        const session = await resolvePortalSession(request, env);
+        if (!session) return json({ ok: false, code: "AUTH_REQUIRED" }, 401);
+        return json({
+          ok: true,
+          subject: {
+            subject_id: session.subject_id,
+            display_name: session.display_name,
+            role: session.role
+          },
+          tenant: {
+            tenant_id: session.tenant_id,
+            display_name: session.tenant_name
+          }
+        });
+      }
+
+      if (url.pathname === "/api/portal/dashboard" && request.method === "GET") {
+        const session = await resolvePortalSession(request, env);
+        if (!session) return json({ ok: false, code: "AUTH_REQUIRED" }, 401);
+        const payload = await dashboardForSubject(env, session.subject_id, session.tenant_id);
+        if (!payload) return json({ ok: false, code: "ENTITLEMENT_NOT_FOUND" }, 403);
+        payload.subject = {
+          subject_id: session.subject_id,
+          display_name: session.display_name,
+          role: session.role
+        };
+        return json(payload);
+      }
+
+      if (url.pathname.startsWith("/api/dev/")) requireRemoteDevToken(request, env);
 
       if (url.pathname === "/api/dev/dashboard" && request.method === "GET") {
         const tenantId = cleanId(url.searchParams.get("tenant_id") || DEMO_TENANT);
@@ -279,8 +386,20 @@ export default {
       return json({ ok: false, code: "NOT_FOUND" }, 404);
     } catch (error) {
       const code = error?.message || "INTERNAL_ERROR";
-      const status = code === "DEV_ACCESS_DENIED" ? 401 : 500;
-      return json({ ok: false, code }, status);
+      const statusMap = {
+        DEV_ACCESS_DENIED: 401,
+        AUTH_REQUIRED: 401,
+        OIDC_NOT_CONFIGURED: 503,
+        IDENTITY_NOT_PROVISIONED: 403,
+        IDENTITY_INACTIVE: 403,
+        IDENTITY_INVITE_EXPIRED: 403,
+        OIDC_CALLBACK_INVALID: 400,
+        OIDC_STATE_INVALID: 400,
+        OIDC_STATE_REPLAYED: 400,
+        OIDC_STATE_EXPIRED: 400,
+        OIDC_PROVIDER_ERROR: 400,
+      };
+      return json({ ok: false, code }, statusMap[code] || 500);
     }
   }
 };

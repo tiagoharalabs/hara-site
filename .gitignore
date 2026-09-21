@@ -22,3 +22,6 @@ logs/
 dev-preview/
 artifacts/dev/
 apps/commander/.generated/
+
+__pycache__/
+*.pyc
