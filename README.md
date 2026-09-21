@@ -30,3 +30,13 @@ Não use `git push` diretamente para `main` como fluxo normal e não use staging
 O workflow `HARA Site Main Provenance Guard` verifica a proveniência de cada push em `main` e falha se o commit não estiver associado a um pull request mergeado. Esse guard é detecção/adjudicação pós-push e **não substitui branch protection/ruleset nativo do GitHub**. Portanto, não trate a existência do workflow como prova de que `main` está preventivamente protegido.
 
 A configuração exata de branch protection/ruleset e a integração externa de deploy devem ser resolvidas por readback atual antes de qualquer afirmação de proteção preventiva.
+
+## Ambientes DEV / HOMOLOG / PROD
+
+O fluxo de publicação do site é DEV -> HOMOLOG -> PROD.
+
+DEV é local e descartável. HOMOLOG é a superfície de revisão, normalmente o preview Cloudflare do pull request/branch ou um preview local. PROD é o estado mergeado em main e comprovado ao vivo em haralabs.com.br / www.haralabs.com.br.
+
+O Git não deve acumular snapshots permanentes de DEV ou HOMOLOG. Branches de PR são transporte temporário para revisão; o estado durável do produto é PROD.
+
+Contrato completo: docs/workflows/HARA_SITE_ENVIRONMENT_PROMOTION_V1.md.

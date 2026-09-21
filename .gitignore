@@ -16,3 +16,10 @@ node_modules/
 logs/
 *.log
 .DS_Store
+
+# local DEV/HOMOLOG publication state
+.local-env/
+dev-preview/
+homolog-preview/
+artifacts/dev/
+artifacts/homolog/
