@@ -277,9 +277,11 @@ export default {
   async fetch(request, env) {
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: json({}).headers });
 
+    const requestUrl = new URL(request.url);
+
     try {
       requireDev(env);
-      const url = new URL(request.url);
+      const url = requestUrl;
 
       if (url.pathname === "/api/dev/health" && request.method === "GET") {
         return json({
@@ -400,7 +402,7 @@ export default {
         OIDC_PROVIDER_ERROR: 400,
       };
 
-      if (url?.pathname === "/auth/callback") {
+      if (requestUrl.pathname === "/auth/callback") {
         const safeCode = /^[A-Z0-9_]{1,80}$/.test(code) ? code : "AUTH_CALLBACK_FAILED";
         return new Response(null, {
           status: 302,
