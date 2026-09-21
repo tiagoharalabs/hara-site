@@ -8,13 +8,15 @@ Pacote estático do site institucional H.A.R.A. A publicação externa é integr
 - `styles.css`
 - `assets/images/`
 
-## Imagens incluídas
+## Identidade visual canônica
 
-- `hara-logo-premium.webp`
-- `hara-logo-premium.png`
-- `hara-mark-square.webp`
-- `hara-mark-square.png`
-- favicons em PNG
+- fonte aprovada: `brand/hara-capybara-flat-matte-source.png`
+- derivado web/Commander: `assets/images/hara-brand-flat-matte.png` + cópia em `public/`
+- app/plugin square: `hara-mark-square.png` / `hara-mark-square.webp`
+- favicons `16`, `32`, `192` e `512` derivados da mesma fonte
+- política: flat/matte, não espelhado, marca integral visível e `object-fit: contain` nas superfícies de branding
+
+Os arquivos `hara-logo-premium.*` permanecem apenas como legado não ativo; não são a identidade primária.
 
 ## Publicação governada
 
