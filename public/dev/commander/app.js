@@ -1,0 +1,77 @@
+(() => {
+  const views = [...document.querySelectorAll("[data-view]")];
+  const toast = document.getElementById("toast");
+  const sidebarTemplate = document.getElementById("sidebarTemplate");
+  const appViews = new Set(["dashboard", "usage", "plans", "connections", "security"]);
+  const publicViews = new Set(["landing", "login", "signup", ...appViews]);
+
+  function copySidebars() {
+    document.querySelectorAll("[data-sidebar]").forEach((node) => {
+      node.innerHTML = sidebarTemplate.innerHTML;
+    });
+  }
+
+  function showToast(message) {
+    toast.textContent = message;
+    toast.classList.add("show");
+    clearTimeout(showToast.timer);
+    showToast.timer = setTimeout(() => toast.classList.remove("show"), 3200);
+  }
+
+  function route(target, push = true) {
+    const next = publicViews.has(target) ? target : "landing";
+    views.forEach((view) => view.classList.toggle("active", view.dataset.view === next));
+
+    document.querySelectorAll("[data-app-go]").forEach((button) => {
+      button.classList.toggle("active", button.dataset.appGo === next);
+    });
+    document.querySelectorAll("[data-nav]").forEach((link) => {
+      link.classList.toggle("active", link.dataset.nav === next);
+    });
+
+    document.body.classList.toggle("workspace-mode", appViews.has(next));
+    if (push && location.hash !== "#" + next) history.pushState(null, "", "#" + next);
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }
+
+  copySidebars();
+
+  document.addEventListener("click", (event) => {
+    const go = event.target.closest("[data-go]");
+    if (go) {
+      event.preventDefault();
+      route(go.dataset.go);
+      return;
+    }
+
+    const appGo = event.target.closest("[data-app-go]");
+    if (appGo) {
+      event.preventDefault();
+      route(appGo.dataset.appGo);
+      return;
+    }
+
+    const demo = event.target.closest("[data-demo-toast]");
+    if (demo) {
+      event.preventDefault();
+      showToast(demo.dataset.demoToast);
+    }
+  });
+
+  document.querySelectorAll("[data-auth-form]").forEach((form) => {
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const label = form.dataset.authForm === "signup"
+        ? "Workspace DEV criado localmente. Nenhuma credencial foi persistida."
+        : "Login DEV simulado. Nenhuma credencial foi enviada.";
+      showToast(label);
+      route("dashboard");
+      form.reset();
+    });
+  });
+
+  window.addEventListener("popstate", () => route(location.hash.slice(1) || "landing", false));
+  window.addEventListener("hashchange", () => route(location.hash.slice(1) || "landing", false));
+
+  route(location.hash.slice(1) || "landing", false);
+})();
