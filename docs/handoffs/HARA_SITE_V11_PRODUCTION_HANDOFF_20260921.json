@@ -1,0 +1,43 @@
+{
+  "schema": "hara.site.production-handoff.v1",
+  "date": "2026-09-21",
+  "state": "TERMINAL",
+  "operator_visual_signoff": "PASS",
+  "public_deployment": "PASS",
+  "production_readback": "PASS",
+  "environment_model": [
+    "DEV",
+    "PROD"
+  ],
+  "live": {
+    "apex": "https://haralabs.com.br/",
+    "www": "https://www.haralabs.com.br/",
+    "apex_http": 200,
+    "www_http": 200
+  },
+  "lineage": {
+    "implementation_pr": 20,
+    "implementation_head": "daabfb2c0f1b47625a569fea4fc662e28ab282d0",
+    "implementation_merge": "c17a8b069eeeba4c1cb70d12975fac9923af8335",
+    "governance_pr": 21,
+    "governance_head": "b2c023b954b38c5c5e3c53c3616e4d5be9703251",
+    "canonical_main_before_handoff": "80257effde5af9762dfd516024d2cc5cae447582"
+  },
+  "hashes": {
+    "logo": "ba136d189dad05119a02a83b0c1d5c8dc741a6357f301f0ee3021cdd4bc1aac9",
+    "css": "c1961152d63c182c6104b5aa75d93ea006279be1e7de043b29d862567e6917b1",
+    "js": "a6cd579277047f38a4b87bc052efcb6475600b13e13215f16d4b3bb94a3385f3"
+  },
+  "checks": {
+    "provenance_guard": "PASS",
+    "cloudflare_workers_build": "PASS",
+    "root_public_parity": "PASS",
+    "public_sanitization": "PASS",
+    "runtime_config_untouched": true
+  },
+  "closed_issues": [
+    13,
+    14
+  ],
+  "terminal": "PASS"
+}
