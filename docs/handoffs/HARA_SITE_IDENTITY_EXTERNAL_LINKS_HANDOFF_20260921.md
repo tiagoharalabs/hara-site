@@ -220,3 +220,25 @@ Return:
 4. HTTP validation evidence
 5. any unresolved legal placeholders
 6. explicit statement whether External Links are safe to configure now
+
+
+## Addendum — legal entity data supplied by owner (2026-09-21)
+
+The owner supplied the following CNPJ registration details for use by the HARA Site legal-content front:
+
+- CNPJ: `18.061.774/0001-98`
+- Legal name: `IRMAOS SARTORI TECNOLOGIA DA INFORMACAO LTDA`
+- Legal nature: `206-2 - Sociedade Empresária Limitada`
+- Primary CNAE: `62.01-5-01 - Desenvolvimento de programas de computador sob encomenda`
+- Opening date: `07/05/2013`
+- Registration status reported by owner: `ATIVA`
+- Address shown on supplied registration receipt: `R MURICI, 225, SALA 1, VILA CECILIA MARIA, SANTO ANDRE/SP, CEP 09.175-620`
+- Email shown on supplied registration receipt: `SARTIAGO@GMAIL.COM`
+- Phone shown on supplied registration receipt: `(11) 4453-6976`
+
+Source note:
+- The pasted registration receipt is dated `05/03/2021`.
+- The owner states the company remains active and current with its accountant as of 2026-09-21.
+- Before publishing legal pages, the site front MUST validate these details against a current official Receita Federal CNPJ registration receipt or equivalent authoritative source.
+- Do not silently normalize or replace the legal name; preserve the official legal name from the current authoritative record.
+- Public-facing support/contact should continue using `contato@haralabs.com.br` unless the owner explicitly changes that decision.
