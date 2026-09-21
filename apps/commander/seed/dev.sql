@@ -53,3 +53,36 @@ INSERT OR REPLACE INTO billing_connections (
   '2026-09-21T15:30:00Z',
   '2026-09-21T15:30:00Z'
 );
+
+INSERT OR REPLACE INTO tenants (
+  tenant_id, display_name, state, environment, created_at_utc
+) VALUES (
+  'HARA-TENANT-QUOTA-0001',
+  'Quota Validation Tenant',
+  'ACTIVE',
+  'DEV',
+  '2026-09-21T15:30:00Z'
+);
+
+INSERT OR REPLACE INTO plans (
+  plan_code, display_name, meter_id, period_kind, unit_limit, state
+) VALUES (
+  'DEV_ONE_UNIT',
+  'DEV One Unit',
+  'HARA_COMMANDER_GOVERNED_INVOKE',
+  'CALENDAR_MONTH',
+  1,
+  'ACTIVE'
+);
+
+INSERT OR REPLACE INTO entitlements (
+  entitlement_id, tenant_id, subject_id, plan_code, state, valid_from_utc, valid_until_utc
+) VALUES (
+  'HARA-ENTITLEMENT-QUOTA-0001',
+  'HARA-TENANT-QUOTA-0001',
+  NULL,
+  'DEV_ONE_UNIT',
+  'ACTIVE',
+  '2026-09-01T00:00:00Z',
+  NULL
+);
