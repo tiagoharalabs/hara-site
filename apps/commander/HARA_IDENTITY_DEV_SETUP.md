@@ -12,9 +12,24 @@ https://auth.haralabs.com.br/
 Commander DEV callback:
 https://hara-commander-dev-v2.tiago-sartori.workers.dev/auth/callback
 
-The Commander OIDC implementation remains provider-neutral: authorization-code
-plus PKCE, state, nonce, discovery, JWKS, RS256 verification, exact issuer plus
-subject binding, and HttpOnly portal sessions.
+The Commander OIDC implementation remains provider-neutral: Authorization Code
+plus PKCE, client_secret_basic for confidential Web clients, state, nonce,
+discovery, JWKS, RS256 verification, exact issuer plus subject binding, and
+HttpOnly portal sessions.
+
+Create the application in HARA Identity with these settings:
+
+- Project: H.A.R.A. Commander DEV
+- Application: Commander DEV
+- Type: Web
+- Authentication method: Basic
+- Redirect URI: https://hara-commander-dev-v2.tiago-sartori.workers.dev/auth/callback
+- Post-logout redirect URI: https://hara-commander-dev-v2.tiago-sartori.workers.dev/
+- Development mode: disabled
+- Login V2: instance default
+
+The authorization request still uses PKCE S256 in addition to confidential
+client authentication.
 
 After creating the Commander OIDC application in HARA Identity, run:
 
