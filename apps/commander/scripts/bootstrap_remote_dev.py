@@ -6,11 +6,14 @@ import os
 import pathlib
 import subprocess
 import sys
+import secrets
+import re
 
 ROOT = pathlib.Path(__file__).resolve().parents[3]
 APP = ROOT / "apps" / "commander"
 GENERATED = APP / ".generated"
 CONFIG = GENERATED / "wrangler.remote.dev.json"
+TOKEN_FILE = GENERATED / "remote-dev-access-token"
 DB_NAME = "hara-commander-product-dev"
 WORKER_NAME = "hara-commander-dev-v2"
 
@@ -100,6 +103,26 @@ def main() -> int:
     CONFIG.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
     print("REMOTE_DEV_CONFIG_GENERATED=PASS")
 
+    if not TOKEN_FILE.exists():
+        TOKEN_FILE.write_text(secrets.token_urlsafe(48), encoding="utf-8")
+        TOKEN_FILE.chmod(0o600)
+    token = TOKEN_FILE.read_text(encoding="utf-8").strip()
+    if len(token) < 32:
+        print("REMOTE_DEV_TOKEN=FAIL")
+        return 5
+
+    secret = subprocess.run(
+        ["npx", "--yes", "wrangler@4.136.1", "secret", "put", "DEV_ACCESS_TOKEN", "--config", str(CONFIG)],
+        cwd=ROOT,
+        text=True,
+        input=token + "\n",
+        capture_output=True,
+        check=False,
+        env=os.environ.copy(),
+    )
+    require_ok(secret, "REMOTE_DEV_SECRET")
+    print("REMOTE_DEV_SECRET=PASS")
+
     migrations = run(
         "d1", "migrations", "apply", DB_NAME,
         "--remote",
@@ -124,9 +147,21 @@ def main() -> int:
     )
     output = require_ok(deploy, "REMOTE_DEV_WORKER_DEPLOY")
     print("REMOTE_DEV_WORKER_DEPLOY=PASS")
-    for line in output.splitlines():
-        if "workers.dev" in line or "https://" in line:
-            print("REMOTE_DEV_DEPLOY_OUTPUT=" + line.strip())
+    urls = re.findall(r"https://[^\s]+", output)
+    worker_url = next((url.rstrip(".,") for url in urls if "workers.dev" in url), None)
+    if worker_url:
+        validation = subprocess.run(
+            [sys.executable, str(APP / "scripts" / "validate_remote_dev.py"), worker_url, str(TOKEN_FILE)],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+            env=os.environ.copy(),
+        )
+        print(validation.stdout, end="")
+        require_ok(validation, "REMOTE_DEV_POSTDEPLOY")
+    else:
+        print("REMOTE_DEV_WORKER_URL=NOT_DISCOVERED")
 
     print("REMOTE_DEV_D1=PASS")
     print("REMOTE_DEV_QUOTA_NAMESPACE=PASS")

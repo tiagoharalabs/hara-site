@@ -24,6 +24,20 @@ function requireDev(env) {
   }
 }
 
+function requireRemoteDevToken(request, env) {
+  if (env.STORAGE_MODE !== "REMOTE_DEV") return;
+  const expected = String(env.DEV_ACCESS_TOKEN || "");
+  const supplied = String(request.headers.get("x-hara-dev-token") || "");
+  if (!expected || supplied.length !== expected.length) {
+    throw new Error("DEV_ACCESS_DENIED");
+  }
+  let diff = 0;
+  for (let i = 0; i < expected.length; i += 1) {
+    diff |= expected.charCodeAt(i) ^ supplied.charCodeAt(i);
+  }
+  if (diff !== 0) throw new Error("DEV_ACCESS_DENIED");
+}
+
 function cleanId(value, max = 180) {
   const text = String(value || "").trim();
   if (!text || text.length > max || !/^[A-Za-z0-9_.:-]+$/.test(text)) {
@@ -207,6 +221,7 @@ export default {
     try {
       requireDev(env);
       const url = new URL(request.url);
+      if (url.pathname !== "/api/dev/health") requireRemoteDevToken(request, env);
 
       if (url.pathname === "/api/dev/health" && request.method === "GET") {
         return json({
@@ -263,7 +278,9 @@ export default {
 
       return json({ ok: false, code: "NOT_FOUND" }, 404);
     } catch (error) {
-      return json({ ok: false, code: error?.message || "INTERNAL_ERROR" }, 500);
+      const code = error?.message || "INTERNAL_ERROR";
+      const status = code === "DEV_ACCESS_DENIED" ? 401 : 500;
+      return json({ ok: false, code }, status);
     }
   }
 };
