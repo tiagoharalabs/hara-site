@@ -85,7 +85,9 @@ img {
 }
 
 .brand-logo {
-  object-fit: cover;
+  object-fit: contain;
+  padding: 4px;
+  background: #0b0b0b;
 }
 
 .brand-fallback {
@@ -1299,7 +1301,9 @@ section[id] {
 .commander-logo {
   width: 150px;
   aspect-ratio: 1 / 1;
-  object-fit: cover;
+  object-fit: contain;
+  padding: 10px;
+  background: #0b0b0b;
   border-radius: 24px;
   border: 1px solid rgba(240, 180, 41, 0.34);
   box-shadow: 0 16px 42px rgba(0, 0, 0, 0.38);
