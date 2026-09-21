@@ -85,3 +85,4 @@ Do not:
 ## Repository cleanliness
 
 This contract is documentation-only. It does not create or retain DEV/HOMOLOG release directories inside the repository; local publication artifacts remain ignored and disposable.
+A preview URL is review evidence only and is never production authority.
