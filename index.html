@@ -1,920 +1,182 @@
 <!doctype html>
 <html lang="pt-BR">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta
-      name="description"
-      content="H.A.R.A Labs ajuda empresas a transformar tecnologia, dados e IA em operação estruturada, governável e rastreável."
-    />
-    <meta name="theme-color" content="#07131f" />
-    <meta property="og:title" content="H.A.R.A Labs — H.A.R.A. Commander" />
-    <meta property="og:description" content="Infraestrutura governada para integrar IA, dados e operação real — incluindo o H.A.R.A. Commander." />
-    <meta property="og:image" content="https://haralabs.com.br/assets/images/hara-brand-flat-matte.png?v=20260921a" />
-    <meta property="og:type" content="website" />
-    <link rel="icon" type="image/png" href="/assets/images/favicon-32.png?v=20260921a" />
-    <title>H.A.R.A Labs</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-      rel="stylesheet"
-    />
-    <link rel="stylesheet" href="/assets/css/styles.css?v=20260921-medium1" />
-    <link rel="preconnect" href="https://challenges.cloudflare.com" />
-  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#eef8fd">
+<meta name="description" content="H.A.R.A Labs — infraestrutura corporativa de IA híbrida, segura e governada.">
+<title>H.A.R.A Labs — IA corporativa sob controle</title>
+<link rel="icon" href="/assets/images/hara-logo-web.webp" type="image/webp">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/css/styles.css?v=20260921-v11">
 </head>
-  <body>
-    <header class="topbar">
-      <div class="shell topbar-inner">
-        <a href="#inicio" class="brand" aria-label="H.A.R.A Labs">
-          <img
-            class="brand-logo"
-            src="/assets/images/hara-brand-flat-matte.png?v=20260921a"
-            alt="Logo H.A.R.A. Labs"
-            width="44"
-            height="44"
-            decoding="async"
-            onerror="
-              this.style.display = 'none';
-              this.nextElementSibling.style.display = 'grid';
-            "
-          />
-          <span class="brand-fallback" style="display: none">H</span>
-          <span class="brand-text">H.A.R.A Labs</span>
-        </a>
+<body>
+<svg class="svg-sprite" aria-hidden="true">
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6l7-3z"/><path d="M9 12l2 2 4-5"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 4 6 4 9s-1 6-4 9c-3-3-4-6-4-9s1-6 4-9z"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 12l9 5 9-5M3 16l9 5 9-5"/></symbol>
+  <symbol id="i-rotate" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6 8a7 7 0 0111-2l3 3M18 16a7 7 0 01-11 2l-3-3"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-4 2-6 6-6s6 2 6 6M14 15c3 0 5 2 5 5"/></symbol>
+  <symbol id="i-server" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="6" rx="1"/><rect x="4" y="14" width="16" height="6" rx="1"/><path d="M7 7h.01M7 17h.01M10 7h6M10 17h6"/></symbol>
+  <symbol id="i-building" viewBox="0 0 24 24"><path d="M5 21V5h10v16M15 9h4v12M8 8h2M12 8h1M8 12h2M12 12h1M8 16h2M12 16h1"/></symbol>
+  <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M7 18h10a4 4 0 000-8 6 6 0 00-11-2 5 5 0 001 10z"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 018 0v3M12 14v3"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-5 3-7 8-7s8 2 8 7"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v5h5M9 12h6M9 16h6"/></symbol>
+  <symbol id="i-plug" viewBox="0 0 24 24"><path d="M8 3v5M16 3v5M6 8h12v2a6 6 0 01-6 6v5M9 21h6"/></symbol>
+  <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 1v3M23 12h-3"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M5 20V11M10 20V6M15 20V13M20 20V3"/></symbol>
+  <symbol id="i-database" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="7" ry="3"/><path d="M5 5v6c0 2 3 3 7 3s7-1 7-3V5M5 11v6c0 2 3 3 7 3s7-1 7-3v-6"/></symbol>
+  <symbol id="i-box" viewBox="0 0 24 24"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5 8-4.5M12 12v9"/></symbol>
+</svg>
 
-        <nav class="nav" aria-label="Navegação principal">
-          <a href="#missao">Missão</a>
-          <a href="#valores">Valores</a>
-          <a href="#atuacao">Atuação</a>
-          <a href="#criticidade">Criticidade</a>
-        <a href="#dados">Dados</a>
-          <a href="#pessoas">Pessoas</a>
-          <a href="/observabilidade/">Observabilidade</a>
-          <a href="#commander">Commander</a>
-          <a href="#diagnostico">Diagnóstico</a>
-          <a href="#contato">Contato</a>
-        </nav>
+<header class="site-header" id="top">
+  <div class="nav-shell">
+    <a class="brand" href="#inicio" aria-label="H.A.R.A Labs">
+      <img src="/assets/images/hara-logo-web.webp" alt="H.A.R.A Labs" class="brand-logo">
+      <span class="brand-word">H.A.R.A <b>Labs</b></span>
+    </a>
+    <nav class="main-nav" aria-label="Navegação principal">
+      <a href="#solucoes">Soluções</a><a href="#arquitetura">Arquitetura</a><a href="#seguranca">Segurança</a><a href="#integracoes">Integrações</a><a href="#commander">Commander</a><a href="#empresa">Empresa</a>
+    </nav>
+    <a class="nav-cta" href="#contato">Falar com especialista <span>→</span></a>
+    <button class="menu-button" aria-label="Abrir menu" aria-expanded="false"><span></span><span></span></button>
+  </div>
+  <div class="mobile-menu" aria-hidden="true">
+    <a href="#solucoes">Soluções</a><a href="#arquitetura">Arquitetura</a><a href="#seguranca">Segurança</a><a href="#integracoes">Integrações</a><a href="#commander">Commander</a><a href="#empresa">Empresa</a><a href="#contato">Falar com especialista</a>
+  </div>
+</header>
+
+<main>
+<section class="hero" id="inicio">
+  <div class="hero-orb orb-a"></div><div class="hero-orb orb-b"></div>
+  <div class="page-shell hero-grid">
+    <div class="hero-copy reveal">
+      <div class="eyebrow"><i></i> Infraestrutura de IA para empresas</div>
+      <h1>IA corporativa<br>sem abrir mão<br>do <em>controle.</em></h1>
+      <p class="hero-lead">Integramos cloud, on-premise e on-site em uma arquitetura única para que seus dados críticos permaneçam protegidos, onde devem estar.</p>
+      <div class="hero-actions"><a class="button primary" href="#contato">Solicitar avaliação executiva <span>→</span></a><a class="button secondary" href="#arquitetura">Conhecer a arquitetura <span>→</span></a></div>
+      <div class="hero-trust"><span><svg><use href="#i-shield"/></svg>Privacidade por arquitetura</span><span><svg><use href="#i-layers"/></svg>Integração governada</span><span><svg><use href="#i-chart"/></svg>Operação rastreável</span></div>
+    </div>
+
+    <div class="hero-system reveal delay">
+      <div class="system-frame">
+        <div class="system-grid-lines"></div>
+        <div class="system-card sys-prem"><svg><use href="#i-server"/></svg><small>ON-PREMISE</small><b>Core privado</b><span>Dados & modelos<br>no seu ambiente</span></div>
+        <div class="system-card sys-cloud"><svg><use href="#i-cloud"/></svg><small>CLOUD</small><b>Capacidade elástica</b><span>Serviços & modelos<br>sob demanda</span></div>
+        <div class="system-card sys-site"><svg><use href="#i-building"/></svg><small>ON-SITE</small><b>Operação local</b><span>Edge & unidades<br>estratégicas</span></div>
+        <div class="system-card sys-app"><svg><use href="#i-box"/></svg><small>SISTEMAS</small><b>Seu negócio</b><span>ERP · CRM · APIs<br>Dados corporativos</span></div>
+        <svg class="hero-links" viewBox="0 0 620 470" aria-hidden="true"><path d="M146 110 C245 110 225 235 310 235"/><path d="M146 360 C245 360 225 235 310 235"/><path d="M474 110 C375 110 395 235 310 235"/><path d="M474 360 C375 360 395 235 310 235"/></svg>
+        <div class="system-core"><div class="core-ring"></div><img src="/assets/images/hara-logo-web.webp" alt=""><strong>H.A.R.A</strong><small>Policy · MCP · Evidence</small></div>
+        <span class="signal s1"></span><span class="signal s2"></span><span class="signal s3"></span><span class="signal s4"></span>
       </div>
-    </header>
-
-    <main id="inicio" class="shell">
-      <section class="hero">
-        <div class="hero-grid">
-          <div class="hero-card">
-            <div class="eyebrow">
-              Arquitetura operacional, dados, integração e IA aplicada
-            </div>
-
-            <h1>Tecnologia, dados e IA para operação real.</h1>
-
-            <p class="lead">
-              A H.A.R.A Labs ajuda empresas a transformar tecnologia, dados e IA
-              em operação estruturada, governável e rastreável.
-            </p>
-
-            <p class="supporting-copy">
-              Organizamos processos, integrações, fluxos de dados e critérios de
-              uso de IA para ambientes corporativos que exigem continuidade,
-              segurança, compliance e clareza operacional.
-            </p>
-
-            <div class="hero-actions">
-              <a class="button button-gold" href="#diagnostico"
-                >Solicitar diagnóstico inicial</a
-              >
-              <a
-                class="button button-ghost"
-                href="https://www.linkedin.com/in/tiago--sartori/"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Falar com especialista
-              </a>
-              <a
-                class="button button-ghost"
-                href="https://www.linkedin.com/company/hara-labs/"
-                target="_blank"
-                rel="noreferrer"
-              >
-                LinkedIn H.A.R.A Labs
-              </a>
-            </div>
-
-            <div class="hero-metrics">
-              <div class="metric">
-                <strong>Foco</strong>
-                <span>governança antes de escala</span>
-              </div>
-              <div class="metric">
-                <strong>Abordagem</strong>
-                <span>local, híbrido ou nuvem</span>
-              </div>
-              <div class="metric">
-                <strong>Resultado</strong>
-                <span>clareza, rastreabilidade e controle</span>
-              </div>
-            </div>
-          </div>
-
-          <aside class="hero-visual panel">
-            <div class="hero-slider" id="heroSlider">
-              <div class="slide active">
-                <img
-                  src="assets/images/hero-ia-realidade.png"
-                  alt="Fluxo real de dados, ciência de dados e operacionalização para gerar valor com IA"
-                class="process-graphic" />
-                <div class="slide-caption">
-                  <strong>Arquitetura operacional</strong>
-                  <span
-                    >Tecnologia alinhada às regras, restrições e objetivos do
-                    ambiente.</span
-                  >
-                </div>
-              </div>
-
-              <div class="slide">
-                <img
-                  src="assets/images/capivara-02.webp"
-                  alt="Identidade H.A.R.A Labs 2"
-                />
-                <div class="slide-caption">
-                  <strong>Governança de dados</strong>
-                  <span
-                    >Origem, dono, qualidade e confiança antes da
-                    automação.</span
-                  >
-                </div>
-              </div>
-
-              <div class="slide">
-                <img
-                  src="assets/images/capivara-03.webp"
-                  alt="Identidade H.A.R.A Labs 3"
-                />
-                <div class="slide-caption">
-                  <strong>IA como parte do fluxo</strong>
-                  <span
-                    >IA aplicada com contexto, critério e acompanhamento.</span
-                  >
-                </div>
-              </div>
-            </div>
-
-            <div
-              class="slider-dots"
-              id="sliderDots"
-              aria-label="Indicadores do painel"
-            >
-              <button
-                class="dot active"
-                type="button"
-                aria-label="Slide 1"
-              ></button>
-              <button class="dot" type="button" aria-label="Slide 2"></button>
-              <button class="dot" type="button" aria-label="Slide 3"></button>
-            </div>
-          </aside>
-        </div>
-      </section>
-
-      <section id="missao">
-        <div class="section-head">
-          <h2>Missão</h2>
-          <p>
-            Estruturar ambientes operacionais governáveis e rastreáveis para que
-            dados, integrações, automação e IA aplicada sustentem evolução contínua.
-          </p>
-        </div>
-
-        <div class="content-grid">
-          <article class="card highlight">
-            <h3>Posicionamento</h3>
-            <p>
-              A H.A.R.A Labs atua na organização de dados, processos,
-              integrações e uso responsável de IA em ambientes corporativos
-              reais, respeitando criticidade, compliance, arquitetura existente
-              e necessidades operacionais da empresa.
-            </p>
-          </article>
-
-          <article class="card">
-            <h3>Linha central</h3>
-            <p>
-              Antes de recomendar ferramentas, entendemos o ambiente: onde estão
-              os dados, quais sistemas sustentam a operação, quem responde pelas
-              informações e quais decisões precisam de rastreabilidade.
-            </p>
-          </article>
-        </div>
-      </section>
-
-      <section id="valores">
-        <div class="section-head">
-          <h2>Valores</h2>
-          <p>Princípios que orientam a atuação da H.A.R.A Labs.</p>
-        </div>
-
-        <div class="areas">
-          <article class="area-item">
-            <h3>Estrutura antes de escala</h3>
-            <p>Escala sustentável exige base operacional, dados confiáveis e governança.</p>
-          </article>
-
-          <article class="area-item">
-            <h3>Operação acima de conceito</h3>
-            <p>Soluções precisam funcionar dentro da rotina, das restrições e dos objetivos reais da empresa.</p>
-          </article>
-
-          <article class="area-item">
-            <h3>Simplicidade executável</h3>
-            <p>Soluções precisam ser compreendidas, operadas e mantidas.</p>
-          </article>
-
-          <article class="area-item">
-            <h3>Continuidade operacional</h3>
-            <p>Sistemas devem sobreviver a mudanças, pressão e crescimento.</p>
-          </article>
-
-          <article class="area-item">
-            <h3>IA como parte do fluxo</h3>
-            <p>IA gera mais valor quando conectada a dados, processos, integrações e critérios de uso.</p>
-          </article>
-
-          <article class="area-item">
-            <h3>Governança de dados</h3>
-            <p>
-              Dados devem ter dono, origem, contexto e controle de exposição.
-            </p>
-          </article>
-
-          <article class="area-item">
-            <h3>Compatibilidade corporativa</h3>
-            <p>
-              Toda solução precisa respeitar o ambiente existente do cliente.
-            </p>
-          </article>
-
-          <article class="area-item">
-            <h3>Privacidade por arquitetura</h3>
-            <p>
-              Dados sensíveis exigem controle proporcional à sua criticidade.
-            </p>
-          </article>
-
-          <article class="area-item">
-            <h3>Evidência sobre discurso</h3>
-            <p>Decisões precisam ser sustentadas por evidências, funcionamento real e rastreabilidade.</p>
-          </article>
-        </div>
-      </section>
-
-      <section id="atuacao">
-        <div class="section-head">
-          <h2>Frentes de atuação</h2>
-          <p>
-            Atuação orientada à clareza operacional, governança de dados,
-            integração progressiva e aplicação responsável de IA.
-          </p>
-        </div>
-
-        <div class="areas">
-          <article class="area-item">
-            <h3>Pipelines de dados</h3>
-            <p>
-              Ingestão, normalização, categorização e persistência com coerência
-              operacional.
-            </p>
-          </article>
-
-          <article class="area-item">
-            <h3>Sanitização e padronização</h3>
-            <p>
-              Tratamento de dados vindos de múltiplas fontes para reduzir
-              inconsistência.
-            </p>
-          </article>
-
-          <article class="area-item">
-            <h3>Integração progressiva</h3>
-            <p>
-              Conexão entre legados, ERP, SaaS e camadas modernas sem ruptura
-              desnecessária.
-            </p>
-          </article>
-
-          <article class="area-item">
-            <h3>Fluxo de trabalho com IA</h3>
-            <p>
-              Organização de rotinas onde IA apoia execução, decisão e
-              rastreabilidade.
-            </p>
-          </article>
-
-          <article class="area-item">
-            <h3>Observabilidade e rastreabilidade</h3>
-            <p>
-              Leitura do ambiente, acompanhamento operacional e evidência
-              técnica.
-            </p>
-          </article>
-
-          <article class="area-item">
-            <h3>Governança operacional</h3>
-            <p>
-              Estruturas que tornam decisões, dados e processos mais claros e
-              sustentáveis.
-            </p>
-          </article>
-        </div>
-      </section>
-
-      <section id="criticidade">
-        <div class="section-head">
-          <h2>Integração, compliance e arquitetura por criticidade</h2>
-          <p>
-            A H.A.R.A Labs atua dentro das regras do ambiente contratante,
-            considerando políticas internas, requisitos técnicos, compliance e
-            privacidade de dados.
-          </p>
-        </div>
-
-        <div class="content-grid">
-          <article class="card highlight">
-            <h3>Arquitetura correta para cada cenário</h3>
-            <p>
-              A arquitetura pode ser local, híbrida ou em nuvem. A decisão deve
-              considerar criticidade dos dados, ambiente regulatório, contratos
-              corporativos, políticas internas e necessidade operacional.
-            </p>
-          </article>
-
-          <article class="card">
-            <h3>Compatibilidade corporativa real</h3>
-            <p>
-              Atuamos em ambientes que utilizam plataformas como AWS, Microsoft
-              Azure, Google Cloud, IBM, Oracle Cloud, Salesforce, SAP Cloud e
-              outros ecossistemas corporativos amplamente adotados.
-            </p>
-          </article>
-        </div>
-      
-      <div class="content-grid">
-        <article class="card highlight">
-          <h3>Tratamento proporcional à criticidade</h3>
-          <p>
-            Ambientes corporativos possuem diferentes níveis de criticidade,
-            sensibilidade e exposição. Por isso, a arquitetura deve considerar
-            quais informações precisam permanecer controladas, quais podem ser
-            tratadas, quais podem ser desidentificadas e quais podem circular em
-            ambientes externos com segurança.
-          </p>
-        </article>
-
-        <article class="card">
-          <h3>IA como camada operacional</h3>
-          <p>
-            A IA gera mais valor quando está conectada a dados organizados,
-            processos claros, integrações confiáveis e critérios de uso. Ela deve
-            operar com contexto, limites, governança e acompanhamento.
-          </p>
-        </article>
-      </div>
-
-    </section>
-
-      <section id="dados">
-        <div class="section-head">
-          <h2>Qualidade e governança de dados</h2>
-          <p>
-            Dados só geram valor quando possuem contexto, origem,
-            responsabilidade definida e nível de confiança claro.
-          </p>
-        </div>
-
-        <div class="content-grid">
-          <article class="card highlight">
-            <h3>Pilares de qualidade</h3>
-            <ul class="feature-list">
-              <li><strong>Dono do dado:</strong> quem responde por ele.</li>
-              <li>
-                <strong>Origem rastreável:</strong> de onde veio e como foi
-                transformado.
-              </li>
-              <li>
-                <strong>Qualidade:</strong> consistência, integridade e
-                adequação ao uso.
-              </li>
-              <li>
-                <strong>Confiabilidade:</strong> nível de confiança para uso
-                operacional.
-              </li>
-            </ul>
-          </article>
-
-          <article class="card">
-            <h3>Score de confiabilidade</h3>
-            <p>
-              A H.A.R.A Labs considera a necessidade de classificar a
-              confiabilidade dos dados, ajudando a diferenciar aquilo que é
-              verificável, frágil, incompleto ou sensível.
-            </p>
-            <p>Com isso, automação e IA passam a operar com mais contexto, critério e segurança.</p>
-          </article>
-        </div>
-      </section>
-
-      <section id="pessoas">
-        <div class="section-head">
-          <h2>Pessoas e operação</h2>
-          <p>
-            O futuro da IA não depende apenas da tecnologia, mas da capacidade
-            operacional das equipes de trabalhar dentro de um ambiente
-            estruturado.
-          </p>
-        </div>
-
-        <div class="content-grid">
-          <article class="card highlight">
-            <h3>Fator humano como parte da arquitetura</h3>
-            <p>
-              A H.A.R.A Labs considera o fator humano como parte da arquitetura:
-              processos claros, responsabilidades definidas e integração real
-              entre pessoas, sistemas e ferramentas.
-            </p>
-          </article>
-
-          <article class="card">
-            <h3>IA com contexto operacional</h3>
-            <p>
-              IA não substitui a responsabilidade operacional. Ela amplia a
-              capacidade de ambientes que possuem clareza, contexto e
-              organização mínima.
-            </p>
-          </article>
-        </div>
-      </section>
-
-      <section>
-        <div class="quote-card">
-          <p>
-            Ajudamos a conectar sistemas, dados e decisões para tornar a
-            operação mais clara, previsível e rastreável.
-          </p>
-        </div>
-      </section>
-
-  
-    <section>
-      <div class="quote-card">
-        <p>
-          Governança transforma intenção em prática: critérios claros,
-          responsabilidades definidas, evidências rastreáveis e decisões mais seguras.
-        </p>
-      </div>
-    </section>
-
-
-
-      <section id="commander">
-        <div class="section-head">
-          <span class="eyebrow">H.A.R.A. Commander</span>
-          <h2>Integração governada entre IA e operação.</h2>
-          <p>
-            O H.A.R.A. Commander é a camada de integração remota da H.A.R.A Labs para
-            conectar clientes de IA compatíveis com MCP a funções operacionais
-            explicitamente autorizadas, com autenticação, rastreabilidade e controle.
-          </p>
-        </div>
-
-        <div class="content-grid">
-          <article class="card highlight commander-card">
-            <img
-              class="commander-logo"
-              src="/assets/images/hara-brand-flat-matte.png?v=20260921a"
-              alt="Símbolo do H.A.R.A. Commander"
-              width="150"
-              height="150"
-              loading="lazy"
-              decoding="async"
-              onerror="
-                this.onerror = null;
-                this.src = '/assets/images/hara-mark-square.png?v=20260921a';
-              "
-            />
-            <div>
-              <h3>Controle por funções, não por shell aberto</h3>
-              <p>
-                O desenho prioriza funções canônicas e verificáveis, reduzindo exposição
-                desnecessária e preservando a autoridade operacional do ambiente.
-              </p>
-            </div>
-          </article>
-
-          <article class="card">
-            <h3>MCP remoto com autenticação</h3>
-            <p>
-              A integração utiliza um endpoint MCP remoto protegido, com autorização
-              explícita, descoberta padronizada e evidências de execução.
-            </p>
-            <div class="commander-badges" aria-label="Características do H.A.R.A. Commander">
-              <span>MCP</span>
-              <span>OAuth</span>
-              <span>Governança</span>
-              <span>Rastreabilidade</span>
-            </div>
-          </article>
-        </div>
-      </section>
-
-    <section id="diagnostico">
-      <div class="section-head">
-        <h2>Diagnóstico inicial</h2>
-        <p>
-          Antes de propor qualquer solução, avaliamos maturidade operacional,
-          estrutura de dados, sistemas envolvidos, criticidade das informações,
-          riscos de integração e oportunidades de aplicação responsável de IA.
-        </p>
-      </div>
-
-      <div class="card">
-        <form class="diagnostic-form" id="diagnosticForm">
-          <div class="form-grid">
-            <div class="field">
-              <label for="nome">Nome</label>
-              <input id="nome" name="nome" type="text" maxlength="120" required />
-            </div>
-
-            <div class="field">
-              <label for="email">E-mail</label>
-              <input id="email" name="email" type="email" maxlength="160" required />
-            </div>
-
-            <div class="field">
-              <label for="empresa">Empresa</label>
-              <input id="empresa" name="empresa" type="text" maxlength="160" required />
-            </div>
-
-            <div class="field">
-              <label for="cargo">Cargo / função</label>
-              <input id="cargo" name="cargo" type="text" maxlength="120" required />
-            </div>
-
-            <div class="field">
-              <label for="tipoEmpresa">Perfil da empresa</label>
-              <select id="tipoEmpresa" name="tipoEmpresa" required>
-                <option value="">Selecione</option>
-                <option>Empresa nacional</option>
-                <option>Multinacional com sede no Brasil</option>
-                <option>Multinacional com sede fora do Brasil</option>
-                <option>Grupo regional / LATAM</option>
-              </select>
-            </div>
-
-            <div class="field">
-              <label for="colaboradores">Quantidade de colaboradores</label>
-              <select id="colaboradores" name="colaboradores" required>
-                <option value="">Selecione</option>
-                <option>1 a 20</option>
-                <option>21 a 100</option>
-                <option>101 a 500</option>
-                <option>501 a 2.000</option>
-                <option>Acima de 2.000</option>
-              </select>
-            </div>
-
-            <div class="field">
-              <label for="decisao">Origem das decisões de TI</label>
-              <select id="decisao" name="decisao" required>
-                <option value="">Selecione</option>
-                <option>Principalmente locais</option>
-                <option>Regionais</option>
-                <option>Globais</option>
-                <option>Mistas</option>
-                <option>Não está claro</option>
-              </select>
-            </div>
-
-            <div class="field">
-              <label for="sede">País da sede / matriz</label>
-              <input id="sede" name="sede" type="text" maxlength="120" required />
-            </div>
-
-            <div class="field">
-              <label for="objetivo">Objetivo principal</label>
-              <select id="objetivo" name="objetivo" required>
-                <option value="">Selecione</option>
-                <option>Reduzir dependência de planilhas</option>
-                <option>Organizar dados</option>
-                <option>Integrar sistemas</option>
-                <option>Implantar IA com segurança</option>
-                <option>Melhorar governança</option>
-                <option>Automatizar processos</option>
-                <option>Criar dashboards / indicadores</option>
-                <option>Diagnosticar ambiente antes de decidir</option>
-              </select>
-            </div>
-
-            <div class="field">
-              <label for="urgencia">Urgência</label>
-              <select id="urgencia" name="urgencia" required>
-                <option value="">Selecione</option>
-                <option>Exploração inicial</option>
-                <option>Próximos 3 meses</option>
-                <option>Próximos 6 meses</option>
-                <option>Já existe dor crítica</option>
-                <option>Projeto já em andamento</option>
-              </select>
-            </div>
-
-            <div class="field">
-              <label for="sponsor">Patrocinador interno</label>
-              <select id="sponsor" name="sponsor" required>
-                <option value="">Selecione</option>
-                <option>Diretoria</option>
-                <option>TI</option>
-                <option>Operações</option>
-                <option>Dados / BI</option>
-                <option>Financeiro</option>
-                <option>Área de negócio</option>
-                <option>Ainda não definido</option>
-              </select>
-            </div>
-
-            <div class="field">
-              <label for="documentacao">Documentação dos processos</label>
-              <select id="documentacao" name="documentacao" required>
-                <option value="">Selecione</option>
-                <option>Bem documentados</option>
-                <option>Parcialmente documentados</option>
-                <option>Espalhados em planilhas/e-mails</option>
-                <option>Dependem de pessoas específicas</option>
-                <option>Não estão documentados</option>
-              </select>
-            </div>
-
-            <div class="field">
-              <label for="donoDados">Dono dos dados</label>
-              <select id="donoDados" name="donoDados" required>
-                <option value="">Selecione</option>
-                <option>Sim, responsáveis definidos</option>
-                <option>Parcialmente definidos</option>
-                <option>Não existem responsáveis claros</option>
-                <option>Não sabemos informar</option>
-              </select>
-            </div>
-
-            <div class="field">
-              <label for="maturidade">Maturidade percebida</label>
-              <select id="maturidade" name="maturidade" required>
-                <option value="">Selecione</option>
-                <option>Inicial</option>
-                <option>Em organização</option>
-                <option>Intermediária</option>
-                <option>Avançada</option>
-                <option>Não sei avaliar</option>
-              </select>
-            </div>
-
-            <div class="field">
-              <label for="erp">ERP principal</label>
-              <select id="erp" name="erp" required>
-                <option value="">Selecione</option>
-                <option>SAP</option>
-                <option>Oracle / JD Edwards</option>
-                <option>Totvs</option>
-                <option>Senior</option>
-                <option>Sankhya</option>
-                <option>Microsoft Dynamics</option>
-                <option>Outro</option>
-                <option>Não possui ERP estruturado</option>
-              </select>
-            </div>
-
-            <div class="field">
-              <label for="crm">CRM principal</label>
-              <select id="crm" name="crm" required>
-                <option value="">Selecione</option>
-                <option>Salesforce</option>
-                <option>HubSpot</option>
-                <option>Microsoft Dynamics CRM</option>
-                <option>Outro</option>
-                <option>Não utiliza</option>
-              </select>
-            </div>
-
-            <div class="field full">
-              <label>Tecnologias / plataformas já utilizadas</label>
-              <div class="checkbox-grid">
-                <label><input type="checkbox" name="tech" value="AWS" /> AWS</label>
-                <label><input type="checkbox" name="tech" value="Azure" /> Azure</label>
-                <label><input type="checkbox" name="tech" value="Google Cloud" /> Google Cloud</label>
-                <label><input type="checkbox" name="tech" value="IBM Cloud" /> IBM Cloud</label>
-                <label><input type="checkbox" name="tech" value="Oracle Cloud" /> Oracle Cloud</label>
-                <label><input type="checkbox" name="tech" value="Salesforce" /> Salesforce</label>
-                <label><input type="checkbox" name="tech" value="SAP Cloud" /> SAP Cloud</label>
-                <label><input type="checkbox" name="tech" value="Microsoft 365" /> Microsoft 365</label>
-                <label><input type="checkbox" name="tech" value="Google Workspace" /> Google Workspace</label>
-                <label><input type="checkbox" name="tech" value="ServiceNow" /> ServiceNow</label>
-                <label><input type="checkbox" name="tech" value="Power BI" /> Power BI</label>
-                <label><input type="checkbox" name="tech" value="Tableau" /> Tableau</label>
-                <label><input type="checkbox" name="tech" value="Snowflake" /> Snowflake</label>
-                <label><input type="checkbox" name="tech" value="Databricks" /> Databricks</label>
-              </div>
-            </div>
-
-            <div class="field full">
-              <label for="techOutro">Outras tecnologias</label>
-              <input
-                id="techOutro"
-                name="techOutro"
-                type="text"
-                maxlength="240"
-                placeholder="Ex.: SharePoint, TOTVS Fluig, Qlik, DocuSign..."
-              />
-            </div>
-
-            <div class="field full">
-              <label>Sensibilidade dos dados</label>
-              <div class="checkbox-grid">
-                <label><input type="checkbox" name="sensibilidade" value="Dados pessoais" /> Dados pessoais</label>
-                <label><input type="checkbox" name="sensibilidade" value="Dados financeiros" /> Dados financeiros</label>
-                <label><input type="checkbox" name="sensibilidade" value="Dados fiscais" /> Dados fiscais</label>
-                <label><input type="checkbox" name="sensibilidade" value="Dados industriais" /> Dados industriais</label>
-                <label><input type="checkbox" name="sensibilidade" value="Dados de saúde" /> Dados de saúde</label>
-                <label><input type="checkbox" name="sensibilidade" value="Dados estratégicos/comerciais" /> Dados estratégicos/comerciais</label>
-                <label><input type="checkbox" name="sensibilidade" value="Não sei informar" /> Não sei informar</label>
-              </div>
-            </div>
-
-            <div class="field full">
-              <label>Requisitos de compliance / governança</label>
-              <div class="checkbox-grid">
-                <label><input type="checkbox" name="compliance" value="LGPD" /> LGPD</label>
-                <label><input type="checkbox" name="compliance" value="SOX" /> SOX</label>
-                <label><input type="checkbox" name="compliance" value="ISO 27001" /> ISO 27001</label>
-                <label><input type="checkbox" name="compliance" value="Políticas globais internas" /> Políticas globais internas</label>
-                <label><input type="checkbox" name="compliance" value="Auditoria externa" /> Auditoria externa</label>
-                <label><input type="checkbox" name="compliance" value="Contratos com fornecedores globais" /> Contratos com fornecedores globais</label>
-                <label><input type="checkbox" name="compliance" value="Não sei informar" /> Não sei informar</label>
-              </div>
-            </div>
-
-            <div class="field full">
-              <label>Onde está a maior dor?</label>
-              <div class="checkbox-grid">
-                <label><input type="checkbox" name="maiorDor" value="Muitos sistemas desconectados" /> Muitos sistemas desconectados</label>
-                <label><input type="checkbox" name="maiorDor" value="Muitas planilhas" /> Muitas planilhas</label>
-                <label><input type="checkbox" name="maiorDor" value="Dados duplicados" /> Dados duplicados</label>
-                <label><input type="checkbox" name="maiorDor" value="Dados sem dono" /> Dados sem dono</label>
-                <label><input type="checkbox" name="maiorDor" value="Baixa rastreabilidade" /> Baixa rastreabilidade</label>
-                <label><input type="checkbox" name="maiorDor" value="Integrações manuais" /> Integrações manuais</label>
-                <label><input type="checkbox" name="maiorDor" value="Decisões sem indicador confiável" /> Decisões sem indicador confiável</label>
-              </div>
-            </div>
-
-            <div class="field full">
-              <label>Arquitetura aceitável</label>
-              <div class="checkbox-grid">
-                <label><input type="checkbox" name="arquitetura" value="Local" /> Local</label>
-                <label><input type="checkbox" name="arquitetura" value="Nuvem" /> Nuvem</label>
-                <label><input type="checkbox" name="arquitetura" value="Híbrida" /> Híbrida</label>
-                <label><input type="checkbox" name="arquitetura" value="Precisa seguir diretriz global" /> Precisa seguir diretriz global</label>
-                <label><input type="checkbox" name="arquitetura" value="Ainda não definido" /> Ainda não definido</label>
-              </div>
-            </div>
-
-            <div class="field full">
-              <label>Onde os dados / documentos vivem hoje?</label>
-              <div class="checkbox-grid">
-                <label><input type="checkbox" name="dadosBase" value="Planilhas" /> Planilhas</label>
-                <label><input type="checkbox" name="dadosBase" value="SharePoint" /> SharePoint</label>
-                <label><input type="checkbox" name="dadosBase" value="Banco SQL" /> Banco SQL</label>
-                <label><input type="checkbox" name="dadosBase" value="Data warehouse" /> Data warehouse</label>
-                <label><input type="checkbox" name="dadosBase" value="Data lake" /> Data lake</label>
-                <label><input type="checkbox" name="dadosBase" value="Pastas locais" /> Pastas locais</label>
-                <label><input type="checkbox" name="dadosBase" value="Sistemas legados" /> Sistemas legados</label>
-                <label><input type="checkbox" name="dadosBase" value="SaaS dispersos" /> SaaS dispersos</label>
-              </div>
-            </div>
-
-            <div class="field full">
-              <label for="dadosOutro">Outras fontes / contexto de dados</label>
-              <textarea
-                id="dadosOutro"
-                name="dadosOutro"
-                maxlength="800"
-                placeholder="Descreva outras fontes, repositórios ou dependências importantes."
-              ></textarea>
-            </div>
-
-            <div class="field full">
-              <label for="dores">Principais dores / sinais de complexidade</label>
-              <textarea
-                id="dores"
-                name="dores"
-                maxlength="1000"
-                placeholder="Ex.: dados inconsistentes, planilhas paralelas, integração manual, baixa rastreabilidade, pouca clareza de dono, processos não documentados..."
-              ></textarea>
-            </div>
-
-            <div class="field full">
-              <label for="ia">Uso atual ou interesse em IA</label>
-              <textarea
-                id="ia"
-                name="ia"
-                maxlength="1000"
-                placeholder="Ex.: já usam ChatGPT/Copilot? há política interna? quais dados exigem mais cuidado? existe interesse em IA local, híbrida ou em nuvem?"
-              ></textarea>
-            </div>
-
-            <div class="field full">
-              <label class="legal-check">
-                <input id="legalConfirm" name="legalConfirm" type="checkbox" required />
-                Confirmo que este diagnóstico inicial não contém credenciais, documentos internos,
-                dados pessoais de terceiros, dados sensíveis detalhados ou informações confidenciais.
-              </label>
-            </div>
-          </div>
-
-          <p class="form-note">
-            Não envie dados sensíveis, credenciais, documentos internos, informações pessoais de terceiros ou dados confidenciais neste diagnóstico inicial.
-            O objetivo é entender contexto, maturidade e estrutura geral do ambiente. A análise é feita internamente pela H.A.R.A Labs, com foco em governança, aderência operacional e próximos passos possíveis.
-          </p>
-
-            <div class="field full">
-              <label>Verificação de segurança</label>
-              <div class="turnstile-box">
-                <div
-                  class="cf-turnstile"
-                  data-sitekey="0x4AAAAAADEZ6ZEdazOVA7aH"
-                  data-theme="dark"
-                  data-size="flexible"
-                  data-action="diagnostic"
-                ></div>
-              </div>
-            </div>
-
-          <div class="hero-actions">
-            <button class="button button-gold" type="submit">Enviar formulário</button>
-            <a class="button button-ghost" href="mailto:contato@haralabs.com.br">
-              Preferir contato direto
-            </a>
-          </div>
-        </form>
-      </div>
-    </section>
-
-
-    <section id="contato">
-        <div class="card contact-card">
-          <div>
-            <span class="eyebrow">Contato</span>
-            <h2>Vamos conversar?</h2>
-            <p>
-              Para oportunidades, parcerias, diagnóstico de ambiente e conversas
-              sobre estruturação operacional, dados e IA aplicada.
-            </p>
-          </div>
-
-          <div class="hero-actions contact-actions">
-            <a class="button button-gold" href="mailto:contato@haralabs.com.br">
-              contato@haralabs.com.br
-            </a>
-            <a
-              class="button button-ghost"
-              href="https://www.linkedin.com/in/tiago--sartori/"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Tiago Sartori
-            </a>
-            <a
-              class="button button-ghost"
-              href="https://www.linkedin.com/company/hara-labs/"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Página da H.A.R.A Labs
-            </a>
-          </div>
-        </div>
-      </section>
-    </main>
-
-    <footer>
-      <div class="shell footer-line">
-        <span>© 2026 H.A.R.A Labs</span>
-        <span>Arquitetura operacional, governança de dados e IA aplicada.</span>
-        <span class="legal-links">
-          <a href="/privacy/">Privacidade</a>
-          <a href="/terms/">Termos</a>
-          <a href="/support/">Suporte</a>
-        </span>
-      </div>
-    </footer>
-
-    <script src="assets/js/script.js"></script>
-  </body>
+      <div class="hand-note">Uma arquitetura.<br>Total liberdade.<br>Dados sempre seus.<i></i></div>
+    </div>
+  </div>
+</section>
+
+<section class="trust-strip">
+  <div class="page-shell trust-grid">
+    <div><svg><use href="#i-shield"/></svg><p><strong>Segurança</strong><span>Dados protegidos por design</span></p></div>
+    <div><svg><use href="#i-globe"/></svg><p><strong>Soberania</strong><span>Você no controle</span></p></div>
+    <div><svg><use href="#i-layers"/></svg><p><strong>Integração</strong><span>Do legado ao futuro</span></p></div>
+    <div><svg><use href="#i-rotate"/></svg><p><strong>Continuidade</strong><span>Operação sem interrupções</span></p></div>
+    <div><svg><use href="#i-users"/></svg><p><strong>Governança</strong><span>Auditável e em conformidade</span></p></div>
+  </div>
+</section>
+
+<section class="section solutions" id="solucoes">
+  <div class="page-shell split-heading reveal">
+    <div><div class="section-kicker"><i></i>Nossas soluções</div><h2>Três caminhos.<br>Um mesmo controle.</h2><p>Implante a IA da forma certa para o seu negócio, com a flexibilidade que sua operação exige.</p><a class="section-link" href="#arquitetura">Explorar todas as soluções <span>→</span></a></div>
+    <div class="solution-grid">
+      <article class="solution-card"><div class="icon-box"><svg><use href="#i-building"/></svg></div><h3>On-site</h3><p>IA próxima da operação, mesmo em ambientes isolados.</p><ul><li>Edge e ambientes restritos</li><li>Baixa latência</li><li>Operação autônoma</li></ul></article>
+      <article class="solution-card featured"><div class="icon-box"><svg><use href="#i-server"/></svg></div><h3>On-premise</h3><p>Seu ambiente. Suas regras. Seu controle.</p><ul><li>Dados e modelos locais</li><li>Integração com legado</li><li>Total privacidade</li></ul></article>
+      <article class="solution-card"><div class="icon-box"><svg><use href="#i-cloud"/></svg></div><h3>Cloud</h3><p>Escala e inovação quando você precisa.</p><ul><li>Modelos de última geração</li><li>Elasticidade sob demanda</li><li>Governança unificada</li></ul></article>
+    </div>
+  </div>
+</section>
+
+<section class="section architecture" id="arquitetura">
+  <div class="page-shell architecture-grid">
+    <div class="architecture-copy reveal"><div class="section-kicker"><i></i>Arquitetura</div><h2>Híbrida por natureza.<br>Segura por design.</h2><p>Uma arquitetura única que conecta cloud, on-premise e on-site, com governança centralizada, interoperabilidade e controle total dos seus dados.</p><a class="section-link" href="#integracoes">Conhecer a arquitetura em detalhes <span>→</span></a></div>
+    <div class="orbit-panel reveal delay">
+      <div class="orbit-ring ring1"></div><div class="orbit-ring ring2"></div>
+      <div class="orbit-center"><img src="/assets/images/hara-logo-web.webp" alt=""><strong>H.A.R.A</strong><span>Arquitetura híbrida</span></div>
+      <div class="orbit-node n-prem"><svg><use href="#i-server"/></svg><b>On-premise</b><span>Dados & modelos</span></div>
+      <div class="orbit-node n-site"><svg><use href="#i-building"/></svg><b>On-site</b><span>Edge & operações</span></div>
+      <div class="orbit-node n-cloud"><svg><use href="#i-cloud"/></svg><b>Cloud</b><span>Serviços & escala</span></div>
+      <div class="orbit-node n-sys"><svg><use href="#i-box"/></svg><b>Sistemas</b><span>ERP · CRM · APIs</span></div>
+    </div>
+    <div class="arch-checks reveal delay2"><span>✓ Integração nativa</span><span>✓ Fluxo de dados governado</span><span>✓ Portabilidade de workloads</span><span>✓ Sem vendor lock-in</span></div>
+  </div>
+</section>
+
+<section class="section security" id="seguranca">
+  <div class="page-shell">
+    <div class="section-title reveal"><div class="section-kicker"><i></i>Segurança</div><h2>Segurança em<br>todas as camadas.</h2><p>Controles técnicos e operacionais para que a sua IA opere com o mais alto nível de proteção e conformidade.</p></div>
+    <div class="security-grid">
+      <article class="security-card reveal"><div class="icon-box"><svg><use href="#i-lock"/></svg></div><h3>Menor privilégio</h3><p>Apenas o necessário, sempre.</p><a href="#contato">→</a></article>
+      <article class="security-card reveal"><div class="icon-box"><svg><use href="#i-user"/></svg></div><h3>Identidade e política</h3><p>Acesso governado por contexto.</p><a href="#contato">→</a></article>
+      <article class="security-card reveal"><div class="icon-box"><svg><use href="#i-file"/></svg></div><h3>Evidência</h3><p>Logs e rastreabilidade completa.</p><a href="#contato">→</a></article>
+      <article class="security-card reveal"><div class="icon-box"><svg><use href="#i-shield"/></svg></div><h3>Continuidade</h3><p>Resiliência e recuperação garantidas.</p><a href="#contato">→</a></article>
+    </div>
+  </div>
+</section>
+
+<section class="section integrations" id="integracoes">
+  <div class="page-shell integrations-grid">
+    <div class="integration-copy reveal"><div class="section-kicker"><i></i>Integrações</div><h2>Conecta o que você tem.<br>Com o que vem.</h2><p>Do seu ERP aos modelos de IA, o MCP da H.A.R.A integra sistemas, dados e agentes com segurança e governança.</p><a class="section-link" href="#contato">Ver todas as integrações <span>→</span></a></div>
+    <div class="integration-board reveal delay">
+      <div class="stack systems"><strong>Seus sistemas</strong><span>ERP <em>SAP · Oracle · TOTVS</em></span><span>CRM <em>Salesforce · HubSpot</em></span><span>SQL <em>PostgreSQL · SQL Server</em></span><span>Docs <em>SharePoint · Google Drive</em></span></div>
+      <div class="mcp-core"><span>MCP</span><img src="/assets/images/hara-logo-web.webp" alt=""><strong>H.A.R.A</strong><small>Conector universal</small></div>
+      <div class="stack agents"><strong>IA e agentes</strong><span>LLM <em>Cloud · Local · Frontier</em></span><span>Agent <em>Agentes especializados</em></span><span>API <em>APIs e serviços</em></span><span>Flow <em>Workflows e automações</em></span></div>
+      <svg class="integration-lines" viewBox="0 0 720 280"><path d="M230 140H325"/><path d="M395 140H490"/></svg>
+    </div>
+    <div class="integration-checks reveal delay2"><span>✓ Integração padronizada</span><span>✓ Segura e governada</span><span>✓ Conecta sistemas e agentes</span><span>✓ Pronta para o seu ecossistema</span></div>
+  </div>
+</section>
+
+<section class="commander" id="commander">
+  <div class="page-shell commander-grid">
+    <div class="commander-copy reveal"><div class="section-kicker gold"><i></i>H.A.R.A Commander</div><h2>Visibilidade. Controle. Ação.</h2><p>O centro de comando para sua infraestrutura de IA. Monitore, governe e opere tudo em um só lugar.</p><a class="button gold-btn" href="#contato">Conheça o Commander <span>→</span></a></div>
+    <div class="commander-ui reveal delay">
+      <div class="console-nav"><img src="/assets/images/hara-logo-web.webp" alt=""><strong>H.A.R.A Commander</strong><span>Visão geral</span><span>Modelos</span><span>Integrações</span><span>Segurança</span><span>Auditoria</span></div>
+      <div class="console-main"><div class="console-top"><article><small>Infraestrutura</small><b>● Saudável</b></article><article><small>Modelos</small><b>12 ativos</b></article><article><small>Integrações</small><b>28 conectadas</b></article><article><small>Solicitações</small><b>1.2k hoje</b></article></div><div class="chart-card"><span>Uso de IA</span><svg viewBox="0 0 500 130"><path d="M10 110 C70 100,80 65,130 78 S220 25,270 58 S360 98,410 54 S455 30,490 36"/></svg></div><div class="events"><span>● model.deployed <b>10:24</b></span><span>● integration.synced <b>09:18</b></span><span>● policy.updated <b>08:41</b></span></div></div>
+    </div>
+    <div class="commander-quote">DA<br>ESTRATÉGIA<br>À OPERAÇÃO.<br>SEMPRE NO<br>SEU CONTROLE.<i></i></div>
+  </div>
+</section>
+
+<section class="section company" id="empresa">
+  <div class="page-shell company-grid">
+    <div class="section-title reveal"><div class="section-kicker"><i></i>Sobre a H.A.R.A Labs</div><h2>IA real para<br>empresas reais.</h2><p>Combinamos tecnologia, segurança e pragmatismo para ajudar organizações a adotarem IA de forma responsável, produtiva e sob seu controle.</p></div>
+    <div class="value-grid">
+      <article class="reveal"><svg><use href="#i-target"/></svg><h3>Foco em resultado</h3><p>IA que gera valor concreto.</p></article>
+      <article class="reveal"><svg><use href="#i-users"/></svg><h3>Experiência real</h3><p>Expertise em ambientes críticos.</p></article>
+      <article class="reveal"><svg><use href="#i-shield"/></svg><h3>Compromisso</h3><p>Segurança e soberania primeiro.</p></article>
+      <article class="reveal"><svg><use href="#i-chart"/></svg><h3>Parceria de longo prazo</h3><p>Do piloto à escala, ao seu lado.</p></article>
+    </div>
+  </div>
+</section>
+
+<section class="final-cta" id="contato">
+  <div class="page-shell cta-card reveal">
+    <img src="/assets/images/hara-logo-web.webp" alt="">
+    <div><h2>Vamos construir sua estratégia de IA?</h2><p>Converse com nossos especialistas e descubra como a H.A.R.A pode acelerar seus resultados com segurança, controle e total alinhamento ao seu negócio.</p></div>
+    <a class="button dark-btn" href="mailto:contato@haralabs.com.br">Falar com especialista <span>→</span></a>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="page-shell footer-grid">
+    <div class="footer-brand"><img src="/assets/images/hara-logo-web.webp" alt=""><div><strong>H.A.R.A <b>Labs</b></strong><small>IA com propósito. Sob seu controle.</small></div></div>
+    <nav><a href="#solucoes">Soluções</a><a href="#arquitetura">Arquitetura</a><a href="#seguranca">Segurança</a><a href="#integracoes">Integrações</a><a href="#commander">Commander</a><a href="#empresa">Empresa</a></nav>
+    <small>© 2026 H.A.R.A Labs<br>Todos os direitos reservados.</small>
+  </div>
+</footer>
+<script src="/assets/js/script.js?v=20260921-v11"></script>
+</body>
 </html>
