@@ -371,6 +371,13 @@ p {
   background: #06111c;
 }
 
+.manual-hero-carousel img[src*="hara-brand-flat-matte"] {
+  object-fit: contain;
+  object-position: center;
+  padding: 14px;
+  background: var(--canvas-deep);
+}
+
 .slide-caption {
   margin-top: auto;
   padding: 18px 20px 20px;
