@@ -11,6 +11,7 @@
   const params = new URLSearchParams(location.search);
   const localHost = location.hostname === "127.0.0.1" || location.hostname === "localhost";
   const scenario = String(params.get("scenario") || "").trim().toLowerCase();
+  const authError = String(params.get("auth_error") || "").trim().toUpperCase();
   const remotePortal = !localHost;
   let retryAction = null;
   let authProviderConfigured = false;
@@ -278,6 +279,14 @@
     const go = event.target.closest("[data-go]");
     if (go) {
       event.preventDefault();
+      if (remotePortal && go.dataset.go === "login") {
+        startRemoteAuth(false);
+        return;
+      }
+      if (remotePortal && go.dataset.go === "signup") {
+        startRemoteAuth(true);
+        return;
+      }
       route(go.dataset.go);
       return;
     }
@@ -324,5 +333,27 @@
 
   configureAuthUi();
   route(location.hash.slice(1) || "landing", false);
+
+  if (authError) {
+    const authMessages = {
+      IDENTITY_NOT_PROVISIONED: "Esta identidade foi autenticada, mas ainda não está provisionada para este workspace.",
+      IDENTITY_INACTIVE: "Esta identidade está inativa no Commander.",
+      IDENTITY_INVITE_EXPIRED: "O convite desta identidade expirou.",
+      OIDC_STATE_EXPIRED: "A tentativa de login expirou. Inicie o login novamente.",
+      OIDC_STATE_INVALID: "A validação de segurança do login falhou. Inicie o login novamente.",
+      OIDC_STATE_REPLAYED: "Esta tentativa de login já foi utilizada. Inicie uma nova.",
+      OIDC_PROVIDER_ERROR: "O provedor de identidade recusou ou cancelou o login.",
+      AUTH_CALLBACK_FAILED: "Não foi possível concluir o login seguro.",
+    };
+    showBanner(
+      "warning",
+      "Login não concluído",
+      authMessages[authError] || "Não foi possível concluir o login seguro.",
+      "Tentar novamente",
+      () => startRemoteAuth(false),
+    );
+    history.replaceState(null, "", location.pathname + "#login");
+  }
+
   if (localHost) loadProductDashboard();
 })();
