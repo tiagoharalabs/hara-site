@@ -21,3 +21,4 @@ logs/
 .local-env/
 dev-preview/
 artifacts/dev/
+apps/commander/.generated/

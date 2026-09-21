@@ -213,8 +213,8 @@ export default {
           ok: true,
           service: "hara-commander-product-dev",
           environment: env.ENVIRONMENT,
-          product_db: "D1_LOCAL",
-          quota_store: "DURABLE_OBJECT_SQLITE_LOCAL",
+          product_db: env.STORAGE_MODE === "REMOTE_DEV" ? "D1_REMOTE_DEV" : "D1_LOCAL",
+          quota_store: env.STORAGE_MODE === "REMOTE_DEV" ? "DURABLE_OBJECT_SQLITE_REMOTE_DEV" : "DURABLE_OBJECT_SQLITE_LOCAL",
           production_mutation: false
         });
       }

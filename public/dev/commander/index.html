@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="./styles.css?v=20260921-dev1" />
+  <link rel="stylesheet" href="./styles.css?v=20260921-dev2" />
 </head>
 <body>
   <div class="dev-ribbon" role="status">
@@ -39,6 +39,14 @@
       <button class="btn btn-primary" type="button" data-go="signup">Criar conta</button>
     </div>
   </header>
+
+  <div class="system-banner" id="systemBanner" role="status" aria-live="polite" hidden>
+    <div>
+      <strong id="systemBannerTitle">Estado do Commander</strong>
+      <span id="systemBannerMessage">—</span>
+    </div>
+    <button class="btn btn-secondary small" id="systemBannerAction" type="button" hidden>Repetir</button>
+  </div>
 
   <main>
     <section class="view active" data-view="landing" aria-labelledby="landing-title">
@@ -233,7 +241,7 @@
               <span>Conexões</span><strong>1 ativa</strong><small>ChatGPT</small>
             </article>
             <article class="summary-card">
-              <span>Estado</span><strong class="healthy">Saudável</strong><small>Entitlement ativo</small>
+              <span>Estado</span><strong class="healthy" id="dashboardState">Saudável</strong><small id="dashboardStateDetail">Entitlement ativo</small>
             </article>
           </div>
 
@@ -254,7 +262,7 @@
 
             <article class="panel activity-panel">
               <div class="panel-head"><div><span>Últimas execuções</span><h2>Receipts recentes</h2></div></div>
-              <div class="activity-list">
+              <div class="activity-list" id="activityList">
                 <div><i class="ok"></i><span><b>fleet.list</b><small>READ_ONLY · 10:24</small></span><strong>PASS</strong></div>
                 <div><i class="ok"></i><span><b>hara.health</b><small>Discovery · 10:21</small></span><strong>PASS</strong></div>
                 <div><i class="ok"></i><span><b>fleet.list</b><small>READ_ONLY · 09:58</small></span><strong>PASS</strong></div>
@@ -346,7 +354,7 @@
             <div class="user-chip"><span>TS</span><div><b>Tiago Demo</b><small>Owner</small></div></div>
           </header>
 
-          <div class="connection-list">
+          <div class="connection-list" id="connectionList">
             <article class="connection-card">
               <div class="connection-icon openai">AI</div>
               <div><h2>ChatGPT</h2><p>Plugin H.A.R.A. Commander via Remote MCP + OAuth.</p><span class="status-line connected"><i></i> Pronto para conexão</span></div>
@@ -420,6 +428,6 @@
     </div>
   </template>
 
-  <script src="./app.js?v=20260921-dev1"></script>
+  <script src="./app.js?v=20260921-dev2"></script>
 </body>
 </html>
