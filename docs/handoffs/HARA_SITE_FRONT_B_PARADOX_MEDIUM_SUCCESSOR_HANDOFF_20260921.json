@@ -1,0 +1,53 @@
+{
+  "schema": "hara.site.front-b-paradox-medium-successor-handoff.v1",
+  "date": "2026-09-21",
+  "issue": 14,
+  "state": "READY_FOR_SUCCESSOR_ANALYSIS_IMPLEMENT_AFTER_SOURCE_REFRESH",
+  "repository": "tiagoharalabs/hara-site",
+  "site_baseline_main": "a158f100dfb6bba0bab2a81e453fb83c304bec33",
+  "paradox": {
+    "repository": "tiagoharalabs/hara-platform",
+    "platform_main_at_handoff": "1f01a685e832eaba187c2065586f5a167ef0b5d4",
+    "canonical_pr": 812,
+    "canonical_pr_merged": true,
+    "canonical_merge_commit": "5dd7ffc1bc53909f1b38d4a247a145d6dee6529b",
+    "canonical_handoff": "docs/handoffs/HARA_PARADOX_VISUAL_V4_RAG_HEAVY_TRIAD_SUCCESSOR_HANDOFF_20260921.md",
+    "v3_4_promotion_rejected": true,
+    "v4_live": false,
+    "v4_qualitative_acceptance": "PENDING",
+    "separate_open_pr_789": {
+      "open": true,
+      "head_sha": "5c763d8339f38c4aa18c491e77e4f6839bdfdc3d",
+      "canonical_over_812": false
+    }
+  },
+  "reference_tokens": {
+    "canvas": "#07131f",
+    "surface": "#0a1b2a",
+    "surface_2": "#0d2132",
+    "text": "#e5f0f7",
+    "blue": "#76bfee",
+    "gold": "#d8b45d"
+  },
+  "dependency": {
+    "front_a_issue": 13,
+    "requires_front_a_canonical_asset_before_final_signoff": true
+  },
+  "mandatory_refresh_before_implementation": true,
+  "boundaries": {
+    "paradox_runtime_mutation": false,
+    "paradox_promotion": false,
+    "mcp_change": false,
+    "oauth_change": false,
+    "hara_runtime_change": false
+  },
+  "terminal_requires": [
+    "PARADOX_SOURCE_REFRESHED_BEFORE_IMPLEMENTATION_PASS",
+    "FRONT_A_CANONICAL_ASSET_CONSUMED_PASS",
+    "SITE_TOKEN_MAP_DOCUMENTED_PASS",
+    "GLOW_REDUCED_PASS",
+    "CI_PROVENANCE_PASS",
+    "CLOUDFLARE_LIVE_READBACK_PASS",
+    "OPERATOR_QUALITATIVE_ACCEPTANCE_PASS"
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "schema": "hara.site.front-a-branding-successor-handoff.v1",
+  "date": "2026-09-21",
+  "issue": 13,
+  "state": "READY_FOR_SUCCESSOR_EXECUTION",
+  "repository": "tiagoharalabs/hara-site",
+  "baseline_main": "a158f100dfb6bba0bab2a81e453fb83c304bec33",
+  "mission": "Canonize flat/matte non-mirrored H.A.R.A. capybara identity for public site and H.A.R.A. Commander",
+  "operator_decision": {
+    "primary_style": "FLAT_MATTE",
+    "capybara_orientation": "NON_MIRRORED",
+    "metallic_3d_primary": false,
+    "high_glow_primary": false,
+    "full_mark_visible": true,
+    "object_fit": "contain"
+  },
+  "current_assets": {
+    "commander_logo_git_blob": "056acfdd9c7cd57559d85fcde65bc65bc28084c8",
+    "premium_logo_git_blob": "5c9e9f5a1560ee7dc9ced4d3383a2c910ea05cba"
+  },
+  "current_files": {
+    "html_git_blob": "fcb925f7d2842df2627e0c1953493221996ce36f",
+    "css_git_blob": "be4807e90e36a6fae78eb3954d0f441592b89fa4"
+  },
+  "dependency": {
+    "front_b_issue": 14,
+    "front_b_consumes_front_a_asset": true
+  },
+  "boundaries": {
+    "mcp_auth_change": false,
+    "oauth_change": false,
+    "hara_runtime_change": false,
+    "paradox_runtime_change": false
+  },
+  "terminal_requires": [
+    "CANONICAL_FLAT_SOURCE_ASSET_PASS",
+    "LEGACY_ACTIVE_REFERENCES_0",
+    "ROOT_PUBLIC_PARITY_PASS",
+    "CI_PROVENANCE_PASS",
+    "CLOUDFLARE_LIVE_READBACK_PASS",
+    "OPERATOR_VISUAL_ACCEPTANCE_PASS"
+  ]
+}
