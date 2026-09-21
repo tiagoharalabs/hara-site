@@ -26,3 +26,38 @@ footer{border-top:1px solid var(--line);padding:28px 0 34px;background:rgba(247,
 @media(max-width:1100px){.main-nav{display:none}.menu-button{display:block}.nav-cta{margin-left:auto}.mobile-menu.open{display:grid;padding:10px 20px 18px;background:#f5fbff;border-top:1px solid var(--line)}.mobile-menu a{padding:10px 0;color:#4c7088;font-size:.8rem;font-weight:650}.hero-grid,.split-heading,.architecture-grid,.integrations-grid,.company-grid,.commander-grid{grid-template-columns:1fr}.hero h1{max-width:12ch}.hero-system{max-width:760px;margin:auto;padding-right:0}.hand-note{display:none}.trust-grid{grid-template-columns:repeat(3,1fr)}.trust-grid>div{min-height:72px}.solution-grid{margin-top:30px}.architecture-copy,.integration-copy{max-width:720px}.orbit-panel{max-width:680px;width:100%;margin:auto}.arch-checks,.integration-checks{grid-template-columns:repeat(2,1fr)}.security-grid{grid-template-columns:repeat(2,1fr)}.commander-grid{gap:28px}.commander-quote{display:none}.commander-ui{max-width:850px}.value-grid{margin-top:26px}}
 @media(max-width:760px){.page-shell,.nav-shell{width:min(calc(100% - 28px),var(--max))}.nav-shell{height:68px}.brand{min-width:0}.brand-logo{width:42px;height:40px}.brand-word{font-size:.9rem}.nav-cta{display:none}.hero{padding:50px 0}.hero h1{font-size:clamp(3rem,14vw,4.5rem)}.hero-system{display:none}.hero-trust{display:grid}.trust-grid{grid-template-columns:1fr 1fr}.trust-grid>div{border-bottom:1px solid var(--line)}.solution-grid,.security-grid{grid-template-columns:1fr}.section{padding:72px 0}.architecture-grid{gap:26px}.orbit-panel{height:400px;transform:scale(.9)}.n-prem,.n-site{left:-4px}.n-cloud,.n-sys{right:-4px}.integration-board{grid-template-columns:1fr;gap:12px}.integration-lines{display:none}.mcp-core{max-width:180px;margin:auto}.arch-checks,.integration-checks{grid-template-columns:1fr}.commander{padding:65px 0}.commander-ui{display:block;transform:none}.console-nav{display:none}.console-top{grid-template-columns:repeat(2,1fr)}.events{grid-template-columns:1fr}.value-grid{grid-template-columns:1fr 1fr}.value-grid article:nth-child(2){border-right:0}.value-grid article{border-bottom:1px solid var(--line)}.value-grid article:nth-child(n+3){border-bottom:0}.cta-card{grid-template-columns:64px 1fr}.cta-card .button{grid-column:1/-1}.cta-card>img{width:60px;height:58px}.footer-grid{grid-template-columns:1fr}.footer-grid nav{justify-content:flex-start;flex-wrap:wrap}.footer-grid>small{text-align:left}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation:none!important;transition:none!important}.reveal{opacity:1;transform:none}}
+
+/* V12 content narrative */
+.thesis{padding-top:88px;background:linear-gradient(180deg,rgba(246,252,255,.92),rgba(236,248,254,.82))}
+.thesis-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:64px;align-items:center}
+.thesis-copy h2,.value-heading h2,.start-heading h2{margin:0 0 18px;color:var(--navy);font-size:clamp(2.45rem,4vw,4.25rem);line-height:1.04;letter-spacing:-.05em}
+.thesis-copy>p,.value-heading>p,.start-heading>p{max-width:760px;color:var(--muted);line-height:1.75}
+.thesis-emphasis{margin-top:20px!important;padding-left:18px;border-left:3px solid var(--gold);color:#345f7b!important;font-weight:650}
+.control-card{padding:28px;border:1px solid #c9e2ef;border-radius:22px;background:rgba(255,255,255,.82);box-shadow:var(--shadow)}
+.control-card>small{display:block;margin-bottom:18px;color:#4289b3;font-size:.67rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+.control-list{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.control-list span{display:flex;align-items:center;gap:10px;padding:13px 14px;border:1px solid #d9eaf3;border-radius:11px;background:#f8fcff;color:#365f79;font-size:.73rem;font-weight:700}
+.control-list b{color:#8fb6cc;font-size:.57rem}
+.manifesto{margin-top:48px;padding:30px 34px;border-radius:20px;background:linear-gradient(135deg,#0a3150,#0e4368);color:white;box-shadow:0 24px 60px rgba(11,53,85,.16)}
+.manifesto strong{display:block;font-size:clamp(1.45rem,2.4vw,2.35rem);letter-spacing:-.035em}
+.manifesto span{display:block;max-width:980px;margin-top:10px;color:#bcd7e7;font-size:.84rem;line-height:1.65}
+.integration-callout{margin-top:20px!important;padding:14px 16px;border:1px solid #cfe6f2;border-radius:11px;background:#f5fbfe;color:#245b79!important;font-weight:750}
+.business-value{border-top:1px solid var(--line);background:linear-gradient(180deg,#f8fcff,#eef8fd)}
+.value-heading{max-width:760px;margin-bottom:34px}
+.usecase-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.usecase{min-height:195px;padding:23px;border:1px solid var(--line);border-radius:17px;background:rgba(255,255,255,.76);transition:.2s}
+.usecase:hover{transform:translateY(-4px);border-color:#b9ddeb;box-shadow:var(--shadow)}
+.usecase>span{display:block;color:#87afc5;font-size:.58rem;font-weight:800}
+.usecase h3{margin:32px 0 9px;font-size:1rem}
+.usecase p{font-size:.72rem!important;line-height:1.6!important}
+.start-path{border-top:1px solid var(--line);background:#f7fcff}
+.start-heading{max-width:900px;margin-bottom:34px}
+.steps{display:grid;grid-template-columns:repeat(5,1fr);border:1px solid var(--line);border-radius:19px;background:rgba(255,255,255,.78);overflow:hidden}
+.steps article{position:relative;min-height:165px;padding:23px;border-right:1px solid var(--line)}
+.steps article:last-child{border-right:0}
+.steps b,.steps strong,.steps span{display:block}
+.steps b{color:#88b2c9;font-size:.6rem}
+.steps strong{margin-top:38px;font-size:.82rem}
+.steps span{margin-top:7px;color:#708da0;font-size:.64rem;line-height:1.5}
+@media(max-width:1100px){.thesis-grid{grid-template-columns:1fr}.usecase-grid{grid-template-columns:repeat(2,1fr)}.steps{grid-template-columns:repeat(3,1fr)}.steps article{border-bottom:1px solid var(--line)}}
+@media(max-width:760px){.control-list,.usecase-grid{grid-template-columns:1fr}.manifesto{padding:24px}.steps{grid-template-columns:1fr}.steps article{border-right:0;border-bottom:1px solid var(--line);min-height:125px}.steps article:last-child{border-bottom:0}.steps strong{margin-top:24px}}
