@@ -58,7 +58,7 @@ export function authStatus(env) {
   const configured = Boolean(env.AUTH_ISSUER && env.AUTH_CLIENT_ID);
   return {
     configured,
-    provider: env.AUTH_PROVIDER_LABEL || "Auth0",
+    provider: env.AUTH_PROVIDER_LABEL || "HARA Identity",
   };
 }
 
