@@ -31,12 +31,12 @@ O workflow `HARA Site Main Provenance Guard` verifica a proveniência de cada pu
 
 A configuração exata de branch protection/ruleset e a integração externa de deploy devem ser resolvidas por readback atual antes de qualquer afirmação de proteção preventiva.
 
-## Ambientes DEV / HOMOLOG / PROD
+## Ambientes DEV / PROD
 
-O fluxo de publicação do site é DEV -> HOMOLOG -> PROD.
+O fluxo canônico do site é DEV -> PROD.
 
-DEV é local e descartável. HOMOLOG é a superfície de revisão, normalmente o preview Cloudflare do pull request/branch ou um preview local. PROD é o estado mergeado em main e comprovado ao vivo em haralabs.com.br / www.haralabs.com.br.
+DEV é o ambiente local de engenharia e revisão visual. PROD é o estado mergeado em `main` e comprovado ao vivo em `haralabs.com.br` / `www.haralabs.com.br`.
 
-O Git não deve acumular snapshots permanentes de DEV ou HOMOLOG. Branches de PR são transporte temporário para revisão; o estado durável do produto é PROD.
+O Git não mantém uma árvore `dev/` nem snapshots de preview como estado durável. Branches de PR são transporte temporário para revisão; o estado persistente do produto no repositório representa PROD.
 
-Contrato completo: docs/workflows/HARA_SITE_ENVIRONMENT_PROMOTION_V1.md.
+Contrato completo: `docs/workflows/HARA_SITE_ENVIRONMENT_PROMOTION_V2.md`.

@@ -17,9 +17,7 @@ logs/
 *.log
 .DS_Store
 
-# local DEV/HOMOLOG publication state
+# local DEV preview publication state
 .local-env/
 dev-preview/
-homolog-preview/
 artifacts/dev/
-artifacts/homolog/
