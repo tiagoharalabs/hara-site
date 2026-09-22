@@ -1,0 +1,38 @@
+{
+  "schema": "hara.commander.device-connect.successor-handoff.v1",
+  "timestamp_utc": "2026-09-22T20:28:58Z",
+  "mission": "Account -> Device -> Commander Agent -> outbound HARA relay -> ChatGPT/Codex -> governed five-tool bridge",
+  "runtime": {
+    "portal": "https://hara-commander-dev-v2.tiago-sartori.workers.dev/",
+    "identity": "https://auth.haralabs.com.br/",
+    "mcp": "https://mcp.haralabs.com.br/mcp",
+    "worker_version": "e6303c51-135c-4f83-bd56-c3a6fdcb772f",
+    "branch": "issue29-commander-dev-v3-auth",
+    "hara_platform_main": "77904a2ac5c895e3634d53458b0021fe25d24c79"
+  },
+  "proven": {
+    "linux_installer": "PASS",
+    "windows_installer_static": "PASS",
+    "pairing": "PASS",
+    "heartbeat": "PASS",
+    "revocation": "PASS",
+    "outbound_health_relay": "PASS",
+    "atomic_claim": "PASS",
+    "result_roundtrip": "PASS",
+    "idempotency": "PASS",
+    "arbitrary_tool_denied": "PASS",
+    "per_device_cloudflared_dependency": false
+  },
+  "visual": {
+    "dark_mode_reference": "APPROVED",
+    "light_mode_spec": "docs/design/HARA_COMMANDER_CLARUS_V1_20260922.md"
+  },
+  "next_blocker": "PORTABLE_GOVERNED_FIVE_TOOL_DEVICE_BRIDGE",
+  "next_gates": [
+    "real Windows installer runtime test",
+    "portable five-tool local bridge",
+    "selected-device public MCP routing",
+    "ChatGPT/Codex read-only canary"
+  ],
+  "billing": "DEFERRED"
+}

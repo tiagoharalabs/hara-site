@@ -100,3 +100,16 @@ The canonical relay architecture remains:
 `hara-platform/docs/architecture/HARA_REMOTE_MCP_RELAY_V1.md`.
 
 Do not call heartbeat/presence a completed tunnel, and do not call the health-only outbound channel a completed five-tool product bridge.
+
+
+## Visual baseline
+
+Dark mode is the current approved visual reference.
+
+The light theme refinement is named `Clarus` and is specified at:
+
+`docs/design/HARA_COMMANDER_CLARUS_V1_20260922.md`
+
+Clarus must preserve the same product hierarchy while reducing the current pale-blue wash. The sidebar remains dark; the workspace moves to a neutral cold off-white canvas with stronger white-card separation.
+
+Visual work is subordinate to the V1 functional mission and must not reintroduce fleet/NOC/observability concepts.
