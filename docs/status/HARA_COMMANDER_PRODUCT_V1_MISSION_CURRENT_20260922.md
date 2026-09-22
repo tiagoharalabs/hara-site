@@ -118,3 +118,17 @@ The light theme refinement is named `Clarus` and is specified at:
 Clarus must preserve the same product hierarchy while reducing the current pale-blue wash. The sidebar remains dark; the workspace moves to a neutral cold off-white canvas with stronger white-card separation.
 
 Visual work is subordinate to the V1 functional mission and must not reintroduce fleet/NOC/observability concepts.
+
+
+## Cross-repository canonical anchors
+
+HARA Platform Commander reconciliation:
+- PR: `#1019`
+- merged Commander documentation commit: `6a81f37f4d2975da3b86014c4b6f03ed457d769e`
+- hara-platform current main observed after that merge: `7bb3e960a98414f696f7ef243456d59c11fc7195`
+- Issue #747 reconciliation comment id: `5783791551`
+
+Canonical HARA Platform handoff:
+`docs/handoffs/HARA_COMMANDER_DEVICE_CONNECT_SUCCESSOR_HANDOFF_20260922T203602Z.md`
+
+This hara-site mission document and the HARA Platform handoff must be treated as the same product authority. If they diverge, reconcile before implementation.

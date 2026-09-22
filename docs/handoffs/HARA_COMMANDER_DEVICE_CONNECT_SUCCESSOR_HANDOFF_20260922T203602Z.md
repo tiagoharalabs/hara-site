@@ -147,3 +147,14 @@ Billing primitives already exist internally; payment integration is intentionall
 7. only then continue OpenAI publication and billing.
 
 No successor should reintroduce fleet/NOC/Paradox/degraded-state concepts into Commander V1.
+
+
+## Cross-repository closure
+
+The corresponding HARA Platform reconciliation was merged through PR #1019.
+
+- Commander documentation merge: `6a81f37f4d2975da3b86014c4b6f03ed457d769e`
+- hara-platform main observed after subsequent unrelated merges: `7bb3e960a98414f696f7ef243456d59c11fc7195`
+- Issue #747 reconciliation comment: `5783791551`
+
+Successors must consult both this handoff and the HARA Platform canonical handoff before changing Commander scope.
