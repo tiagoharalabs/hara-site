@@ -33,18 +33,38 @@ The policy sets:
 - instance display name: `HARA Identity`
 - allowed languages: Portuguese and English
 - Hosted Login V2 visible translations
-- Verify Email, Password Reset, Password Change, Init and Domain Claimed message texts
+- Verify Email, Verify Phone, Password Reset, Password Change, Init and Domain Claimed message texts
 
-SMTP transport is intentionally outside this script. The live provider is already HARA-branded:
+The live SMTP provider is HARA-branded:
 `identity@haralabs.com.br`, sender name `HARA Identity`, reply-to `contato@haralabs.com.br`.
 
+The applicator also supports an optional SMTP transport alignment for Zoho implicit TLS:
+
+```bash
+python3 apps/identity-login/scripts/apply_hara_identity_white_label.py \
+  --pat-file /secure/path/identity-owner.pat \
+  --align-smtp
+```
+
+This changes only the SMTP endpoint to `smtp.zoho.com:465` with TLS enabled and preserves the stored SMTP password. Use `--smtp-test-recipient <address>` to request a provider test after alignment.
+
 ## Live validation
+
+Public white-label validation:
 
 ```bash
 python3 apps/identity-login/scripts/validate_live_white_label.py
 ```
 
-The validator proves HARA public assets, manifest, visible branding, absence of visible vendor copy, Commander OIDC redirect, PKCE S256 and explicit account selection.
+Backend drift validation (run on the Identity host):
+
+```bash
+sudo python3 /srv/hara/identity/tools/validate_identity_backend.py
+```
+
+The public validator proves HARA assets, manifest, visible branding, absence of visible vendor copy, Commander OIDC redirect, PKCE S256 and explicit account selection.
+
+The backend validator proves instance policy, administrative roles, PAT hygiene, complete PT/EN mail-template coverage including Verify Phone, absence of active vendor text, SMTP branding and runtime container health. It also reports the current SMTP transport alignment state without mutating it.
 
 ## Rollback
 

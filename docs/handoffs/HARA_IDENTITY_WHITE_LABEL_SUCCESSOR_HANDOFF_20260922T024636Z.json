@@ -22,14 +22,38 @@
     "human_owner": "hara-admin@zitadel.auth.haralabs.com.br",
     "human_owner_role": "IAM_OWNER",
     "login_client_role": "IAM_LOGIN_CLIENT",
-    "owner_pat_present": false,
+    "maintenance_service_account": "hara-identity-admin",
+    "maintenance_service_account_role": "IAM_OWNER",
+    "owner_pat_present": true,
+    "owner_pat_storage": "/srv/hara/identity/secrets/identity-owner.pat",
+    "owner_pat_mode": "0600",
     "stale_bootstrap_password_attempts": 1,
     "system_api_bootstrap_active": false
   },
+  "policy": {
+    "instance_name": "HARA Identity",
+    "default_language": "pt",
+    "allowed_languages": ["pt", "en"],
+    "public_org_registration_disabled": true,
+    "hosted_login_translations": ["pt", "en"],
+    "mail_templates": ["VerifyEmail", "VerifyPhone", "PasswordReset", "PasswordChange", "InitCode", "DomainClaimed"]
+  },
+  "real_mail_test": {
+    "type": "password_reset",
+    "human_subject": "391814630923567107",
+    "http_status": 200,
+    "password_changed": false,
+    "smtp_starttls_fallback_observed": true,
+    "inbox_confirmation_pending": false,
+    "inbox_visual_confirmation": true,
+    "subject": "Redefina sua senha — HARA Labs"
+  },
+  "credential_hygiene": {
+    "login_client_active_pat_count": 1,
+    "identity_admin_active_pat_count": 1,
+    "active_pt_en_vendor_text_residue": false
+  },
   "pending": [
-    "Provision a dedicated IAM owner maintenance credential without elevating login-client",
-    "Run apps/identity-login/scripts/apply_hara_identity_white_label.py",
-    "Verify instance name and pt/en policy",
-    "Send a real verification or reset email and verify zero vendor text"
+    "Optional: align Zoho SMTP transport from port 587 to 465 to remove the TLS-to-STARTTLS fallback warning"
   ]
 }

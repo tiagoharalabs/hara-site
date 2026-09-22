@@ -32,47 +32,73 @@ Run:
 `python3 apps/identity-login/scripts/validate_live_white_label.py`
 ## SMTP and message text state
 
-SMTP transport is already HARA-branded:
+SMTP transport is HARA-branded:
 
 - sender: `identity@haralabs.com.br`
 - sender name: `HARA Identity`
 - reply-to: `contato@haralabs.com.br`
 - provider: HARA Identity Zoho
 
-The ZITADEL message-text policy is still the remaining vendor-residual layer.
-The default message subjects/titles still contain strings such as `Zitadel - Verify email`,
-`Zitadel - Reset password` and `ZITADEL - Password of user has changed`.
+The supported API applicator completed successfully with an IAM_OWNER preflight.
 
-The prepared supported-API applicator is:
-`apps/identity-login/scripts/apply_hara_identity_white_label.py`
+Applied state:
+- instance display name: `HARA Identity`
+- default language: `pt`
+- allowed languages: `pt,en`
+- public organization registration: disabled
+- Hosted Login translations: PT + EN
+- Verify Email: PT + EN
+- Verify Phone: PT + EN
+- Password Reset: PT + EN
+- Password Change: PT + EN
+- Init / Account Activation: PT + EN
+- Domain Claimed: PT + EN
+
+German default rows remain in the projection but are dormant because `de` is not an allowed language.
 ## Administrative credential boundary
 
 Current roles:
 
 - `hara-admin@zitadel.auth.haralabs.com.br` = `IAM_OWNER`
 - `login-client` = `IAM_LOGIN_CLIENT` only
-- there is no IAM_OWNER PAT stored today
+- `hara-identity-admin` = `IAM_OWNER`
 
-The preserved `first-admin-password` is stale. Exactly one controlled Session API check was attempted and returned `COMMAND-3M0fs` (invalid password), failedAttempts=1. Do not retry it and do not reset the admin password merely to automate this task.
+The dedicated service account `hara-identity-admin` is now the maintenance identity for instance administration.
+Its PAT was validated read-only before mutation and is stored on `storage` at:
+`/srv/hara/identity/secrets/identity-owner.pat`
+with mode `0600`, owner `root:root`.
 
-A temporary System API User bootstrap was prepared but tool security prevented signing/using the administrative JWT. It was fully reverted:
+The preserved `first-admin-password` is stale. Exactly one controlled Session API check was attempted and returned `COMMAND-3M0fs` (invalid password), failedAttempts=1. Do not retry it.
+
+A temporary System API User bootstrap was prepared earlier but fully reverted:
 - no `ZITADEL_SYSTEMAPIUSERS` remains active
 - temporary RSA private/public keys were removed
 - API returned healthy after rollback
-## Next safe action
+## Real mail test and next action
 
-From an already authenticated Identity admin console, create a dedicated administrative machine identity/PAT with only the required instance administration permissions, or create an IAM_OWNER PAT suitable for this maintenance task.
+A real PasswordReset notification was triggered through User API v2 for the human subject `391814630923567107`.
+The API returned HTTP 200 and the activity log recorded the request successfully.
+No password was changed.
 
-Store it directly on `storage`, for example:
-`/srv/hara/identity/secrets/identity-owner.pat`
-with mode `0600`. Do not paste the PAT into chat.
+SMTP first attempted direct TLS, logged a handshake warning, and then automatically fell back to STARTTLS.
 
-Then run the supported API applicator and verify:
-1. instance display name = HARA Identity
-2. languages = pt/en
-3. Hosted Login translations = HARA
-4. Verify Email / Reset / Password Change / Init / Domain Claimed texts = HARA
-5. send a real verification/reset email and confirm zero vendor text
+Inbox delivery was visually confirmed. The received message showed:
+- subject: `Redefina sua senha — HARA Labs`
+- HARA logo
+- Portuguese HARA body copy
+- `Redefinir senha` button
+- HARA Labs footer
+
+The password reset link was not used and no password was changed.
+
+Credential hygiene was also rechecked:
+- `login-client`: exactly 1 active PAT
+- `hara-identity-admin`: exactly 1 active PAT
+- active PT/EN mail templates: zero visible `Zitadel/ZITADEL` residue
+
+Remaining optional improvement:
+- align Zoho SMTP from port 587 + STARTTLS fallback to port 465 + implicit TLS to eliminate the warning while preserving the currently working mail flow.
+
+Keep `login-client` restricted to `IAM_LOGIN_CLIENT` and `hara-identity-admin` as the dedicated instance-maintenance identity.
 
 Do not modify ZITADEL projections/event store directly.
-Do not elevate the existing `login-client` to IAM_OWNER.
