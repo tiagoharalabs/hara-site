@@ -53,6 +53,19 @@ export async function pkceChallenge(verifier) {
   return sha256(verifier);
 }
 
+export async function oidcUserInfo({ metadata, accessToken }) {
+  if (!metadata?.userinfo_endpoint || !accessToken) throw new Error("OIDC_USERINFO_UNAVAILABLE");
+  const response = await fetch(metadata.userinfo_endpoint, {
+    headers: {
+      accept: "application/json",
+      authorization: "Bearer " + String(accessToken),
+    },
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || !payload.sub) throw new Error("OIDC_USERINFO_FAILED");
+  return payload;
+}
+
 function formUrlEncodeComponent(value) {
   return new URLSearchParams([["v", String(value)]]).toString().slice(2);
 }

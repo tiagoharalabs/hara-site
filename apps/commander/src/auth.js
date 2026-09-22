@@ -2,6 +2,7 @@ import {
   exchangeAuthorizationCode,
   normalizeIssuer,
   oidcDiscovery,
+  oidcUserInfo,
   pkceChallenge,
   randomToken,
   sha256,
@@ -243,7 +244,14 @@ export async function finishLogin(request, env) {
     nonce: tx.nonce,
   });
 
-  const user = await resolveOrClaimIdentity(env, claims);
+  let identityClaims = claims;
+  if (claims.email_verified !== true || !normalizeEmail(claims.email)) {
+    const userInfo = await oidcUserInfo({ metadata, accessToken: tokens.access_token });
+    if (String(userInfo.sub) !== String(claims.sub)) throw new Error("OIDC_USERINFO_SUBJECT_MISMATCH");
+    identityClaims = { ...claims, ...userInfo, iss: claims.iss, sub: claims.sub };
+  }
+
+  const user = await resolveOrClaimIdentity(env, identityClaims);
   const sessionToken = randomToken(48);
   const sessionHash = await sha256(sessionToken);
   const createdAt = nowIso();
