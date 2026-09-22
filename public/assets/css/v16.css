@@ -145,3 +145,69 @@ body{overflow-x:hidden}
 }
 .skip-link:focus,.skip-link:focus-visible{top:14px}
 html[data-theme="dark"] .skip-link{background:#eaf6fc;color:#061b2b}
+
+/* V16.2 — 404 mobile artwork refinement.
+   Keep desktop unchanged; place the full capybara/cloud in normal flow on phones. */
+@media(max-width:620px){
+  .error-hero{
+    min-height:auto;
+    padding:46px 0 34px;
+  }
+  .error-grid{
+    display:flex;
+    flex-direction:column;
+    min-height:0;
+  }
+  .error-copy{
+    width:100%;
+    max-width:none;
+    padding-top:2px;
+  }
+  .error-copy h1{
+    font-size:clamp(2.65rem,13vw,3.75rem);
+    line-height:.98;
+  }
+  .error-actions{margin-top:24px}
+
+  .error-watermark{
+    position:relative!important;
+    top:auto!important;
+    right:auto!important;
+    bottom:auto!important;
+    width:min(100%,520px)!important;
+    margin:26px auto -4px;
+    transform:none!important;
+    opacity:1!important;
+    overflow:visible;
+  }
+  .error-watermark:after{display:none!important}
+  .error-watermark img{
+    display:block;
+    width:100%;
+    max-width:100%;
+    height:auto;
+    opacity:.62;
+    object-fit:contain;
+    object-position:center;
+    filter:saturate(.78) contrast(.95);
+    mix-blend-mode:multiply;
+    -webkit-mask-image:none!important;
+    mask-image:none!important;
+  }
+  html[data-theme="dark"] .error-watermark{opacity:1!important}
+  html[data-theme="dark"] .error-watermark img{
+    opacity:.42;
+    filter:saturate(.64) brightness(.84) contrast(.92);
+    mix-blend-mode:screen;
+  }
+
+  .error-links{padding:30px 0 54px}
+}
+
+@media(max-width:420px){
+  .error-hero{padding-top:38px}
+  .error-watermark{
+    width:96%!important;
+    margin-top:20px;
+  }
+}
