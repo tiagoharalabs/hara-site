@@ -1,4 +1,4 @@
-INSERT OR REPLACE INTO tenants (
+INSERT OR IGNORE INTO tenants (
   tenant_id, display_name, state, environment, created_at_utc
 ) VALUES (
   'HARA-TENANT-DEMO-0001',
@@ -8,7 +8,7 @@ INSERT OR REPLACE INTO tenants (
   '2026-09-21T15:30:00Z'
 );
 
-INSERT OR REPLACE INTO users (
+INSERT OR IGNORE INTO users (
   subject_id, tenant_id, oidc_issuer, oidc_subject, email, display_name, state, role, created_at_utc
 ) VALUES (
   'HARA-SUBJECT-DEMO-0001',
@@ -22,14 +22,14 @@ INSERT OR REPLACE INTO users (
   '2026-09-21T15:30:00Z'
 );
 
-INSERT OR REPLACE INTO plans (
+INSERT OR IGNORE INTO plans (
   plan_code, display_name, meter_id, period_kind, unit_limit, state
 ) VALUES
   ('TRIAL', 'Trial', 'HARA_COMMANDER_GOVERNED_INVOKE', 'CALENDAR_MONTH', 1000, 'ACTIVE'),
   ('STANDARD', 'Standard', 'HARA_COMMANDER_GOVERNED_INVOKE', 'CALENDAR_MONTH', 10000, 'ACTIVE'),
   ('SCALE', 'Scale', 'HARA_COMMANDER_GOVERNED_INVOKE', 'NONE', NULL, 'ACTIVE');
 
-INSERT OR REPLACE INTO entitlements (
+INSERT OR IGNORE INTO entitlements (
   entitlement_id, tenant_id, subject_id, plan_code, state, valid_from_utc, valid_until_utc
 ) VALUES (
   'HARA-ENTITLEMENT-DEMO-0001',
@@ -41,7 +41,7 @@ INSERT OR REPLACE INTO entitlements (
   NULL
 );
 
-INSERT OR REPLACE INTO billing_connections (
+INSERT OR IGNORE INTO billing_connections (
   billing_connection_id, tenant_id, provider, external_customer_id, external_subscription_id, state, created_at_utc, updated_at_utc
 ) VALUES (
   'HARA-BILLING-DEMO-0001',
@@ -54,7 +54,7 @@ INSERT OR REPLACE INTO billing_connections (
   '2026-09-21T15:30:00Z'
 );
 
-INSERT OR REPLACE INTO tenants (
+INSERT OR IGNORE INTO tenants (
   tenant_id, display_name, state, environment, created_at_utc
 ) VALUES (
   'HARA-TENANT-QUOTA-0001',
@@ -64,7 +64,7 @@ INSERT OR REPLACE INTO tenants (
   '2026-09-21T15:30:00Z'
 );
 
-INSERT OR REPLACE INTO plans (
+INSERT OR IGNORE INTO plans (
   plan_code, display_name, meter_id, period_kind, unit_limit, state
 ) VALUES (
   'DEV_ONE_UNIT',
@@ -75,7 +75,7 @@ INSERT OR REPLACE INTO plans (
   'ACTIVE'
 );
 
-INSERT OR REPLACE INTO entitlements (
+INSERT OR IGNORE INTO entitlements (
   entitlement_id, tenant_id, subject_id, plan_code, state, valid_from_utc, valid_until_utc
 ) VALUES (
   'HARA-ENTITLEMENT-QUOTA-0001',
@@ -89,21 +89,19 @@ INSERT OR REPLACE INTO entitlements (
 
 
 INSERT OR IGNORE INTO plan_grants (plan_code, grant_code, created_at_utc)
-SELECT plan_code, grant_code, '2026-09-22T14:20:00Z'
-FROM (
-  SELECT 'TRIAL' AS plan_code, 'COMMANDER_DISCOVERY' AS grant_code
-  UNION ALL SELECT 'TRIAL', 'COMMANDER_READ_ONLY_INVOKE'
-  UNION ALL SELECT 'TRIAL', 'COMMANDER_RECEIPT_READ'
-  UNION ALL SELECT 'STANDARD', 'COMMANDER_DISCOVERY'
-  UNION ALL SELECT 'STANDARD', 'COMMANDER_READ_ONLY_INVOKE'
-  UNION ALL SELECT 'STANDARD', 'COMMANDER_RECEIPT_READ'
-  UNION ALL SELECT 'SCALE', 'COMMANDER_DISCOVERY'
-  UNION ALL SELECT 'SCALE', 'COMMANDER_READ_ONLY_INVOKE'
-  UNION ALL SELECT 'SCALE', 'COMMANDER_RECEIPT_READ'
-  UNION ALL SELECT 'DEV_ONE_UNIT', 'COMMANDER_DISCOVERY'
-  UNION ALL SELECT 'DEV_ONE_UNIT', 'COMMANDER_READ_ONLY_INVOKE'
-  UNION ALL SELECT 'DEV_ONE_UNIT', 'COMMANDER_RECEIPT_READ'
-);
+VALUES
+  ('TRIAL', 'COMMANDER_DISCOVERY', '2026-09-22T14:20:00Z'),
+  ('TRIAL', 'COMMANDER_READ_ONLY_INVOKE', '2026-09-22T14:20:00Z'),
+  ('TRIAL', 'COMMANDER_RECEIPT_READ', '2026-09-22T14:20:00Z'),
+  ('STANDARD', 'COMMANDER_DISCOVERY', '2026-09-22T14:20:00Z'),
+  ('STANDARD', 'COMMANDER_READ_ONLY_INVOKE', '2026-09-22T14:20:00Z'),
+  ('STANDARD', 'COMMANDER_RECEIPT_READ', '2026-09-22T14:20:00Z'),
+  ('SCALE', 'COMMANDER_DISCOVERY', '2026-09-22T14:20:00Z'),
+  ('SCALE', 'COMMANDER_READ_ONLY_INVOKE', '2026-09-22T14:20:00Z'),
+  ('SCALE', 'COMMANDER_RECEIPT_READ', '2026-09-22T14:20:00Z'),
+  ('DEV_ONE_UNIT', 'COMMANDER_DISCOVERY', '2026-09-22T14:20:00Z'),
+  ('DEV_ONE_UNIT', 'COMMANDER_READ_ONLY_INVOKE', '2026-09-22T14:20:00Z'),
+  ('DEV_ONE_UNIT', 'COMMANDER_RECEIPT_READ', '2026-09-22T14:20:00Z');
 
 
 INSERT OR IGNORE INTO identity_bindings (

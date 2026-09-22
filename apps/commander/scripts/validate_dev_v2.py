@@ -8,6 +8,7 @@ HTML = (ROOT / "public/dev/commander/index.html").read_text(encoding="utf-8")
 JS = (ROOT / "public/dev/commander/app.js").read_text(encoding="utf-8")
 CSS = (ROOT / "public/dev/commander/styles.css").read_text(encoding="utf-8")
 BOOT = (ROOT / "apps/commander/scripts/bootstrap_remote_dev.py").read_text(encoding="utf-8")
+WORKER = (ROOT / "apps/commander/src/worker.js").read_text(encoding="utf-8")
 
 required_html = [
     "systemBanner",
@@ -39,7 +40,18 @@ required_boot = [
     "REMOTE_DEV_D1",
     "REMOTE_DEV_D1_MIGRATIONS",
     "REMOTE_DEV_SYNTHETIC_SEED",
+    "MCP_ACCESS_ISSUER",
     "PRODUCTION_DNS_MUTATION=FALSE",
+]
+required_worker = [
+    "CLOUDFLARE_ACCESS",
+    "SECONDARY_IDENTITY_CONFLICT",
+    "SECONDARY_ISSUER_MISMATCH",
+    "MCP_ACCESS_ISSUER",
+    "REQUEST_USAGE_TERMINAL",
+    "/api/internal/mcp/authorize",
+    "/api/internal/mcp/commit",
+    "/api/internal/mcp/release",
 ]
 
 for token in required_html:
@@ -50,6 +62,8 @@ for token in required_css:
     assert token in CSS, f"CSS_MISSING:{token}"
 for token in required_boot:
     assert token in BOOT, f"BOOT_MISSING:{token}"
+for token in required_worker:
+    assert token in WORKER, f"WORKER_MISSING:{token}"
 
 print("COMMANDER_FUNCTIONAL_STATES=PASS")
 print("LOADING_EMPTY_ERROR_RETRY_UX=PASS")
@@ -61,6 +75,8 @@ print("RECEIPT_UNAVAILABLE_UX=PASS")
 print("BILLING_DISCONNECTED_UX=PASS")
 print("REDUCED_MOTION=PASS")
 print("REMOTE_DEV_BOOTSTRAP_STATIC=PASS")
+print("MCP_PRODUCT_SECONDARY_IDENTITY_STATIC=PASS")
+print("MCP_PRODUCT_USAGE_TERMINAL_STATIC=PASS")
 print("PRODUCTION_PUBLICATION=FALSE")
 
 forbidden_visible = [

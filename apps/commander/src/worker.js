@@ -10,6 +10,7 @@ import { normalizeIssuer } from "./oidc.js";
 
 const DEMO_TENANT = "HARA-TENANT-DEMO-0001";
 const MCP_METER_ID = "HARA_COMMANDER_GOVERNED_INVOKE";
+const MCP_SECONDARY_PROVIDER = "CLOUDFLARE_ACCESS";
 const MCP_TOOL_GRANTS = Object.freeze({
   "hara.health": "COMMANDER_DISCOVERY",
   "hara.functions.list": "COMMANDER_DISCOVERY",
@@ -90,6 +91,12 @@ function cleanOpaque(value, max = 512) {
   return text;
 }
 
+function normalizeEmail(value) {
+  const email = String(value || "").trim().toLowerCase();
+  if (!email || email.length > 320 || !email.includes("@")) return null;
+  return email;
+}
+
 export class TenantQuota extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
@@ -152,7 +159,13 @@ export class TenantQuota extends DurableObject {
       ) {
         return { ok: false, code: "IDEMPOTENCY_CONFLICT", existing: true, state: existing.state };
       }
-      return { ok: existing.state !== "DENIED", existing: true, state: existing.state, ...this.status(periodKey, limit) };
+      return {
+        ok: existing.state !== "DENIED",
+        existing: true,
+        state: existing.state,
+        receipt_sha256: existing.receipt_sha256 || null,
+        ...this.status(periodKey, limit)
+      };
     }
 
     const balance = this.status(periodKey, limit);
@@ -334,7 +347,102 @@ async function grantsForPlan(env, planCode) {
   return (result.results || []).map((row) => String(row.grant_code));
 }
 
-async function mcpProductContext(env, issuer, oidcSubject) {
+async function ensureSecondaryMcpBinding(env, {
+  issuer,
+  oidcSubject,
+  providerCode,
+  email,
+}) {
+  const provider = cleanId(providerCode, 80);
+  if (provider !== MCP_SECONDARY_PROVIDER) {
+    return { ok: false, code: "SECONDARY_PROVIDER_INVALID" };
+  }
+
+  const configuredIssuerRaw = String(env.MCP_ACCESS_ISSUER || "").trim();
+  if (!configuredIssuerRaw) {
+    return { ok: false, code: "MCP_ACCESS_ISSUER_NOT_CONFIGURED" };
+  }
+
+  const normalizedIssuer = normalizeIssuer(issuer);
+  const configuredIssuer = normalizeIssuer(configuredIssuerRaw);
+  if (normalizedIssuer !== configuredIssuer) {
+    return { ok: false, code: "SECONDARY_ISSUER_MISMATCH" };
+  }
+
+  const subject = cleanOpaque(oidcSubject, 512);
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) {
+    return { ok: false, code: "SECONDARY_EMAIL_REQUIRED" };
+  }
+
+  const candidates = await env.PRODUCT_DB.prepare(
+    `SELECT DISTINCT u.subject_id
+       FROM users u
+       JOIN identity_bindings primary_binding
+         ON primary_binding.subject_id = u.subject_id
+        AND primary_binding.provider_code = 'PRIMARY_OIDC'
+        AND primary_binding.state = 'ACTIVE'
+      WHERE lower(u.email) = ?
+        AND u.state = 'ACTIVE'
+      LIMIT 2`
+  ).bind(normalizedEmail).all();
+
+  const rows = candidates.results || [];
+  if (rows.length === 0) return { ok: false, code: "IDENTITY_NOT_PROVISIONED" };
+  if (rows.length !== 1) return { ok: false, code: "SECONDARY_IDENTITY_AMBIGUOUS" };
+  const targetSubjectId = String(rows[0].subject_id);
+
+  const providerBindings = await env.PRODUCT_DB.prepare(
+    `SELECT issuer, external_subject
+       FROM identity_bindings
+      WHERE subject_id = ?
+        AND provider_code = ?
+        AND state = 'ACTIVE'
+      LIMIT 2`
+  ).bind(targetSubjectId, provider).all();
+
+  const activeProviderBindings = providerBindings.results || [];
+  if (activeProviderBindings.length > 0) {
+    const exact = activeProviderBindings.some(
+      (row) => row.issuer === normalizedIssuer && row.external_subject === subject
+    );
+    return exact
+      ? { ok: true, subject_id: targetSubjectId, existing: true }
+      : { ok: false, code: "SECONDARY_IDENTITY_CONFLICT" };
+  }
+
+  const createdAt = new Date().toISOString();
+  await env.PRODUCT_DB.prepare(
+    `INSERT OR IGNORE INTO identity_bindings
+      (identity_binding_id, subject_id, provider_code, issuer, external_subject, state, created_at_utc, revoked_at_utc)
+     VALUES (?, ?, ?, ?, ?, 'ACTIVE', ?, NULL)`
+  ).bind(
+    "CLOUDFLARE_ACCESS:" + targetSubjectId,
+    targetSubjectId,
+    provider,
+    normalizedIssuer,
+    subject,
+    createdAt,
+  ).run();
+
+  const bound = await env.PRODUCT_DB.prepare(
+    `SELECT subject_id
+       FROM identity_bindings
+      WHERE issuer = ?
+        AND external_subject = ?
+        AND provider_code = ?
+        AND state = 'ACTIVE'
+      LIMIT 1`
+  ).bind(normalizedIssuer, subject, provider).first();
+
+  if (!bound || String(bound.subject_id) !== targetSubjectId) {
+    return { ok: false, code: "SECONDARY_IDENTITY_BINDING_FAILED" };
+  }
+
+  return { ok: true, subject_id: targetSubjectId, existing: false };
+}
+
+async function mcpProductContext(env, issuer, oidcSubject, bootstrap = null) {
   const normalizedIssuer = normalizeIssuer(issuer);
   const subject = cleanOpaque(oidcSubject, 512);
   const row = await env.PRODUCT_DB.prepare(
@@ -567,7 +675,10 @@ export default {
           });
         }
 
-        const context = await mcpProductContext(env, body.issuer, body.subject);
+        const context = await mcpProductContext(env, body.issuer, body.subject, {
+          provider_code: body.provider_code,
+          email: body.email,
+        });
         if (!context.ok) {
           return internalJson({
             schema: "hara.commander-mcp-product-decision.v1",
@@ -606,6 +717,19 @@ export default {
             schema: "hara.commander-mcp-product-decision.v1",
             allowed: false,
             code: reservation.code || "QUOTA_DENIED",
+            tool_id: toolId,
+            request_id: requestId,
+            function_id: functionId,
+            required_grant: requiredGrant,
+            usage: reservation,
+          });
+        }
+
+        if (reservation.existing && reservation.state === "RELEASED") {
+          return internalJson({
+            schema: "hara.commander-mcp-product-decision.v1",
+            allowed: false,
+            code: "REQUEST_USAGE_TERMINAL",
             tool_id: toolId,
             request_id: requestId,
             function_id: functionId,

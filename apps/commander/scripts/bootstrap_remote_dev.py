@@ -100,6 +100,7 @@ def main() -> int:
             "ENVIRONMENT": "DEV",
             "STORAGE_MODE": "REMOTE_DEV",
             "MCP_BASE_URL": "https://mcp.haralabs.com.br/mcp",
+            "MCP_ACCESS_ISSUER": "https://proud-sun-7542.cloudflareaccess.com",
         },
         "d1_databases": [{
             "binding": "PRODUCT_DB",
