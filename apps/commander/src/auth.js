@@ -130,6 +130,20 @@ export async function beginLogin(request, env) {
   });
 }
 
+async function ensurePrimaryIdentityBinding(env, subjectId, issuer, externalSubject) {
+  await env.PRODUCT_DB.prepare(
+    `INSERT OR IGNORE INTO identity_bindings
+      (identity_binding_id, subject_id, provider_code, issuer, external_subject, state, created_at_utc, revoked_at_utc)
+     VALUES (?, ?, 'PRIMARY_OIDC', ?, ?, 'ACTIVE', ?, NULL)`
+  ).bind(
+    "PRIMARY:" + subjectId,
+    subjectId,
+    issuer,
+    externalSubject,
+    nowIso(),
+  ).run();
+}
+
 async function resolveOrClaimIdentity(env, claims) {
   const issuer = normalizeIssuer(claims.iss);
   const subject = String(claims.sub);
@@ -143,6 +157,7 @@ async function resolveOrClaimIdentity(env, claims) {
 
   if (user) {
     if (user.state !== "ACTIVE") throw new Error("IDENTITY_INACTIVE");
+    await ensurePrimaryIdentityBinding(env, user.subject_id, issuer, subject);
     return user;
   }
 
@@ -182,6 +197,11 @@ async function resolveOrClaimIdentity(env, claims) {
           SET state = 'CLAIMED', claimed_at_utc = ?, claimed_issuer = ?, claimed_subject = ?
         WHERE invite_id = ? AND state = 'ACTIVE'`
     ).bind(claimedAt, issuer, subject, invite.invite_id),
+    env.PRODUCT_DB.prepare(
+      `INSERT OR IGNORE INTO identity_bindings
+        (identity_binding_id, subject_id, provider_code, issuer, external_subject, state, created_at_utc, revoked_at_utc)
+       VALUES (?, ?, 'PRIMARY_OIDC', ?, ?, 'ACTIVE', ?, NULL)`
+    ).bind("PRIMARY:" + target.subject_id, target.subject_id, issuer, subject, claimedAt),
   ]);
 
   user = await env.PRODUCT_DB.prepare(

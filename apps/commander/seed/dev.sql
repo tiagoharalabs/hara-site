@@ -86,3 +86,43 @@ INSERT OR REPLACE INTO entitlements (
   '2026-09-01T00:00:00Z',
   NULL
 );
+
+
+INSERT OR IGNORE INTO plan_grants (plan_code, grant_code, created_at_utc)
+SELECT plan_code, grant_code, '2026-09-22T14:20:00Z'
+FROM (
+  SELECT 'TRIAL' AS plan_code, 'COMMANDER_DISCOVERY' AS grant_code
+  UNION ALL SELECT 'TRIAL', 'COMMANDER_READ_ONLY_INVOKE'
+  UNION ALL SELECT 'TRIAL', 'COMMANDER_RECEIPT_READ'
+  UNION ALL SELECT 'STANDARD', 'COMMANDER_DISCOVERY'
+  UNION ALL SELECT 'STANDARD', 'COMMANDER_READ_ONLY_INVOKE'
+  UNION ALL SELECT 'STANDARD', 'COMMANDER_RECEIPT_READ'
+  UNION ALL SELECT 'SCALE', 'COMMANDER_DISCOVERY'
+  UNION ALL SELECT 'SCALE', 'COMMANDER_READ_ONLY_INVOKE'
+  UNION ALL SELECT 'SCALE', 'COMMANDER_RECEIPT_READ'
+  UNION ALL SELECT 'DEV_ONE_UNIT', 'COMMANDER_DISCOVERY'
+  UNION ALL SELECT 'DEV_ONE_UNIT', 'COMMANDER_READ_ONLY_INVOKE'
+  UNION ALL SELECT 'DEV_ONE_UNIT', 'COMMANDER_RECEIPT_READ'
+);
+
+
+INSERT OR IGNORE INTO identity_bindings (
+  identity_binding_id,
+  subject_id,
+  provider_code,
+  issuer,
+  external_subject,
+  state,
+  created_at_utc,
+  revoked_at_utc
+)
+SELECT
+  'PRIMARY:' || subject_id,
+  subject_id,
+  'PRIMARY_OIDC',
+  oidc_issuer,
+  oidc_subject,
+  'ACTIVE',
+  created_at_utc,
+  NULL
+FROM users;
