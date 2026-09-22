@@ -191,3 +191,39 @@ html[data-theme="dark"] .system-banner.success{background:#0b2c26;border-color:#
 @media(prefers-reduced-motion:reduce){
   html,body,.topbar,.app-view,.sidebar,.summary-card,.panel,.plan-card,.connection-card,.user-chip,.auth-card,.identity-gateway,.feature-grid article,.value-strip,.big-chart,.grant-grid span,.tr.head,.theme-toggle{transition:none!important}
 }
+
+
+/* Authenticated topbar state */
+[hidden]{display:none!important}
+.top-actions{align-items:center}
+.top-guest-actions,.top-session-actions{display:flex;align-items:center;gap:10px}
+.top-session-user{display:flex;align-items:center;gap:9px;min-width:0;padding:6px 10px 6px 7px;border:1px solid #c8e2f0;border-radius:11px;background:rgba(255,255,255,.86);color:var(--ink);box-shadow:0 5px 16px rgba(22,78,117,.06);cursor:pointer}
+.top-session-user:hover{transform:translateY(-1px);border-color:#abd4e8;background:#fff;box-shadow:0 8px 20px rgba(22,78,117,.10)}
+.top-session-avatar{display:grid;place-items:center;width:30px;height:30px;border-radius:9px;background:var(--navy);color:#fff;font-size:9px;font-weight:800;flex:0 0 auto}
+.top-session-copy{display:flex;flex-direction:column;align-items:flex-start;min-width:0;line-height:1.05}
+.top-session-copy b{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;color:var(--ink)}
+.top-session-copy small{margin-top:4px;font-size:7px;font-weight:800;letter-spacing:.06em;color:#7691a3;text-transform:uppercase}
+.top-logout{padding-left:13px;padding-right:13px}
+
+html[data-theme="dark"] .top-session-user{border-color:#28536b;background:#0c293b;color:#d9edf7;box-shadow:0 5px 16px rgba(0,0,0,.18)}
+html[data-theme="dark"] .top-session-user:hover{background:#12344a;border-color:#35637b}
+html[data-theme="dark"] .top-session-copy b{color:#e5f2f9}
+html[data-theme="dark"] .top-session-copy small{color:#8faebe}
+html[data-theme="dark"] .top-session-avatar{background:#0d4265}
+
+@media(max-width:760px){
+  .top-session-copy{display:none}
+  .top-session-user{padding:5px}
+  .top-session-avatar{width:32px;height:32px}
+  .top-session-actions{gap:7px}
+  .top-logout{padding:10px 11px;font-size:0}
+  .top-logout::after{content:"Sair";font-size:11px}
+  .top-guest-actions .btn-primary{display:none}
+}
+
+.tag.reserved{background:#e9f3fb;color:#2b6d93}
+html[data-theme="dark"] .tag.reserved{background:#11344a;color:#8fd0f2}
+
+@media(max-width:760px){
+  .top-session-actions .top-logout{display:inline-flex}
+}

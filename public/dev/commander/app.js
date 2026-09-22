@@ -12,6 +12,9 @@
   const root = document.documentElement;
   const themeBtn = document.querySelector(".theme-toggle");
   const themeMeta = document.querySelector('meta[name="theme-color"]');
+  const brandLink = document.querySelector(".brand");
+  const guestActions = document.querySelector("[data-auth-guest]");
+  const sessionActions = document.querySelector("[data-auth-session]");
   const localHost = location.hostname === "127.0.0.1" || location.hostname === "localhost";
   const scenario = String(params.get("scenario") || "").trim().toLowerCase();
   const authError = String(params.get("auth_error") || "").trim().toUpperCase();
@@ -101,10 +104,26 @@
     }
   }
 
+  function setGuestHeader() {
+    if (guestActions) guestActions.hidden = false;
+    if (sessionActions) sessionActions.hidden = true;
+    if (brandLink) brandLink.href = "#landing";
+    document.body.classList.remove("session-authenticated");
+  }
+
+  function setAuthenticatedHeader(payload) {
+    if (guestActions) guestActions.hidden = true;
+    if (sessionActions) sessionActions.hidden = false;
+    if (brandLink) brandLink.href = "#dashboard";
+    document.body.classList.add("session-authenticated");
+    applyIdentityFields(payload);
+  }
+
   async function logoutRemote() {
     if (remotePortal) {
       await fetch("/auth/logout", { method: "POST", cache: "no-store" }).catch(() => null);
     }
+    setGuestHeader();
     route("landing");
   }
 
@@ -155,14 +174,24 @@
     return (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase();
   }
 
-  function applyIdentity(payload) {
+  function applyIdentityFields(payload) {
     const tenantName = String(payload?.tenant?.display_name || "HARA Labs");
     const userName = String(payload?.subject?.display_name || "Conta HARA");
     const userRole = String(payload?.subject?.role || "Owner");
     document.querySelectorAll("[data-tenant-name]").forEach((node) => { node.textContent = tenantName; });
     document.querySelectorAll("[data-user-name]").forEach((node) => { node.textContent = userName; });
+    const subjectId = String(payload?.subject?.subject_id || "—");
+    const tenantId = String(payload?.tenant?.tenant_id || "—");
     document.querySelectorAll("[data-user-role]").forEach((node) => { node.textContent = userRole; });
     document.querySelectorAll("[data-user-initials]").forEach((node) => { node.textContent = initials(userName); });
+    document.querySelectorAll("[data-security-subject]").forEach((node) => { node.textContent = subjectId; });
+    document.querySelectorAll("[data-security-tenant]").forEach((node) => { node.textContent = tenantId; });
+    document.querySelectorAll("[data-security-role]").forEach((node) => { node.textContent = userRole.toUpperCase(); });
+  }
+
+  function applyIdentity(payload) {
+    applyIdentityFields(payload);
+    setAuthenticatedHeader(payload);
   }
 
   function applyDashboard(payload) {
@@ -182,6 +211,11 @@
     setText("dashboardLimit", limit == null ? "/ sem limite" : "/ " + number(limit));
     setText("dashboardPercent", limit == null ? "Plano sem limite definido" : percent.toFixed(2).replace(".", ",") + "% utilizado");
     setText("dashboardInvokes", number(consumed));
+    const activeConnections = Number(payload?.connections?.active_count || 0);
+    setText("dashboardConnections", activeConnections + (activeConnections === 1 ? " ativa" : " ativas"));
+    setText("dashboardConnectionsDetail", activeConnections ? "Cliente MCP conectado" : "Nenhum cliente conectado");
+    setText("landingConnections", number(activeConnections));
+    setText("landingConnectionsDetail", activeConnections ? "Cliente MCP conectado" : "Nenhuma ativa");
     setText("usageConsumed", number(consumed));
     setText("usageLimit", limit == null ? "sem limite" : "de " + number(limit));
     setText("usageRemaining", remaining == null ? "Capacidade sem limite definido" : number(remaining) + " unidades disponíveis");
@@ -190,11 +224,118 @@
 
     const bar = document.getElementById("usageProgress");
     if (bar) bar.style.width = (limit == null ? 0 : percent) + "%";
+    renderActivity(payload?.activity || []);
+  }
+
+  async function hydrateSessionHeader() {
+    if (!remotePortal || !apiBase) return;
+    try {
+      const response = await fetch(apiBase + dashboardPath, { cache: "no-store", credentials: "same-origin" });
+      if (!response.ok) {
+        if (response.status === 401) setGuestHeader();
+        return;
+      }
+      const payload = await response.json();
+      applyIdentity(payload);
+      if (payload?.entitlement && payload?.usage) applyDashboard(payload);
+    } catch (_error) {
+      // Public navigation remains available even if the session probe fails.
+    }
+  }
+
+  function formatActivityTime(value) {
+    const date = new Date(String(value || ""));
+    if (Number.isNaN(date.getTime())) return "—";
+    return new Intl.DateTimeFormat("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    }).format(date);
+  }
+
+  function shortReceipt(value) {
+    const receipt = String(value || "").trim();
+    if (!receipt) return "—";
+    if (receipt.length <= 14) return receipt;
+    return receipt.slice(0, 7) + "…" + receipt.slice(-5);
   }
 
   function renderEmptyActivity() {
     const activity = document.getElementById("activityList");
-    if (activity) activity.innerHTML = '<div class="empty-state"><strong>Nenhuma execução ainda</strong>Conecte um cliente MCP e faça a primeira operação governada.</div>';
+    if (activity) {
+      activity.replaceChildren();
+      const empty = document.createElement("div");
+      empty.className = "empty-state";
+      const title = document.createElement("strong");
+      title.textContent = "Nenhuma execução ainda";
+      empty.append(title, document.createTextNode("As operações reais deste workspace aparecerão aqui."));
+      activity.append(empty);
+    }
+
+    const ledger = document.getElementById("usageLedger");
+    if (ledger) {
+      [...ledger.querySelectorAll(".tr:not(.head), .empty-state")].forEach((node) => node.remove());
+      const empty = document.createElement("div");
+      empty.className = "empty-state";
+      const title = document.createElement("strong");
+      title.textContent = "Nenhum evento de uso";
+      empty.append(title, document.createTextNode("O ledger será preenchido por operações reais do workspace."));
+      ledger.append(empty);
+    }
+  }
+
+  function renderActivity(rows) {
+    const activityRows = Array.isArray(rows) ? rows : [];
+    if (!activityRows.length) {
+      renderEmptyActivity();
+      return;
+    }
+
+    const activity = document.getElementById("activityList");
+    if (activity) {
+      activity.replaceChildren();
+      activityRows.slice(0, 6).forEach((row) => {
+        const state = String(row?.state || "UNKNOWN").toUpperCase();
+        const item = document.createElement("div");
+        const dot = document.createElement("i");
+        dot.className = state === "COMMITTED" ? "ok" : state === "DENIED" ? "deny" : "";
+        const text = document.createElement("span");
+        const fn = document.createElement("b");
+        fn.textContent = String(row?.function_id || "—");
+        const meta = document.createElement("small");
+        meta.textContent = state + " · " + formatActivityTime(row?.updated_at_utc);
+        text.append(fn, meta);
+        const status = document.createElement("strong");
+        status.textContent = state;
+        item.append(dot, text, status);
+        activity.append(item);
+      });
+    }
+
+    const ledger = document.getElementById("usageLedger");
+    if (ledger) {
+      [...ledger.querySelectorAll(".tr:not(.head), .empty-state")].forEach((node) => node.remove());
+      activityRows.forEach((row) => {
+        const state = String(row?.state || "UNKNOWN").toUpperCase();
+        const line = document.createElement("div");
+        line.className = "tr";
+
+        const time = document.createElement("span");
+        time.textContent = formatActivityTime(row?.updated_at_utc);
+        const fn = document.createElement("span");
+        fn.textContent = String(row?.function_id || "—");
+        const stateCell = document.createElement("span");
+        stateCell.className = "tag " + state.toLowerCase();
+        stateCell.textContent = state;
+        const units = document.createElement("span");
+        units.textContent = number(row?.units || 0);
+        const receipt = document.createElement("span");
+        receipt.textContent = shortReceipt(row?.receipt_sha256);
+
+        line.append(time, fn, stateCell, units, receipt);
+        ledger.append(line);
+      });
+    }
   }
 
   function applyScenario(name, payload) {
@@ -273,6 +414,7 @@
     try {
       const response = await fetch(apiBase + dashboardPath, { cache: "no-store", credentials: "same-origin" });
       if (response.status === 401) {
+        setGuestHeader();
         applyScenario("auth-expired", null);
         return;
       }
@@ -309,7 +451,7 @@
     document.body.classList.toggle("workspace-mode", appViews.has(next));
     if (push && location.hash !== "#" + next) history.pushState(null, "", "#" + next);
     window.scrollTo({ top: 0, behavior: "instant" });
-    if (next === "dashboard" || next === "usage" || (next === "landing" && localHost)) loadProductDashboard();
+    if (appViews.has(next) || (next === "landing" && localHost)) loadProductDashboard();
   }
 
   copySidebars();
@@ -381,7 +523,10 @@
   window.addEventListener("hashchange", () => route(location.hash.slice(1) || "landing", false));
 
   configureAuthUi();
-  route(location.hash.slice(1) || "landing", false);
+  const initialRoute = location.hash.slice(1) || "landing";
+  setGuestHeader();
+  route(initialRoute, false);
+  if (!appViews.has(initialRoute)) hydrateSessionHeader();
 
   if (authError) {
     const authMessages = {

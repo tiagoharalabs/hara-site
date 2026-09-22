@@ -17,6 +17,11 @@ required_html = [
     "dashboardStateDetail",
     "activityList",
     "connectionList",
+    "data-auth-guest",
+    "data-auth-session",
+    "usageLedger",
+    "data-security-subject",
+    "dashboardConnections",
 ]
 required_js = [
     "auth-expired",
@@ -29,11 +34,17 @@ required_js = [
     "loading",
     "empty",
     "Tentar novamente",
+    "setAuthenticatedHeader",
+    "setGuestHeader",
+    "hydrateSessionHeader",
+    "renderActivity",
 ]
 required_css = [
     "system-banner",
     "empty-state",
     "prefers-reduced-motion",
+    "top-session-user",
+    "tag.reserved",
 ]
 required_boot = [
     "CLOUDFLARE_AUTH=REQUIRED",
@@ -107,3 +118,5 @@ assert "applyIdentity(payload)" in JS, "IDENTITY_PAYLOAD_BINDING_MISSING"
 
 print("PRODUCTION_LIKE_VISIBLE_UX=PASS")
 print("AUTHENTICATED_IDENTITY_UI_BINDING=PASS")
+print("AUTHENTICATED_TOPBAR_STATE=PASS")
+print("REAL_ACTIVITY_LEDGER_UI=PASS")

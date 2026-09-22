@@ -144,6 +144,19 @@ export class TenantQuota extends DurableObject {
     };
   }
 
+  recent(subjectId, limit = 8) {
+    const safeLimit = Math.max(1, Math.min(Number(limit) || 8, 50));
+    return [...this.ctx.storage.sql.exec(
+      `SELECT request_id, function_id, state, units, receipt_sha256, updated_at_utc
+         FROM request_state
+        WHERE subject_id = ?
+        ORDER BY updated_at_utc DESC
+        LIMIT ?`,
+      subjectId,
+      safeLimit
+    )];
+  }
+
   reserve(requestId, subjectId, periodKey, functionId, limit) {
     const existing = [...this.ctx.storage.sql.exec(
       `SELECT request_id, subject_id, period_key, function_id, state, units, receipt_sha256
@@ -333,7 +346,8 @@ async function dashboardForSubject(env, subjectId, tenantId) {
       period_kind: ent.period_kind,
       unit_limit: limit
     },
-    usage
+    usage,
+    activity
   };
 }
 
