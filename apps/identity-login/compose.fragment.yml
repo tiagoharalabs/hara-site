@@ -1,9 +1,30 @@
 services:
   zitadel-login:
-    image: hara-identity-login:v4.16.0-hara.1
+    image: hara-identity-login:v4.16.0-hara.7
     environment:
       NEXT_PUBLIC_APPLICATION_NAME: HARA Identity
       NEXT_PUBLIC_THEME_ROUNDNESS: mid
       NEXT_PUBLIC_THEME_LAYOUT: side-by-side
       NEXT_PUBLIC_THEME_SPACING: compact
       NEXT_PUBLIC_THEME_APPEARANCE: material
+    labels:
+      - 'traefik.http.routers.zitadel-login.rule=Host(`${ZITADEL_DOMAIN}`) && PathPrefix(`/ui/v2/login`)'
+
+  zitadel-assets:
+    image: hara-identity-login:v4.16.0-hara.7
+    restart: unless-stopped
+    entrypoint: ["node", "/app/hara-static-server.mjs"]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/favicon/site.webmanifest"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=hara-identity
+      - traefik.http.services.zitadel-assets.loadbalancer.server.port=8080
+      - 'traefik.http.routers.zitadel-assets.rule=Host(`${ZITADEL_DOMAIN}`) && (PathPrefix(`/favicon`) || Path(`/favicon.ico`) || Path(`/hara-logo-light.svg`) || Path(`/hara-logo-dark.svg`) || Path(`/zitadel-logo-light.svg`) || Path(`/zitadel-logo-dark.svg`))'
+      - traefik.http.routers.zitadel-assets.entrypoints=web
+      - traefik.http.routers.zitadel-assets.service=zitadel-assets
+      - traefik.http.routers.zitadel-assets.priority=500
