@@ -1,0 +1,4 @@
+User-agent: *
+Disallow: /dev/
+
+Sitemap: https://www.haralabs.com.br/sitemap.xml
