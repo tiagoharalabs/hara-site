@@ -123,9 +123,11 @@ Visual work is subordinate to the V1 functional mission and must not reintroduce
 ## Cross-repository canonical anchors
 
 HARA Platform Commander reconciliation:
-- PR: `#1019`
-- merged Commander documentation commit: `6a81f37f4d2975da3b86014c4b6f03ed457d769e`
-- hara-platform current main observed after that merge: `7bb3e960a98414f696f7ef243456d59c11fc7195`
+- prior mission reconciliation PR: `#1019`
+- prior documentation merge: `6a81f37f4d2975da3b86014c4b6f03ed457d769e`
+- Ponto 0 closure PR: `#1022`
+- Ponto 0 merge commit: `8823d179c25840add5f51028d45d25724097ae00`
+- HARA Site Ponto 0 closure commit: `53d407765f7bfa32a8c71d13e0cc44b6515603a1`
 - Issue #747 reconciliation comment id: `5783791551`
 
 Canonical HARA Platform handoff:

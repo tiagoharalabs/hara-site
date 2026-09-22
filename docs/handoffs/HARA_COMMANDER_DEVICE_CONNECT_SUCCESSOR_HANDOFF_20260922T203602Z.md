@@ -151,10 +151,13 @@ No successor should reintroduce fleet/NOC/Paradox/degraded-state concepts into C
 
 ## Cross-repository closure
 
-The corresponding HARA Platform reconciliation was merged through PR #1019.
+The corresponding HARA Platform mission reconciliation was merged through PR #1019.
 
-- Commander documentation merge: `6a81f37f4d2975da3b86014c4b6f03ed457d769e`
-- hara-platform main observed after subsequent unrelated merges: `7bb3e960a98414f696f7ef243456d59c11fc7195`
+The final Ponto 0 closure was merged through PR #1022.
+
+- prior Commander documentation merge: `6a81f37f4d2975da3b86014c4b6f03ed457d769e`
+- HARA Site Ponto 0 closure: `53d407765f7bfa32a8c71d13e0cc44b6515603a1`
+- HARA Platform Ponto 0 merge: `8823d179c25840add5f51028d45d25724097ae00`
 - Issue #747 reconciliation comment: `5783791551`
 
 Successors must consult both this handoff and the HARA Platform canonical handoff before changing Commander scope.
