@@ -1,86 +1,110 @@
 # HARA Commander — OpenAI reviewer current — 2026-09-22
 
-## Canonical OpenAI submission readiness
+## Current state
 
-Canonical HARA Platform source:
-- repo: `tiagoharalabs/hara-platform`
-- main: `3663da95e7c4d6bca46cb1a0333b42569949881c`
-- submission preflight: PASS
-- tool review count: 5
-- positive review tests: 5
-- negative review tests: 3
-- annotations and justifications: already canonical in HARA Platform
-- demo recording: still external/pending
-- publisher identity/apps write/domain challenge/country selection: still external/pending
+Commander DEV:
+`https://hara-commander-dev-v2.tiago-sartori.workers.dev/`
 
-Commander Product Plane:
-- hara-site branch: `issue29-commander-dev-v3-auth`
-- starting head for this reviewer provisioning lane: `1845bfaac709bc32b1f9248eb0461835b4893b91`
-- MCP Product authorize/release/commit validator: PASS
-- MCP Product validator rerun-safe: PASS
+HARA Identity:
+`https://auth.haralabs.com.br/`
 
-## Reviewer tenant provisioned in Commander DEV
-
-- tenant id: `HARA-TENANT-REVIEW-0001`
-- display name: `HARA Review`
-- environment: `REVIEW`
-- subject placeholder: `HARA-SUBJECT-REVIEW-0001`
-- reviewer email: `openai-reviewer@haralabs.com.br`
-- role: `REVIEWER`
-- plan: `REVIEW`
-- meter: `HARA_COMMANDER_GOVERNED_INVOKE`
-- monthly unit limit: `100`
-- grants:
-  - `COMMANDER_DISCOVERY`
-  - `COMMANDER_READ_ONLY_INVOKE`
-  - `COMMANDER_RECEIPT_READ`
-- entitlement: ACTIVE
-- billing provider: `REVIEW_NO_BILLING`
-- invite id: `HARA-INVITE-OPENAI-REVIEW-0001`
-- invite state: `ACTIVE`
-- invite expiry: 90 days from provisioning
-
-Provisioner:
-`apps/commander/scripts/provision_openai_reviewer_dev.py`
-
-## Reviewer credential handling
-
-A dedicated reviewer credential was generated locally on `nucleo-a`:
-
-`~/Documents/.hara-identity/openai-reviewer.credentials`
-
-Security:
-- mode: `0600`
-- password never printed by automation
-- password not stored in Git
-- username: `openai-reviewer@haralabs.com.br`
-
-The HARA Identity provisioning helper is versioned at:
-
-`apps/identity-login/scripts/provision_openai_reviewer_identity.py`
-
-The operator executed it successfully.
-
-Provisioned reviewer identity:
-- user id: `391922351219933187`
-- username/email: `openai-reviewer@haralabs.com.br`
-- user state: ACTIVE
+Reviewer:
+- email: `openai-reviewer@haralabs.com.br`
+- HARA Identity user id: `391922351219933187`
+- Identity state: ACTIVE
 - email verified: TRUE
-- password configured: TRUE
 - password change required: FALSE
 - preferred language: `en`
-- no MFA/TOTP enrollment was provisioned
-- credential value remains local-only and was not exposed in chat or Git
+- Commander subject id: `HARA-SUBJECT-REVIEW-0001`
+- tenant id: `HARA-TENANT-REVIEW-0001`
+- tenant name: `HARA Review`
+- environment: `REVIEW`
+- role: `REVIEWER`
+- plan: `REVIEW`
+- quota: `100`
+- entitlement: ACTIVE
+- billing provider: `REVIEW_NO_BILLING`
 
-## Remaining reviewer gates
+Invite:
+- id: `HARA-INVITE-OPENAI-REVIEW-0001`
+- state: `CLAIMED`
+- claimed at: `2026-09-22T18:04:17.955Z`
+- claimed issuer: `https://auth.haralabs.com.br/`
+- claimed subject: `391922351219933187`
 
-1. Perform one public browser login as `openai-reviewer@haralabs.com.br` through HARA Identity and let the Commander invite claim naturally.
-2. Prove D1 invite `CLAIMED`, real reviewer OIDC subject, REVIEW session, tenant, entitlement and quota.
-3. Log out once and prove session revocation.
-4. Do not install or reconfigure a new Cloudflare IdP from assumption.
-5. Create/open the actual OpenAI plugin draft and observe whether reviewer credentials are requested.
-6. If reviewer credentials are required, test the existing Cloudflare Access login path first.
-7. Only if the existing Access login cannot meet no-MFA/no-email/no-SMS review requirements, configure a bounded password-capable edge IdP path.
-8. Run the canonical 5 positive + 3 negative probe using the reviewer identity/path.
-9. Record demo.
-10. Complete publisher verification/apps write/domain challenge/country selection in the OpenAI portal.
+Portal session:
+- active: TRUE
+- revoked: FALSE
+- browser login E2E: PASS
+
+Credential:
+- local path: `~/Documents/.hara-identity/openai-reviewer.credentials`
+- mode: `0600`
+- stored in Git: FALSE
+- exposed in chat: FALSE
+
+## UI/runtime closure
+
+Reviewer visual test exposed a public/private state mismatch and demo residue. The DEV portal was hardened and redeployed.
+
+Current behavior:
+- authenticated topbar replaces `Entrar / Criar conta` with user, role and logout;
+- direct app routes resolve the active session;
+- brand routes to dashboard while authenticated;
+- Security binds real subject, tenant and role;
+- fake browser/location and fake ChatGPT OAuth session rows removed;
+- demo receipt/activity rows removed;
+- activity is sourced from the real TenantQuota Durable Object ledger;
+- zero-activity workspaces show explicit empty states;
+- connection count is zero until a real MCP client is connected;
+- usage ledger renders backend values with DOM/textContent-safe construction;
+- light/dark theme remains aligned with canonical HARA Site V13.
+
+DEV Worker version:
+`f3956f3e-abb0-4868-906f-ead85f6eff18`
+
+Implementation commit:
+`39b870e28bad52a5e8d53ef23bcf22d53c3fd568`
+
+Latest documentation commit before this reconciliation:
+`f4ce439729d47844569f718a4bab1456a49d85b8`
+
+## Canonical OpenAI submission readiness
+
+HARA Platform canonical main:
+`3663da95e7c4d6bca46cb1a0333b42569949881c`
+
+Already PASS/canonical:
+- exact tool count: 5
+- tool annotations
+- annotation justifications
+- 5 positive review tests
+- 3 negative review tests
+- public HTTPS MCP endpoint
+- OAuth protected-resource metadata
+- submission payload
+- review probe
+- site/privacy/terms/support assets
+- domain challenge runbook
+
+## Remaining gates
+
+Product E2E:
+1. visually verify the corrected authenticated topbar;
+2. perform exactly one reviewer logout;
+3. prove `portal_sessions.revoked_at_utc` becomes non-null;
+4. optionally log the reviewer back in and prove clean re-authentication.
+
+OpenAI external:
+1. create/open the real OpenAI app/plugin draft in the portal;
+2. confirm publisher/business verification state;
+3. confirm Apps Management Write / `api.apps.write`;
+4. run the portal's actual MCP/tool scan;
+5. read back the reviewer credential requirement from the portal;
+6. test the existing Cloudflare Access path before adding any new IdP;
+7. publish the exact domain challenge token only when issued;
+8. select availability/countries;
+9. record and host the demo video;
+10. submit for review.
+
+Do not add billing before the product E2E and OpenAI draft/tool scan are proven. Billing remains a later commercial activation gate.

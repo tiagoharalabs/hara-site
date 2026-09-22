@@ -1,41 +1,65 @@
 # HARA Commander DEV — E2E current — 2026-09-22
 
-## Human identity E2E
+## Runtime
 
-- Commander DEV: `https://hara-commander-dev-v2.tiago-sartori.workers.dev/`
+- URL: `https://hara-commander-dev-v2.tiago-sartori.workers.dev/`
 - HARA Identity issuer: `https://auth.haralabs.com.br/`
-- Human identity: `tiago.sartori@haralabs.com.br`
-- Real OIDC subject: `391814630923567107`
-- Invite `HARA-INVITE-OWNER-DEV-0001`: `CLAIMED`
-- D1 subject row retained: `HARA-SUBJECT-DEMO-0001`
-- User state: `ACTIVE`
-- Role: `OWNER`
-- Portal session: active, not revoked
-- Tenant: `HARA Labs`
-- Entitlement: `ACTIVE`
-- Plan: `STANDARD`
-- Meter: `HARA_COMMANDER_GOVERNED_INVOKE`
-- Period: `CALENDAR_MONTH`
-- Unit limit: `10000`
+- Worker version: `f3956f3e-abb0-4868-906f-ead85f6eff18`
+- branch: `issue29-commander-dev-v3-auth`
+- product implementation commit: `39b870e28bad52a5e8d53ef23bcf22d53c3fd568`
 
-The human login completed through HARA Identity and the Commander dashboard rendered the real user identity.
+## First customer / owner E2E
 
-## Visual system alignment
+- email: `tiago.sartori@haralabs.com.br`
+- real OIDC subject: `391814630923567107`
+- Commander subject: `HARA-SUBJECT-DEMO-0001`
+- invite: CLAIMED
+- user: ACTIVE / OWNER
+- tenant: `HARA Labs`
+- plan: `STANDARD`
+- entitlement: ACTIVE
+- unit limit: `10000`
+- login E2E: PASS
 
-Commander DEV now consumes the canonical HARA Site V13 theme behavior and palette from main:
-- source commit: `5e2e04d` (`feat: add canonical HARA dark theme and visual system v1`)
-- persistent key: `hara-theme`
-- system preference fallback: `prefers-color-scheme`
-- canonical light palette: navy/blue/green/gold from HARA Site
-- canonical dark palette: `#061721 / #081c29 / #0a2231`
-- theme toggle: moon / sun, same accessibility behavior as HARA Site
-- sidebar width: `260px`
-- sidebar primary navigation: `12px`
-- workspace/sidebar labels increased for readability
+## OpenAI reviewer E2E
 
-## Runtime validation
+- email: `openai-reviewer@haralabs.com.br`
+- Identity user id / real OIDC subject: `391922351219933187`
+- Commander subject: `HARA-SUBJECT-REVIEW-0001`
+- tenant: `HARA Review`
+- role: `REVIEWER`
+- plan: `REVIEW`
+- entitlement: ACTIVE
+- unit limit: `100`
+- invite: CLAIMED
+- session: ACTIVE / not revoked
+- browser login E2E: PASS
 
-Remote validation after deployment:
+## Product plane
+
+- MCP Product discovery: PASS
+- reserve/release: PASS
+- released request terminal behavior: PASS
+- commit: PASS
+- commit idempotency: PASS
+- token exposed: FALSE
+- secondary identity binding path: implemented
+- bootstrap seed: non-destructive after real identity claim
+- validator rerun-safe: PASS
+
+## Portal/UI
+
+- HARA Site V13 light/dark alignment: PASS
+- authenticated topbar: PASS
+- real user/role binding: PASS
+- Security real subject/tenant/role binding: PASS
+- demo activity removed: PASS
+- real activity ledger source: PASS
+- fake connection count removed: PASS
+- zero-use reviewer empty state: PASS
+
+## Remote validation
+
 - `PRODUCTION_LIKE_PUBLIC_UI=PASS`
 - `PORTAL_AUTH_CONFIG=PASS`
 - `PRODUCTION_LIKE_TENANT_NAME=PASS`
@@ -49,10 +73,16 @@ Remote validation after deployment:
 - `REMOTE_DEV_COMMIT_IDEMPOTENCY=PASS`
 - `REMOTE_DEV_RECEIPT_CONFLICT=PASS`
 - `REMOTE_DEV_VALIDATOR_RERUN_SAFE=PASS`
+- `AUTHENTICATED_TOPBAR_STATE=PASS`
+- `REAL_ACTIVITY_LEDGER_UI=PASS`
 - `PRODUCTION_MUTATION=FALSE`
 
-Cloudflare DEV version: `8c9443c0-6d8b-4994-93da-2c91ce907295`
+## Next product test
 
-## Remaining E2E closure
+1. Refresh the reviewer dashboard and visually confirm the authenticated topbar.
+2. Navigate Dashboard → Usage → Plan → Connections → Security and confirm identity/session state persists.
+3. Confirm reviewer shows 0/100 and no fake receipts/connections.
+4. Click `Sair` exactly once.
+5. Prove D1 `revoked_at_utc` is non-null.
 
-Keep the human portal session active until visual review is complete. Then perform one explicit logout and verify `portal_sessions.revoked_at_utc` becomes non-null.
+After that, move to the real OpenAI draft/tool-scan flow.

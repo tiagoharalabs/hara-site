@@ -1,0 +1,43 @@
+{
+  "schema": "hara.commander.openai-publication.successor-handoff.v1",
+  "timestamp_utc": "2026-09-22T18:59:08Z",
+  "runtime": {
+    "commander_url": "https://hara-commander-dev-v2.tiago-sartori.workers.dev/",
+    "identity_issuer": "https://auth.haralabs.com.br/",
+    "mcp_url": "https://mcp.haralabs.com.br/mcp",
+    "worker_version": "f3956f3e-abb0-4868-906f-ead85f6eff18",
+    "branch": "issue29-commander-dev-v3-auth",
+    "product_commit": "39b870e28bad52a5e8d53ef23bcf22d53c3fd568",
+    "hara_platform_main": "3663da95e7c4d6bca46cb1a0333b42569949881c"
+  },
+  "reviewer": {
+    "email": "openai-reviewer@haralabs.com.br",
+    "identity_user_id": "391922351219933187",
+    "subject_id": "HARA-SUBJECT-REVIEW-0001",
+    "tenant_id": "HARA-TENANT-REVIEW-0001",
+    "tenant_name": "HARA Review",
+    "role": "REVIEWER",
+    "plan": "REVIEW",
+    "quota": 100,
+    "invite_state": "CLAIMED",
+    "portal_session_active": true,
+    "portal_session_revoked": false,
+    "login_e2e": "PASS"
+  },
+  "submission_readiness": {
+    "tools": 5,
+    "annotations": "PASS",
+    "justifications": "PASS",
+    "positive_tests": 5,
+    "negative_tests": 3,
+    "review_probe": "PASS",
+    "submission_payload": "READY",
+    "draft": "PENDING_MANUAL_PORTAL",
+    "publisher_verification": "PENDING_PORTAL_READBACK",
+    "apps_write": "PENDING_PORTAL_READBACK",
+    "domain_challenge": "PENDING_TOKEN",
+    "demo_recording": "PENDING"
+  },
+  "next_gate": "REVIEWER_LOGOUT_REVOCATION_PROOF",
+  "billing_gate": "DEFERRED_UNTIL_OPENAI_DRAFT_AND_REAL_MCP_E2E"
+}
