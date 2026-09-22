@@ -7,13 +7,15 @@ import pathlib
 import urllib.error
 import urllib.request
 
-def request(base, token, method, path, body=None, headers=None):
+def request(base, token, method, path, body=None, headers=None, common_headers=None):
     data = None if body is None else json.dumps(body).encode()
     hdr = {
         "Authorization": "Bearer " + token,
         "Accept": "application/json",
         "Content-Type": "application/json",
     }
+    if common_headers:
+        hdr.update(common_headers)
     if headers:
         hdr.update(headers)
     req = urllib.request.Request(base.rstrip("/") + path, data=data, headers=hdr, method=method)
@@ -65,21 +67,42 @@ def main():
     ap = argparse.ArgumentParser(description="Apply HARA Identity white-label settings.")
     ap.add_argument("--base-url", default="https://auth.haralabs.com.br")
     ap.add_argument("--pat-file", required=True)
+    ap.add_argument("--host-header")
+    ap.add_argument("--forwarded-proto")
     args = ap.parse_args()
     token = pathlib.Path(args.pat_file).read_text().strip()
     if not token:
         raise SystemExit("EMPTY_PAT")
+
+    common_headers = {}
+    if args.host_header:
+        common_headers["Host"] = args.host_header
+    if args.forwarded_proto:
+        common_headers["X-Forwarded-Proto"] = args.forwarded_proto
+
+    status, _ = request(
+        args.base_url,
+        token,
+        "GET",
+        "/admin/v1/text/default/message/verifyemail/pt",
+        common_headers=common_headers,
+    )
+    if status != 200:
+        raise SystemExit(f"IAM_OWNER_PREFLIGHT_FAILED:{status}")
+    print("IAM_OWNER_PREFLIGHT=PASS")
     request(
         args.base_url, token, "POST",
         "/zitadel.instance.v2.InstanceService/UpdateInstance",
         {"instanceName": "HARA Identity"},
         {"Connect-Protocol-Version": "1"},
+        common_headers=common_headers,
     )
     print("INSTANCE_NAME=PASS")
 
     request(
         args.base_url, token, "PUT", "/admin/v1/restrictions",
         {"disallowPublicOrgRegistration": True, "allowedLanguages": {"list": ["pt", "en"]}},
+        common_headers=common_headers,
     )
     print("LANGUAGE_RESTRICTIONS=PASS")
 
@@ -87,6 +110,7 @@ def main():
         request(
             args.base_url, token, "PUT", "/v2/settings/hosted_login_translation",
             {"instance": True, "locale": locale, "translations": translations},
+            common_headers=common_headers,
         )
         print(f"HOSTED_LOGIN_TRANSLATION_{locale.upper()}=PASS")
 
@@ -96,6 +120,7 @@ def main():
                 args.base_url, token, "PUT",
                 f"/admin/v1/text/message/{template}/{locale}",
                 message_body(values),
+                common_headers=common_headers,
             )
             print(f"MESSAGE_{template}_{locale}=PASS")
 
