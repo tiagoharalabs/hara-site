@@ -22,7 +22,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/css/styles.css?v=14">
-<link rel="stylesheet" href="/assets/css/v14.css?v=14">
+<link rel="stylesheet" href="/assets/css/v14.css?v=15">
 </head><body><a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
 <header class="site-header" id="top">
   <div class="nav-shell">
@@ -41,37 +41,82 @@
   <div class="mobile-menu" aria-hidden="true"><a href="/solucoes/">Soluções</a><a href="/arquitetura/">Arquitetura</a><a href="/seguranca/" aria-current="page">Segurança</a><a href="/commander/">Commander</a><a href="/empresa/">Empresa</a><a href="/contato/">Contato</a></div>
 </header>
 <main id="conteudo">
-<section class="subhero">
+<section class="subhero trust-hero">
   <div class="page-shell subhero-inner">
     <div class="section-kicker"><i></i>Segurança & Trust</div>
-    <h1>Segurança e governança para IA corporativa.</h1>
-    <p>IA conectada à operação exige identidade, escopo, política e evidência. Segurança não é um recurso isolado: é uma propriedade da arquitetura.</p>
+    <h1>Segurança, identidade e governança.</h1>
+    <p>Esta página descreve controles, princípios e fatos públicos da arquitetura H.A.R.A. Onde uma capacidade ainda está em desenvolvimento ou depende de configuração específica, isso é indicado explicitamente.</p>
   </div>
 </section>
-<section class="content-section"><div class="page-shell"><div class="section-head"><div class="section-kicker"><i></i>Trust Center</div><h2>Controles incorporados à arquitetura.</h2><p>Não tratamos segurança como um selo decorativo. O objetivo é limitar autoridade, conhecer identidade, registrar execução e reduzir o raio de impacto de cada ação.</p></div>
-<div class="pillar-grid">
-<article class="pillar-card"><small>Identidade</small><h3>Quem está operando?</h3><p>Autenticação, contexto de conta e autorização participam do acesso às capacidades.</p></article>
-<article class="pillar-card"><small>Menor privilégio</small><h3>O que pode ser feito?</h3><p>Funções e integrações devem expor apenas o necessário para o escopo autorizado.</p></article>
-<article class="pillar-card"><small>Política</small><h3>Em quais condições?</h3><p>Regras podem restringir execução por risco, ambiente, função e contexto.</p></article>
-<article class="pillar-card"><small>Evidência</small><h3>O que aconteceu?</h3><p>Eventos e receipts ajudam a reconstruir a cadeia operacional e investigar falhas.</p></article>
-<article class="pillar-card"><small>Segregação</small><h3>Onde executa?</h3><p>Workloads podem permanecer locais ou usar terceiros conforme sensibilidade e necessidade.</p></article>
-<article class="pillar-card"><small>Continuidade</small><h3>Como degradar com segurança?</h3><p>Alternativas e modos de contingência devem ser definidos antes de uma indisponibilidade.</p></article>
-</div></div></section>
-<section class="content-section alt"><div class="page-shell intro-grid"><div><div class="section-kicker"><i></i>Fatos publicados</div><h2>Práticas e fatos publicados.</h2></div><div><p>O H.A.R.A Identity é self-hosted. O ambiente público de autenticação usa <strong>auth.haralabs.com.br</strong>. O Commander pode delegar autenticação a provedores de identidade, sem receber a senha utilizada no provedor externo. Cloudflare e outros terceiros podem participar de fluxos específicos conforme a arquitetura escolhida.</p><p>Não apresentamos certificações, SLAs ou garantias regulatórias que não estejam formalmente publicadas.</p></div></div></section>
-<section class="content-section"><div class="page-shell"><div class="cta-band"><div><h2>Avaliação de risco e controles.</h2><p>Começamos pelo processo, dados, identidade, capacidade e impacto esperado.</p></div><a class="button primary" href="/contato/">Conversar sobre segurança <span>→</span></a></div></div></section>
+
+<section class="trust-summary">
+  <div class="page-shell trust-summary-grid">
+    <article><small>IDENTIDADE</small><strong>H.A.R.A Identity self-hosted</strong><span>Autenticação pública operada em auth.haralabs.com.br.</span></article>
+    <article><small>ACESSO</small><strong>Menor privilégio por desenho</strong><span>Integrações devem expor somente as capacidades necessárias ao escopo autorizado.</span></article>
+    <article><small>EVIDÊNCIA</small><strong>Eventos e receipts operacionais</strong><span>A arquitetura prevê rastreabilidade de ações e contexto de execução.</span></article>
+    <article><small>TRANSPARÊNCIA</small><strong>Sem certificações implícitas</strong><span>Não declaramos certificações, SLA público ou conformidade formal que não estejam documentados.</span></article>
+  </div>
+</section>
+
+<section class="content-section"><div class="page-shell">
+  <div class="section-head"><div class="section-kicker"><i></i>Modelo de controle</div><h2>Controles distribuídos ao longo do fluxo.</h2><p>Segurança não fica concentrada em um único componente. Identidade, política, integração, execução e evidência participam da decisão de permitir ou limitar uma ação.</p></div>
+  <div class="trust-control-grid">
+    <article><span>01</span><div><h3>Identidade</h3><p>Determina quem inicia a sessão ou solicita uma capacidade.</p></div></article>
+    <article><span>02</span><div><h3>Autorização</h3><p>Restringe o conjunto de funções disponível ao contexto autenticado.</p></div></article>
+    <article><span>03</span><div><h3>Política</h3><p>Pode condicionar execução a ambiente, função, risco e regras operacionais.</p></div></article>
+    <article><span>04</span><div><h3>Integração</h3><p>APIs, MCP e conectores expõem superfícies limitadas em vez de acesso irrestrito.</p></div></article>
+    <article><span>05</span><div><h3>Execução</h3><p>O workload pode ser local, cloud ou edge conforme requisito e arquitetura definida.</p></div></article>
+    <article><span>06</span><div><h3>Evidência</h3><p>Eventos, logs e receipts ajudam a reconstruir contexto e resultado operacional.</p></div></article>
+  </div>
+</div></section>
+
+<section class="content-section alt"><div class="page-shell trust-two-col">
+  <div><div class="section-kicker"><i></i>Identidade</div><h2>Autenticação separada da aplicação.</h2></div>
+  <div class="trust-facts">
+    <p><strong>H.A.R.A Identity</strong> é operado de forma self-hosted e atende o domínio público <strong>auth.haralabs.com.br</strong>.</p>
+    <p>Quando a autenticação é delegada a um provedor externo de identidade, a aplicação consumidora não precisa receber a senha usada nesse provedor. Claims, tokens e dados de sessão podem participar do fluxo conforme a configuração.</p>
+    <p>A presença de um provedor externo não elimina a necessidade de autorização e política dentro da arquitetura H.A.R.A.</p>
+  </div>
+</div></section>
+
+<section class="content-section"><div class="page-shell">
+  <div class="section-head"><div class="section-kicker"><i></i>Dados e terceiros</div><h2>Processamento depende do caminho arquitetural escolhido.</h2><p>A H.A.R.A não assume que todos os dados devam sair do ambiente da organização. Também não assume que tudo precise permanecer local. O fluxo é definido por necessidade, sensibilidade e integração.</p></div>
+  <div class="fact-grid trust-data-grid">
+    <article class="fact-card"><small>LOCAL</small><h3>Workloads locais</h3><p>Podem ser utilizados quando privacidade, latência, continuidade ou custo justificarem execução sob infraestrutura controlada.</p></article>
+    <article class="fact-card"><small>CLOUD</small><h3>Serviços externos</h3><p>Podem participar quando capacidade, elasticidade ou uma integração específica justificarem seu uso.</p></article>
+    <article class="fact-card"><small>EDGE</small><h3>Execução próxima da operação</h3><p>Pode ser adotada para unidades ou funções que dependam de baixa latência ou autonomia local.</p></article>
+  </div>
+  <div class="trust-note"><strong>Terceiros.</strong><span>Cloudflare, provedores externos de identidade e outros serviços podem processar dados técnicos ou de sessão quando fizerem parte do fluxo configurado. A Política de Privacidade descreve as categorias e finalidades públicas atualmente documentadas.</span><a href="/legal/privacidade/">Política de Privacidade →</a></div>
+</div></section>
+
+<section class="content-section alt"><div class="page-shell">
+  <div class="section-head"><div class="section-kicker"><i></i>Postura pública</div><h2>O que afirmamos — e o que não afirmamos.</h2></div>
+  <div class="trust-claim-table" role="table" aria-label="Postura pública de segurança">
+    <div class="trust-claim-row head" role="row"><span>Área</span><span>Posição pública</span></div>
+    <div class="trust-claim-row" role="row"><strong>Identidade</strong><span>Self-hosted e integrada à arquitetura de acesso.</span></div>
+    <div class="trust-claim-row" role="row"><strong>Menor privilégio</strong><span>Princípio de desenho para integrações e capacidades.</span></div>
+    <div class="trust-claim-row" role="row"><strong>Rastreabilidade</strong><span>Eventos, logs e receipts são parte da arquitetura operacional.</span></div>
+    <div class="trust-claim-row" role="row"><strong>Certificações</strong><span>Nenhuma certificação é alegada nesta página sem documentação formal publicada.</span></div>
+    <div class="trust-claim-row" role="row"><strong>SLA</strong><span>Não existe SLA público geral declarado para os serviços nesta página.</span></div>
+    <div class="trust-claim-row" role="row"><strong>Commander</strong><span>Em desenvolvimento; não é apresentado como produto comercial concluído.</span></div>
+  </div>
+  <div class="trust-note operational-proof"><strong>Evidência operacional pública.</strong><span>O cockpit de Observabilidade integra o site institucional e publica apenas sinais agregados e sanitizados da plataforma.</span><a href="/observabilidade/">Abrir Observabilidade →</a></div>
+</div></section>
+
+<section class="content-section"><div class="page-shell"><div class="cta-band"><div><h2>Dúvidas sobre segurança ou arquitetura?</h2><p>Use o canal institucional para discutir controles, dados, identidade e requisitos de implantação.</p></div><a class="button primary" href="/contato/">Entrar em contato <span>→</span></a></div></div></section>
 </main>
-<footer class="footer-v14">
+<footer class="footer-v14 footer-v15">
   <div class="page-shell footer-v14-grid">
     <div class="footer-v14-brand">
       <a class="brand" href="/"><img src="/assets/images/hara-logo-web.webp" alt="" class="brand-logo"><span class="brand-word">H.A.R.A <b>Labs</b></span></a>
-      <p>Infraestrutura corporativa de IA híbrida, governada e sob controle.</p>
+      <p>Infraestrutura corporativa de IA para ambientes híbridos, com identidade, integração, governança e evidência.</p>
       <small>Irmãos Sartori Tecnologia da Informação Ltda<br>CNPJ 18.061.774/0001-98</small>
     </div>
-    <div class="footer-col"><strong>Plataforma</strong><a href="/solucoes/">Soluções</a><a href="/arquitetura/">Arquitetura</a><a href="/commander/">Commander</a><a href="/seguranca/">Segurança</a></div>
-    <div class="footer-col"><strong>Empresa</strong><a href="/empresa/">Sobre a H.A.R.A Labs</a><a href="/contato/">Contato</a><a href="/support/">Suporte</a></div>
+    <div class="footer-col"><strong>Arquitetura</strong><a href="/solucoes/">Soluções</a><a href="/arquitetura/">Arquitetura</a><a href="/seguranca/">Segurança & Trust</a><a href="/observabilidade/">Observabilidade</a></div>
+    <div class="footer-col"><strong>Empresa</strong><a href="/empresa/">Sobre a H.A.R.A Labs</a><a href="/contato/">Contato</a><a href="/support/">Suporte</a><a class="footer-dev-link" href="/commander/">Commander <em>em desenvolvimento</em></a></div>
     <div class="footer-col"><strong>Legal</strong><a href="/legal/">Central Legal</a><a href="/legal/termos/">Termos de Uso</a><a href="/legal/privacidade/">Privacidade</a></div>
   </div>
-  <div class="page-shell footer-bottom"><span>© 2026 H.A.R.A Labs. Todos os direitos reservados.</span></div>
+  <div class="page-shell footer-bottom"><span>© 2026 H.A.R.A Labs. Todos os direitos reservados.</span><span>Documentação institucional pública.</span></div>
 </footer>
 <script src="/assets/js/script.js?v=14"></script>
 </body></html>
