@@ -1,0 +1,42 @@
+{
+  "schema": "hara.commander.openai-reviewer.current.v1",
+  "timestamp_utc": "2026-09-22T17:55:25Z",
+  "hara_platform_main": "3663da95e7c4d6bca46cb1a0333b42569949881c",
+  "submission_preflight": "PASS",
+  "tool_review_count": 5,
+  "positive_tests": 5,
+  "negative_tests": 3,
+  "reviewer": {
+    "tenant_id": "HARA-TENANT-REVIEW-0001",
+    "tenant_name": "HARA Review",
+    "environment": "REVIEW",
+    "subject_id": "HARA-SUBJECT-REVIEW-0001",
+    "email": "openai-reviewer@haralabs.com.br",
+    "role": "REVIEWER",
+    "plan_code": "REVIEW",
+    "unit_limit": 100,
+    "entitlement_state": "ACTIVE",
+    "invite_id": "HARA-INVITE-OPENAI-REVIEW-0001",
+    "invite_state": "ACTIVE",
+    "identity_user_state": "PENDING_MANUAL_PROVISION"
+  },
+  "credential": {
+    "local_path": "~/Documents/.hara-identity/openai-reviewer.credentials",
+    "mode": "0600",
+    "stored_in_git": false,
+    "value_exposed": false
+  },
+  "pending_external": [
+    "HARA Identity reviewer user creation",
+    "OpenAI draft creation",
+    "reviewer credential requirement readback",
+    "public reviewer login validation",
+    "demo recording URL",
+    "publisher identity verification",
+    "Apps Management Write confirmation",
+    "OpenAI domain challenge",
+    "country availability selection",
+    "Review tools",
+    "submission"
+  ]
+}
