@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="./styles.css?v=20260922-prodlike1" />
+  <link rel="stylesheet" href="./styles.css?v=20260922-authfix2" />
 </head>
 <body>
   <header class="topbar">
@@ -141,28 +141,18 @@
           <h1 id="login-title">Entre no seu workspace.</h1>
           <p>Use sua identidade H.A.R.A. para consultar plano, quota, conexões e receipts.</p>
 
+          <div class="identity-gateway">
+            <span class="identity-gateway-label">HARA IDENTITY</span>
+            <strong>Autenticação segura e centralizada</strong>
+            <p>Você escolherá sua conta e fará a autenticação diretamente no HARA Identity.</p>
+          </div>
+
           <form class="auth-form" data-auth-form="login">
-            <label>
-              <span>E-mail</span>
-              <input type="email" name="email" placeholder="voce@empresa.com" autocomplete="email" required />
-            </label>
-            <label>
-              <span>Senha</span>
-              <input type="password" name="password" placeholder="••••••••••••" autocomplete="current-password" required />
-            </label>
-            <div class="form-row">
-              <label class="check"><input type="checkbox" /> <span>Manter conectado</span></label>
-              <button class="text-button" type="button" data-demo-toast="A recuperação de senha é gerenciada com segurança pelo HARA Identity.">Esqueci minha senha</button>
-            </div>
-            <button class="btn btn-primary btn-block" type="button" data-go="login">Entrar no Commander</button>
+            <button class="btn btn-primary btn-block" type="button" data-go="login">Entrar com HARA Identity</button>
           </form>
 
-          <div class="auth-divider"><span>ou</span></div>
-          <button class="btn btn-provider btn-block" type="button" data-go="login">
-            Entrar com SSO corporativo
-          </button>
           <p class="auth-switch">Ainda não possui conta? <button type="button" data-go="signup">Criar conta</button></p>
-          <p class="auth-note">A autenticação é protegida pelo HARA Identity. O H.A.R.A. não recebe nem armazena sua senha.</p>
+          <p class="auth-note">O H.A.R.A. Commander não recebe nem armazena sua senha.</p>
         </div>
       </div>
     </section>
@@ -179,18 +169,18 @@
           <h1 id="signup-title">Prepare seu workspace.</h1>
           <p>Sua identidade e seu workspace são provisionados de forma segura pelo HARA Identity.</p>
 
-          <form class="auth-form signup-grid" data-auth-form="signup">
-            <label><span>Nome</span><input type="text" name="name" placeholder="Seu nome" required /></label>
-            <label><span>Empresa</span><input type="text" name="company" placeholder="Empresa" required /></label>
-            <label class="full"><span>E-mail corporativo</span><input type="email" name="email" placeholder="voce@empresa.com" required /></label>
-            <label><span>Senha</span><input type="password" name="password" placeholder="Mínimo 8 caracteres" required /></label>
-            <label><span>Confirmar senha</span><input type="password" name="confirm" placeholder="Repita a senha" required /></label>
-            <label class="check full"><input type="checkbox" required /> <span>Li e aceito os Termos de Uso e a Política de Privacidade.</span></label>
-            <button class="btn btn-primary btn-block full" type="submit">Criar workspace</button>
+          <div class="identity-gateway">
+            <span class="identity-gateway-label">HARA IDENTITY</span>
+            <strong>Crie sua identidade com segurança</strong>
+            <p>Cadastro, senha, verificação de e-mail e recuperação ficam centralizados no HARA Identity.</p>
+          </div>
+
+          <form class="auth-form" data-auth-form="signup">
+            <button class="btn btn-primary btn-block" type="submit">Criar conta com HARA Identity</button>
           </form>
 
           <p class="auth-switch">Já possui conta? <button type="button" data-go="login">Entrar</button></p>
-          <p class="auth-note">Sua senha é tratada exclusivamente pelo HARA Identity.</p>
+          <p class="auth-note">O workspace é associado à sua identidade após o cadastro.</p>
         </div>
       </div>
     </section>
@@ -423,6 +413,6 @@
     </div>
   </template>
 
-  <script src="./app.js?v=20260922-prodlike1"></script>
+  <script src="./app.js?v=20260922-authfix2"></script>
 </body>
 </html>
