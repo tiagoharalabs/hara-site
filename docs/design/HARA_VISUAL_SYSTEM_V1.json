@@ -1,0 +1,40 @@
+{
+  "schema": "hara.visual-system.v1",
+  "status": "CANONICAL",
+  "effective_date": "2026-09-22",
+  "light": {
+    "navy_primary": "#082C4A",
+    "navy_secondary": "#0B3555",
+    "ink": "#0B2D49",
+    "muted": "#607F96",
+    "background": "#EEF8FD",
+    "background_secondary": "#E7F5FC",
+    "sky": "#39A2DF",
+    "sky_light": "#78C9F3",
+    "gold": "#E9B128",
+    "line": "#D4E7F2"
+  },
+  "dark": {
+    "base": "#061721",
+    "surface": "#081C29",
+    "raised": "#0B2637",
+    "raised_alt": "#0B2839",
+    "border": "#1B4054",
+    "border_strong": "#244B61",
+    "text": "#E5F2F9",
+    "muted": "#9BB5C5",
+    "sky": "#48BAF2",
+    "gold": "#F1B82D"
+  },
+  "theme": {
+    "storage_key": "hara-theme",
+    "values": [
+      "light",
+      "dark"
+    ],
+    "first_visit": "prefers-color-scheme",
+    "light_icon": "moon",
+    "dark_icon": "sun",
+    "reduced_motion": true
+  }
+}
