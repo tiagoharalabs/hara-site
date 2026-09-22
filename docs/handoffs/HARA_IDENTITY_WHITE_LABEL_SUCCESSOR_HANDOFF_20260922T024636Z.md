@@ -48,6 +48,7 @@ Applied state:
 - public organization registration: disabled
 - Hosted Login translations: PT + EN
 - Verify Email: PT + EN
+- Verify Phone: PT + EN
 - Password Reset: PT + EN
 - Password Change: PT + EN
 - Init / Account Activation: PT + EN
@@ -81,10 +82,23 @@ No password was changed.
 
 SMTP first attempted direct TLS, logged a handshake warning, and then automatically fell back to STARTTLS.
 
-Next action:
-1. confirm the received e-mail subject, sender and body are fully HARA-branded;
-2. if the message arrived, close this white-label/mail lane;
-3. keep `login-client` restricted to `IAM_LOGIN_CLIENT`;
-4. keep `hara-identity-admin` as the dedicated instance-maintenance identity.
+Inbox delivery was visually confirmed. The received message showed:
+- subject: `Redefina sua senha — HARA Labs`
+- HARA logo
+- Portuguese HARA body copy
+- `Redefinir senha` button
+- HARA Labs footer
+
+The password reset link was not used and no password was changed.
+
+Credential hygiene was also rechecked:
+- `login-client`: exactly 1 active PAT
+- `hara-identity-admin`: exactly 1 active PAT
+- active PT/EN mail templates: zero visible `Zitadel/ZITADEL` residue
+
+Remaining optional improvement:
+- align Zoho SMTP from port 587 + STARTTLS fallback to port 465 + implicit TLS to eliminate the warning while preserving the currently working mail flow.
+
+Keep `login-client` restricted to `IAM_LOGIN_CLIENT` and `hara-identity-admin` as the dedicated instance-maintenance identity.
 
 Do not modify ZITADEL projections/event store directly.

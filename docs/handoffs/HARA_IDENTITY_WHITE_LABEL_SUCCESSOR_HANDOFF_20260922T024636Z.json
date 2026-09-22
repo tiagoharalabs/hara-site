@@ -36,7 +36,7 @@
     "allowed_languages": ["pt", "en"],
     "public_org_registration_disabled": true,
     "hosted_login_translations": ["pt", "en"],
-    "mail_templates": ["VerifyEmail", "PasswordReset", "PasswordChange", "InitCode", "DomainClaimed"]
+    "mail_templates": ["VerifyEmail", "VerifyPhone", "PasswordReset", "PasswordChange", "InitCode", "DomainClaimed"]
   },
   "real_mail_test": {
     "type": "password_reset",
@@ -44,9 +44,16 @@
     "http_status": 200,
     "password_changed": false,
     "smtp_starttls_fallback_observed": true,
-    "inbox_confirmation_pending": true
+    "inbox_confirmation_pending": false,
+    "inbox_visual_confirmation": true,
+    "subject": "Redefina sua senha — HARA Labs"
+  },
+  "credential_hygiene": {
+    "login_client_active_pat_count": 1,
+    "identity_admin_active_pat_count": 1,
+    "active_pt_en_vendor_text_residue": false
   },
   "pending": [
-    "Confirm the received password-reset email subject, sender and body are fully HARA-branded"
+    "Optional: align Zoho SMTP transport from port 587 to 465 to remove the TLS-to-STARTTLS fallback warning"
   ]
 }
