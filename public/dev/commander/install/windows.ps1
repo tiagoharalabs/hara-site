@@ -14,7 +14,7 @@ if ([string]::IsNullOrWhiteSpace($PairingToken)) { throw "Pairing token cannot b
 
 $DeviceName = $env:COMPUTERNAME
 $Architecture = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant()
-$Payload = @{ pairing_token=$PairingToken; device_name=$DeviceName; platform="WINDOWS"; architecture=$Architecture; agent_version="0.1.0" } | ConvertTo-Json -Compress
+$Payload = @{ pairing_token=$PairingToken; device_name=$DeviceName; platform="WINDOWS"; architecture=$Architecture; agent_version="0.2.0" } | ConvertTo-Json -Compress
 $Enroll = Invoke-RestMethod -Uri "$BaseUrl/api/device/enroll" -Method Post -ContentType "application/json" -Headers @{ Accept="application/json" } -Body $Payload -TimeoutSec 30
 $PairingToken = $null
 $SecurePairing.Dispose()
@@ -22,7 +22,7 @@ if (-not $Enroll.device_id -or -not $Enroll.device_token) { throw "DEVICE_ENROLL
 
 New-Item -ItemType Directory -Path $Root -Force | Out-Null
 $EncryptedToken = ConvertTo-SecureString $Enroll.device_token -AsPlainText -Force | ConvertFrom-SecureString
-$ConfigObject = @{ base_url=$BaseUrl; device_id=[string]$Enroll.device_id; encrypted_device_token=$EncryptedToken; architecture=$Architecture; agent_version="0.1.0" }
+$ConfigObject = @{ base_url=$BaseUrl; device_id=[string]$Enroll.device_id; encrypted_device_token=$EncryptedToken; architecture=$Architecture; agent_version="0.2.0" }
 $ConfigObject | ConvertTo-Json | Set-Content -Path $Config -Encoding UTF8
 
 $Identity = [Security.Principal.WindowsIdentity]::GetCurrent().Name
@@ -37,18 +37,48 @@ function Get-PlainText([Security.SecureString]$SecureValue) {
   $ptr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecureValue)
   try { return [Runtime.InteropServices.Marshal]::PtrToStringBSTR($ptr) } finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ptr) }
 }
+$LastHeartbeat = [datetime]::MinValue
 while ($true) {
   try {
     $Cfg = Get-Content -Raw -Path $ConfigPath | ConvertFrom-Json
     $SecureToken = ConvertTo-SecureString ([string]$Cfg.encrypted_device_token)
     $DeviceToken = Get-PlainText $SecureToken
-    $Heartbeat = @{ device_id=[string]$Cfg.device_id; architecture=[string]$Cfg.architecture; agent_version=[string]$Cfg.agent_version } | ConvertTo-Json -Compress
-    Invoke-RestMethod -Uri "$($Cfg.base_url)/api/device/heartbeat" -Method Post -ContentType "application/json" -Headers @{ Accept="application/json"; Authorization="Bearer $DeviceToken" } -Body $Heartbeat -TimeoutSec 20 | Out-Null
+    $Headers = @{ Accept="application/json"; Authorization="Bearer $DeviceToken" }
+
+    if (((Get-Date) - $LastHeartbeat).TotalSeconds -ge 30) {
+      $Heartbeat = @{ device_id=[string]$Cfg.device_id; architecture=[string]$Cfg.architecture; agent_version=[string]$Cfg.agent_version } | ConvertTo-Json -Compress
+      Invoke-RestMethod -Uri "$($Cfg.base_url)/api/device/heartbeat" -Method Post -ContentType "application/json" -Headers $Headers -Body $Heartbeat -TimeoutSec 20 | Out-Null
+      $LastHeartbeat = Get-Date
+    }
+
+    $Call = Invoke-RestMethod -Uri "$($Cfg.base_url)/api/device/calls/next" -Method Post -ContentType "application/json" -Headers $Headers -Body "{}" -TimeoutSec 25
+    if ($null -ne $Call -and $Call.call_id) {
+      if ([string]$Call.tool_id -eq "hara.health") {
+        $Result = @{
+          ok=$true
+          agent_version=[string]$Cfg.agent_version
+          device_id=[string]$Cfg.device_id
+          platform="WINDOWS"
+          architecture=[string]$Cfg.architecture
+          hostname=$env:COMPUTERNAME
+          tunnel_mode="OUTBOUND_RELAY"
+        }
+        $Complete = @{ call_id=[string]$Call.call_id; state="COMPLETED"; result=$Result } | ConvertTo-Json -Depth 5 -Compress
+      } else {
+        $Complete = @{
+          call_id=[string]$Call.call_id
+          state="FAILED"
+          result=@{ tool_id=[string]$Call.tool_id }
+          error_code="LOCAL_TOOL_BRIDGE_NOT_IMPLEMENTED"
+        } | ConvertTo-Json -Depth 5 -Compress
+      }
+      Invoke-RestMethod -Uri "$($Cfg.base_url)/api/device/calls/complete" -Method Post -ContentType "application/json" -Headers $Headers -Body $Complete -TimeoutSec 20 | Out-Null
+    }
+
     $DeviceToken = $null
-    Start-Sleep -Seconds 30
   } catch {
-    Start-Sleep -Seconds 10
   }
+  Start-Sleep -Seconds 2
 }
 '@
 Set-Content -Path $Agent -Value $AgentBody -Encoding UTF8

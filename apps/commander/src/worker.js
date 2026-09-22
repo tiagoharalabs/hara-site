@@ -137,6 +137,19 @@ function deviceOnline(lastSeenAtUtc, now = Date.now()) {
   return Number.isFinite(seen) && now - seen <= 90_000;
 }
 
+function boundedJson(value, maxBytes, code) {
+  let text;
+  try {
+    text = JSON.stringify(value == null ? {} : value);
+  } catch (_error) {
+    throw new Error(code);
+  }
+  if (new TextEncoder().encode(text).byteLength > maxBytes) {
+    throw new Error(code);
+  }
+  return text;
+}
+
 export class TenantQuota extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
@@ -823,6 +836,221 @@ async function revokePortalDevice(env, session, body) {
   };
 }
 
+async function enqueueDeviceCall(env, body) {
+  const requestId = cleanId(body.request_id, 220);
+  const toolId = cleanId(body.tool_id, 120);
+  const requiredGrant = MCP_TOOL_GRANTS[toolId];
+  if (!requiredGrant) throw new Error("DEVICE_CALL_TOOL_DENIED");
+
+  const context = await mcpProductContext(env, body.issuer, body.subject, {
+    provider_code: body.provider_code,
+    email: body.email,
+  });
+  if (!context.ok) throw new Error(context.code);
+  if (!context.grants.includes(requiredGrant)) throw new Error("GRANT_MISSING");
+
+  const deviceId = cleanId(body.device_id, 180);
+  const device = await env.PRODUCT_DB.prepare(
+    `SELECT device_id, tenant_id, state, last_seen_at_utc, revoked_at_utc
+       FROM commander_devices
+      WHERE device_id = ? AND tenant_id = ?
+      LIMIT 1`
+  ).bind(deviceId, context.tenant_id).first();
+  if (!device || device.state !== "ACTIVE" || device.revoked_at_utc) {
+    throw new Error("DEVICE_NOT_FOUND");
+  }
+  if (!deviceOnline(device.last_seen_at_utc)) throw new Error("DEVICE_OFFLINE");
+
+  const payloadJson = boundedJson(body.payload || {}, 128 * 1024, "DEVICE_CALL_PAYLOAD_INVALID");
+  const existing = await env.PRODUCT_DB.prepare(
+    `SELECT call_id, tenant_id, subject_id, device_id, tool_id, state, expires_at_utc
+       FROM commander_device_calls WHERE request_id = ? LIMIT 1`
+  ).bind(requestId).first();
+  if (existing) {
+    if (
+      existing.tenant_id !== context.tenant_id
+      || existing.subject_id !== context.subject_id
+      || existing.device_id !== deviceId
+      || existing.tool_id !== toolId
+    ) {
+      throw new Error("IDEMPOTENCY_CONFLICT");
+    }
+    return {
+      schema: "hara.commander-device-call.v1",
+      existing: true,
+      call_id: existing.call_id,
+      request_id: requestId,
+      device_id: deviceId,
+      tool_id: toolId,
+      state: existing.state,
+      expires_at_utc: existing.expires_at_utc,
+    };
+  }
+
+  const callId = "HARA-CALL-" + crypto.randomUUID();
+  const createdAt = nowIso();
+  const expiresAt = nowIso(120);
+  await env.PRODUCT_DB.prepare(
+    `INSERT INTO commander_device_calls
+      (call_id, request_id, tenant_id, subject_id, device_id, tool_id, payload_json,
+       state, created_at_utc, expires_at_utc, claimed_at_utc, completed_at_utc,
+       result_json, error_code)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 'PENDING', ?, ?, NULL, NULL, NULL, NULL)`
+  ).bind(
+    callId, requestId, context.tenant_id, context.subject_id, deviceId, toolId,
+    payloadJson, createdAt, expiresAt
+  ).run();
+
+  return {
+    schema: "hara.commander-device-call.v1",
+    existing: false,
+    call_id: callId,
+    request_id: requestId,
+    device_id: deviceId,
+    tool_id: toolId,
+    state: "PENDING",
+    expires_at_utc: expiresAt,
+  };
+}
+
+async function claimNextDeviceCall(env, request) {
+  const device = await resolveDeviceCredential(env, request);
+  const now = nowIso();
+
+  await env.PRODUCT_DB.prepare(
+    `UPDATE commander_device_calls
+        SET state = 'EXPIRED', completed_at_utc = ?
+      WHERE device_id = ?
+        AND state IN ('PENDING','EXECUTING')
+        AND expires_at_utc <= ?`
+  ).bind(now, device.device_id, now).run();
+
+  const result = await env.PRODUCT_DB.prepare(
+    `UPDATE commander_device_calls
+        SET state = 'EXECUTING', claimed_at_utc = ?
+      WHERE call_id = (
+        SELECT call_id
+          FROM commander_device_calls
+         WHERE device_id = ?
+           AND state = 'PENDING'
+           AND expires_at_utc > ?
+         ORDER BY created_at_utc
+         LIMIT 1
+      )
+      RETURNING call_id, request_id, tool_id, payload_json, expires_at_utc`
+  ).bind(now, device.device_id, now).all();
+
+  await env.PRODUCT_DB.prepare(
+    `UPDATE commander_devices SET last_seen_at_utc = ? WHERE device_id = ? AND state = 'ACTIVE'`
+  ).bind(now, device.device_id).run();
+
+  const row = (result.results || [])[0];
+  if (!row) return null;
+
+  return {
+    schema: "hara.commander-device-call-claim.v1",
+    call_id: row.call_id,
+    request_id: row.request_id,
+    tool_id: row.tool_id,
+    payload: JSON.parse(row.payload_json || "{}"),
+    expires_at_utc: row.expires_at_utc,
+  };
+}
+
+async function completeDeviceCall(env, request, body) {
+  const device = await resolveDeviceCredential(env, request);
+  const callId = cleanId(body.call_id, 180);
+  const state = String(body.state || "").trim().toUpperCase();
+  if (!["COMPLETED", "FAILED"].includes(state)) {
+    throw new Error("DEVICE_CALL_RESULT_STATE_INVALID");
+  }
+
+  const resultJson = boundedJson(body.result || {}, 256 * 1024, "DEVICE_CALL_RESULT_INVALID");
+  const errorCode = state === "FAILED"
+    ? cleanId(body.error_code || "DEVICE_EXECUTION_FAILED", 120)
+    : null;
+  const completedAt = nowIso();
+
+  const update = await env.PRODUCT_DB.prepare(
+    `UPDATE commander_device_calls
+        SET state = ?, completed_at_utc = ?, result_json = ?, error_code = ?
+      WHERE call_id = ?
+        AND tenant_id = ?
+        AND device_id = ?
+        AND state = 'EXECUTING'
+      RETURNING call_id, request_id, tool_id, state, completed_at_utc`
+  ).bind(
+    state, completedAt, resultJson, errorCode, callId, device.tenant_id, device.device_id
+  ).all();
+
+  const row = (update.results || [])[0];
+  if (!row) {
+    const existing = await env.PRODUCT_DB.prepare(
+      `SELECT state FROM commander_device_calls
+        WHERE call_id = ? AND tenant_id = ? AND device_id = ? LIMIT 1`
+    ).bind(callId, device.tenant_id, device.device_id).first();
+    if (existing && existing.state === state) {
+      return { schema: "hara.commander-device-call-result.v1", ok: true, existing: true, call_id: callId, state };
+    }
+    throw new Error("DEVICE_CALL_NOT_EXECUTING");
+  }
+
+  return {
+    schema: "hara.commander-device-call-result.v1",
+    ok: true,
+    existing: false,
+    call_id: row.call_id,
+    request_id: row.request_id,
+    tool_id: row.tool_id,
+    state: row.state,
+    completed_at_utc: row.completed_at_utc,
+  };
+}
+
+async function deviceCallStatus(env, body) {
+  const callId = cleanId(body.call_id, 180);
+  const context = await mcpProductContext(env, body.issuer, body.subject, {
+    provider_code: body.provider_code,
+    email: body.email,
+  });
+  if (!context.ok) throw new Error(context.code);
+
+  const now = nowIso();
+  await env.PRODUCT_DB.prepare(
+    `UPDATE commander_device_calls
+        SET state = 'EXPIRED', completed_at_utc = ?
+      WHERE call_id = ?
+        AND tenant_id = ?
+        AND subject_id = ?
+        AND state IN ('PENDING','EXECUTING')
+        AND expires_at_utc <= ?`
+  ).bind(now, callId, context.tenant_id, context.subject_id, now).run();
+
+  const row = await env.PRODUCT_DB.prepare(
+    `SELECT call_id, request_id, device_id, tool_id, state, created_at_utc,
+            expires_at_utc, claimed_at_utc, completed_at_utc, result_json, error_code
+       FROM commander_device_calls
+      WHERE call_id = ? AND tenant_id = ? AND subject_id = ?
+      LIMIT 1`
+  ).bind(callId, context.tenant_id, context.subject_id).first();
+  if (!row) throw new Error("DEVICE_CALL_NOT_FOUND");
+
+  return {
+    schema: "hara.commander-device-call-status.v1",
+    call_id: row.call_id,
+    request_id: row.request_id,
+    device_id: row.device_id,
+    tool_id: row.tool_id,
+    state: row.state,
+    created_at_utc: row.created_at_utc,
+    expires_at_utc: row.expires_at_utc,
+    claimed_at_utc: row.claimed_at_utc,
+    completed_at_utc: row.completed_at_utc,
+    result: row.result_json ? JSON.parse(row.result_json) : null,
+    error_code: row.error_code || null,
+  };
+}
+
 export default {
   async fetch(request, env) {
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: json({}).headers });
@@ -926,8 +1154,37 @@ export default {
         return json(await heartbeatDevice(env, request, body));
       }
 
-      if (url.pathname.startsWith("/api/internal/mcp/")) {
+      if (url.pathname === "/api/device/calls/next" && request.method === "POST") {
+        const call = await claimNextDeviceCall(env, request);
+        if (!call) {
+          return new Response(null, {
+            status: 204,
+            headers: { "cache-control": "no-store" }
+          });
+        }
+        return json(call);
+      }
+
+      if (url.pathname === "/api/device/calls/complete" && request.method === "POST") {
+        const body = await request.json();
+        return json(await completeDeviceCall(env, request, body));
+      }
+
+      if (
+        url.pathname.startsWith("/api/internal/mcp/")
+        || url.pathname.startsWith("/api/internal/device/")
+      ) {
         requireMcpProductToken(request, env);
+      }
+
+      if (url.pathname === "/api/internal/device/calls" && request.method === "POST") {
+        const body = await request.json();
+        return internalJson(await enqueueDeviceCall(env, body), 201);
+      }
+
+      if (url.pathname === "/api/internal/device/calls/status" && request.method === "POST") {
+        const body = await request.json();
+        return internalJson(await deviceCallStatus(env, body));
       }
 
       if (url.pathname === "/api/internal/mcp/authorize" && request.method === "POST") {
@@ -1129,6 +1386,15 @@ export default {
         DEVICE_NAME_INVALID: 400,
         DEVICE_PLATFORM_INVALID: 400,
         DEVICE_METADATA_INVALID: 400,
+        DEVICE_OFFLINE: 409,
+        DEVICE_CALL_TOOL_DENIED: 403,
+        DEVICE_CALL_PAYLOAD_INVALID: 400,
+        DEVICE_CALL_RESULT_STATE_INVALID: 400,
+        DEVICE_CALL_RESULT_INVALID: 400,
+        DEVICE_CALL_NOT_EXECUTING: 409,
+        DEVICE_CALL_NOT_FOUND: 404,
+        GRANT_MISSING: 403,
+        IDEMPOTENCY_CONFLICT: 409,
       };
 
       if (requestUrl.pathname === "/auth/callback") {

@@ -36,7 +36,7 @@ print(json.dumps({
   "device_name": sys.argv[2],
   "platform": "LINUX",
   "architecture": sys.argv[3],
-  "agent_version": "0.1.0",
+  "agent_version": "0.2.0",
 }, separators=(",",":")))
 PY
 )"
@@ -69,31 +69,121 @@ EOF
 chmod 600 "$CONFIG_FILE"
 
 cat >"$AGENT" <<'EOF'
-#!/usr/bin/env bash
-set -euo pipefail
-CONFIG_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/hara-commander/device.env"
-[ -r "$CONFIG_FILE" ] || exit 78
-# shellcheck disable=SC1090
-. "$CONFIG_FILE"
+#!/usr/bin/env python3
+import json
+import os
+import platform
+import time
+import urllib.error
+import urllib.request
+from pathlib import Path
 
-heartbeat() {
-  local payload
-  payload="$(python3 - "$HARA_DEVICE_ID" "$HARA_DEVICE_ARCH" <<'PY'
-import json,sys
-print(json.dumps({
-  "device_id":sys.argv[1],
-  "architecture":sys.argv[2],
-  "agent_version":"0.1.0",
-},separators=(",",":")))
-PY
-)"
-  curl -fsS --max-time 20     -H 'content-type: application/json'     -H "authorization: Bearer $HARA_DEVICE_TOKEN"     --data "$payload"     "$HARA_COMMANDER_URL/api/device/heartbeat" >/dev/null
-}
+CONFIG_FILE = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config"))) / "hara-commander/device.env"
+AGENT_VERSION = "0.2.0"
 
-while :; do
-  heartbeat || true
-  sleep 30
-done
+def load_config():
+    data = {}
+    for raw in CONFIG_FILE.read_text(encoding="utf-8").splitlines():
+        if "=" in raw:
+            key, value = raw.split("=", 1)
+            data[key] = value
+    required = ("HARA_COMMANDER_URL", "HARA_DEVICE_ID", "HARA_DEVICE_TOKEN", "HARA_DEVICE_ARCH")
+    if not all(data.get(key) for key in required):
+        raise RuntimeError("DEVICE_CONFIG_INVALID")
+    return data
+
+def post_json(url, token, payload):
+    request = urllib.request.Request(
+        url,
+        data=json.dumps(payload, separators=(",", ":")).encode("utf-8"),
+        method="POST",
+        headers={
+            "content-type": "application/json",
+            "accept": "application/json",
+            "authorization": "Bearer " + token,
+            "user-agent": "HARA-Commander-Agent/" + AGENT_VERSION,
+        },
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=25) as response:
+            if response.status == 204:
+                return None
+            raw = response.read()
+            return json.loads(raw.decode("utf-8") or "{}")
+    except urllib.error.HTTPError as exc:
+        if exc.code == 204:
+            return None
+        raise
+
+def health_result(config):
+    return {
+        "ok": True,
+        "agent_version": AGENT_VERSION,
+        "device_id": config["HARA_DEVICE_ID"],
+        "platform": "LINUX",
+        "architecture": config["HARA_DEVICE_ARCH"],
+        "hostname": platform.node(),
+        "tunnel_mode": "OUTBOUND_RELAY",
+    }
+
+def complete(config, call, state, result, error_code=None):
+    body = {
+        "call_id": call["call_id"],
+        "state": state,
+        "result": result,
+    }
+    if error_code:
+        body["error_code"] = error_code
+    post_json(
+        config["HARA_COMMANDER_URL"] + "/api/device/calls/complete",
+        config["HARA_DEVICE_TOKEN"],
+        body,
+    )
+
+def execute_call(config, call):
+    tool_id = str(call.get("tool_id") or "")
+    if tool_id == "hara.health":
+        complete(config, call, "COMPLETED", health_result(config))
+        return
+    complete(
+        config,
+        call,
+        "FAILED",
+        {"tool_id": tool_id},
+        "LOCAL_TOOL_BRIDGE_NOT_IMPLEMENTED",
+    )
+
+def main():
+    config = load_config()
+    last_heartbeat = 0.0
+    while True:
+        now = time.monotonic()
+        try:
+            if now - last_heartbeat >= 30:
+                post_json(
+                    config["HARA_COMMANDER_URL"] + "/api/device/heartbeat",
+                    config["HARA_DEVICE_TOKEN"],
+                    {
+                        "device_id": config["HARA_DEVICE_ID"],
+                        "architecture": config["HARA_DEVICE_ARCH"],
+                        "agent_version": AGENT_VERSION,
+                    },
+                )
+                last_heartbeat = now
+
+            call = post_json(
+                config["HARA_COMMANDER_URL"] + "/api/device/calls/next",
+                config["HARA_DEVICE_TOKEN"],
+                {},
+            )
+            if call:
+                execute_call(config, call)
+        except Exception:
+            pass
+        time.sleep(2)
+
+if __name__ == "__main__":
+    main()
 EOF
 chmod 700 "$AGENT"
 

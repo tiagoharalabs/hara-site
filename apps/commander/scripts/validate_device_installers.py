@@ -15,6 +15,8 @@ for token in (
     'platform": "LINUX"',
     "/api/device/enroll",
     "/api/device/heartbeat",
+    "/api/device/calls/next",
+    "/api/device/calls/complete",
     "systemctl --user enable --now",
     "chmod 600",
 ):
@@ -27,6 +29,8 @@ for token in (
     'platform="WINDOWS"',
     "/api/device/enroll",
     "/api/device/heartbeat",
+    "/api/device/calls/next",
+    "/api/device/calls/complete",
     "ConvertFrom-SecureString",
     "New-ScheduledTaskTrigger -AtLogOn",
     "Register-ScheduledTask",
@@ -45,4 +49,5 @@ need(HTML, "data-copy-windows", "PORTAL_WINDOWS_COPY")
 need(JS, "Comando Windows copiado.", "PORTAL_WINDOWS_COPY_HANDLER")
 print("PORTAL_DEVICE_INSTALLERS=PASS")
 print("PER_DEVICE_CLOUDFLARED_DEPENDENCY=FALSE")
-print("OUTBOUND_CALL_CHANNEL_IMPLEMENTED=FALSE")
+print("OUTBOUND_CALL_CHANNEL_HEALTH_ONLY=PASS")
+print("ARBITRARY_SHELL_EXPOSED=FALSE")
