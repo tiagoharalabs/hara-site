@@ -9,12 +9,38 @@
   const appViews = new Set(["dashboard", "usage", "plans", "connections", "security"]);
   const publicViews = new Set(["landing", "login", "signup", ...appViews]);
   const params = new URLSearchParams(location.search);
+  const root = document.documentElement;
+  const themeBtn = document.querySelector(".theme-toggle");
+  const themeMeta = document.querySelector('meta[name="theme-color"]');
   const localHost = location.hostname === "127.0.0.1" || location.hostname === "localhost";
   const scenario = String(params.get("scenario") || "").trim().toLowerCase();
   const authError = String(params.get("auth_error") || "").trim().toUpperCase();
   const remotePortal = !localHost;
   let retryAction = null;
   let authProviderConfigured = false;
+
+  function currentTheme() {
+    return root.dataset.theme === "dark" ? "dark" : "light";
+  }
+
+  function syncThemeUi() {
+    const dark = currentTheme() === "dark";
+    if (themeBtn) {
+      themeBtn.setAttribute("aria-pressed", String(dark));
+      themeBtn.setAttribute("aria-label", dark ? "Ativar modo claro" : "Ativar modo escuro");
+      themeBtn.title = dark ? "Modo claro" : "Modo escuro";
+    }
+    if (themeMeta) themeMeta.setAttribute("content", dark ? "#061721" : "#eef8fd");
+    root.style.colorScheme = dark ? "dark" : "light";
+  }
+
+  syncThemeUi();
+  themeBtn?.addEventListener("click", () => {
+    const next = currentTheme() === "dark" ? "light" : "dark";
+    root.dataset.theme = next;
+    try { localStorage.setItem("hara-theme", next); } catch (_error) {}
+    syncThemeUi();
+  });
 
   function validApiBase(value) {
     if (!value) return null;
