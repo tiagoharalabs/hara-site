@@ -2,7 +2,7 @@ INSERT OR REPLACE INTO tenants (
   tenant_id, display_name, state, environment, created_at_utc
 ) VALUES (
   'HARA-TENANT-DEMO-0001',
-  'Workspace Demo',
+  'HARA Labs',
   'ACTIVE',
   'DEV',
   '2026-09-21T15:30:00Z'
@@ -16,7 +16,7 @@ INSERT OR REPLACE INTO users (
   'https://auth.dev.haralabs.invalid/',
   'demo-user-0001',
   'demo@haralabs.invalid',
-  'Tiago Demo',
+  'Conta HARA',
   'ACTIVE',
   'OWNER',
   '2026-09-21T15:30:00Z'

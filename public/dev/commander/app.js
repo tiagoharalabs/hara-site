@@ -35,7 +35,7 @@
       return;
     }
     if (!authProviderConfigured) {
-      showToast("O provedor OIDC DEV ainda não está configurado.");
+      showToast("O HARA Identity ainda não está disponível para autenticação.");
       return;
     }
     const target = "/auth/login?return_to=" + encodeURIComponent("/#dashboard") + (signup ? "&screen_hint=signup" : "");
@@ -63,10 +63,10 @@
         }
       });
 
-      document.querySelectorAll(".dev-note").forEach((node) => {
+      document.querySelectorAll(".auth-note").forEach((node) => {
         node.textContent = authProviderConfigured
-          ? "DEV: a autenticação acontece no provedor OIDC. O H.A.R.A. não recebe nem armazena sua senha."
-          : "DEV: o portal está pronto para OIDC, mas o provedor ainda não foi configurado.";
+          ? "A autenticação acontece no HARA Identity. O H.A.R.A. não recebe nem armazena sua senha."
+          : "O provedor de identidade está temporariamente indisponível.";
       });
     } catch (_error) {
       authProviderConfigured = false;
@@ -121,8 +121,25 @@
     document.body.classList.toggle("product-loading", active);
   }
 
+  function initials(value) {
+    const parts = String(value || "").trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return "HA";
+    return (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase();
+  }
+
+  function applyIdentity(payload) {
+    const tenantName = String(payload?.tenant?.display_name || "HARA Labs");
+    const userName = String(payload?.subject?.display_name || "Conta HARA");
+    const userRole = String(payload?.subject?.role || "Owner");
+    document.querySelectorAll("[data-tenant-name]").forEach((node) => { node.textContent = tenantName; });
+    document.querySelectorAll("[data-user-name]").forEach((node) => { node.textContent = userName; });
+    document.querySelectorAll("[data-user-role]").forEach((node) => { node.textContent = userRole; });
+    document.querySelectorAll("[data-user-initials]").forEach((node) => { node.textContent = initials(userName); });
+  }
+
   function applyDashboard(payload) {
     if (!payload?.entitlement || !payload?.usage) return;
+    applyIdentity(payload);
     const plan = payload.entitlement.plan_name || payload.entitlement.plan_code || "—";
     const consumed = Number(payload.usage.consumed_units || 0);
     const limit = payload.usage.limit == null ? null : Number(payload.usage.limit);
@@ -168,7 +185,7 @@
     }
     if (name === "auth-expired") {
       setState("Sessão expirada", "Autenticação necessária");
-      showBanner("danger", "Sessão expirada", "Sua sessão DEV expirou. Entre novamente para continuar.", "Entrar novamente", () => startRemoteAuth(false));
+      showBanner("danger", "Sessão expirada", "Sua sessão expirou. Entre novamente para continuar.", "Entrar novamente", () => startRemoteAuth(false));
       return;
     }
     if (name === "entitlement-suspended") {
@@ -200,12 +217,12 @@
       return;
     }
     if (name === "billing-disconnected") {
-      showBanner("info", "Cobrança ainda não conectada", "Este tenant DEV usa entitlement sintético e não possui provedor de pagamento real.");
+      showBanner("info", "Cobrança ainda não conectada", "Este workspace ainda não possui um provedor de pagamento conectado.");
       return;
     }
     if (name === "degraded") {
       setState("Degradado", "Uma dependência está instável");
-      showBanner("warning", "Serviço degradado", "O Commander continua acessível, mas uma dependência DEV está apresentando instabilidade.", "Revalidar", loadProductDashboard);
+      showBanner("warning", "Serviço degradado", "O Commander continua acessível, mas uma dependência está apresentando instabilidade.", "Revalidar", loadProductDashboard);
     }
   }
 
@@ -221,7 +238,7 @@
 
     if (!apiBase) {
       setLoading(false);
-      showBanner("warning", "Backend DEV não configurado", "Defina um endpoint DEV válido para carregar dados de produto.");
+      showBanner("warning", "Serviço de produto não configurado", "Não foi possível localizar um endpoint válido para os dados do produto.");
       return;
     }
 
@@ -237,7 +254,7 @@
       applyScenario(scenario, payload);
     } catch (_error) {
       setState("Degradado", "Product API indisponível");
-      showBanner("danger", "Backend DEV indisponível", "Não foi possível carregar tenant, entitlement e quota.", "Tentar novamente", loadProductDashboard);
+      showBanner("danger", "Serviço de produto indisponível", "Não foi possível carregar tenant, entitlement e quota.", "Tentar novamente", loadProductDashboard);
     } finally {
       setLoading(false);
     }
@@ -320,8 +337,8 @@
         return;
       }
       const label = form.dataset.authForm === "signup"
-        ? "Workspace DEV criado localmente. Nenhuma credencial foi persistida."
-        : "Login DEV simulado. Nenhuma credencial foi enviada.";
+        ? "Prévia local carregada. Nenhuma credencial foi persistida."
+        : "Prévia local carregada. Nenhuma credencial foi enviada.";
       showToast(label);
       route("dashboard");
       form.reset();
