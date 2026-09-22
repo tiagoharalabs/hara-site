@@ -679,6 +679,16 @@
       return;
     }
 
+    const copyWindows = event.target.closest("[data-copy-windows]");
+    if (copyWindows) {
+      event.preventDefault();
+      copyText(
+        "irm https://hara-commander-dev-v2.tiago-sartori.workers.dev/install/windows.ps1 | iex",
+        "Comando Windows copiado."
+      );
+      return;
+    }
+
     const copyPairing = event.target.closest("[data-copy-pairing]");
     if (copyPairing) {
       event.preventDefault();

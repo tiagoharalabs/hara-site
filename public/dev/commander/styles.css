@@ -267,3 +267,6 @@ html[data-theme="dark"] .device-state.offline{background:#102b3b;color:#91adbd}
 html[data-theme="dark"] .device-state.revoked{background:#392027;color:#f0a8a8}
 @media(max-width:1050px){.setup-grid,.device-onboarding{grid-template-columns:1fr}.setup-card{grid-template-columns:46px 1fr}.setup-card .btn{grid-column:2}}
 @media(max-width:760px){.setup-card{grid-template-columns:1fr}.setup-card .btn{grid-column:auto}.device-row{grid-template-columns:40px 1fr auto}.device-row .link-button{grid-column:2/4;justify-self:start}.install-command,.pairing-token{align-items:stretch;flex-direction:column}}
+
+.install-note{display:block;margin:-8px 0 16px;color:#7891a1;font-size:9px;line-height:1.55}
+html[data-theme="dark"] .install-note{color:#8faebe}
