@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#eef8fd">
 <script>
-(()=>{try{const saved=localStorage.getItem("hara-theme");const theme=saved||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.dataset.theme=theme;document.documentElement.style.colorScheme=theme}catch(e){}})();
+(()=>{try{const saved=localStorage.getItem("hara-theme");const theme=saved||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.dataset.theme=theme;document.documentElement.style.colorScheme=theme;const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=theme==="dark"?"#061721":"#eef8fd"}catch(e){}})();
 </script>
 <meta name="description" content="H.A.R.A Labs — infraestrutura corporativa de IA híbrida, segura e governada.">
 <link rel="canonical" href="https://www.haralabs.com.br/">
@@ -16,6 +16,13 @@
 <meta property="og:url" content="https://www.haralabs.com.br/">
 <meta property="og:image" content="https://www.haralabs.com.br/assets/images/hero-ia-realidade-sep.png">
 <meta name="twitter:card" content="summary_large_image">
+<meta property="og:locale" content="pt_BR">
+<meta property="og:image:width" content="1672">
+<meta property="og:image:height" content="941">
+<meta property="og:image:alt" content="H.A.R.A Labs — infraestrutura corporativa de IA">
+<meta name="twitter:title" content="H.A.R.A Labs — Infraestrutura corporativa de IA">
+<meta name="twitter:description" content="Infraestrutura corporativa de IA híbrida, segura e governada.">
+<meta name="twitter:image" content="https://www.haralabs.com.br/assets/images/hero-ia-realidade-sep.png">
 <title>H.A.R.A Labs — Infraestrutura corporativa de IA</title>
 <link rel="icon" href="/assets/images/hara-logo-web.webp" type="image/webp">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -23,7 +30,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/css/styles.css?v=14">
 <link rel="stylesheet" href="/assets/css/v14.css?v=15.1">
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"H.A.R.A Labs","legalName":"Irmãos Sartori Tecnologia da Informação Ltda","url":"https://www.haralabs.com.br/","email":"contato@haralabs.com.br","taxID":"18.061.774/0001-98"}</script>
+<link rel="stylesheet" href="/assets/css/v16.css?v=16.1">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"H.A.R.A Labs","legalName":"Irmãos Sartori Tecnologia da Informação Ltda","url":"https://www.haralabs.com.br/","email":"contato@haralabs.com.br","taxID":"18.061.774/0001-98","logo":"https://www.haralabs.com.br/assets/images/hara-logo-web.webp","sameAs":["https://www.linkedin.com/company/hara-labs/"]}</script>
 </head>
 <body>
 <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
@@ -49,7 +57,7 @@
 <header class="site-header" id="top">
   <div class="nav-shell">
     <a class="brand" href="/" aria-label="H.A.R.A Labs">
-      <img src="/assets/images/hara-logo-web.webp" alt="H.A.R.A Labs" class="brand-logo">
+      <img decoding="async" src="/assets/images/hara-logo-web.webp" alt="H.A.R.A Labs" class="brand-logo">
       <span class="brand-word">H.A.R.A <b>Labs</b></span>
     </a>
     <nav class="main-nav" aria-label="Navegação principal">
@@ -87,7 +95,7 @@
         <div class="system-card sys-site"><svg><use href="#i-building"/></svg><small>ON-SITE</small><b>Operação local</b><span>Edge & unidades<br>estratégicas</span></div>
         <div class="system-card sys-app"><svg><use href="#i-box"/></svg><small>SISTEMAS</small><b>Seu negócio</b><span>ERP · CRM · APIs<br>Dados corporativos</span></div>
         <svg class="hero-links" viewBox="0 0 620 470" aria-hidden="true"><path d="M146 110 C245 110 225 235 310 235"/><path d="M146 360 C245 360 225 235 310 235"/><path d="M474 110 C375 110 395 235 310 235"/><path d="M474 360 C375 360 395 235 310 235"/></svg>
-        <div class="system-core"><div class="core-ring"></div><img src="/assets/images/hara-logo-web.webp" alt=""><strong>H.A.R.A</strong><small>Policy · MCP · Evidence</small></div>
+        <div class="system-core"><div class="core-ring"></div><img decoding="async" src="/assets/images/hara-logo-web.webp" alt=""><strong>H.A.R.A</strong><small>Policy · MCP · Evidence</small></div>
         <span class="signal s1"></span><span class="signal s2"></span><span class="signal s3"></span><span class="signal s4"></span>
       </div>
       <div class="hand-note">Uma arquitetura.<br>Total liberdade.<br>Dados sempre seus.<i></i></div>
@@ -155,7 +163,7 @@
     <div class="architecture-copy reveal"><div class="section-kicker"><i></i>Arquitetura</div><h2>Controle sobre dados, políticas e infraestrutura.</h2><p>A H.A.R.A combina recursos locais e externos sem tornar acesso irrestrito um requisito para usar IA. O posicionamento de cada capacidade depende do contexto operacional.</p><a class="section-link" href="/arquitetura/">Conhecer a arquitetura em detalhes <span>→</span></a></div>
     <div class="orbit-panel reveal delay">
       <div class="orbit-ring ring1"></div><div class="orbit-ring ring2"></div>
-      <div class="orbit-center"><img src="/assets/images/hara-logo-web.webp" alt=""><strong>H.A.R.A</strong><span>Arquitetura híbrida</span></div>
+      <div class="orbit-center"><img decoding="async" src="/assets/images/hara-logo-web.webp" alt=""><strong>H.A.R.A</strong><span>Arquitetura híbrida</span></div>
       <div class="orbit-node n-prem"><svg><use href="#i-server"/></svg><b>On-premise</b><span>Dados & modelos</span></div>
       <div class="orbit-node n-site"><svg><use href="#i-building"/></svg><b>On-site</b><span>Edge & operações</span></div>
       <div class="orbit-node n-cloud"><svg><use href="#i-cloud"/></svg><b>Cloud</b><span>Serviços & escala</span></div>
@@ -182,7 +190,7 @@
     <div class="integration-copy reveal"><div class="section-kicker"><i></i>Integrações</div><h2>Funções autorizadas conectadas à IA.</h2><p>A H.A.R.A conecta modelos a funções autorizadas da empresa — consultar, analisar, criar, atualizar ou executar — com identidade, escopo, política e evidência.</p><a class="section-link" href="/commander/">Conhecer o Commander <span>→</span></a></div>
     <div class="integration-board reveal delay">
       <div class="stack systems"><strong>Seus sistemas</strong><span>ERP <em>SAP · Oracle · TOTVS</em></span><span>CRM <em>Salesforce · HubSpot</em></span><span>SQL <em>PostgreSQL · SQL Server</em></span><span>Docs <em>SharePoint · Google Drive</em></span></div>
-      <div class="mcp-core"><span>MCP</span><img src="/assets/images/hara-logo-web.webp" alt=""><strong>H.A.R.A</strong><small>Conector universal</small></div>
+      <div class="mcp-core"><span>MCP</span><img decoding="async" src="/assets/images/hara-logo-web.webp" alt=""><strong>H.A.R.A</strong><small>Conector universal</small></div>
       <div class="stack agents"><strong>IA e agentes</strong><span>LLM <em>Cloud · Local · Frontier</em></span><span>Agent <em>Agentes especializados</em></span><span>API <em>APIs e serviços</em></span><span>Flow <em>Workflows e automações</em></span></div>
       <svg class="integration-lines" viewBox="0 0 720 280"><path d="M230 140H325"/><path d="M395 140H490"/></svg>
     </div>
@@ -194,7 +202,7 @@
   <div class="page-shell commander-grid">
     <div class="commander-copy reveal"><div class="section-kicker gold"><i></i>H.A.R.A Commander · em desenvolvimento</div><h2>Camada operacional em construção.</h2><p>O Commander está sendo desenvolvido como superfície de operação para modelos, integrações, políticas e evidências. A página pública descreve a direção arquitetural, não uma oferta comercial disponível.</p><a class="button gold-btn" href="/commander/">Ver direção do produto <span>→</span></a></div>
     <div class="commander-ui reveal delay">
-      <div class="console-nav"><img src="/assets/images/hara-logo-web.webp" alt=""><strong>H.A.R.A Commander</strong><span>Visão geral</span><span>Modelos</span><span>Integrações</span><span>Segurança</span><span>Auditoria</span></div>
+      <div class="console-nav"><img decoding="async" src="/assets/images/hara-logo-web.webp" alt=""><strong>H.A.R.A Commander</strong><span>Visão geral</span><span>Modelos</span><span>Integrações</span><span>Segurança</span><span>Auditoria</span></div>
       <div class="console-main"><div class="console-top"><article><small>Infraestrutura</small><b>● Saudável</b></article><article><small>Modelos</small><b>12 ativos</b></article><article><small>Integrações</small><b>28 conectadas</b></article><article><small>Solicitações</small><b>1.2k hoje</b></article></div><div class="chart-card"><span>Uso de IA</span><svg viewBox="0 0 500 130"><path d="M10 110 C70 100,80 65,130 78 S220 25,270 58 S360 98,410 54 S455 30,490 36"/></svg></div><div class="events"><span>● model.deployed <b>10:24</b></span><span>● integration.synced <b>09:18</b></span><span>● policy.updated <b>08:41</b></span></div></div>
     </div>
     <div class="commander-quote">IDENTIDADE<br>POLÍTICA<br>INTEGRAÇÃO<br>EVIDÊNCIA<i></i></div>
@@ -250,7 +258,7 @@
 
 <section class="final-cta" id="contato">
   <div class="page-shell cta-card reveal">
-    <img src="/assets/images/hara-logo-web.webp" alt="">
+    <img decoding="async" src="/assets/images/hara-logo-web.webp" alt="">
     <div><h2>Avalie um primeiro caso de uso com escopo controlado.</h2><p>O ponto de partida pode ser um processo, uma área, um agente ou uma integração, com arquitetura definida para expansão posterior.</p></div>
     <a class="button dark-btn" href="/contato/">Conversar sobre a arquitetura <span>→</span></a>
   </div>
@@ -260,12 +268,12 @@
 <footer class="footer-v14 footer-v15">
   <div class="page-shell footer-v14-grid">
     <div class="footer-v14-brand">
-      <a class="brand" href="/"><img src="/assets/images/hara-logo-web.webp" alt="" class="brand-logo"><span class="brand-word">H.A.R.A <b>Labs</b></span></a>
+      <a class="brand" href="/"><img decoding="async" src="/assets/images/hara-logo-web.webp" alt="" class="brand-logo"><span class="brand-word">H.A.R.A <b>Labs</b></span></a>
       <p>Infraestrutura corporativa de IA para ambientes híbridos, com identidade, integração, governança e evidência.</p>
       <small>Irmãos Sartori Tecnologia da Informação Ltda<br>CNPJ 18.061.774/0001-98</small>
     </div>
     <div class="footer-col"><strong>Arquitetura</strong><a href="/solucoes/">Soluções</a><a href="/arquitetura/">Arquitetura</a><a href="/seguranca/">Segurança & Trust</a><a href="/observabilidade/">Observabilidade</a></div>
-    <div class="footer-col"><strong>Empresa</strong><a href="/empresa/">Sobre a H.A.R.A Labs</a><a href="/contato/">Contato</a><a href="/support/">Suporte</a><a class="footer-dev-link" href="/commander/">Commander <em>em desenvolvimento</em></a></div>
+    <div class="footer-col"><strong>Empresa</strong><a href="/empresa/">Sobre a H.A.R.A Labs</a><a href="/contato/">Contato</a><a href="/support/">Suporte</a><a href="/commander/">Commander</a></div>
     <div class="footer-col"><strong>Legal</strong><a href="/legal/">Central Legal</a><a href="/legal/termos/">Termos de Uso</a><a href="/legal/privacidade/">Privacidade</a></div>
   </div>
   <div class="page-shell footer-bottom"><span>© 2026 H.A.R.A Labs. Todos os direitos reservados.</span><span>Documentação institucional pública.</span></div>
