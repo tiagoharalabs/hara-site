@@ -54,10 +54,10 @@ Current DEV:
 `https://hara-commander-dev-v2.tiago-sartori.workers.dev/`
 
 Current Worker:
-`a80aff45-4f33-42ee-af45-9f7ca7c710d2`
+`e6303c51-135c-4f83-bd56-c3a6fdcb772f`
 
 Current code:
-`34ebd1425061036b6e3ef96567a20024510e895f`
+`abc1768f39c29bacb52396c10494d0ba1f931b4c`
 
 Validation:
 - `DEVICE_PAIRING_VALIDATION=PASS`
@@ -65,24 +65,38 @@ Validation:
 - `WINDOWS_DEVICE_INSTALLER_STATIC=PASS`
 - `PORTAL_DEVICE_INSTALLERS=PASS`
 - `PER_DEVICE_CLOUDFLARED_DEPENDENCY=FALSE`
+- `OUTBOUND_CALL_CHANNEL_HEALTH_ONLY=PASS`
+- `DEVICE_RELAY_ATOMIC_CLAIM=PASS`
+- `DEVICE_RELAY_RESULT_ROUNDTRIP=PASS`
+- `DEVICE_RELAY_IDEMPOTENCY=PASS`
+- `DEVICE_RELAY_ARBITRARY_TOOL=DENIED`
 - `CUSTOMER_DEGRADED_LANGUAGE=ABSENT`
 
-## Remaining functional blocker
+## Current transport proof
 
-`OUTBOUND_CALL_CHANNEL_IMPLEMENTED=FALSE`
+`OUTBOUND_CALL_CHANNEL_HEALTH_ONLY=PASS`
 
-The installed Agents currently prove identity, pairing, presence and revocation. They do not yet transport MCP tool calls.
+The installed Linux and Windows Agents now have a real outbound call channel. The current proven canary is intentionally limited to `hara.health`:
 
-Next implementation gate:
 - durable relay call state;
-- outbound device event/poll channel;
+- outbound device polling;
 - atomic `PENDING -> EXECUTING` claim;
-- local governed MCP execution;
 - `COMPLETED/FAILED` result return;
 - request/call/device correlation;
-- ChatGPT/Codex real read-only canary.
+- result roundtrip;
+- idempotent enqueue;
+- arbitrary/unknown tool denied fail-closed.
+
+The next functional blocker is not transport. It is the portable local governed tool bridge plus public MCP routing to the selected customer device.
+
+Next implementation gate:
+- expose the exact governed five-tool local contract through the Agent;
+- keep arbitrary shell/filesystem/SSH absent;
+- bind public MCP identity/tenant to a selected online device;
+- route `hara.health`, list, describe, read-only invoke and receipt through that device;
+- run a real ChatGPT/Codex read-only canary.
 
 The canonical relay architecture remains:
 `hara-platform/docs/architecture/HARA_REMOTE_MCP_RELAY_V1.md`.
 
-Do not call heartbeat/presence a completed tunnel.
+Do not call heartbeat/presence a completed tunnel, and do not call the health-only outbound channel a completed five-tool product bridge.
