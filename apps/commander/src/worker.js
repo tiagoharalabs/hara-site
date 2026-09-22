@@ -6,7 +6,7 @@ import {
   logout,
   resolvePortalSession,
 } from "./auth.js";
-import { normalizeIssuer } from "./oidc.js";
+import { normalizeIssuer, randomToken, sha256 } from "./oidc.js";
 
 const DEMO_TENANT = "HARA-TENANT-DEMO-0001";
 const MCP_METER_ID = "HARA_COMMANDER_GOVERNED_INVOKE";
@@ -25,7 +25,7 @@ function json(payload, status = 200) {
     headers: {
       "cache-control": "no-store",
       "access-control-allow-origin": "*",
-      "access-control-allow-headers": "content-type",
+      "access-control-allow-headers": "content-type,authorization",
       "access-control-allow-methods": "GET,POST,OPTIONS"
     }
   });
@@ -95,6 +95,46 @@ function normalizeEmail(value) {
   const email = String(value || "").trim().toLowerCase();
   if (!email || email.length > 320 || !email.includes("@")) return null;
   return email;
+}
+
+function nowIso(offsetSeconds = 0) {
+  return new Date(Date.now() + offsetSeconds * 1000).toISOString();
+}
+
+function bearerToken(request) {
+  const header = String(request.headers.get("authorization") || "");
+  if (!header.toLowerCase().startsWith("bearer ")) return null;
+  const token = header.slice(7).trim();
+  return token || null;
+}
+
+function cleanDeviceName(value) {
+  const text = String(value || "").trim().replace(/\s+/g, " ");
+  if (!text || text.length > 120 || /[\u0000-\u001f\u007f]/.test(text)) {
+    throw new Error("DEVICE_NAME_INVALID");
+  }
+  return text;
+}
+
+function normalizeDevicePlatform(value) {
+  const platform = String(value || "").trim().toUpperCase();
+  if (!["LINUX", "WINDOWS"].includes(platform)) throw new Error("DEVICE_PLATFORM_INVALID");
+  return platform;
+}
+
+function cleanAgentValue(value, max = 80) {
+  const text = String(value || "").trim();
+  if (!text) return null;
+  if (text.length > max || /[\u0000-\u001f\u007f]/.test(text)) {
+    throw new Error("DEVICE_METADATA_INVALID");
+  }
+  return text;
+}
+
+function deviceOnline(lastSeenAtUtc, now = Date.now()) {
+  if (!lastSeenAtUtc) return false;
+  const seen = Date.parse(String(lastSeenAtUtc));
+  return Number.isFinite(seen) && now - seen <= 90_000;
 }
 
 export class TenantQuota extends DurableObject {
@@ -588,6 +628,201 @@ function mcpDecisionPayload(context, toolId, requiredGrant, extra = {}) {
   };
 }
 
+async function createDevicePairing(env, session) {
+  const token = randomToken(32);
+  const tokenHash = await sha256(token);
+  const pairingId = "HARA-PAIR-" + crypto.randomUUID();
+  const createdAt = nowIso();
+  const expiresAt = nowIso(10 * 60);
+
+  await env.PRODUCT_DB.prepare(
+    `INSERT INTO device_pairing_tokens
+      (pairing_id, token_hash, tenant_id, subject_id, created_at_utc, expires_at_utc, consumed_at_utc)
+     VALUES (?, ?, ?, ?, ?, ?, NULL)`
+  ).bind(
+    pairingId,
+    tokenHash,
+    session.tenant_id,
+    session.subject_id,
+    createdAt,
+    expiresAt,
+  ).run();
+
+  return {
+    schema: "hara.commander-device-pairing.v1",
+    pairing_id: pairingId,
+    pairing_token: token,
+    expires_at_utc: expiresAt,
+    one_time: true,
+  };
+}
+
+async function listDevices(env, session) {
+  const result = await env.PRODUCT_DB.prepare(
+    `SELECT device_id, enrolled_by_subject_id, device_name, platform, architecture,
+            agent_version, tunnel_mode, state, created_at_utc, last_seen_at_utc, revoked_at_utc
+       FROM commander_devices
+      WHERE tenant_id = ?
+      ORDER BY created_at_utc DESC`
+  ).bind(session.tenant_id).all();
+
+  const now = Date.now();
+  return (result.results || []).map((row) => ({
+    device_id: row.device_id,
+    enrolled_by_subject_id: row.enrolled_by_subject_id,
+    device_name: row.device_name,
+    platform: row.platform,
+    architecture: row.architecture,
+    agent_version: row.agent_version,
+    tunnel_mode: row.tunnel_mode,
+    state: row.state,
+    online: row.state === "ACTIVE" && deviceOnline(row.last_seen_at_utc, now),
+    created_at_utc: row.created_at_utc,
+    last_seen_at_utc: row.last_seen_at_utc,
+    revoked_at_utc: row.revoked_at_utc,
+  }));
+}
+
+async function enrollDevice(env, body) {
+  const pairingToken = cleanOpaque(body.pairing_token, 512);
+  const tokenHash = await sha256(pairingToken);
+  const deviceName = cleanDeviceName(body.device_name);
+  const platform = normalizeDevicePlatform(body.platform);
+  const architecture = cleanAgentValue(body.architecture, 80);
+  const agentVersion = cleanAgentValue(body.agent_version, 80) || "0.1.0";
+  const deviceId = "HARA-DEVICE-" + crypto.randomUUID();
+  const deviceSecret = randomToken(48);
+  const credentialHash = await sha256(deviceSecret);
+  const createdAt = nowIso();
+
+  const insert = env.PRODUCT_DB.prepare(
+    `INSERT INTO commander_devices
+      (device_id, pairing_id, tenant_id, enrolled_by_subject_id, device_name, platform,
+       architecture, agent_version, tunnel_mode, credential_hash, state,
+       created_at_utc, last_seen_at_utc, revoked_at_utc)
+     SELECT ?, pairing_id, tenant_id, subject_id, ?, ?, ?, ?, 'OUTBOUND_RELAY', ?,
+            'ACTIVE', ?, ?, NULL
+       FROM device_pairing_tokens
+      WHERE token_hash = ?
+        AND consumed_at_utc IS NULL
+        AND expires_at_utc > ?`
+  ).bind(
+    deviceId,
+    deviceName,
+    platform,
+    architecture,
+    agentVersion,
+    credentialHash,
+    createdAt,
+    createdAt,
+    tokenHash,
+    createdAt,
+  );
+
+  const consume = env.PRODUCT_DB.prepare(
+    `UPDATE device_pairing_tokens
+        SET consumed_at_utc = ?
+      WHERE token_hash = ?
+        AND consumed_at_utc IS NULL
+        AND expires_at_utc > ?`
+  ).bind(createdAt, tokenHash, createdAt);
+
+  let results;
+  try {
+    results = await env.PRODUCT_DB.batch([insert, consume]);
+  } catch (_error) {
+    throw new Error("DEVICE_PAIRING_INVALID");
+  }
+
+  if (!results?.[0]?.meta?.changes || !results?.[1]?.meta?.changes) {
+    throw new Error("DEVICE_PAIRING_INVALID");
+  }
+
+  return {
+    schema: "hara.commander-device-enrollment.v1",
+    device_id: deviceId,
+    device_token: deviceSecret,
+    device_name: deviceName,
+    platform,
+    architecture,
+    agent_version: agentVersion,
+    tunnel_mode: "OUTBOUND_RELAY",
+    state: "ACTIVE",
+    enrolled_at_utc: createdAt,
+  };
+}
+
+async function resolveDeviceCredential(env, request) {
+  const token = bearerToken(request);
+  if (!token) throw new Error("DEVICE_AUTH_REQUIRED");
+  const credentialHash = await sha256(token);
+  const device = await env.PRODUCT_DB.prepare(
+    `SELECT device_id, tenant_id, enrolled_by_subject_id, device_name, platform,
+            architecture, agent_version, tunnel_mode, state, created_at_utc,
+            last_seen_at_utc, revoked_at_utc
+       FROM commander_devices
+      WHERE credential_hash = ?
+      LIMIT 1`
+  ).bind(credentialHash).first();
+
+  if (!device || device.state !== "ACTIVE" || device.revoked_at_utc) {
+    throw new Error("DEVICE_AUTH_INVALID");
+  }
+  return device;
+}
+
+async function heartbeatDevice(env, request, body) {
+  const device = await resolveDeviceCredential(env, request);
+  const requestedId = body.device_id ? cleanId(body.device_id, 180) : device.device_id;
+  if (requestedId !== device.device_id) throw new Error("DEVICE_ID_MISMATCH");
+
+  const agentVersion = cleanAgentValue(body.agent_version, 80) || device.agent_version;
+  const architecture = cleanAgentValue(body.architecture, 80) || device.architecture;
+  const seenAt = nowIso();
+
+  await env.PRODUCT_DB.prepare(
+    `UPDATE commander_devices
+        SET last_seen_at_utc = ?, agent_version = ?, architecture = ?
+      WHERE device_id = ? AND state = 'ACTIVE'`
+  ).bind(seenAt, agentVersion, architecture, device.device_id).run();
+
+  return {
+    schema: "hara.commander-device-heartbeat.v1",
+    ok: true,
+    device_id: device.device_id,
+    state: "ACTIVE",
+    server_time_utc: seenAt,
+    heartbeat_after_seconds: 30,
+  };
+}
+
+async function revokePortalDevice(env, session, body) {
+  const deviceId = cleanId(body.device_id, 180);
+  const revokedAt = nowIso();
+  const privileged = ["OWNER", "ADMIN", "REVIEWER"].includes(String(session.role));
+  const statement = privileged
+    ? env.PRODUCT_DB.prepare(
+        `UPDATE commander_devices
+            SET state = 'REVOKED', revoked_at_utc = ?
+          WHERE device_id = ? AND tenant_id = ? AND state = 'ACTIVE'`
+      ).bind(revokedAt, deviceId, session.tenant_id)
+    : env.PRODUCT_DB.prepare(
+        `UPDATE commander_devices
+            SET state = 'REVOKED', revoked_at_utc = ?
+          WHERE device_id = ? AND tenant_id = ? AND enrolled_by_subject_id = ? AND state = 'ACTIVE'`
+      ).bind(revokedAt, deviceId, session.tenant_id, session.subject_id);
+
+  const result = await statement.run();
+  if (!result.meta?.changes) throw new Error("DEVICE_NOT_FOUND");
+  return {
+    schema: "hara.commander-device-revocation.v1",
+    ok: true,
+    device_id: deviceId,
+    state: "REVOKED",
+    revoked_at_utc: revokedAt,
+  };
+}
+
 export default {
   async fetch(request, env) {
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: json({}).headers });
@@ -654,6 +889,41 @@ export default {
           role: session.role
         };
         return json(payload);
+      }
+
+      if (url.pathname === "/api/portal/devices" && request.method === "GET") {
+        const session = await resolvePortalSession(request, env);
+        if (!session) return json({ ok: false, code: "AUTH_REQUIRED" }, 401);
+        const devices = await listDevices(env, session);
+        return json({
+          schema: "hara.commander-device-list.v1",
+          devices,
+          active_count: devices.filter((device) => device.state === "ACTIVE").length,
+          online_count: devices.filter((device) => device.online).length,
+        });
+      }
+
+      if (url.pathname === "/api/portal/devices/pairing" && request.method === "POST") {
+        const session = await resolvePortalSession(request, env);
+        if (!session) return json({ ok: false, code: "AUTH_REQUIRED" }, 401);
+        return json(await createDevicePairing(env, session), 201);
+      }
+
+      if (url.pathname === "/api/portal/devices/revoke" && request.method === "POST") {
+        const session = await resolvePortalSession(request, env);
+        if (!session) return json({ ok: false, code: "AUTH_REQUIRED" }, 401);
+        const body = await request.json();
+        return json(await revokePortalDevice(env, session, body));
+      }
+
+      if (url.pathname === "/api/device/enroll" && request.method === "POST") {
+        const body = await request.json();
+        return json(await enrollDevice(env, body), 201);
+      }
+
+      if (url.pathname === "/api/device/heartbeat" && request.method === "POST") {
+        const body = await request.json().catch(() => ({}));
+        return json(await heartbeatDevice(env, request, body));
       }
 
       if (url.pathname.startsWith("/api/internal/mcp/")) {
@@ -851,6 +1121,14 @@ export default {
         OIDC_STATE_REPLAYED: 400,
         OIDC_STATE_EXPIRED: 400,
         OIDC_PROVIDER_ERROR: 400,
+        DEVICE_PAIRING_INVALID: 401,
+        DEVICE_AUTH_REQUIRED: 401,
+        DEVICE_AUTH_INVALID: 401,
+        DEVICE_ID_MISMATCH: 403,
+        DEVICE_NOT_FOUND: 404,
+        DEVICE_NAME_INVALID: 400,
+        DEVICE_PLATFORM_INVALID: 400,
+        DEVICE_METADATA_INVALID: 400,
       };
 
       if (requestUrl.pathname === "/auth/callback") {
