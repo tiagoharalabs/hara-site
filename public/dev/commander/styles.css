@@ -63,7 +63,7 @@ body,.topbar,.app-view,.sidebar,.summary-card,.panel,.plan-card,.connection-card
 .theme-icon{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .theme-icon-sun{display:none}
 
-.topbar{background:rgba(255,244,194,.96);border-bottom-color:#efd887;backdrop-filter:blur(18px);box-shadow:0 8px 24px rgba(159,119,13,.07)}
+.topbar{background:rgba(247,252,255,.94);border-bottom:2px solid rgba(233,177,40,.82);backdrop-filter:blur(18px);box-shadow:0 8px 24px rgba(26,86,125,.06)}
 .brand-copy em{color:var(--blue)}
 .topnav a{color:#486d86}
 .btn-primary{background:var(--gold)}
