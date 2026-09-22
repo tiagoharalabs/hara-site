@@ -211,3 +211,285 @@ html[data-theme="dark"] .skip-link{background:#eaf6fc;color:#061b2b}
     margin-top:20px;
   }
 }
+/* V16.3 — Global typography balance
+   Desktop + mobile scale refinement. Visual structure unchanged. */
+
+/* Navigation and institutional labels */
+.main-nav a{font-size:.90rem}
+.nav-cta{font-size:.87rem}
+.eyebrow,.section-kicker{font-size:.75rem}
+.brand-word{font-size:1.06rem}
+
+/* Home / general institutional body */
+.hero h1{font-size:clamp(3.45rem,5vw,5.45rem)}
+.hero-lead{font-size:1.10rem}
+.hero-trust span{font-size:.76rem}
+.system-card small{font-size:.62rem}
+.system-card b{font-size:.84rem}
+.system-card span{font-size:.69rem}
+.system-core strong{font-size:.96rem}
+.system-core small{font-size:.62rem}
+.hand-note{font-size:.78rem}
+.trust-grid strong{font-size:.84rem}
+.trust-grid span{font-size:.66rem}
+.section h2,.section-title h2,.architecture-copy h2,.integration-copy h2{
+  font-size:clamp(2.15rem,3.25vw,3.45rem)
+}
+.section p,.section-title>p,.architecture-copy>p,.integration-copy>p{font-size:1rem}
+.section-link{font-size:.83rem}
+.solution-card h3,.security-card h3{font-size:1.12rem}
+.solution-card>p,.security-card>p{font-size:.84rem}
+.solution-card li{font-size:.76rem}
+.arch-checks span,.integration-checks span{font-size:.74rem}
+.value-grid h3{font-size:.87rem}
+.value-grid p{font-size:.74rem}
+.cta-card h2{font-size:1.45rem}
+.cta-card p{font-size:.83rem}
+
+/* Canonical subpages */
+.subhero h1{font-size:clamp(2.9rem,5.35vw,5.25rem)}
+.subhero p{font-size:1.06rem}
+.intro-grid h2,.section-head h2{font-size:clamp(1.95rem,3.25vw,3.25rem)}
+.fact-card small,.pillar-card small,.case-card small,.link-card small,.contact-card small{font-size:.65rem}
+.fact-card h3,.pillar-card h3,.case-card h3,.link-card h3,.contact-card h3{font-size:1.08rem}
+.fact-card p,.pillar-card p,.case-card p,.link-card p,.contact-card p{font-size:.84rem}
+.arch-layer b{font-size:.90rem}
+.arch-layer p{font-size:.80rem}
+.arch-layer span{font-size:.65rem}
+.timeline b{font-size:.65rem}
+.timeline strong{font-size:.90rem}
+.timeline span{font-size:.73rem}
+.cta-band h2{font-size:clamp(1.55rem,2.8vw,2.55rem)}
+
+/* Trust / architecture fine print */
+.trust-summary-grid small,.product-status-grid small{font-size:.62rem}
+.trust-summary-grid strong,.product-status-grid strong{font-size:.86rem}
+.trust-summary-grid span{font-size:.70rem}
+.trust-control-grid article>span{font-size:.64rem}
+.trust-control-grid h3{font-size:.90rem}
+.trust-control-grid p{font-size:.74rem}
+.trust-note strong{font-size:.79rem}
+.trust-note span{font-size:.75rem}
+.trust-note a{font-size:.72rem}
+.trust-claim-row strong{font-size:.76rem}
+.trust-claim-row span{font-size:.74rem}
+.trust-claim-row.head span{font-size:.60rem}
+.arch-node small,.arch-panel-title small{font-size:.59rem}
+.arch-node strong,.arch-panel-title strong{font-size:.84rem}
+.arch-node span{font-size:.66rem}
+.arch-bridge span{font-size:.59rem}
+.arch-legend{font-size:.65rem}
+
+/* Footer: the biggest readability correction on large screens */
+.footer-v14-brand p{max-width:350px;font-size:.76rem}
+.footer-v14-brand small{font-size:.63rem}
+.footer-col strong{font-size:.77rem}
+.footer-col a,.footer-col span{font-size:.72rem}
+.footer-bottom{font-size:.62rem}
+
+/* Legal + support */
+.legal-kicker{font-size:.76rem}
+.legal-hero h1{font-size:clamp(2.55rem,4.65vw,4.55rem)}
+.legal-hero p{font-size:1rem}
+.legal-meta{font-size:.76rem}
+.legal-toc strong{font-size:.79rem}
+.legal-toc a{font-size:.76rem}
+.legal-card h2{font-size:1.26rem}
+.legal-card h3{font-size:.98rem}
+.legal-card p,.legal-card li{font-size:.90rem}
+.identity-box strong,.notice-box strong,.danger-box strong{font-size:.85rem}
+.support-card span{font-size:.65rem}
+.support-card h3{font-size:1rem}
+.support-card p{font-size:.79rem}
+.support-contact h2{font-size:1.43rem}
+.support-contact p{font-size:.84rem}
+.legal-entity{font-size:.66rem}
+.legal-top-note{font-size:.82rem}
+
+/* Observability */
+.obs-hero h1{font-size:clamp(2.9rem,5.15vw,5.15rem)}
+.obs-meta>span,.obs-meta strong{font-size:.72rem}
+.obs-refresh{font-size:.70rem}
+.obs-live-label{font-size:.61rem}
+.obs-live-card p{font-size:.73rem}
+.obs-section-head h2{font-size:clamp(1.65rem,2.75vw,2.55rem)}
+.obs-back-link{font-size:.70rem}
+.summary-card .label,.obs-signal .label{font-size:.61rem}
+.summary-card p{font-size:.72rem}
+.panel-head h2{font-size:clamp(1.55rem,2.6vw,2.35rem)}
+.obs-signal strong{font-size:1rem}
+.obs-signal p,.obs-component p{font-size:.70rem}
+.obs-status-pill{font-size:.57rem}
+.obs-component h3{font-size:.84rem}
+.principles small{font-size:.59rem}
+.principles strong{font-size:.88rem}
+.principles p{font-size:.71rem}
+.obs-executive-card>small{font-size:.60rem}
+.obs-executive-card h2{font-size:1.32rem}
+.obs-state-item strong{font-size:.76rem}
+.obs-state-item b{font-size:.69rem}
+.obs-state-item p{font-size:.67rem}
+
+/* 404 desktop: reduce oversized title slightly, improve supporting text. */
+.error-kicker{font-size:.74rem}
+.error-copy h1{font-size:clamp(3.25rem,5.65vw,5.85rem)}
+.error-copy p{font-size:1.04rem}
+.error-links-label{font-size:.67rem}
+.error-link-grid strong{font-size:.90rem}
+.error-link-grid span{font-size:.71rem}
+
+/* Mobile — make the site feel designed for phone, not desktop shrunk down. */
+@media(max-width:760px){
+  .brand-word{font-size:.96rem}
+  .mobile-menu a{font-size:1rem;padding:13px 0}
+  .eyebrow,.section-kicker,.legal-kicker{font-size:.72rem}
+  .hero h1{font-size:clamp(2.75rem,12.2vw,3.8rem)}
+  .hero-lead{font-size:1rem;line-height:1.65}
+  .hero-trust span{font-size:.82rem}
+
+  .subhero h1{font-size:clamp(2.65rem,11.8vw,3.7rem);line-height:1}
+  .subhero p{font-size:1rem;line-height:1.68}
+  .intro-grid h2,.section-head h2,
+  .section h2,.section-title h2,.architecture-copy h2,.integration-copy h2{
+    font-size:clamp(1.95rem,8.5vw,2.65rem)
+  }
+
+  .fact-card small,.pillar-card small,.case-card small,.link-card small,.contact-card small{font-size:.72rem}
+  .fact-card h3,.pillar-card h3,.case-card h3,.link-card h3,.contact-card h3{font-size:1.12rem}
+  .fact-card p,.pillar-card p,.case-card p,.link-card p,.contact-card p{font-size:.91rem;line-height:1.62}
+
+  .trust-summary-grid small,.product-status-grid small{font-size:.68rem}
+  .trust-summary-grid strong,.product-status-grid strong{font-size:.92rem}
+  .trust-summary-grid span{font-size:.78rem}
+  .trust-control-grid h3{font-size:.96rem}
+  .trust-control-grid p{font-size:.82rem}
+  .trust-note strong{font-size:.84rem}
+  .trust-note span{font-size:.82rem}
+  .trust-note a{font-size:.80rem}
+  .trust-claim-row strong{font-size:.82rem}
+  .trust-claim-row span{font-size:.80rem}
+
+  .arch-node small,.arch-panel-title small{font-size:.65rem}
+  .arch-node strong,.arch-panel-title strong{font-size:.90rem}
+  .arch-node span{font-size:.73rem}
+  .arch-legend{font-size:.72rem}
+
+  .footer-v14-brand p{font-size:.82rem;line-height:1.65}
+  .footer-v14-brand small{font-size:.70rem}
+  .footer-col strong{font-size:.83rem}
+  .footer-col a,.footer-col span{font-size:.80rem;padding:7px 0}
+  .footer-bottom{font-size:.69rem}
+
+  .legal-hero h1{font-size:clamp(2.4rem,10.5vw,3.35rem)}
+  .legal-hero p{font-size:1rem}
+  .legal-meta{font-size:.82rem}
+  .legal-toc strong{font-size:.84rem}
+  .legal-toc a{font-size:.82rem}
+  .legal-card h2{font-size:1.30rem}
+  .legal-card h3{font-size:1.02rem}
+  .legal-card p,.legal-card li{font-size:.94rem}
+  .support-card span{font-size:.70rem}
+  .support-card h3{font-size:1.04rem}
+  .support-card p{font-size:.86rem}
+  .support-contact p{font-size:.90rem}
+
+  .obs-hero h1{font-size:clamp(2.55rem,11vw,3.55rem)}
+  .obs-meta>span,.obs-meta strong{font-size:.78rem}
+  .obs-live-label{font-size:.67rem}
+  .obs-live-card p{font-size:.80rem}
+  .summary-card .label,.obs-signal .label{font-size:.67rem}
+  .summary-card p{font-size:.79rem}
+  .obs-signal p,.obs-component p{font-size:.77rem}
+  .obs-component h3{font-size:.91rem}
+  .principles p{font-size:.78rem}
+
+  .error-kicker{font-size:.72rem}
+  .error-copy h1{font-size:clamp(2.55rem,11.4vw,3.55rem)}
+  .error-copy p{font-size:1rem;line-height:1.65}
+  .error-links-label{font-size:.72rem}
+  .error-link-grid strong{font-size:.96rem}
+  .error-link-grid span{font-size:.78rem}
+}
+
+@media(min-width:1600px){
+  /* Large screens need readable support text, not simply larger headlines. */
+  .page-shell,.nav-shell{--max:1320px}
+  .main-nav a{font-size:.92rem}
+  .nav-cta{font-size:.89rem}
+  .footer-v14-brand p{font-size:.78rem}
+  .footer-col a,.footer-col span{font-size:.74rem}
+}
+
+/* V16.3.1 — footer readability final tune */
+.footer-v14-brand p{font-size:.80rem}
+.footer-v14-brand small{font-size:.68rem}
+.footer-col strong{font-size:.80rem}
+.footer-col a,.footer-col span{font-size:.77rem}
+.footer-bottom{font-size:.66rem}
+
+@media(max-width:760px){
+  .footer-v14-brand p{font-size:.84rem}
+  .footer-v14-brand small{font-size:.73rem}
+  .footer-col strong{font-size:.86rem}
+  .footer-col a,.footer-col span{font-size:.84rem}
+  .footer-bottom{font-size:.72rem}
+}
+@media(min-width:1600px){
+  .footer-v14-brand p{font-size:.82rem}
+  .footer-col a,.footer-col span{font-size:.79rem}
+}
+
+/* V16.3.2 — Title scale refinement
+   Approved: large H1 -12%, large H2/section titles -10%, card titles -2%.
+   Body, navigation and footer typography intentionally unchanged. */
+
+/* Large H1 / hero titles: ~12% reduction */
+.hero h1{font-size:clamp(3.04rem,4.40vw,4.80rem)}
+.subhero h1{font-size:clamp(2.55rem,4.70vw,4.62rem)}
+.legal-hero h1{font-size:clamp(2.24rem,4.10vw,4.00rem)}
+.obs-hero h1{font-size:clamp(2.55rem,4.53vw,4.53rem)}
+.error-copy h1{font-size:clamp(2.86rem,4.97vw,5.15rem)}
+
+/* Major H2 / section titles: ~10% reduction */
+.section h2,
+.section-title h2,
+.architecture-copy h2,
+.integration-copy h2{font-size:clamp(1.94rem,2.93vw,3.10rem)}
+
+.intro-grid h2,
+.section-head h2{font-size:clamp(1.76rem,2.93vw,2.93rem)}
+
+.trust-two-col h2{font-size:clamp(1.80rem,3.06vw,2.88rem)}
+.cta-band h2{font-size:clamp(1.40rem,2.52vw,2.30rem)}
+.obs-section-head h2{font-size:clamp(1.49rem,2.48vw,2.30rem)}
+.panel-head h2{font-size:clamp(1.40rem,2.34vw,2.12rem)}
+.obs-executive-card h2{font-size:1.19rem}
+.legal-card h2{font-size:1.13rem}
+.support-contact h2{font-size:1.29rem}
+
+/* Card headings: ~2% reduction */
+.solution-card h3,.security-card h3{font-size:1.10rem}
+.fact-card h3,.pillar-card h3,.case-card h3,.link-card h3,.contact-card h3{font-size:1.06rem}
+.value-grid h3{font-size:.85rem}
+.trust-control-grid h3{font-size:.88rem}
+.obs-component h3{font-size:.82rem}
+.support-card h3{font-size:.98rem}
+.legal-card h3{font-size:.96rem}
+
+/* Mobile follows the same hierarchy, with slightly tighter large titles */
+@media(max-width:760px){
+  .hero h1{font-size:clamp(2.42rem,10.75vw,3.34rem)}
+  .subhero h1{font-size:clamp(2.33rem,10.38vw,3.26rem)}
+  .legal-hero h1{font-size:clamp(2.11rem,9.24vw,2.95rem)}
+  .obs-hero h1{font-size:clamp(2.24rem,9.68vw,3.12rem)}
+  .error-copy h1{font-size:clamp(2.24rem,10.03vw,3.12rem)}
+
+  .intro-grid h2,.section-head h2,
+  .section h2,.section-title h2,.architecture-copy h2,.integration-copy h2{
+    font-size:clamp(1.76rem,7.65vw,2.39rem)
+  }
+
+  .fact-card h3,.pillar-card h3,.case-card h3,.link-card h3,.contact-card h3{font-size:1.10rem}
+  .trust-control-grid h3{font-size:.94rem}
+  .support-card h3{font-size:1.02rem}
+}
