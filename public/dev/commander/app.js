@@ -212,15 +212,18 @@
     setText("dashboardPercent", limit == null ? "Plano sem limite definido" : percent.toFixed(2).replace(".", ",") + "% utilizado");
     setText("dashboardInvokes", number(consumed));
     const activeConnections = Number(payload?.connections?.active_count || 0);
-    setText("dashboardConnections", activeConnections + (activeConnections === 1 ? " ativa" : " ativas"));
-    setText("dashboardConnectionsDetail", activeConnections ? "Cliente MCP conectado" : "Nenhum cliente conectado");
+    setText("dashboardConnections", activeConnections + (activeConnections === 1 ? " conectado" : " conectados"));
+    setText("dashboardConnectionsDetail", activeConnections ? "Commander Agent online" : "Instale o Commander Agent");
     setText("landingConnections", number(activeConnections));
-    setText("landingConnectionsDetail", activeConnections ? "Cliente MCP conectado" : "Nenhuma ativa");
+    setText("landingConnectionsDetail", activeConnections ? "Commander Agent online" : "Nenhum computador conectado");
     setText("usageConsumed", number(consumed));
     setText("usageLimit", limit == null ? "sem limite" : "de " + number(limit));
     setText("usageRemaining", remaining == null ? "Capacidade sem limite definido" : number(remaining) + " unidades disponíveis");
     setText("usagePeriod", payload.usage.period_key || "—");
-    setState("Saudável", "Entitlement ativo", true);
+    setState(
+      activeConnections ? "Pronto" : "Aguardando",
+      activeConnections ? "Computador conectado" : "Conecte seu computador"
+    );
 
     const bar = document.getElementById("usageProgress");
     if (bar) bar.style.width = (limit == null ? 0 : percent) + "%";
@@ -228,18 +231,17 @@
   }
 
   async function hydrateSessionHeader() {
-    if (!remotePortal || !apiBase) return;
+    if (!remotePortal) return;
     try {
-      const response = await fetch(apiBase + dashboardPath, { cache: "no-store", credentials: "same-origin" });
+      const response = await fetch("/api/portal/session", { cache: "no-store", credentials: "same-origin" });
       if (!response.ok) {
         if (response.status === 401) setGuestHeader();
         return;
       }
       const payload = await response.json();
       applyIdentity(payload);
-      if (payload?.entitlement && payload?.usage) applyDashboard(payload);
     } catch (_error) {
-      // Public navigation remains available even if the session probe fails.
+      // Session chrome must never depend on quota/telemetry availability.
     }
   }
 
@@ -377,8 +379,8 @@
       return;
     }
     if (name === "mcp-unavailable") {
-      setState("Degradado", "MCP indisponível");
-      showBanner("danger", "Commander temporariamente indisponível", "O Product Plane está ativo, mas o MCP não respondeu ao health check.", "Tentar novamente", loadProductDashboard);
+      setState("Aguardando", "Cliente MCP ainda não conectado");
+      showBanner("info", "Conexão ainda não disponível", "Conecte o HARA Commander Agent e depois autorize ChatGPT ou Codex.", "Atualizar", loadProductDashboard);
       return;
     }
     if (name === "receipt-unavailable") {
@@ -390,8 +392,8 @@
       return;
     }
     if (name === "degraded") {
-      setState("Degradado", "Uma dependência está instável");
-      showBanner("warning", "Serviço degradado", "O Commander continua acessível, mas uma dependência está apresentando instabilidade.", "Revalidar", loadProductDashboard);
+      setState("Aguardando", "Dados de conta temporariamente indisponíveis");
+      showBanner("info", "Dados ainda não atualizados", "Sua conta continua autenticada. Tente atualizar os dados do Commander.", "Atualizar", loadProductDashboard);
     }
   }
 
@@ -423,8 +425,8 @@
       applyDashboard(payload);
       applyScenario(scenario, payload);
     } catch (_error) {
-      setState("Degradado", "Product API indisponível");
-      showBanner("danger", "Serviço de produto indisponível", "Não foi possível carregar tenant, entitlement e quota.", "Tentar novamente", loadProductDashboard);
+      setState("Aguardando", "Dados da conta ainda não carregados");
+      showBanner("info", "Dados da conta não atualizados", "O login continua válido. Atualize para carregar plano e uso quando o serviço responder.", "Atualizar", loadProductDashboard);
     } finally {
       setLoading(false);
     }
