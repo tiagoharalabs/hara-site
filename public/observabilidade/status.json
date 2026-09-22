@@ -1,80 +1,97 @@
 {
-  "components": [
-    {
-      "name": "Plano de observação",
-      "state": "degraded",
-      "summary": "4 de 10 alvos essenciais saudáveis."
-    },
-    {
-      "name": "Coleta de telemetria",
-      "state": "healthy",
-      "summary": "Telemetria agregada disponível sem expor identidade ou transporte interno."
-    },
-    {
-      "name": "Site de observabilidade",
-      "state": "healthy",
-      "summary": "Snapshot público sanitizado disponível."
-    }
-  ],
+  "schema": "hara.public-observability.v2",
+  "generated_at_utc": "2026-09-22T18:28:32.462995Z",
+  "overall_state": "healthy",
+  "overall_message": "Telemetria atual indica operação estável nos sinais públicos selecionados.",
   "freshness": {
-    "maximum_expected_seconds": 180,
-    "seconds": 0,
-    "state": "fresh"
+    "maximum_expected_seconds": 3600
   },
-  "generated_at_utc": "2026-08-06T21:20:20.825656Z",
   "governance": {
+    "state": "healthy",
+    "summary": "Sem drift verdadeiro, incidente atual ou revisão pendente nos sinais públicos selecionados.",
     "direct_main_push": 0,
     "force_push": 0,
-    "merge": 1,
-    "state": "healthy",
-    "summary": "Publicação governada por revisão e validação antes do merge."
+    "merge": 1
   },
-  "overall_message": "Sinais agregados de disponibilidade e saúde operacional.",
-  "overall_state": "degraded",
-  "schema": "hara.public-observability.v1",
+  "components": [
+    {
+      "name": "Telemetria canônica",
+      "state": "healthy",
+      "summary": "Projeção operacional atualizada; 4/4 serviços essenciais observados ativos."
+    },
+    {
+      "name": "Cobertura de observação",
+      "state": "healthy",
+      "summary": "20 de 20 séries-alvo públicas selecionadas disponíveis."
+    },
+    {
+      "name": "Frota observada",
+      "state": "healthy",
+      "summary": "9/9 nós observados online; 3/3 nós always-on disponíveis."
+    },
+    {
+      "name": "Incidentes atuais",
+      "state": "healthy",
+      "summary": "0 incidente(s) atual(is) e 0 serviço(s) atual(is) unhealthy."
+    },
+    {
+      "name": "Qualidade de dados",
+      "state": "healthy",
+      "summary": "Checagens públicas selecionadas sem inconsistências atuais."
+    }
+  ],
   "signals": {
-    "disk": {
-      "detail": "Uso agregado, sem publicar volumes, caminhos ou identidade de host.",
-      "display": "74.3% usado",
-      "label": "Uso de armazenamento observado",
+    "telemetry_freshness": {
+      "label": "Frescor da telemetria",
       "state": "healthy",
-      "value": 0.74287145
+      "display": "8 s",
+      "detail": "Idade da projeção operacional usada para compor este snapshot.",
+      "value": 8
     },
-    "failed_units": {
-      "detail": "Contagem agregada e sanitizada.",
-      "display": "2",
-      "label": "Unidades com falha",
-      "state": "degraded",
-      "value": 2.0
-    },
-    "journal_errors": {
-      "detail": "Contagem agregada de eventos recentes de prioridade erro.",
-      "display": "1",
-      "label": "Erros recentes",
-      "state": "degraded",
-      "value": 1.0
-    },
-    "observer": {
-      "detail": "Telemetria agregada disponível.",
-      "display": "Ativo",
-      "label": "Coleta de telemetria",
+    "prometheus_targets": {
+      "label": "Cobertura de observação",
       "state": "healthy",
-      "value": 1
+      "display": "20/20",
+      "detail": "Séries-alvo disponíveis na camada de observação agregada.",
+      "up": 20,
+      "total": 20
     },
-    "snapshot": {
-      "detail": "Idade da última coleta pública sanitizada.",
-      "display": "50 s",
-      "label": "Frescor do snapshot",
+    "fleet_online": {
+      "label": "Frota observada online",
       "state": "healthy",
-      "value": 50.825650691986084
+      "display": "9/9",
+      "detail": "Disponibilidade agregada da frota observada, sem identificação individual.",
+      "up": 9,
+      "total": 9
     },
-    "targets": {
-      "detail": "Saúde agregada dos alvos esperados, sem identificação individual.",
-      "display": "4/10",
-      "label": "Alvos essenciais",
-      "state": "degraded",
-      "total": 10,
-      "up": 4
+    "always_on": {
+      "label": "Núcleos always-on",
+      "state": "healthy",
+      "display": "3/3",
+      "detail": "Disponibilidade agregada dos nós com política always-on.",
+      "up": 3,
+      "total": 3
+    },
+    "current_incidents": {
+      "label": "Incidentes atuais",
+      "state": "healthy",
+      "display": "0",
+      "detail": "Incidentes operacionais atuais após adjudicação; histórico preservado não entra neste contador.",
+      "value": 0
+    },
+    "service_health": {
+      "label": "Serviços atuais unhealthy",
+      "state": "healthy",
+      "display": "0",
+      "detail": "Contagem atual de serviços classificados como unhealthy na projeção operacional.",
+      "value": 0
+    },
+    "data_quality": {
+      "label": "Inconsistências de dados selecionadas",
+      "state": "healthy",
+      "display": "0",
+      "detail": "Soma de inconsistências nas checagens públicas selecionadas de qualidade de dados.",
+      "value": 0
     }
   }
 }

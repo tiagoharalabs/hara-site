@@ -82,7 +82,14 @@ function publicObservabilityProjection(payload = {}) {
     journal_errors: "Erros recentes",
     observer: "Coleta de telemetria",
     snapshot: "Frescor do snapshot",
-    targets: "Alvos essenciais"
+    targets: "Alvos essenciais",
+    telemetry_freshness: "Frescor da telemetria",
+    prometheus_targets: "Cobertura de observação",
+    fleet_online: "Frota observada online",
+    always_on: "Núcleos always-on",
+    current_incidents: "Incidentes atuais",
+    service_health: "Serviços atuais unhealthy",
+    data_quality: "Inconsistências de dados selecionadas"
   };
 
   for (const [key, fallbackLabel] of Object.entries(allowedSignals)) {
@@ -103,7 +110,7 @@ function publicObservabilityProjection(payload = {}) {
   const freshness = payload.freshness || {};
 
   return {
-    schema: "hara.public-observability.v1",
+    schema: "hara.public-observability.v2",
     generated_at_utc: cleanText(payload.generated_at_utc || "", 80),
     overall_state: publicText(payload.overall_state || "unknown", 40),
     overall_message: publicText(payload.overall_message || "Snapshot público sanitizado.", 240),
@@ -378,39 +385,47 @@ async function observabilityPayload(payload) {
 
 async function handleObservabilityStatus(request, env) {
   const key = "observability/public/status/current.json";
+  let r2Payload = null;
+  let fallbackPayload = null;
 
   try {
     if (env.DIAGNOSTICS_BUCKET) {
       const object = await env.DIAGNOSTICS_BUCKET.get(key);
-
-      if (object) {
-        const payload = JSON.parse(await object.text());
-        return json(await observabilityPayload(payload));
-      }
+      if (object) r2Payload = JSON.parse(await object.text());
     }
   } catch (_error) {
-    // A static sanitized fallback remains available with the deployment.
+    r2Payload = null;
   }
 
-  const fallbackUrl = new URL("/observabilidade/status.json", request.url);
-  const fallback = await env.ASSETS.fetch(new Request(fallbackUrl, request));
+  try {
+    const fallbackUrl = new URL("/observabilidade/status.json", request.url);
+    const fallback = await env.ASSETS.fetch(new Request(fallbackUrl, request));
+    if (fallback.ok) fallbackPayload = await fallback.json();
+  } catch (_error) {
+    fallbackPayload = null;
+  }
 
-  if (!fallback.ok) {
+  if (!r2Payload && !fallbackPayload) {
     return json({
       ok: false,
       message: "Snapshot de observabilidade indisponível."
     }, 503);
   }
 
-  try {
-    const payload = await fallback.json();
-    return json(await observabilityPayload(payload));
-  } catch (_error) {
-    return json({
-      ok: false,
-      message: "Snapshot de observabilidade inválido."
-    }, 503);
-  }
+  const timestamp = (payload) => {
+    const value = Date.parse(payload?.generated_at_utc || "");
+    return Number.isFinite(value) ? value : -1;
+  };
+
+  // Prefer the newest valid evidence. A stale R2 object must never hide a newer
+  // sanitized snapshot bundled with the deployment; a future R2 relay takes
+  // precedence again as soon as it publishes newer evidence.
+  const selected =
+    r2Payload && fallbackPayload
+      ? (timestamp(r2Payload) >= timestamp(fallbackPayload) ? r2Payload : fallbackPayload)
+      : (r2Payload || fallbackPayload);
+
+  return json(await observabilityPayload(selected));
 }
 
 export default {
