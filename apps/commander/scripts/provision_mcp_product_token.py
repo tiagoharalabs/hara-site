@@ -17,6 +17,7 @@ def main() -> int:
         print("MCP_PRODUCT_CONFIG=FAIL")
         return 2
 
+    TOKEN_FILE.parent.mkdir(parents=True, exist_ok=True)
     if not TOKEN_FILE.exists():
         TOKEN_FILE.write_text(secrets.token_urlsafe(48), encoding="utf-8")
     TOKEN_FILE.chmod(0o600)
