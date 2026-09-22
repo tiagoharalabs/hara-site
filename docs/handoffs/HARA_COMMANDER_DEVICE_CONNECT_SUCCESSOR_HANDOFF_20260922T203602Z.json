@@ -1,0 +1,51 @@
+{
+  "schema": "hara.commander.device-connect.successor-handoff.v2",
+  "timestamp_utc": "2026-09-22T20:36:02Z",
+  "mission": "HARA account -> Linux/Windows computer -> Commander Agent -> outbound HARA relay -> ChatGPT/Codex -> exact governed five-tool bridge",
+  "non_goals": [
+    "fleet NOC",
+    "Paradox observability dashboard",
+    "degraded-state console",
+    "generic shell/SSH/filesystem browser",
+    "per-customer Cloudflare Tunnel"
+  ],
+  "runtime": {
+    "portal": "https://hara-commander-dev-v2.tiago-sartori.workers.dev/",
+    "identity": "https://auth.haralabs.com.br/",
+    "mcp": "https://mcp.haralabs.com.br/mcp",
+    "worker": "e6303c51-135c-4f83-bd56-c3a6fdcb772f",
+    "branch": "issue29-commander-dev-v3-auth",
+    "functional_relay_baseline": "abc1768f39c29bacb52396c10494d0ba1f931b4c",
+    "pre_handoff_head": "3f6c921e81e09c98f2d385f87079101a43746fad"
+  },
+  "proof": {
+    "device_relay_health_e2e": "PASS",
+    "device_relay_atomic_claim": "PASS",
+    "device_relay_result_roundtrip": "PASS",
+    "device_relay_idempotency": "PASS",
+    "device_relay_arbitrary_tool": "DENIED",
+    "linux_installer_static": "PASS",
+    "windows_installer_static": "PASS",
+    "portal_installers": "PASS",
+    "per_device_cloudflared_dependency": false,
+    "outbound_call_channel": "HEALTH_ONLY_PASS",
+    "arbitrary_shell_exposed": false,
+    "customer_degraded_language": "ABSENT"
+  },
+  "maturity": {
+    "transport_real": true,
+    "full_five_tool_bridge": false,
+    "windows_runtime_test": "PENDING_REAL_HOST",
+    "ordinary_chatgpt_codex_canary": "PENDING"
+  },
+  "exact_tools": [
+    "hara.health",
+    "hara.functions.list",
+    "hara.functions.describe",
+    "hara.functions.invoke",
+    "hara.receipts.get"
+  ],
+  "next_gate": "PORTABLE_EXACT_FIVE_TOOL_DEVICE_BRIDGE",
+  "publication": "DEFERRED_UNTIL_ORDINARY_CLIENT_CANARY",
+  "billing": "DEFERRED"
+}

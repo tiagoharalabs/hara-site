@@ -56,8 +56,13 @@ Current DEV:
 Current Worker:
 `e6303c51-135c-4f83-bd56-c3a6fdcb772f`
 
-Current code:
+Functional relay baseline:
 `abc1768f39c29bacb52396c10494d0ba1f931b4c`
+
+Repository HEAD before the latest succession reconciliation:
+`3f6c921e81e09c98f2d385f87079101a43746fad`
+
+The commits after `abc1768` are documentation/design/succession updates; they do not supersede the relay functional baseline.
 
 Validation:
 - `DEVICE_PAIRING_VALIDATION=PASS`
