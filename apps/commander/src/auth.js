@@ -114,6 +114,8 @@ export async function beginLogin(request, env) {
   authorize.searchParams.set("code_challenge_method", "S256");
   if (url.searchParams.get("screen_hint") === "signup") {
     authorize.searchParams.set("prompt", "create");
+  } else if (url.searchParams.get("force_login") === "1") {
+    authorize.searchParams.set("prompt", "login");
   } else {
     authorize.searchParams.set("prompt", "select_account");
   }

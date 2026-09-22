@@ -29,7 +29,7 @@
   const apiBase = validApiBase(params.get("api")) || (localHost ? "http://127.0.0.1:9192" : location.origin);
   const dashboardPath = localHost ? "/api/dev/dashboard" : "/api/portal/dashboard";
 
-  function startRemoteAuth(signup = false) {
+  function startRemoteAuth(signup = false, forceLogin = false) {
     if (!remotePortal) {
       route(signup ? "signup" : "login");
       return;
@@ -38,7 +38,9 @@
       showToast("O HARA Identity ainda não está disponível para autenticação.");
       return;
     }
-    const target = "/auth/login?return_to=" + encodeURIComponent("/#dashboard") + (signup ? "&screen_hint=signup" : "");
+    const target = "/auth/login?return_to=" + encodeURIComponent("/#dashboard")
+      + (signup ? "&screen_hint=signup" : "")
+      + (forceLogin ? "&force_login=1" : "");
     location.assign(target);
   }
 
@@ -304,6 +306,10 @@
         startRemoteAuth(true);
         return;
       }
+      if (remotePortal && go.dataset.go === "other-account") {
+        startRemoteAuth(false, true);
+        return;
+      }
       route(go.dataset.go);
       return;
     }
@@ -353,7 +359,7 @@
 
   if (authError) {
     const authMessages = {
-      IDENTITY_NOT_PROVISIONED: "Esta identidade foi autenticada, mas ainda não está provisionada para este workspace.",
+      IDENTITY_NOT_PROVISIONED: "A conta escolhida foi autenticada, mas não tem acesso a este workspace. Use outra conta HARA Identity autorizada.",
       IDENTITY_INACTIVE: "Esta identidade está inativa no Commander.",
       IDENTITY_INVITE_EXPIRED: "O convite desta identidade expirou.",
       OIDC_STATE_EXPIRED: "A tentativa de login expirou. Inicie o login novamente.",
@@ -362,12 +368,13 @@
       OIDC_PROVIDER_ERROR: "O provedor de identidade recusou ou cancelou o login.",
       AUTH_CALLBACK_FAILED: "Não foi possível concluir o login seguro.",
     };
+    const useAnotherAccount = authError === "IDENTITY_NOT_PROVISIONED";
     showBanner(
       "warning",
       "Login não concluído",
       authMessages[authError] || "Não foi possível concluir o login seguro.",
-      "Tentar novamente",
-      () => startRemoteAuth(false),
+      useAnotherAccount ? "Usar outra conta" : "Tentar novamente",
+      () => startRemoteAuth(false, useAnotherAccount),
     );
     history.replaceState(null, "", location.pathname + "#login");
   }
