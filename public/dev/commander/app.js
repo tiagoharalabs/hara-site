@@ -231,17 +231,19 @@
   }
 
   async function hydrateSessionHeader() {
-    if (!remotePortal) return;
+    if (!remotePortal) return false;
     try {
       const response = await fetch("/api/portal/session", { cache: "no-store", credentials: "same-origin" });
       if (!response.ok) {
         if (response.status === 401) setGuestHeader();
-        return;
+        return false;
       }
       const payload = await response.json();
       applyIdentity(payload);
+      return true;
     } catch (_error) {
       // Session chrome must never depend on quota/telemetry availability.
+      return false;
     }
   }
 
@@ -729,33 +731,47 @@
   window.addEventListener("popstate", () => route(location.hash.slice(1) || "landing", false));
   window.addEventListener("hashchange", () => route(location.hash.slice(1) || "landing", false));
 
-  configureAuthUi();
-  const initialRoute = location.hash.slice(1) || "landing";
-  setGuestHeader();
-  route(initialRoute, false);
-  if (!appViews.has(initialRoute)) hydrateSessionHeader();
+  async function bootstrapInitialView() {
+    try {
+      await configureAuthUi();
+      const initialRoute = location.hash.slice(1) || "landing";
 
-  if (authError) {
-    const authMessages = {
-      IDENTITY_NOT_PROVISIONED: "A conta escolhida foi autenticada, mas não tem acesso a este workspace. Use outra conta HARA Identity autorizada.",
-      IDENTITY_INACTIVE: "Esta identidade está inativa no Commander.",
-      IDENTITY_INVITE_EXPIRED: "O convite desta identidade expirou.",
-      OIDC_STATE_EXPIRED: "A tentativa de login expirou. Inicie o login novamente.",
-      OIDC_STATE_INVALID: "A validação de segurança do login falhou. Inicie o login novamente.",
-      OIDC_STATE_REPLAYED: "Esta tentativa de login já foi utilizada. Inicie uma nova.",
-      OIDC_PROVIDER_ERROR: "O provedor de identidade recusou ou cancelou o login.",
-      AUTH_CALLBACK_FAILED: "Não foi possível concluir o login seguro.",
-    };
-    const useAnotherAccount = authError === "IDENTITY_NOT_PROVISIONED";
-    showBanner(
-      "warning",
-      "Login não concluído",
-      authMessages[authError] || "Não foi possível concluir o login seguro.",
-      useAnotherAccount ? "Usar outra conta" : "Tentar novamente",
-      () => startRemoteAuth(false, useAnotherAccount),
-    );
-    history.replaceState(null, "", location.pathname + "#login");
+      if (remotePortal) {
+        const authenticated = await hydrateSessionHeader();
+        if (!authenticated) setGuestHeader();
+      } else {
+        setGuestHeader();
+      }
+
+      route(initialRoute, false);
+
+      if (authError) {
+        const authMessages = {
+          IDENTITY_NOT_PROVISIONED: "A conta escolhida foi autenticada, mas não tem acesso a este workspace. Use outra conta HARA Identity autorizada.",
+          IDENTITY_INACTIVE: "Esta identidade está inativa no Commander.",
+          IDENTITY_INVITE_EXPIRED: "O convite desta identidade expirou.",
+          OIDC_STATE_EXPIRED: "A tentativa de login expirou. Inicie o login novamente.",
+          OIDC_STATE_INVALID: "A validação de segurança do login falhou. Inicie o login novamente.",
+          OIDC_STATE_REPLAYED: "Esta tentativa de login já foi utilizada. Inicie uma nova.",
+          OIDC_PROVIDER_ERROR: "O provedor de identidade recusou ou cancelou o login.",
+          AUTH_CALLBACK_FAILED: "Não foi possível concluir o login seguro.",
+        };
+        const useAnotherAccount = authError === "IDENTITY_NOT_PROVISIONED";
+        showBanner(
+          "warning",
+          "Login não concluído",
+          authMessages[authError] || "Não foi possível concluir o login seguro.",
+          useAnotherAccount ? "Usar outra conta" : "Tentar novamente",
+          () => startRemoteAuth(false, useAnotherAccount),
+        );
+        history.replaceState(null, "", location.pathname + "#login");
+      }
+
+      if (localHost) loadProductDashboard();
+    } finally {
+      requestAnimationFrame(() => root.classList.remove("auth-bootstrap-pending"));
+    }
   }
 
-  if (localHost) loadProductDashboard();
+  bootstrapInitialView();
 })();

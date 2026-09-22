@@ -6,8 +6,9 @@
   <meta name="robots" content="noindex,nofollow" />
   <meta name="theme-color" content="#eef8fd" />
   <script>
-    (()=>{try{const saved=localStorage.getItem("hara-theme");const theme=saved||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.dataset.theme=theme;document.documentElement.style.colorScheme=theme}catch(e){}})();
+    (()=>{const root=document.documentElement;root.classList.add("auth-bootstrap-pending");setTimeout(()=>root.classList.remove("auth-bootstrap-pending"),3000);try{const saved=localStorage.getItem("hara-theme");const theme=saved||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");root.dataset.theme=theme;root.style.colorScheme=theme}catch(e){}})();
   </script>
+  <style>html.auth-bootstrap-pending body{visibility:hidden}</style>
   <title>H.A.R.A. Commander</title>
   <link rel="icon" type="image/webp" href="./assets/hara-commander-royal.webp?v=20260921-final1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -465,6 +466,6 @@
     </div>
   </template>
 
-  <script src="./app.js?v=20260922-device1"></script>
+  <script src="./app.js?v=20260922-auth2"></script>
 </body>
 </html>

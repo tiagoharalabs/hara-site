@@ -43,6 +43,8 @@ required_js = [
     "loadDevices",
     "createPairing",
     "revokeDevice",
+    "bootstrapInitialView",
+    'root.classList.remove("auth-bootstrap-pending")',
 ]
 required_css = [
     "system-banner",
@@ -133,6 +135,8 @@ assert "applyIdentity(payload)" in JS, "IDENTITY_PAYLOAD_BINDING_MISSING"
 
 print("PRODUCTION_LIKE_VISIBLE_UX=PASS")
 print("AUTHENTICATED_IDENTITY_UI_BINDING=PASS")
+assert 'setGuestHeader();\n  route(initialRoute, false);' not in JS, "GUEST_FIRST_BOOTSTRAP_REGRESSION"
 print("AUTHENTICATED_TOPBAR_STATE=PASS")
+print("AUTH_FIRST_PAINT_GATED=PASS")
 print("DEVICE_PAIRING_UI=PASS")
 print("CUSTOMER_DEGRADED_LANGUAGE=ABSENT")
