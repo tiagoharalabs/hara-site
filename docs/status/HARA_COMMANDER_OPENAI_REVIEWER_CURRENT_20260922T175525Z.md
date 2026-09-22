@@ -59,24 +59,28 @@ The HARA Identity provisioning helper is versioned at:
 
 `apps/identity-login/scripts/provision_openai_reviewer_identity.py`
 
-It creates the human reviewer with:
-- email already verified;
-- password already configured;
-- password change not required;
-- no MFA/TOTP enrollment;
-- English preferred language.
+The operator executed it successfully.
 
-Execution of that helper is intentionally manual because the assistant security boundary blocks using the local PAT + generated password together.
+Provisioned reviewer identity:
+- user id: `391922351219933187`
+- username/email: `openai-reviewer@haralabs.com.br`
+- user state: ACTIVE
+- email verified: TRUE
+- password configured: TRUE
+- password change required: FALSE
+- preferred language: `en`
+- no MFA/TOTP enrollment was provisioned
+- credential value remains local-only and was not exposed in chat or Git
 
 ## Remaining reviewer gates
 
-1. Operator runs the HARA Identity reviewer provisioner locally.
-2. Backend verifies reviewer user is ACTIVE, email verified and password-change-required=false.
-3. Do not install or reconfigure a new Cloudflare IdP from assumption.
-4. Create/open the actual OpenAI plugin draft and observe whether reviewer credentials are requested.
-5. If reviewer credentials are required, test the existing Cloudflare Access login path first.
-6. Only if the existing Access login cannot meet no-MFA/no-email/no-SMS review requirements, configure a bounded password-capable edge IdP path.
-7. Validate reviewer login from the public internet.
-8. Run the canonical 5 positive + 3 negative probe using the reviewer identity.
+1. Perform one public browser login as `openai-reviewer@haralabs.com.br` through HARA Identity and let the Commander invite claim naturally.
+2. Prove D1 invite `CLAIMED`, real reviewer OIDC subject, REVIEW session, tenant, entitlement and quota.
+3. Log out once and prove session revocation.
+4. Do not install or reconfigure a new Cloudflare IdP from assumption.
+5. Create/open the actual OpenAI plugin draft and observe whether reviewer credentials are requested.
+6. If reviewer credentials are required, test the existing Cloudflare Access login path first.
+7. Only if the existing Access login cannot meet no-MFA/no-email/no-SMS review requirements, configure a bounded password-capable edge IdP path.
+8. Run the canonical 5 positive + 3 negative probe using the reviewer identity/path.
 9. Record demo.
 10. Complete publisher verification/apps write/domain challenge/country selection in the OpenAI portal.

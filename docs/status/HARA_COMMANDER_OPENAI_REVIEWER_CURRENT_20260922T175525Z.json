@@ -18,7 +18,11 @@
     "entitlement_state": "ACTIVE",
     "invite_id": "HARA-INVITE-OPENAI-REVIEW-0001",
     "invite_state": "ACTIVE",
-    "identity_user_state": "PENDING_MANUAL_PROVISION"
+    "identity_user_state": "ACTIVE",
+    "identity_user_id": "391922351219933187",
+    "email_verified": true,
+    "password_change_required": false,
+    "preferred_language": "en"
   },
   "credential": {
     "local_path": "~/Documents/.hara-identity/openai-reviewer.credentials",
