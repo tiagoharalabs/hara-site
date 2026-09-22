@@ -1,0 +1,38 @@
+{
+  "schema": "hara.commander.point0.front-closure.v1",
+  "timestamp_utc": "2026-09-22T20:44:14Z",
+  "front_state": "CLOSED_FOR_SUCCESSION",
+  "point_zero": "HARA_COMMANDER_DEVICE_CONNECT",
+  "mission": "HARA account -> Linux/Windows computer -> Commander Agent -> outbound HARA relay -> ChatGPT/Codex -> exact governed five-tool bridge",
+  "hara_site_baseline_before_marker": "e84bcaea6544a2f4d4688e07c1ca3e43b24346e1",
+  "functional_relay_baseline": "abc1768f39c29bacb52396c10494d0ba1f931b4c",
+  "worker_version": "e6303c51-135c-4f83-bd56-c3a6fdcb772f",
+  "authoritative_docs": [
+    "docs/status/HARA_COMMANDER_PRODUCT_V1_MISSION_CURRENT_20260922.md",
+    "docs/handoffs/HARA_COMMANDER_DEVICE_CONNECT_SUCCESSOR_HANDOFF_20260922T203602Z.md",
+    "hara-platform/docs/architecture/HARA_REMOTE_MCP_RELAY_V1.md"
+  ],  "proven": [
+    "identity_tenant_entitlement",
+    "linux_installer",
+    "windows_installer",
+    "device_pairing_one_time",
+    "device_credential_heartbeat_revocation",
+    "outbound_relay_health_e2e",
+    "atomic_claim",
+    "result_roundtrip",
+    "idempotency",
+    "unknown_tool_fail_closed",
+    "no_per_device_cloudflared",
+    "customer_degraded_language_absent"
+  ],
+  "remaining": [
+    "portable_exact_five_tool_device_bridge",
+    "public_mcp_identity_tenant_to_selected_device_binding",
+    "five_tool_relay_routing",
+    "real_windows_runtime_test",
+    "ordinary_chatgpt_codex_read_only_canary",
+    "openai_portal_scan_submission",
+    "billing_activation"
+  ],
+  "next_gate": "EXACT_FIVE_TOOL_PORTABLE_DEVICE_BRIDGE"
+}
