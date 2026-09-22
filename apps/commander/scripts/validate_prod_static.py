@@ -19,6 +19,7 @@ def need(ok, code):
 need(CFG["name"] == "hara-commander", "WORKER_NAME")
 need(CFG["vars"]["ENVIRONMENT"] == "PROD", "ENVIRONMENT")
 need(CFG["vars"]["STORAGE_MODE"] == "REMOTE_PROD", "STORAGE_MODE")
+need(CFG["vars"]["AUTH_CLIENT_AUTH"] == "BASIC", "AUTH_CLIENT_AUTH")
 need(CFG["d1_databases"][0]["database_name"] == "hara-commander-product-prod", "PROD_D1_NAME")
 need(CFG["d1_databases"][0]["database_id"] == "2c6473ff-9f65-4ee3-b9aa-a68996d47c46", "PROD_D1_ID")
 need(CFG["routes"][0] == {"pattern": "commander.haralabs.com.br", "custom_domain": True}, "PROD_ROUTE")

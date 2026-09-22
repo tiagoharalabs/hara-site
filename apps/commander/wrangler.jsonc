@@ -20,7 +20,8 @@
     "MCP_ACCESS_ISSUER": "https://proud-sun-7542.cloudflareaccess.com",
     "AUTH_ISSUER": "https://auth.haralabs.com.br/",
     "AUTH_CLIENT_ID": "391790882505949187",
-    "AUTH_PROVIDER_LABEL": "HARA Identity"
+    "AUTH_PROVIDER_LABEL": "HARA Identity",
+    "AUTH_CLIENT_AUTH": "BASIC"
   },
   "d1_databases": [
     {

@@ -56,10 +56,13 @@ function normalizeEmail(value) {
 }
 
 export function authStatus(env) {
-  const configured = Boolean(env.AUTH_ISSUER && env.AUTH_CLIENT_ID);
+  const clientAuth = String(env.AUTH_CLIENT_AUTH || "BASIC").trim().toUpperCase();
+  const credentialsReady = clientAuth === "NONE" || Boolean(env.AUTH_CLIENT_SECRET);
+  const configured = Boolean(env.AUTH_ISSUER && env.AUTH_CLIENT_ID && credentialsReady);
   return {
     configured,
     provider: env.AUTH_PROVIDER_LABEL || "HARA Identity",
+    client_auth: clientAuth,
   };
 }
 
