@@ -1,0 +1,55 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "hara-commander",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-09-21",
+  "assets": {
+    "directory": "public",
+    "binding": "ASSETS",
+    "run_worker_first": [
+      "/api/*",
+      "/auth/*"
+    ],
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "404-page"
+  },
+  "vars": {
+    "ENVIRONMENT": "PROD",
+    "STORAGE_MODE": "REMOTE_PROD",
+    "MCP_BASE_URL": "https://mcp.haralabs.com.br/mcp",
+    "MCP_ACCESS_ISSUER": "https://proud-sun-7542.cloudflareaccess.com",
+    "AUTH_ISSUER": "https://auth.haralabs.com.br/",
+    "AUTH_CLIENT_ID": "391790882505949187",
+    "AUTH_PROVIDER_LABEL": "HARA Identity"
+  },
+  "d1_databases": [
+    {
+      "binding": "PRODUCT_DB",
+      "database_name": "hara-commander-product-prod",
+      "database_id": "2c6473ff-9f65-4ee3-b9aa-a68996d47c46",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "TENANT_QUOTA",
+        "class_name": "TenantQuota"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": [
+        "TenantQuota"
+      ]
+    }
+  ],
+  "routes": [
+    {
+      "pattern": "commander.haralabs.com.br",
+      "custom_domain": true
+    }
+  ]
+}
