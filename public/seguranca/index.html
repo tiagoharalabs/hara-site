@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#eef8fd">
+<script>
+(()=>{try{const saved=localStorage.getItem("hara-theme");const theme=saved||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.dataset.theme=theme;document.documentElement.style.colorScheme=theme}catch(e){}})();
+</script>
+<meta name="description" content="Princípios de segurança, identidade, menor privilégio, políticas e evidência da arquitetura H.A.R.A.">
+<title>Segurança e Trust — H.A.R.A Labs</title>
+<link rel="canonical" href="https://www.haralabs.com.br/seguranca/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="H.A.R.A Labs">
+<meta property="og:title" content="Segurança e Trust — H.A.R.A Labs">
+<meta property="og:description" content="Princípios de segurança, identidade, menor privilégio, políticas e evidência da arquitetura H.A.R.A.">
+<meta property="og:url" content="https://www.haralabs.com.br/seguranca/">
+<meta property="og:image" content="https://www.haralabs.com.br/assets/images/hero-ia-realidade-sep.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/assets/images/hara-logo-web.webp" type="image/webp">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/css/styles.css?v=14">
+<link rel="stylesheet" href="/assets/css/v14.css?v=14">
+</head><body><a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
+<header class="site-header" id="top">
+  <div class="nav-shell">
+    <a class="brand" href="/" aria-label="H.A.R.A Labs — início">
+      <img src="/assets/images/hara-logo-web.webp" alt="" class="brand-logo">
+      <span class="brand-word">H.A.R.A <b>Labs</b></span>
+    </a>
+    <nav class="main-nav" aria-label="Navegação principal"><a href="/solucoes/">Soluções</a><a href="/arquitetura/">Arquitetura</a><a href="/seguranca/" aria-current="page">Segurança</a><a href="/commander/">Commander</a><a href="/empresa/">Empresa</a></nav>
+    <a class="nav-cta" href="/contato/">Conversar <span>→</span></a>
+    <button class="theme-toggle" type="button" aria-label="Ativar modo escuro" aria-pressed="false" title="Alternar tema">
+  <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 15.2A8.5 8.5 0 0 1 8.8 4 8.5 8.5 0 1 0 20 15.2Z"/></svg>
+  <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.5"/><path d="M12 2v2.2M12 19.8V22M4.93 4.93l1.56 1.56M17.51 17.51l1.56 1.56M2 12h2.2M19.8 12H22M4.93 19.07l1.56-1.56M17.51 6.49l1.56-1.56"/></svg>
+</button>
+    <button class="menu-button" aria-label="Abrir menu" aria-expanded="false"><span></span><span></span></button>
+  </div>
+  <div class="mobile-menu" aria-hidden="true"><a href="/solucoes/">Soluções</a><a href="/arquitetura/">Arquitetura</a><a href="/seguranca/" aria-current="page">Segurança</a><a href="/commander/">Commander</a><a href="/empresa/">Empresa</a><a href="/contato/">Contato</a></div>
+</header>
+<main id="conteudo">
+<section class="subhero">
+  <div class="page-shell subhero-inner">
+    <div class="section-kicker"><i></i>Segurança & Trust</div>
+    <h1>Segurança e governança para IA corporativa.</h1>
+    <p>IA conectada à operação exige identidade, escopo, política e evidência. Segurança não é um recurso isolado: é uma propriedade da arquitetura.</p>
+  </div>
+</section>
+<section class="content-section"><div class="page-shell"><div class="section-head"><div class="section-kicker"><i></i>Trust Center</div><h2>Controles incorporados à arquitetura.</h2><p>Não tratamos segurança como um selo decorativo. O objetivo é limitar autoridade, conhecer identidade, registrar execução e reduzir o raio de impacto de cada ação.</p></div>
+<div class="pillar-grid">
+<article class="pillar-card"><small>Identidade</small><h3>Quem está operando?</h3><p>Autenticação, contexto de conta e autorização participam do acesso às capacidades.</p></article>
+<article class="pillar-card"><small>Menor privilégio</small><h3>O que pode ser feito?</h3><p>Funções e integrações devem expor apenas o necessário para o escopo autorizado.</p></article>
+<article class="pillar-card"><small>Política</small><h3>Em quais condições?</h3><p>Regras podem restringir execução por risco, ambiente, função e contexto.</p></article>
+<article class="pillar-card"><small>Evidência</small><h3>O que aconteceu?</h3><p>Eventos e receipts ajudam a reconstruir a cadeia operacional e investigar falhas.</p></article>
+<article class="pillar-card"><small>Segregação</small><h3>Onde executa?</h3><p>Workloads podem permanecer locais ou usar terceiros conforme sensibilidade e necessidade.</p></article>
+<article class="pillar-card"><small>Continuidade</small><h3>Como degradar com segurança?</h3><p>Alternativas e modos de contingência devem ser definidos antes de uma indisponibilidade.</p></article>
+</div></div></section>
+<section class="content-section alt"><div class="page-shell intro-grid"><div><div class="section-kicker"><i></i>Fatos publicados</div><h2>Práticas e fatos publicados.</h2></div><div><p>O H.A.R.A Identity é self-hosted. O ambiente público de autenticação usa <strong>auth.haralabs.com.br</strong>. O Commander pode delegar autenticação a provedores de identidade, sem receber a senha utilizada no provedor externo. Cloudflare e outros terceiros podem participar de fluxos específicos conforme a arquitetura escolhida.</p><p>Não apresentamos certificações, SLAs ou garantias regulatórias que não estejam formalmente publicadas.</p></div></div></section>
+<section class="content-section"><div class="page-shell"><div class="cta-band"><div><h2>Avaliação de risco e controles.</h2><p>Começamos pelo processo, dados, identidade, capacidade e impacto esperado.</p></div><a class="button primary" href="/contato/">Conversar sobre segurança <span>→</span></a></div></div></section>
+</main>
+<footer class="footer-v14">
+  <div class="page-shell footer-v14-grid">
+    <div class="footer-v14-brand">
+      <a class="brand" href="/"><img src="/assets/images/hara-logo-web.webp" alt="" class="brand-logo"><span class="brand-word">H.A.R.A <b>Labs</b></span></a>
+      <p>Infraestrutura corporativa de IA híbrida, governada e sob controle.</p>
+      <small>Irmãos Sartori Tecnologia da Informação Ltda<br>CNPJ 18.061.774/0001-98</small>
+    </div>
+    <div class="footer-col"><strong>Plataforma</strong><a href="/solucoes/">Soluções</a><a href="/arquitetura/">Arquitetura</a><a href="/commander/">Commander</a><a href="/seguranca/">Segurança</a></div>
+    <div class="footer-col"><strong>Empresa</strong><a href="/empresa/">Sobre a H.A.R.A Labs</a><a href="/contato/">Contato</a><a href="/support/">Suporte</a></div>
+    <div class="footer-col"><strong>Legal</strong><a href="/legal/">Central Legal</a><a href="/legal/termos/">Termos de Uso</a><a href="/legal/privacidade/">Privacidade</a></div>
+  </div>
+  <div class="page-shell footer-bottom"><span>© 2026 H.A.R.A Labs. Todos os direitos reservados.</span></div>
+</footer>
+<script src="/assets/js/script.js?v=14"></script>
+</body></html>
