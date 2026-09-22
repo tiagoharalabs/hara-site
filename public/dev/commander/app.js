@@ -33,7 +33,7 @@
       themeBtn.setAttribute("aria-label", dark ? "Ativar modo claro" : "Ativar modo escuro");
       themeBtn.title = dark ? "Modo claro" : "Modo escuro";
     }
-    if (themeMeta) themeMeta.setAttribute("content", dark ? "#061721" : "#eef8fd");
+    if (themeMeta) themeMeta.setAttribute("content", dark ? "#061721" : "#fff4c2");
     root.style.colorScheme = dark ? "dark" : "light";
   }
 
