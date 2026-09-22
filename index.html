@@ -4,13 +4,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#eef8fd">
+<script>
+(()=>{try{const saved=localStorage.getItem("hara-theme");const theme=saved||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.dataset.theme=theme;document.documentElement.style.colorScheme=theme}catch(e){}})();
+</script>
 <meta name="description" content="H.A.R.A Labs — infraestrutura corporativa de IA híbrida, segura e governada.">
 <title>H.A.R.A Labs — IA corporativa sob controle</title>
 <link rel="icon" href="/assets/images/hara-logo-web.webp" type="image/webp">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/css/styles.css?v=20260921-v12">
+<link rel="stylesheet" href="/assets/css/styles.css?v=20260922-v13-dark">
 </head>
 <body>
 <svg class="svg-sprite" aria-hidden="true">
@@ -42,6 +45,10 @@
       <a href="#solucoes">Soluções</a><a href="#arquitetura">Arquitetura</a><a href="#seguranca">Segurança</a><a href="#integracoes">Integrações</a><a href="#commander">Commander</a><a href="#empresa">Empresa</a>
     </nav>
     <a class="nav-cta" href="https://br.linkedin.com/in/tiago--sartori" target="_blank" rel="noopener noreferrer">Falar com especialista <span>→</span></a>
+    <button class="theme-toggle" type="button" aria-label="Ativar modo escuro" aria-pressed="false" title="Alternar tema">
+      <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 15.2A8.5 8.5 0 0 1 8.8 4 8.5 8.5 0 1 0 20 15.2Z"/></svg>
+      <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.5"/><path d="M12 2v2.2M12 19.8V22M4.93 4.93l1.56 1.56M17.51 17.51l1.56 1.56M2 12h2.2M19.8 12H22M4.93 19.07l1.56-1.56M17.51 6.49l1.56-1.56"/></svg>
+    </button>
     <button class="menu-button" aria-label="Abrir menu" aria-expanded="false"><span></span><span></span></button>
   </div>
   <div class="mobile-menu" aria-hidden="true">
@@ -238,6 +245,6 @@
     <small>© 2026 H.A.R.A Labs<br>Todos os direitos reservados.<br><a href="/legal/termos/">Termos</a> · <a href="/legal/privacidade/">Privacidade</a> · <a href="/support/">Suporte</a></small>
   </div>
 </footer>
-<script src="/assets/js/script.js?v=20260921-v12"></script>
+<script src="/assets/js/script.js?v=20260922-v13-dark"></script>
 </body>
 </html>
