@@ -1,0 +1,9 @@
+services:
+  zitadel-login:
+    image: hara-identity-login:v4.16.0-hara.1
+    environment:
+      NEXT_PUBLIC_APPLICATION_NAME: HARA Identity
+      NEXT_PUBLIC_THEME_ROUNDNESS: mid
+      NEXT_PUBLIC_THEME_LAYOUT: side-by-side
+      NEXT_PUBLIC_THEME_SPACING: compact
+      NEXT_PUBLIC_THEME_APPEARANCE: material
