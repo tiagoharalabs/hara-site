@@ -43,12 +43,40 @@ def call(path, payload=None, auth=True):
     return status, decoded
 
 
+def raw_call(path):
+    cmd = [
+        "curl", "-sS",
+        "-o", "-",
+        "-w", "\n%{http_code}",
+        "--connect-timeout", "10",
+        "--max-time", "20",
+        BASE + path,
+    ]
+    completed = subprocess.run(cmd, text=True, capture_output=True, check=False)
+    if completed.returncode != 0:
+        raise RuntimeError("CURL_FAILED:" + (completed.stderr or "").strip())
+    body, status_text = completed.stdout.rsplit("\n", 1)
+    return int(status_text.strip()), body
+
+
 def need(condition, code):
     if not condition:
         raise AssertionError(code)
 
 
 def main():
+    public_status, public_html = raw_call("/")
+    need(public_status == 200, "PUBLIC_UI")
+    for token in (
+        "AMBIENTE DEV", "Portal DEV", "Workspace Demo", "Tiago Demo",
+        "Sair do DEV", "DEV:", "UX em DEV", "Backend DEV", "tenant DEV",
+    ):
+        need(token not in public_html, "PRODUCTION_LIKE_UI_LEAK:" + token)
+
+    auth_status, auth_config = call("/api/portal/auth-config", auth=False)
+    need(auth_status == 200 and auth_config.get("configured") is True, "PORTAL_AUTH_CONFIG")
+    need(auth_config.get("provider") == "HARA Identity", "PORTAL_AUTH_PROVIDER")
+
     status, health = call("/api/dev/health", auth=False)
     need(status == 200 and health.get("ok") is True, "HEALTH")
     need(health.get("product_db") == "D1_REMOTE_DEV", "REMOTE_D1_HEALTH")
@@ -60,6 +88,7 @@ def main():
 
     status, dashboard = call("/api/dev/dashboard?tenant_id=" + DEMO)
     need(status == 200, "DASHBOARD")
+    need(dashboard["tenant"]["display_name"] == "HARA Labs", "PRODUCTION_LIKE_TENANT_NAME")
     need(dashboard["entitlement"]["plan_code"] == "STANDARD", "DEMO_PLAN")
     need(dashboard["entitlement"]["unit_limit"] == 10000, "DEMO_LIMIT")
     baseline = int(dashboard["usage"]["consumed_units"])
@@ -137,6 +166,9 @@ def main():
     expected = baseline if reservation.get("state") == "COMMITTED" else baseline + 1
     need(final_dashboard["usage"]["consumed_units"] == expected, "FINAL_BALANCE")
 
+    print("PRODUCTION_LIKE_PUBLIC_UI=PASS")
+    print("PORTAL_AUTH_CONFIG=PASS")
+    print("PRODUCTION_LIKE_TENANT_NAME=PASS")
     print("REMOTE_DEV_HEALTH=PASS")
     print("REMOTE_DEV_ACCESS_TOKEN=PASS")
     print("REMOTE_DEV_D1_READ=PASS")
