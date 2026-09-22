@@ -16,6 +16,14 @@ Canonical standalone product-plane Worker for:
 - Billing activation remains separate from runtime publication.
 - Passwords are never stored by Commander.
 
+## Current product direction
+
+Canonical current product/visual status:
+
+docs/status/HARA_COMMANDER_PRODUCT_DIRECTION_CURRENT_20260922.md
+
+The Commander visual baseline is approved enough to inform the future HARA Labs institutional-site update, while the product remains under active implementation. Production OIDC readiness is still an open gate; do not treat the current disabled login path as product-complete.
+
 ## Runtime surface
 
 Production health:
