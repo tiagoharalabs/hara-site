@@ -15,13 +15,16 @@ required_html = [
     "systemBannerAction",
     "dashboardState",
     "dashboardStateDetail",
-    "activityList",
     "connectionList",
     "data-auth-guest",
     "data-auth-session",
     "usageLedger",
     "data-security-subject",
     "dashboardConnections",
+    "deviceList",
+    "pairingPanel",
+    "data-create-pairing",
+    "data-app-go=\"devices\"",
 ]
 required_js = [
     "auth-expired",
@@ -37,7 +40,9 @@ required_js = [
     "setAuthenticatedHeader",
     "setGuestHeader",
     "hydrateSessionHeader",
-    "renderActivity",
+    "loadDevices",
+    "createPairing",
+    "revokeDevice",
 ]
 required_css = [
     "system-banner",
@@ -45,6 +50,9 @@ required_css = [
     "prefers-reduced-motion",
     "top-session-user",
     "tag.reserved",
+    "setup-grid",
+    "device-row",
+    "pairing-token",
 ]
 required_boot = [
     "CLOUDFLARE_AUTH=REQUIRED",
@@ -63,6 +71,10 @@ required_worker = [
     "/api/internal/mcp/authorize",
     "/api/internal/mcp/commit",
     "/api/internal/mcp/release",
+    "/api/portal/devices",
+    "/api/portal/devices/pairing",
+    "/api/device/enroll",
+    "/api/device/heartbeat",
 ]
 
 for token in required_html:
@@ -101,6 +113,9 @@ forbidden_visible = [
     "Backend DEV",
     "tenant DEV",
     "simulada em DEV",
+    "Degradado",
+    "Product API indisponível",
+    "Serviço de produto indisponível",
 ]
 for token in forbidden_visible:
     assert token not in HTML, f"PRODUCTION_LIKE_HTML_LEAK:{token}"
@@ -119,4 +134,5 @@ assert "applyIdentity(payload)" in JS, "IDENTITY_PAYLOAD_BINDING_MISSING"
 print("PRODUCTION_LIKE_VISIBLE_UX=PASS")
 print("AUTHENTICATED_IDENTITY_UI_BINDING=PASS")
 print("AUTHENTICATED_TOPBAR_STATE=PASS")
-print("REAL_ACTIVITY_LEDGER_UI=PASS")
+print("DEVICE_PAIRING_UI=PASS")
+print("CUSTOMER_DEGRADED_LANGUAGE=ABSENT")

@@ -211,6 +211,7 @@
           </div>
           <nav class="side-nav" aria-label="Workspace Commander">
             <button class="active" data-app-go="dashboard"><span>▦</span> Visão geral</button>
+            <button data-app-go="devices"><span>▣</span> Computadores</button>
             <button data-app-go="usage"><span>⌁</span> Uso & quota</button>
             <button data-app-go="plans"><span>◇</span> Plano</button>
             <button data-app-go="connections"><span>⇄</span> Conexões</button>
@@ -247,28 +248,65 @@
             </article>
           </div>
 
-          <div class="dashboard-grid">
-            <article class="panel usage-panel">
-              <div class="panel-head">
-                <div><span>Uso governado</span><h2><span id="dashboardInvokes">0</span> invokes</h2></div>
-                <button class="link-button" data-app-go="usage">Ver detalhes →</button>
+          <div class="setup-grid">
+            <article class="setup-card">
+              <span class="setup-step">01</span>
+              <div>
+                <small>SEU COMPUTADOR</small>
+                <h2>Instale o Commander Agent</h2>
+                <p>O agente cria uma conexão segura de saída. Você não precisa abrir portas no roteador ou configurar acesso remoto manualmente.</p>
               </div>
-              <div class="big-chart" aria-label="Gráfico ilustrativo de uso">
-                <div class="grid-lines"></div>
-                <svg viewBox="0 0 700 220" preserveAspectRatio="none" role="img" aria-label="Curva ilustrativa de consumo">
-                  <path d="M5,180 C70,170 95,130 155,138 C220,145 245,75 305,92 C365,109 380,155 445,145 C505,135 535,48 600,68 C640,80 660,90 695,62" fill="none" vector-effect="non-scaling-stroke"/>
-                </svg>
-              </div>
-              <div class="chart-foot"><span>01 Set</span><span>Hoje</span></div>
+              <button class="btn btn-primary" type="button" data-app-go="devices">Conectar computador</button>
             </article>
-
-            <article class="panel activity-panel">
-              <div class="panel-head"><div><span>Últimas execuções</span><h2>Receipts recentes</h2></div></div>
-              <div class="activity-list" id="activityList">
-                <div class="empty-state"><strong>Nenhuma execução ainda</strong>As operações reais deste workspace aparecerão aqui.</div>
+            <article class="setup-card">
+              <span class="setup-step">02</span>
+              <div>
+                <small>CHATGPT / CODEX</small>
+                <h2>Autorize seu cliente de IA</h2>
+                <p>Depois que o computador estiver online, conecte ChatGPT ou Codex ao H.A.R.A. Commander usando sua conta.</p>
               </div>
+              <button class="btn btn-secondary" type="button" data-app-go="connections">Conectar IA</button>
             </article>
           </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="view app-view" data-view="devices" aria-labelledby="devices-title">
+      <div class="app-shell">
+        <aside class="sidebar" data-sidebar></aside>
+        <div class="workspace-main">
+          <header class="workspace-head">
+            <div><span class="eyebrow"><i></i> COMPUTADORES</span><h1 id="devices-title">Seus computadores</h1><p>Instale o Commander Agent e mantenha uma conexão segura de saída com sua conta.</p></div>
+            <div class="user-chip"><span data-user-initials>HA</span><div><b data-user-name>Conta HARA</b><small data-user-role>Owner</small></div></div>
+          </header>
+
+          <div class="device-onboarding">
+            <article class="panel device-install-card">
+              <div class="panel-head"><div><span>LINUX</span><h2>Instalar no Linux</h2></div><span class="status-pill"><i></i> Disponível</span></div>
+              <p>Gere um código de pareamento e execute o instalador no computador que você quer conectar.</p>
+              <div class="install-command"><code>curl -fsSL https://hara-commander-dev-v2.tiago-sartori.workers.dev/install/linux.sh | bash</code><button class="btn btn-secondary small" type="button" data-copy-linux>Copiar</button></div>
+              <button class="btn btn-primary" type="button" data-create-pairing>Gerar código de pareamento</button>
+            </article>
+            <article class="panel device-install-card">
+              <div class="panel-head"><div><span>WINDOWS</span><h2>Instalar no Windows</h2></div><span class="status-pill pending"><i></i> Em preparação</span></div>
+              <p>O instalador Windows vai registrar o dispositivo e criar a conexão de saída automaticamente, sem abrir portas.</p>
+              <button class="btn btn-secondary" type="button" disabled>Instalador Windows em preparação</button>
+            </article>
+          </div>
+
+          <article class="panel pairing-panel" id="pairingPanel" hidden>
+            <div class="panel-head"><div><span>PAREAMENTO</span><h2>Código temporário</h2></div><span id="pairingExpiry">10 minutos</span></div>
+            <p>Use este código somente no computador que você está instalando. Ele funciona uma única vez e expira automaticamente.</p>
+            <div class="pairing-token"><code id="pairingToken">—</code><button class="btn btn-secondary small" type="button" data-copy-pairing>Copiar código</button></div>
+          </article>
+
+          <article class="panel devices-panel">
+            <div class="panel-head"><div><span>DISPOSITIVOS</span><h2>Computadores conectados</h2></div><button class="link-button" type="button" data-refresh-devices>Atualizar</button></div>
+            <div class="device-list" id="deviceList">
+              <div class="empty-state"><strong>Nenhum computador conectado</strong>Instale o Commander Agent para começar.</div>
+            </div>
+          </article>
         </div>
       </div>
     </section>
@@ -412,6 +450,7 @@
     </div>
     <nav class="side-nav" aria-label="Workspace Commander">
       <button data-app-go="dashboard"><span>▦</span> Visão geral</button>
+      <button data-app-go="devices"><span>▣</span> Computadores</button>
       <button data-app-go="usage"><span>⌁</span> Uso & quota</button>
       <button data-app-go="plans"><span>◇</span> Plano</button>
       <button data-app-go="connections"><span>⇄</span> Conexões</button>

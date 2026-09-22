@@ -6,7 +6,7 @@
   const bannerTitle = document.getElementById("systemBannerTitle");
   const bannerMessage = document.getElementById("systemBannerMessage");
   const bannerAction = document.getElementById("systemBannerAction");
-  const appViews = new Set(["dashboard", "usage", "plans", "connections", "security"]);
+  const appViews = new Set(["dashboard", "devices", "usage", "plans", "connections", "security"]);
   const publicViews = new Set(["landing", "login", "signup", ...appViews]);
   const params = new URLSearchParams(location.search);
   const root = document.documentElement;
@@ -245,6 +245,157 @@
     }
   }
 
+  function formatDeviceSeen(value) {
+    if (!value) return "Ainda não conectado";
+    const date = new Date(String(value));
+    if (Number.isNaN(date.getTime())) return "—";
+    return new Intl.DateTimeFormat("pt-BR", {
+      dateStyle: "short",
+      timeStyle: "medium",
+    }).format(date);
+  }
+
+  function renderDevices(payload) {
+    const list = document.getElementById("deviceList");
+    const devices = Array.isArray(payload?.devices) ? payload.devices : [];
+    const onlineCount = Number(payload?.online_count || 0);
+
+    setText("dashboardConnections", onlineCount + (onlineCount === 1 ? " conectado" : " conectados"));
+    setText("dashboardConnectionsDetail", onlineCount ? "Commander Agent online" : "Instale o Commander Agent");
+    setState(
+      onlineCount ? "Pronto" : "Aguardando",
+      onlineCount ? "Computador conectado" : "Conecte seu computador"
+    );
+
+    if (!list) return;
+    list.replaceChildren();
+
+    if (!devices.length) {
+      const empty = document.createElement("div");
+      empty.className = "empty-state";
+      const title = document.createElement("strong");
+      title.textContent = "Nenhum computador conectado";
+      empty.append(title, document.createTextNode("Instale o Commander Agent para começar."));
+      list.append(empty);
+      return;
+    }
+
+    devices.forEach((device) => {
+      const row = document.createElement("div");
+      row.className = "device-row";
+
+      const icon = document.createElement("span");
+      icon.className = "device-platform";
+      icon.textContent = device.platform === "WINDOWS" ? "WIN" : "LIN";
+
+      const body = document.createElement("div");
+      body.className = "device-copy";
+      const name = document.createElement("b");
+      name.textContent = String(device.device_name || "Computador");
+      const meta = document.createElement("small");
+      const arch = device.architecture ? " · " + String(device.architecture) : "";
+      meta.textContent = String(device.platform || "—") + arch + " · " + formatDeviceSeen(device.last_seen_at_utc);
+      body.append(name, meta);
+
+      const state = document.createElement("span");
+      state.className = "device-state " + (device.online ? "online" : device.state === "REVOKED" ? "revoked" : "offline");
+      state.textContent = device.state === "REVOKED" ? "Revogado" : device.online ? "Online" : "Offline";
+
+      row.append(icon, body, state);
+
+      if (device.state === "ACTIVE") {
+        const revoke = document.createElement("button");
+        revoke.className = "link-button";
+        revoke.type = "button";
+        revoke.dataset.revokeDevice = String(device.device_id);
+        revoke.textContent = "Revogar";
+        row.append(revoke);
+      }
+      list.append(row);
+    });
+  }
+
+  async function loadDevices() {
+    if (!remotePortal) return;
+    try {
+      const response = await fetch("/api/portal/devices", { cache: "no-store", credentials: "same-origin" });
+      if (response.status === 401) {
+        setGuestHeader();
+        return;
+      }
+      if (!response.ok) throw new Error("HTTP_" + response.status);
+      renderDevices(await response.json());
+    } catch (_error) {
+      const list = document.getElementById("deviceList");
+      if (list) {
+        list.replaceChildren();
+        const empty = document.createElement("div");
+        empty.className = "empty-state";
+        const title = document.createElement("strong");
+        title.textContent = "Não foi possível atualizar agora";
+        empty.append(title, document.createTextNode("Sua conta continua ativa. Tente novamente."));
+        list.append(empty);
+      }
+    }
+  }
+
+  async function createPairing() {
+    const button = document.querySelector("[data-create-pairing]");
+    if (button) button.disabled = true;
+    try {
+      const response = await fetch("/api/portal/devices/pairing", {
+        method: "POST",
+        cache: "no-store",
+        credentials: "same-origin",
+      });
+      if (!response.ok) throw new Error("HTTP_" + response.status);
+      const payload = await response.json();
+      const token = String(payload?.pairing_token || "");
+      if (!token) throw new Error("PAIRING_TOKEN_MISSING");
+      setText("pairingToken", token);
+      const panel = document.getElementById("pairingPanel");
+      if (panel) panel.hidden = false;
+      const expiry = document.getElementById("pairingExpiry");
+      if (expiry) {
+        const when = new Date(payload.expires_at_utc);
+        expiry.textContent = Number.isNaN(when.getTime())
+          ? "Expira em 10 minutos"
+          : "Expira às " + new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" }).format(when);
+      }
+      showToast("Código de pareamento criado. Ele funciona uma única vez.");
+    } catch (_error) {
+      showToast("Não foi possível gerar o código de pareamento.");
+    } finally {
+      if (button) button.disabled = false;
+    }
+  }
+
+  async function revokeDevice(deviceId) {
+    try {
+      const response = await fetch("/api/portal/devices/revoke", {
+        method: "POST",
+        cache: "no-store",
+        credentials: "same-origin",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ device_id: deviceId }),
+      });
+      if (!response.ok) throw new Error("HTTP_" + response.status);
+      showToast("Computador revogado.");
+      await loadDevices();
+    } catch (_error) {
+      showToast("Não foi possível revogar o computador.");
+    }
+  }
+
+  async function copyText(value, successMessage) {
+    try {
+      await navigator.clipboard.writeText(String(value || ""));
+      showToast(successMessage);
+    } catch (_error) {
+      showToast("Não foi possível copiar automaticamente.");
+    }
+  }
+
   function formatActivityTime(value) {
     const date = new Date(String(value || ""));
     if (Number.isNaN(date.getTime())) return "—";
@@ -453,7 +604,13 @@
     document.body.classList.toggle("workspace-mode", appViews.has(next));
     if (push && location.hash !== "#" + next) history.pushState(null, "", "#" + next);
     window.scrollTo({ top: 0, behavior: "instant" });
-    if (appViews.has(next) || (next === "landing" && localHost)) loadProductDashboard();
+    if (next === "devices") {
+      hydrateSessionHeader();
+      loadDevices();
+    } else if (appViews.has(next) || (next === "landing" && localHost)) {
+      loadProductDashboard();
+      if (next === "dashboard") loadDevices();
+    }
   }
 
   copySidebars();
@@ -495,6 +652,44 @@
     if (logout) {
       event.preventDefault();
       logoutRemote();
+      return;
+    }
+
+    const pairing = event.target.closest("[data-create-pairing]");
+    if (pairing) {
+      event.preventDefault();
+      createPairing();
+      return;
+    }
+
+    const refreshDevices = event.target.closest("[data-refresh-devices]");
+    if (refreshDevices) {
+      event.preventDefault();
+      loadDevices();
+      return;
+    }
+
+    const copyLinux = event.target.closest("[data-copy-linux]");
+    if (copyLinux) {
+      event.preventDefault();
+      copyText(
+        "curl -fsSL https://hara-commander-dev-v2.tiago-sartori.workers.dev/install/linux.sh | bash",
+        "Comando Linux copiado."
+      );
+      return;
+    }
+
+    const copyPairing = event.target.closest("[data-copy-pairing]");
+    if (copyPairing) {
+      event.preventDefault();
+      copyText(document.getElementById("pairingToken")?.textContent || "", "Código de pareamento copiado.");
+      return;
+    }
+
+    const revokeDeviceButton = event.target.closest("[data-revoke-device]");
+    if (revokeDeviceButton) {
+      event.preventDefault();
+      revokeDevice(revokeDeviceButton.dataset.revokeDevice);
       return;
     }
 
