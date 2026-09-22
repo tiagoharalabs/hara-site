@@ -63,7 +63,7 @@ body,.topbar,.app-view,.sidebar,.summary-card,.panel,.plan-card,.connection-card
 .theme-icon{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .theme-icon-sun{display:none}
 
-.topbar{background:rgba(247,252,255,.94);border-bottom:2px solid rgba(233,177,40,.82);backdrop-filter:blur(18px);box-shadow:0 8px 24px rgba(26,86,125,.06)}
+.topbar{background:rgba(247,252,255,.94);border-top:2px solid rgba(233,177,40,.92);border-bottom:2px solid rgba(233,177,40,.82);backdrop-filter:blur(18px);box-shadow:0 8px 24px rgba(26,86,125,.06)}
 .brand-copy em{color:var(--blue)}
 .topnav a{color:#486d86}
 .btn-primary{background:var(--gold)}
@@ -109,7 +109,7 @@ html[data-theme="dark"]{
   background:#061721;
 }
 html[data-theme="dark"] body{color:#e5f2f9;background:linear-gradient(180deg,#071923 0,#081c29 45%,#0a2130 100%)}
-html[data-theme="dark"] .topbar{border-color:#15394d;background:rgba(5,21,32,.90);box-shadow:0 10px 35px rgba(0,0,0,.18)}
+html[data-theme="dark"] .topbar{background:rgba(5,21,32,.90);border-top:2px solid rgba(72,109,134,.56);border-bottom:2px solid rgba(27,64,84,.96);box-shadow:0 10px 35px rgba(0,0,0,.18)}
 html[data-theme="dark"] .brand-copy b,html[data-theme="dark"] .topnav a{color:#d9ecf6}
 html[data-theme="dark"] .brand-copy small{color:#789aab}
 html[data-theme="dark"] .topnav a:hover{color:#fff}
