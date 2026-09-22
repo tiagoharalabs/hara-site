@@ -1,0 +1,57 @@
+{
+  "timestamp_utc": "2026-09-22T00:36:31Z",
+  "status": "CONTINUE_FROM_COMMANDER_E2E",
+  "branch": "issue29-commander-dev-v3-auth",
+  "head_before_handoff": "f1c48b65018a520d9d20dcf3f3b2c4de34ad5100",
+  "identity": {
+    "ready": true,
+    "issuer": "https://auth.haralabs.com.br/",
+    "org": "HARA Labs",
+    "primary_domain": "haralabs.com.br",
+    "external_links_complete": true,
+    "password_policy": {
+      "min_length": 8,
+      "number": true,
+      "symbol": true,
+      "lowercase": true,
+      "uppercase": true
+    },
+    "lockout": {
+      "password_attempts": 5,
+      "otp_attempts": 5
+    },
+    "smtp_active": true,
+    "watermark_disabled": true
+  },
+  "users": {
+    "technical_admin_login": "hara-admin@zitadel.auth.haralabs.com.br",
+    "technical_admin_recovery_email_review_pending": true,
+    "normal_product_user_login": "tiago.sartori@haralabs.com.br",
+    "normal_product_user_active": true,
+    "normal_product_user_email_verified": true,
+    "normal_product_user_password_configured": true
+  },
+  "commander": {
+    "url": "https://hara-commander-dev-v2.tiago-sartori.workers.dev/",
+    "auth_configured": true,
+    "auth_login_http": 302,
+    "login_button_patch_commit": "f1c48b65018a520d9d20dcf3f3b2c4de34ad5100",
+    "live_login_button_explicit_oidc": true,
+    "terminal_e2e_pass": false
+  },
+  "blockers": [
+    "Terminal Commander callback/dashboard E2E not yet proven after explicit login-button patch",
+    "Wrangler local Cloudflare authorization may still return API 7403 for D1 evidence",
+    "Customer-facing ZITADEL wording remains in invitation/login messaging",
+    "Technical admin recovery/contact e-mail verification should be reviewed"
+  ],
+  "next": [
+    "Private-browser Commander login using normal product user",
+    "Prove callback/dashboard",
+    "Restore Wrangler auth if needed",
+    "Prove D1 invite CLAIMED, issuer+subject, session, tenant, entitlement, quota",
+    "Prove logout revocation",
+    "Add Google IdP only after terminal E2E PASS",
+    "White-label remaining ZITADEL wording"
+  ]
+}\n
