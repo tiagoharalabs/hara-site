@@ -9,6 +9,15 @@ import {
   verifyIdToken,
 } from "./oidc.js";
 
+const AUTH_SECURITY_HEADERS = Object.freeze({
+  "strict-transport-security": "max-age=31536000; includeSubDomains",
+  "x-content-type-options": "nosniff",
+  "x-frame-options": "DENY",
+  "referrer-policy": "no-referrer",
+  "permissions-policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
+  "x-robots-tag": "noindex, nofollow",
+});
+
 const SESSION_COOKIE = "hara_commander_session";
 const TX_COOKIE = "hara_commander_oidc_tx";
 const SESSION_SECONDS = 8 * 60 * 60;
@@ -126,6 +135,7 @@ export async function beginLogin(request, env) {
   return new Response(null, {
     status: 302,
     headers: {
+      ...AUTH_SECURITY_HEADERS,
       location: authorize.toString(),
       "set-cookie": setCookie(TX_COOKIE, browserBinding, { maxAge: TX_SECONDS, path: "/auth" }),
       "cache-control": "no-store",
@@ -339,6 +349,7 @@ export async function finishLogin(request, env) {
   ).bind(sessionHash, user.subject_id, createdAt, expiresAt, createdAt).run();
 
   const headers = new Headers({
+    ...AUTH_SECURITY_HEADERS,
     location: safeReturnTo(tx.return_to),
     "cache-control": "no-store",
   });
@@ -398,6 +409,7 @@ export async function logout(request, env) {
   return new Response(null, {
     status: 204,
     headers: {
+      ...AUTH_SECURITY_HEADERS,
       "set-cookie": clearCookie(SESSION_COOKIE, "/"),
       "cache-control": "no-store",
     },

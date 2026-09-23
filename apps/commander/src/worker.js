@@ -19,10 +19,20 @@ const MCP_TOOL_GRANTS = Object.freeze({
   "hara.receipts.get": "COMMANDER_RECEIPT_READ",
 });
 
+const SECURITY_HEADERS = Object.freeze({
+  "strict-transport-security": "max-age=31536000; includeSubDomains",
+  "x-content-type-options": "nosniff",
+  "x-frame-options": "DENY",
+  "referrer-policy": "no-referrer",
+  "permissions-policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
+  "x-robots-tag": "noindex, nofollow",
+});
+
 function json(payload, status = 200) {
   return Response.json(payload, {
     status,
     headers: {
+      ...SECURITY_HEADERS,
       "cache-control": "no-store",
       "access-control-allow-origin": "*",
       "access-control-allow-headers": "content-type,authorization",
@@ -35,6 +45,7 @@ function internalJson(payload, status = 200) {
   return Response.json(payload, {
     status,
     headers: {
+      ...SECURITY_HEADERS,
       "cache-control": "no-store",
       "content-type": "application/json; charset=utf-8"
     }
@@ -1299,7 +1310,7 @@ export default {
         if (!call) {
           return new Response(null, {
             status: 204,
-            headers: { "cache-control": "no-store" }
+            headers: { ...SECURITY_HEADERS, "cache-control": "no-store" }
           });
         }
         return json(call);
@@ -1546,6 +1557,7 @@ export default {
         return new Response(null, {
           status: 302,
           headers: {
+            ...SECURITY_HEADERS,
             location: "/?auth_error=" + encodeURIComponent(safeCode) + "#login",
             "cache-control": "no-store",
           },
