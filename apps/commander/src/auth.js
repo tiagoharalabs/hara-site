@@ -93,6 +93,13 @@ export async function beginLogin(request, env) {
   const redirectUri = url.origin + "/auth/callback";
   const returnTo = safeReturnTo(url.searchParams.get("return_to"));
 
+  // Bound OIDC transaction retention before creating a new browser flow.
+  // Expired rows are no longer useful for replay protection because callbacks
+  // are rejected once their transaction window closes.
+  await env.PRODUCT_DB.prepare(
+    `DELETE FROM oidc_transactions WHERE expires_at_utc <= ?`
+  ).bind(nowIso()).run();
+
   const state = randomToken(32);
   const browserBinding = randomToken(32);
   const verifier = randomToken(64);
@@ -127,7 +134,10 @@ export async function beginLogin(request, env) {
   if (url.searchParams.get("screen_hint") === "signup") {
     authorize.searchParams.set("prompt", "create");
   } else if (url.searchParams.get("force_login") === "1") {
-    authorize.searchParams.set("prompt", "login");
+    // "Usar outra conta" must select an account, not merely reauthenticate
+    // whichever HARA Identity session happened to be current.
+    authorize.searchParams.set("prompt", "select_account");
+    authorize.searchParams.set("max_age", "0");
   } else {
     authorize.searchParams.set("prompt", "select_account");
   }

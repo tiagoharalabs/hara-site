@@ -32,14 +32,15 @@ QUERIES = {
       (SELECT COUNT(*) FROM commander_devices) AS devices,
       (SELECT COUNT(*) FROM commander_device_selections) AS selections,
       (SELECT COUNT(*) FROM commander_device_calls) AS calls,
-      (SELECT COUNT(*) FROM portal_sessions WHERE revoked_at_utc IS NULL) AS active_sessions;""",
+      (SELECT COUNT(*) FROM portal_sessions WHERE revoked_at_utc IS NULL AND julianday(expires_at_utc) > julianday('now')) AS active_sessions;""",
     "integrity": """SELECT
       (SELECT COUNT(*) FROM users u LEFT JOIN tenants t ON t.tenant_id=u.tenant_id WHERE t.tenant_id IS NULL) AS users_orphan_tenant,
       (SELECT COUNT(*) FROM entitlements e LEFT JOIN tenants t ON t.tenant_id=e.tenant_id WHERE t.tenant_id IS NULL) AS entitlements_orphan_tenant,
       (SELECT COUNT(*) FROM entitlements e LEFT JOIN plans p ON p.plan_code=e.plan_code WHERE p.plan_code IS NULL) AS entitlements_orphan_plan,
       (SELECT COUNT(*) FROM identity_bindings b LEFT JOIN users u ON u.subject_id=b.subject_id WHERE u.subject_id IS NULL) AS bindings_orphan_user,
-      (SELECT COUNT(*) FROM commander_device_selections s LEFT JOIN commander_devices d ON d.device_id=s.device_id WHERE d.device_id IS NULL) AS selections_orphan_device,
-      (SELECT COUNT(*) FROM portal_sessions WHERE revoked_at_utc IS NULL AND expires_at_utc <= datetime('now')) AS expired_unrevoked_sessions;""",
+      (SELECT COUNT(*) FROM commander_device_selections s LEFT JOIN commander_devices d ON d.device_id=s.device_id WHERE d.device_id IS NULL) AS selections_orphan_device;""",
+    "session_hygiene": """SELECT
+      (SELECT COUNT(*) FROM portal_sessions WHERE revoked_at_utc IS NULL AND julianday(expires_at_utc) <= julianday('now')) AS expired_unrevoked_sessions;""",
 }
 
 

@@ -64,6 +64,12 @@ def main() -> None:
     need(instance_name == EXPECTED_INSTANCE_NAME, "INSTANCE_NAME")
     need(default_language == EXPECTED_DEFAULT_LANGUAGE, "DEFAULT_LANGUAGE")
 
+    login_policy_rows = sql(
+        "SELECT default_redirect_uri FROM projections.login_policies5 "
+        "WHERE instance_id='391782241182679043';"
+    )
+    need(login_policy_rows == ["https://commander.haralabs.com.br/"], "LOGIN_DEFAULT_REDIRECT_URI")
+
     restriction_rows = sql(
         "SELECT allowed_languages,disallow_public_org_registration "
         "FROM projections.restrictions2 "
@@ -151,6 +157,7 @@ def main() -> None:
         need(image == EXPECTED_LOGIN_IMAGE, f"LOGIN_IMAGE_DRIFT:{container}:{image}")
 
     print("IDENTITY_INSTANCE_POLICY=PASS")
+    print("IDENTITY_LOGIN_DEFAULT_REDIRECT=PASS")
     print("IDENTITY_ADMIN_ROLES=PASS")
     print("IDENTITY_PAT_HYGIENE=PASS")
     print("IDENTITY_MAIL_TEMPLATE_COVERAGE=PASS")
