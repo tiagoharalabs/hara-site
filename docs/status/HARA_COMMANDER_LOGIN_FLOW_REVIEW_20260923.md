@@ -1,6 +1,6 @@
 # H.A.R.A. Commander — login flow review — 2026-09-23
 
-State: **COMMANDER CODE FIXED / IDENTITY BACKEND POLICY ALIGNED / LOGIN V2 RUNTIME STALE / RUNTIME REFRESH NEXT**
+State: **COMMANDER CODE FIXED / IDENTITY BACKEND POLICY ALIGNED / LOGIN V2 RUNTIME CONVERGED / HUMAN CALLBACK RETEST NEXT**
 
 ## Symptoms reviewed
 
@@ -87,23 +87,19 @@ IDENTITY_LOGIN_IMAGE_VARIANT=PASS_HARA_8
 
 Do not edit ZITADEL projections or event-store rows directly. The canonical path remains the supported Admin API helper.
 
-## Live Login V2 runtime readback — FAIL / stale
+## Live Login V2 runtime readback — PASS
 
-A fresh production login initiation reaches HARA Identity correctly, but the server-rendered Login V2 payload still exposes the old fallback setting:
-
-```text
-defaultRedirectUri=https://hara-commander-dev-v2.tiago-sartori.workers.dev/
-```
-
-This differs from the persisted Login Policy and backend validator, which both report `https://commander.haralabs.com.br/`. Therefore backend policy alignment is PASS, but the currently running Login V2 process has not yet converged to that setting.
-
-`validate_live_white_label.py` now defaults to Commander PROD and verifies the rendered `defaultRedirectUri`. The new gate currently fails with:
+After restarting only `hara-identity-zitadel-login-1`, the container returned healthy and a fresh public Commander PROD flow rendered:
 
 ```text
-AssertionError: LOGIN_DEFAULT_REDIRECT_RUNTIME_DRIFT
+defaultRedirectUri=https://commander.haralabs.com.br/
 ```
 
-Required operational refresh: restart only `hara-identity-zitadel-login-1`, wait for health `healthy`, then rerun the public validator. Keep the ZITADEL API, Postgres and event store untouched. A human browser callback retest is valid only after the runtime gate passes.
+The route is not being served from Cloudflare cache (`cf-cache-status: DYNAMIC`; login responses are `no-store` / `private, no-cache, no-store`). Direct Settings API readback for both instance and default-organization context also returns the Commander PROD redirect.
+
+The first version of the new runtime gate incorrectly searched for unescaped JSON inside the Next.js server-component payload. The validator now normalizes escaped quotes before checking the field. Post-fix execution reports `HARA_IDENTITY_LOGIN_DEFAULT_REDIRECT_RUNTIME=PASS`.
+
+Keep the ZITADEL API, Postgres and event store untouched. The remaining gate is the human browser callback/logout/account-switch test.
 
 ## Completion target
 
@@ -112,6 +108,6 @@ HARA_IDENTITY_DEFAULT_REDIRECT_ALIGN=PASS
 IDENTITY_LOGIN_DEFAULT_REDIRECT=PASS
 COMMANDER_PROD_ACCOUNT_SWITCH=PASS
 COMMANDER_PROD_OIDC_TX_RETENTION=PASS
-HARA_IDENTITY_LOGIN_DEFAULT_REDIRECT_RUNTIME=PENDING_RUNTIME_REFRESH
+HARA_IDENTITY_LOGIN_DEFAULT_REDIRECT_RUNTIME=PASS
 COMMANDER_LOGIN_CALLBACK_E2E=PENDING_BROWSER_RETEST
 ```

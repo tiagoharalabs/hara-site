@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import pathlib
+import re
 import subprocess
 import tempfile
 import urllib.parse
@@ -110,14 +111,17 @@ def main():
         )
     need(status == 200, "HARA_LOGIN_PAGE_HTTP")
     page = body.decode("utf-8", errors="replace")
+    # Next.js serializes the server component payload with escaped quotes.
+    # Normalize only quote escapes before checking the rendered setting.
+    normalized_page = re.sub(r'\\+(?=")', "", page)
     expected_default_redirect = (
         '"defaultRedirectUri":"' + args.expected_default_redirect + '"')
     need(
-        expected_default_redirect in page,
+        expected_default_redirect in normalized_page,
         "LOGIN_DEFAULT_REDIRECT_RUNTIME_DRIFT",
     )
     need(
-        '"defaultRedirectUri":"https://hara-commander-dev-v2.tiago-sartori.workers.dev/"' not in page,
+        '"defaultRedirectUri":"https://hara-commander-dev-v2.tiago-sartori.workers.dev/"' not in normalized_page,
         "LOGIN_DEFAULT_REDIRECT_RUNTIME_DEV_RESIDUE",
     )
     need("Entrar com HARA Identity" in page, "HARA_LOGIN_TITLE")
