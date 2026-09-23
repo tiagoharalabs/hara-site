@@ -6,6 +6,7 @@ import json
 import pathlib
 import urllib.error
 import urllib.request
+import urllib.parse
 
 def request(base, token, method, path, body=None, headers=None, common_headers=None):
     data = None if body is None else json.dumps(body).encode()
@@ -27,17 +28,61 @@ def request(base, token, method, path, body=None, headers=None, common_headers=N
         detail = exc.read().decode(errors="replace")
         raise SystemExit(f"{method} {path} -> HTTP {exc.code}: {detail[:600]}") from exc
 
+def request_status(base, token, method, path, body=None, headers=None, common_headers=None):
+    data = None if body is None else json.dumps(body).encode()
+    hdr = {
+        "Authorization": "Bearer " + token,
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+    }
+    if common_headers:
+        hdr.update(common_headers)
+    if headers:
+        hdr.update(headers)
+    req = urllib.request.Request(base.rstrip("/") + path, data=data, headers=hdr, method=method)
+    try:
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            payload = resp.read().decode()
+            return resp.status, json.loads(payload) if payload else {}
+    except urllib.error.HTTPError as exc:
+        payload = exc.read().decode(errors="replace")
+        try:
+            decoded = json.loads(payload) if payload else {}
+        except json.JSONDecodeError:
+            decoded = {"raw": payload[:600]}
+        return exc.code, decoded
+
 FOOTER_PT = "HARA Labs · Identidade e acesso seguro · haralabs.com.br"
 FOOTER_EN = "HARA Labs · Secure identity and access · haralabs.com.br"
 TRANSLATIONS = {
     "pt": {
         "common": {"title": "Entrar com HARA Identity"},
         "register": {"description": "Crie sua conta HARA Identity."},
+        "password": {
+            "verify": {
+                "info": {
+                    "passwordResetSent": "Se o identificador informado estiver vinculado a uma conta com e-mail de recuperação, enviaremos as instruções ao e-mail cadastrado. Se você usou um alias ou nome de usuário, tente novamente com o e-mail cadastrado na conta."
+                }
+            },
+            "errors": {
+                "couldNotSendResetLink": "Não foi possível iniciar a recuperação. Use o endereço de e-mail cadastrado na sua conta ou entre em contato com o suporte."
+            },
+        },
         "device": {"request": {"disclaimer": "Ao clicar em Permitir, você autoriza {appName} e HARA Identity a usar as informações necessárias para autenticação e acesso. Você pode revogar este acesso a qualquer momento."}},
     },
     "en": {
         "common": {"title": "Sign in with HARA Identity"},
         "register": {"description": "Create your HARA Identity account."},
+        "password": {
+            "verify": {
+                "info": {
+                    "passwordResetSent": "If the identifier is linked to an account with a recovery email, we will send instructions to the registered email address. If you used an alias or username, try again with the email registered on the account."
+                }
+            },
+            "errors": {
+                "couldNotSendResetLink": "We could not start account recovery. Use the email address registered on your account or contact support."
+            },
+        },
         "device": {"request": {"disclaimer": "By clicking Allow, you authorize {appName} and HARA Identity to use the information required for authentication and access. You can revoke this access at any time."}},
     },
 }
@@ -116,7 +161,29 @@ def main():
             {"instance": True, "locale": locale, "translations": translations},
             common_headers=common_headers,
         )
+        query = urllib.parse.urlencode({
+            "instance": "true",
+            "locale": locale,
+            "ignore_inheritance": "true",
+        })
+        status, current = request_status(
+            args.base_url, token, "GET",
+            "/v2/settings/hosted_login_translation?" + query,
+            common_headers=common_headers,
+        )
+        if status == 404 and locale == "pt" and "HostedLoginTranslationNotFound-pt" in str(current.get("message", "")):
+            print("HOSTED_LOGIN_TRANSLATION_PT=DEFERRED_UPSTREAM_V4_16_SYSTEM_LOCALE_MISSING")
+            print("HOSTED_LOGIN_TRANSLATION_PT_FALSE_PASS=FALSE")
+            continue
+        if status != 200 or not isinstance(current.get("translations"), dict):
+            raise SystemExit(f"HOSTED_LOGIN_TRANSLATION_{locale.upper()}_READBACK_FAILED:{status}")
+        actual = current["translations"]
+        expected_reset = translations["password"]["verify"]["info"]["passwordResetSent"]
+        observed_reset = (((actual.get("password") or {}).get("verify") or {}).get("info") or {}).get("passwordResetSent")
+        if observed_reset != expected_reset:
+            raise SystemExit(f"HOSTED_LOGIN_TRANSLATION_{locale.upper()}_RECOVERY_COPY_DRIFT")
         print(f"HOSTED_LOGIN_TRANSLATION_{locale.upper()}=PASS")
+        print(f"HOSTED_LOGIN_TRANSLATION_{locale.upper()}_READBACK=PASS")
 
     for locale, templates in MESSAGES.items():
         for template, values in templates.items():

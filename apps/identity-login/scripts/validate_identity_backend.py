@@ -9,6 +9,7 @@ POSTGRES_CONTAINER = "hara-identity-postgres-1"
 EXPECTED_INSTANCE_NAME = "HARA Identity"
 EXPECTED_DEFAULT_LANGUAGE = "pt"
 EXPECTED_ALLOWED_LANGUAGES = {"pt", "en"}
+EXPECTED_LOGIN_IMAGE = "hara-identity-login:v4.16.0-hara.8"
 EXPECTED_ROLES = {
     "391782241183268867": {"IAM_OWNER"},
     "391782241183334403": {"IAM_LOGIN_CLIENT"},
@@ -142,6 +143,13 @@ def main() -> None:
         health = run(["docker", "inspect", "-f", "{{.State.Health.Status}}", container])
         need(health == "healthy", f"CONTAINER_HEALTH:{container}")
 
+    for container in (
+        "hara-identity-zitadel-login-1",
+        "hara-identity-zitadel-assets-1",
+    ):
+        image = run(["docker", "inspect", "-f", "{{.Config.Image}}", container])
+        need(image == EXPECTED_LOGIN_IMAGE, f"LOGIN_IMAGE_DRIFT:{container}:{image}")
+
     print("IDENTITY_INSTANCE_POLICY=PASS")
     print("IDENTITY_ADMIN_ROLES=PASS")
     print("IDENTITY_PAT_HYGIENE=PASS")
@@ -149,6 +157,7 @@ def main() -> None:
     print("IDENTITY_ACTIVE_VENDOR_TEXT_RESIDUE=FALSE")
     print("IDENTITY_SMTP_BRANDING=PASS")
     print("IDENTITY_RUNTIME_HEALTH=PASS")
+    print("IDENTITY_LOGIN_IMAGE_VARIANT=PASS_HARA_8")
     if host == "smtp.zoho.com:587":
         print("IDENTITY_SMTP_TLS_ALIGNMENT=PENDING_587_STARTTLS_FALLBACK")
     else:

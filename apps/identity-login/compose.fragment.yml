@@ -1,6 +1,6 @@
 services:
   zitadel-login:
-    image: hara-identity-login:v4.16.0-hara.7
+    image: hara-identity-login:v4.16.0-hara.8
     environment:
       NEXT_PUBLIC_APPLICATION_NAME: HARA Identity
       NEXT_PUBLIC_THEME_ROUNDNESS: mid
@@ -11,7 +11,7 @@ services:
       - 'traefik.http.routers.zitadel-login.rule=Host(`${ZITADEL_DOMAIN}`) && PathPrefix(`/ui/v2/login`)'
 
   zitadel-assets:
-    image: hara-identity-login:v4.16.0-hara.7
+    image: hara-identity-login:v4.16.0-hara.8
     restart: unless-stopped
     entrypoint: ["node", "/app/hara-static-server.mjs"]
     healthcheck:
