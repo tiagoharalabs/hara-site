@@ -26,7 +26,8 @@ for token in ('platform": "LINUX"', "/api/device/enroll", "/agent/linux.py",
               "HARA_COMMANDER_AGENT_UPDATE_ROLLBACK_READY=TRUE",
               "/release/agent-manifest.json", "AGENT_SHA256_MISMATCH",
               "AGENT_VERSION_MANIFEST_MISMATCH", "HARA_COMMANDER_AGENT_INTEGRITY=PASS",
-              "HARA_COMMANDER_FAILED_INSTALL_ROLLBACK=", "rollback_enrolled_device"):
+              "HARA_COMMANDER_FAILED_INSTALL_ROLLBACK=", "rollback_enrolled_device",
+              "hara.commander-support-report.v1", "device_token_exposed", "support_agent"):
     need(LINUX, token, "LINUX_INSTALLER_MISSING")
 assert "cloudflared" not in LINUX.lower()
 print("LINUX_DEVICE_INSTALLER_STATIC=PASS")
@@ -39,7 +40,8 @@ for token in ('platform="WINDOWS"', "/api/device/enroll", "/agent/windows.ps1",
               "SERVER_DEVICE_REVOKE=", "HARA_COMMANDER_AGENT_UPDATE_ROLLBACK_READY=TRUE",
               "/release/agent-manifest.json", "AGENT_SHA256_MISMATCH",
               "AGENT_VERSION_MANIFEST_MISMATCH", "HARA_COMMANDER_AGENT_INTEGRITY=PASS",
-              "HARA_COMMANDER_FAILED_INSTALL_ROLLBACK=", "$InstallEnrolled"):
+              "HARA_COMMANDER_FAILED_INSTALL_ROLLBACK=", "$InstallEnrolled",
+              "hara.commander-support-report.v1", "device_token_exposed", "Show-SupportReport"):
     need(WINDOWS, token, "WINDOWS_INSTALLER_MISSING")
 assert "cloudflared" not in WINDOWS.lower()
 assert "encrypted_device_token" in WINDOWS
@@ -88,3 +90,4 @@ print("AGENT_DOCTOR_REMOTE_HEARTBEAT=PASS")
 print("AGENT_UPDATE_ROLLBACK_SAFE=PASS")
 print("AGENT_DOWNLOAD_INTEGRITY_ENFORCED=PASS")
 print("AGENT_FAILED_INSTALL_ROLLBACK=READY")
+print("AGENT_SUPPORT_REPORT_SANITIZED=READY")

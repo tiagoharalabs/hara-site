@@ -67,6 +67,35 @@ function Invoke-DeviceAction {
   }
 }
 
+function Show-SupportReport {
+  $cfg = Get-InstalledDevice
+  $task = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+  $version = "unknown"
+  $sha256 = $null
+  if (Test-Path -LiteralPath $Agent -PathType Leaf) {
+    $match = Select-String -LiteralPath $Agent -Pattern '^\$AgentVersion = "([^"]+)"$' | Select-Object -First 1
+    if ($match -and $match.Matches.Count) { $version = $match.Matches[0].Groups[1].Value }
+    try { $sha256 = (Get-FileHash -LiteralPath $Agent -Algorithm SHA256).Hash.ToLowerInvariant() } catch { $sha256 = $null }
+  }
+  $tokenPresent = $false
+  if ($cfg -and $cfg.encrypted_device_token) { $tokenPresent = $true }
+  $report = [ordered]@{
+    schema = "hara.commander-support-report.v1"
+    platform = "WINDOWS"
+    device_id = $(if ($cfg -and $cfg.device_id) { [string]$cfg.device_id } else { $null })
+    architecture = $(if ($cfg -and $cfg.architecture) { [string]$cfg.architecture } else { [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant() })
+    commander_url = $(if ($cfg -and $cfg.base_url) { [string]$cfg.base_url } else { $null })
+    agent_version = $version
+    agent_sha256 = $sha256
+    config_present = (Test-Path -LiteralPath $Config -PathType Leaf)
+    task_present = [bool]$task
+    task_state = $(if ($task) { [string]$task.State } else { $null })
+    device_token_present = $tokenPresent
+    device_token_exposed = $false
+  }
+  $report | ConvertTo-Json -Compress
+}
+
 function Invoke-Doctor {
   $cfg = Get-InstalledDevice
   if (-not $cfg) { throw "DEVICE_NOT_ENROLLED" }
@@ -97,6 +126,7 @@ function Show-Status {
 
 if ($Action -eq "status") { Show-Status; exit 0 }
 if ($Action -eq "doctor") { Invoke-Doctor; exit 0 }
+if ($Action -eq "support") { Show-SupportReport; exit 0 }
 if ($Action -eq "update") {
   if (-not (Test-Path -LiteralPath $Config -PathType Leaf)) { throw "DEVICE_NOT_ENROLLED" }
   if (-not (Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue)) { throw "AGENT_TASK_NOT_INSTALLED" }
@@ -146,7 +176,7 @@ if ($Action -eq "uninstall") {
   Write-Host "DEVICE_TOKEN_EXPOSED=FALSE"
   exit 0
 }
-if ($Action -ne "install") { throw "Usage: windows.ps1 -Action install|status|doctor|update|uninstall" }
+if ($Action -ne "install") { throw "Usage: windows.ps1 -Action install|status|doctor|support|update|uninstall" }
 if (Test-Path -LiteralPath $Config -PathType Leaf) { throw "DEVICE_ALREADY_ENROLLED: use status, update, or uninstall." }
 
 Write-Host "HARA Commander - Windows device pairing"
