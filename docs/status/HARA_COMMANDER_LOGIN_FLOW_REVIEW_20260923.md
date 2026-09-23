@@ -1,6 +1,6 @@
 # H.A.R.A. Commander — login flow review — 2026-09-23
 
-State: **COMMANDER CODE FIXED / IDENTITY DEFAULT REDIRECT DRIFT PROVEN / LIVE POLICY ALIGNMENT PENDING SECRET-BOUNDARY APPLY**
+State: **COMMANDER CODE FIXED / IDENTITY DEFAULT REDIRECT LIVE ALIGNED / BROWSER CALLBACK RETEST NEXT**
 
 ## Symptoms reviewed
 
@@ -66,9 +66,26 @@ The script uses the supported ZITADEL Admin API, preserves the current Login Pol
 
 `validate_identity_backend.py` now requires the production default redirect to equal `https://commander.haralabs.com.br/`.
 
-## Secret boundary
+## Live policy alignment — PASS
 
-The automated remote tool is not permitted to consume the owner PAT file. Therefore the supported policy mutation must be executed locally on the authorized identity host/operator path using the secure PAT file. Do not edit ZITADEL projections or the event store directly.
+The supported ZITADEL Admin API alignment was executed from the authorized operator path using the secure owner PAT without exposing the PAT value. Readback:
+
+```text
+HARA_IDENTITY_LOGIN_POLICY_READ=PASS
+HARA_IDENTITY_DEFAULT_REDIRECT_PREVIOUS=https://hara-commander-dev-v2.tiago-sartori.workers.dev/
+HARA_IDENTITY_DEFAULT_REDIRECT_CURRENT=https://commander.haralabs.com.br/
+HARA_IDENTITY_DEFAULT_REDIRECT_ALIGN=PASS
+```
+
+Independent backend validator after the mutation:
+
+```text
+IDENTITY_LOGIN_DEFAULT_REDIRECT=PASS
+IDENTITY_RUNTIME_HEALTH=PASS
+IDENTITY_LOGIN_IMAGE_VARIANT=PASS_HARA_8
+```
+
+Do not edit ZITADEL projections or event-store rows directly. The canonical path remains the supported Admin API helper.
 
 ## Completion target
 
@@ -77,5 +94,5 @@ HARA_IDENTITY_DEFAULT_REDIRECT_ALIGN=PASS
 IDENTITY_LOGIN_DEFAULT_REDIRECT=PASS
 COMMANDER_PROD_ACCOUNT_SWITCH=PASS
 COMMANDER_PROD_OIDC_TX_RETENTION=PASS
-COMMANDER_LOGIN_CALLBACK_E2E=PASS
+COMMANDER_LOGIN_CALLBACK_E2E=PENDING_BROWSER_RETEST
 ```
