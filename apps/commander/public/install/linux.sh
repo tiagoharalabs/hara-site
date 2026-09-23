@@ -39,17 +39,43 @@ PY
 
 download_agent() {
   mkdir -p "$BIN_DIR"
-  local tmp
+  local tmp manifest expected_sha expected_version actual_sha actual_version
   tmp="$(mktemp "$BIN_DIR/.hara-commander-agent.XXXXXX")"
+  manifest="$(mktemp "$BIN_DIR/.hara-commander-manifest.XXXXXX")"
   if ! curl -fsS --max-time 30 "$BASE_URL/agent/linux.py" -o "$tmp"; then
-    rm -f "$tmp"; return 1
+    rm -f "$tmp" "$manifest"; return 1
   fi
+  if ! curl -fsS --max-time 30 "$BASE_URL/release/agent-manifest.json" -o "$manifest"; then
+    rm -f "$tmp" "$manifest"; echo 'AGENT_RELEASE_MANIFEST_DOWNLOAD_FAILED' >&2; return 1
+  fi
+  readarray -t META < <(python3 - "$manifest" <<'PYMANIFEST'
+import json,sys
+obj=json.load(open(sys.argv[1],encoding="utf-8"))
+if obj.get("schema")!="hara.commander-agent-release.v1": raise SystemExit("AGENT_RELEASE_MANIFEST_INVALID")
+version=obj.get("agent_version")
+entry=next((item for item in obj.get("files",[]) if item.get("path")=="agent/linux.py"),None)
+if not isinstance(version,str) or not entry or not isinstance(entry.get("sha256"),str): raise SystemExit("AGENT_RELEASE_MANIFEST_INVALID")
+print(version); print(entry["sha256"].lower())
+PYMANIFEST
+  ) || { rm -f "$tmp" "$manifest"; echo 'AGENT_RELEASE_MANIFEST_INVALID' >&2; return 1; }
+  expected_version="${META[0]}"
+  expected_sha="${META[1]}"
+  actual_sha="$(python3 - "$tmp" <<'PYHASH'
+import hashlib,sys
+print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest())
+PYHASH
+)"
+  [ "$actual_sha" = "$expected_sha" ] || { rm -f "$tmp" "$manifest"; echo 'AGENT_SHA256_MISMATCH' >&2; return 1; }
   chmod 700 "$tmp"
+  actual_version="$(python3 "$tmp" --version 2>/dev/null || true)"
+  [ "$actual_version" = "$expected_version" ] || { rm -f "$tmp" "$manifest"; echo 'AGENT_VERSION_MANIFEST_MISMATCH' >&2; return 1; }
   if ! python3 "$tmp" --self-test >/dev/null; then
-    rm -f "$tmp"; echo 'AGENT_UPDATE_VALIDATION_FAILED' >&2; return 1
+    rm -f "$tmp" "$manifest"; echo 'AGENT_UPDATE_VALIDATION_FAILED' >&2; return 1
   fi
+  rm -f "$manifest"
   mv -f "$tmp" "$AGENT"
   chmod 700 "$AGENT"
+  printf 'HARA_COMMANDER_AGENT_INTEGRITY=PASS\n'
 }
 
 status_agent() {

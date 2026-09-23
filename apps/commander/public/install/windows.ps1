@@ -13,6 +13,26 @@ function Get-InstalledDevice {
   try { return Get-Content -Raw -LiteralPath $Config | ConvertFrom-Json } catch { return $null }
 }
 
+function Get-AgentReleaseMetadata {
+  $manifest = Invoke-RestMethod -Uri "$BaseUrl/release/agent-manifest.json" -Method Get -Headers @{ Accept="application/json" } -TimeoutSec 30
+  if (-not $manifest -or [string]$manifest.schema -ne "hara.commander-agent-release.v1") { throw "AGENT_RELEASE_MANIFEST_INVALID" }
+  $entry = @($manifest.files | Where-Object { [string]$_.path -eq "agent/windows.ps1" } | Select-Object -First 1)
+  if (-not $entry -or -not $entry.sha256 -or -not $manifest.agent_version) { throw "AGENT_RELEASE_MANIFEST_INVALID" }
+  return [PSCustomObject]@{ Version=[string]$manifest.agent_version; Sha256=([string]$entry.sha256).ToLowerInvariant() }
+}
+
+function Assert-AgentIntegrity {
+  param([string]$Path)
+  $meta = Get-AgentReleaseMetadata
+  $actual = (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()
+  if ($actual -ne $meta.Sha256) { throw "AGENT_SHA256_MISMATCH" }
+  $match = Select-String -LiteralPath $Path -Pattern '^\$AgentVersion = "([^"]+)"$' | Select-Object -First 1
+  if (-not $match -or -not $match.Matches.Count) { throw "AGENT_VERSION_NOT_FOUND" }
+  $version = $match.Matches[0].Groups[1].Value
+  if ([string]$version -ne [string]$meta.Version) { throw "AGENT_VERSION_MANIFEST_MISMATCH" }
+  Write-Host "HARA_COMMANDER_AGENT_INTEGRITY=PASS"
+}
+
 function Get-DeviceToken {
   param($Cfg)
   if (-not $Cfg -or -not $Cfg.encrypted_device_token) { throw "DEVICE_TOKEN_UNAVAILABLE" }
@@ -86,6 +106,7 @@ if ($Action -eq "update") {
   $backup = $Agent + ".rollback"
   Remove-Item -Force $tmp,$backup -ErrorAction SilentlyContinue
   Invoke-WebRequest -Uri "$BaseUrl/agent/windows.ps1" -OutFile $tmp -UseBasicParsing -TimeoutSec 30
+  Assert-AgentIntegrity $tmp
   $tokens=$null; $errors=$null
   [System.Management.Automation.Language.Parser]::ParseFile($tmp,[ref]$tokens,[ref]$errors) | Out-Null
   if ($errors.Count -ne 0) { Remove-Item -Force $tmp; throw "AGENT_UPDATE_SYNTAX_INVALID" }
@@ -151,7 +172,11 @@ $Identity = [Security.Principal.WindowsIdentity]::GetCurrent().Name
 & icacls.exe $Root /inheritance:r /grant:r "$Identity:(OI)(CI)F" | Out-Null
 & icacls.exe $Config /inheritance:r /grant:r "$Identity:F" | Out-Null
 
-Invoke-WebRequest -Uri "$BaseUrl/agent/windows.ps1" -OutFile $Agent -UseBasicParsing -TimeoutSec 30
+$InstallTmp = $Agent + ".install"
+Remove-Item -Force $InstallTmp -ErrorAction SilentlyContinue
+Invoke-WebRequest -Uri "$BaseUrl/agent/windows.ps1" -OutFile $InstallTmp -UseBasicParsing -TimeoutSec 30
+Assert-AgentIntegrity $InstallTmp
+Move-Item -Force $InstallTmp $Agent
 & icacls.exe $Agent /inheritance:r /grant:r "$Identity:F" | Out-Null
 
 $PowerShellExe = (Get-Command powershell.exe).Source
