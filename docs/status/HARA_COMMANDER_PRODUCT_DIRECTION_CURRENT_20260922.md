@@ -64,7 +64,7 @@ Current factual state as of 2026-09-23:
 - expired OIDC transactions are pruned before a new login transaction is created;
 - D1 session readback now distinguishes expiry from explicit revocation.
 
-The HARA Identity instance Login Policy fallback redirect has now been aligned from the DEV Worker to `https://commander.haralabs.com.br/` through the supported ZITADEL Admin API. Independent backend validation reports `IDENTITY_LOGIN_DEFAULT_REDIRECT=PASS`. The remaining login gate is a fresh human browser login/callback + logout/account-switch retest in production.
+The HARA Identity instance Login Policy fallback redirect has been aligned from the DEV Worker to `https://commander.haralabs.com.br/` through the supported ZITADEL Admin API. Independent backend validation reports `IDENTITY_LOGIN_DEFAULT_REDIRECT=PASS`, and after refreshing only the Login V2 container the public runtime gate now reports `HARA_IDENTITY_LOGIN_DEFAULT_REDIRECT_RUNTIME=PASS`. The remaining login gate is the fresh human browser callback/logout/account-switch retest.
 
 Canonical evidence and remediation are in `docs/status/HARA_COMMANDER_LOGIN_FLOW_REVIEW_20260923.md`.
 
@@ -86,13 +86,12 @@ The product is still under active development. Visual approval does not mean fun
 
 ## Next product gates
 
-1. Re-prove a fresh human browser login/callback after the live production redirect alignment.
-2. Re-prove logout / `Usar outra conta` and preserve no-flash authenticated first-paint behavior.
-3. Complete the first real production device pairing on `nucleo-a`.
-4. Bind public MCP identity/workspace to a selected online customer computer.
-5. Prove the governed tool surface end-to-end with ChatGPT/Codex.
-6. Keep arbitrary shell, SSH and generic filesystem access absent.
-7. Add billing only after ordinary authentication + MCP E2E is stable.
+1. Re-prove a fresh human browser login/callback, logout / `Usar outra conta`, and preserve no-flash authenticated first-paint behavior.
+2. Complete the first real production device pairing on `nucleo-a`.
+3. Bind public MCP identity/workspace to the selected online customer computer.
+4. Prove the governed tool surface end-to-end with ChatGPT/Codex.
+5. Keep arbitrary shell, SSH and generic filesystem access absent.
+6. Add billing only after ordinary authentication + MCP E2E is stable.
 
 ## HARA Labs institutional site direction
 

@@ -1,6 +1,6 @@
 # H.A.R.A. Commander — login live successor handoff — 2026-09-23
 
-State: **DEFAULT REDIRECT LIVE ALIGNED / CODE HARDENING LIVE / HUMAN BROWSER RETEST NEXT**
+State: **BACKEND DEFAULT REDIRECT ALIGNED / LOGIN V2 RUNTIME CONVERGED / HUMAN BROWSER RETEST NEXT**
 
 ## What is already live
 
@@ -32,21 +32,36 @@ IDENTITY_RUNTIME_HEALTH=PASS
 IDENTITY_LOGIN_IMAGE_VARIANT=PASS_HARA_8
 ```
 
+## Runtime convergence finding — PASS
+
+The operator restarted only `hara-identity-zitadel-login-1`; the container returned `healthy`. A fresh public Commander PROD login is served with `cf-cache-status: DYNAMIC` and the server-rendered Login V2 payload now contains:
+
+```text
+defaultRedirectUri=https://commander.haralabs.com.br/
+```
+
+The public validator was corrected to normalize Next.js escaped quotes before checking the rendered setting. Post-restart validation now reports:
+
+```text
+HARA_IDENTITY_LOGIN_DEFAULT_REDIRECT_RUNTIME=PASS
+COMMANDER_OIDC_REDIRECT=PASS
+COMMANDER_OIDC_PKCE=PASS
+COMMANDER_ACCOUNT_SELECTION=PASS
+```
+
+Live `Usar outra conta` proof also returns `prompt=select_account&max_age=0`. Do not reapply the backend policy.
+
 ## Do not repeat
 
-Do not reapply the default redirect unless readback proves drift. Do not edit ZITADEL projections/event-store rows. Do not repeat HARA Identity recovery hara.8 promotion, PKCE/account-switch fixes, OIDC transaction cleanup, Cloudflare AUD lookup, or product-token provisioning.
+Do not reapply the default redirect unless backend readback proves drift. Do not edit ZITADEL projections/event-store rows. Do not repeat HARA Identity recovery hara.8 promotion, PKCE/account-switch fixes, OIDC transaction cleanup, Cloudflare AUD lookup, or product-token provisioning.
 
 ## Exact next gate
 
-Human browser retest in production:
+1. open `https://commander.haralabs.com.br` in a fresh human browser session;
+2. complete HARA Identity login;
+3. prove return to Commander production origin and authenticated session/UI;
+4. test `Sair`;
+5. test `Usar outra conta`;
+6. confirm no redirect to DEV, no stale-login loop and no unauthenticated UI flash.
 
-1. open `https://commander.haralabs.com.br`;
-2. sign out if an old session exists;
-3. click `Entrar`;
-4. complete HARA Identity login;
-5. prove return to Commander production origin and authenticated session/UI;
-6. test `Sair`;
-7. test `Usar outra conta`;
-8. confirm no redirect to DEV and no stale-login loop.
-
-Only after this login gate passes should the first real production device pairing begin.
+Keep the ZITADEL API and Postgres untouched. Only after this login gate passes should the first real production device pairing begin.
