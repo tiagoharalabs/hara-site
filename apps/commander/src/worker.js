@@ -68,6 +68,12 @@ function requireDev(env) {
   }
 }
 
+function sanitizeErrorCode(error) {
+  if (error instanceof SyntaxError) return "INVALID_JSON";
+  const raw = String(error?.message || "INTERNAL_ERROR");
+  return /^[A-Z][A-Z0-9_]{0,119}$/.test(raw) ? raw : "INTERNAL_ERROR";
+}
+
 function secretMatches(expectedValue, suppliedValue) {
   const expected = String(expectedValue || "");
   const supplied = String(suppliedValue || "");
@@ -1515,9 +1521,10 @@ export default {
 
       return json({ ok: false, code: "NOT_FOUND" }, 404);
     } catch (error) {
-      const code = error?.message || "INTERNAL_ERROR";
+      const code = sanitizeErrorCode(error);
       const statusMap = {
         RUNTIME_ENV_INVALID: 500,
+        INVALID_JSON: 400,
         DEV_ENDPOINT_DISABLED: 404,
         DEV_ACCESS_DENIED: 401,
         MCP_PRODUCT_ACCESS_DENIED: 401,
