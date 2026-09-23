@@ -147,6 +147,48 @@ async function ensurePrimaryIdentityBinding(env, subjectId, issuer, externalSubj
   ).run();
 }
 
+async function provisionProductionIdentity(env, claims, issuer, subject, email) {
+  if (String(env.ENVIRONMENT || "") !== "PROD") return null;
+  const fingerprint = await sha256(issuer + "\n" + subject);
+  const tenantId = "HARA-TENANT-" + fingerprint.slice(0, 24).toUpperCase();
+  const subjectId = "HARA-SUBJECT-" + fingerprint.slice(24, 48).toUpperCase();
+  const entitlementId = "HARA-ENTITLEMENT-" + fingerprint.slice(40, 64).toUpperCase();
+  const displayName = String(claims.name || claims.nickname || email).slice(0, 200);
+  const createdAt = nowIso();
+
+  await env.PRODUCT_DB.batch([
+    env.PRODUCT_DB.prepare(
+      `INSERT OR IGNORE INTO tenants
+        (tenant_id, display_name, state, environment, created_at_utc)
+       VALUES (?, ?, 'ACTIVE', 'PRODUCTION', ?)`
+    ).bind(tenantId, displayName || "Commander", createdAt),
+    env.PRODUCT_DB.prepare(
+      `INSERT OR IGNORE INTO users
+        (subject_id, tenant_id, oidc_issuer, oidc_subject, email, display_name,
+         state, role, created_at_utc)
+       VALUES (?, ?, ?, ?, ?, ?, 'ACTIVE', 'OWNER', ?)`
+    ).bind(subjectId, tenantId, issuer, subject, email, displayName, createdAt),
+    env.PRODUCT_DB.prepare(
+      `INSERT OR IGNORE INTO identity_bindings
+        (identity_binding_id, subject_id, provider_code, issuer, external_subject,
+         state, created_at_utc, revoked_at_utc)
+       VALUES (?, ?, 'PRIMARY_OIDC', ?, ?, 'ACTIVE', ?, NULL)`
+    ).bind("PRIMARY:" + subjectId, subjectId, issuer, subject, createdAt),
+    env.PRODUCT_DB.prepare(
+      `INSERT OR IGNORE INTO entitlements
+        (entitlement_id, tenant_id, subject_id, plan_code, state, valid_from_utc, valid_until_utc)
+       VALUES (?, ?, ?, 'TRIAL', 'ACTIVE', ?, NULL)`
+    ).bind(entitlementId, tenantId, subjectId, createdAt),
+  ]);
+
+  return env.PRODUCT_DB.prepare(
+    `SELECT subject_id, tenant_id, oidc_issuer, oidc_subject, email, display_name, state, role
+       FROM users
+      WHERE oidc_issuer = ? AND oidc_subject = ?
+      LIMIT 1`
+  ).bind(issuer, subject).first();
+}
+
 async function resolveOrClaimIdentity(env, claims) {
   const issuer = normalizeIssuer(claims.iss);
   const subject = String(claims.sub);
@@ -174,7 +216,13 @@ async function resolveOrClaimIdentity(env, claims) {
       LIMIT 1`
   ).bind(email).first();
 
-  if (!invite || invite.state !== "ACTIVE") throw new Error("IDENTITY_NOT_PROVISIONED");
+  if (!invite || invite.state !== "ACTIVE") {
+    const provisioned = await provisionProductionIdentity(env, claims, issuer, subject, email);
+    if (!provisioned || provisioned.state !== "ACTIVE") {
+      throw new Error("IDENTITY_NOT_PROVISIONED");
+    }
+    return provisioned;
+  }
   if (invite.expires_at_utc && invite.expires_at_utc <= nowIso()) throw new Error("IDENTITY_INVITE_EXPIRED");
 
   const target = await env.PRODUCT_DB.prepare(

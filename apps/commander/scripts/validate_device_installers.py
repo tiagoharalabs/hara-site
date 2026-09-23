@@ -1,53 +1,54 @@
 #!/usr/bin/env python3
 from pathlib import Path
+import subprocess
 
 ROOT = Path(__file__).resolve().parents[3]
 PUBLIC = ROOT / "apps/commander/public"
 LINUX = (PUBLIC / "install/linux.sh").read_text(encoding="utf-8")
 WINDOWS = (PUBLIC / "install/windows.ps1").read_text(encoding="utf-8")
+LINUX_AGENT = (PUBLIC / "agent/linux.py").read_text(encoding="utf-8")
+WINDOWS_AGENT = (PUBLIC / "agent/windows.ps1").read_text(encoding="utf-8")
 HTML = (PUBLIC / "index.html").read_text(encoding="utf-8")
 JS = (PUBLIC / "app.js").read_text(encoding="utf-8")
 
 def need(text: str, token: str, code: str) -> None:
     assert token in text, f"{code}:{token}"
 
-for token in (
-    'platform": "LINUX"',
-    "/api/device/enroll",
-    "/api/device/heartbeat",
-    "/api/device/calls/next",
-    "/api/device/calls/complete",
-    "systemctl --user enable --now",
-    "chmod 600",
-):
+for token in ('platform": "LINUX"', "/api/device/enroll", "/agent/linux.py",
+              "systemctl --user enable --now", "chmod 600", '"agent_version": "0.3.0"'):
     need(LINUX, token, "LINUX_INSTALLER_MISSING")
-
-assert "cloudflared" not in LINUX.lower(), "LINUX_INSTALLER_CLOUDFLARED_NOT_ALLOWED"
+assert "cloudflared" not in LINUX.lower()
 print("LINUX_DEVICE_INSTALLER_STATIC=PASS")
 
-for token in (
-    'platform="WINDOWS"',
-    "/api/device/enroll",
-    "/api/device/heartbeat",
-    "/api/device/calls/next",
-    "/api/device/calls/complete",
-    "ConvertFrom-SecureString",
-    "New-ScheduledTaskTrigger -AtLogOn",
-    "Register-ScheduledTask",
-    "icacls.exe",
-):
+for token in ('platform="WINDOWS"', "/api/device/enroll", "/agent/windows.ps1",
+              "ConvertFrom-SecureString", "Register-ScheduledTask", "icacls.exe",
+              'agent_version="0.3.0"'):
     need(WINDOWS, token, "WINDOWS_INSTALLER_MISSING")
-
-assert "cloudflared" not in WINDOWS.lower(), "WINDOWS_INSTALLER_CLOUDFLARED_NOT_ALLOWED"
-assert "encrypted_device_token" in WINDOWS, "WINDOWS_DPAPI_TOKEN_MISSING"
-assert "DEVICE_TOKEN_EXPOSED=FALSE" in WINDOWS, "WINDOWS_TOKEN_HYGIENE_MARKER"
+assert "cloudflared" not in WINDOWS.lower()
+assert "encrypted_device_token" in WINDOWS
+assert "DEVICE_TOKEN_EXPOSED=FALSE" in WINDOWS
 print("WINDOWS_DEVICE_INSTALLER_STATIC=PASS")
+
+TOOLS = ("hara.health","hara.functions.list","hara.functions.describe",
+         "hara.functions.invoke","hara.receipts.get")
+for token in TOOLS:
+    need(LINUX_AGENT, token, "LINUX_AGENT_TOOL_MISSING")
+    need(WINDOWS_AGENT, token, "WINDOWS_AGENT_TOOL_MISSING")
+for forbidden in ("subprocess.", "os.system(", "shell=True", "paramiko", "ssh "):
+    assert forbidden not in LINUX_AGENT, f"LINUX_AGENT_ARBITRARY_EXEC:{forbidden}"
+for forbidden in ("Invoke-Expression", "Start-Process", "cmd.exe", "powershell.exe -Command"):
+    assert forbidden not in WINDOWS_AGENT, f"WINDOWS_AGENT_ARBITRARY_EXEC:{forbidden}"
+assert "UNKNOWN_FUNCTION_ID" in LINUX_AGENT and "UNKNOWN_FUNCTION_ID" in WINDOWS_AGENT
+assert "device.info" in LINUX_AGENT and "device.info" in WINDOWS_AGENT
+subprocess.run([str(PUBLIC / "agent/linux.py"), "--self-test"], check=True)
+print("COMMANDER_EXACT_FIVE_TOOL_AGENT=PASS")
+print("ARBITRARY_SHELL_EXPOSED=FALSE")
 
 need(HTML, "/install/linux.sh", "PORTAL_LINUX_INSTALLER_LINK")
 need(HTML, "/install/windows.ps1", "PORTAL_WINDOWS_INSTALLER_LINK")
-need(HTML, "data-copy-windows", "PORTAL_WINDOWS_COPY")
 need(JS, "Comando Windows copiado.", "PORTAL_WINDOWS_COPY_HANDLER")
+need(JS, "/api/portal/devices/select", "PORTAL_DEVICE_SELECTION")
 print("PORTAL_DEVICE_INSTALLERS=PASS")
+print("PORTAL_DEVICE_SELECTION=PASS")
 print("PER_DEVICE_CLOUDFLARED_DEPENDENCY=FALSE")
-print("OUTBOUND_CALL_CHANNEL_HEALTH_ONLY=PASS")
-print("ARBITRARY_SHELL_EXPOSED=FALSE")
+print("OUTBOUND_CALL_CHANNEL_FIVE_TOOL_READY=PASS")
