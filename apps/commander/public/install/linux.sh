@@ -67,34 +67,109 @@ status_agent() {
   printf 'DEVICE_TOKEN_EXPOSED=FALSE\n'
 }
 
+remote_device_action() {
+  local action="$1"
+  python3 - "$CONFIG_FILE" "$action" <<'PYREMOTE'
+import json,sys,urllib.request,urllib.error
+from pathlib import Path
+path=Path(sys.argv[1]); action=sys.argv[2]
+values={}
+for raw in path.read_text(encoding="utf-8").splitlines():
+    if "=" in raw:
+        key,value=raw.split("=",1); values[key]=value
+base=values.get("HARA_COMMANDER_URL","").rstrip("/")
+token=values.get("HARA_DEVICE_TOKEN","")
+device_id=values.get("HARA_DEVICE_ID","")
+arch=values.get("HARA_DEVICE_ARCH","")
+if not base or not token or not device_id:
+    raise SystemExit(2)
+if action=="heartbeat":
+    endpoint="/api/device/heartbeat"
+    payload={"device_id":device_id,"architecture":arch,"agent_version":"0.3.2"}
+elif action=="revoke":
+    endpoint="/api/device/revoke-self"
+    payload={}
+else:
+    raise SystemExit(2)
+req=urllib.request.Request(
+    base+endpoint, data=json.dumps(payload,separators=(",",":")).encode(), method="POST",
+    headers={"content-type":"application/json","accept":"application/json","authorization":"Bearer "+token},
+)
+try:
+    with urllib.request.urlopen(req,timeout=15) as response:
+        obj=json.loads(response.read().decode() or "{}")
+except Exception:
+    raise SystemExit(3)
+if action=="heartbeat":
+    if not obj.get("ok") or obj.get("device_id")!=device_id:
+        raise SystemExit(4)
+else:
+    if not obj.get("ok") or obj.get("state")!="REVOKED" or obj.get("device_id")!=device_id:
+        raise SystemExit(4)
+PYREMOTE
+}
+
+doctor_agent() {
+  [ -f "$CONFIG_FILE" ] || { echo 'DEVICE_NOT_ENROLLED' >&2; return 5; }
+  [ -f "$AGENT" ] || { echo 'AGENT_BINARY_MISSING' >&2; return 6; }
+  [ -f "$UNIT" ] || { echo 'AGENT_SERVICE_NOT_INSTALLED' >&2; return 6; }
+  systemctl --user is-enabled --quiet "$SERVICE" || { echo 'AGENT_SERVICE_NOT_ENABLED' >&2; return 7; }
+  systemctl --user is-active --quiet "$SERVICE" || { echo 'AGENT_SERVICE_NOT_ACTIVE' >&2; return 7; }
+  python3 "$AGENT" --self-test >/dev/null || { echo 'AGENT_SELF_TEST_FAILED' >&2; return 8; }
+  remote_device_action heartbeat || { echo 'COMMANDER_REMOTE_HEARTBEAT=FAIL' >&2; return 9; }
+  printf 'HARA_COMMANDER_AGENT_DOCTOR=PASS\n'
+  printf 'COMMANDER_REMOTE_HEARTBEAT=PASS\n'
+  status_agent
+}
+
 case "$ACTION" in
   status)
     status_agent; exit 0 ;;
+  doctor)
+    doctor_agent; exit $? ;;
   update)
     [ -f "$CONFIG_FILE" ] || { echo 'DEVICE_NOT_ENROLLED' >&2; exit 5; }
     [ -f "$UNIT" ] || { echo 'AGENT_SERVICE_NOT_INSTALLED' >&2; exit 6; }
     configured_url="$(read_config_value HARA_COMMANDER_URL 2>/dev/null || true)"
     [ -z "$configured_url" ] || BASE_URL="${configured_url%/}"
+    backup="$AGENT.rollback"
+    rm -f "$backup"
+    [ ! -f "$AGENT" ] || cp -p "$AGENT" "$backup"
     download_agent
     systemctl --user daemon-reload
     systemctl --user restart "$SERVICE"
     sleep 1
-    systemctl --user is-active --quiet "$SERVICE" || { echo 'HARA Commander Agent failed after update.' >&2; exit 7; }
+    if ! systemctl --user is-active --quiet "$SERVICE"; then
+      if [ -f "$backup" ]; then
+        mv -f "$backup" "$AGENT"
+        chmod 700 "$AGENT"
+        systemctl --user restart "$SERVICE" || true
+        sleep 1
+        systemctl --user is-active --quiet "$SERVICE" && printf 'HARA_COMMANDER_AGENT_UPDATE_ROLLBACK=PASS\n' >&2
+      fi
+      echo 'HARA Commander Agent failed after update; previous agent restored when available.' >&2
+      exit 7
+    fi
+    rm -f "$backup"
     printf 'HARA_COMMANDER_AGENT_UPDATE=PASS\n'
+    printf 'HARA_COMMANDER_AGENT_UPDATE_ROLLBACK_READY=TRUE\n'
     status_agent; exit 0 ;;
   uninstall)
     device_id="$(read_config_value HARA_DEVICE_ID 2>/dev/null || true)"
+    revoke_state=PENDING
+    if [ -f "$CONFIG_FILE" ] && remote_device_action revoke; then revoke_state=PASS; fi
     systemctl --user disable --now "$SERVICE" >/dev/null 2>&1 || true
     rm -f "$UNIT"
     systemctl --user daemon-reload >/dev/null 2>&1 || true
     rm -rf "$BIN_DIR" "$CONFIG_DIR"
     printf 'HARA_COMMANDER_AGENT_UNINSTALL=PASS\n'
     [ -z "$device_id" ] || printf 'DEVICE_ID=%s\n' "$device_id"
-    printf 'SERVER_DEVICE_REVOKE_REQUIRED=TRUE\n'
+    printf 'SERVER_DEVICE_REVOKE=%s\n' "$revoke_state"
+    [ "$revoke_state" = PASS ] || printf 'SERVER_DEVICE_REVOKE_PENDING=TRUE\n'
     printf 'DEVICE_TOKEN_EXPOSED=FALSE\n'
     exit 0 ;;
   install) ;;
-  *) echo 'Usage: linux.sh [install|status|update|uninstall]' >&2; exit 64 ;;
+  *) echo 'Usage: linux.sh [install|status|doctor|update|uninstall]' >&2; exit 64 ;;
 esac
 
 [ ! -f "$CONFIG_FILE" ] || { echo 'DEVICE_ALREADY_ENROLLED: use status, update, or uninstall.' >&2; exit 8; }
@@ -115,7 +190,7 @@ print(json.dumps({
   "device_name": sys.argv[2],
   "platform": "LINUX",
   "architecture": sys.argv[3],
-  "agent_version": "0.3.1",
+  "agent_version": "0.3.2",
 }, separators=(",",":")))
 PY
 )"

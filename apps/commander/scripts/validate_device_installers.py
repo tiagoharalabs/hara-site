@@ -15,18 +15,21 @@ def need(text: str, token: str, code: str) -> None:
     assert token in text, f"{code}:{token}"
 
 for token in ('platform": "LINUX"', "/api/device/enroll", "/agent/linux.py",
-              "systemctl --user enable --now", "chmod 600", '"agent_version": "0.3.1"',
+              "systemctl --user enable --now", "chmod 600", '"agent_version": "0.3.2"',
               "HARA_COMMANDER_AGENT_UPDATE=PASS", "HARA_COMMANDER_AGENT_UNINSTALL=PASS",
-              "HARA_COMMANDER_AGENT_VERSION=", "SERVER_DEVICE_REVOKE_REQUIRED=TRUE"):
+              "HARA_COMMANDER_AGENT_VERSION=", "HARA_COMMANDER_AGENT_DOCTOR=PASS",
+              "/api/device/revoke-self", "SERVER_DEVICE_REVOKE=",
+              "HARA_COMMANDER_AGENT_UPDATE_ROLLBACK_READY=TRUE"):
     need(LINUX, token, "LINUX_INSTALLER_MISSING")
 assert "cloudflared" not in LINUX.lower()
 print("LINUX_DEVICE_INSTALLER_STATIC=PASS")
 
 for token in ('platform="WINDOWS"', "/api/device/enroll", "/agent/windows.ps1",
               "ConvertFrom-SecureString", "Register-ScheduledTask", "icacls.exe",
-              'agent_version="0.3.1"', "HARA_COMMANDER_AGENT_UPDATE=PASS",
+              'agent_version="0.3.2"', "HARA_COMMANDER_AGENT_UPDATE=PASS",
               "HARA_COMMANDER_AGENT_UNINSTALL=PASS", "HARA_COMMANDER_AGENT_VERSION=",
-              "SERVER_DEVICE_REVOKE_REQUIRED=TRUE"):
+              "HARA_COMMANDER_AGENT_DOCTOR=PASS", "/api/device/revoke-self",
+              "SERVER_DEVICE_REVOKE=", "HARA_COMMANDER_AGENT_UPDATE_ROLLBACK_READY=TRUE"):
     need(WINDOWS, token, "WINDOWS_INSTALLER_MISSING")
 assert "cloudflared" not in WINDOWS.lower()
 assert "encrypted_device_token" in WINDOWS
@@ -57,3 +60,6 @@ print("PORTAL_DEVICE_INSTALLERS=PASS")
 print("PORTAL_DEVICE_SELECTION=PASS")
 print("PER_DEVICE_CLOUDFLARED_DEPENDENCY=FALSE")
 print("OUTBOUND_CALL_CHANNEL_FIVE_TOOL_READY=PASS")
+print("AGENT_REMOTE_SELF_REVOKE=PASS")
+print("AGENT_DOCTOR_REMOTE_HEARTBEAT=PASS")
+print("AGENT_UPDATE_ROLLBACK_SAFE=PASS")
