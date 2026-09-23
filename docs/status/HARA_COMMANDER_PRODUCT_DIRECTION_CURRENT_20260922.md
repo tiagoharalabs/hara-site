@@ -64,7 +64,7 @@ Current factual state as of 2026-09-23:
 - expired OIDC transactions are pruned before a new login transaction is created;
 - D1 session readback now distinguishes expiry from explicit revocation.
 
-The remaining login defect is isolated to the HARA Identity instance Login Policy fallback redirect: `default_redirect_uri` is still pointed at the DEV Worker and must be aligned to `https://commander.haralabs.com.br/` through the supported ZITADEL Admin API. Do not edit ZITADEL projections or event-store rows directly.
+The HARA Identity instance Login Policy fallback redirect has now been aligned from the DEV Worker to `https://commander.haralabs.com.br/` through the supported ZITADEL Admin API. Independent backend validation reports `IDENTITY_LOGIN_DEFAULT_REDIRECT=PASS`. The remaining login gate is a fresh human browser login/callback + logout/account-switch retest in production.
 
 Canonical evidence and remediation are in `docs/status/HARA_COMMANDER_LOGIN_FLOW_REVIEW_20260923.md`.
 
@@ -86,9 +86,9 @@ The product is still under active development. Visual approval does not mean fun
 
 ## Next product gates
 
-1. Align the HARA Identity default redirect URI to the Commander production origin and re-prove login callback.
-2. Preserve the no-flash authenticated first-paint behavior.
-3. Complete the portable local governed tool bridge behind the Agent.
+1. Re-prove a fresh human browser login/callback after the live production redirect alignment.
+2. Re-prove logout / `Usar outra conta` and preserve no-flash authenticated first-paint behavior.
+3. Complete the first real production device pairing on `nucleo-a`.
 4. Bind public MCP identity/workspace to a selected online customer computer.
 5. Prove the governed tool surface end-to-end with ChatGPT/Codex.
 6. Keep arbitrary shell, SSH and generic filesystem access absent.
