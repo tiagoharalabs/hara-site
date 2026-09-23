@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 310 64" role="img" aria-label="H.A.R.A. Labs">
+  <rect width="64" height="64" rx="12" fill="#061b2b"/>
+  <path d="M32 8 55 51H9L32 8Z" fill="#f1b82d"/>
+  <path d="M32 18 44 42H20L32 18Z" fill="#061b2b"/>
+  <text x="80" y="31" font-family="Inter,Arial,sans-serif" font-size="24" font-weight="800" fill="#0a2840">H.A.R.A.</text>
+  <text x="80" y="51" font-family="Inter,Arial,sans-serif" font-size="16" font-weight="700" fill="#2d98d0">Labs · Identity</text>
+</svg>
