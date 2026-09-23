@@ -67,6 +67,29 @@ function Invoke-DeviceAction {
   }
 }
 
+function Invoke-Preflight {
+  $health = Invoke-RestMethod -Uri "$BaseUrl/api/health" -Method Get -Headers @{ Accept="application/json" } -TimeoutSec 15
+  if (-not $health.ok -or [string]$health.service -ne "hara-commander") { throw "COMMANDER_HEALTH_INVALID" }
+  $manifest = Invoke-RestMethod -Uri "$BaseUrl/release/agent-manifest.json" -Method Get -Headers @{ Accept="application/json" } -TimeoutSec 15
+  if (-not $manifest -or [string]$manifest.schema -ne "hara.commander-agent-release.v1" -or -not $manifest.agent_version) { throw "AGENT_RELEASE_MANIFEST_INVALID" }
+  $scheduledTaskReady = [bool](Get-Command Register-ScheduledTask -ErrorAction SilentlyContinue)
+  $powershellReady = [bool](Get-Command powershell.exe -ErrorAction SilentlyContinue)
+  $report = [ordered]@{
+    schema = "hara.commander-device-preflight.v1"
+    platform = "WINDOWS"
+    architecture = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant()
+    commander_url = $BaseUrl
+    commander_health = $true
+    release_manifest = $true
+    stable_agent_version = [string]$manifest.agent_version
+    persistence = "scheduled-task"
+    persistence_ready = ($scheduledTaskReady -and $powershellReady)
+    mutation_performed = $false
+  }
+  $report | ConvertTo-Json -Compress
+  if (-not $report.persistence_ready) { throw "WINDOWS_PERSISTENCE_PREREQUISITE_MISSING" }
+}
+
 function Show-SupportReport {
   $cfg = Get-InstalledDevice
   $task = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
@@ -124,6 +147,7 @@ function Show-Status {
   Write-Host "DEVICE_TOKEN_EXPOSED=FALSE"
 }
 
+if ($Action -eq "preflight") { Invoke-Preflight; exit 0 }
 if ($Action -eq "status") { Show-Status; exit 0 }
 if ($Action -eq "doctor") { Invoke-Doctor; exit 0 }
 if ($Action -eq "support") { Show-SupportReport; exit 0 }
@@ -176,7 +200,7 @@ if ($Action -eq "uninstall") {
   Write-Host "DEVICE_TOKEN_EXPOSED=FALSE"
   exit 0
 }
-if ($Action -ne "install") { throw "Usage: windows.ps1 -Action install|status|doctor|support|update|uninstall" }
+if ($Action -ne "install") { throw "Usage: windows.ps1 -Action install|preflight|status|doctor|support|update|uninstall" }
 if (Test-Path -LiteralPath $Config -PathType Leaf) { throw "DEVICE_ALREADY_ENROLLED: use status, update, or uninstall." }
 
 Write-Host "HARA Commander - Windows device pairing"

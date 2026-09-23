@@ -12,6 +12,15 @@ SERVICE="hara-commander-agent.service"
 ACTION="${1:-install}"
 ACTION="${ACTION#--}"
 
+# Reattach to the existing per-user systemd/DBus runtime when invoked from
+# non-graphical SSH/automation sessions that omit the usual desktop env.
+if [ -z "${XDG_RUNTIME_DIR:-}" ] && [ -d "/run/user/$(id -u)" ]; then
+  export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+fi
+if [ -n "${XDG_RUNTIME_DIR:-}" ] && [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ] && [ -S "$XDG_RUNTIME_DIR/bus" ]; then
+  export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"
+fi
+
 need() {
   command -v "$1" >/dev/null 2>&1 || {
     printf 'HARA Commander requires %s.\n' "$1" >&2
@@ -172,6 +181,41 @@ cleanup_failed_install() {
   exit "$rc"
 }
 
+preflight_agent() {
+  local manifest health persistence_ready=FALSE arch
+  manifest="$(mktemp)"
+  health="$(mktemp)"
+  trap 'rm -f "$manifest" "$health"' RETURN
+  curl -fsS --max-time 15 "$BASE_URL/api/health" -o "$health" || { echo 'COMMANDER_HEALTH_UNREACHABLE' >&2; return 10; }
+  curl -fsS --max-time 15 "$BASE_URL/release/agent-manifest.json" -o "$manifest" || { echo 'AGENT_RELEASE_MANIFEST_UNREACHABLE' >&2; return 11; }
+  systemctl --user show-environment >/dev/null 2>&1 && persistence_ready=TRUE || true
+  arch="$(uname -m)"
+  python3 - "$health" "$manifest" "$BASE_URL" "$arch" "$persistence_ready" <<'PYPREFLIGHT'
+import json,sys
+health=json.load(open(sys.argv[1],encoding="utf-8"))
+manifest=json.load(open(sys.argv[2],encoding="utf-8"))
+if health.get("ok") is not True or health.get("service")!="hara-commander": raise SystemExit("COMMANDER_HEALTH_INVALID")
+if manifest.get("schema")!="hara.commander-agent-release.v1": raise SystemExit("AGENT_RELEASE_MANIFEST_INVALID")
+version=manifest.get("agent_version")
+if not isinstance(version,str) or not version: raise SystemExit("AGENT_RELEASE_VERSION_INVALID")
+ready=sys.argv[5]=="TRUE"
+report={
+  "schema":"hara.commander-device-preflight.v1",
+  "platform":"LINUX",
+  "architecture":sys.argv[4],
+  "commander_url":sys.argv[3],
+  "commander_health":True,
+  "release_manifest":True,
+  "stable_agent_version":version,
+  "persistence":"systemd-user",
+  "persistence_ready":ready,
+  "mutation_performed":False,
+}
+print(json.dumps(report,separators=(",",":"),sort_keys=True))
+if not ready: raise SystemExit(12)
+PYPREFLIGHT
+}
+
 support_agent() {
   local active=FALSE enabled=FALSE
   systemctl --user is-active --quiet "$SERVICE" 2>/dev/null && active=TRUE || true
@@ -233,6 +277,8 @@ doctor_agent() {
 case "$ACTION" in
   status)
     status_agent; exit 0 ;;
+  preflight)
+    preflight_agent; exit $? ;;
   doctor)
     doctor_agent; exit $? ;;
   support)
@@ -279,7 +325,7 @@ case "$ACTION" in
     printf 'DEVICE_TOKEN_EXPOSED=FALSE\n'
     exit 0 ;;
   install) ;;
-  *) echo 'Usage: linux.sh [install|status|doctor|support|update|uninstall]' >&2; exit 64 ;;
+  *) echo 'Usage: linux.sh [install|preflight|status|doctor|support|update|uninstall]' >&2; exit 64 ;;
 esac
 
 [ ! -f "$CONFIG_FILE" ] || { echo 'DEVICE_ALREADY_ENROLLED: use status, update, or uninstall.' >&2; exit 8; }

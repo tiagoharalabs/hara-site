@@ -9,7 +9,7 @@ Linux:
 - bootstrap installer: `/install/linux.sh`;
 - Agent: `/agent/linux.py`;
 - user-systemd persistence;
-- status / doctor / support / update / uninstall;
+- preflight / status / doctor / support / update / uninstall;
 - rollback-safe update;
 - authenticated self-revoke.
 
@@ -19,7 +19,7 @@ Windows:
 - Agent: `/agent/windows.ps1`;
 - DPAPI-protected device token;
 - Scheduled Task persistence;
-- status / doctor / support / update / uninstall;
+- preflight / status / doctor / support / update / uninstall;
 - rollback-safe update;
 - authenticated self-revoke.
 
@@ -57,6 +57,18 @@ The external Windows test is intentionally late in the sequence. It does **not**
 8. uninstall self-revokes and removes local state.
 
 Only after the Linux/nucleo selected-device E2E is terminal should a native Windows EXE/MSI wrapper be finalized and sent to an external tester.
+
+## Host preflight contract
+
+`preflight` is non-mutating and does not require a pairing token. It validates Commander HTTPS/API health, stable release-manifest reachability/version and the platform persistence mechanism (`systemd --user` on Linux; Scheduled Task + Windows PowerShell on Windows).
+
+Schema: `hara.commander-device-preflight.v1`.
+
+The report must state `mutation_performed=false`. A preflight failure must occur before any server-side enrollment. On Linux, the installer can reattach to an existing user-systemd/DBus runtime when invoked through SSH/automation that omitted `XDG_RUNTIME_DIR`/`DBUS_SESSION_BUS_ADDRESS`; it does not create a new privileged service.
+
+Linux real-host proof on `nucleo-a` before any pairing:
+
+`NUCLEO_COMMANDER_PREFLIGHT_NON_MUTATING=PASS`
 
 ## Support contract
 

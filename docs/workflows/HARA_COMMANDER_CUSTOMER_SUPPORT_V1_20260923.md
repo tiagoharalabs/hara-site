@@ -4,6 +4,24 @@
 
 Customer-side Agent triage without shell access to the customer computer and without exposing the device token.
 
+## Host preflight before pairing
+
+Linux:
+
+```bash
+curl -fsS https://commander.haralabs.com.br/install/linux.sh -o /tmp/hara-commander-linux.sh
+bash /tmp/hara-commander-linux.sh preflight
+```
+
+Windows PowerShell:
+
+```powershell
+Invoke-WebRequest https://commander.haralabs.com.br/install/windows.ps1 -OutFile $env:TEMP\hara-commander-windows.ps1
+& $env:TEMP\hara-commander-windows.ps1 -Action preflight
+```
+
+Preflight is non-mutating, consumes no pairing token and must report `mutation_performed=false`. It validates Commander health, release-manifest reachability/version and the local persistence mechanism.
+
 ## First-line collection
 
 Linux:
@@ -34,11 +52,12 @@ It must never contain the device token, pairing token, OAuth secret, Cloudflare 
 
 ## Escalation sequence
 
-1. `support` — offline/sanitized state snapshot.
-2. `status` — concise local lifecycle state.
-3. `doctor` — local self-test plus authenticated Commander heartbeat.
-4. `update` — explicit stable-channel update with manifest/SHA/version verification and rollback.
-5. `uninstall` — server-side self-revoke followed by local cleanup.
+1. `preflight` — before pairing; validates host readiness without mutation.
+2. `support` — offline/sanitized state snapshot.
+3. `status` — concise local lifecycle state.
+4. `doctor` — local self-test plus authenticated Commander heartbeat.
+5. `update` — explicit stable-channel update with manifest/SHA/version verification and rollback.
+6. `uninstall` — server-side self-revoke followed by local cleanup.
 
 Do not request SSH, RDP, inbound port forwarding or a per-customer Cloudflare Tunnel as part of standard Commander support.
 
