@@ -254,6 +254,7 @@ html[data-theme="dark"] .tag.reserved{background:#11344a;color:#8fd0f2}
 .device-state.online{background:#e6f7f1;color:#19795e}
 .device-state.offline{background:#edf3f6;color:#607f91}
 .device-state.revoked{background:#fff0ed;color:#9b4a3d}
+.device-actions{display:flex;align-items:center;gap:10px}.device-select[disabled]{color:#258467;opacity:1;cursor:default}
 html[data-theme="dark"] .setup-card,
 html[data-theme="dark"] .device-install-card,
 html[data-theme="dark"] .pairing-panel,

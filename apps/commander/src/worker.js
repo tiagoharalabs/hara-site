@@ -504,7 +504,7 @@ async function ensureSecondaryMcpBinding(env, {
 async function mcpProductContext(env, issuer, oidcSubject, bootstrap = null) {
   const normalizedIssuer = normalizeIssuer(issuer);
   const subject = cleanOpaque(oidcSubject, 512);
-  const row = await env.PRODUCT_DB.prepare(
+  let row = await env.PRODUCT_DB.prepare(
     `SELECT
        u.subject_id,
        u.tenant_id,
@@ -538,6 +538,16 @@ async function mcpProductContext(env, issuer, oidcSubject, bootstrap = null) {
     LIMIT 1`
   ).bind(normalizedIssuer, subject).first();
 
+  if (!row && bootstrap) {
+    const binding = await ensureSecondaryMcpBinding(env, {
+      issuer: normalizedIssuer,
+      oidcSubject: subject,
+      providerCode: bootstrap.provider_code,
+      email: bootstrap.email,
+    });
+    if (!binding.ok) return binding;
+    return mcpProductContext(env, normalizedIssuer, subject, null);
+  }
   if (!row) return { ok: false, code: "IDENTITY_NOT_PROVISIONED" };
   if (row.subject_state !== "ACTIVE") return { ok: false, code: "SUBJECT_INACTIVE" };
   if (row.tenant_state !== "ACTIVE") return { ok: false, code: "TENANT_INACTIVE" };
@@ -647,6 +657,51 @@ function mcpDecisionPayload(context, toolId, requiredGrant, extra = {}) {
   };
 }
 
+async function selectedDeviceForSubject(env, tenantId, subjectId) {
+  return env.PRODUCT_DB.prepare(
+    `SELECT s.device_id
+       FROM commander_device_selections s
+       JOIN commander_devices d ON d.device_id = s.device_id
+      WHERE s.tenant_id = ?
+        AND s.subject_id = ?
+        AND d.tenant_id = s.tenant_id
+        AND d.state = 'ACTIVE'
+        AND d.revoked_at_utc IS NULL
+      LIMIT 1`
+  ).bind(tenantId, subjectId).first();
+}
+
+async function selectDevice(env, tenantId, subjectId, deviceId) {
+  const device = await env.PRODUCT_DB.prepare(
+    `SELECT device_id, state, revoked_at_utc
+       FROM commander_devices
+      WHERE device_id = ? AND tenant_id = ?
+      LIMIT 1`
+  ).bind(deviceId, tenantId).first();
+  if (!device || device.state !== "ACTIVE" || device.revoked_at_utc) {
+    throw new Error("DEVICE_NOT_FOUND");
+  }
+  await env.PRODUCT_DB.prepare(
+    `INSERT INTO commander_device_selections
+      (tenant_id, subject_id, device_id, selected_at_utc)
+     VALUES (?, ?, ?, ?)
+     ON CONFLICT(tenant_id, subject_id)
+     DO UPDATE SET device_id = excluded.device_id, selected_at_utc = excluded.selected_at_utc`
+  ).bind(tenantId, subjectId, deviceId, nowIso()).run();
+  return deviceId;
+}
+
+async function selectPortalDevice(env, session, body) {
+  const deviceId = cleanId(body.device_id, 180);
+  await selectDevice(env, session.tenant_id, session.subject_id, deviceId);
+  return {
+    schema: "hara.commander-device-selection.v1",
+    ok: true,
+    device_id: deviceId,
+    selected: true,
+  };
+}
+
 async function createDevicePairing(env, session) {
   const token = randomToken(32);
   const tokenHash = await sha256(token);
@@ -678,12 +733,17 @@ async function createDevicePairing(env, session) {
 
 async function listDevices(env, session) {
   const result = await env.PRODUCT_DB.prepare(
-    `SELECT device_id, enrolled_by_subject_id, device_name, platform, architecture,
-            agent_version, tunnel_mode, state, created_at_utc, last_seen_at_utc, revoked_at_utc
-       FROM commander_devices
-      WHERE tenant_id = ?
-      ORDER BY created_at_utc DESC`
-  ).bind(session.tenant_id).all();
+    `SELECT d.device_id, d.enrolled_by_subject_id, d.device_name, d.platform, d.architecture,
+            d.agent_version, d.tunnel_mode, d.state, d.created_at_utc, d.last_seen_at_utc,
+            d.revoked_at_utc,
+            CASE WHEN s.device_id = d.device_id THEN 1 ELSE 0 END AS selected
+       FROM commander_devices d
+       LEFT JOIN commander_device_selections s
+         ON s.tenant_id = d.tenant_id
+        AND s.subject_id = ?
+      WHERE d.tenant_id = ?
+      ORDER BY d.created_at_utc DESC`
+  ).bind(session.subject_id, session.tenant_id).all();
 
   const now = Date.now();
   return (result.results || []).map((row) => ({
@@ -696,6 +756,7 @@ async function listDevices(env, session) {
     tunnel_mode: row.tunnel_mode,
     state: row.state,
     online: row.state === "ACTIVE" && deviceOnline(row.last_seen_at_utc, now),
+    selected: Boolean(row.selected) && row.state === "ACTIVE" && !row.revoked_at_utc,
     created_at_utc: row.created_at_utc,
     last_seen_at_utc: row.last_seen_at_utc,
     revoked_at_utc: row.revoked_at_utc,
@@ -756,6 +817,17 @@ async function enrollDevice(env, body) {
   if (!results?.[0]?.meta?.changes || !results?.[1]?.meta?.changes) {
     throw new Error("DEVICE_PAIRING_INVALID");
   }
+
+  const enrolled = await env.PRODUCT_DB.prepare(
+    `SELECT tenant_id, enrolled_by_subject_id
+       FROM commander_devices WHERE device_id = ? LIMIT 1`
+  ).bind(deviceId).first();
+  if (!enrolled) throw new Error("DEVICE_PAIRING_INVALID");
+  await env.PRODUCT_DB.prepare(
+    `INSERT OR IGNORE INTO commander_device_selections
+      (tenant_id, subject_id, device_id, selected_at_utc)
+     VALUES (?, ?, ?, ?)`
+  ).bind(enrolled.tenant_id, enrolled.enrolled_by_subject_id, deviceId, createdAt).run();
 
   return {
     schema: "hara.commander-device-enrollment.v1",
@@ -833,6 +905,10 @@ async function revokePortalDevice(env, session, body) {
 
   const result = await statement.run();
   if (!result.meta?.changes) throw new Error("DEVICE_NOT_FOUND");
+  await env.PRODUCT_DB.prepare(
+    `DELETE FROM commander_device_selections
+      WHERE tenant_id = ? AND device_id = ?`
+  ).bind(session.tenant_id, deviceId).run();
   return {
     schema: "hara.commander-device-revocation.v1",
     ok: true,
@@ -855,7 +931,14 @@ async function enqueueDeviceCall(env, body) {
   if (!context.ok) throw new Error(context.code);
   if (!context.grants.includes(requiredGrant)) throw new Error("GRANT_MISSING");
 
-  const deviceId = cleanId(body.device_id, 180);
+  const selection = await selectedDeviceForSubject(
+    env, context.tenant_id, context.subject_id
+  );
+  if (!selection) throw new Error("DEVICE_SELECTION_REQUIRED");
+  const deviceId = cleanId(selection.device_id, 180);
+  if (body.device_id && cleanId(body.device_id, 180) !== deviceId) {
+    throw new Error("DEVICE_NOT_SELECTED");
+  }
   const device = await env.PRODUCT_DB.prepare(
     `SELECT device_id, tenant_id, state, last_seen_at_utc, revoked_at_utc
        FROM commander_devices
@@ -1161,6 +1244,13 @@ export default {
         return json(await revokePortalDevice(env, session, body));
       }
 
+      if (url.pathname === "/api/portal/devices/select" && request.method === "POST") {
+        const session = await resolvePortalSession(request, env);
+        if (!session) return json({ ok: false, code: "AUTH_REQUIRED" }, 401);
+        const body = await request.json();
+        return json(await selectPortalDevice(env, session, body));
+      }
+
       if (url.pathname === "/api/device/enroll" && request.method === "POST") {
         const body = await request.json();
         return json(await enrollDevice(env, body), 201);
@@ -1402,6 +1492,8 @@ export default {
         DEVICE_AUTH_INVALID: 401,
         DEVICE_ID_MISMATCH: 403,
         DEVICE_NOT_FOUND: 404,
+        DEVICE_SELECTION_REQUIRED: 409,
+        DEVICE_NOT_SELECTED: 403,
         DEVICE_NAME_INVALID: 400,
         DEVICE_PLATFORM_INVALID: 400,
         DEVICE_METADATA_INVALID: 400,

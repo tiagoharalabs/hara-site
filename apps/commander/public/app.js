@@ -306,12 +306,24 @@
       row.append(icon, body, state);
 
       if (device.state === "ACTIVE") {
+        const actions = document.createElement("div");
+        actions.className = "device-actions";
+
+        const select = document.createElement("button");
+        select.className = "link-button device-select";
+        select.type = "button";
+        select.disabled = Boolean(device.selected);
+        select.dataset.selectDevice = String(device.device_id);
+        select.textContent = device.selected ? "Selecionado" : "Usar este";
+        actions.append(select);
+
         const revoke = document.createElement("button");
         revoke.className = "link-button";
         revoke.type = "button";
         revoke.dataset.revokeDevice = String(device.device_id);
         revoke.textContent = "Revogar";
-        row.append(revoke);
+        actions.append(revoke);
+        row.append(actions);
       }
       list.append(row);
     });
@@ -369,6 +381,23 @@
       showToast("Não foi possível gerar o código de pareamento.");
     } finally {
       if (button) button.disabled = false;
+    }
+  }
+
+  async function selectDevice(deviceId) {
+    try {
+      const response = await fetch("/api/portal/devices/select", {
+        method: "POST",
+        cache: "no-store",
+        credentials: "same-origin",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ device_id: deviceId }),
+      });
+      if (!response.ok) throw new Error("HTTP_" + response.status);
+      showToast("Computador selecionado para o Commander.");
+      await loadDevices();
+    } catch (_error) {
+      showToast("Não foi possível selecionar o computador.");
     }
   }
 
@@ -695,6 +724,13 @@
     if (copyPairing) {
       event.preventDefault();
       copyText(document.getElementById("pairingToken")?.textContent || "", "Código de pareamento copiado.");
+      return;
+    }
+
+    const selectDeviceButton = event.target.closest("[data-select-device]");
+    if (selectDeviceButton) {
+      event.preventDefault();
+      selectDevice(selectDeviceButton.dataset.selectDevice);
       return;
     }
 
