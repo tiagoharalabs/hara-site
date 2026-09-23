@@ -83,3 +83,12 @@ Revert `zitadel-login` and `zitadel-assets` to `hara-identity-login:v4.16.0-hara
 ZITADEL v4.16.0 Login V2 contains a Portuguese frontend locale, but its backend `internal/query/v2-default.json` does not contain `pt`. `GetHostedLoginTranslation(locale=pt)` therefore returns `HostedLoginTranslationNotFound-pt` before instance-level custom translations can be merged. HARA login variant `hara.8` patches only the bundled PT/EN recovery fallback copy so the user-facing flow remains accurate and anti-enumeration-safe while the backend stays on v4.16.0.
 
 The upstream backend default includes `pt` starting in ZITADEL v4.17.0. Upgrading the Identity API to v4.17+ is a separate migration gate because it includes backend migrations and must not be coupled to this UX-only login image change.
+## Commander login default redirect
+
+The instance Login Policy default redirect must be `https://commander.haralabs.com.br/`. This is the safe fallback when Login V2 loses the OIDC request context (for example through a direct login/password-recovery path). A DEV Worker URL must never remain as the instance default redirect in production.
+
+Canonical aligner:
+
+`python3 apps/identity-login/scripts/align_login_default_redirect.py --pat-file <secure-owner-pat>`
+
+The script reads the existing policy, preserves its supported fields, changes only `defaultRedirectUri`, and reads the policy back. `validate_identity_backend.py` fails on redirect drift.
