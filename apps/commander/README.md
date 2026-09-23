@@ -24,6 +24,14 @@ docs/status/HARA_COMMANDER_PRODUCT_DIRECTION_CURRENT_20260922.md
 
 The Commander visual baseline is approved enough to inform the future HARA Labs institutional-site update, while the product remains under active implementation. Production OIDC readiness is still an open gate; do not treat the current disabled login path as product-complete.
 
+## Agent lifecycle
+
+Current lifecycle status and homologation evidence:
+
+`docs/status/HARA_COMMANDER_P1_AGENT_LIFECYCLE_CURRENT_20260923.md`
+
+Agent lifecycle commands now cover status, doctor, rollback-safe update and self-revoking uninstall.
+
 ## Runtime surface
 
 Production health:

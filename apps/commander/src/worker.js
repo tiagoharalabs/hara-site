@@ -887,6 +887,35 @@ async function heartbeatDevice(env, request, body) {
   };
 }
 
+async function revokeDeviceSelf(env, request) {
+  const device = await resolveDeviceCredential(env, request);
+  const revokedAt = nowIso();
+  await env.PRODUCT_DB.batch([
+    env.PRODUCT_DB.prepare(
+      `UPDATE commander_devices
+          SET state = 'REVOKED', revoked_at_utc = ?
+        WHERE device_id = ? AND tenant_id = ? AND state = 'ACTIVE'`
+    ).bind(revokedAt, device.device_id, device.tenant_id),
+    env.PRODUCT_DB.prepare(
+      `DELETE FROM commander_device_selections
+        WHERE tenant_id = ? AND device_id = ?`
+    ).bind(device.tenant_id, device.device_id),
+    env.PRODUCT_DB.prepare(
+      `UPDATE commander_device_calls
+          SET state = 'CANCELLED', completed_at_utc = ?, error_code = 'DEVICE_REVOKED'
+        WHERE tenant_id = ? AND device_id = ? AND state IN ('PENDING','EXECUTING')`
+    ).bind(revokedAt, device.tenant_id, device.device_id),
+  ]);
+  return {
+    schema: "hara.commander-device-self-revocation.v1",
+    ok: true,
+    device_id: device.device_id,
+    state: "REVOKED",
+    revoked_at_utc: revokedAt,
+    pending_calls_cancelled: true,
+  };
+}
+
 async function revokePortalDevice(env, session, body) {
   const deviceId = cleanId(body.device_id, 180);
   const revokedAt = nowIso();
@@ -1259,6 +1288,10 @@ export default {
       if (url.pathname === "/api/device/heartbeat" && request.method === "POST") {
         const body = await request.json().catch(() => ({}));
         return json(await heartbeatDevice(env, request, body));
+      }
+
+      if (url.pathname === "/api/device/revoke-self" && request.method === "POST") {
+        return json(await revokeDeviceSelf(env, request));
       }
 
       if (url.pathname === "/api/device/calls/next" && request.method === "POST") {
