@@ -1,6 +1,6 @@
 # H.A.R.A. Identity — password recovery UX checkpoint — 2026-09-23
 
-State: **ROOT CAUSE PROVEN / HARA.8 FALLBACK CANDIDATE PASS / BACKEND PT UPGRADE DEFERRED**
+State: **HARA.8 LIVE / RECOVERY UX CORRECTED / BACKEND PT UPGRADE DEFERRED**
 
 ## Tester finding
 
@@ -59,14 +59,16 @@ IDENTITY_V8_PASSWORD_PAGE_BRANDING=PASS
 
 The candidate was run on `storage` on a non-public local port against the current v4.16 API. No production route was changed during candidate validation.
 
-## Promotion boundary
+## Live promotion
 
-Promotion of hara.8 changes only:
+`hara-identity-login:v4.16.0-hara.8` is now live on `zitadel-login` and `zitadel-assets`.
+
+Promotion changed only:
 
 - `zitadel-login` image;
 - `zitadel-assets` image.
 
-It does not change:
+It did not change:
 
 - ZITADEL API image;
 - Postgres;
@@ -76,7 +78,30 @@ It does not change:
 - OIDC applications;
 - Commander tenant/device data.
 
-Normal rollback target: `hara-identity-login:v4.16.0-hara.7`.
+Post-promotion proof:
+
+```text
+zitadel-login=hara-identity-login:v4.16.0-hara.8 healthy
+zitadel-assets=hara-identity-login:v4.16.0-hara.8 healthy
+zitadel-api=ghcr.io/zitadel/zitadel:v4.16.0 healthy
+IDENTITY_INSTANCE_POLICY=PASS
+IDENTITY_ADMIN_ROLES=PASS
+IDENTITY_PAT_HYGIENE=PASS
+IDENTITY_MAIL_TEMPLATE_COVERAGE=PASS
+IDENTITY_ACTIVE_VENDOR_TEXT_RESIDUE=FALSE
+IDENTITY_SMTP_BRANDING=PASS
+IDENTITY_RUNTIME_HEALTH=PASS
+HARA_IDENTITY_PUBLIC_ASSETS=PASS
+HARA_IDENTITY_VISIBLE_BRANDING=PASS
+COMMANDER_OIDC_REDIRECT=PASS
+COMMANDER_OIDC_PKCE=PASS
+COMMANDER_ACCOUNT_SELECTION=PASS
+HARA_IDENTITY_RECOVERY_PAGE_HTTP=PASS
+HARA_IDENTITY_RECOVERY_COPY_PT=PASS
+HARA_IDENTITY_RECOVERY_FALSE_SUCCESS_COPY=ABSENT
+```
+
+Normal rollback target remains `hara-identity-login:v4.16.0-hara.7`.
 
 ## Later backend improvement
 
