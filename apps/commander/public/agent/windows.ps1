@@ -2,7 +2,7 @@ $ErrorActionPreference = "Stop"
 $Root = Join-Path $env:LOCALAPPDATA "HARA Commander"
 $ConfigPath = Join-Path $Root "device.json"
 $ReceiptDir = Join-Path $Root "receipts"
-$AgentVersion = "0.3.0"
+$AgentVersion = "0.3.1"
 $FunctionId = "device.info"
 
 function Get-PlainText([Security.SecureString]$SecureValue) {

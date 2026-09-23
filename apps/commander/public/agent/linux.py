@@ -10,7 +10,7 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
-AGENT_VERSION = "0.3.0"
+AGENT_VERSION = "0.3.1"
 CONFIG_FILE = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home()/".config"))) / "hara-commander/device.env"
 DATA_DIR = Path(os.environ.get("XDG_DATA_HOME", str(Path.home()/".local/share"))) / "hara-commander"
 RECEIPT_DIR = DATA_DIR / "receipts"
@@ -203,6 +203,8 @@ def self_test():
     print("COMMANDER_ARBITRARY_FUNCTION=DENIED")
 
 def main():
+    if "--version" in sys.argv:
+        print(AGENT_VERSION); return
     if "--self-test" in sys.argv:
         self_test(); return
     config=load_config()
