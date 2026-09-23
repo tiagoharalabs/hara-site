@@ -172,6 +172,51 @@ cleanup_failed_install() {
   exit "$rc"
 }
 
+support_agent() {
+  local active=FALSE enabled=FALSE
+  systemctl --user is-active --quiet "$SERVICE" 2>/dev/null && active=TRUE || true
+  systemctl --user is-enabled --quiet "$SERVICE" 2>/dev/null && enabled=TRUE || true
+  python3 - "$CONFIG_FILE" "$AGENT" "$UNIT" "$active" "$enabled" <<'PYSUPPORT'
+import hashlib,json,os,platform,stat,sys
+from pathlib import Path
+config_path=Path(sys.argv[1]); agent_path=Path(sys.argv[2]); unit_path=Path(sys.argv[3])
+active=sys.argv[4]=="TRUE"; enabled=sys.argv[5]=="TRUE"
+values={}
+if config_path.is_file():
+    for raw in config_path.read_text(encoding="utf-8").splitlines():
+        if "=" in raw:
+            key,value=raw.split("=",1)
+            if key != "HARA_DEVICE_TOKEN": values[key]=value
+version="unknown"
+agent_sha=None
+if agent_path.is_file():
+    try:
+        import subprocess
+        version=subprocess.run([sys.executable,str(agent_path),"--version"],capture_output=True,text=True,timeout=5).stdout.strip() or "unknown"
+    except Exception: pass
+    agent_sha=hashlib.sha256(agent_path.read_bytes()).hexdigest()
+mode=None
+if config_path.exists(): mode=oct(stat.S_IMODE(config_path.stat().st_mode))[2:]
+report={
+  "schema":"hara.commander-support-report.v1",
+  "platform":"LINUX",
+  "device_id":values.get("HARA_DEVICE_ID"),
+  "architecture":values.get("HARA_DEVICE_ARCH") or platform.machine(),
+  "commander_url":values.get("HARA_COMMANDER_URL"),
+  "agent_version":version,
+  "agent_sha256":agent_sha,
+  "config_present":config_path.is_file(),
+  "config_mode":mode,
+  "service_unit_present":unit_path.is_file(),
+  "service_active":active,
+  "service_enabled":enabled,
+  "device_token_present":bool(config_path.is_file() and any(line.startswith("HARA_DEVICE_TOKEN=") for line in config_path.read_text(encoding="utf-8").splitlines())),
+  "device_token_exposed":False,
+}
+print(json.dumps(report,separators=(",",":"),sort_keys=True))
+PYSUPPORT
+}
+
 doctor_agent() {
   [ -f "$CONFIG_FILE" ] || { echo 'DEVICE_NOT_ENROLLED' >&2; return 5; }
   [ -f "$AGENT" ] || { echo 'AGENT_BINARY_MISSING' >&2; return 6; }
@@ -190,6 +235,8 @@ case "$ACTION" in
     status_agent; exit 0 ;;
   doctor)
     doctor_agent; exit $? ;;
+  support)
+    support_agent; exit $? ;;
   update)
     [ -f "$CONFIG_FILE" ] || { echo 'DEVICE_NOT_ENROLLED' >&2; exit 5; }
     [ -f "$UNIT" ] || { echo 'AGENT_SERVICE_NOT_INSTALLED' >&2; exit 6; }
@@ -232,7 +279,7 @@ case "$ACTION" in
     printf 'DEVICE_TOKEN_EXPOSED=FALSE\n'
     exit 0 ;;
   install) ;;
-  *) echo 'Usage: linux.sh [install|status|doctor|update|uninstall]' >&2; exit 64 ;;
+  *) echo 'Usage: linux.sh [install|status|doctor|support|update|uninstall]' >&2; exit 64 ;;
 esac
 
 [ ! -f "$CONFIG_FILE" ] || { echo 'DEVICE_ALREADY_ENROLLED: use status, update, or uninstall.' >&2; exit 8; }

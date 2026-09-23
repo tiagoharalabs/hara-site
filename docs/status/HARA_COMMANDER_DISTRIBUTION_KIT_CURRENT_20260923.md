@@ -9,7 +9,7 @@ Linux:
 - bootstrap installer: `/install/linux.sh`;
 - Agent: `/agent/linux.py`;
 - user-systemd persistence;
-- status / doctor / update / uninstall;
+- status / doctor / support / update / uninstall;
 - rollback-safe update;
 - authenticated self-revoke.
 
@@ -19,7 +19,7 @@ Windows:
 - Agent: `/agent/windows.ps1`;
 - DPAPI-protected device token;
 - Scheduled Task persistence;
-- status / doctor / update / uninstall;
+- status / doctor / support / update / uninstall;
 - rollback-safe update;
 - authenticated self-revoke.
 
@@ -57,6 +57,27 @@ The external Windows test is intentionally late in the sequence. It does **not**
 8. uninstall self-revokes and removes local state.
 
 Only after the Linux/nucleo selected-device E2E is terminal should a native Windows EXE/MSI wrapper be finalized and sent to an external tester.
+
+## Support contract
+
+`support` emits `hara.commander-support-report.v1`. The report is safe to attach to a customer support case because it does not decrypt or print the device token. It contains only operational metadata such as platform, device ID, Commander URL, Agent version/SHA-256, config presence/permissions and service/task state.
+
+Linux isolated proof:
+
+`LINUX_SUPPORT_REPORT_SANITIZED=PASS`
+
+Windows has the same schema contract implemented; live Windows output remains part of the later real-host canary.
+
+## Release / compatibility policy
+
+- stable channel is the only customer channel in V1;
+- Agent semantic version is shared by Linux and Windows;
+- manifest version and Agent-reported version must match before install/update;
+- current stable Agent: `0.3.2`;
+- update is fail-closed on manifest/hash/version mismatch;
+- previous Agent is retained only as a short-lived rollback candidate during update;
+- no forced update occurs merely because a newer manifest exists; update remains explicit until a later managed-update policy is approved;
+- protocol expansion beyond the exact five MCP tools requires a separately reviewed compatibility gate.
 
 ## Native Windows packaging — intentionally pending
 

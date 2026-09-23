@@ -30,7 +30,21 @@ Current lifecycle status and homologation evidence:
 
 `docs/status/HARA_COMMANDER_P1_AGENT_LIFECYCLE_CURRENT_20260923.md`
 
-Agent lifecycle commands now cover status, doctor, rollback-safe update and self-revoking uninstall.
+Agent lifecycle commands now cover status, doctor, sanitized support report, rollback-safe update and self-revoking uninstall.
+
+## Support diagnostics
+
+Customer-side diagnostics are intentionally token-safe and offline-capable.
+
+Linux:
+
+`linux.sh support`
+
+Windows:
+
+`windows.ps1 -Action support`
+
+Both emit `hara.commander-support-report.v1` JSON with device/Agent/service metadata and hash information while exposing only whether a device token exists, never the token value. The support report does not call ChatGPT/OpenAI and does not require the Product MCP cutover.
 
 ## Release integrity
 
