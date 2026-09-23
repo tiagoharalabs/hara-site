@@ -64,7 +64,7 @@ Current factual state as of 2026-09-23:
 - expired OIDC transactions are pruned before a new login transaction is created;
 - D1 session readback now distinguishes expiry from explicit revocation.
 
-The HARA Identity instance Login Policy fallback redirect has now been aligned from the DEV Worker to `https://commander.haralabs.com.br/` through the supported ZITADEL Admin API. Independent backend validation reports `IDENTITY_LOGIN_DEFAULT_REDIRECT=PASS`. The remaining login gate is a fresh human browser login/callback + logout/account-switch retest in production.
+The HARA Identity instance Login Policy fallback redirect has been aligned from the DEV Worker to `https://commander.haralabs.com.br/` through the supported ZITADEL Admin API, and independent backend validation reports `IDENTITY_LOGIN_DEFAULT_REDIRECT=PASS`. However, a fresh server-rendered Login V2 page still exposes the old DEV `defaultRedirectUri`, so the Login V2 runtime is stale relative to the persisted policy. The runtime must be refreshed and pass the new public redirect gate before the human browser callback/logout/account-switch retest.
 
 Canonical evidence and remediation are in `docs/status/HARA_COMMANDER_LOGIN_FLOW_REVIEW_20260923.md`.
 
@@ -86,8 +86,8 @@ The product is still under active development. Visual approval does not mean fun
 
 ## Next product gates
 
-1. Re-prove a fresh human browser login/callback after the live production redirect alignment.
-2. Re-prove logout / `Usar outra conta` and preserve no-flash authenticated first-paint behavior.
+1. Refresh only the HARA Identity Login V2 runtime and prove its rendered `defaultRedirectUri` is the Commander production origin.
+2. Re-prove a fresh human browser login/callback, logout / `Usar outra conta`, and preserve no-flash authenticated first-paint behavior.
 3. Complete the first real production device pairing on `nucleo-a`.
 4. Bind public MCP identity/workspace to a selected online customer computer.
 5. Prove the governed tool surface end-to-end with ChatGPT/Codex.

@@ -1,6 +1,6 @@
 # H.A.R.A. Commander — login live successor handoff — 2026-09-23
 
-State: **DEFAULT REDIRECT LIVE ALIGNED / CODE HARDENING LIVE / HUMAN BROWSER RETEST NEXT**
+State: **BACKEND DEFAULT REDIRECT ALIGNED / LOGIN V2 RUNTIME STALE / RUNTIME REFRESH BEFORE HUMAN RETEST**
 
 ## What is already live
 
@@ -32,21 +32,29 @@ IDENTITY_RUNTIME_HEALTH=PASS
 IDENTITY_LOGIN_IMAGE_VARIANT=PASS_HARA_8
 ```
 
+## Runtime convergence finding
+
+A fresh Commander PROD login reaches Login V2, but the server-rendered login payload still contains:
+
+```text
+defaultRedirectUri=https://hara-commander-dev-v2.tiago-sartori.workers.dev/
+```
+
+The persisted policy is already correct, so do not reapply it. `validate_live_white_label.py` now checks this live rendered setting and currently fails with `LOGIN_DEFAULT_REDIRECT_RUNTIME_DRIFT`.
+
 ## Do not repeat
 
-Do not reapply the default redirect unless readback proves drift. Do not edit ZITADEL projections/event-store rows. Do not repeat HARA Identity recovery hara.8 promotion, PKCE/account-switch fixes, OIDC transaction cleanup, Cloudflare AUD lookup, or product-token provisioning.
+Do not reapply the default redirect unless backend readback proves drift. Do not edit ZITADEL projections/event-store rows. Do not repeat HARA Identity recovery hara.8 promotion, PKCE/account-switch fixes, OIDC transaction cleanup, Cloudflare AUD lookup, or product-token provisioning.
 
 ## Exact next gate
 
-Human browser retest in production:
-
-1. open `https://commander.haralabs.com.br`;
-2. sign out if an old session exists;
-3. click `Entrar`;
-4. complete HARA Identity login;
+1. restart only `hara-identity-zitadel-login-1` through an authorized privileged operator path;
+2. wait until that container is `healthy`;
+3. rerun `apps/identity-login/scripts/validate_live_white_label.py` and require `HARA_IDENTITY_LOGIN_DEFAULT_REDIRECT_RUNTIME=PASS`;
+4. only then open `https://commander.haralabs.com.br` and complete a human login;
 5. prove return to Commander production origin and authenticated session/UI;
 6. test `Sair`;
 7. test `Usar outra conta`;
 8. confirm no redirect to DEV and no stale-login loop.
 
-Only after this login gate passes should the first real production device pairing begin.
+Keep the ZITADEL API and Postgres untouched. Only after this login gate passes should the first real production device pairing begin.

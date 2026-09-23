@@ -70,7 +70,7 @@ Backend drift validation (run on the Identity host):
 sudo python3 /srv/hara/identity/tools/validate_identity_backend.py
 ```
 
-The public validator proves HARA assets, manifest, visible branding, absence of visible vendor copy, Commander OIDC redirect, PKCE S256 and explicit account selection.
+The public validator proves HARA assets, manifest, visible branding, absence of visible vendor copy, Commander PROD OIDC redirect, PKCE S256, explicit account selection, and that the Login V2 server-rendered `defaultRedirectUri` matches the Commander production origin.
 
 The backend validator proves instance policy, administrative roles, PAT hygiene, complete PT/EN mail-template coverage including Verify Phone, absence of active vendor text, SMTP branding and runtime container health. It also reports the current SMTP transport alignment state without mutating it.
 
