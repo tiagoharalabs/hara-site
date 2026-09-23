@@ -13,14 +13,14 @@
       "sha256": "25def6a0689de9c7cc91d06d166eb96660face9a942346cb5086a56094ebdc0a"
     },
     {
-      "bytes": 10206,
+      "bytes": 11876,
       "path": "install/linux.sh",
-      "sha256": "79c11a726495a407958c5fe89414e7973de55c329bfceec6f9e079793c71ef69"
+      "sha256": "e4bb9f9745338bf04327fd6bae3e7a4ca2f0addaaac63b95c23e24d7ab549611"
     },
     {
-      "bytes": 10884,
+      "bytes": 12034,
       "path": "install/windows.ps1",
-      "sha256": "10aa753de1bd29cd233d7263750f840739236c748413cbe67bbdf73c2911f9ff"
+      "sha256": "6b80282e50ba0132b5520b8dcfd19192b789eef109a972a66e762b7387f1681d"
     }
   ],
   "product": "H.A.R.A. Commander",

@@ -135,6 +135,43 @@ else:
 PYREMOTE
 }
 
+rollback_enrolled_device() {
+  [ -n "${DEVICE_ID:-}" ] && [ -n "${DEVICE_TOKEN:-}" ] || return 1
+  HARA_ROLLBACK_DEVICE_ID="$DEVICE_ID" HARA_ROLLBACK_DEVICE_TOKEN="$DEVICE_TOKEN" \
+    python3 - "$BASE_URL" <<'PYROLLBACK'
+import json,os,sys,urllib.request
+base=sys.argv[1].rstrip("/")
+device_id=os.environ.get("HARA_ROLLBACK_DEVICE_ID","")
+token=os.environ.get("HARA_ROLLBACK_DEVICE_TOKEN","")
+if not device_id or not token: raise SystemExit(2)
+req=urllib.request.Request(
+    base+"/api/device/revoke-self", data=b"{}", method="POST",
+    headers={"content-type":"application/json","accept":"application/json","authorization":"Bearer "+token,"user-agent":"HARA-Commander-Installer-Rollback/0.3.2"},
+)
+with urllib.request.urlopen(req,timeout=15) as response:
+    obj=json.loads(response.read().decode() or "{}")
+if not obj.get("ok") or obj.get("state")!="REVOKED" or obj.get("device_id")!=device_id:
+    raise SystemExit(3)
+PYROLLBACK
+}
+
+cleanup_failed_install() {
+  local rc=$?
+  trap - EXIT
+  if [ "$rc" -ne 0 ] && [ "${INSTALL_ENROLLED:-FALSE}" = TRUE ]; then
+    local revoke_state=PENDING
+    rollback_enrolled_device >/dev/null 2>&1 && revoke_state=PASS || true
+    systemctl --user disable --now "$SERVICE" >/dev/null 2>&1 || true
+    rm -f "$UNIT"
+    systemctl --user daemon-reload >/dev/null 2>&1 || true
+    rm -rf "$BIN_DIR" "$CONFIG_DIR"
+    printf 'HARA_COMMANDER_FAILED_INSTALL_ROLLBACK=%s\n' "$revoke_state" >&2
+    [ "$revoke_state" = PASS ] || printf 'SERVER_DEVICE_REVOKE_PENDING=TRUE\n' >&2
+  fi
+  unset DEVICE_TOKEN || true
+  exit "$rc"
+}
+
 doctor_agent() {
   [ -f "$CONFIG_FILE" ] || { echo 'DEVICE_NOT_ENROLLED' >&2; return 5; }
   [ -f "$AGENT" ] || { echo 'AGENT_BINARY_MISSING' >&2; return 6; }
@@ -237,6 +274,8 @@ PY
 DEVICE_ID="${VALUES[0]}"
 DEVICE_TOKEN="${VALUES[1]}"
 unset PAIRING_TOKEN RESPONSE PAYLOAD VALUES
+INSTALL_ENROLLED=TRUE
+trap cleanup_failed_install EXIT
 
 umask 077
 mkdir -p "$CONFIG_DIR" "$BIN_DIR" "$SYSTEMD_DIR"
@@ -278,6 +317,9 @@ if ! systemctl --user is-active --quiet hara-commander-agent.service; then
   exit 4
 fi
 
+INSTALL_ENROLLED=FALSE
+trap - EXIT
+unset DEVICE_TOKEN
 printf 'HARA_COMMANDER_DEVICE_ENROLLMENT=PASS\n'
 printf 'HARA_COMMANDER_AGENT_SERVICE=ACTIVE\n'
 printf 'DEVICE_ID=%s\n' "$DEVICE_ID"
