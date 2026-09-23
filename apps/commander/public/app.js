@@ -296,7 +296,8 @@
       name.textContent = String(device.device_name || "Computador");
       const meta = document.createElement("small");
       const arch = device.architecture ? " · " + String(device.architecture) : "";
-      meta.textContent = String(device.platform || "—") + arch + " · " + formatDeviceSeen(device.last_seen_at_utc);
+      const agentVersion = device.agent_version ? " · Agent " + String(device.agent_version) : "";
+      meta.textContent = String(device.platform || "—") + arch + agentVersion + " · " + formatDeviceSeen(device.last_seen_at_utc);
       body.append(name, meta);
 
       const state = document.createElement("span");

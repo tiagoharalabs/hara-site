@@ -8,6 +8,9 @@ SYSTEMD_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
 CONFIG_FILE="$CONFIG_DIR/device.env"
 AGENT="$BIN_DIR/hara-commander-agent"
 UNIT="$SYSTEMD_DIR/hara-commander-agent.service"
+SERVICE="hara-commander-agent.service"
+ACTION="${1:-install}"
+ACTION="${ACTION#--}"
 
 need() {
   command -v "$1" >/dev/null 2>&1 || {
@@ -19,6 +22,82 @@ need() {
 need curl
 need python3
 need systemctl
+
+read_config_value() {
+  local key="$1"
+  [ -f "$CONFIG_FILE" ] || return 1
+  python3 - "$CONFIG_FILE" "$key" <<'PY'
+from pathlib import Path
+import sys
+path=Path(sys.argv[1]); key=sys.argv[2]
+for raw in path.read_text(encoding="utf-8").splitlines():
+    if raw.startswith(key+"="):
+        print(raw.split("=",1)[1]); raise SystemExit(0)
+raise SystemExit(1)
+PY
+}
+
+download_agent() {
+  mkdir -p "$BIN_DIR"
+  local tmp
+  tmp="$(mktemp "$BIN_DIR/.hara-commander-agent.XXXXXX")"
+  if ! curl -fsS --max-time 30 "$BASE_URL/agent/linux.py" -o "$tmp"; then
+    rm -f "$tmp"; return 1
+  fi
+  chmod 700 "$tmp"
+  if ! python3 "$tmp" --self-test >/dev/null; then
+    rm -f "$tmp"; echo 'AGENT_UPDATE_VALIDATION_FAILED' >&2; return 1
+  fi
+  mv -f "$tmp" "$AGENT"
+  chmod 700 "$AGENT"
+}
+
+status_agent() {
+  local device_id="" enrolled=FALSE active=FALSE enabled=FALSE version="unknown"
+  device_id="$(read_config_value HARA_DEVICE_ID 2>/dev/null || true)"
+  [ -n "$device_id" ] && enrolled=TRUE
+  systemctl --user is-active --quiet "$SERVICE" 2>/dev/null && active=TRUE || true
+  systemctl --user is-enabled --quiet "$SERVICE" 2>/dev/null && enabled=TRUE || true
+  [ ! -f "$AGENT" ] || version="$(python3 "$AGENT" --version 2>/dev/null || echo unknown)"
+  printf 'HARA_COMMANDER_DEVICE_ENROLLED=%s\n' "$enrolled"
+  printf 'HARA_COMMANDER_AGENT_ACTIVE=%s\n' "$active"
+  printf 'HARA_COMMANDER_AGENT_ENABLED=%s\n' "$enabled"
+  printf 'HARA_COMMANDER_AGENT_VERSION=%s\n' "$version"
+  [ -z "$device_id" ] || printf 'DEVICE_ID=%s\n' "$device_id"
+  printf 'DEVICE_TOKEN_EXPOSED=FALSE\n'
+}
+
+case "$ACTION" in
+  status)
+    status_agent; exit 0 ;;
+  update)
+    [ -f "$CONFIG_FILE" ] || { echo 'DEVICE_NOT_ENROLLED' >&2; exit 5; }
+    [ -f "$UNIT" ] || { echo 'AGENT_SERVICE_NOT_INSTALLED' >&2; exit 6; }
+    configured_url="$(read_config_value HARA_COMMANDER_URL 2>/dev/null || true)"
+    [ -z "$configured_url" ] || BASE_URL="${configured_url%/}"
+    download_agent
+    systemctl --user daemon-reload
+    systemctl --user restart "$SERVICE"
+    sleep 1
+    systemctl --user is-active --quiet "$SERVICE" || { echo 'HARA Commander Agent failed after update.' >&2; exit 7; }
+    printf 'HARA_COMMANDER_AGENT_UPDATE=PASS\n'
+    status_agent; exit 0 ;;
+  uninstall)
+    device_id="$(read_config_value HARA_DEVICE_ID 2>/dev/null || true)"
+    systemctl --user disable --now "$SERVICE" >/dev/null 2>&1 || true
+    rm -f "$UNIT"
+    systemctl --user daemon-reload >/dev/null 2>&1 || true
+    rm -rf "$BIN_DIR" "$CONFIG_DIR"
+    printf 'HARA_COMMANDER_AGENT_UNINSTALL=PASS\n'
+    [ -z "$device_id" ] || printf 'DEVICE_ID=%s\n' "$device_id"
+    printf 'SERVER_DEVICE_REVOKE_REQUIRED=TRUE\n'
+    printf 'DEVICE_TOKEN_EXPOSED=FALSE\n'
+    exit 0 ;;
+  install) ;;
+  *) echo 'Usage: linux.sh [install|status|update|uninstall]' >&2; exit 64 ;;
+esac
+
+[ ! -f "$CONFIG_FILE" ] || { echo 'DEVICE_ALREADY_ENROLLED: use status, update, or uninstall.' >&2; exit 8; }
 
 printf 'HARA Commander — Linux device pairing\n'
 printf 'Pairing token: '
@@ -36,7 +115,7 @@ print(json.dumps({
   "device_name": sys.argv[2],
   "platform": "LINUX",
   "architecture": sys.argv[3],
-  "agent_version": "0.3.0",
+  "agent_version": "0.3.1",
 }, separators=(",",":")))
 PY
 )"
@@ -68,8 +147,7 @@ HARA_DEVICE_ARCH=$ARCH
 EOF
 chmod 600 "$CONFIG_FILE"
 
-curl -fsS --max-time 30 "$BASE_URL/agent/linux.py" -o "$AGENT"
-chmod 700 "$AGENT"
+download_agent
 
 cat >"$UNIT" <<EOF
 [Unit]
