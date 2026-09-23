@@ -34,15 +34,17 @@ Agent lifecycle commands now cover status, doctor, sanitized support report, rol
 
 ## Support diagnostics
 
-Customer-side diagnostics are intentionally token-safe and offline-capable.
+Customer-side diagnostics are intentionally token-safe and offline-capable. A separate non-mutating `preflight` checks whether a host can reach Commander, read the stable release manifest and provide the local persistence mechanism before the customer generates or consumes a pairing token.
 
 Linux:
 
-`linux.sh support`
+- `linux.sh preflight`
+- `linux.sh support`
 
 Windows:
 
-`windows.ps1 -Action support`
+- `windows.ps1 -Action preflight`
+- `windows.ps1 -Action support`
 
 Both emit `hara.commander-support-report.v1` JSON with device/Agent/service metadata and hash information while exposing only whether a device token exists, never the token value. The support report does not call ChatGPT/OpenAI and does not require the Product MCP cutover.
 
