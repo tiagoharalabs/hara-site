@@ -163,34 +163,56 @@ $PairingToken = $null
 $SecurePairing.Dispose()
 if (-not $Enroll.device_id -or -not $Enroll.device_token) { throw "DEVICE_ENROLLMENT_RESPONSE_INVALID" }
 
-New-Item -ItemType Directory -Path $Root -Force | Out-Null
-$EncryptedToken = ConvertTo-SecureString $Enroll.device_token -AsPlainText -Force | ConvertFrom-SecureString
-$ConfigObject = @{ base_url=$BaseUrl; device_id=[string]$Enroll.device_id; encrypted_device_token=$EncryptedToken; architecture=$Architecture; agent_version="0.3.2" }
-$ConfigObject | ConvertTo-Json | Set-Content -Path $Config -Encoding UTF8
+$InstallEnrolled = $true
+$DeviceTokenForRollback = [string]$Enroll.device_token
+try {
+  New-Item -ItemType Directory -Path $Root -Force | Out-Null
+  $EncryptedToken = ConvertTo-SecureString $Enroll.device_token -AsPlainText -Force | ConvertFrom-SecureString
+  $ConfigObject = @{ base_url=$BaseUrl; device_id=[string]$Enroll.device_id; encrypted_device_token=$EncryptedToken; architecture=$Architecture; agent_version="0.3.2" }
+  $ConfigObject | ConvertTo-Json | Set-Content -Path $Config -Encoding UTF8
 
-$Identity = [Security.Principal.WindowsIdentity]::GetCurrent().Name
-& icacls.exe $Root /inheritance:r /grant:r "$Identity:(OI)(CI)F" | Out-Null
-& icacls.exe $Config /inheritance:r /grant:r "$Identity:F" | Out-Null
+  $Identity = [Security.Principal.WindowsIdentity]::GetCurrent().Name
+  & icacls.exe $Root /inheritance:r /grant:r "$Identity:(OI)(CI)F" | Out-Null
+  & icacls.exe $Config /inheritance:r /grant:r "$Identity:F" | Out-Null
 
-$InstallTmp = $Agent + ".install"
-Remove-Item -Force $InstallTmp -ErrorAction SilentlyContinue
-Invoke-WebRequest -Uri "$BaseUrl/agent/windows.ps1" -OutFile $InstallTmp -UseBasicParsing -TimeoutSec 30
-Assert-AgentIntegrity $InstallTmp
-Move-Item -Force $InstallTmp $Agent
-& icacls.exe $Agent /inheritance:r /grant:r "$Identity:F" | Out-Null
+  $InstallTmp = $Agent + ".install"
+  Remove-Item -Force $InstallTmp -ErrorAction SilentlyContinue
+  Invoke-WebRequest -Uri "$BaseUrl/agent/windows.ps1" -OutFile $InstallTmp -UseBasicParsing -TimeoutSec 30
+  Assert-AgentIntegrity $InstallTmp
+  Move-Item -Force $InstallTmp $Agent
+  & icacls.exe $Agent /inheritance:r /grant:r "$Identity:F" | Out-Null
 
-$PowerShellExe = (Get-Command powershell.exe).Source
-$Argument = "-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$Agent`""
-$Action = New-ScheduledTaskAction -Execute $PowerShellExe -Argument $Argument
-$Trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
-$Settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RestartCount 10 -RestartInterval (New-TimeSpan -Minutes 1)
-Register-ScheduledTask -TaskName $TaskName -Action $Action -Trigger $Trigger -Settings $Settings -Description "HARA Commander outbound device agent" -Force | Out-Null
-Start-ScheduledTask -TaskName $TaskName
-Start-Sleep -Seconds 2
-$Task = Get-ScheduledTask -TaskName $TaskName
-if (-not $Task) { throw "HARA Commander Agent scheduled task was not created." }
+  $PowerShellExe = (Get-Command powershell.exe).Source
+  $Argument = "-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$Agent`""
+  $Action = New-ScheduledTaskAction -Execute $PowerShellExe -Argument $Argument
+  $Trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
+  $Settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RestartCount 10 -RestartInterval (New-TimeSpan -Minutes 1)
+  Register-ScheduledTask -TaskName $TaskName -Action $Action -Trigger $Trigger -Settings $Settings -Description "HARA Commander outbound device agent" -Force | Out-Null
+  Start-ScheduledTask -TaskName $TaskName
+  Start-Sleep -Seconds 2
+  $Task = Get-ScheduledTask -TaskName $TaskName
+  if (-not $Task) { throw "HARA Commander Agent scheduled task was not created." }
 
-Write-Host "HARA_COMMANDER_DEVICE_ENROLLMENT=PASS"
-Write-Host "HARA_COMMANDER_AGENT_TASK=REGISTERED"
-Write-Host "DEVICE_ID=$($Enroll.device_id)"
-Write-Host "DEVICE_TOKEN_EXPOSED=FALSE"
+  $InstallEnrolled = $false
+  $DeviceTokenForRollback = $null
+  Write-Host "HARA_COMMANDER_DEVICE_ENROLLMENT=PASS"
+  Write-Host "HARA_COMMANDER_AGENT_TASK=REGISTERED"
+  Write-Host "DEVICE_ID=$($Enroll.device_id)"
+  Write-Host "DEVICE_TOKEN_EXPOSED=FALSE"
+} catch {
+  $OriginalError = $_
+  if ($InstallEnrolled) {
+    $RevokeState = "PENDING"
+    try {
+      $headers = @{ Accept="application/json"; Authorization=("Bearer " + $DeviceTokenForRollback) }
+      $result = Invoke-RestMethod -Uri "$BaseUrl/api/device/revoke-self" -Method Post -ContentType "application/json" -Headers $headers -Body "{}" -TimeoutSec 15
+      if ($result.ok -and [string]$result.state -eq "REVOKED" -and [string]$result.device_id -eq [string]$Enroll.device_id) { $RevokeState = "PASS" }
+    } catch { $RevokeState = "PENDING" }
+    Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $Root -Recurse -Force -ErrorAction SilentlyContinue
+    Write-Host ("HARA_COMMANDER_FAILED_INSTALL_ROLLBACK=" + $RevokeState)
+    if ($RevokeState -ne "PASS") { Write-Host "SERVER_DEVICE_REVOKE_PENDING=TRUE" }
+  }
+  $DeviceTokenForRollback = $null
+  throw $OriginalError
+}

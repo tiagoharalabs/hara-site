@@ -37,7 +37,7 @@ The manifest binds stable Agent version `0.3.2` to SHA-256 and byte length for:
 - `install/linux.sh`;
 - `install/windows.ps1`.
 
-Install/update downloads now fail closed on Agent SHA-256 mismatch or Agent-version/manifest mismatch.
+Install/update downloads now fail closed on Agent SHA-256 mismatch or Agent-version/manifest mismatch. After server-side enrollment, bootstrap installation is transactional: if the local Agent/service/task setup fails, the installer attempts authenticated self-revocation and removes partial local state before returning the original failure.
 
 Builder/checker:
 
