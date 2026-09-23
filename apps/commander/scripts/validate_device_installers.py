@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 from pathlib import Path
+import hashlib
+import json
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -10,6 +12,8 @@ LINUX_AGENT = (PUBLIC / "agent/linux.py").read_text(encoding="utf-8")
 WINDOWS_AGENT = (PUBLIC / "agent/windows.ps1").read_text(encoding="utf-8")
 HTML = (PUBLIC / "index.html").read_text(encoding="utf-8")
 JS = (PUBLIC / "app.js").read_text(encoding="utf-8")
+MANIFEST = json.loads((PUBLIC / "release/agent-manifest.json").read_text(encoding="utf-8"))
+SHA256SUMS = (PUBLIC / "release/SHA256SUMS").read_text(encoding="utf-8")
 
 def need(text: str, token: str, code: str) -> None:
     assert token in text, f"{code}:{token}"
@@ -19,7 +23,9 @@ for token in ('platform": "LINUX"', "/api/device/enroll", "/agent/linux.py",
               "HARA_COMMANDER_AGENT_UPDATE=PASS", "HARA_COMMANDER_AGENT_UNINSTALL=PASS",
               "HARA_COMMANDER_AGENT_VERSION=", "HARA_COMMANDER_AGENT_DOCTOR=PASS",
               "/api/device/revoke-self", "SERVER_DEVICE_REVOKE=",
-              "HARA_COMMANDER_AGENT_UPDATE_ROLLBACK_READY=TRUE"):
+              "HARA_COMMANDER_AGENT_UPDATE_ROLLBACK_READY=TRUE",
+              "/release/agent-manifest.json", "AGENT_SHA256_MISMATCH",
+              "AGENT_VERSION_MANIFEST_MISMATCH", "HARA_COMMANDER_AGENT_INTEGRITY=PASS"):
     need(LINUX, token, "LINUX_INSTALLER_MISSING")
 assert "cloudflared" not in LINUX.lower()
 print("LINUX_DEVICE_INSTALLER_STATIC=PASS")
@@ -29,12 +35,27 @@ for token in ('platform="WINDOWS"', "/api/device/enroll", "/agent/windows.ps1",
               'agent_version="0.3.2"', "HARA_COMMANDER_AGENT_UPDATE=PASS",
               "HARA_COMMANDER_AGENT_UNINSTALL=PASS", "HARA_COMMANDER_AGENT_VERSION=",
               "HARA_COMMANDER_AGENT_DOCTOR=PASS", "/api/device/revoke-self",
-              "SERVER_DEVICE_REVOKE=", "HARA_COMMANDER_AGENT_UPDATE_ROLLBACK_READY=TRUE"):
+              "SERVER_DEVICE_REVOKE=", "HARA_COMMANDER_AGENT_UPDATE_ROLLBACK_READY=TRUE",
+              "/release/agent-manifest.json", "AGENT_SHA256_MISMATCH",
+              "AGENT_VERSION_MANIFEST_MISMATCH", "HARA_COMMANDER_AGENT_INTEGRITY=PASS"):
     need(WINDOWS, token, "WINDOWS_INSTALLER_MISSING")
 assert "cloudflared" not in WINDOWS.lower()
 assert "encrypted_device_token" in WINDOWS
 assert "DEVICE_TOKEN_EXPOSED=FALSE" in WINDOWS
 print("WINDOWS_DEVICE_INSTALLER_STATIC=PASS")
+
+assert MANIFEST.get("schema") == "hara.commander-agent-release.v1"
+assert MANIFEST.get("agent_version") == "0.3.2"
+entries = {item["path"]: item for item in MANIFEST.get("files", [])}
+for rel in ("agent/linux.py", "agent/windows.ps1", "install/linux.sh", "install/windows.ps1"):
+    path = PUBLIC / rel
+    assert rel in entries, f"RELEASE_MANIFEST_MISSING:{rel}"
+    digest = hashlib.sha256(path.read_bytes()).hexdigest()
+    assert entries[rel].get("sha256") == digest, f"RELEASE_SHA256_DRIFT:{rel}"
+    assert int(entries[rel].get("bytes", -1)) == path.stat().st_size, f"RELEASE_SIZE_DRIFT:{rel}"
+    assert f"{digest}  {rel}\n" in SHA256SUMS, f"RELEASE_SHA256SUMS_DRIFT:{rel}"
+print("COMMANDER_RELEASE_MANIFEST_INTEGRITY=PASS")
+print("COMMANDER_RELEASE_SHA256SUMS_INTEGRITY=PASS")
 
 TOOLS = ("hara.health","hara.functions.list","hara.functions.describe",
          "hara.functions.invoke","hara.receipts.get")
@@ -63,3 +84,4 @@ print("OUTBOUND_CALL_CHANNEL_FIVE_TOOL_READY=PASS")
 print("AGENT_REMOTE_SELF_REVOKE=PASS")
 print("AGENT_DOCTOR_REMOTE_HEARTBEAT=PASS")
 print("AGENT_UPDATE_ROLLBACK_SAFE=PASS")
+print("AGENT_DOWNLOAD_INTEGRITY_ENFORCED=PASS")

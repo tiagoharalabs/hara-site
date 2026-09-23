@@ -22,7 +22,7 @@ Canonical current product/visual status:
 
 docs/status/HARA_COMMANDER_PRODUCT_DIRECTION_CURRENT_20260922.md
 
-The Commander visual baseline is approved enough to inform the future HARA Labs institutional-site update, while the product remains under active implementation. Production OIDC readiness is still an open gate; do not treat the current disabled login path as product-complete.
+The Commander visual baseline is approved enough to inform the future HARA Labs institutional-site update, while the product remains under active implementation. Production OIDC login is active and the first real production tenant/user/TRIAL onboarding has completed successfully. The next product gate is first real device pairing and selected-device E2E.
 
 ## Agent lifecycle
 
@@ -31,6 +31,17 @@ Current lifecycle status and homologation evidence:
 `docs/status/HARA_COMMANDER_P1_AGENT_LIFECYCLE_CURRENT_20260923.md`
 
 Agent lifecycle commands now cover status, doctor, rollback-safe update and self-revoking uninstall.
+
+## Release integrity
+
+Agent distribution is bound to a deterministic stable-channel release manifest:
+
+- `/release/agent-manifest.json`
+- `/release/SHA256SUMS`
+
+`apps/commander/scripts/build_release_manifest.py` derives Agent version and SHA-256/size metadata from the canonical Linux/Windows Agents and installers. `--check` fails if any release artifact drifts without regenerating the manifest. Linux and Windows installers verify the downloaded Agent SHA-256 and declared Agent version before install/update, then run their existing validation/rollback path.
+
+This is integrity metadata, not code-signing. Native Windows EXE/MSI packaging and publisher signing remain a later distribution gate after the Linux selected-device path is terminal and before an external Windows canary is sent to a third party.
 
 ## Runtime surface
 
@@ -45,11 +56,13 @@ Authenticated portal:
 - `GET /api/portal/devices`
 - `POST /api/portal/devices/pairing`
 - `POST /api/portal/devices/revoke`
+- `POST /api/portal/devices/select`
 
 Device Agent:
 
 - `POST /api/device/enroll`
 - `POST /api/device/heartbeat`
+- `POST /api/device/revoke-self`
 - `POST /api/device/calls/next`
 - `POST /api/device/calls/complete`
 
