@@ -50,19 +50,23 @@ Verified on 2026-09-22:
 - environment: PROD;
 - storage mode: REMOTE_PROD.
 
-## Known production blocker: login readiness
+## Current production login state
 
-The production login is intentionally not considered complete yet.
+This section supersedes the historical 2026-09-22 login-readiness blocker.
 
-Current factual state:
-- /api/portal/auth-config returns configured=false;
+Current factual state as of 2026-09-23:
+- `/api/portal/auth-config` returns `configured=true`;
 - provider is HARA Identity;
 - client auth is BASIC;
-- /auth/login currently returns HTTP 503.
+- `/auth/login` returns HTTP 302 to the HARA Identity OIDC authorization endpoint;
+- first real production OIDC login/onboarding previously completed successfully;
+- account-switch now uses `prompt=select_account` with `max_age=0`;
+- expired OIDC transactions are pruned before a new login transaction is created;
+- D1 session readback now distinguishes expiry from explicit revocation.
 
-Therefore the disabled/non-operational Entrar path is a real runtime readiness blocker, not merely a visual defect.
+The remaining login defect is isolated to the HARA Identity instance Login Policy fallback redirect: `default_redirect_uri` is still pointed at the DEV Worker and must be aligned to `https://commander.haralabs.com.br/` through the supported ZITADEL Admin API. Do not edit ZITADEL projections or event-store rows directly.
 
-Do not hide this state by enabling the button without fixing OIDC production readiness.
+Canonical evidence and remediation are in `docs/status/HARA_COMMANDER_LOGIN_FLOW_REVIEW_20260923.md`.
 
 ## Product implementation state
 
@@ -82,7 +86,7 @@ The product is still under active development. Visual approval does not mean fun
 
 ## Next product gates
 
-1. Restore production OIDC readiness and make Entrar operational.
+1. Align the HARA Identity default redirect URI to the Commander production origin and re-prove login callback.
 2. Preserve the no-flash authenticated first-paint behavior.
 3. Complete the portable local governed tool bridge behind the Agent.
 4. Bind public MCP identity/workspace to a selected online customer computer.
