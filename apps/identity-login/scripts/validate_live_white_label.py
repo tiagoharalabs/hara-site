@@ -16,6 +16,13 @@ FORBIDDEN_VISIBLE = (
     "zitadel.com/docs",
 )
 
+RECOVERY_COPY_PT = (
+    "Se o identificador informado estiver vinculado a uma conta com e-mail de recuperação, "
+    "enviaremos as instruções ao e-mail cadastrado. Se você usou um alias ou nome de usuário, "
+    "tente novamente com o e-mail cadastrado na conta."
+)
+RECOVERY_OLD_FALSE_SUCCESS_PT = "A senha foi redefinida. Por favor, verifique seu e-mail"
+
 def curl(url, *, follow=False, cookie_jar=None):
     cmd = [
         "curl", "-sS", "--retry", "3", "--retry-delay", "1",
@@ -104,6 +111,13 @@ def main():
     for token in FORBIDDEN_VISIBLE:
         need(token not in page, f"VISIBLE_VENDOR_LEAK:{token}")
 
+    recovery_url = identity + "/ui/v2/login/password?loginName=qa-alias-does-not-exist"
+    status, _, recovery_body = curl(recovery_url)
+    need(status == 200, "RECOVERY_PAGE_HTTP")
+    recovery_page = recovery_body.decode("utf-8", errors="replace")
+    need(RECOVERY_COPY_PT in recovery_page, "RECOVERY_COPY_PT_MISSING")
+    need(RECOVERY_OLD_FALSE_SUCCESS_PT not in recovery_page, "RECOVERY_FALSE_SUCCESS_COPY_PRESENT")
+
     print("HARA_IDENTITY_PUBLIC_ASSETS=PASS")
     print("HARA_IDENTITY_MANIFEST=PASS")
     print("HARA_IDENTITY_VISIBLE_BRANDING=PASS")
@@ -111,6 +125,9 @@ def main():
     print("COMMANDER_OIDC_REDIRECT=PASS")
     print("COMMANDER_OIDC_PKCE=PASS")
     print("COMMANDER_ACCOUNT_SELECTION=PASS")
+    print("HARA_IDENTITY_RECOVERY_PAGE_HTTP=PASS")
+    print("HARA_IDENTITY_RECOVERY_COPY_PT=PASS")
+    print("HARA_IDENTITY_RECOVERY_FALSE_SUCCESS_COPY=ABSENT")
 
 if __name__ == "__main__":
     main()
