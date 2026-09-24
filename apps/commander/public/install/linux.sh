@@ -9,6 +9,7 @@ CONFIG_FILE="$CONFIG_DIR/device.env"
 AGENT="$BIN_DIR/hara-commander-agent"
 UNIT="$SYSTEMD_DIR/hara-commander-agent.service"
 SERVICE="hara-commander-agent.service"
+STATUS_FILE="$BIN_DIR/runtime-status.json"
 ACTION="${1:-install}"
 ACTION="${ACTION#--}"
 
@@ -120,7 +121,7 @@ if not base or not token or not device_id:
     raise SystemExit(2)
 if action=="heartbeat":
     endpoint="/api/device/heartbeat"
-    payload={"device_id":device_id,"architecture":arch,"agent_version":"0.3.2"}
+    payload={"device_id":device_id,"architecture":arch,"agent_version":"0.3.3"}
 elif action=="revoke":
     endpoint="/api/device/revoke-self"
     payload={}
@@ -146,22 +147,21 @@ PYREMOTE
 
 rollback_enrolled_device() {
   [ -n "${DEVICE_ID:-}" ] && [ -n "${DEVICE_TOKEN:-}" ] || return 1
-  HARA_ROLLBACK_DEVICE_ID="$DEVICE_ID" HARA_ROLLBACK_DEVICE_TOKEN="$DEVICE_TOKEN" \
-    python3 - "$BASE_URL" <<'PYROLLBACK'
-import json,os,sys,urllib.request
+  printf '%s\n' "$DEVICE_TOKEN" | python3 -c '
+import json,sys,urllib.request
 base=sys.argv[1].rstrip("/")
-device_id=os.environ.get("HARA_ROLLBACK_DEVICE_ID","")
-token=os.environ.get("HARA_ROLLBACK_DEVICE_TOKEN","")
+device_id=sys.argv[2]
+token=sys.stdin.readline().rstrip("\n")
 if not device_id or not token: raise SystemExit(2)
 req=urllib.request.Request(
     base+"/api/device/revoke-self", data=b"{}", method="POST",
-    headers={"content-type":"application/json","accept":"application/json","authorization":"Bearer "+token,"user-agent":"HARA-Commander-Installer-Rollback/0.3.2"},
+    headers={"content-type":"application/json","accept":"application/json","authorization":"Bearer "+token,"user-agent":"HARA-Commander-Installer-Rollback/0.3.3"},
 )
 with urllib.request.urlopen(req,timeout=15) as response:
     obj=json.loads(response.read().decode() or "{}")
 if not obj.get("ok") or obj.get("state")!="REVOKED" or obj.get("device_id")!=device_id:
     raise SystemExit(3)
-PYROLLBACK
+' "$BASE_URL" "$DEVICE_ID"
 }
 
 cleanup_failed_install() {
@@ -220,11 +220,11 @@ support_agent() {
   local active=FALSE enabled=FALSE
   systemctl --user is-active --quiet "$SERVICE" 2>/dev/null && active=TRUE || true
   systemctl --user is-enabled --quiet "$SERVICE" 2>/dev/null && enabled=TRUE || true
-  python3 - "$CONFIG_FILE" "$AGENT" "$UNIT" "$active" "$enabled" <<'PYSUPPORT'
+  python3 - "$CONFIG_FILE" "$AGENT" "$UNIT" "$STATUS_FILE" "$active" "$enabled" <<'PYSUPPORT'
 import hashlib,json,os,platform,stat,sys
 from pathlib import Path
-config_path=Path(sys.argv[1]); agent_path=Path(sys.argv[2]); unit_path=Path(sys.argv[3])
-active=sys.argv[4]=="TRUE"; enabled=sys.argv[5]=="TRUE"
+config_path=Path(sys.argv[1]); agent_path=Path(sys.argv[2]); unit_path=Path(sys.argv[3]); status_path=Path(sys.argv[4])
+active=sys.argv[5]=="TRUE"; enabled=sys.argv[6]=="TRUE"
 values={}
 if config_path.is_file():
     for raw in config_path.read_text(encoding="utf-8").splitlines():
@@ -241,6 +241,10 @@ if agent_path.is_file():
     agent_sha=hashlib.sha256(agent_path.read_bytes()).hexdigest()
 mode=None
 if config_path.exists(): mode=oct(stat.S_IMODE(config_path.stat().st_mode))[2:]
+runtime={}
+if status_path.is_file():
+    try: runtime=json.loads(status_path.read_text(encoding="utf-8"))
+    except Exception: runtime={}
 report={
   "schema":"hara.commander-support-report.v1",
   "platform":"LINUX",
@@ -256,6 +260,9 @@ report={
   "service_enabled":enabled,
   "device_token_present":bool(config_path.is_file() and any(line.startswith("HARA_DEVICE_TOKEN=") for line in config_path.read_text(encoding="utf-8").splitlines())),
   "device_token_exposed":False,
+  "last_successful_heartbeat_at_utc":runtime.get("last_successful_heartbeat_at_utc"),
+  "last_runtime_error_code":runtime.get("last_runtime_error_code"),
+  "last_runtime_error_at_utc":runtime.get("last_runtime_error_at_utc"),
 }
 print(json.dumps(report,separators=(",",":"),sort_keys=True))
 PYSUPPORT
@@ -339,30 +346,29 @@ printf '\n'
 DEVICE_NAME="${HOSTNAME:-$(hostname 2>/dev/null || echo linux-device)}"
 ARCH="$(uname -m)"
 
-PAYLOAD="$(python3 - "$PAIRING_TOKEN" "$DEVICE_NAME" "$ARCH" <<'PY'
+PAYLOAD="$(printf '%s\n' "$PAIRING_TOKEN" | python3 -c '
 import json,sys
+token=sys.stdin.readline().rstrip("\n")
 print(json.dumps({
-  "pairing_token": sys.argv[1],
-  "device_name": sys.argv[2],
+  "pairing_token": token,
+  "device_name": sys.argv[1],
   "platform": "LINUX",
-  "architecture": sys.argv[3],
-  "agent_version": "0.3.2",
+  "architecture": sys.argv[2],
+  "agent_version": "0.3.3",
 }, separators=(",",":")))
-PY
-)"
+' "$DEVICE_NAME" "$ARCH")"
 
-RESPONSE="$(curl -fsS --max-time 30   -H 'content-type: application/json'   -H 'accept: application/json'   --data "$PAYLOAD"   "$BASE_URL/api/device/enroll")"
+RESPONSE="$(printf '%s' "$PAYLOAD" | curl -fsS --max-time 30   -H 'content-type: application/json'   -H 'accept: application/json'   --data-binary @-   "$BASE_URL/api/device/enroll")"
 
-readarray -t VALUES < <(python3 - "$RESPONSE" <<'PY'
+readarray -t VALUES < <(printf '%s' "$RESPONSE" | python3 -c '
 import json,sys
-obj=json.loads(sys.argv[1])
+obj=json.load(sys.stdin)
 for key in ("device_id","device_token"):
     value=obj.get(key)
     if not isinstance(value,str) or not value:
         raise SystemExit("DEVICE_ENROLLMENT_RESPONSE_INVALID")
     print(value)
-PY
-)
+')
 
 DEVICE_ID="${VALUES[0]}"
 DEVICE_TOKEN="${VALUES[1]}"

@@ -22,6 +22,7 @@ const SESSION_COOKIE = "hara_commander_session";
 const TX_COOKIE = "hara_commander_oidc_tx";
 const SESSION_SECONDS = 8 * 60 * 60;
 const TX_SECONDS = 10 * 60;
+const SESSION_TOUCH_SECONDS = 5 * 60;
 
 function nowIso(offsetSeconds = 0) {
   return new Date(Date.now() + offsetSeconds * 1000).toISOString();
@@ -50,6 +51,18 @@ function setCookie(name, value, { maxAge, path = "/", secure = true } = {}) {
 
 function clearCookie(name, path = "/") {
   return setCookie(name, "", { maxAge: 0, path });
+}
+
+export function authCallbackFailureResponse(error) {
+  const raw = String(error?.message || "AUTH_CALLBACK_FAILED");
+  const safeCode = /^[A-Z0-9_]{1,80}$/.test(raw) ? raw : "AUTH_CALLBACK_FAILED";
+  const headers = new Headers({
+    ...AUTH_SECURITY_HEADERS,
+    location: "/?auth_error=" + encodeURIComponent(safeCode) + "#login",
+    "cache-control": "no-store",
+  });
+  headers.append("set-cookie", clearCookie(TX_COOKIE, "/auth"));
+  return new Response(null, { status: 302, headers });
 }
 
 function safeReturnTo(value) {
@@ -379,6 +392,7 @@ export async function resolvePortalSession(request, env) {
        s.session_hash,
        s.subject_id,
        s.expires_at_utc,
+       s.last_seen_at_utc,
        s.revoked_at_utc,
        u.tenant_id,
        u.oidc_issuer,
@@ -400,9 +414,14 @@ export async function resolvePortalSession(request, env) {
   if (session.revoked_at_utc || session.expires_at_utc <= nowIso()) return null;
   if (session.user_state !== "ACTIVE" || session.tenant_state !== "ACTIVE") return null;
 
-  await env.PRODUCT_DB.prepare(
-    `UPDATE portal_sessions SET last_seen_at_utc = ? WHERE session_hash = ?`
-  ).bind(nowIso(), hash).run();
+  const seenAt = Date.parse(String(session.last_seen_at_utc || ""));
+  const now = Date.now();
+  if (!Number.isFinite(seenAt) || now - seenAt >= SESSION_TOUCH_SECONDS * 1000) {
+    // Session liveness telemetry must never make an already-valid session fail.
+    await env.PRODUCT_DB.prepare(
+      `UPDATE portal_sessions SET last_seen_at_utc = ? WHERE session_hash = ?`
+    ).bind(new Date(now).toISOString(), hash).run().catch(() => null);
+  }
 
   return session;
 }

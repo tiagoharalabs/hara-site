@@ -12,6 +12,8 @@ LINUX_AGENT = (PUBLIC / "agent/linux.py").read_text(encoding="utf-8")
 WINDOWS_AGENT = (PUBLIC / "agent/windows.ps1").read_text(encoding="utf-8")
 HTML = (PUBLIC / "index.html").read_text(encoding="utf-8")
 JS = (PUBLIC / "app.js").read_text(encoding="utf-8")
+WORKER = (ROOT / "apps/commander/src/worker.js").read_text(encoding="utf-8")
+AUTH = (ROOT / "apps/commander/src/auth.js").read_text(encoding="utf-8")
 MANIFEST = json.loads((PUBLIC / "release/agent-manifest.json").read_text(encoding="utf-8"))
 SHA256SUMS = (PUBLIC / "release/SHA256SUMS").read_text(encoding="utf-8")
 
@@ -19,7 +21,7 @@ def need(text: str, token: str, code: str) -> None:
     assert token in text, f"{code}:{token}"
 
 for token in ('platform": "LINUX"', "/api/device/enroll", "/agent/linux.py",
-              "systemctl --user enable --now", "chmod 600", '"agent_version": "0.3.2"',
+              "systemctl --user enable --now", "chmod 600", '"agent_version": "0.3.3"',
               "HARA_COMMANDER_AGENT_UPDATE=PASS", "HARA_COMMANDER_AGENT_UNINSTALL=PASS",
               "HARA_COMMANDER_AGENT_VERSION=", "HARA_COMMANDER_AGENT_DOCTOR=PASS",
               "/api/device/revoke-self", "SERVER_DEVICE_REVOKE=",
@@ -31,11 +33,17 @@ for token in ('platform": "LINUX"', "/api/device/enroll", "/agent/linux.py",
               "hara.commander-device-preflight.v1", "mutation_performed", "preflight_agent"):
     need(LINUX, token, "LINUX_INSTALLER_MISSING")
 assert "cloudflared" not in LINUX.lower()
+assert 'python3 - "$PAIRING_TOKEN"' not in LINUX, "PAIRING_TOKEN_EXPOSED_IN_ARGV"
+assert 'python3 - "$RESPONSE"' not in LINUX, "DEVICE_TOKEN_RESPONSE_EXPOSED_IN_ARGV"
+assert '--data "$PAYLOAD"' not in LINUX, "PAIRING_PAYLOAD_EXPOSED_IN_CURL_ARGV"
+assert "HARA_ROLLBACK_DEVICE_TOKEN=" not in LINUX, "DEVICE_TOKEN_EXPOSED_IN_ROLLBACK_ENV"
+assert "--data-binary @-" in LINUX, "PAIRING_PAYLOAD_STDIN_MISSING"
 print("LINUX_DEVICE_INSTALLER_STATIC=PASS")
+print("LINUX_INSTALLER_SECRET_ARGV_EXPOSURE=FALSE")
 
 for token in ('platform="WINDOWS"', "/api/device/enroll", "/agent/windows.ps1",
               "ConvertFrom-SecureString", "Register-ScheduledTask", "icacls.exe",
-              'agent_version="0.3.2"', "HARA_COMMANDER_AGENT_UPDATE=PASS",
+              'agent_version="0.3.3"', "HARA_COMMANDER_AGENT_UPDATE=PASS",
               "HARA_COMMANDER_AGENT_UNINSTALL=PASS", "HARA_COMMANDER_AGENT_VERSION=",
               "HARA_COMMANDER_AGENT_DOCTOR=PASS", "/api/device/revoke-self",
               "SERVER_DEVICE_REVOKE=", "HARA_COMMANDER_AGENT_UPDATE_ROLLBACK_READY=TRUE",
@@ -51,7 +59,7 @@ assert "DEVICE_TOKEN_EXPOSED=FALSE" in WINDOWS
 print("WINDOWS_DEVICE_INSTALLER_STATIC=PASS")
 
 assert MANIFEST.get("schema") == "hara.commander-agent-release.v1"
-assert MANIFEST.get("agent_version") == "0.3.2"
+assert MANIFEST.get("agent_version") == "0.3.3"
 entries = {item["path"]: item for item in MANIFEST.get("files", [])}
 for rel in ("agent/linux.py", "agent/windows.ps1", "install/linux.sh", "install/windows.ps1"):
     path = PUBLIC / rel
@@ -73,6 +81,11 @@ for forbidden in ("subprocess.", "os.system(", "shell=True", "paramiko", "ssh ")
 for forbidden in ("Invoke-Expression", "Start-Process", "cmd.exe", "powershell.exe -Command"):
     assert forbidden not in WINDOWS_AGENT, f"WINDOWS_AGENT_ARBITRARY_EXEC:{forbidden}"
 assert "UNKNOWN_FUNCTION_ID" in LINUX_AGENT and "UNKNOWN_FUNCTION_ID" in WINDOWS_AGENT
+assert "except Exception:\n            pass" not in LINUX_AGENT, "LINUX_AGENT_SILENT_RUNTIME_ERROR"
+assert "catch {\n  }\n  Start-Sleep" not in WINDOWS_AGENT, "WINDOWS_AGENT_SILENT_RUNTIME_ERROR"
+assert "safe_error_code" in LINUX_AGENT and "Get-SafeErrorCode" in WINDOWS_AGENT, "AGENT_ERROR_SANITIZATION_MISSING"
+assert "runtime-status.json" in LINUX_AGENT and "runtime-status.json" in WINDOWS_AGENT, "AGENT_RUNTIME_STATUS_MISSING"
+assert "last_runtime_error_code" in LINUX and "last_runtime_error_code" in WINDOWS, "SUPPORT_RUNTIME_DIAGNOSTIC_MISSING"
 assert "device.info" in LINUX_AGENT and "device.info" in WINDOWS_AGENT
 subprocess.run([str(PUBLIC / "agent/linux.py"), "--self-test"], check=True)
 print("COMMANDER_EXACT_FIVE_TOOL_AGENT=PASS")
@@ -94,3 +107,15 @@ print("AGENT_DOWNLOAD_INTEGRITY_ENFORCED=PASS")
 print("AGENT_FAILED_INSTALL_ROLLBACK=READY")
 print("AGENT_SUPPORT_REPORT_SANITIZED=READY")
 print("AGENT_DEVICE_PREFLIGHT_NON_MUTATING=READY")
+
+claim = WORKER.split("async function claimNextDeviceCall", 1)[1].split("async function completeDeviceCall", 1)[0]
+heartbeat = WORKER.split("async function heartbeatDevice", 1)[1].split("async function revokeDeviceSelf", 1)[0]
+assert "UPDATE commander_devices SET last_seen_at_utc" not in claim, "CALL_POLL_PRESENCE_WRITE_PRESENT"
+assert "UPDATE commander_devices" in heartbeat and "last_seen_at_utc" in heartbeat, "HEARTBEAT_PRESENCE_WRITE_MISSING"
+assert "authCallbackFailureResponse" in WORKER and "clearCookie(TX_COOKIE" in AUTH, "OIDC_CALLBACK_COOKIE_CLEANUP_MISSING"
+assert "SESSION_TOUCH_SECONDS" in AUTH and ".run().catch(() => null)" in AUTH, "PORTAL_SESSION_TOUCH_NOT_BEST_EFFORT"
+print("COMMANDER_CALL_POLL_PRESENCE_WRITE=ABSENT")
+print("COMMANDER_OIDC_FAILURE_COOKIE_CLEANUP=READY")
+print("COMMANDER_SESSION_TOUCH_BEST_EFFORT=READY")
+print("COMMANDER_AGENT_RUNTIME_DIAGNOSTIC=READY")
+print("COMMANDER_AGENT_ERROR_CODE_SANITIZATION=READY")
