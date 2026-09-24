@@ -653,14 +653,15 @@ git diff --check
 - PR #128 — quota TTL PROD rollout receipt / runtime authority — **MERGED**
 - PR #129 — versioned DEV runtime config / environment isolation — **MERGED + DEV PROMOTED**
 - PR #132 — portal mutation missing-Origin fail-closed hardening — **MERGED + DEV PROMOTED**
+- PR #134 — malformed auth-cookie fail-closed hardening — **MERGED + DEV PROMOTED**
 - hara-platform PR #1158 — quota finalization compensation source — **MERGED; real-device COMMIT E2E pending**
 - issue #65 — Commander post-promotion coordination / residual homologation — **OPEN**
 
-Source authority incorporated by this checkpoint through PR #132: `f9354b117a5c54c54207ce4a4155ac449b7db653`.
+Source authority incorporated by this checkpoint through PR #134: `7faaa19e32fb3d892fc70a6212f9303821885619`.
 Current deployed PROD Commander runtime source: `84895dd17489e418b4b207bde405d7db9aa33469`.
 Current PROD Worker: `093ceec9-cacb-4f8b-ba23-bbfc85f7e1aa`; rollback: `382f4b7e-3094-43b9-a013-3b3f46f39fbf`.
-Current DEV source: `f9354b117a5c54c54207ce4a4155ac449b7db653`.
-Current DEV Worker: `406247fc-9c41-4088-8251-83c0c249ab93`; rollback: `5a1185d7-98ac-4d47-87fd-84cf33bbc9da`.
+Current DEV source: `7faaa19e32fb3d892fc70a6212f9303821885619`.
+Current DEV Worker: `c2acc69c-2773-4c4b-b20a-fbea94b48274`; rollback: `406247fc-9c41-4088-8251-83c0c249ab93`.
 Versioned DEV authority: `apps/commander/wrangler.dev.jsonc`, bound to DEV-only D1 / `REMOTE_DEV`; secrets remain external to Git and anti-cross-environment validation is mandatory.
 PRs #110–#112 are operator-tooling/preflight/token-custody hardening. PRs #113/#115/#116/#118 changed deployable/runtime customer assets or behavior and were explicitly promoted.
 
