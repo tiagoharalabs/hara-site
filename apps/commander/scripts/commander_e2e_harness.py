@@ -66,6 +66,9 @@ def load_token(path: Path) -> str:
         raise HarnessError("MCP_PRODUCT_TOKEN_INVALID")
     return token
 
+def token_file_path(value: str) -> Path:
+    return Path(os.path.abspath(os.path.expanduser(value)))
+
 def stable_agent_version() -> str:
     if not RELEASE_MANIFEST.is_file():
         raise HarnessError("AGENT_RELEASE_MANIFEST_MISSING")
@@ -734,7 +737,7 @@ def main() -> int:
     if args.timeout < 5 or args.timeout > 55:
         raise HarnessError("E2E_TIMEOUT_INVALID")
 
-    token_path = Path(args.token_file).expanduser().resolve()
+    token_path = token_file_path(args.token_file)
     token = load_token(token_path)
     try:
         if args.mode == "quota-roundtrip":
