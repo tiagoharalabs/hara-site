@@ -132,12 +132,12 @@ COMMANDER_PROD_SESSION_RETENTION_ELIGIBLE=0
 COMMANDER_PROD_SESSION_OLDEST_EXPIRED_AGE_DAYS=1.28
 COMMANDER_PROD_RUNTIME_ASSETS=CURRENT
 COMMANDER_PROD_WORKER_DEPLOYMENT=PROVEN
-COMMANDER_PROD_WORKER_VERSION=5fce4f09-8db4-44a0-a5d6-b237c5288e75
+COMMANDER_PROD_WORKER_VERSION=cb80f974-cb21-4ae7-9d5d-fc2271eacd8e
 COMMANDER_HUMAN_HOMOLOGATION=PENDING_OPERATOR_GATE
 COMMANDER_FIRST_DEVICE_E2E=PENDING_HOMOLOGATION
 ```
 
-The original production promotion used canonical `main` commit `da28e0404df689b9e9943fa4377f51789c9b5dfd`. The current deployed runtime has since advanced through reviewed hardening to source `85ec98591842c0e82fc67873fda1937c1fc8eee7` (Agent 0.3.5 startup-attestation rollout). Later repository changes through #99/#100 are documentation/operator-tooling only and do not imply another Worker deployment.
+The original production promotion used canonical `main` commit `da28e0404df689b9e9943fa4377f51789c9b5dfd`. The current deployed runtime has since advanced through reviewed hardening to source `5d69e0be19f9467413edb26e61ec3ee12a0e678d` (PR #104 bounded OIDC transaction hygiene). Repository changes #105–#108 are operator-tooling/preflight hardening only and do not imply another Worker deployment.
 Future source merges still do **not** implicitly publish Commander; later deployments remain explicit.
 
 ## 5. Live product/data facts confirmed
@@ -194,9 +194,9 @@ Agent 0.3.4 / technical hardening deployment (2026-09-24 UTC):
 - canonical source after the latest Worker hardening: `c0669a1db1a3ac75b86c1f196f9aef0f67bd8e01`;
 - PR #94 pins the privileged E2E harness to the exact canonical PROD origin and disables token-bearing redirects;
 - PR #95 validates the five device-tool payload contracts server-side and denies unsupported function IDs before quota reservation;
-- current PROD deployment id: `8fb3f5b5-41b6-4cb5-901e-778b7681087b`;
-- current PROD Worker version at 100%: `f96d5690-7681-4976-b86b-94fe66ea842c`;
-- current rollback Worker version: `0f1028a0-797a-470e-a825-68d3e607cf67`;
+- that rollout's PROD deployment id: `8fb3f5b5-41b6-4cb5-901e-778b7681087b`;
+- that rollout's PROD Worker version at 100%: `f96d5690-7681-4976-b86b-94fe66ea842c`;
+- that rollout's rollback Worker version: `0f1028a0-797a-470e-a825-68d3e607cf67`;
 - #95 deployment uploaded **no changed asset files**; it changed Worker trust-boundary logic only;
 - 10/10 critical public assets: **CURRENT**;
 - public fail-closed smoke: **PASS**;
@@ -282,7 +282,7 @@ The deterministic source and runtime promotion gates are closed. Remaining work 
    - selected-device online/offline behavior;
    - governed five-tool call path;
    - revoke and expiry behavior.
-   - current candidate evidence: `nucleo-a` is **READY** on Linux x86_64 with no prior Commander enrollment/residue, systemd-user persistence ready and public Agent 0.3.5 reachable.
+   - current candidate evidence: `nucleo-a` is **READY** on Linux x86_64 with no prior Commander enrollment/residue, systemd-user persistence ready and public Agent 0.3.5 reachable; custom XDG roots are inspected correctly and relative XDG roots fail closed.
 
 3. **Quota runtime proof**
    - hara-platform PR #1158 closed the source compensation gap;
@@ -323,14 +323,17 @@ The promotion was executed in the required order:
 ```
 
 Current deployment:
-- deployable source: `85ec98591842c0e82fc67873fda1937c1fc8eee7`;
-- Worker version: `5fce4f09-8db4-44a0-a5d6-b237c5288e75`;
-- rollback version: `532bb762-c2b2-443d-8527-ada001bbce39`;
-- deployment id: `e22da847-4641-413d-a6e0-f5dd547b072f`;
+- deployable source: `5d69e0be19f9467413edb26e61ec3ee12a0e678d`;
+- Worker version: `cb80f974-cb21-4ae7-9d5d-fc2271eacd8e`;
+- rollback version: `4caf1542-8aab-4563-ae19-aa09ed8c74e6`;
+- deployment id: `f8b4ee0e-2b15-4e3e-b544-cb24d1f9d3b7`;
+- deployed at: `2026-09-24T18:21:07.745409Z`;
 - migration 0009: **APPLIED**;
 - runtime assets: **CURRENT**;
 - public health/auth: **PASS**;
 - public fail-closed smoke: **PASS**;
+- OIDC transaction hygiene: **PASS**, 10-minute window, expired=0 in latest readback;
+- pairing/session retention eligibility: **0** in latest readback;
 - Agent release: **0.3.5**;
 - Agent startup attestation on install/update: **READY**.
 
@@ -342,7 +345,7 @@ Do not redeploy solely to reproduce this promotion receipt; future deployment sh
 ## 10. Known non-blocking operational items
 
 These are non-blocking operational follow-ups and are not current Commander source blockers:
-- Identity SMTP 587/STARTTLS state remains **authority-blocked for supported readback**: both the available owner PAT and the Login V2 machine-user PAT return HTTP 403 from the documented Admin REST SMTP read endpoint. The observed `ZITADEL_TLS_ENABLED=false` is server-TLS configuration, not SMTP evidence. Do not bypass this through database/projection reads; **no SMTP mutation was performed**;
+- Identity SMTP 587/STARTTLS remains a **non-blocking fallback/maturity item**. Supported Admin REST read was previously authority-blocked (HTTP 403), and the current automation environment will not expose/manipulate the PAT to bypass that safely. The existing read-only backend validator currently reports `IDENTITY_SMTP_BRANDING=PASS`, TLS enabled on the provider, and `IDENTITY_SMTP_TLS_ALIGNMENT=PENDING_587_STARTTLS_FALLBACK`. The observed `ZITADEL_TLS_ENABLED=false` is only the internal ZITADEL listener behind the TLS proxy, not SMTP evidence. A supported Admin-API helper exists to align to port 465, but it was **not** executed because password-preservation semantics on the deprecated full-config endpoint are not explicit enough for a safe blind mutation;
 - Login V2 custom-translation warning previously recurred as `Error fetching custom translations: Error: fetch() returned undefined`. The running v4.16 bundle shows this warning comes from `getHostedLoginTranslation()`, after which bundled locale JSON remains the fallback. A fresh one-hour log window on 2026-09-24 showed **0 occurrences** while the container remained healthy. Treat this as upstream/transient unless current logs and user-visible behavior prove regression; do not patch around it blindly;
 - device count remains zero until first production pairing.
 
@@ -371,7 +374,7 @@ Order of execution from the current promoted state:
 1. Run the consolidated live-readonly gate and require:
    - migration 0009 = `APPLIED`;
    - public assets = `CURRENT`;
-   - Worker version = `f96d5690-7681-4976-b86b-94fe66ea842c`.
+   - Worker version = `cb80f974-cb21-4ae7-9d5d-fc2271eacd8e`.
 2. Perform the human browser homologation:
    - fresh private browser;
    - login / callback;
@@ -401,7 +404,7 @@ python3 apps/commander/scripts/validate_preprod_readiness.py \
   --live-readonly \
   --expect-prod-migration applied \
   --expect-prod-assets current \
-  --expect-prod-worker-version 5fce4f09-8db4-44a0-a5d6-b237c5288e75
+  --expect-prod-worker-version cb80f974-cb21-4ae7-9d5d-fc2271eacd8e
 ```
 
 This command is the current production convergence proof. If a future reviewed deployment changes the Worker version, update the expected version only after that deployment is intentionally promoted.
@@ -486,7 +489,7 @@ Worker deployment readback:
 
 ```bash
 python3 apps/commander/scripts/commander_prod_deployment_readback.py \
-  --expect-version 5fce4f09-8db4-44a0-a5d6-b237c5288e75
+  --expect-version cb80f974-cb21-4ae7-9d5d-fc2271eacd8e
 ```
 
 E2E harness source contract:
@@ -521,7 +524,7 @@ python3 apps/commander/scripts/commander_e2e_harness.py five-tool \
   --subject '<oidc-subject>'
 ```
 
-The harness never prints the product token. Its invoke leg reserves quota, releases on failure, and commits only after a completed Agent call returns a 64-hex receipt SHA-256. If a commit/release response is lost after server processing, it now reconciles the same request_id through the existing idempotent authorize readback; COMMITTED is accepted only with the exact receipt SHA-256 and RELEASED only from the terminal RELEASED state.
+The harness never prints the product token. Its invoke leg reserves quota, releases on failure, and commits only after a completed Agent call returns a 64-hex receipt SHA-256. If a commit/release response is lost after server processing, it reconciles the same request_id through the existing idempotent authorize readback; COMMITTED is accepted only with the exact receipt SHA-256 and RELEASED only from the terminal RELEASED state. The five-tool proof also requires one stable selected device for the entire run, exact call/request/device/tool correlation, Agent version parity with the public release manifest, semantic tool-result validation, and receipt provenance bound to the invoke device_id + request_id + OUTBOUND_RELAY + canonical receipt SHA-256.
 
 JavaScript syntax:
 
@@ -569,11 +572,20 @@ git diff --check
 - PR #97 — ambiguous E2E quota-state reconciliation — **MERGED**
 - PR #98 — Agent 0.3.5 startup attestation — **MERGED + PROMOTED**
 - PR #99 — Agent 0.3.5 runtime rollout receipt — **MERGED**
+- PR #100 — non-mutating first-device candidate preflight — **MERGED**
+- PR #101 — session-retention readback clarification — **MERGED**
+- PR #102 — retention state surfaced in readiness — **MERGED**
+- PR #103 — terminal pairing retention — **MERGED + PROMOTED**
+- PR #104 — bounded OIDC transaction hygiene — **MERGED + PROMOTED**
+- PR #105 — five-tool semantic result validation — **MERGED**
+- PR #106 — custom-XDG residue correctness in first-device preflight — **MERGED**
+- PR #107 — same-device / release-version / request / receipt correlation — **MERGED**
+- PR #108 — relative XDG paths denied in first-device preflight — **MERGED**
 - hara-platform PR #1158 — quota finalization compensation source — **MERGED; real-device COMMIT E2E pending**
 - issue #65 — Commander post-promotion coordination / residual homologation — **OPEN**
 
-Canonical repository state at this checkpoint: `main` = `91e1f21ec55732037f2455c38d88ce5df86864b9`.
-Current deployed Commander runtime source: `85ec98591842c0e82fc67873fda1937c1fc8eee7`.
-PR #99 is documentation-only and does not require another Worker deployment.
+Canonical repository state at this checkpoint: `main` = `a35e1e8c165c4ce167412b64bba3f6efebe2ef14`.
+Current deployed Commander runtime source: `5d69e0be19f9467413edb26e61ec3ee12a0e678d`.
+PRs #105–#108 are operator-tooling/preflight-only and do not require another Worker deployment.
 
 Continue from current `main`, this guide and the newest issue #65 comments. Do not use PR #66 as a backend source.
