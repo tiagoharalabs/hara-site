@@ -137,7 +137,7 @@ COMMANDER_HUMAN_HOMOLOGATION=PENDING_OPERATOR_GATE
 COMMANDER_FIRST_DEVICE_E2E=PENDING_HOMOLOGATION
 ```
 
-The original production promotion used canonical `main` commit `da28e0404df689b9e9943fa4377f51789c9b5dfd`. The current deployed runtime has since advanced through reviewed hardening to source `021b32476074c2b7655337a5d902ff19a3ffa855` (PR #113 Agent 0.3.6 redirect fail-closed release). PRs #110–#112 are operator-tooling/preflight/token-custody hardening; #113 required and received an explicit DEV/PROD asset promotion.
+The original production promotion used canonical `main` commit `da28e0404df689b9e9943fa4377f51789c9b5dfd`. The current deployed runtime has since advanced through reviewed hardening to source `285dbffc4bd9dec6106d019d9950180bde6bfe86` (PR #122 Agent 0.3.7 receipt/result binding). PRs #110–#112 remain operator-tooling/preflight/token-custody hardening; #113 introduced Agent 0.3.6 redirect fail-closed transport and #122 is the current promoted Agent release authority.
 Future source merges still do **not** implicitly publish Commander; later deployments remain explicit.
 
 ## 5. Live product/data facts confirmed
@@ -240,7 +240,7 @@ Agent 0.3.6 redirect fail-closed deployment (2026-09-24 UTC):
 - DEV deployed at: `2026-09-24T19:41:05.035211Z`;
 - six release assets were the only pre-deploy drift; all ten critical PROD assets are now **CURRENT**;
 - full live-readonly gate and fail-closed smoke: **PASS**;
-- `nucleo-a` first-device candidate is **READY** on Linux x86_64 with public installer/manifest byte parity and Agent **0.3.6**.
+- `nucleo-a` first-device candidate is **READY** on Linux x86_64 with public installer/manifest byte parity and Agent **0.3.7**.
 
 ## 6. Device pairing / credential review
 
@@ -284,6 +284,8 @@ Closed:
 
 Do not reopen these as unresolved unless a current runtime/source readback proves regression.
 
+- first-device candidate remains **READY** on `nucleo-a` with public release `0.3.7`, no residue, no active/enabled Agent, and no token exposure.
+
 ## 8. Remaining gates after PROD promotion
 
 The deterministic source and runtime promotion gates are closed. Remaining work now requires homologation or later product maturity:
@@ -303,7 +305,7 @@ The deterministic source and runtime promotion gates are closed. Remaining work 
    - selected-device online/offline behavior;
    - governed five-tool call path;
    - revoke and expiry behavior.
-   - current candidate evidence: `nucleo-a` is **READY** on Linux x86_64 with no prior Commander enrollment/residue, systemd-user persistence ready, public installer/manifest byte parity and public Agent 0.3.6 reachable; custom XDG roots are inspected correctly and relative XDG roots fail closed.
+   - current candidate evidence: `nucleo-a` is **READY** on Linux x86_64 with no prior Commander enrollment/residue, systemd-user persistence ready, public installer/manifest byte parity and public Agent 0.3.7 reachable; custom XDG roots are inspected correctly and relative XDG roots fail closed.
 
 3. **Quota runtime proof**
    - hara-platform PR #1158 closed the source compensation gap;
@@ -348,8 +350,8 @@ The promotion was executed in the required order:
 
 Current deployment:
 - deployable source: `15b52110b5a580f6066e46fe859a6b455424e47c`;
-- Worker version: `d0c2b2a2-59ba-45b8-af6d-5ce22465a8d8`;
-- rollback version: `afbba7d5-5219-4abc-be06-7df48d218505`;
+- Worker version: `f72ea822-dc27-4aaa-9136-d489f478fb26`;
+- rollback version: `d0c2b2a2-59ba-45b8-af6d-5ce22465a8d8`;
 - deployed after PR #118 canonical bootstrap-origin pinning;
 - migration 0009: **APPLIED**;
 - runtime assets: **CURRENT**;
@@ -357,15 +359,17 @@ Current deployment:
 - public fail-closed smoke: **PASS**;
 - OIDC transaction hygiene: **PASS**, 10-minute window, expired=0 in latest readback;
 - pairing/session retention eligibility: **0** in latest readback;
-- Agent release: **0.3.6**;
+- Agent release: **0.3.7**;
 - Agent startup attestation on install/update: **READY**;
 - customer-visible Linux/Windows bootstrap commands deny redirects and pin enrollment to canonical PROD even when a stale `HARA_COMMANDER_URL` is inherited;
 - Linux customer bootstrap no longer uses `curl | bash`: fetch completes into a `mktemp` file before execution, so download failure propagates instead of being masked by an empty successful `bash`;
 - Windows customer bootstrap no longer uses `irm | iex`: fetch is terminating (`-ErrorAction Stop`), empty content is rejected, and execution occurs only after successful fetch.
+- Agent 0.3.7 invoke receipts now bind the exact `stdout` through `result_binding=STDOUT_SHA256_V1` + `result_stdout_sha256`;
+- five-tool E2E now proves `receipt.get` correlation before quota COMMIT; receipt proof failure releases the reservation instead of charging it.
 
 Current DEV runtime:
-- Worker `hara-commander-dev-v2`: `80f3b819-e6ae-4a2e-ad61-e94729240957`;
-- rollback DEV Worker: `27de9c54-2dda-4462-82d9-a13772ce0d95`;
+- Worker `hara-commander-dev-v2`: `5a594804-0de5-4aa8-abf4-b669454f020f`;
+- rollback DEV Worker: `80f3b819-e6ae-4a2e-ad61-e94729240957`;
 - health: **DEV / REMOTE_DEV / HARA Identity configured**;
 - bootstrap command assets: byte-equal to canonical source after propagation readback.
 
@@ -436,7 +440,7 @@ python3 apps/commander/scripts/validate_preprod_readiness.py \
   --live-readonly \
   --expect-prod-migration applied \
   --expect-prod-assets current \
-  --expect-prod-worker-version d0c2b2a2-59ba-45b8-af6d-5ce22465a8d8
+  --expect-prod-worker-version f72ea822-dc27-4aaa-9136-d489f478fb26
 ```
 
 This command is the current production convergence proof. If a future reviewed deployment changes the Worker version, update the expected version only after that deployment is intentionally promoted.
@@ -521,7 +525,7 @@ Worker deployment readback:
 
 ```bash
 python3 apps/commander/scripts/commander_prod_deployment_readback.py \
-  --expect-version d0c2b2a2-59ba-45b8-af6d-5ce22465a8d8
+  --expect-version f72ea822-dc27-4aaa-9136-d489f478fb26
 ```
 
 E2E harness source contract:
@@ -623,13 +627,14 @@ git diff --check
 - PR #117 — bootstrap redirect-hardening rollout authority — **MERGED**
 - PR #118 — customer bootstrap canonical enrollment-origin pin — **MERGED + PROMOTED**
 - PR #120 — bootstrap fetch-failure propagation / pipe masking closure — **MERGED + PROMOTED**
+- PR #122 — Agent 0.3.7 receipt/result binding + proof-before-quota-commit — **MERGED + PROMOTED**
 - hara-platform PR #1158 — quota finalization compensation source — **MERGED; real-device COMMIT E2E pending**
 - issue #65 — Commander post-promotion coordination / residual homologation — **OPEN**
 
 Canonical repository state at this checkpoint: `main` = `fecd6e79cd9d4d997c4e93ca2143b879153bb197`.
-Current deployed Commander runtime source: `15b52110b5a580f6066e46fe859a6b455424e47c`.
-Current PROD Worker: `d0c2b2a2-59ba-45b8-af6d-5ce22465a8d8`; rollback: `afbba7d5-5219-4abc-be06-7df48d218505`.
-Current DEV Worker: `80f3b819-e6ae-4a2e-ad61-e94729240957`; rollback: `27de9c54-2dda-4462-82d9-a13772ce0d95`.
+Current deployed Commander runtime source: `285dbffc4bd9dec6106d019d9950180bde6bfe86`.
+Current PROD Worker: `f72ea822-dc27-4aaa-9136-d489f478fb26`; rollback: `d0c2b2a2-59ba-45b8-af6d-5ce22465a8d8`.
+Current DEV Worker: `5a594804-0de5-4aa8-abf4-b669454f020f`; rollback: `80f3b819-e6ae-4a2e-ad61-e94729240957`.
 PRs #110–#112 are operator-tooling/preflight/token-custody hardening. PRs #113/#115/#116/#118 changed deployable/runtime customer assets or behavior and were explicitly promoted.
 
 Continue from current `main`, this guide and the newest issue #65 comments. Do not use PR #66 as a backend source.
