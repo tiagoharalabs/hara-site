@@ -24,3 +24,7 @@ artifacts/dev/
 
 # HARA Commander local generated secrets/config
 apps/commander/.generated/
+
+# Python validation artifacts
+__pycache__/
+*.py[cod]
