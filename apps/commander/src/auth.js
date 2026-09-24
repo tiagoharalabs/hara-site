@@ -102,8 +102,17 @@ function normalizeEmail(value) {
 
 export function authStatus(env) {
   const clientAuth = String(env.AUTH_CLIENT_AUTH || "BASIC").trim().toUpperCase();
-  const credentialsReady = clientAuth === "NONE" || Boolean(env.AUTH_CLIENT_SECRET);
-  const configured = Boolean(env.AUTH_ISSUER && env.AUTH_CLIENT_ID && credentialsReady);
+  const clientAuthSupported = clientAuth === "BASIC" || clientAuth === "NONE";
+  const credentialsReady = (
+    clientAuth === "NONE"
+    || (clientAuth === "BASIC" && Boolean(env.AUTH_CLIENT_SECRET))
+  );
+  const configured = Boolean(
+    clientAuthSupported
+    && env.AUTH_ISSUER
+    && env.AUTH_CLIENT_ID
+    && credentialsReady
+  );
   return {
     configured,
     provider: env.AUTH_PROVIDER_LABEL || "HARA Identity",
@@ -118,6 +127,7 @@ function authConfig(env) {
     issuer: normalizeIssuer(env.AUTH_ISSUER),
     clientId: String(env.AUTH_CLIENT_ID),
     clientSecret: String(env.AUTH_CLIENT_SECRET || ""),
+    clientAuth: status.client_auth,
     provider: status.provider,
   };
 }
@@ -420,6 +430,7 @@ export async function finishLogin(request, env) {
     metadata,
     clientId: config.clientId,
     clientSecret: config.clientSecret,
+    clientAuth: config.clientAuth,
     code,
     verifier: tx.code_verifier,
     redirectUri,

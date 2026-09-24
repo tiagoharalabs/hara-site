@@ -1,7 +1,18 @@
 import assert from "node:assert/strict";
-import { cookieValue, logout, resolvePortalSession, safeReturnTo } from "../src/auth.js";
+import { authStatus, cookieValue, logout, resolvePortalSession, safeReturnTo } from "../src/auth.js";
 
 const fallback = "/#dashboard";
+
+const baseAuthEnv = {
+  AUTH_ISSUER: "https://auth.example.test/",
+  AUTH_CLIENT_ID: "client",
+};
+assert.equal(authStatus({ ...baseAuthEnv, AUTH_CLIENT_AUTH: "BASIC", AUTH_CLIENT_SECRET: "secret" }).configured, true);
+assert.equal(authStatus({ ...baseAuthEnv, AUTH_CLIENT_AUTH: "BASIC" }).configured, false);
+assert.equal(authStatus({ ...baseAuthEnv, AUTH_CLIENT_AUTH: "NONE" }).configured, true);
+assert.equal(authStatus({ ...baseAuthEnv, AUTH_CLIENT_AUTH: "NONE", AUTH_CLIENT_SECRET: "stale-secret" }).configured, true);
+assert.equal(authStatus({ ...baseAuthEnv, AUTH_CLIENT_AUTH: "INVALID", AUTH_CLIENT_SECRET: "secret" }).configured, false);
+assert.equal(authStatus({ ...baseAuthEnv, AUTH_CLIENT_AUTH: "INVALID", AUTH_CLIENT_SECRET: "secret" }).client_auth, "INVALID");
 
 assert.equal(safeReturnTo(), fallback);
 assert.equal(safeReturnTo("/#devices"), "/#devices");
@@ -29,6 +40,7 @@ assert.equal(
   "https://commander.haralabs.com.br"
 );
 
+console.log("COMMANDER_AUTH_CLIENT_AUTH_CONFIG=ENFORCED");
 console.log("COMMANDER_AUTH_RETURN_TO_SAME_ORIGIN=PASS");
 console.log("COMMANDER_AUTH_RETURN_TO_BACKSLASH_OPEN_REDIRECT=BLOCKED");
 
