@@ -38,6 +38,10 @@ need('parsed.netloc != "commander.haralabs.com.br"' in SOURCE, "CANONICAL_ORIGIN
 need('origin != DEFAULT_ORIGIN' in SOURCE, "CANONICAL_ORIGIN_EXACT_GUARD")
 need("NoRedirectHandler" in SOURCE and "NO_REDIRECT_OPENER.open" in SOURCE, "REDIRECT_FAIL_CLOSED")
 need("COMMANDER_REDIRECT_DENIED" in SOURCE, "REDIRECT_DENIAL_MARKER")
+need("reconcile_usage_state" in SOURCE, "QUOTA_RECONCILE_HELPER")
+need("COMMANDER_E2E_QUOTA_COMMIT_RECONCILED=PASS" in SOURCE, "COMMIT_RECONCILE_MARKER")
+need("COMMANDER_E2E_QUOTA_RELEASE_RECONCILED=PASS" in SOURCE, "RELEASE_RECONCILE_MARKER")
+need("MCP_QUOTA_RECONCILE_RECEIPT_MISMATCH" in SOURCE, "RECONCILE_RECEIPT_GUARD")
 
 namespace = {
     "__name__": "commander_e2e_harness_test",
@@ -63,6 +67,87 @@ for bad_origin in (
         assert str(exc) == "COMMANDER_ORIGIN_NOT_CANONICAL"
     else:
         raise SystemExit("COMMANDER_E2E_HARNESS_NONCANONICAL_ORIGIN_ALLOWED=FAIL")
+
+reconcile = namespace["reconcile_usage_state"]
+globals_ = reconcile.__globals__
+original_post_json = globals_["post_json"]
+original_sleep = globals_["time"].sleep
+globals_["time"].sleep = lambda _seconds: None
+
+try:
+    globals_["post_json"] = lambda *_args, **_kwargs: {
+        "allowed": False,
+        "code": "REQUEST_USAGE_TERMINAL",
+        "usage": {"state": "RELEASED"},
+    }
+    released = reconcile("https://commander.haralabs.com.br", "token", "issuer", "subject", "req", "RELEASED")
+    need(released.get("state") == "RELEASED", "RECONCILE_RELEASED")
+
+    receipt = "a" * 64
+    globals_["post_json"] = lambda *_args, **_kwargs: {
+        "allowed": True,
+        "code": "ALLOW",
+        "usage": {"state": "COMMITTED", "receipt_sha256": receipt},
+    }
+    committed = reconcile(
+        "https://commander.haralabs.com.br",
+        "token",
+        "issuer",
+        "subject",
+        "req",
+        "COMMITTED",
+        receipt_sha256=receipt,
+    )
+    need(committed.get("state") == "COMMITTED", "RECONCILE_COMMITTED")
+
+    transient = iter((
+        HarnessError("COMMANDER_NETWORK_ERROR"),
+        {
+            "allowed": True,
+            "code": "ALLOW",
+            "usage": {"state": "COMMITTED", "receipt_sha256": receipt},
+        },
+    ))
+    def transient_post(*_args, **_kwargs):
+        value = next(transient)
+        if isinstance(value, Exception):
+            raise value
+        return value
+    globals_["post_json"] = transient_post
+    recovered = reconcile(
+        "https://commander.haralabs.com.br",
+        "token",
+        "issuer",
+        "subject",
+        "req",
+        "COMMITTED",
+        receipt_sha256=receipt,
+    )
+    need(recovered.get("state") == "COMMITTED", "RECONCILE_TRANSIENT_NETWORK")
+
+    globals_["post_json"] = lambda *_args, **_kwargs: {
+        "allowed": True,
+        "code": "ALLOW",
+        "usage": {"state": "COMMITTED", "receipt_sha256": "b" * 64},
+    }
+    try:
+        reconcile(
+            "https://commander.haralabs.com.br",
+            "token",
+            "issuer",
+            "subject",
+            "req",
+            "COMMITTED",
+            receipt_sha256=receipt,
+            attempts=1,
+        )
+    except HarnessError as exc:
+        need(str(exc) == "MCP_QUOTA_RECONCILE_RECEIPT_MISMATCH", "RECONCILE_RECEIPT_MISMATCH_DENIED")
+    else:
+        raise SystemExit("COMMANDER_E2E_HARNESS_RECONCILE_RECEIPT_MISMATCH_DENIED=FAIL")
+finally:
+    globals_["post_json"] = original_post_json
+    globals_["time"].sleep = original_sleep
 
 print("COMMANDER_E2E_HARNESS_CANONICAL_ORIGIN=PASS")
 print("COMMANDER_E2E_HARNESS_REDIRECT_FAIL_CLOSED=PASS")
