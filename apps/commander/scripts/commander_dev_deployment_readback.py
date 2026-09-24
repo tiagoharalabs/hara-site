@@ -194,12 +194,8 @@ def main():
     )
     with urlopen(req, timeout=15) as response:
         health = json.loads(response.read())
-    if health.get("ok") is not True:
-        raise RuntimeError("DEV_HEALTH_NOT_OK")
-    if health.get("environment") != "DEV":
-        raise RuntimeError("DEV_HEALTH_ENVIRONMENT_DRIFT")
-    if health.get("storage_mode") != "REMOTE_DEV":
-        raise RuntimeError("DEV_HEALTH_STORAGE_DRIFT")
+    if health != {"ok": True, "service": "hara-commander"}:
+        raise RuntimeError("DEV_PUBLIC_HEALTH_CONTRACT_DRIFT")
 
     validate_login_redirect(expected, force_login=False)
     validate_login_redirect(expected, force_login=True)
