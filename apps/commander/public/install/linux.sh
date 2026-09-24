@@ -151,6 +151,10 @@ remote_device_action() {
   python3 - "$CONFIG_FILE" "$action" <<'PYREMOTE'
 import json,sys,urllib.request,urllib.error
 from pathlib import Path
+class NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise urllib.error.HTTPError(req.full_url, code, "REDIRECT_DENIED", headers, fp)
+opener=urllib.request.build_opener(NoRedirectHandler)
 path=Path(sys.argv[1]); action=sys.argv[2]
 values={}
 for raw in path.read_text(encoding="utf-8").splitlines():
@@ -164,7 +168,7 @@ if not base or not token or not device_id:
     raise SystemExit(2)
 if action=="heartbeat":
     endpoint="/api/device/heartbeat"
-    payload={"device_id":device_id,"architecture":arch,"agent_version":"0.3.5"}
+    payload={"device_id":device_id,"architecture":arch,"agent_version":"0.3.6"}
 elif action=="revoke":
     endpoint="/api/device/revoke-self"
     payload={}
@@ -175,7 +179,7 @@ req=urllib.request.Request(
     headers={"content-type":"application/json","accept":"application/json","authorization":"Bearer "+token},
 )
 try:
-    with urllib.request.urlopen(req,timeout=15) as response:
+    with opener.open(req,timeout=15) as response:
         obj=json.loads(response.read().decode() or "{}")
 except Exception:
     raise SystemExit(3)
@@ -191,16 +195,20 @@ PYREMOTE
 rollback_enrolled_device() {
   [ -n "${DEVICE_ID:-}" ] && [ -n "${DEVICE_TOKEN:-}" ] || return 1
   printf '%s\n' "$DEVICE_TOKEN" | python3 -c '
-import json,sys,urllib.request
+import json,sys,urllib.request,urllib.error
+class NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise urllib.error.HTTPError(req.full_url, code, "REDIRECT_DENIED", headers, fp)
+opener=urllib.request.build_opener(NoRedirectHandler)
 base=sys.argv[1].rstrip("/")
 device_id=sys.argv[2]
 token=sys.stdin.readline().rstrip("\n")
 if not device_id or not token: raise SystemExit(2)
 req=urllib.request.Request(
     base+"/api/device/revoke-self", data=b"{}", method="POST",
-    headers={"content-type":"application/json","accept":"application/json","authorization":"Bearer "+token,"user-agent":"HARA-Commander-Installer-Rollback/0.3.5"},
+    headers={"content-type":"application/json","accept":"application/json","authorization":"Bearer "+token,"user-agent":"HARA-Commander-Installer-Rollback/0.3.6"},
 )
-with urllib.request.urlopen(req,timeout=15) as response:
+with opener.open(req,timeout=15) as response:
     obj=json.loads(response.read().decode() or "{}")
 if not obj.get("ok") or obj.get("state")!="REVOKED" or obj.get("device_id")!=device_id:
     raise SystemExit(3)
@@ -400,7 +408,7 @@ print(json.dumps({
   "device_name": sys.argv[1],
   "platform": "LINUX",
   "architecture": sys.argv[2],
-  "agent_version": "0.3.5",
+  "agent_version": "0.3.6",
 }, separators=(",",":")))
 ' "$DEVICE_NAME" "$ARCH")"
 

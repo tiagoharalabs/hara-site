@@ -10,12 +10,18 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
-AGENT_VERSION = "0.3.5"
+AGENT_VERSION = "0.3.6"
 CONFIG_FILE = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home()/".config"))) / "hara-commander/device.env"
 DATA_DIR = Path(os.environ.get("XDG_DATA_HOME", str(Path.home()/".local/share"))) / "hara-commander"
 RECEIPT_DIR = DATA_DIR / "receipts"
 STATUS_FILE = DATA_DIR / "runtime-status.json"
 FUNCTION_ID = "device.info"
+
+class NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise urllib.error.HTTPError(req.full_url, code, "REDIRECT_DENIED", headers, fp)
+
+NO_REDIRECT_OPENER = urllib.request.build_opener(NoRedirectHandler)
 
 def utcnow():
     return datetime.now(timezone.utc).isoformat()
@@ -86,7 +92,7 @@ def post_json(url, token, payload):
         },
     )
     try:
-        with urllib.request.urlopen(req, timeout=25) as response:
+        with NO_REDIRECT_OPENER.open(req, timeout=25) as response:
             if response.status == 204:
                 return None
             return json.loads(response.read().decode() or "{}")

@@ -3,7 +3,7 @@ $Root = Join-Path $env:LOCALAPPDATA "HARA Commander"
 $ConfigPath = Join-Path $Root "device.json"
 $ReceiptDir = Join-Path $Root "receipts"
 $RuntimeStatus = Join-Path $Root "runtime-status.json"
-$AgentVersion = "0.3.5"
+$AgentVersion = "0.3.6"
 $FunctionId = "device.info"
 
 function Get-PlainText([Security.SecureString]$SecureValue) {
@@ -171,7 +171,7 @@ function Invoke-Tool($Cfg,$Call) {
 function Send-Json([string]$Url,[string]$Token,$Body,[int]$Timeout=25) {
   $headers=@{Accept="application/json";Authorization="Bearer $Token"}
   $json=$Body | ConvertTo-Json -Depth 10 -Compress
-  return Invoke-RestMethod -Uri $Url -Method Post -ContentType "application/json" -Headers $headers -Body $json -TimeoutSec $Timeout
+  return Invoke-RestMethod -Uri $Url -Method Post -ContentType "application/json" -Headers $headers -Body $json -TimeoutSec $Timeout -MaximumRedirection 0
 }
 
 function Complete-Call($Cfg,[string]$Token,$Call,[string]$State,$Result,[string]$ErrorCode="") {
