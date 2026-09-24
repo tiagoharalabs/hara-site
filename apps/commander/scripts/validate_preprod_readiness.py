@@ -19,6 +19,7 @@ def run(label, command):
         print(proc.stdout, end="")
         raise SystemExit(proc.returncode)
     print(f"{label}=PASS")
+    return proc.stdout
 
 def main():
     parser = argparse.ArgumentParser()
@@ -26,6 +27,12 @@ def main():
         "--live-readonly",
         action="store_true",
         help="also run public Identity and PROD D1 read-only checks",
+    )
+    parser.add_argument(
+        "--expect-prod-migration",
+        choices=("pending", "applied", "any"),
+        default="pending",
+        help="expected PROD D1 migration 0009 state during live read-only validation",
     )
     args = parser.parse_args()
 
@@ -65,18 +72,29 @@ def main():
     print("COMMANDER_PREPROD_DEPLOY_ORDER_CONTRACT=PASS")
     print("COMMANDER_SOURCE_PREPROD_READY=PASS")
 
+    migration_state_line = None
     if args.live_readonly:
         run("COMMANDER_IDENTITY_LIVE_READONLY", [
             sys.executable,
             "apps/identity-login/scripts/validate_live_white_label.py",
         ])
-        run("COMMANDER_PROD_D1_LIVE_READONLY", [
+        d1_output = run("COMMANDER_PROD_D1_LIVE_READONLY", [
             sys.executable,
             "apps/commander/scripts/commander_prod_readback.py",
             "--attempts", "3",
+            "--expect-migration-0009", args.expect_prod_migration,
         ])
+        for line in d1_output.splitlines():
+            if line.startswith("COMMANDER_PROD_D1_MIGRATION_0009="):
+                migration_state_line = line
+                break
+        if migration_state_line is None:
+            raise SystemExit("COMMANDER_PROD_D1_MIGRATION_STATE_MISSING")
 
-    print("COMMANDER_PROD_D1_MIGRATION_0009=PENDING_PROMOTION_GATE")
+    if migration_state_line:
+        print(migration_state_line)
+    else:
+        print("COMMANDER_PROD_D1_MIGRATION_0009=PENDING_PROMOTION_GATE")
     print("COMMANDER_PROD_WORKER_DEPLOYMENT=PENDING_PROMOTION_GATE")
     print("COMMANDER_HUMAN_HOMOLOGATION=PENDING_OPERATOR_GATE")
     print("COMMANDER_FIRST_DEVICE_E2E=PENDING_HOMOLOGATION")

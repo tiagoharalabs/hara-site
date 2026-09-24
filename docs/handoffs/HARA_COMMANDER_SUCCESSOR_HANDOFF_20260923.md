@@ -252,6 +252,7 @@ Therefore deployment ordering is mandatory:
 ```
 
 Never deploy the current Worker before migration 0009.
+The live read-only gate now reads the actual PROD D1 schema and can require migration 0009 to be either `pending` or `applied`; it no longer relies on a hardcoded status string.
 No PROD promotion has been performed by this hardening front.
 
 ## 10. Known non-blocking operational items
@@ -305,10 +306,20 @@ Consolidated pre-PROD gate:
 python3 apps/commander/scripts/validate_preprod_readiness.py
 ```
 
-Include current public Identity and PROD D1 read-only checks:
+Include current public Identity and PROD D1 read-only checks before migration 0009:
 
 ```bash
-python3 apps/commander/scripts/validate_preprod_readiness.py --live-readonly
+python3 apps/commander/scripts/validate_preprod_readiness.py \
+  --live-readonly \
+  --expect-prod-migration pending
+```
+
+After migration 0009 is intentionally applied, require the schema to be present before Worker promotion:
+
+```bash
+python3 apps/commander/scripts/validate_preprod_readiness.py \
+  --live-readonly \
+  --expect-prod-migration applied
 ```
 
 Public Identity / Commander login runtime:
@@ -340,6 +351,16 @@ Production D1 readback:
 ```bash
 python3 apps/commander/scripts/commander_prod_readback.py --attempts 3
 ```
+
+Explicit migration-state readback:
+
+```bash
+python3 apps/commander/scripts/commander_prod_readback.py \
+  --attempts 3 \
+  --expect-migration-0009 pending
+```
+
+Switch the expectation to `applied` only after the governed migration step has completed.
 
 JavaScript syntax:
 
