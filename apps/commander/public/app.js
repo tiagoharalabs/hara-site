@@ -8,6 +8,17 @@
   const bannerAction = document.getElementById("systemBannerAction");
   const appViews = new Set(["dashboard", "devices", "usage", "plans", "connections", "security"]);
   const publicViews = new Set(["landing", "login", "signup", ...appViews]);
+  const viewTitles = Object.freeze({
+    landing: "H.A.R.A. Commander",
+    login: "Entrar · H.A.R.A. Commander",
+    signup: "Criar conta · H.A.R.A. Commander",
+    dashboard: "Visão geral · H.A.R.A. Commander",
+    devices: "Computadores · H.A.R.A. Commander",
+    usage: "Uso & quota · H.A.R.A. Commander",
+    plans: "Plano · H.A.R.A. Commander",
+    connections: "Conexões · H.A.R.A. Commander",
+    security: "Segurança · H.A.R.A. Commander",
+  });
   const params = new URLSearchParams(location.search);
   const root = document.documentElement;
   const themeBtn = document.querySelector(".theme-toggle");
@@ -16,11 +27,16 @@
   const guestActions = document.querySelector("[data-auth-guest]");
   const sessionActions = document.querySelector("[data-auth-session]");
   const localHost = location.hostname === "127.0.0.1" || location.hostname === "localhost";
-  const scenario = String(params.get("scenario") || "").trim().toLowerCase();
+  const scenario = localHost
+    ? String(params.get("scenario") || "").trim().toLowerCase()
+    : "";
   const authError = String(params.get("auth_error") || "").trim().toUpperCase();
   const remotePortal = !localHost;
   let retryAction = null;
   let authProviderConfigured = false;
+  let sessionAuthenticated = false;
+  let pairingExpiryTimer = null;
+  let currentView = null;
 
   function currentTheme() {
     return root.dataset.theme === "dark" ? "dark" : "light";
@@ -55,7 +71,9 @@
     return null;
   }
 
-  const apiBase = validApiBase(params.get("api")) || (localHost ? "http://127.0.0.1:9192" : location.origin);
+  const apiBase = localHost
+    ? (validApiBase(params.get("api")) || "http://127.0.0.1:9192")
+    : location.origin;
   const dashboardPath = localHost ? "/api/dev/dashboard" : "/api/portal/dashboard";
 
   function startRemoteAuth(signup = false, forceLogin = false) {
@@ -105,6 +123,7 @@
   }
 
   function setGuestHeader() {
+    sessionAuthenticated = false;
     if (guestActions) guestActions.hidden = false;
     if (sessionActions) sessionActions.hidden = true;
     if (brandLink) brandLink.href = "#landing";
@@ -112,6 +131,7 @@
   }
 
   function setAuthenticatedHeader(payload) {
+    sessionAuthenticated = true;
     if (guestActions) guestActions.hidden = true;
     if (sessionActions) sessionActions.hidden = false;
     if (brandLink) brandLink.href = "#dashboard";
@@ -121,7 +141,13 @@
 
   async function logoutRemote() {
     if (remotePortal) {
-      await fetch("/auth/logout", { method: "POST", cache: "no-store" }).catch(() => null);
+      try {
+        const response = await fetch("/auth/logout", { method: "POST", cache: "no-store" });
+        if (!response.ok) throw new Error("HTTP_" + response.status);
+      } catch (_error) {
+        showToast("Não foi possível encerrar a sessão agora. Tente novamente.");
+        return;
+      }
     }
     setGuestHeader();
     route("landing");
@@ -175,7 +201,7 @@
   }
 
   function applyIdentityFields(payload) {
-    const tenantName = String(payload?.tenant?.display_name || "HARA Labs");
+    const tenantName = String(payload?.tenant?.display_name || "Seu workspace");
     const userName = String(payload?.subject?.display_name || "Conta HARA");
     const userRole = String(payload?.subject?.role || "Owner");
     document.querySelectorAll("[data-tenant-name]").forEach((node) => { node.textContent = tenantName; });
@@ -210,24 +236,14 @@
     setText("dashboardConsumed", number(consumed));
     setText("dashboardLimit", limit == null ? "/ sem limite" : "/ " + number(limit));
     setText("dashboardPercent", limit == null ? "Plano sem limite definido" : percent.toFixed(2).replace(".", ",") + "% utilizado");
-    setText("dashboardInvokes", number(consumed));
-    const activeConnections = Number(payload?.connections?.active_count || 0);
-    setText("dashboardConnections", activeConnections + (activeConnections === 1 ? " conectado" : " conectados"));
-    setText("dashboardConnectionsDetail", activeConnections ? "Commander Agent online" : "Instale o Commander Agent");
-    setText("landingConnections", number(activeConnections));
-    setText("landingConnectionsDetail", activeConnections ? "Commander Agent online" : "Nenhum computador conectado");
     setText("usageConsumed", number(consumed));
     setText("usageLimit", limit == null ? "sem limite" : "de " + number(limit));
     setText("usageRemaining", remaining == null ? "Capacidade sem limite definido" : number(remaining) + " unidades disponíveis");
     setText("usagePeriod", payload.usage.period_key || "—");
-    setState(
-      activeConnections ? "Pronto" : "Aguardando",
-      activeConnections ? "Computador conectado" : "Conecte seu computador"
-    );
-
     const bar = document.getElementById("usageProgress");
     if (bar) bar.style.width = (limit == null ? 0 : percent) + "%";
-    renderActivity(payload?.activity || []);
+    // Device state is hydrated independently by /api/portal/devices.
+    // Usage activity is not part of the current dashboard API contract.
   }
 
   async function hydrateSessionHeader() {
@@ -261,13 +277,19 @@
     const list = document.getElementById("deviceList");
     const devices = Array.isArray(payload?.devices) ? payload.devices : [];
     const onlineCount = Number(payload?.online_count || 0);
+    const selectedDevice = devices.find((device) => Boolean(device.selected)) || null;
 
-    setText("dashboardConnections", onlineCount + (onlineCount === 1 ? " conectado" : " conectados"));
-    setText("dashboardConnectionsDetail", onlineCount ? "Commander Agent online" : "Instale o Commander Agent");
-    setState(
-      onlineCount ? "Pronto" : "Aguardando",
-      onlineCount ? "Computador conectado" : "Conecte seu computador"
-    );
+    setText("dashboardConnections", number(onlineCount) + " online");
+    setText("dashboardConnectionsDetail", devices.length ? devices.length + (devices.length === 1 ? " computador pareado" : " computadores pareados") : "Instale o Commander Agent");
+    setText("landingConnections", number(onlineCount));
+    setText("landingConnectionsDetail", onlineCount ? "Commander Agent online" : "Nenhum computador online");
+    if (!selectedDevice) {
+      setState("Aguardando", devices.length ? "Selecione um computador" : "Conecte seu computador");
+    } else if (selectedDevice.online) {
+      setState("Pronto", String(selectedDevice.device_name || "Computador") + " está online", true);
+    } else {
+      setState("Offline", String(selectedDevice.device_name || "Computador") + " está sem conexão");
+    }
 
     if (!list) return;
     list.replaceChildren();
@@ -330,14 +352,24 @@
     });
   }
 
-  async function loadDevices() {
+  function handlePortalAuthFailure(response, message) {
+    if (response.status !== 401) return false;
+    setGuestHeader();
+    route("login");
+    showBanner("warning", "Sessão expirada", message, "Entrar novamente", () => startRemoteAuth(false));
+    return true;
+  }
+
+  async function loadDevices(trigger = null) {
     if (!remotePortal) return;
+    const originalLabel = trigger?.textContent || "Atualizar";
+    if (trigger) {
+      trigger.disabled = true;
+      trigger.textContent = "Atualizando…";
+    }
     try {
       const response = await fetch("/api/portal/devices", { cache: "no-store", credentials: "same-origin" });
-      if (response.status === 401) {
-        setGuestHeader();
-        return;
-      }
+      if (handlePortalAuthFailure(response, "Entre novamente para consultar seus computadores.")) return;
       if (!response.ok) throw new Error("HTTP_" + response.status);
       renderDevices(await response.json());
     } catch (_error) {
@@ -351,41 +383,88 @@
         empty.append(title, document.createTextNode("Sua conta continua ativa. Tente novamente."));
         list.append(empty);
       }
+    } finally {
+      if (trigger?.isConnected) {
+        trigger.disabled = false;
+        trigger.textContent = originalLabel;
+      }
     }
   }
 
+  function armPairingExpiry(expiresAt) {
+    if (pairingExpiryTimer) clearInterval(pairingExpiryTimer);
+    pairingExpiryTimer = null;
+    const expiry = document.getElementById("pairingExpiry");
+    const copyButton = document.querySelector("[data-copy-pairing]");
+    const deadline = Date.parse(String(expiresAt || ""));
+    if (!Number.isFinite(deadline)) {
+      if (expiry) expiry.textContent = "Expira em 10 minutos";
+      if (copyButton) copyButton.disabled = false;
+      return;
+    }
+
+    const tick = () => {
+      const remaining = deadline - Date.now();
+      if (remaining <= 0) {
+        if (expiry) expiry.textContent = "Expirado · gere um novo código";
+        setText("pairingToken", "EXPIRADO");
+        if (copyButton) copyButton.disabled = true;
+        if (pairingExpiryTimer) clearInterval(pairingExpiryTimer);
+        pairingExpiryTimer = null;
+        return;
+      }
+      const minutes = Math.max(1, Math.ceil(remaining / 60000));
+      const when = new Date(deadline);
+      if (expiry) {
+        expiry.textContent = "Expira em " + minutes + " min · "
+          + new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" }).format(when);
+      }
+      if (copyButton) copyButton.disabled = false;
+    };
+
+    tick();
+    pairingExpiryTimer = setInterval(tick, 15000);
+  }
+
   async function createPairing() {
-    const button = document.querySelector("[data-create-pairing]");
-    if (button) button.disabled = true;
+    const buttons = [...document.querySelectorAll("[data-create-pairing]")];
+    buttons.forEach((button) => { button.disabled = true; });
     try {
       const response = await fetch("/api/portal/devices/pairing", {
         method: "POST",
         cache: "no-store",
         credentials: "same-origin",
       });
+      if (handlePortalAuthFailure(response, "Entre novamente para gerar um código de pareamento.")) return;
       if (!response.ok) throw new Error("HTTP_" + response.status);
       const payload = await response.json();
       const token = String(payload?.pairing_token || "");
       if (!token) throw new Error("PAIRING_TOKEN_MISSING");
       setText("pairingToken", token);
       const panel = document.getElementById("pairingPanel");
-      if (panel) panel.hidden = false;
-      const expiry = document.getElementById("pairingExpiry");
-      if (expiry) {
-        const when = new Date(payload.expires_at_utc);
-        expiry.textContent = Number.isNaN(when.getTime())
-          ? "Expira em 10 minutos"
-          : "Expira às " + new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" }).format(when);
+      if (panel) {
+        panel.hidden = false;
+        panel.focus({ preventScroll: true });
+        panel.scrollIntoView({
+          behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+          block: "center",
+        });
       }
+      armPairingExpiry(payload.expires_at_utc);
       showToast("Código de pareamento criado. Ele funciona uma única vez.");
     } catch (_error) {
-      showToast("Não foi possível gerar o código de pareamento.");
+      showBanner("warning", "Pareamento indisponível", "Não foi possível gerar o código agora.", "Tentar novamente", createPairing);
     } finally {
-      if (button) button.disabled = false;
+      buttons.forEach((button) => { button.disabled = false; });
     }
   }
 
-  async function selectDevice(deviceId) {
+  async function selectDevice(deviceId, trigger = null) {
+    const originalLabel = trigger?.textContent || "Usar este";
+    if (trigger) {
+      trigger.disabled = true;
+      trigger.textContent = "Selecionando…";
+    }
     try {
       const response = await fetch("/api/portal/devices/select", {
         method: "POST",
@@ -394,15 +473,28 @@
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ device_id: deviceId }),
       });
+      if (handlePortalAuthFailure(response, "Entre novamente para selecionar o computador.")) return;
       if (!response.ok) throw new Error("HTTP_" + response.status);
       showToast("Computador selecionado para o Commander.");
       await loadDevices();
     } catch (_error) {
       showToast("Não foi possível selecionar o computador.");
+    } finally {
+      if (trigger?.isConnected) {
+        trigger.disabled = false;
+        trigger.textContent = originalLabel;
+      }
     }
   }
 
-  async function revokeDevice(deviceId) {
+  async function revokeDevice(deviceId, trigger = null) {
+    const confirmed = window.confirm("Revogar este computador? Ele perderá acesso ao Commander e precisará ser pareado novamente.");
+    if (!confirmed) return;
+    const originalLabel = trigger?.textContent || "Revogar";
+    if (trigger) {
+      trigger.disabled = true;
+      trigger.textContent = "Revogando…";
+    }
     try {
       const response = await fetch("/api/portal/devices/revoke", {
         method: "POST",
@@ -411,121 +503,47 @@
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ device_id: deviceId }),
       });
+      if (handlePortalAuthFailure(response, "Entre novamente para revogar o computador.")) return;
       if (!response.ok) throw new Error("HTTP_" + response.status);
       showToast("Computador revogado.");
       await loadDevices();
     } catch (_error) {
       showToast("Não foi possível revogar o computador.");
+    } finally {
+      if (trigger?.isConnected) {
+        trigger.disabled = false;
+        trigger.textContent = originalLabel;
+      }
     }
   }
 
   async function copyText(value, successMessage) {
+    const text = String(value || "");
     try {
-      await navigator.clipboard.writeText(String(value || ""));
+      if (!text) throw new Error("COPY_EMPTY");
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const helper = document.createElement("textarea");
+        helper.value = text;
+        helper.setAttribute("readonly", "");
+        helper.style.position = "fixed";
+        helper.style.opacity = "0";
+        document.body.append(helper);
+        helper.select();
+        const copied = document.execCommand("copy");
+        helper.remove();
+        if (!copied) throw new Error("COPY_FALLBACK_FAILED");
+      }
       showToast(successMessage);
     } catch (_error) {
-      showToast("Não foi possível copiar automaticamente.");
-    }
-  }
-
-  function formatActivityTime(value) {
-    const date = new Date(String(value || ""));
-    if (Number.isNaN(date.getTime())) return "—";
-    return new Intl.DateTimeFormat("pt-BR", {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    }).format(date);
-  }
-
-  function shortReceipt(value) {
-    const receipt = String(value || "").trim();
-    if (!receipt) return "—";
-    if (receipt.length <= 14) return receipt;
-    return receipt.slice(0, 7) + "…" + receipt.slice(-5);
-  }
-
-  function renderEmptyActivity() {
-    const activity = document.getElementById("activityList");
-    if (activity) {
-      activity.replaceChildren();
-      const empty = document.createElement("div");
-      empty.className = "empty-state";
-      const title = document.createElement("strong");
-      title.textContent = "Nenhuma execução ainda";
-      empty.append(title, document.createTextNode("As operações reais deste workspace aparecerão aqui."));
-      activity.append(empty);
-    }
-
-    const ledger = document.getElementById("usageLedger");
-    if (ledger) {
-      [...ledger.querySelectorAll(".tr:not(.head), .empty-state")].forEach((node) => node.remove());
-      const empty = document.createElement("div");
-      empty.className = "empty-state";
-      const title = document.createElement("strong");
-      title.textContent = "Nenhum evento de uso";
-      empty.append(title, document.createTextNode("O ledger será preenchido por operações reais do workspace."));
-      ledger.append(empty);
-    }
-  }
-
-  function renderActivity(rows) {
-    const activityRows = Array.isArray(rows) ? rows : [];
-    if (!activityRows.length) {
-      renderEmptyActivity();
-      return;
-    }
-
-    const activity = document.getElementById("activityList");
-    if (activity) {
-      activity.replaceChildren();
-      activityRows.slice(0, 6).forEach((row) => {
-        const state = String(row?.state || "UNKNOWN").toUpperCase();
-        const item = document.createElement("div");
-        const dot = document.createElement("i");
-        dot.className = state === "COMMITTED" ? "ok" : state === "DENIED" ? "deny" : "";
-        const text = document.createElement("span");
-        const fn = document.createElement("b");
-        fn.textContent = String(row?.function_id || "—");
-        const meta = document.createElement("small");
-        meta.textContent = state + " · " + formatActivityTime(row?.updated_at_utc);
-        text.append(fn, meta);
-        const status = document.createElement("strong");
-        status.textContent = state;
-        item.append(dot, text, status);
-        activity.append(item);
-      });
-    }
-
-    const ledger = document.getElementById("usageLedger");
-    if (ledger) {
-      [...ledger.querySelectorAll(".tr:not(.head), .empty-state")].forEach((node) => node.remove());
-      activityRows.forEach((row) => {
-        const state = String(row?.state || "UNKNOWN").toUpperCase();
-        const line = document.createElement("div");
-        line.className = "tr";
-
-        const time = document.createElement("span");
-        time.textContent = formatActivityTime(row?.updated_at_utc);
-        const fn = document.createElement("span");
-        fn.textContent = String(row?.function_id || "—");
-        const stateCell = document.createElement("span");
-        stateCell.className = "tag " + state.toLowerCase();
-        stateCell.textContent = state;
-        const units = document.createElement("span");
-        units.textContent = number(row?.units || 0);
-        const receipt = document.createElement("span");
-        receipt.textContent = shortReceipt(row?.receipt_sha256);
-
-        line.append(time, fn, stateCell, units, receipt);
-        ledger.append(line);
-      });
+      showToast("Não foi possível copiar automaticamente. Selecione e copie o texto manualmente.");
     }
   }
 
   function applyScenario(name, payload) {
     if (!name) return;
-    const limit = Number(payload?.usage?.limit || payload?.entitlement?.unit_limit || 10000);
+    const limit = Number(payload?.usage?.limit || payload?.entitlement?.unit_limit || 100);
     const connections = document.querySelectorAll("#connectionList button:not([disabled])");
 
     if (name === "loading") {
@@ -533,8 +551,7 @@
       return;
     }
     if (name === "empty") {
-      renderEmptyActivity();
-      showBanner("info", "Workspace pronto", "Ainda não há execuções ou receipts neste workspace.");
+      showBanner("info", "Workspace pronto", "Ainda não há execuções registradas neste workspace.");
       return;
     }
     if (name === "auth-expired") {
@@ -552,13 +569,12 @@
       setText("dashboardConsumed", number(limit));
       setText("dashboardLimit", "/ " + number(limit));
       setText("dashboardPercent", "100% utilizado");
-      setText("dashboardInvokes", number(limit));
       setText("usageConsumed", number(limit));
       setText("usageLimit", "de " + number(limit));
       setText("usageRemaining", "0 unidades disponíveis");
       const bar = document.getElementById("usageProgress");
       if (bar) bar.style.width = "100%";
-      showBanner("warning", "Quota esgotada", "O período atingiu o limite contratado. Novos invokes ficam bloqueados sem afetar receipts anteriores.");
+      showBanner("warning", "Limite de uso atingido", "O período atingiu a capacidade disponível. Novas execuções ficam bloqueadas sem afetar comprovantes anteriores.");
       return;
     }
     if (name === "mcp-unavailable") {
@@ -567,7 +583,7 @@
       return;
     }
     if (name === "receipt-unavailable") {
-      showBanner("warning", "Receipt indisponível", "A execução foi registrada, mas o receipt solicitado ainda não pôde ser recuperado.", "Tentar novamente", loadProductDashboard);
+      showBanner("warning", "Comprovante indisponível", "A execução foi registrada, mas o comprovante solicitado ainda não pôde ser recuperado.", "Tentar novamente", loadProductDashboard);
       return;
     }
     if (name === "billing-disconnected") {
@@ -600,8 +616,21 @@
       const response = await fetch(apiBase + dashboardPath, { cache: "no-store", credentials: "same-origin" });
       if (response.status === 401) {
         setGuestHeader();
+        route("login");
         applyScenario("auth-expired", null);
         return;
+      }
+      if (response.status === 403) {
+        const payload = await response.json().catch(() => ({}));
+        if (payload?.code === "ENTITLEMENT_NOT_FOUND") {
+          setState("Aguardando", "Plano ativo necessário");
+          showBanner(
+            "warning",
+            "Plano não disponível",
+            "Sua conta está autenticada, mas ainda não possui um plano ativo do Commander.",
+          );
+          return;
+        }
       }
       if (!response.ok) throw new Error("HTTP_" + response.status);
       const payload = await response.json();
@@ -629,13 +658,35 @@
   }
 
   function route(target, push = true) {
-    const next = publicViews.has(target) ? target : "landing";
+    const requested = publicViews.has(target) ? target : "landing";
+    const protectedRoute = remotePortal && appViews.has(requested) && !sessionAuthenticated;
+    const next = protectedRoute ? "login" : requested;
+    if (!push && currentView === next) return;
+    currentView = next;
+    document.title = viewTitles[next] || viewTitles.landing;
     views.forEach((view) => view.classList.toggle("active", view.dataset.view === next));
-    document.querySelectorAll("[data-app-go]").forEach((button) => button.classList.toggle("active", button.dataset.appGo === next));
-    document.querySelectorAll("[data-nav]").forEach((link) => link.classList.toggle("active", link.dataset.nav === next));
+    document.querySelectorAll("[data-app-go]").forEach((button) => {
+      const active = button.dataset.appGo === next;
+      button.classList.toggle("active", active);
+      if (active) button.setAttribute("aria-current", "page");
+      else button.removeAttribute("aria-current");
+    });
+    document.querySelectorAll("[data-nav]").forEach((link) => {
+      const active = link.dataset.nav === next;
+      link.classList.toggle("active", active);
+      if (active) link.setAttribute("aria-current", "page");
+      else link.removeAttribute("aria-current");
+    });
     document.body.classList.toggle("workspace-mode", appViews.has(next));
-    if (push && location.hash !== "#" + next) history.pushState(null, "", "#" + next);
+    if (location.hash !== "#" + next) {
+      if (push) history.pushState(null, "", "#" + next);
+      else if (protectedRoute) history.replaceState(null, "", "#" + next);
+    }
     window.scrollTo({ top: 0, behavior: "instant" });
+    if (protectedRoute) {
+      showBanner("info", "Acesso protegido", "Entre com HARA Identity para acessar seu workspace.", "Entrar", () => startRemoteAuth(false));
+      return;
+    }
     if (next === "devices") {
       hydrateSessionHeader();
       loadDevices();
@@ -697,7 +748,7 @@
     const refreshDevices = event.target.closest("[data-refresh-devices]");
     if (refreshDevices) {
       event.preventDefault();
-      loadDevices();
+      loadDevices(refreshDevices);
       return;
     }
 
@@ -731,22 +782,17 @@
     const selectDeviceButton = event.target.closest("[data-select-device]");
     if (selectDeviceButton) {
       event.preventDefault();
-      selectDevice(selectDeviceButton.dataset.selectDevice);
+      selectDevice(selectDeviceButton.dataset.selectDevice, selectDeviceButton);
       return;
     }
 
     const revokeDeviceButton = event.target.closest("[data-revoke-device]");
     if (revokeDeviceButton) {
       event.preventDefault();
-      revokeDevice(revokeDeviceButton.dataset.revokeDevice);
+      revokeDevice(revokeDeviceButton.dataset.revokeDevice, revokeDeviceButton);
       return;
     }
 
-    const demo = event.target.closest("[data-demo-toast]");
-    if (demo) {
-      event.preventDefault();
-      showToast(demo.dataset.demoToast);
-    }
   });
 
   document.querySelectorAll("[data-auth-form]").forEach((form) => {
@@ -802,6 +848,7 @@
           () => startRemoteAuth(false, useAnotherAccount),
         );
         history.replaceState(null, "", location.pathname + "#login");
+        route("login", false);
       }
 
       if (localHost) loadProductDashboard();

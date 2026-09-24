@@ -98,6 +98,14 @@ function requireMcpProductToken(request, env) {
   }
 }
 
+function requirePortalMutationOrigin(request) {
+  const expectedOrigin = new URL(request.url).origin;
+  const origin = request.headers.get("origin");
+  const fetchSite = String(request.headers.get("sec-fetch-site") || "").toLowerCase();
+  if (origin && origin !== expectedOrigin) throw new Error("PORTAL_ORIGIN_DENIED");
+  if (fetchSite && fetchSite !== "same-origin") throw new Error("PORTAL_ORIGIN_DENIED");
+}
+
 function cleanId(value, max = 180) {
   const text = String(value || "").trim();
   if (!text || text.length > max || !/^[A-Za-z0-9_.:-]+$/.test(text)) {
@@ -951,16 +959,24 @@ async function revokePortalDevice(env, session, body) {
 
   const result = await statement.run();
   if (!result.meta?.changes) throw new Error("DEVICE_NOT_FOUND");
-  await env.PRODUCT_DB.prepare(
-    `DELETE FROM commander_device_selections
-      WHERE tenant_id = ? AND device_id = ?`
-  ).bind(session.tenant_id, deviceId).run();
+  await env.PRODUCT_DB.batch([
+    env.PRODUCT_DB.prepare(
+      `DELETE FROM commander_device_selections
+        WHERE tenant_id = ? AND device_id = ?`
+    ).bind(session.tenant_id, deviceId),
+    env.PRODUCT_DB.prepare(
+      `UPDATE commander_device_calls
+          SET state = 'CANCELLED', completed_at_utc = ?, error_code = 'DEVICE_REVOKED'
+        WHERE tenant_id = ? AND device_id = ? AND state IN ('PENDING','EXECUTING')`
+    ).bind(revokedAt, session.tenant_id, deviceId),
+  ]);
   return {
     schema: "hara.commander-device-revocation.v1",
     ok: true,
     device_id: deviceId,
     state: "REVOKED",
     revoked_at_utc: revokedAt,
+    pending_calls_cancelled: true,
   };
 }
 
@@ -1232,6 +1248,7 @@ export default {
       }
 
       if (url.pathname === "/auth/logout" && request.method === "POST") {
+        requirePortalMutationOrigin(request);
         return await logout(request, env);
       }
 
@@ -1278,12 +1295,14 @@ export default {
       }
 
       if (url.pathname === "/api/portal/devices/pairing" && request.method === "POST") {
+        requirePortalMutationOrigin(request);
         const session = await resolvePortalSession(request, env);
         if (!session) return json({ ok: false, code: "AUTH_REQUIRED" }, 401);
         return json(await createDevicePairing(env, session), 201);
       }
 
       if (url.pathname === "/api/portal/devices/revoke" && request.method === "POST") {
+        requirePortalMutationOrigin(request);
         const session = await resolvePortalSession(request, env);
         if (!session) return json({ ok: false, code: "AUTH_REQUIRED" }, 401);
         const body = await request.json();
@@ -1291,6 +1310,7 @@ export default {
       }
 
       if (url.pathname === "/api/portal/devices/select" && request.method === "POST") {
+        requirePortalMutationOrigin(request);
         const session = await resolvePortalSession(request, env);
         if (!session) return json({ ok: false, code: "AUTH_REQUIRED" }, 401);
         const body = await request.json();

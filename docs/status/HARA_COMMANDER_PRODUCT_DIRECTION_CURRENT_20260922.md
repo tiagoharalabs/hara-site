@@ -86,12 +86,14 @@ The product is still under active development. Visual approval does not mean fun
 
 ## Next product gates
 
-1. Re-prove a fresh human browser login/callback, logout / `Usar outra conta`, and preserve no-flash authenticated first-paint behavior.
-2. Complete the first real production device pairing on `nucleo-a`.
-3. Bind public MCP identity/workspace to the selected online customer computer.
-4. Prove the governed tool surface end-to-end with ChatGPT/Codex.
-5. Keep arbitrary shell, SSH and generic filesystem access absent.
-6. Add billing only after ordinary authentication + MCP E2E is stable.
+1. Integrate the Commander pre-test hardening through PR/CI; source merge does not automatically deploy the Commander Worker.
+2. Resolve or explicitly defer the architectural review points tracked in GitHub issue #65 that can affect the homologation contract.
+3. Explicitly publish the reviewed Commander Worker.
+4. Re-prove a fresh human browser login/callback, logout / `Usar outra conta`, and preserve no-flash authenticated first-paint behavior.
+5. Complete the first real production device pairing on `nucleo-a`.
+6. Bind public MCP identity/workspace to the selected customer computer and prove the governed tool surface end-to-end with ChatGPT/Codex.
+7. Keep arbitrary shell, SSH and generic filesystem access absent.
+8. Add billing only after ordinary authentication + MCP E2E is stable.
 
 ## HARA Labs institutional site direction
 

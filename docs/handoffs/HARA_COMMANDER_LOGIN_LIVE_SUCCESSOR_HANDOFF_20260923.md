@@ -1,6 +1,6 @@
 # H.A.R.A. Commander — login live successor handoff — 2026-09-23
 
-State: **BACKEND DEFAULT REDIRECT ALIGNED / LOGIN V2 RUNTIME CONVERGED / HUMAN BROWSER RETEST NEXT**
+State: **BACKEND DEFAULT REDIRECT ALIGNED / LOGIN V2 RUNTIME CONVERGED / PRE-TEST HARDENING READY FOR REVIEW / HUMAN RETEST DEFERRED BY OPERATOR**
 
 ## What is already live
 
@@ -51,17 +51,46 @@ COMMANDER_ACCOUNT_SELECTION=PASS
 
 Live `Usar outra conta` proof also returns `prompt=select_account&max_age=0`. Do not reapply the backend policy.
 
+## Pre-test hardening — source ready for review
+
+The operator explicitly deferred the human browser retest while Commander receives a deeper usability/security pass.
+
+Source branch: `fix/commander-ux-pretest-20260923`.
+
+Validated hardening includes:
+
+- protected workspace routes require a hydrated authenticated session;
+- PROD `?api=` and QA `?scenario=` overrides are localhost-only;
+- auth-error routing now keeps URL, rendered view and visible banner aligned;
+- logout fails honestly instead of pretending the session closed;
+- portal mutation routes enforce same-origin browser semantics;
+- fake/demo production actions were replaced by honest disabled homologation/roadmap states;
+- pairing is presented as an explicit 1 → 2 → 3 flow, with visible expiry, focus/scroll and retry UX;
+- device revoke requires confirmation and cancels pending/executing calls in the product DB;
+- selected-device UX distinguishes no selection, selected-online and selected-offline states;
+- Trial UI now matches live PROD D1: 100 executions/month; Standard and Scale are not represented as active catalog plans;
+- per-execution history is labeled as in homologation because the current portal dashboard contract exposes aggregate usage, not activity rows;
+- dead Google Font dependencies were removed without relaxing CSP;
+- mobile keeps Support reachable while avoiding duplicate logout controls;
+- customer-facing copy was simplified while canonical grant codes remain visible in Security.
+
+Full static, installer, Identity and PROD D1 readback suites pass.
+
+Astra coordination: GitHub issue **#65** contains architectural questions that this front will not decide silently: pairing-token supersession, quota release after CANCELLED/EXPIRED device calls, final ChatGPT/Codex activation semantics, versioned PROD dashboard schema naming, bootstrap installer supply-chain posture and persistent offline-device selection semantics.
+
+This repository has no automatic Commander deployment workflow. Merging source does not by itself publish the Commander Worker.
+
 ## Do not repeat
 
 Do not reapply the default redirect unless backend readback proves drift. Do not edit ZITADEL projections/event-store rows. Do not repeat HARA Identity recovery hara.8 promotion, PKCE/account-switch fixes, OIDC transaction cleanup, Cloudflare AUD lookup, or product-token provisioning.
 
 ## Exact next gate
 
-1. open `https://commander.haralabs.com.br` in a fresh human browser session;
-2. complete HARA Identity login;
-3. prove return to Commander production origin and authenticated session/UI;
-4. test `Sair`;
-5. test `Usar outra conta`;
-6. confirm no redirect to DEV, no stale-login loop and no unauthenticated UI flash.
+1. integrate the pre-test hardening through PR/CI without publishing the Worker automatically;
+2. incorporate any Astra #65 decision that materially affects the pre-test UX/runtime contract;
+3. explicitly deploy the reviewed Commander Worker;
+4. only then perform the fresh human browser login/callback, logout and `Usar outra conta` retest;
+5. confirm no redirect to DEV, no stale-login loop, no unauthenticated UI flash and no fake/demo product action;
+6. after the login gate passes, complete the first real production device pairing.
 
-Keep the ZITADEL API and Postgres untouched. Only after this login gate passes should the first real production device pairing begin.
+Keep the ZITADEL API and Postgres untouched. Do not start the human retest until the pre-test hardening/deploy gate is intentionally opened.
