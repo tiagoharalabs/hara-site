@@ -436,7 +436,7 @@ python3 apps/commander/scripts/validate_preprod_readiness.py \
   --live-readonly \
   --expect-prod-migration applied \
   --expect-prod-assets current \
-  --expect-prod-worker-version afbba7d5-5219-4abc-be06-7df48d218505
+  --expect-prod-worker-version d0c2b2a2-59ba-45b8-af6d-5ce22465a8d8
 ```
 
 This command is the current production convergence proof. If a future reviewed deployment changes the Worker version, update the expected version only after that deployment is intentionally promoted.
@@ -521,7 +521,7 @@ Worker deployment readback:
 
 ```bash
 python3 apps/commander/scripts/commander_prod_deployment_readback.py \
-  --expect-version afbba7d5-5219-4abc-be06-7df48d218505
+  --expect-version d0c2b2a2-59ba-45b8-af6d-5ce22465a8d8
 ```
 
 E2E harness source contract:
