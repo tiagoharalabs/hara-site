@@ -29,6 +29,11 @@ need(CFG["d1_databases"][0]["database_id"] == "2c6473ff-9f65-4ee3-b9aa-a68996d47
 need(CFG["routes"][0] == {"pattern": "commander.haralabs.com.br", "custom_domain": True}, "PROD_ROUTE")
 need('"DEV", "PROD"' in WORKER, "RUNTIME_ENV_GATE")
 need('url.pathname.startsWith("/api/dev/")' in WORKER, "DEV_PREFIX_GATE")
+need(
+    'if (url.pathname === "/api/dev/health" && request.method === "GET") {' in WORKER
+    and 'requireRemoteDevToken(request, env);' in WORKER,
+    "DEV_HEALTH_TOKEN_GUARD",
+)
 need('requireDev(env)' in WORKER, "DEV_REQUIRE_GATE")
 need('url.pathname === "/api/health"' in WORKER, "PROD_HEALTH")
 need('DEV_ENDPOINT_DISABLED: 404' in WORKER, "DEV_DISABLED_STATUS")
