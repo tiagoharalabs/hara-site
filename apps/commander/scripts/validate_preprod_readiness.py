@@ -36,7 +36,7 @@ def main():
     )
     parser.add_argument(
         "--expect-prod-assets",
-        choices=("stale", "current", "any"),
+        choices=("stale", "mixed", "current", "any"),
         default="stale",
         help="expected public Commander asset state during live read-only validation",
     )

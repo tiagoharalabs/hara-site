@@ -132,12 +132,12 @@ COMMANDER_PROD_SESSION_RETENTION_ELIGIBLE=0
 COMMANDER_PROD_SESSION_OLDEST_EXPIRED_AGE_DAYS=1.28
 COMMANDER_PROD_RUNTIME_ASSETS=CURRENT
 COMMANDER_PROD_WORKER_DEPLOYMENT=PROVEN
-COMMANDER_PROD_WORKER_VERSION=cb80f974-cb21-4ae7-9d5d-fc2271eacd8e
+COMMANDER_PROD_WORKER_VERSION=daf0cc4b-9372-4165-8c94-c2decefa221f
 COMMANDER_HUMAN_HOMOLOGATION=PENDING_OPERATOR_GATE
 COMMANDER_FIRST_DEVICE_E2E=PENDING_HOMOLOGATION
 ```
 
-The original production promotion used canonical `main` commit `da28e0404df689b9e9943fa4377f51789c9b5dfd`. The current deployed runtime has since advanced through reviewed hardening to source `5d69e0be19f9467413edb26e61ec3ee12a0e678d` (PR #104 bounded OIDC transaction hygiene). Repository changes #105–#108 are operator-tooling/preflight hardening only and do not imply another Worker deployment.
+The original production promotion used canonical `main` commit `da28e0404df689b9e9943fa4377f51789c9b5dfd`. The current deployed runtime has since advanced through reviewed hardening to source `021b32476074c2b7655337a5d902ff19a3ffa855` (PR #113 Agent 0.3.6 redirect fail-closed release). PRs #110–#112 are operator-tooling/preflight/token-custody hardening; #113 required and received an explicit DEV/PROD asset promotion.
 Future source merges still do **not** implicitly publish Commander; later deployments remain explicit.
 
 ## 5. Live product/data facts confirmed
@@ -221,6 +221,27 @@ Agent 0.3.5 startup-attestation deployment (2026-09-24 UTC):
 - fail-closed live smoke: **PASS**;
 - full live-readonly gate: **PASS**.
 
+Agent 0.3.6 redirect fail-closed deployment (2026-09-24 UTC):
+- source `main`: `021b32476074c2b7655337a5d902ff19a3ffa855`;
+- PR #110 hardened local MCP product-token custody with owner/mode/no-follow checks and Wrangler 4.137.0 alignment;
+- PR #111 requires byte-exact public/local installer + release-manifest parity before the first-device candidate may report READY;
+- PR #112 closed a symlink-bypass regression in the E2E token path and redacts raw Wrangler failure output;
+- PR #113 released Agent **0.3.6** and makes sensitive Agent/installer transport fail closed on HTTP redirects on Linux and Windows;
+- Linux redirect canary proves the redirect destination receives **0 requests** and **0 bearer credentials**;
+- Windows Agent/installer calls use `-MaximumRedirection 0`; Linux urllib bearer helpers use explicit no-redirect openers;
+- Windows pairing plaintext payload is cleared immediately after enrollment response handling;
+- PROD deployment id: `03f57aee-7194-484c-a42e-314482f5e6c6`;
+- PROD Worker version: `daf0cc4b-9372-4165-8c94-c2decefa221f`;
+- PROD rollback Worker version: `cb80f974-cb21-4ae7-9d5d-fc2271eacd8e`;
+- PROD deployed at: `2026-09-24T19:42:20.099217Z`;
+- DEV deployment id: `7050005c-cada-4900-be76-3e1986259481`;
+- DEV Worker version: `5b2efcc0-607e-445b-a06e-7275b91bd5f3`;
+- DEV rollback Worker version: `f7970197-d3dc-4122-afc2-f61c972cfd25`;
+- DEV deployed at: `2026-09-24T19:41:05.035211Z`;
+- six release assets were the only pre-deploy drift; all ten critical PROD assets are now **CURRENT**;
+- full live-readonly gate and fail-closed smoke: **PASS**;
+- `nucleo-a` first-device candidate is **READY** on Linux x86_64 with public installer/manifest byte parity and Agent **0.3.6**.
+
 ## 6. Device pairing / credential review
 
 The reviewed pairing model is structurally sound:
@@ -282,7 +303,7 @@ The deterministic source and runtime promotion gates are closed. Remaining work 
    - selected-device online/offline behavior;
    - governed five-tool call path;
    - revoke and expiry behavior.
-   - current candidate evidence: `nucleo-a` is **READY** on Linux x86_64 with no prior Commander enrollment/residue, systemd-user persistence ready and public Agent 0.3.5 reachable; custom XDG roots are inspected correctly and relative XDG roots fail closed.
+   - current candidate evidence: `nucleo-a` is **READY** on Linux x86_64 with no prior Commander enrollment/residue, systemd-user persistence ready, public installer/manifest byte parity and public Agent 0.3.6 reachable; custom XDG roots are inspected correctly and relative XDG roots fail closed.
 
 3. **Quota runtime proof**
    - hara-platform PR #1158 closed the source compensation gap;
@@ -296,8 +317,9 @@ The deterministic source and runtime promotion gates are closed. Remaining work 
 5. **Installer bootstrap supply chain**
    - release manifest + SHA256SUMS cover both installers and both Agents;
    - Linux enforces Agent SHA-256, release version and dynamic self-test before acceptance;
-   - Agent 0.3.5 adds the same fail-closed functional self-test requirement to Windows install and update, after SHA/version/syntax validation;
-- Agent 0.3.5 additionally requires fresh local startup attestation for the expected version before install/update success on both Linux and Windows;
+   - Agent 0.3.5 added the same fail-closed functional self-test requirement to Windows install and update, after SHA/version/syntax validation;
+   - Agent 0.3.5 additionally requires fresh local startup attestation for the expected version before install/update success on both Linux and Windows;
+   - Agent 0.3.6 additionally denies HTTP redirects for credential-bearing Agent/installer transport on both platforms;
    - the public runtime drift gate covers installers, Agents, manifest and checksums byte-for-byte;
    - the initial `curl | bash` / `irm | iex` bootstrap still trusts the Commander HTTPS origin and has no independent trust anchor yet;
    - independent package/signature trust remains a later product-maturity target and must not be represented as already solved.
@@ -323,18 +345,18 @@ The promotion was executed in the required order:
 ```
 
 Current deployment:
-- deployable source: `5d69e0be19f9467413edb26e61ec3ee12a0e678d`;
-- Worker version: `cb80f974-cb21-4ae7-9d5d-fc2271eacd8e`;
-- rollback version: `4caf1542-8aab-4563-ae19-aa09ed8c74e6`;
-- deployment id: `f8b4ee0e-2b15-4e3e-b544-cb24d1f9d3b7`;
-- deployed at: `2026-09-24T18:21:07.745409Z`;
+- deployable source: `021b32476074c2b7655337a5d902ff19a3ffa855`;
+- Worker version: `daf0cc4b-9372-4165-8c94-c2decefa221f`;
+- rollback version: `cb80f974-cb21-4ae7-9d5d-fc2271eacd8e`;
+- deployment id: `03f57aee-7194-484c-a42e-314482f5e6c6`;
+- deployed at: `2026-09-24T19:42:20.099217Z`;
 - migration 0009: **APPLIED**;
 - runtime assets: **CURRENT**;
 - public health/auth: **PASS**;
 - public fail-closed smoke: **PASS**;
 - OIDC transaction hygiene: **PASS**, 10-minute window, expired=0 in latest readback;
 - pairing/session retention eligibility: **0** in latest readback;
-- Agent release: **0.3.5**;
+- Agent release: **0.3.6**;
 - Agent startup attestation on install/update: **READY**.
 
 The HTML runtime validator permits only one known Cloudflare Browser Insights beacon injection when comparing `/`; after removing that single known injected script, the HTML must match source exactly. The other nine critical assets (JS/CSS, installers, Agents, release files and brand asset) remain byte-exact checks.
@@ -374,7 +396,7 @@ Order of execution from the current promoted state:
 1. Run the consolidated live-readonly gate and require:
    - migration 0009 = `APPLIED`;
    - public assets = `CURRENT`;
-   - Worker version = `cb80f974-cb21-4ae7-9d5d-fc2271eacd8e`.
+   - Worker version = `daf0cc4b-9372-4165-8c94-c2decefa221f`.
 2. Perform the human browser homologation:
    - fresh private browser;
    - login / callback;
@@ -404,7 +426,7 @@ python3 apps/commander/scripts/validate_preprod_readiness.py \
   --live-readonly \
   --expect-prod-migration applied \
   --expect-prod-assets current \
-  --expect-prod-worker-version cb80f974-cb21-4ae7-9d5d-fc2271eacd8e
+  --expect-prod-worker-version daf0cc4b-9372-4165-8c94-c2decefa221f
 ```
 
 This command is the current production convergence proof. If a future reviewed deployment changes the Worker version, update the expected version only after that deployment is intentionally promoted.
@@ -475,7 +497,7 @@ Public runtime asset drift readback:
 python3 apps/commander/scripts/validate_prod_runtime_drift.py --expect-assets current
 ```
 
-Current canonical expectation is `current`. The validator allows only the known Cloudflare Browser Insights beacon injection on HTML before normalized comparison; the other nine critical assets remain byte-exact.
+Current canonical expectation is `current`. During an intentional partial asset rollout, `mixed` is a valid temporary expected state and may be requested explicitly with `--expect-assets mixed`; it must return to `current` after deployment. The validator allows only the known Cloudflare Browser Insights beacon injection on HTML before normalized comparison; the other nine critical assets remain byte-exact.
 
 Public fail-closed smoke:
 
@@ -489,7 +511,7 @@ Worker deployment readback:
 
 ```bash
 python3 apps/commander/scripts/commander_prod_deployment_readback.py \
-  --expect-version cb80f974-cb21-4ae7-9d5d-fc2271eacd8e
+  --expect-version daf0cc4b-9372-4165-8c94-c2decefa221f
 ```
 
 E2E harness source contract:
@@ -581,11 +603,15 @@ git diff --check
 - PR #106 — custom-XDG residue correctness in first-device preflight — **MERGED**
 - PR #107 — same-device / release-version / request / receipt correlation — **MERGED**
 - PR #108 — relative XDG paths denied in first-device preflight — **MERGED**
+- PR #110 — local MCP product-token custody hardening — **MERGED**
+- PR #111 — first-device public/local installer + manifest parity — **MERGED**
+- PR #112 — MCP token symlink-bypass closure / failure-output redaction — **MERGED**
+- PR #113 — Agent 0.3.6 redirect fail-closed release — **MERGED + PROMOTED**
 - hara-platform PR #1158 — quota finalization compensation source — **MERGED; real-device COMMIT E2E pending**
 - issue #65 — Commander post-promotion coordination / residual homologation — **OPEN**
 
-Canonical repository state at this checkpoint: `main` = `a35e1e8c165c4ce167412b64bba3f6efebe2ef14`.
-Current deployed Commander runtime source: `5d69e0be19f9467413edb26e61ec3ee12a0e678d`.
-PRs #105–#108 are operator-tooling/preflight-only and do not require another Worker deployment.
+Canonical repository state at this checkpoint: `main` = `021b32476074c2b7655337a5d902ff19a3ffa855`.
+Current deployed Commander runtime source: `021b32476074c2b7655337a5d902ff19a3ffa855`.
+PRs #110–#112 are operator-tooling/preflight/token-custody hardening. PR #113 changed public release assets and was explicitly promoted to DEV and PROD.
 
 Continue from current `main`, this guide and the newest issue #65 comments. Do not use PR #66 as a backend source.
