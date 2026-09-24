@@ -58,6 +58,7 @@ need(".sidebar-bottom{display:flex;flex-direction:row" in CSS and ".sidebar-bott
 need('OWNER: "Proprietário"' in JS and 'data-user-role>Owner<' not in HTML and 'usage: "Uso & limite · H.A.R.A. Commander"' in JS, "PORTUGUESE_ROLE_AND_TITLE_UX")
 need("https://www.haralabs.com.br/legal/termos/" in HTML and "https://www.haralabs.com.br/legal/privacidade/" in HTML and 'class="auth-legal"' in HTML and 'class="product-legal-links"' in HTML, "LEGAL_LINKS_READY")
 need("#dashboardInvokes" not in CSS and ".activity-list" not in CSS, "DEAD_ACTIVITY_CSS_ABSENT")
+need('class="user-chip"' not in HTML, "DUPLICATE_INTERNAL_SESSION_IDENTITY_ABSENT")
 
 prod = "https://commander.haralabs.com.br"
 dev = "hara-commander-dev-v2.tiago-sartori.workers.dev"
