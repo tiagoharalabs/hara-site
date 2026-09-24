@@ -134,7 +134,7 @@ COMMANDER_HUMAN_HOMOLOGATION=PENDING_OPERATOR_GATE
 COMMANDER_FIRST_DEVICE_E2E=PENDING_HOMOLOGATION
 ```
 
-The promoted deployable source was canonical `main` commit `da28e0404df689b9e9943fa4377f51789c9b5dfd`.
+The original production promotion used canonical `main` commit `da28e0404df689b9e9943fa4377f51789c9b5dfd`. The current runtime has since advanced through reviewed hardening to source `c0669a1db1a3ac75b86c1f196f9aef0f67bd8e01`.
 Future source merges still do **not** implicitly publish Commander; later deployments remain explicit.
 
 ## 5. Live product/data facts confirmed
@@ -300,7 +300,7 @@ The promotion was executed in the required order:
 
 Current deployment:
 - Worker version: `f96d5690-7681-4976-b86b-94fe66ea842c`;
-- rollback version: `6d018e75-6c43-4efe-bf29-c277a49d4f2c`;
+- rollback version: `0f1028a0-797a-470e-a825-68d3e607cf67`;
 - migration 0009: **APPLIED**;
 - runtime assets: **CURRENT**;
 - public health/auth: **PASS**;
@@ -343,7 +343,7 @@ Order of execution from the current promoted state:
 1. Run the consolidated live-readonly gate and require:
    - migration 0009 = `APPLIED`;
    - public assets = `CURRENT`;
-   - Worker version = `6d018e75-6c43-4efe-bf29-c277a49d4f2c`.
+   - Worker version = `f96d5690-7681-4976-b86b-94fe66ea842c`.
 2. Perform the human browser homologation:
    - fresh private browser;
    - login / callback;
