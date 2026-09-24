@@ -34,6 +34,12 @@ def main():
         default="pending",
         help="expected PROD D1 migration 0009 state during live read-only validation",
     )
+    parser.add_argument(
+        "--expect-prod-assets",
+        choices=("stale", "current", "any"),
+        default="stale",
+        help="expected public Commander asset state during live read-only validation",
+    )
     args = parser.parse_args()
 
     run("COMMANDER_PREPROD_APP_JS", [
@@ -73,6 +79,7 @@ def main():
     print("COMMANDER_SOURCE_PREPROD_READY=PASS")
 
     migration_state_line = None
+    runtime_asset_state_line = None
     if args.live_readonly:
         run("COMMANDER_IDENTITY_LIVE_READONLY", [
             sys.executable,
@@ -90,9 +97,22 @@ def main():
                 break
         if migration_state_line is None:
             raise SystemExit("COMMANDER_PROD_D1_MIGRATION_STATE_MISSING")
+        runtime_output = run("COMMANDER_PROD_RUNTIME_LIVE_READONLY", [
+            sys.executable,
+            "apps/commander/scripts/validate_prod_runtime_drift.py",
+            "--expect-assets", args.expect_prod_assets,
+        ])
+        for line in runtime_output.splitlines():
+            if line.startswith("COMMANDER_PROD_RUNTIME_ASSETS="):
+                runtime_asset_state_line = line
+                break
+        if runtime_asset_state_line is None:
+            raise SystemExit("COMMANDER_PROD_RUNTIME_ASSET_STATE_MISSING")
 
     if migration_state_line:
         print(migration_state_line)
+    if runtime_asset_state_line:
+        print(runtime_asset_state_line)
     else:
         print("COMMANDER_PROD_D1_MIGRATION_0009=PENDING_PROMOTION_GATE")
     print("COMMANDER_PROD_WORKER_DEPLOYMENT=PENDING_PROMOTION_GATE")

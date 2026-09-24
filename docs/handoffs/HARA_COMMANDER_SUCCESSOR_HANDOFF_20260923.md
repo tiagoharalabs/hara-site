@@ -311,7 +311,8 @@ Include current public Identity and PROD D1 read-only checks before migration 00
 ```bash
 python3 apps/commander/scripts/validate_preprod_readiness.py \
   --live-readonly \
-  --expect-prod-migration pending
+  --expect-prod-migration pending \
+  --expect-prod-assets stale
 ```
 
 After migration 0009 is intentionally applied, require the schema to be present before Worker promotion:
@@ -319,7 +320,8 @@ After migration 0009 is intentionally applied, require the schema to be present 
 ```bash
 python3 apps/commander/scripts/validate_preprod_readiness.py \
   --live-readonly \
-  --expect-prod-migration applied
+  --expect-prod-migration applied \
+  --expect-prod-assets current
 ```
 
 Public Identity / Commander login runtime:
@@ -361,6 +363,15 @@ python3 apps/commander/scripts/commander_prod_readback.py \
 ```
 
 Switch the expectation to `applied` only after the governed migration step has completed.
+
+Public runtime asset drift readback:
+
+```bash
+python3 apps/commander/scripts/validate_prod_runtime_drift.py --expect-assets stale
+```
+
+Before promotion, `stale` is the expected state because current PROD has not been promoted to canonical `main`.
+After Worker/assets deployment, rerun with `--expect-assets current` and require exact body hashes for `/`, `/app.js` and `/styles.css`.
 
 JavaScript syntax:
 
