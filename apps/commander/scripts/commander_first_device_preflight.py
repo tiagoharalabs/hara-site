@@ -53,9 +53,12 @@ def parse_preflight(text: str) -> dict:
         raise PreflightError("PREFLIGHT_JSON_INVALID") from exc
 
 def _xdg_root(home: Path, value: str | None, fallback: str) -> Path:
-    path = Path(value) if value else home / fallback
-    if not path.is_absolute():
-        path = ROOT / path
+    if value:
+        path = Path(value)
+        if not path.is_absolute():
+            raise PreflightError("XDG_PATH_NOT_ABSOLUTE")
+    else:
+        path = home / fallback
     return path.resolve()
 
 def residue_state(
