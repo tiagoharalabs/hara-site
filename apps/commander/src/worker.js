@@ -728,10 +728,20 @@ async function createDevicePairing(env, session) {
   const createdAt = nowIso();
   const expiresAt = nowIso(10 * 60);
 
-  await env.PRODUCT_DB.prepare(
+  const supersede = env.PRODUCT_DB.prepare(
+    `UPDATE device_pairing_tokens
+        SET superseded_at_utc = ?
+      WHERE tenant_id = ?
+        AND subject_id = ?
+        AND consumed_at_utc IS NULL
+        AND superseded_at_utc IS NULL`
+  ).bind(createdAt, session.tenant_id, session.subject_id);
+
+  const insert = env.PRODUCT_DB.prepare(
     `INSERT INTO device_pairing_tokens
-      (pairing_id, token_hash, tenant_id, subject_id, created_at_utc, expires_at_utc, consumed_at_utc)
-     VALUES (?, ?, ?, ?, ?, ?, NULL)`
+      (pairing_id, token_hash, tenant_id, subject_id, created_at_utc, expires_at_utc,
+       consumed_at_utc, superseded_at_utc)
+     VALUES (?, ?, ?, ?, ?, ?, NULL, NULL)`
   ).bind(
     pairingId,
     tokenHash,
@@ -739,7 +749,13 @@ async function createDevicePairing(env, session) {
     session.subject_id,
     createdAt,
     expiresAt,
-  ).run();
+  );
+
+  try {
+    await env.PRODUCT_DB.batch([supersede, insert]);
+  } catch (_error) {
+    throw new Error("DEVICE_PAIRING_CREATE_FAILED");
+  }
 
   return {
     schema: "hara.commander-device-pairing.v1",
@@ -804,6 +820,7 @@ async function enrollDevice(env, body) {
        FROM device_pairing_tokens
       WHERE token_hash = ?
         AND consumed_at_utc IS NULL
+        AND superseded_at_utc IS NULL
         AND expires_at_utc > ?`
   ).bind(
     deviceId,
@@ -823,6 +840,7 @@ async function enrollDevice(env, body) {
         SET consumed_at_utc = ?
       WHERE token_hash = ?
         AND consumed_at_utc IS NULL
+        AND superseded_at_utc IS NULL
         AND expires_at_utc > ?`
   ).bind(createdAt, tokenHash, createdAt);
 
