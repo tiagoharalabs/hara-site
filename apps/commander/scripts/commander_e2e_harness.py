@@ -9,7 +9,8 @@ import time
 import uuid
 from pathlib import Path
 from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+from urllib.parse import urlsplit
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 DEFAULT_ORIGIN = "https://commander.haralabs.com.br"
 FUNCTION_ID = "device.info"
@@ -23,6 +24,12 @@ TOOLS = (
 
 class HarnessError(RuntimeError):
     pass
+
+class NoRedirectHandler(HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise HTTPError(req.full_url, code, "REDIRECT_DENIED", headers, fp)
+
+NO_REDIRECT_OPENER = build_opener(NoRedirectHandler)
 
 def load_token(path: Path) -> str:
     if not path.is_file():
@@ -38,8 +45,16 @@ def load_token(path: Path) -> str:
 
 def clean_origin(value: str) -> str:
     origin = value.rstrip("/")
-    if not origin.startswith("https://"):
-        raise HarnessError("COMMANDER_ORIGIN_MUST_BE_HTTPS")
+    parsed = urlsplit(origin)
+    if (
+        parsed.scheme != "https"
+        or parsed.netloc != "commander.haralabs.com.br"
+        or parsed.path
+        or parsed.query
+        or parsed.fragment
+        or origin != DEFAULT_ORIGIN
+    ):
+        raise HarnessError("COMMANDER_ORIGIN_NOT_CANONICAL")
     return origin
 
 def post_json(origin: str, path: str, token: str, body: dict) -> dict:
@@ -56,12 +71,14 @@ def post_json(origin: str, path: str, token: str, body: dict) -> dict:
         },
     )
     try:
-        with urlopen(req, timeout=20) as response:
+        with NO_REDIRECT_OPENER.open(req, timeout=20) as response:
             raw = response.read().decode()
             if not raw:
                 return {}
             return json.loads(raw)
     except HTTPError as exc:
+        if 300 <= int(exc.code) < 400:
+            raise HarnessError("COMMANDER_REDIRECT_DENIED") from exc
         raw = exc.read().decode()
         try:
             obj = json.loads(raw or "{}")
