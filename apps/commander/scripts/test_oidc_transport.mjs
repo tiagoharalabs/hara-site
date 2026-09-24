@@ -3,9 +3,16 @@ import { exchangeAuthorizationCode, oidcUserInfo } from "../src/oidc.js";
 
 const originalFetch = globalThis.fetch;
 const calls = [];
+let forcedRedirectUrl = "";
 
 globalThis.fetch = async (url, init = {}) => {
   calls.push({ url: String(url), init });
+  if (String(url) === forcedRedirectUrl) {
+    return new Response(null, {
+      status: 302,
+      headers: { location: "https://redirect.example.test/" },
+    });
+  }
   if (String(url).endsWith("/token")) {
     return Response.json({ id_token: "header.payload.signature", access_token: "access" });
   }
@@ -34,7 +41,7 @@ try {
   await oidcUserInfo({ metadata, accessToken: "access" });
 
   assert.equal(calls.length, 2);
-  for (const call of calls) assert.equal(call.init.redirect, "error");
+  for (const call of calls) assert.equal(call.init.redirect, "manual");
   assert.equal(calls[0].init.method, "POST");
   assert.match(String(calls[0].init.headers.authorization), /^Basic /);
   assert.equal(new URLSearchParams(calls[0].init.body).has("client_id"), false);
@@ -66,10 +73,31 @@ try {
     }),
     /OIDC_CLIENT_AUTH_INVALID/,
   );
+
+  forcedRedirectUrl = metadata.token_endpoint;
+  await assert.rejects(
+    exchangeAuthorizationCode({
+      metadata,
+      clientId: "client",
+      clientSecret: "secret",
+      clientAuth: "BASIC",
+      code: "code",
+      verifier: "verifier",
+      redirectUri: "https://commander.example.test/auth/callback",
+    }),
+    /OIDC_TOKEN_REDIRECT_DENIED/,
+  );
+
+  forcedRedirectUrl = metadata.userinfo_endpoint;
+  await assert.rejects(
+    oidcUserInfo({ metadata, accessToken: "access" }),
+    /OIDC_USERINFO_REDIRECT_DENIED/,
+  );
+  forcedRedirectUrl = "";
 } finally {
   globalThis.fetch = originalFetch;
 }
 
 console.log("COMMANDER_OIDC_CLIENT_AUTH_METHOD=ENFORCED");
-console.log("COMMANDER_OIDC_TOKEN_REDIRECT=FAIL_CLOSED");
-console.log("COMMANDER_OIDC_USERINFO_REDIRECT=FAIL_CLOSED");
+console.log("COMMANDER_OIDC_TOKEN_REDIRECT=MANUAL_DENY");
+console.log("COMMANDER_OIDC_USERINFO_REDIRECT=MANUAL_DENY");

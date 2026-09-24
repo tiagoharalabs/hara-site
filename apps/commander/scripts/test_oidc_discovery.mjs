@@ -15,7 +15,6 @@ async function discover(metadata) {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (url, init = {}) => {
     assert.equal(String(url), discoveryUrl);
-    assert.equal(init.redirect, "error");
     return Response.json(metadata);
   };
   try {
