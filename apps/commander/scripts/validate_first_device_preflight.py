@@ -81,4 +81,13 @@ with tempfile.TemporaryDirectory() as tmp:
     default_state = residue_state(home, {})
     need(default_state["config_dir"] is True, "DEFAULT_CONFIG_RESIDUE_DETECTED")
 
+
+for key in ("XDG_CONFIG_HOME", "XDG_DATA_HOME"):
+    try:
+        residue_state(home, {key: "relative/path"})
+    except namespace["PreflightError"] as exc:
+        need(str(exc) == "XDG_PATH_NOT_ABSOLUTE", f"{key}_RELATIVE_DENIED")
+    else:
+        raise SystemExit(f"COMMANDER_FIRST_DEVICE_PREFLIGHT_{key}_RELATIVE_DENIED=FAIL")
+
 print("COMMANDER_FIRST_DEVICE_PREFLIGHT_CONTRACT=PASS")
