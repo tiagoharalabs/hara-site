@@ -11,8 +11,8 @@ Full historical authority:
 ## 1. Current authority
 
 Repository:
-- source authority incorporated by this kit through PR #138: `ff56d1ebd6cb5fcd2815580af97e5d675aac0fbd`
-- latest Commander source merge: PR #138 — OIDC claim-shape validation
+- source authority incorporated by this kit through PR #146: `427e6a0c09a0a912e7b9e95ee808b8f0cd58bd7c`
+- latest Commander source merge: PR #146 — OIDC redirect hotfix after live DEV bisect
 - open Commander PRs observed at kit creation: **0**
 
 PROD:
@@ -27,9 +27,9 @@ PROD:
 - Identity live-readonly: **PASS**
 
 DEV:
-- Worker `hara-commander-dev-v2`: `71031640-7e02-4bbc-940c-4af8da3472d9`
-- rollback: `c2acc69c-2773-4c4b-b20a-fbea94b48274`
-- deployed source: `ff56d1ebd6cb5fcd2815580af97e5d675aac0fbd`
+- Worker `hara-commander-dev-v2`: `4e641bb4-1daf-471f-800e-bfdf13edb3f6`
+- rollback: `6fca61dd-5844-4128-bb8b-96fa106d1f29`
+- deployed source: `427e6a0c09a0a912e7b9e95ee808b8f0cd58bd7c`
 - health: **DEV / REMOTE_DEV / HARA Identity configured**
 - bootstrap public assets: byte-equal to canonical source in latest readback
 - versioned DEV config: `apps/commander/wrangler.dev.jsonc`
@@ -65,7 +65,20 @@ Closed in source/runtime:
 - OIDC `nbf` is enforced with a bounded 30-second clock-skew allowance; malformed/non-numeric `nbf` fails closed
 - OIDC issuer query/fragment/embedded credentials are rejected; only trailing-slash canonicalization is allowed
 - OIDC `iat` is required and numeric; audience entries and subject format are validated before identity binding
+- any present OIDC `azp` must be a non-empty string before client-id comparison
+- OIDC Discovery Authorization/Token/JWKS/UserInfo endpoints are validated as HTTPS; embedded credentials/fragments fail closed
+- JWKS signing-key selection honors compatible `use=sig`, `alg=RS256` and `key_ops=verify` metadata when present
+- `AUTH_CLIENT_AUTH` is authoritative and limited to `BASIC|NONE`; BASIC requires a secret and NONE ignores any stale secret binding
+- credential-bearing Token/UserInfo subrequests use manual redirect handling and explicitly deny 3xx responses
 - PROD alternate Worker/version URL surface disabled
+
+Live DEV regression / resolution:
+- source through #145 was briefly canaried in DEV and exposed `GET /auth/login` returning 500;
+- operational bisect proved #141 returns 302 while #143 returns 500, isolating the regression to `redirect=error` on the Worker-side Discovery subrequest;
+- DEV was restored to #141 while #146 was reviewed;
+- #146 replaced the unsafe broad policy with Cloudflare-compatible handling: Discovery/JWKS carry no credentials and use normal fetch behavior; Token/UserInfo carry sensitive headers and use manual redirects with explicit 3xx denial;
+- final live DEV proof on Worker `4e641bb4-1daf-471f-800e-bfdf13edb3f6`: login 302 to HARA Identity, Authorization Code + PKCE S256, account switch `max_age=0`, anonymous/malformed sessions 401, missing-Origin logout 403, exact same-origin logout 204;
+- historical failed/bisect Worker IDs are evidence only and are not rollback targets for new work: `501b8736-ca2d-4ec5-addf-b261fa7db1b8` and `2dc36978-df0e-4908-a073-844a9570232d`.
 
 Still human-only:
 - fresh private-browser login/callback
@@ -255,7 +268,7 @@ Latest structural PROD posture:
 - retention-eligible portal sessions = 0
 - device count remains zero until first real pairing
 
-## 7. Recent delivery map — #91 to #138
+## 7. Recent delivery map — #91 to #146
 
 Key progression after the original promotion/UI cleanup:
 
@@ -291,6 +304,13 @@ Key progression after the original promotion/UI cleanup:
 - #136 — OIDC authorized-party (`azp`) validation with cryptographic RS256 regression coverage
 - #137 — OIDC `nbf` not-before enforcement and malformed-claim denial
 - #138 — OIDC issuer / `iat` / audience / subject claim-shape hardening; DEV promoted to Worker `71031640-7e02-4bbc-940c-4af8da3472d9`, rollback `c2acc69c-2773-4c4b-b20a-fbea94b48274`
+- #140 — `azp` claim-shape enforcement
+- #141 — HTTPS validation for OIDC Discovery endpoints
+- #142 — Commander validation hygiene (local ESM boundary, Python cache ignore)
+- #143 — initial all-subrequest redirect hardening; **superseded after live DEV regression**
+- #144 — JWKS signing-key metadata selection hardening
+- #145 — explicit `AUTH_CLIENT_AUTH` enforcement
+- #146 — live-regression hotfix: Discovery/JWKS reads restored to compatible fetch behavior; Token/UserInfo remain manual-redirect fail-closed; DEV promoted and login 302 re-proven
 
 For the earlier #64–#90 history, use the canonical successor guide.
 
