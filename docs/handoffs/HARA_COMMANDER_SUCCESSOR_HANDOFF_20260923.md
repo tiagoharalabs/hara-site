@@ -134,7 +134,7 @@ COMMANDER_HUMAN_HOMOLOGATION=PENDING_OPERATOR_GATE
 COMMANDER_FIRST_DEVICE_E2E=PENDING_HOMOLOGATION
 ```
 
-The original production promotion used canonical `main` commit `da28e0404df689b9e9943fa4377f51789c9b5dfd`. The current runtime has since advanced through reviewed hardening to source `c0669a1db1a3ac75b86c1f196f9aef0f67bd8e01`.
+The original production promotion used canonical `main` commit `da28e0404df689b9e9943fa4377f51789c9b5dfd`. The current deployed runtime has since advanced through reviewed hardening to source `85ec98591842c0e82fc67873fda1937c1fc8eee7` (Agent 0.3.5 startup-attestation rollout). Later repository changes through #99/#100 are documentation/operator-tooling only and do not imply another Worker deployment.
 Future source merges still do **not** implicitly publish Commander; later deployments remain explicit.
 
 ## 5. Live product/data facts confirmed
@@ -151,13 +151,15 @@ Current PROD D1 facts recorded in issue #65:
 
 Therefore old visible claims such as Trial 1,000, Standard 10,000 and active Standard/Scale were incorrect and must not return.
 
-Latest structural PROD readback during the pre-test hardening:
+Latest structural PROD readback during the hardening:
 - devices = 0;
 - selections = 0;
 - calls = 0;
 - active portal sessions = 0;
 - foreign-key/integrity defects = 0;
-- one historical expired/unrevoked portal session remains as retention hygiene.
+- expired/unrevoked portal sessions = 1;
+- retention-eligible terminal sessions under the 30-day policy = **0**;
+- oldest expired/unrevoked session age observed on 2026-09-24 = **1.28 days**, so preservation is expected rather than a cleanup defect.
 
 No real production device has been paired yet.
 
