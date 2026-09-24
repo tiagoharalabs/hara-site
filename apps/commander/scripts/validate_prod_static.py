@@ -59,6 +59,7 @@ need('OWNER: "Proprietário"' in JS and 'data-user-role>Owner<' not in HTML and 
 need("https://www.haralabs.com.br/legal/termos/" in HTML and "https://www.haralabs.com.br/legal/privacidade/" in HTML and 'class="auth-legal"' in HTML and 'class="product-legal-links"' in HTML, "LEGAL_LINKS_READY")
 need("#dashboardInvokes" not in CSS and ".activity-list" not in CSS, "DEAD_ACTIVITY_CSS_ABSENT")
 need('class="user-chip"' not in HTML, "DUPLICATE_INTERNAL_SESSION_IDENTITY_ABSENT")
+need(".user-chip" not in CSS, "DEAD_USER_CHIP_CSS_ABSENT")
 
 prod = "https://commander.haralabs.com.br"
 dev = "hara-commander-dev-v2.tiago-sartori.workers.dev"
