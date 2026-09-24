@@ -6,6 +6,7 @@ import json
 import os
 import subprocess
 import sys
+from collections.abc import Mapping
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -51,11 +52,23 @@ def parse_preflight(text: str) -> dict:
     except json.JSONDecodeError as exc:
         raise PreflightError("PREFLIGHT_JSON_INVALID") from exc
 
-def residue_state(home: Path) -> dict[str, bool]:
+def _xdg_root(home: Path, value: str | None, fallback: str) -> Path:
+    path = Path(value) if value else home / fallback
+    if not path.is_absolute():
+        path = ROOT / path
+    return path.resolve()
+
+def residue_state(
+    home: Path,
+    environ: Mapping[str, str] | None = None,
+) -> dict[str, bool]:
+    env = os.environ if environ is None else environ
+    config_root = _xdg_root(home, env.get("XDG_CONFIG_HOME"), ".config")
+    data_root = _xdg_root(home, env.get("XDG_DATA_HOME"), ".local/share")
     paths = {
-        "config_dir": home / ".config/hara-commander",
-        "data_dir": home / ".local/share/hara-commander",
-        "systemd_unit": home / ".config/systemd/user/hara-commander-agent.service",
+        "config_dir": config_root / "hara-commander",
+        "data_dir": data_root / "hara-commander",
+        "systemd_unit": config_root / "systemd/user/hara-commander-agent.service",
     }
     return {name: path.exists() for name, path in paths.items()}
 
