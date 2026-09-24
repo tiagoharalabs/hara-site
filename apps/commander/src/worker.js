@@ -12,6 +12,7 @@ import { normalizeIssuer, randomToken, sha256 } from "./oidc.js";
 const DEMO_TENANT = "HARA-TENANT-DEMO-0001";
 const MCP_METER_ID = "HARA_COMMANDER_GOVERNED_INVOKE";
 const MCP_SECONDARY_PROVIDER = "CLOUDFLARE_ACCESS";
+const DEVICE_CALL_TTL_SECONDS = 50;
 const MCP_TOOL_GRANTS = Object.freeze({
   "hara.health": "COMMANDER_DISCOVERY",
   "hara.functions.list": "COMMANDER_DISCOVERY",
@@ -997,6 +998,15 @@ async function enqueueDeviceCall(env, body) {
   }
   if (!deviceOnline(device.last_seen_at_utc)) throw new Error("DEVICE_OFFLINE");
 
+  const enqueueAt = nowIso();
+  await env.PRODUCT_DB.prepare(
+    `UPDATE commander_device_calls
+        SET state = 'EXPIRED', completed_at_utc = ?
+      WHERE tenant_id = ? AND subject_id = ? AND device_id = ?
+        AND state IN ('PENDING','EXECUTING')
+        AND expires_at_utc <= ?`
+  ).bind(enqueueAt, context.tenant_id, context.subject_id, deviceId, enqueueAt).run();
+
   const payloadJson = boundedJson(body.payload || {}, 128 * 1024, "DEVICE_CALL_PAYLOAD_INVALID");
   const existing = await env.PRODUCT_DB.prepare(
     `SELECT call_id, tenant_id, subject_id, device_id, tool_id, state, expires_at_utc
@@ -1025,7 +1035,7 @@ async function enqueueDeviceCall(env, body) {
 
   const callId = "HARA-CALL-" + crypto.randomUUID();
   const createdAt = nowIso();
-  const expiresAt = nowIso(120);
+  const expiresAt = nowIso(DEVICE_CALL_TTL_SECONDS);
   await env.PRODUCT_DB.prepare(
     `INSERT INTO commander_device_calls
       (call_id, request_id, tenant_id, subject_id, device_id, tool_id, payload_json,
@@ -1052,14 +1062,6 @@ async function enqueueDeviceCall(env, body) {
 async function claimNextDeviceCall(env, request) {
   const device = await resolveDeviceCredential(env, request);
   const now = nowIso();
-
-  await env.PRODUCT_DB.prepare(
-    `UPDATE commander_device_calls
-        SET state = 'EXPIRED', completed_at_utc = ?
-      WHERE device_id = ?
-        AND state IN ('PENDING','EXECUTING')
-        AND expires_at_utc <= ?`
-  ).bind(now, device.device_id, now).run();
 
   const result = await env.PRODUCT_DB.prepare(
     `UPDATE commander_device_calls
@@ -1148,24 +1150,40 @@ async function deviceCallStatus(env, body) {
   if (!context.ok) throw new Error(context.code);
 
   const now = nowIso();
-  await env.PRODUCT_DB.prepare(
-    `UPDATE commander_device_calls
-        SET state = 'EXPIRED', completed_at_utc = ?
-      WHERE call_id = ?
-        AND tenant_id = ?
-        AND subject_id = ?
-        AND state IN ('PENDING','EXECUTING')
-        AND expires_at_utc <= ?`
-  ).bind(now, callId, context.tenant_id, context.subject_id, now).run();
-
-  const row = await env.PRODUCT_DB.prepare(
+  const readCall = () => env.PRODUCT_DB.prepare(
     `SELECT call_id, request_id, device_id, tool_id, state, created_at_utc,
             expires_at_utc, claimed_at_utc, completed_at_utc, result_json, error_code
        FROM commander_device_calls
       WHERE call_id = ? AND tenant_id = ? AND subject_id = ?
       LIMIT 1`
   ).bind(callId, context.tenant_id, context.subject_id).first();
+
+  let row = await readCall();
   if (!row) throw new Error("DEVICE_CALL_NOT_FOUND");
+
+  if (
+    ["PENDING", "EXECUTING"].includes(String(row.state))
+    && String(row.expires_at_utc) <= now
+  ) {
+    const expired = await env.PRODUCT_DB.prepare(
+      `UPDATE commander_device_calls
+          SET state = 'EXPIRED', completed_at_utc = ?
+        WHERE call_id = ?
+          AND tenant_id = ?
+          AND subject_id = ?
+          AND state IN ('PENDING','EXECUTING')
+          AND expires_at_utc <= ?
+        RETURNING call_id, request_id, device_id, tool_id, state, created_at_utc,
+                  expires_at_utc, claimed_at_utc, completed_at_utc, result_json, error_code`
+    ).bind(now, callId, context.tenant_id, context.subject_id, now).all();
+    const updated = (expired.results || [])[0];
+    if (updated) {
+      row = updated;
+    } else {
+      row = await readCall();
+      if (!row) throw new Error("DEVICE_CALL_NOT_FOUND");
+    }
+  }
 
   return {
     schema: "hara.commander-device-call-status.v1",
