@@ -442,7 +442,11 @@ git diff --check
 - PR #83 — latest race proofs added to consolidated readiness — **MERGED**
 - PR #84 — migration 0009 state-aware PROD readback — **MERGED**
 - PR #85 — public runtime drift gate — **MERGED**
+- PR #86 — PROD promotion receipt / Worker deployment proof — **MERGED**
+- PR #87 — post-deploy fail-closed + 10-asset runtime gates — **MERGED**
 - hara-platform PR #1158 — quota finalization compensation source — **MERGED; runtime E2E pending**
 - issue #65 — Commander post-promotion coordination / residual homologation — **OPEN**
+
+Canonical Git state after the post-deploy gate merge: `main` = `9855d2d0bd468cf9e47d9eef63e0bff8371dc100`; zero open Commander PRs were observed at closure.
 
 Continue from current `main`, this guide and the newest issue #65 comments. Do not use PR #66 as a backend source.
