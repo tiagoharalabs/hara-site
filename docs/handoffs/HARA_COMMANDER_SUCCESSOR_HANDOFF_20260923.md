@@ -129,7 +129,7 @@ COMMANDER_PROD_WORKER_LIVE_READONLY=PASS
 COMMANDER_PROD_D1_MIGRATION_0009=APPLIED
 COMMANDER_PROD_RUNTIME_ASSETS=CURRENT
 COMMANDER_PROD_WORKER_DEPLOYMENT=PROVEN
-COMMANDER_PROD_WORKER_VERSION=6d018e75-6c43-4efe-bf29-c277a49d4f2c
+COMMANDER_PROD_WORKER_VERSION=0f1028a0-797a-470e-a825-68d3e607cf67
 COMMANDER_HUMAN_HOMOLOGATION=PENDING_OPERATOR_GATE
 COMMANDER_FIRST_DEVICE_E2E=PENDING_HOMOLOGATION
 ```
@@ -183,6 +183,19 @@ Subsequent UX-only deployment (2026-09-24 UTC):
 - DEV rollback version: `964936c0-c921-4b43-82ac-aff9b54ed491`;
 - DEV D1 migration 0009: **APPLIED** after backup; DEV health remains `DEV / REMOTE_DEV`;
 - PROD and DEV rendered `user-chip` count: **0**.
+
+Agent 0.3.4 / supply-chain deployment (2026-09-24 UTC):
+- source `main`: `c79d743ef4bbfd54bf2b51497d5d0709f953669c`;
+- includes PR #91 dead CSS cleanup, #92 canonical E2E harness, #93 Agent 0.3.4 supply-chain hardening and #94 E2E token-origin pinning;
+- PROD deployment id: `4b3051c7-35b2-41dc-b6ec-132a35024c61`;
+- PROD Worker version at 100%: `0f1028a0-797a-470e-a825-68d3e607cf67`;
+- rollback Worker version: `6d018e75-6c43-4efe-bf29-c277a49d4f2c`;
+- 10/10 critical public assets: **CURRENT**;
+- public fail-closed smoke: **PASS**;
+- `validate_bootstrap_supply_chain.py`: **PASS**;
+- Agent public release: **0.3.4**;
+- initial bootstrap trust remains `WEB_ORIGIN`; independent trust anchor remains **PENDING_MATURITY**;
+- DEV 0.3.4 asset alignment was **not** performed by this front because the DEV public endpoint requires `DEV_ACCESS_TOKEN` and no post-deploy HTTP readback could be proven without that credential. Existing DEV Worker remains independently isolated from PROD.
 
 ## 6. Device pairing / credential review
 
@@ -283,11 +296,12 @@ The promotion was executed in the required order:
 ```
 
 Current deployment:
-- Worker version: `6d018e75-6c43-4efe-bf29-c277a49d4f2c`;
-- rollback version: `ae7c9d6c-1d2a-401b-abf0-489f5d09b869`;
+- Worker version: `0f1028a0-797a-470e-a825-68d3e607cf67`;
+- rollback version: `6d018e75-6c43-4efe-bf29-c277a49d4f2c`;
 - migration 0009: **APPLIED**;
 - runtime assets: **CURRENT**;
-- public health/auth: **PASS**.
+- public health/auth: **PASS**;
+- Agent release: **0.3.4**.
 
 The HTML runtime validator permits only one known Cloudflare Browser Insights beacon injection when comparing `/`; after removing that single known injected script, the HTML must match source exactly. The other nine critical assets (JS/CSS, installers, Agents, release files and brand asset) remain byte-exact checks.
 
@@ -297,8 +311,9 @@ Do not redeploy solely to reproduce this promotion receipt; future deployment sh
 ## 10. Known non-blocking operational items
 
 These are non-blocking operational follow-ups and are not current Commander source blockers:
-- Identity SMTP TLS alignment still reports the historical 587/STARTTLS fallback pending state;
-- Login V2 logs previously showed a custom-translation fetch warning; no user-visible blocker was proven from it;
+- Identity SMTP TLS alignment still reports `PENDING_587_STARTTLS_FALLBACK`; the supported local ZITADEL path was identified, but this connector's safety layer blocked PAT use before API execution, so **no SMTP mutation was performed**;
+- Login V2 custom-translation warning is current but classified by the existing helper as `DEFERRED_UPSTREAM_V4_16_SYSTEM_LOCALE_MISSING` for pt; no user-visible blocker was proven and it should not trigger an unsupported rewrite;
+- DEV Agent 0.3.4 parity remains pending a credentialed DEV readback/deploy path;
 - device count remains zero until first production pairing.
 
 ## 11. Do not repeat
@@ -356,7 +371,7 @@ python3 apps/commander/scripts/validate_preprod_readiness.py \
   --live-readonly \
   --expect-prod-migration applied \
   --expect-prod-assets current \
-  --expect-prod-worker-version 6d018e75-6c43-4efe-bf29-c277a49d4f2c
+  --expect-prod-worker-version 0f1028a0-797a-470e-a825-68d3e607cf67
 ```
 
 This command is the current production convergence proof. If a future reviewed deployment changes the Worker version, update the expected version only after that deployment is intentionally promoted.
@@ -433,7 +448,7 @@ Worker deployment readback:
 
 ```bash
 python3 apps/commander/scripts/commander_prod_deployment_readback.py \
-  --expect-version 6d018e75-6c43-4efe-bf29-c277a49d4f2c
+  --expect-version 0f1028a0-797a-470e-a825-68d3e607cf67
 ```
 
 E2E harness source contract:
@@ -499,6 +514,10 @@ git diff --check
 - PR #86 — PROD promotion receipt / Worker deployment proof — **MERGED**
 - PR #87 — post-deploy fail-closed + 10-asset runtime gates — **MERGED**
 - PR #89 — single signed-in identity in workspace UI — **MERGED**
+- PR #91 — dead internal user-chip CSS cleanup — **MERGED**
+- PR #92 — canonical E2E/quota harness — **MERGED**
+- PR #93 — Agent 0.3.4 supply-chain hardening — **MERGED**
+- PR #94 — E2E product-token origin/redirect hardening — **MERGED**
 - hara-platform PR #1158 — quota finalization compensation source — **MERGED; runtime E2E pending**
 - issue #65 — Commander post-promotion coordination / residual homologation — **OPEN**
 
