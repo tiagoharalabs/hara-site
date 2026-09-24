@@ -376,9 +376,10 @@ Current deployment:
 - strict post-deploy readback requires explicit `AUTH_CLIENT_AUTH=BASIC`, DEV-only D1, the three expected secret binding names and `DEV / REMOTE_DEV` health.
 
 Current DEV runtime:
-- Worker `hara-commander-dev-v2`: `5a1185d7-98ac-4d47-87fd-84cf33bbc9da`;
-- rollback DEV Worker: `5a594804-0de5-4aa8-abf4-b669454f020f`;
-- deployable source: `7f1f24e2399666017c7a6e7cf2f09b5273121d95`;
+- Worker `hara-commander-dev-v2`: `406247fc-9c41-4088-8251-83c0c249ab93`;
+- rollback DEV Worker: `5a1185d7-98ac-4d47-87fd-84cf33bbc9da`;
+- deployable source: `f9354b117a5c54c54207ce4a4155ac449b7db653`;
+- PR #132 portal mutations now fail closed when `Origin` is absent; live DEV missing-Origin logout probe returns `403 PORTAL_ORIGIN_DENIED`, while exact same-origin logout remains 204;
 - D1: `hara-commander-product-dev` / `698afbb9-e4eb-4c4e-98f2-f5abe28219d3`;
 - health: **DEV / REMOTE_DEV / HARA Identity configured**;
 - secret bindings present by name only: `AUTH_CLIENT_SECRET`, `DEV_ACCESS_TOKEN`, `MCP_PRODUCT_TOKEN`;
@@ -651,13 +652,15 @@ git diff --check
 - PR #127 — abandoned quota-reservation TTL / crash-safety — **MERGED + PROD PROMOTED**
 - PR #128 — quota TTL PROD rollout receipt / runtime authority — **MERGED**
 - PR #129 — versioned DEV runtime config / environment isolation — **MERGED + DEV PROMOTED**
+- PR #132 — portal mutation missing-Origin fail-closed hardening — **MERGED + DEV PROMOTED**
 - hara-platform PR #1158 — quota finalization compensation source — **MERGED; real-device COMMIT E2E pending**
 - issue #65 — Commander post-promotion coordination / residual homologation — **OPEN**
 
-Source authority incorporated by this checkpoint through PR #129: `7f1f24e2399666017c7a6e7cf2f09b5273121d95`.
-Current deployed Commander runtime source: `84895dd17489e418b4b207bde405d7db9aa33469`.
+Source authority incorporated by this checkpoint through PR #132: `f9354b117a5c54c54207ce4a4155ac449b7db653`.
+Current deployed PROD Commander runtime source: `84895dd17489e418b4b207bde405d7db9aa33469`.
 Current PROD Worker: `093ceec9-cacb-4f8b-ba23-bbfc85f7e1aa`; rollback: `382f4b7e-3094-43b9-a013-3b3f46f39fbf`.
-Current DEV Worker: `5a1185d7-98ac-4d47-87fd-84cf33bbc9da`; rollback: `5a594804-0de5-4aa8-abf4-b669454f020f`.
+Current DEV source: `f9354b117a5c54c54207ce4a4155ac449b7db653`.
+Current DEV Worker: `406247fc-9c41-4088-8251-83c0c249ab93`; rollback: `5a1185d7-98ac-4d47-87fd-84cf33bbc9da`.
 Versioned DEV authority: `apps/commander/wrangler.dev.jsonc`, bound to DEV-only D1 / `REMOTE_DEV`; secrets remain external to Git and anti-cross-environment validation is mandatory.
 PRs #110–#112 are operator-tooling/preflight/token-custody hardening. PRs #113/#115/#116/#118 changed deployable/runtime customer assets or behavior and were explicitly promoted.
 

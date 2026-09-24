@@ -11,8 +11,8 @@ Full historical authority:
 ## 1. Current authority
 
 Repository:
-- source authority incorporated by this kit through PR #129: `7f1f24e2399666017c7a6e7cf2f09b5273121d95`
-- latest source/config merge before this kit: PR #129 — versioned DEV runtime authority
+- source authority incorporated by this kit through PR #132: `f9354b117a5c54c54207ce4a4155ac449b7db653`
+- latest Commander source merge: PR #132 — portal mutation Origin fail-closed hardening
 - open Commander PRs observed at kit creation: **0**
 
 PROD:
@@ -27,9 +27,9 @@ PROD:
 - Identity live-readonly: **PASS**
 
 DEV:
-- Worker `hara-commander-dev-v2`: `5a1185d7-98ac-4d47-87fd-84cf33bbc9da`
-- rollback: `5a594804-0de5-4aa8-abf4-b669454f020f`
-- deployed source: `7f1f24e2399666017c7a6e7cf2f09b5273121d95`
+- Worker `hara-commander-dev-v2`: `406247fc-9c41-4088-8251-83c0c249ab93`
+- rollback: `5a1185d7-98ac-4d47-87fd-84cf33bbc9da`
+- deployed source: `f9354b117a5c54c54207ce4a4155ac449b7db653`
 - health: **DEV / REMOTE_DEV / HARA Identity configured**
 - bootstrap public assets: byte-equal to canonical source in latest readback
 - versioned DEV config: `apps/commander/wrangler.dev.jsonc`
@@ -57,6 +57,8 @@ Closed in source/runtime:
 - open-redirect protection
 - login runtime/public white-label validation
 - same-origin portal mutation guard
+- missing `Origin` on portal mutations fails closed with `403 PORTAL_ORIGIN_DENIED` in DEV
+- explicit cross-origin portal mutations remain denied with 403
 - PROD alternate Worker/version URL surface disabled
 
 Still human-only:
@@ -247,7 +249,7 @@ Latest structural PROD posture:
 - retention-eligible portal sessions = 0
 - device count remains zero until first real pairing
 
-## 7. Recent delivery map — #91 to #128
+## 7. Recent delivery map — #91 to #132
 
 Key progression after the original promotion/UI cleanup:
 
@@ -278,6 +280,7 @@ Key progression after the original promotion/UI cleanup:
 - #127 — abandoned quota reservation TTL / crash safety
 - #128 — current PROD quota-TTL rollout receipt
 - #129 — versioned DEV runtime config + DEV-only binding/readback authority — DEV promoted
+- #132 — portal mutation guard now requires an exact `Origin`; DEV promoted to Worker `406247fc-9c41-4088-8251-83c0c249ab93`, missing-Origin logout probe now returns 403
 
 For the earlier #64–#90 history, use the canonical successor guide.
 
