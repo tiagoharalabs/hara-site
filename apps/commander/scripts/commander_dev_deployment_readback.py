@@ -5,7 +5,9 @@ import argparse
 import json
 import subprocess
 from pathlib import Path
-from urllib.request import Request, urlopen
+from urllib.error import HTTPError
+from urllib.parse import parse_qs, urlsplit
+from urllib.request import HTTPRedirectHandler, Request, build_opener, urlopen
 
 ROOT = Path(__file__).resolve().parents[3]
 APP = ROOT / "apps/commander"
@@ -16,6 +18,93 @@ REQUIRED_SECRETS = {
     "DEV_ACCESS_TOKEN",
     "MCP_PRODUCT_TOKEN",
 }
+
+
+class NoRedirect(HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def fetch_no_redirect(url):
+    request = Request(
+        url,
+        headers={"User-Agent": "HARA-Commander-DEV-Readback/1"},
+    )
+    opener = build_opener(NoRedirect())
+    try:
+        with opener.open(request, timeout=15) as response:
+            return response.status, response.headers, response.read()
+    except HTTPError as exc:
+        return exc.code, exc.headers, exc.read()
+
+
+def require_single(query, name, expected=None):
+    values = query.get(name) or []
+    if len(values) != 1 or not values[0]:
+        raise RuntimeError(f"DEV_LOGIN_{name.upper()}_INVALID")
+    value = values[0]
+    if expected is not None and value != expected:
+        raise RuntimeError(
+            f"DEV_LOGIN_{name.upper()}_EXPECTED_{expected}_GOT_{value}"
+        )
+    return value
+
+
+def validate_login_redirect(expected, force_login=False):
+    suffix = "/auth/login?return_to=/%23account" if force_login else "/auth/login?return_to=/%23dashboard"
+    if force_login:
+        suffix += "&force_login=1"
+    status, headers, _body = fetch_no_redirect(DEV_ORIGIN + suffix)
+    if status != 302:
+        label = "ACCOUNT_SWITCH" if force_login else "LOGIN"
+        raise RuntimeError(f"DEV_{label}_STATUS_EXPECTED_302_GOT_{status}")
+
+    location = str(headers.get("location") or "")
+    parsed = urlsplit(location)
+    expected_issuer = urlsplit(expected["vars"]["AUTH_ISSUER"])
+    if (
+        parsed.scheme != "https"
+        or parsed.netloc != expected_issuer.netloc
+        or parsed.path != "/oauth/v2/authorize"
+    ):
+        raise RuntimeError("DEV_LOGIN_PROVIDER_REDIRECT_DRIFT")
+
+    query = parse_qs(parsed.query, keep_blank_values=True)
+    require_single(query, "response_type", "code")
+    require_single(query, "client_id", expected["vars"]["AUTH_CLIENT_ID"])
+    require_single(query, "redirect_uri", DEV_ORIGIN + "/auth/callback")
+    scope = set(require_single(query, "scope").split())
+    if "openid" not in scope:
+        raise RuntimeError("DEV_LOGIN_OPENID_SCOPE_MISSING")
+    require_single(query, "code_challenge_method", "S256")
+    require_single(query, "code_challenge")
+    require_single(query, "state")
+    require_single(query, "nonce")
+    require_single(query, "prompt", "select_account")
+
+    if force_login:
+        require_single(query, "max_age", "0")
+
+    cookies = headers.get_all("set-cookie") or []
+    tx_cookie = next(
+        (value for value in cookies if value.startswith("hara_commander_oidc_tx=")),
+        "",
+    )
+    if not tx_cookie:
+        raise RuntimeError("DEV_LOGIN_TX_COOKIE_MISSING")
+    cookie_lower = tx_cookie.lower()
+    for required in (
+        "path=/auth",
+        "httponly",
+        "samesite=lax",
+        "secure",
+        "max-age=600",
+    ):
+        if required not in cookie_lower:
+            raise RuntimeError(f"DEV_LOGIN_TX_COOKIE_ATTRIBUTE_MISSING:{required}")
+
+    return location
+
 
 def run(command):
     proc = subprocess.run(
@@ -112,6 +201,9 @@ def main():
     if health.get("storage_mode") != "REMOTE_DEV":
         raise RuntimeError("DEV_HEALTH_STORAGE_DRIFT")
 
+    validate_login_redirect(expected, force_login=False)
+    validate_login_redirect(expected, force_login=True)
+
     rollback = None
     if len(deployments) >= 2:
         prior = deployments[-2].get("versions") or []
@@ -122,6 +214,11 @@ def main():
     print("COMMANDER_DEV_D1_LIVE=DEV_ONLY")
     print("COMMANDER_DEV_SECRETS_LIVE=PASS")
     print("COMMANDER_DEV_HEALTH=PASS")
+    print("COMMANDER_DEV_LOGIN_REDIRECT_LIVE=PASS")
+    print("COMMANDER_DEV_LOGIN_PKCE_LIVE=S256")
+    print("COMMANDER_DEV_LOGIN_TX_COOKIE_LIVE=PASS")
+    print("COMMANDER_DEV_ACCOUNT_SWITCH_LIVE=PASS")
+    print("COMMANDER_DEV_LOGIN_PROBE_SIDE_EFFECT=OIDC_TX_ROWS_EXPIRE_10M")
     print(f"COMMANDER_DEV_WORKER_VERSION={current}")
     if rollback:
         print(f"COMMANDER_DEV_WORKER_ROLLBACK_VERSION={rollback}")
