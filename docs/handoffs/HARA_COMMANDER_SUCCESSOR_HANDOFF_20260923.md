@@ -376,14 +376,19 @@ Current deployment:
 - strict post-deploy readback requires explicit `AUTH_CLIENT_AUTH=BASIC`, DEV-only D1, the three expected secret binding names and `DEV / REMOTE_DEV` health.
 
 Current DEV runtime:
-- Worker `hara-commander-dev-v2`: `406247fc-9c41-4088-8251-83c0c249ab93`;
-- rollback DEV Worker: `5a1185d7-98ac-4d47-87fd-84cf33bbc9da`;
-- deployable source: `f9354b117a5c54c54207ce4a4155ac449b7db653`;
+- Worker `hara-commander-dev-v2`: `71031640-7e02-4bbc-940c-4af8da3472d9`;
+- rollback DEV Worker: `c2acc69c-2773-4c4b-b20a-fbea94b48274`;
+- deployable source: `ff56d1ebd6cb5fcd2815580af97e5d675aac0fbd`;
 - PR #132 portal mutations now fail closed when `Origin` is absent; live DEV missing-Origin logout probe returns `403 PORTAL_ORIGIN_DENIED`, while exact same-origin logout remains 204;
+- PR #134 malformed session cookies fail closed as unauthenticated and logout still clears the browser cookie;
+- PR #136 validates OIDC authorized party (`azp`) for multi-audience tokens and any present `azp`;
+- PR #137 enforces OIDC `nbf` with bounded clock skew;
+- PR #138 rejects invalid issuer components and malformed/absent `iat`, malformed audiences and invalid subjects;
+- live DEV login after #138 remains Authorization Code + PKCE S256 against HARA Identity; account switch remains `prompt=select_account&max_age=0`; Worker `71031640-7e02-4bbc-940c-4af8da3472d9`;
 - D1: `hara-commander-product-dev` / `698afbb9-e4eb-4c4e-98f2-f5abe28219d3`;
 - health: **DEV / REMOTE_DEV / HARA Identity configured**;
 - secret bindings present by name only: `AUTH_CLIENT_SECRET`, `DEV_ACCESS_TOKEN`, `MCP_PRODUCT_TOKEN`;
-- PROD isolation revalidated after DEV deployment; PROD Worker remained `093ceec9-cacb-4f8b-ba23-bbfc85f7e1aa` and full live-readonly PROD gate remained PASS.
+- PROD isolation revalidated after the #138 DEV deployment; PROD Worker remained `093ceec9-cacb-4f8b-ba23-bbfc85f7e1aa` and deployment readback remained PASS.
 
 The HTML runtime validator permits only one known Cloudflare Browser Insights beacon injection when comparing `/`; after removing that single known injected script, the HTML must match source exactly. The other nine critical assets (JS/CSS, installers, Agents, release files and brand asset) remain byte-exact checks.
 
@@ -654,14 +659,17 @@ git diff --check
 - PR #129 — versioned DEV runtime config / environment isolation — **MERGED + DEV PROMOTED**
 - PR #132 — portal mutation missing-Origin fail-closed hardening — **MERGED + DEV PROMOTED**
 - PR #134 — malformed auth-cookie fail-closed hardening — **MERGED + DEV PROMOTED**
+- PR #136 — OIDC authorized-party validation — **MERGED + DEV PROMOTED**
+- PR #137 — OIDC not-before validation — **MERGED + DEV PROMOTED**
+- PR #138 — OIDC claim-shape validation — **MERGED + DEV PROMOTED**
 - hara-platform PR #1158 — quota finalization compensation source — **MERGED; real-device COMMIT E2E pending**
 - issue #65 — Commander post-promotion coordination / residual homologation — **OPEN**
 
-Source authority incorporated by this checkpoint through PR #134: `7faaa19e32fb3d892fc70a6212f9303821885619`.
+Source authority incorporated by this checkpoint through PR #138: `ff56d1ebd6cb5fcd2815580af97e5d675aac0fbd`.
 Current deployed PROD Commander runtime source: `84895dd17489e418b4b207bde405d7db9aa33469`.
 Current PROD Worker: `093ceec9-cacb-4f8b-ba23-bbfc85f7e1aa`; rollback: `382f4b7e-3094-43b9-a013-3b3f46f39fbf`.
-Current DEV source: `7faaa19e32fb3d892fc70a6212f9303821885619`.
-Current DEV Worker: `c2acc69c-2773-4c4b-b20a-fbea94b48274`; rollback: `406247fc-9c41-4088-8251-83c0c249ab93`.
+Current DEV source: `ff56d1ebd6cb5fcd2815580af97e5d675aac0fbd`.
+Current DEV Worker: `71031640-7e02-4bbc-940c-4af8da3472d9`; rollback: `c2acc69c-2773-4c4b-b20a-fbea94b48274`.
 Versioned DEV authority: `apps/commander/wrangler.dev.jsonc`, bound to DEV-only D1 / `REMOTE_DEV`; secrets remain external to Git and anti-cross-environment validation is mandatory.
 PRs #110–#112 are operator-tooling/preflight/token-custody hardening. PRs #113/#115/#116/#118 changed deployable/runtime customer assets or behavior and were explicitly promoted.
 

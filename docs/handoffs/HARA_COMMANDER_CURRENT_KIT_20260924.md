@@ -11,8 +11,8 @@ Full historical authority:
 ## 1. Current authority
 
 Repository:
-- source authority incorporated by this kit through PR #134: `7faaa19e32fb3d892fc70a6212f9303821885619`
-- latest Commander source merge: PR #134 — malformed auth-cookie fail-closed hardening
+- source authority incorporated by this kit through PR #138: `ff56d1ebd6cb5fcd2815580af97e5d675aac0fbd`
+- latest Commander source merge: PR #138 — OIDC claim-shape validation
 - open Commander PRs observed at kit creation: **0**
 
 PROD:
@@ -27,9 +27,9 @@ PROD:
 - Identity live-readonly: **PASS**
 
 DEV:
-- Worker `hara-commander-dev-v2`: `c2acc69c-2773-4c4b-b20a-fbea94b48274`
-- rollback: `406247fc-9c41-4088-8251-83c0c249ab93`
-- deployed source: `7faaa19e32fb3d892fc70a6212f9303821885619`
+- Worker `hara-commander-dev-v2`: `71031640-7e02-4bbc-940c-4af8da3472d9`
+- rollback: `c2acc69c-2773-4c4b-b20a-fbea94b48274`
+- deployed source: `ff56d1ebd6cb5fcd2815580af97e5d675aac0fbd`
 - health: **DEV / REMOTE_DEV / HARA Identity configured**
 - bootstrap public assets: byte-equal to canonical source in latest readback
 - versioned DEV config: `apps/commander/wrangler.dev.jsonc`
@@ -61,6 +61,10 @@ Closed in source/runtime:
 - explicit cross-origin portal mutations remain denied with 403
 - malformed percent-encoded session cookies fail closed as unauthenticated instead of surfacing 500
 - logout tolerates malformed session cookies and still clears the browser cookie
+- OIDC multi-audience ID Tokens require the expected authorized party (`azp`), and any present `azp` must equal the Commander client ID
+- OIDC `nbf` is enforced with a bounded 30-second clock-skew allowance; malformed/non-numeric `nbf` fails closed
+- OIDC issuer query/fragment/embedded credentials are rejected; only trailing-slash canonicalization is allowed
+- OIDC `iat` is required and numeric; audience entries and subject format are validated before identity binding
 - PROD alternate Worker/version URL surface disabled
 
 Still human-only:
@@ -251,7 +255,7 @@ Latest structural PROD posture:
 - retention-eligible portal sessions = 0
 - device count remains zero until first real pairing
 
-## 7. Recent delivery map — #91 to #134
+## 7. Recent delivery map — #91 to #138
 
 Key progression after the original promotion/UI cleanup:
 
@@ -284,6 +288,9 @@ Key progression after the original promotion/UI cleanup:
 - #129 — versioned DEV runtime config + DEV-only binding/readback authority — DEV promoted
 - #132 — portal mutation guard now requires an exact `Origin`; DEV promoted to Worker `406247fc-9c41-4088-8251-83c0c249ab93`, missing-Origin logout probe now returns 403
 - #134 — malformed session-cookie decoding no longer raises 500; DEV promoted to Worker `c2acc69c-2773-4c4b-b20a-fbea94b48274`; live malformed-cookie probes return 401 on session read and 204 + cookie clear on logout
+- #136 — OIDC authorized-party (`azp`) validation with cryptographic RS256 regression coverage
+- #137 — OIDC `nbf` not-before enforcement and malformed-claim denial
+- #138 — OIDC issuer / `iat` / audience / subject claim-shape hardening; DEV promoted to Worker `71031640-7e02-4bbc-940c-4af8da3472d9`, rollback `c2acc69c-2773-4c4b-b20a-fbea94b48274`
 
 For the earlier #64–#90 history, use the canonical successor guide.
 
