@@ -23,6 +23,8 @@ const TX_COOKIE = "hara_commander_oidc_tx";
 const SESSION_SECONDS = 8 * 60 * 60;
 const TX_SECONDS = 10 * 60;
 const SESSION_TOUCH_SECONDS = 5 * 60;
+const SESSION_RETENTION_SECONDS = 30 * 24 * 60 * 60;
+const SESSION_RETENTION_BATCH = 100;
 
 function nowIso(offsetSeconds = 0) {
   return new Date(Date.now() + offsetSeconds * 1000).toISOString();
@@ -114,6 +116,21 @@ function authConfig(env) {
   };
 }
 
+async function cleanupTerminalPortalSessions(env) {
+  const cutoff = nowIso(-SESSION_RETENTION_SECONDS);
+  await env.PRODUCT_DB.prepare(
+    `DELETE FROM portal_sessions
+      WHERE session_hash IN (
+        SELECT session_hash
+          FROM portal_sessions
+         WHERE expires_at_utc <= ?
+            OR (revoked_at_utc IS NOT NULL AND revoked_at_utc <= ?)
+         ORDER BY COALESCE(revoked_at_utc, expires_at_utc) ASC
+         LIMIT ${SESSION_RETENTION_BATCH}
+      )`
+  ).bind(cutoff, cutoff).run().catch(() => null);
+}
+
 export async function beginLogin(request, env) {
   const config = authConfig(env);
   const metadata = await oidcDiscovery(config.issuer);
@@ -127,6 +144,10 @@ export async function beginLogin(request, env) {
   await env.PRODUCT_DB.prepare(
     `DELETE FROM oidc_transactions WHERE expires_at_utc <= ?`
   ).bind(nowIso()).run();
+
+  // Governed session hygiene: terminal portal sessions are retained for 30 days,
+  // then removed in small best-effort batches so cleanup can never block login.
+  await cleanupTerminalPortalSessions(env);
 
   const state = randomToken(32);
   const browserBinding = randomToken(32);
