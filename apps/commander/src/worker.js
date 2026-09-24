@@ -1414,6 +1414,7 @@ export default {
       }
 
       if (url.pathname === "/api/dev/health" && request.method === "GET") {
+        requireRemoteDevToken(request, env);
         return json({
           ok: true,
           service: "hara-commander-product-dev",
