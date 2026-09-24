@@ -41,6 +41,10 @@ QUERIES = {
       (SELECT COUNT(*) FROM commander_device_selections s LEFT JOIN commander_devices d ON d.device_id=s.device_id WHERE d.device_id IS NULL) AS selections_orphan_device;""",
     "session_hygiene": """SELECT
       (SELECT COUNT(*) FROM portal_sessions WHERE revoked_at_utc IS NULL AND julianday(expires_at_utc) <= julianday('now')) AS expired_unrevoked_sessions;""",
+    "migration_0009": """SELECT
+      COUNT(*) AS superseded_at_utc_columns
+      FROM pragma_table_info('device_pairing_tokens')
+      WHERE name = 'superseded_at_utc';""",
 }
 
 
@@ -79,6 +83,11 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--wrangler-version", default="4.137.0")
     parser.add_argument("--attempts", type=int, default=3)
+    parser.add_argument(
+        "--expect-migration-0009",
+        choices=("pending", "applied", "any"),
+        default="any",
+    )
     args = parser.parse_args()
     if args.attempts < 1 or args.attempts > 5:
         raise SystemExit("--attempts must be between 1 and 5")
@@ -95,9 +104,22 @@ def main() -> int:
     if any(int(value or 0) != 0 for value in integrity.values()):
         raise RuntimeError("D1_INTEGRITY_ANOMALY")
 
+    migration_row = report["queries"]["migration_0009"]["row"]
+    migration_count = int(migration_row.get("superseded_at_utc_columns", 0) or 0)
+    if migration_count not in (0, 1):
+        raise RuntimeError("D1_MIGRATION_0009_SCHEMA_ANOMALY")
+    migration_state = "APPLIED" if migration_count == 1 else "PENDING"
+    expected = args.expect_migration_0009.upper()
+    if expected != "ANY" and migration_state != expected:
+        raise RuntimeError(
+            f"D1_MIGRATION_0009_EXPECTED_{expected}_GOT_{migration_state}"
+        )
+    report["migration_0009_state"] = migration_state
+
     print(json.dumps(report, indent=2, sort_keys=True))
     print("COMMANDER_PROD_D1_READBACK=PASS")
     print("COMMANDER_PROD_D1_TRANSIENT_RETRY=READY")
+    print(f"COMMANDER_PROD_D1_MIGRATION_0009={migration_state}")
     return 0
 
 
