@@ -67,7 +67,6 @@ export async function oidcDiscovery(issuer) {
   const endpoint = new URL(".well-known/openid-configuration", normalized).toString();
   const response = await fetch(endpoint, {
     headers: { accept: "application/json" },
-    redirect: "error",
   });
   if (!response.ok) throw new Error("OIDC_DISCOVERY_FAILED");
   const metadata = await response.json();
@@ -93,8 +92,11 @@ export async function oidcUserInfo({ metadata, accessToken }) {
       accept: "application/json",
       authorization: "Bearer " + String(accessToken),
     },
-    redirect: "error",
+    redirect: "manual",
   });
+  if (response.status >= 300 && response.status < 400) {
+    throw new Error("OIDC_USERINFO_REDIRECT_DENIED");
+  }
   const payload = await response.json().catch(() => ({}));
   if (!response.ok || !payload.sub) throw new Error("OIDC_USERINFO_FAILED");
   return payload;
@@ -141,8 +143,11 @@ export async function exchangeAuthorizationCode({
     method: "POST",
     headers,
     body: form.toString(),
-    redirect: "error",
+    redirect: "manual",
   });
+  if (response.status >= 300 && response.status < 400) {
+    throw new Error("OIDC_TOKEN_REDIRECT_DENIED");
+  }
   const payload = await response.json().catch(() => ({}));
   if (!response.ok || !payload.id_token) throw new Error("OIDC_TOKEN_EXCHANGE_FAILED");
   return payload;
@@ -159,7 +164,6 @@ export async function verifyIdToken({ idToken, metadata, issuer, clientId, nonce
 
   const jwksResponse = await fetch(metadata.jwks_uri, {
     headers: { accept: "application/json" },
-    redirect: "error",
   });
   if (!jwksResponse.ok) throw new Error("OIDC_JWKS_FAILED");
   const jwks = await jwksResponse.json();

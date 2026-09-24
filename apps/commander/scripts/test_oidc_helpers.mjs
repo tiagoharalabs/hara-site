@@ -20,7 +20,6 @@ const originalFetch = globalThis.fetch;
 let jwksKeys = [publicJwk];
 globalThis.fetch = async (url, init = {}) => {
   assert.equal(String(url), metadata.jwks_uri);
-  assert.equal(init.redirect, "error");
   return Response.json({ keys: jwksKeys });
 };
 
