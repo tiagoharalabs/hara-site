@@ -72,6 +72,14 @@ await assert.rejects(
   /OIDC_AUTHORIZED_PARTY_MISMATCH/,
 );
 
+for (const invalidAzp of [0, "", false, { client: clientId }]) {
+  const token = await signJwt({ ...baseClaims, aud: clientId, azp: invalidAzp });
+  await assert.rejects(
+    verifyIdToken({ idToken: token, metadata, issuer, clientId, nonce }),
+    /OIDC_AUTHORIZED_PARTY_INVALID/,
+  );
+}
+
 const validNbf = await signJwt({ ...baseClaims, azp: clientId, nbf: now - 5 });
 assert.equal(
   (await verifyIdToken({ idToken: validNbf, metadata, issuer, clientId, nonce })).sub,
@@ -139,6 +147,7 @@ globalThis.fetch = originalFetch;
 console.log("COMMANDER_OIDC_AZP_VALID=PASS");
 console.log("COMMANDER_OIDC_MULTI_AUD_MISSING_AZP=DENIED");
 console.log("COMMANDER_OIDC_WRONG_AZP=DENIED");
+console.log("COMMANDER_OIDC_AZP_SHAPE=ENFORCED");
 console.log("COMMANDER_OIDC_FUTURE_NBF=DENIED");
 console.log("COMMANDER_OIDC_INVALID_NBF=DENIED");
 console.log("COMMANDER_OIDC_REQUIRED_IAT=ENFORCED");
