@@ -8,6 +8,10 @@ import {
   resolvePortalSession,
 } from "./auth.js";
 import { normalizeIssuer, randomToken, sha256 } from "./oidc.js";
+import {
+  DEVICE_FUNCTION_ID,
+  canonicalDeviceToolPayload,
+} from "./device-tool-contract.mjs";
 
 const DEMO_TENANT = "HARA-TENANT-DEMO-0001";
 const MCP_METER_ID = "HARA_COMMANDER_GOVERNED_INVOKE";
@@ -1039,7 +1043,12 @@ async function enqueueDeviceCall(env, body) {
   if (!context.grants.includes(requiredGrant)) throw new Error("GRANT_MISSING");
 
   const requestedDeviceId = body.device_id ? cleanId(body.device_id, 180) : null;
-  const payloadJson = boundedJson(body.payload || {}, 128 * 1024, "DEVICE_CALL_PAYLOAD_INVALID");
+  const canonicalPayload = canonicalDeviceToolPayload(toolId, body.payload);
+  const payloadJson = boundedJson(
+    canonicalPayload,
+    128 * 1024,
+    "DEVICE_CALL_PAYLOAD_INVALID",
+  );
   const readExisting = () => env.PRODUCT_DB.prepare(
     `SELECT call_id, tenant_id, subject_id, device_id, tool_id, payload_json, state, expires_at_utc
        FROM commander_device_calls WHERE request_id = ? LIMIT 1`
@@ -1542,6 +1551,17 @@ export default {
         }
 
         const functionId = cleanId(body.function_id, 180);
+        if (functionId !== DEVICE_FUNCTION_ID) {
+          return internalJson({
+            schema: "hara.commander-mcp-product-decision.v1",
+            allowed: false,
+            code: "POLICY_DENIED",
+            tool_id: toolId,
+            request_id: requestId,
+            function_id: functionId,
+            required_grant: requiredGrant,
+          });
+        }
         const periodKey = mcpPeriodKey(context);
         const reservation = await env.TENANT_QUOTA
           .getByName(context.tenant_id)
@@ -1705,7 +1725,9 @@ export default {
         DEVICE_METADATA_INVALID: 400,
         DEVICE_OFFLINE: 409,
         DEVICE_CALL_TOOL_DENIED: 403,
+        DEVICE_CALL_FUNCTION_DENIED: 403,
         DEVICE_CALL_PAYLOAD_INVALID: 400,
+        DEVICE_CALL_RECEIPT_INVALID: 400,
         DEVICE_CALL_RESULT_STATE_INVALID: 400,
         DEVICE_CALL_RESULT_INVALID: 400,
         DEVICE_CALL_NOT_EXECUTING: 409,
