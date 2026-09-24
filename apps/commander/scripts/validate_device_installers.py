@@ -70,10 +70,16 @@ windows_web_calls = [
 assert len(windows_web_calls) == 9, f"WINDOWS_INSTALLER_WEB_CALL_COUNT:{len(windows_web_calls)}"
 assert all("-MaximumRedirection 0" in line for line in windows_web_calls), "WINDOWS_INSTALLER_REDIRECT_FOLLOW_PRESENT"
 assert "$PairingToken = $null" in WINDOWS and "$Payload = $null" in WINDOWS, "WINDOWS_PAIRING_SECRET_MEMORY_CLEAR_MISSING"
+assert "$EnrollDeviceId = [string]$Enroll.device_id" in WINDOWS, "WINDOWS_ENROLL_DEVICE_ID_CAPTURE_MISSING"
+assert "$DeviceTokenForRollback = [string]$Enroll.device_token" in WINDOWS, "WINDOWS_ENROLL_DEVICE_TOKEN_CAPTURE_MISSING"
+assert "$Enroll.device_token = $null" in WINDOWS and "$Enroll = $null" in WINDOWS, "WINDOWS_ENROLL_RESPONSE_TOKEN_CLEAR_MISSING"
+assert "ConvertTo-SecureString $DeviceTokenForRollback -AsPlainText -Force" in WINDOWS, "WINDOWS_DEVICE_TOKEN_SINGLE_PLAINTEXT_COPY_MISSING"
+assert "ConvertTo-SecureString $Enroll.device_token -AsPlainText -Force" not in WINDOWS, "WINDOWS_ENROLL_TOKEN_PLAINTEXT_DUPLICATE_PRESENT"
 assert "encrypted_device_token" in WINDOWS
 assert "DEVICE_TOKEN_EXPOSED=FALSE" in WINDOWS
 print("WINDOWS_DEVICE_INSTALLER_STATIC=PASS")
 print("WINDOWS_INSTALLER_REDIRECT_FAIL_CLOSED=PASS")
+print("WINDOWS_INSTALLER_DEVICE_TOKEN_MEMORY_HYGIENE=PASS")
 
 assert MANIFEST.get("schema") == "hara.commander-agent-release.v1"
 assert MANIFEST.get("agent_version") == "0.3.6"
