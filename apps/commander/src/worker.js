@@ -396,7 +396,7 @@ async function dashboardForSubject(env, subjectId, tenantId) {
   const usage = await quota.status(periodKey, limit);
 
   return {
-    schema: "hara.commander-portal-dashboard-dev.v1",
+    schema: "hara.commander-portal-dashboard.v1",
     tenant: {
       tenant_id: ent.tenant_id,
       display_name: ent.tenant_name,
@@ -1675,6 +1675,7 @@ export default {
         OIDC_STATE_EXPIRED: 400,
         OIDC_PROVIDER_ERROR: 400,
         DEVICE_PAIRING_INVALID: 401,
+        DEVICE_PAIRING_CREATE_FAILED: 503,
         DEVICE_AUTH_REQUIRED: 401,
         DEVICE_AUTH_INVALID: 401,
         DEVICE_ID_MISMATCH: 403,
