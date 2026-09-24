@@ -376,19 +376,26 @@ Current deployment:
 - strict post-deploy readback requires explicit `AUTH_CLIENT_AUTH=BASIC`, DEV-only D1, the three expected secret binding names and `DEV / REMOTE_DEV` health.
 
 Current DEV runtime:
-- Worker `hara-commander-dev-v2`: `71031640-7e02-4bbc-940c-4af8da3472d9`;
-- rollback DEV Worker: `c2acc69c-2773-4c4b-b20a-fbea94b48274`;
-- deployable source: `ff56d1ebd6cb5fcd2815580af97e5d675aac0fbd`;
+- Worker `hara-commander-dev-v2`: `4e641bb4-1daf-471f-800e-bfdf13edb3f6`;
+- rollback DEV Worker: `6fca61dd-5844-4128-bb8b-96fa106d1f29`;
+- deployable source: `427e6a0c09a0a912e7b9e95ee808b8f0cd58bd7c`;
 - PR #132 portal mutations now fail closed when `Origin` is absent; live DEV missing-Origin logout probe returns `403 PORTAL_ORIGIN_DENIED`, while exact same-origin logout remains 204;
 - PR #134 malformed session cookies fail closed as unauthenticated and logout still clears the browser cookie;
 - PR #136 validates OIDC authorized party (`azp`) for multi-audience tokens and any present `azp`;
 - PR #137 enforces OIDC `nbf` with bounded clock skew;
 - PR #138 rejects invalid issuer components and malformed/absent `iat`, malformed audiences and invalid subjects;
-- live DEV login after #138 remains Authorization Code + PKCE S256 against HARA Identity; account switch remains `prompt=select_account&max_age=0`; Worker `71031640-7e02-4bbc-940c-4af8da3472d9`;
+- PR #140 enforces non-empty-string `azp` shape;
+- PR #141 validates OIDC endpoint transport as HTTPS;
+- PR #144 constrains JWKS signing-key metadata;
+- PR #145 makes `AUTH_CLIENT_AUTH` authoritative (`BASIC|NONE`);
+- PR #146 supersedes the broken broad redirect policy from #143 and preserves manual 3xx denial only for credential-bearing Token/UserInfo fetches;
+- live DEV login after #146 is re-proven after regression/bisect: Authorization Code + PKCE S256 against HARA Identity; account switch remains `prompt=select_account&max_age=0`; Worker `4e641bb4-1daf-471f-800e-bfdf13edb3f6`;
+- live regression receipt: #143 source produced 500 on `/auth/login`; #141 produced 302 under the same DEV environment, isolating the fault; #146 fixes and supersedes #143 behavior;
+- failed/bisect Workers `501b8736-ca2d-4ec5-addf-b261fa7db1b8` and `2dc36978-df0e-4908-a073-844a9570232d` are historical evidence only;
 - D1: `hara-commander-product-dev` / `698afbb9-e4eb-4c4e-98f2-f5abe28219d3`;
 - health: **DEV / REMOTE_DEV / HARA Identity configured**;
 - secret bindings present by name only: `AUTH_CLIENT_SECRET`, `DEV_ACCESS_TOKEN`, `MCP_PRODUCT_TOKEN`;
-- PROD isolation revalidated after the #138 DEV deployment; PROD Worker remained `093ceec9-cacb-4f8b-ba23-bbfc85f7e1aa` and deployment readback remained PASS.
+- PROD isolation revalidated after the #146 DEV deployment; PROD Worker remained `093ceec9-cacb-4f8b-ba23-bbfc85f7e1aa` and deployment readback remained PASS.
 
 The HTML runtime validator permits only one known Cloudflare Browser Insights beacon injection when comparing `/`; after removing that single known injected script, the HTML must match source exactly. The other nine critical assets (JS/CSS, installers, Agents, release files and brand asset) remain byte-exact checks.
 
@@ -662,14 +669,21 @@ git diff --check
 - PR #136 — OIDC authorized-party validation — **MERGED + DEV PROMOTED**
 - PR #137 — OIDC not-before validation — **MERGED + DEV PROMOTED**
 - PR #138 — OIDC claim-shape validation — **MERGED + DEV PROMOTED**
+- PR #140 — OIDC `azp` shape enforcement — **MERGED**
+- PR #141 — HTTPS OIDC discovery endpoint validation — **MERGED + LIVE-BISECT GOOD**
+- PR #142 — Commander validation hygiene — **MERGED**
+- PR #143 — broad OIDC `redirect=error` hardening — **MERGED, LIVE DEV REGRESSION, SUPERSEDED BY #146**
+- PR #144 — constrained JWKS signing-key selection — **MERGED**
+- PR #145 — explicit OIDC client-auth-mode enforcement — **MERGED**
+- PR #146 — Cloudflare-compatible OIDC redirect hotfix — **MERGED + DEV PROMOTED + LIVE LOGIN RE-PROVEN**
 - hara-platform PR #1158 — quota finalization compensation source — **MERGED; real-device COMMIT E2E pending**
 - issue #65 — Commander post-promotion coordination / residual homologation — **OPEN**
 
-Source authority incorporated by this checkpoint through PR #138: `ff56d1ebd6cb5fcd2815580af97e5d675aac0fbd`.
+Source authority incorporated by this checkpoint through PR #146: `427e6a0c09a0a912e7b9e95ee808b8f0cd58bd7c`.
 Current deployed PROD Commander runtime source: `84895dd17489e418b4b207bde405d7db9aa33469`.
 Current PROD Worker: `093ceec9-cacb-4f8b-ba23-bbfc85f7e1aa`; rollback: `382f4b7e-3094-43b9-a013-3b3f46f39fbf`.
-Current DEV source: `ff56d1ebd6cb5fcd2815580af97e5d675aac0fbd`.
-Current DEV Worker: `71031640-7e02-4bbc-940c-4af8da3472d9`; rollback: `c2acc69c-2773-4c4b-b20a-fbea94b48274`.
+Current DEV source: `427e6a0c09a0a912e7b9e95ee808b8f0cd58bd7c`.
+Current DEV Worker: `4e641bb4-1daf-471f-800e-bfdf13edb3f6`; rollback: `6fca61dd-5844-4128-bb8b-96fa106d1f29`.
 Versioned DEV authority: `apps/commander/wrangler.dev.jsonc`, bound to DEV-only D1 / `REMOTE_DEV`; secrets remain external to Git and anti-cross-environment validation is mandatory.
 PRs #110–#112 are operator-tooling/preflight/token-custody hardening. PRs #113/#115/#116/#118 changed deployable/runtime customer assets or behavior and were explicitly promoted.
 
