@@ -691,22 +691,20 @@ async function selectedDeviceForSubject(env, tenantId, subjectId) {
 }
 
 async function selectDevice(env, tenantId, subjectId, deviceId) {
-  const device = await env.PRODUCT_DB.prepare(
-    `SELECT device_id, state, revoked_at_utc
-       FROM commander_devices
-      WHERE device_id = ? AND tenant_id = ?
-      LIMIT 1`
-  ).bind(deviceId, tenantId).first();
-  if (!device || device.state !== "ACTIVE" || device.revoked_at_utc) {
-    throw new Error("DEVICE_NOT_FOUND");
-  }
-  await env.PRODUCT_DB.prepare(
+  const selectedAt = nowIso();
+  const result = await env.PRODUCT_DB.prepare(
     `INSERT INTO commander_device_selections
       (tenant_id, subject_id, device_id, selected_at_utc)
-     VALUES (?, ?, ?, ?)
+     SELECT ?, ?, d.device_id, ?
+       FROM commander_devices d
+      WHERE d.device_id = ?
+        AND d.tenant_id = ?
+        AND d.state = 'ACTIVE'
+        AND d.revoked_at_utc IS NULL
      ON CONFLICT(tenant_id, subject_id)
      DO UPDATE SET device_id = excluded.device_id, selected_at_utc = excluded.selected_at_utc`
-  ).bind(tenantId, subjectId, deviceId, nowIso()).run();
+  ).bind(tenantId, subjectId, selectedAt, deviceId, tenantId).run();
+  if (!result.meta?.changes) throw new Error("DEVICE_NOT_FOUND");
   return deviceId;
 }
 
@@ -863,8 +861,15 @@ async function enrollDevice(env, body) {
   await env.PRODUCT_DB.prepare(
     `INSERT OR IGNORE INTO commander_device_selections
       (tenant_id, subject_id, device_id, selected_at_utc)
-     VALUES (?, ?, ?, ?)`
-  ).bind(enrolled.tenant_id, enrolled.enrolled_by_subject_id, deviceId, createdAt).run();
+     SELECT ?, ?, d.device_id, ?
+       FROM commander_devices d
+      WHERE d.device_id = ?
+        AND d.tenant_id = ?
+        AND d.state = 'ACTIVE'
+        AND d.revoked_at_utc IS NULL`
+  ).bind(
+    enrolled.tenant_id, enrolled.enrolled_by_subject_id, createdAt, deviceId, enrolled.tenant_id
+  ).run();
 
   return {
     schema: "hara.commander-device-enrollment.v1",
@@ -908,11 +913,12 @@ async function heartbeatDevice(env, request, body) {
   const architecture = cleanAgentValue(body.architecture, 80) || device.architecture;
   const seenAt = nowIso();
 
-  await env.PRODUCT_DB.prepare(
+  const heartbeat = await env.PRODUCT_DB.prepare(
     `UPDATE commander_devices
         SET last_seen_at_utc = ?, agent_version = ?, architecture = ?
-      WHERE device_id = ? AND state = 'ACTIVE'`
+      WHERE device_id = ? AND state = 'ACTIVE' AND revoked_at_utc IS NULL`
   ).bind(seenAt, agentVersion, architecture, device.device_id).run();
+  if (!heartbeat.meta?.changes) throw new Error("DEVICE_AUTH_INVALID");
 
   return {
     schema: "hara.commander-device-heartbeat.v1",
@@ -969,18 +975,45 @@ async function revokePortalDevice(env, session, body) {
           WHERE device_id = ? AND tenant_id = ? AND enrolled_by_subject_id = ? AND state = 'ACTIVE'`
       ).bind(revokedAt, deviceId, session.tenant_id, session.subject_id);
 
-  const result = await statement.run();
-  if (!result.meta?.changes) throw new Error("DEVICE_NOT_FOUND");
-  await env.PRODUCT_DB.prepare(
-    `DELETE FROM commander_device_selections
-      WHERE tenant_id = ? AND device_id = ?`
-  ).bind(session.tenant_id, deviceId).run();
+  const results = await env.PRODUCT_DB.batch([
+    statement,
+    env.PRODUCT_DB.prepare(
+      `DELETE FROM commander_device_selections
+        WHERE tenant_id = ?
+          AND device_id = ?
+          AND EXISTS (
+            SELECT 1
+              FROM commander_devices d
+             WHERE d.device_id = ?
+               AND d.tenant_id = ?
+               AND d.state = 'REVOKED'
+               AND d.revoked_at_utc = ?
+          )`
+    ).bind(session.tenant_id, deviceId, deviceId, session.tenant_id, revokedAt),
+    env.PRODUCT_DB.prepare(
+      `UPDATE commander_device_calls
+          SET state = 'CANCELLED', completed_at_utc = ?, error_code = 'DEVICE_REVOKED'
+        WHERE tenant_id = ?
+          AND device_id = ?
+          AND state IN ('PENDING','EXECUTING')
+          AND EXISTS (
+            SELECT 1
+              FROM commander_devices d
+             WHERE d.device_id = commander_device_calls.device_id
+               AND d.tenant_id = commander_device_calls.tenant_id
+               AND d.state = 'REVOKED'
+               AND d.revoked_at_utc = ?
+          )`
+    ).bind(revokedAt, session.tenant_id, deviceId, revokedAt),
+  ]);
+  if (!results?.[0]?.meta?.changes) throw new Error("DEVICE_NOT_FOUND");
   return {
     schema: "hara.commander-device-revocation.v1",
     ok: true,
     device_id: deviceId,
     state: "REVOKED",
     revoked_at_utc: revokedAt,
+    pending_calls_cancelled: true,
   };
 }
 
@@ -997,14 +1030,46 @@ async function enqueueDeviceCall(env, body) {
   if (!context.ok) throw new Error(context.code);
   if (!context.grants.includes(requiredGrant)) throw new Error("GRANT_MISSING");
 
+  const requestedDeviceId = body.device_id ? cleanId(body.device_id, 180) : null;
+  const payloadJson = boundedJson(body.payload || {}, 128 * 1024, "DEVICE_CALL_PAYLOAD_INVALID");
+  const readExisting = () => env.PRODUCT_DB.prepare(
+    `SELECT call_id, tenant_id, subject_id, device_id, tool_id, payload_json, state, expires_at_utc
+       FROM commander_device_calls WHERE request_id = ? LIMIT 1`
+  ).bind(requestId).first();
+  const existingResponse = (existing) => {
+    if (
+      existing.tenant_id !== context.tenant_id
+      || existing.subject_id !== context.subject_id
+      || existing.tool_id !== toolId
+      || existing.payload_json !== payloadJson
+      || (requestedDeviceId && existing.device_id !== requestedDeviceId)
+    ) {
+      throw new Error("IDEMPOTENCY_CONFLICT");
+    }
+    return {
+      schema: "hara.commander-device-call.v1",
+      existing: true,
+      call_id: existing.call_id,
+      request_id: requestId,
+      device_id: existing.device_id,
+      tool_id: toolId,
+      state: existing.state,
+      expires_at_utc: existing.expires_at_utc,
+    };
+  };
+
+  const existing = await readExisting();
+  if (existing) return existingResponse(existing);
+
   const selection = await selectedDeviceForSubject(
     env, context.tenant_id, context.subject_id
   );
   if (!selection) throw new Error("DEVICE_SELECTION_REQUIRED");
   const deviceId = cleanId(selection.device_id, 180);
-  if (body.device_id && cleanId(body.device_id, 180) !== deviceId) {
+  if (requestedDeviceId && requestedDeviceId !== deviceId) {
     throw new Error("DEVICE_NOT_SELECTED");
   }
+
   const device = await env.PRODUCT_DB.prepare(
     `SELECT device_id, tenant_id, state, last_seen_at_utc, revoked_at_utc
        FROM commander_devices
@@ -1025,45 +1090,55 @@ async function enqueueDeviceCall(env, body) {
         AND expires_at_utc <= ?`
   ).bind(enqueueAt, context.tenant_id, context.subject_id, deviceId, enqueueAt).run();
 
-  const payloadJson = boundedJson(body.payload || {}, 128 * 1024, "DEVICE_CALL_PAYLOAD_INVALID");
-  const existing = await env.PRODUCT_DB.prepare(
-    `SELECT call_id, tenant_id, subject_id, device_id, tool_id, state, expires_at_utc
-       FROM commander_device_calls WHERE request_id = ? LIMIT 1`
-  ).bind(requestId).first();
-  if (existing) {
-    if (
-      existing.tenant_id !== context.tenant_id
-      || existing.subject_id !== context.subject_id
-      || existing.device_id !== deviceId
-      || existing.tool_id !== toolId
-    ) {
-      throw new Error("IDEMPOTENCY_CONFLICT");
-    }
-    return {
-      schema: "hara.commander-device-call.v1",
-      existing: true,
-      call_id: existing.call_id,
-      request_id: requestId,
-      device_id: deviceId,
-      tool_id: toolId,
-      state: existing.state,
-      expires_at_utc: existing.expires_at_utc,
-    };
-  }
-
   const callId = "HARA-CALL-" + crypto.randomUUID();
   const createdAt = nowIso();
   const expiresAt = nowIso(DEVICE_CALL_TTL_SECONDS);
-  await env.PRODUCT_DB.prepare(
-    `INSERT INTO commander_device_calls
+  const onlineCutoff = new Date(Date.now() - 90_000).toISOString();
+  const inserted = await env.PRODUCT_DB.prepare(
+    `INSERT OR IGNORE INTO commander_device_calls
       (call_id, request_id, tenant_id, subject_id, device_id, tool_id, payload_json,
        state, created_at_utc, expires_at_utc, claimed_at_utc, completed_at_utc,
        result_json, error_code)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 'PENDING', ?, ?, NULL, NULL, NULL, NULL)`
+     SELECT ?, ?, ?, ?, d.device_id, ?, ?, 'PENDING', ?, ?, NULL, NULL, NULL, NULL
+       FROM commander_devices d
+       JOIN commander_device_selections s
+         ON s.tenant_id = d.tenant_id
+        AND s.device_id = d.device_id
+      WHERE d.device_id = ?
+        AND d.tenant_id = ?
+        AND d.state = 'ACTIVE'
+        AND d.revoked_at_utc IS NULL
+        AND d.last_seen_at_utc >= ?
+        AND s.subject_id = ?`
   ).bind(
-    callId, requestId, context.tenant_id, context.subject_id, deviceId, toolId,
-    payloadJson, createdAt, expiresAt
+    callId, requestId, context.tenant_id, context.subject_id, toolId, payloadJson,
+    createdAt, expiresAt, deviceId, context.tenant_id, onlineCutoff, context.subject_id
   ).run();
+
+  if (!inserted.meta?.changes) {
+    const concurrent = await readExisting();
+    if (concurrent) return existingResponse(concurrent);
+
+    const currentSelection = await selectedDeviceForSubject(
+      env, context.tenant_id, context.subject_id
+    );
+    if (!currentSelection) throw new Error("DEVICE_SELECTION_REQUIRED");
+    if (cleanId(currentSelection.device_id, 180) !== deviceId) {
+      throw new Error("DEVICE_NOT_SELECTED");
+    }
+
+    const currentDevice = await env.PRODUCT_DB.prepare(
+      `SELECT state, last_seen_at_utc, revoked_at_utc
+         FROM commander_devices
+        WHERE device_id = ? AND tenant_id = ?
+        LIMIT 1`
+    ).bind(deviceId, context.tenant_id).first();
+    if (!currentDevice || currentDevice.state !== "ACTIVE" || currentDevice.revoked_at_utc) {
+      throw new Error("DEVICE_NOT_FOUND");
+    }
+    if (!deviceOnline(currentDevice.last_seen_at_utc)) throw new Error("DEVICE_OFFLINE");
+    throw new Error("DEVICE_CALL_ENQUEUE_CONFLICT");
+  }
 
   return {
     schema: "hara.commander-device-call.v1",
@@ -1130,19 +1205,45 @@ async function completeDeviceCall(env, request, body) {
         AND tenant_id = ?
         AND device_id = ?
         AND state = 'EXECUTING'
+        AND expires_at_utc > ?
       RETURNING call_id, request_id, tool_id, state, completed_at_utc`
   ).bind(
-    state, completedAt, resultJson, errorCode, callId, device.tenant_id, device.device_id
+    state, completedAt, resultJson, errorCode, callId, device.tenant_id, device.device_id,
+    completedAt
   ).all();
 
   const row = (update.results || [])[0];
   if (!row) {
     const existing = await env.PRODUCT_DB.prepare(
-      `SELECT state FROM commander_device_calls
+      `SELECT state, expires_at_utc, result_json, error_code FROM commander_device_calls
         WHERE call_id = ? AND tenant_id = ? AND device_id = ? LIMIT 1`
     ).bind(callId, device.tenant_id, device.device_id).first();
     if (existing && existing.state === state) {
+      if (
+        existing.result_json !== resultJson
+        || (state === "FAILED" && String(existing.error_code || "") !== String(errorCode || ""))
+      ) {
+        throw new Error("IDEMPOTENCY_CONFLICT");
+      }
       return { schema: "hara.commander-device-call-result.v1", ok: true, existing: true, call_id: callId, state };
+    }
+    if (
+      existing
+      && existing.state === "EXECUTING"
+      && String(existing.expires_at_utc) <= completedAt
+    ) {
+      await env.PRODUCT_DB.prepare(
+        `UPDATE commander_device_calls
+            SET state = 'EXPIRED', completed_at_utc = ?, error_code = 'DEVICE_CALL_EXPIRED'
+          WHERE call_id = ?
+            AND tenant_id = ?
+            AND device_id = ?
+            AND state = 'EXECUTING'
+            AND expires_at_utc <= ?`
+      ).bind(
+        completedAt, callId, device.tenant_id, device.device_id, completedAt
+      ).run();
+      throw new Error("DEVICE_CALL_EXPIRED");
     }
     throw new Error("DEVICE_CALL_NOT_EXECUTING");
   }
@@ -1589,6 +1690,8 @@ export default {
         DEVICE_CALL_RESULT_STATE_INVALID: 400,
         DEVICE_CALL_RESULT_INVALID: 400,
         DEVICE_CALL_NOT_EXECUTING: 409,
+        DEVICE_CALL_EXPIRED: 409,
+        DEVICE_CALL_ENQUEUE_CONFLICT: 409,
         DEVICE_CALL_NOT_FOUND: 404,
         GRANT_MISSING: 403,
         IDEMPOTENCY_CONFLICT: 409,
