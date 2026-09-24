@@ -271,11 +271,13 @@ The deterministic source and runtime promotion gates are closed. Remaining work 
    - no DEV redirect / stale loop.
 
 2. **First real device E2E**
+   - run the non-mutating first-device candidate preflight on the intended Linux host;
    - first PROD pairing;
    - Agent heartbeat;
    - selected-device online/offline behavior;
    - governed five-tool call path;
    - revoke and expiry behavior.
+   - current candidate evidence: `nucleo-a` is **READY** on Linux x86_64 with no prior Commander enrollment/residue, systemd-user persistence ready and public Agent 0.3.5 reachable.
 
 3. **Quota runtime proof**
    - hara-platform PR #1158 closed the source compensation gap;
@@ -335,8 +337,8 @@ Do not redeploy solely to reproduce this promotion receipt; future deployment sh
 ## 10. Known non-blocking operational items
 
 These are non-blocking operational follow-ups and are not current Commander source blockers:
-- Identity SMTP 587/STARTTLS state was **not verified by this front**: supported SMTP read attempts with the available owner PAT returned HTTP 403, and the observed `ZITADEL_TLS_ENABLED=false` is server-TLS configuration, not SMTP evidence. This requires an Identity-authorized read path; **no SMTP mutation was performed**;
-- Login V2 custom-translation warning is **currently recurring** (`Error fetching custom translations: Error: fetch() returned undefined`) while the container remains healthy. The repository documents the ZITADEL v4.16 Portuguese hosted-translation system-locale gap as `DEFERRED_UPSTREAM_V4_16_SYSTEM_LOCALE_MISSING`; no user-visible blocker is proven, so do not patch around it without an upstream/version decision;
+- Identity SMTP 587/STARTTLS state remains **authority-blocked for supported readback**: both the available owner PAT and the Login V2 machine-user PAT return HTTP 403 from the documented Admin REST SMTP read endpoint. The observed `ZITADEL_TLS_ENABLED=false` is server-TLS configuration, not SMTP evidence. Do not bypass this through database/projection reads; **no SMTP mutation was performed**;
+- Login V2 custom-translation warning previously recurred as `Error fetching custom translations: Error: fetch() returned undefined`. The running v4.16 bundle shows this warning comes from `getHostedLoginTranslation()`, after which bundled locale JSON remains the fallback. A fresh one-hour log window on 2026-09-24 showed **0 occurrences** while the container remained healthy. Treat this as upstream/transient unless current logs and user-visible behavior prove regression; do not patch around it blindly;
 - device count remains zero until first production pairing.
 
 ## 11. Do not repeat
@@ -416,6 +418,14 @@ Device installers:
 ```bash
 python3 apps/commander/scripts/validate_device_installers.py
 ```
+
+First Linux device candidate preflight (non-mutating; run on the intended host before generating/using a pairing token):
+
+```bash
+python3 apps/commander/scripts/commander_first_device_preflight.py --json
+```
+
+Expected terminal marker: `COMMANDER_FIRST_DEVICE_CANDIDATE=READY`.
 
 Bootstrap / release supply-chain posture:
 
@@ -548,11 +558,17 @@ git diff --check
 - PR #91 — dead internal user-chip CSS cleanup — **MERGED**
 - PR #92 — canonical E2E/quota harness — **MERGED**
 - PR #93 — Agent 0.3.4 supply-chain hardening — **MERGED**
-- PR #94 — E2E product-token origin/redirect hardening — **MERGED**
-- PR #95 — server-side five-tool payload contract / pre-reserve function guard — **MERGED + PROMOTED**
-- hara-platform PR #1158 — quota finalization compensation source — **MERGED; runtime E2E pending**
+- PR #94 — E2E product-token origin / redirect hardening — **MERGED**
+- PR #95 — server-side five-tool payload contract — **MERGED**
+- PR #96 — Agent 0.3.4 runtime rollout receipt — **MERGED**
+- PR #97 — ambiguous E2E quota-state reconciliation — **MERGED**
+- PR #98 — Agent 0.3.5 startup attestation — **MERGED + PROMOTED**
+- PR #99 — Agent 0.3.5 runtime rollout receipt — **MERGED**
+- hara-platform PR #1158 — quota finalization compensation source — **MERGED; real-device COMMIT E2E pending**
 - issue #65 — Commander post-promotion coordination / residual homologation — **OPEN**
 
-Canonical runtime source at this hardening checkpoint: `main` = `c0669a1db1a3ac75b86c1f196f9aef0f67bd8e01`. PR #96 is documentation-only and does not require another Worker deployment.
+Canonical repository state at this checkpoint: `main` = `91e1f21ec55732037f2455c38d88ce5df86864b9`.
+Current deployed Commander runtime source: `85ec98591842c0e82fc67873fda1937c1fc8eee7`.
+PR #99 is documentation-only and does not require another Worker deployment.
 
 Continue from current `main`, this guide and the newest issue #65 comments. Do not use PR #66 as a backend source.
