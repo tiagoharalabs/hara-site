@@ -17,6 +17,7 @@ const DEMO_TENANT = "HARA-TENANT-DEMO-0001";
 const MCP_METER_ID = "HARA_COMMANDER_GOVERNED_INVOKE";
 const MCP_SECONDARY_PROVIDER = "CLOUDFLARE_ACCESS";
 const DEVICE_CALL_TTL_SECONDS = 50;
+const QUOTA_RESERVATION_TTL_SECONDS = 10 * 60;
 const PAIRING_RETENTION_SECONDS = 30 * 24 * 60 * 60;
 const PAIRING_RETENTION_BATCH = 100;
 const MCP_TOOL_GRANTS = Object.freeze({
@@ -218,7 +219,23 @@ export class TenantQuota extends DurableObject {
     });
   }
 
+  expireStaleReservations() {
+    const now = new Date().toISOString();
+    const cutoff = new Date(
+      Date.now() - QUOTA_RESERVATION_TTL_SECONDS * 1000
+    ).toISOString();
+    this.ctx.storage.sql.exec(
+      `UPDATE request_state
+          SET state = 'RELEASED', units = 0, updated_at_utc = ?
+        WHERE state = 'RESERVED'
+          AND updated_at_utc <= ?`,
+      now,
+      cutoff
+    );
+  }
+
   status(periodKey, limit) {
+    this.expireStaleReservations();
     const row = this.ctx.storage.sql.exec(
       `SELECT COALESCE(SUM(units), 0) AS consumed
          FROM request_state
@@ -237,6 +254,7 @@ export class TenantQuota extends DurableObject {
   }
 
   reserve(requestId, subjectId, periodKey, functionId, limit) {
+    this.expireStaleReservations();
     const existing = [...this.ctx.storage.sql.exec(
       `SELECT request_id, subject_id, period_key, function_id, state, units, receipt_sha256
          FROM request_state WHERE request_id = ?`,
@@ -282,6 +300,7 @@ export class TenantQuota extends DurableObject {
   }
 
   commit(requestId, subjectId, receiptSha256, limit) {
+    this.expireStaleReservations();
     const row = [...this.ctx.storage.sql.exec(
       `SELECT request_id, subject_id, period_key, function_id, state, receipt_sha256
          FROM request_state WHERE request_id = ?`,
@@ -306,6 +325,7 @@ export class TenantQuota extends DurableObject {
   }
 
   release(requestId, subjectId, limit) {
+    this.expireStaleReservations();
     const row = [...this.ctx.storage.sql.exec(
       `SELECT request_id, subject_id, period_key, state FROM request_state WHERE request_id = ?`,
       requestId
