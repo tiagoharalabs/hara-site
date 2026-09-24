@@ -255,8 +255,12 @@ The deterministic source and runtime promotion gates are closed. Remaining work 
    - then define the final OAuth/configuration customer flow.
 
 5. **Installer bootstrap supply chain**
-   - downloaded Agent artifacts are hash-verified;
-   - bootstrap scripts still trust the Commander origin and remain a future maturity hardening target.
+   - release manifest + SHA256SUMS cover both installers and both Agents;
+   - Linux enforces Agent SHA-256, release version and dynamic self-test before acceptance;
+   - source candidate 0.3.4 adds the same fail-closed functional self-test requirement to Windows install and update, after SHA/version/syntax validation;
+   - the public runtime drift gate covers installers, Agents, manifest and checksums byte-for-byte;
+   - the initial `curl | bash` / `irm | iex` bootstrap still trusts the Commander HTTPS origin and has no independent trust anchor yet;
+   - independent package/signature trust remains a later product-maturity target and must not be represented as already solved.
 
 6. **Offline-selection semantics**
    - current contract intentionally preserves selection of an ACTIVE but offline device;
@@ -374,6 +378,18 @@ Device installers:
 ```bash
 python3 apps/commander/scripts/validate_device_installers.py
 ```
+
+Bootstrap / release supply-chain posture:
+
+```bash
+python3 apps/commander/scripts/validate_bootstrap_supply_chain.py
+```
+
+Expected posture markers include:
+- `COMMANDER_AGENT_POST_BOOTSTRAP_INTEGRITY=PASS`
+- `COMMANDER_RELEASE_RUNTIME_ATTESTATION=READY`
+- `COMMANDER_BOOTSTRAP_INITIAL_TRUST=WEB_ORIGIN`
+- `COMMANDER_BOOTSTRAP_INDEPENDENT_TRUST_ANCHOR=PENDING_MATURITY`
 
 Pairing supersession:
 

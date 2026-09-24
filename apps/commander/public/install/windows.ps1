@@ -34,6 +34,14 @@ function Assert-AgentIntegrity {
   Write-Host "HARA_COMMANDER_AGENT_INTEGRITY=PASS"
 }
 
+function Assert-AgentSelfTest {
+  param([string]$Path)
+  $PowerShellExe = (Get-Command powershell.exe -ErrorAction Stop).Source
+  & $PowerShellExe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $Path --self-test | Out-Null
+  if ($LASTEXITCODE -ne 0) { throw "AGENT_SELF_TEST_FAILED" }
+  Write-Host "HARA_COMMANDER_AGENT_SELF_TEST=PASS"
+}
+
 function Get-DeviceToken {
   param($Cfg)
   if (-not $Cfg -or -not $Cfg.encrypted_device_token) { throw "DEVICE_TOKEN_UNAVAILABLE" }
@@ -52,7 +60,7 @@ function Invoke-DeviceAction {
   try {
     $headers = @{ Accept="application/json"; Authorization=("Bearer " + $token) }
     if ($Kind -eq "heartbeat") {
-      $payload = @{ device_id=[string]$cfg.device_id; architecture=[string]$cfg.architecture; agent_version="0.3.3" } | ConvertTo-Json -Compress
+      $payload = @{ device_id=[string]$cfg.device_id; architecture=[string]$cfg.architecture; agent_version="0.3.4" } | ConvertTo-Json -Compress
       $result = Invoke-RestMethod -Uri "$base/api/device/heartbeat" -Method Post -ContentType "application/json" -Headers $headers -Body $payload -TimeoutSec 15
       if (-not $result.ok -or [string]$result.device_id -ne [string]$cfg.device_id) { throw "REMOTE_HEARTBEAT_INVALID" }
       return $result
@@ -172,6 +180,7 @@ if ($Action -eq "update") {
   $tokens=$null; $errors=$null
   [System.Management.Automation.Language.Parser]::ParseFile($tmp,[ref]$tokens,[ref]$errors) | Out-Null
   if ($errors.Count -ne 0) { Remove-Item -Force $tmp; throw "AGENT_UPDATE_SYNTAX_INVALID" }
+  Assert-AgentSelfTest $tmp
   if (Test-Path -LiteralPath $Agent -PathType Leaf) { Copy-Item -Force $Agent $backup }
   Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
   Move-Item -Force $tmp $Agent
@@ -219,7 +228,7 @@ if ([string]::IsNullOrWhiteSpace($PairingToken)) { throw "Pairing token cannot b
 
 $DeviceName = $env:COMPUTERNAME
 $Architecture = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant()
-$Payload = @{ pairing_token=$PairingToken; device_name=$DeviceName; platform="WINDOWS"; architecture=$Architecture; agent_version="0.3.3" } | ConvertTo-Json -Compress
+$Payload = @{ pairing_token=$PairingToken; device_name=$DeviceName; platform="WINDOWS"; architecture=$Architecture; agent_version="0.3.4" } | ConvertTo-Json -Compress
 $Enroll = Invoke-RestMethod -Uri "$BaseUrl/api/device/enroll" -Method Post -ContentType "application/json" -Headers @{ Accept="application/json" } -Body $Payload -TimeoutSec 30
 $PairingToken = $null
 $SecurePairing.Dispose()
@@ -230,7 +239,7 @@ $DeviceTokenForRollback = [string]$Enroll.device_token
 try {
   New-Item -ItemType Directory -Path $Root -Force | Out-Null
   $EncryptedToken = ConvertTo-SecureString $Enroll.device_token -AsPlainText -Force | ConvertFrom-SecureString
-  $ConfigObject = @{ base_url=$BaseUrl; device_id=[string]$Enroll.device_id; encrypted_device_token=$EncryptedToken; architecture=$Architecture; agent_version="0.3.3" }
+  $ConfigObject = @{ base_url=$BaseUrl; device_id=[string]$Enroll.device_id; encrypted_device_token=$EncryptedToken; architecture=$Architecture; agent_version="0.3.4" }
   $ConfigObject | ConvertTo-Json | Set-Content -Path $Config -Encoding UTF8
 
   $Identity = [Security.Principal.WindowsIdentity]::GetCurrent().Name
@@ -241,6 +250,10 @@ try {
   Remove-Item -Force $InstallTmp -ErrorAction SilentlyContinue
   Invoke-WebRequest -Uri "$BaseUrl/agent/windows.ps1" -OutFile $InstallTmp -UseBasicParsing -TimeoutSec 30
   Assert-AgentIntegrity $InstallTmp
+  $tokens=$null; $errors=$null
+  [System.Management.Automation.Language.Parser]::ParseFile($InstallTmp,[ref]$tokens,[ref]$errors) | Out-Null
+  if ($errors.Count -ne 0) { Remove-Item -Force $InstallTmp; throw "AGENT_INSTALL_SYNTAX_INVALID" }
+  Assert-AgentSelfTest $InstallTmp
   Move-Item -Force $InstallTmp $Agent
   & icacls.exe $Agent /inheritance:r /grant:r "$Identity:F" | Out-Null
 

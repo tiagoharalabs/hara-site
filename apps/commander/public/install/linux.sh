@@ -121,7 +121,7 @@ if not base or not token or not device_id:
     raise SystemExit(2)
 if action=="heartbeat":
     endpoint="/api/device/heartbeat"
-    payload={"device_id":device_id,"architecture":arch,"agent_version":"0.3.3"}
+    payload={"device_id":device_id,"architecture":arch,"agent_version":"0.3.4"}
 elif action=="revoke":
     endpoint="/api/device/revoke-self"
     payload={}
@@ -155,7 +155,7 @@ token=sys.stdin.readline().rstrip("\n")
 if not device_id or not token: raise SystemExit(2)
 req=urllib.request.Request(
     base+"/api/device/revoke-self", data=b"{}", method="POST",
-    headers={"content-type":"application/json","accept":"application/json","authorization":"Bearer "+token,"user-agent":"HARA-Commander-Installer-Rollback/0.3.3"},
+    headers={"content-type":"application/json","accept":"application/json","authorization":"Bearer "+token,"user-agent":"HARA-Commander-Installer-Rollback/0.3.4"},
 )
 with urllib.request.urlopen(req,timeout=15) as response:
     obj=json.loads(response.read().decode() or "{}")
@@ -354,7 +354,7 @@ print(json.dumps({
   "device_name": sys.argv[1],
   "platform": "LINUX",
   "architecture": sys.argv[2],
-  "agent_version": "0.3.3",
+  "agent_version": "0.3.4",
 }, separators=(",",":")))
 ' "$DEVICE_NAME" "$ARCH")"
 

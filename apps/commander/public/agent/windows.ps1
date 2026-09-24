@@ -3,7 +3,7 @@ $Root = Join-Path $env:LOCALAPPDATA "HARA Commander"
 $ConfigPath = Join-Path $Root "device.json"
 $ReceiptDir = Join-Path $Root "receipts"
 $RuntimeStatus = Join-Path $Root "runtime-status.json"
-$AgentVersion = "0.3.3"
+$AgentVersion = "0.3.4"
 $FunctionId = "device.info"
 
 function Get-PlainText([Security.SecureString]$SecureValue) {
@@ -177,6 +177,54 @@ function Complete-Call($Cfg,[string]$Token,$Call,[string]$State,$Result,[string]
   if ($ErrorCode) { $body.error_code=$ErrorCode }
   Send-Json "$($Cfg.base_url)/api/device/calls/complete" $Token $body 20 | Out-Null
 }
+
+function Invoke-AgentSelfTest {
+  $previousReceiptDir=$script:ReceiptDir
+  $testRoot=Join-Path ([IO.Path]::GetTempPath()) ("hara-commander-selftest-"+[guid]::NewGuid().ToString("N"))
+  try {
+    $script:ReceiptDir=Join-Path $testRoot "receipts"
+    New-Item -ItemType Directory -Path $script:ReceiptDir -Force | Out-Null
+    $cfg=[pscustomobject]@{device_id="selftest";architecture="test"}
+    $base=[ordered]@{call_id="selftest";request_id="selftest-001";tool_id="hara.health";payload=[pscustomobject]@{}}
+
+    $health=Invoke-Tool $cfg ([pscustomobject]$base)
+    if ([string]$health.state -ne "PASS") { throw "SELF_TEST_HEALTH_FAILED" }
+
+    $base.request_id="selftest-002"; $base.tool_id="hara.functions.list"; $base.payload=[pscustomobject]@{}
+    $listing=Invoke-Tool $cfg ([pscustomobject]$base)
+    if ([int]$listing.result.registered_function_count -ne 1) { throw "SELF_TEST_LIST_FAILED" }
+
+    $base.request_id="selftest-003"; $base.tool_id="hara.functions.describe"
+    $base.payload=[pscustomobject]@{function_id=$FunctionId}
+    $description=Invoke-Tool $cfg ([pscustomobject]$base)
+    if ([string]$description.result.function_id -ne $FunctionId) { throw "SELF_TEST_DESCRIBE_FAILED" }
+
+    $base.request_id="selftest-004"; $base.tool_id="hara.functions.invoke"
+    $base.payload=[pscustomobject]@{function_id=$FunctionId;arguments=[pscustomobject]@{argv=@()}}
+    $invoked=Invoke-Tool $cfg ([pscustomobject]$base)
+    $receipt=[string]$invoked.bridge_receipt_sha256
+    if ($receipt -notmatch "^[0-9a-f]{64}$") { throw "SELF_TEST_RECEIPT_FAILED" }
+
+    $base.request_id="selftest-005"; $base.tool_id="hara.receipts.get"
+    $base.payload=[pscustomobject]@{receipt_id_or_sha256=$receipt}
+    $read=Invoke-Tool $cfg ([pscustomobject]$base)
+    if ([string]$read.result.tool_id -ne "hara.functions.invoke") { throw "SELF_TEST_RECEIPTS_GET_FAILED" }
+
+    $blocked=$false
+    try { Invoke-LocalFunction $cfg "shell.run" ([pscustomobject]@{argv=@()}) | Out-Null }
+    catch { if ([string]$_.Exception.Message -eq "UNKNOWN_FUNCTION_ID") { $blocked=$true } }
+    if (-not $blocked) { throw "SELF_TEST_ARBITRARY_FUNCTION_ALLOWED" }
+
+    Write-Host "COMMANDER_WINDOWS_FIVE_TOOL_BRIDGE=PASS"
+    Write-Host "COMMANDER_WINDOWS_ARBITRARY_FUNCTION=DENIED"
+    Write-Host "COMMANDER_WINDOWS_AGENT_SELF_TEST=PASS"
+  } finally {
+    $script:ReceiptDir=$previousReceiptDir
+    Remove-Item -LiteralPath $testRoot -Recurse -Force -ErrorAction SilentlyContinue
+  }
+}
+
+if ($args -contains "--self-test") { Invoke-AgentSelfTest; exit 0 }
 
 $LastHeartbeat=[datetime]::MinValue
 $LastErrorCode=$null
