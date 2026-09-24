@@ -129,7 +129,7 @@ COMMANDER_PROD_WORKER_LIVE_READONLY=PASS
 COMMANDER_PROD_D1_MIGRATION_0009=APPLIED
 COMMANDER_PROD_RUNTIME_ASSETS=CURRENT
 COMMANDER_PROD_WORKER_DEPLOYMENT=PROVEN
-COMMANDER_PROD_WORKER_VERSION=0f1028a0-797a-470e-a825-68d3e607cf67
+COMMANDER_PROD_WORKER_VERSION=f96d5690-7681-4976-b86b-94fe66ea842c
 COMMANDER_HUMAN_HOMOLOGATION=PENDING_OPERATOR_GATE
 COMMANDER_FIRST_DEVICE_E2E=PENDING_HOMOLOGATION
 ```
@@ -184,18 +184,21 @@ Subsequent UX-only deployment (2026-09-24 UTC):
 - DEV D1 migration 0009: **APPLIED** after backup; DEV health remains `DEV / REMOTE_DEV`;
 - PROD and DEV rendered `user-chip` count: **0**.
 
-Agent 0.3.4 / supply-chain deployment (2026-09-24 UTC):
-- source `main`: `c79d743ef4bbfd54bf2b51497d5d0709f953669c`;
-- includes PR #91 dead CSS cleanup, #92 canonical E2E harness, #93 Agent 0.3.4 supply-chain hardening and #94 E2E token-origin pinning;
-- PROD deployment id: `4b3051c7-35b2-41dc-b6ec-132a35024c61`;
-- PROD Worker version at 100%: `0f1028a0-797a-470e-a825-68d3e607cf67`;
-- rollback Worker version: `6d018e75-6c43-4efe-bf29-c277a49d4f2c`;
+Agent 0.3.4 / technical hardening deployment (2026-09-24 UTC):
+- Agent/supply-chain source first promoted through PRs #91-#94; public Agent release is **0.3.4**;
+- canonical source after the latest Worker hardening: `c0669a1db1a3ac75b86c1f196f9aef0f67bd8e01`;
+- PR #94 pins the privileged E2E harness to the exact canonical PROD origin and disables token-bearing redirects;
+- PR #95 validates the five device-tool payload contracts server-side and denies unsupported function IDs before quota reservation;
+- current PROD deployment id: `8fb3f5b5-41b6-4cb5-901e-778b7681087b`;
+- current PROD Worker version at 100%: `f96d5690-7681-4976-b86b-94fe66ea842c`;
+- current rollback Worker version: `0f1028a0-797a-470e-a825-68d3e607cf67`;
+- #95 deployment uploaded **no changed asset files**; it changed Worker trust-boundary logic only;
 - 10/10 critical public assets: **CURRENT**;
 - public fail-closed smoke: **PASS**;
 - `validate_bootstrap_supply_chain.py`: **PASS**;
-- Agent public release: **0.3.4**;
+- server-side five-tool payload contract: **PASS**;
 - initial bootstrap trust remains `WEB_ORIGIN`; independent trust anchor remains **PENDING_MATURITY**;
-- DEV 0.3.4 asset alignment was **not** performed by this front because the DEV public endpoint requires `DEV_ACCESS_TOKEN` and no post-deploy HTTP readback could be proven without that credential. Existing DEV Worker remains independently isolated from PROD.
+- no PowerShell runtime was already available on the reviewed Linux infrastructure, so this front did not claim an independent Windows runtime execution proof; the 0.3.4 Windows installer itself requires its dynamic Agent self-test fail-closed during install/update.
 
 ## 6. Device pairing / credential review
 
@@ -270,7 +273,7 @@ The deterministic source and runtime promotion gates are closed. Remaining work 
 5. **Installer bootstrap supply chain**
    - release manifest + SHA256SUMS cover both installers and both Agents;
    - Linux enforces Agent SHA-256, release version and dynamic self-test before acceptance;
-   - source candidate 0.3.4 adds the same fail-closed functional self-test requirement to Windows install and update, after SHA/version/syntax validation;
+   - live Agent 0.3.4 adds the same fail-closed functional self-test requirement to Windows install and update, after SHA/version/syntax validation;
    - the public runtime drift gate covers installers, Agents, manifest and checksums byte-for-byte;
    - the initial `curl | bash` / `irm | iex` bootstrap still trusts the Commander HTTPS origin and has no independent trust anchor yet;
    - independent package/signature trust remains a later product-maturity target and must not be represented as already solved.
@@ -296,7 +299,7 @@ The promotion was executed in the required order:
 ```
 
 Current deployment:
-- Worker version: `0f1028a0-797a-470e-a825-68d3e607cf67`;
+- Worker version: `f96d5690-7681-4976-b86b-94fe66ea842c`;
 - rollback version: `6d018e75-6c43-4efe-bf29-c277a49d4f2c`;
 - migration 0009: **APPLIED**;
 - runtime assets: **CURRENT**;
@@ -311,9 +314,8 @@ Do not redeploy solely to reproduce this promotion receipt; future deployment sh
 ## 10. Known non-blocking operational items
 
 These are non-blocking operational follow-ups and are not current Commander source blockers:
-- Identity SMTP TLS alignment still reports `PENDING_587_STARTTLS_FALLBACK`; the supported local ZITADEL path was identified, but this connector's safety layer blocked PAT use before API execution, so **no SMTP mutation was performed**;
-- Login V2 custom-translation warning is current but classified by the existing helper as `DEFERRED_UPSTREAM_V4_16_SYSTEM_LOCALE_MISSING` for pt; no user-visible blocker was proven and it should not trigger an unsupported rewrite;
-- DEV Agent 0.3.4 parity remains pending a credentialed DEV readback/deploy path;
+- Identity SMTP 587/STARTTLS state was **not verified by this front**: supported SMTP read attempts with the available owner PAT returned HTTP 403, and the observed `ZITADEL_TLS_ENABLED=false` is server-TLS configuration, not SMTP evidence. This requires an Identity-authorized read path; **no SMTP mutation was performed**;
+- Login V2 custom-translation warning is **currently recurring** (`Error fetching custom translations: Error: fetch() returned undefined`) while the container remains healthy. The repository documents the ZITADEL v4.16 Portuguese hosted-translation system-locale gap as `DEFERRED_UPSTREAM_V4_16_SYSTEM_LOCALE_MISSING`; no user-visible blocker is proven, so do not patch around it without an upstream/version decision;
 - device count remains zero until first production pairing.
 
 ## 11. Do not repeat
@@ -371,7 +373,7 @@ python3 apps/commander/scripts/validate_preprod_readiness.py \
   --live-readonly \
   --expect-prod-migration applied \
   --expect-prod-assets current \
-  --expect-prod-worker-version 0f1028a0-797a-470e-a825-68d3e607cf67
+  --expect-prod-worker-version f96d5690-7681-4976-b86b-94fe66ea842c
 ```
 
 This command is the current production convergence proof. If a future reviewed deployment changes the Worker version, update the expected version only after that deployment is intentionally promoted.
@@ -448,7 +450,7 @@ Worker deployment readback:
 
 ```bash
 python3 apps/commander/scripts/commander_prod_deployment_readback.py \
-  --expect-version 0f1028a0-797a-470e-a825-68d3e607cf67
+  --expect-version f96d5690-7681-4976-b86b-94fe66ea842c
 ```
 
 E2E harness source contract:
@@ -456,6 +458,14 @@ E2E harness source contract:
 ```bash
 python3 apps/commander/scripts/validate_e2e_harness.py
 ```
+
+Server-side five-tool payload contract:
+
+```bash
+node apps/commander/scripts/validate_device_tool_contract.mjs
+```
+
+The Worker must reject non-canonical payloads before queueing and must deny any invoke function other than `device.info` before quota reservation.
 
 Reversible live quota proof (requires the local 0600 MCP product-token file and the OIDC identity passed at runtime; never commit either value):
 
@@ -518,9 +528,10 @@ git diff --check
 - PR #92 — canonical E2E/quota harness — **MERGED**
 - PR #93 — Agent 0.3.4 supply-chain hardening — **MERGED**
 - PR #94 — E2E product-token origin/redirect hardening — **MERGED**
+- PR #95 — server-side five-tool payload contract / pre-reserve function guard — **MERGED + PROMOTED**
 - hara-platform PR #1158 — quota finalization compensation source — **MERGED; runtime E2E pending**
 - issue #65 — Commander post-promotion coordination / residual homologation — **OPEN**
 
-Canonical Git state after the post-deploy gate merge: `main` = `9855d2d0bd468cf9e47d9eef63e0bff8371dc100`; zero open Commander PRs were observed at closure.
+Canonical runtime source at this hardening checkpoint: `main` = `c0669a1db1a3ac75b86c1f196f9aef0f67bd8e01`. PR #96 is documentation-only and does not require another Worker deployment.
 
 Continue from current `main`, this guide and the newest issue #65 comments. Do not use PR #66 as a backend source.
