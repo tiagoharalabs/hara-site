@@ -72,8 +72,28 @@ await assert.rejects(
   /OIDC_AUTHORIZED_PARTY_MISMATCH/,
 );
 
+const validNbf = await signJwt({ ...baseClaims, azp: clientId, nbf: now - 5 });
+assert.equal(
+  (await verifyIdToken({ idToken: validNbf, metadata, issuer, clientId, nonce })).sub,
+  "subject-1",
+);
+
+const futureNbf = await signJwt({ ...baseClaims, azp: clientId, nbf: now + 120 });
+await assert.rejects(
+  verifyIdToken({ idToken: futureNbf, metadata, issuer, clientId, nonce }),
+  /OIDC_ID_TOKEN_NOT_YET_VALID/,
+);
+
+const invalidNbf = await signJwt({ ...baseClaims, azp: clientId, nbf: "tomorrow" });
+await assert.rejects(
+  verifyIdToken({ idToken: invalidNbf, metadata, issuer, clientId, nonce }),
+  /OIDC_ID_TOKEN_NBF_INVALID/,
+);
+
 globalThis.fetch = originalFetch;
 
 console.log("COMMANDER_OIDC_AZP_VALID=PASS");
 console.log("COMMANDER_OIDC_MULTI_AUD_MISSING_AZP=DENIED");
 console.log("COMMANDER_OIDC_WRONG_AZP=DENIED");
+console.log("COMMANDER_OIDC_FUTURE_NBF=DENIED");
+console.log("COMMANDER_OIDC_INVALID_NBF=DENIED");
