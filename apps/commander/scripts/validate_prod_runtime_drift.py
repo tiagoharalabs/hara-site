@@ -16,6 +16,13 @@ ASSETS = {
     "/": PUBLIC / "index.html",
     "/app.js": PUBLIC / "app.js",
     "/styles.css": PUBLIC / "styles.css",
+    "/install/linux.sh": PUBLIC / "install/linux.sh",
+    "/install/windows.ps1": PUBLIC / "install/windows.ps1",
+    "/agent/linux.py": PUBLIC / "agent/linux.py",
+    "/agent/windows.ps1": PUBLIC / "agent/windows.ps1",
+    "/release/agent-manifest.json": PUBLIC / "release/agent-manifest.json",
+    "/release/SHA256SUMS": PUBLIC / "release/SHA256SUMS",
+    "/assets/hara-commander-royal.webp": PUBLIC / "assets/hara-commander-royal.webp",
 }
 
 def sha256(data: bytes) -> str:

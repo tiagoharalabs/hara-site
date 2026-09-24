@@ -124,6 +124,7 @@ COMMANDER_SOURCE_PREPROD_READY=PASS
 COMMANDER_IDENTITY_LIVE_READONLY=PASS
 COMMANDER_PROD_D1_LIVE_READONLY=PASS
 COMMANDER_PROD_RUNTIME_LIVE_READONLY=PASS
+COMMANDER_PROD_FAIL_CLOSED_LIVE_READONLY=PASS
 COMMANDER_PROD_WORKER_LIVE_READONLY=PASS
 COMMANDER_PROD_D1_MIGRATION_0009=APPLIED
 COMMANDER_PROD_RUNTIME_ASSETS=CURRENT
@@ -170,7 +171,8 @@ Production promotion receipt (2026-09-24 UTC):
 - rollback Worker version: `fe4abe4e-1ce3-484d-aa11-b9535dd8610d`;
 - deployed at: `2026-09-24T04:35:17.783098Z`;
 - public health/auth: **PASS**;
-- public assets: **CURRENT** against canonical deployable source.
+- public fail-closed smoke: **PASS**;
+- 10 critical public assets (UI, installers, Agents, release manifest/checksums and brand asset): **CURRENT** against canonical deployable source.
 
 ## 6. Device pairing / credential review
 
@@ -207,7 +209,9 @@ Closed:
 - cross-origin browser portal mutations denied via #78;
 - Astra pre-test UI hardening reconciled via #79;
 - post-auth device claim cannot race past revocation via #81;
-- concurrent invite claim cannot overwrite the winning identity via #82.
+- concurrent invite claim cannot overwrite the winning identity via #82;
+- post-deploy public fail-closed checks deny unauthenticated portal/device/internal MCP access and disable PROD dev routes;
+- runtime drift proof covers all 10 critical public customer assets, not only the UI shell.
 
 Do not reopen these as unresolved unless a current runtime/source readback proves regression.
 
@@ -269,7 +273,7 @@ Current deployment:
 - runtime assets: **CURRENT**;
 - public health/auth: **PASS**.
 
-The HTML runtime validator permits only one known Cloudflare Browser Insights beacon injection when comparing `/`; after removing that single known injected script, the HTML must match source exactly. JavaScript and CSS remain byte-exact checks.
+The HTML runtime validator permits only one known Cloudflare Browser Insights beacon injection when comparing `/`; after removing that single known injected script, the HTML must match source exactly. The other nine critical assets (JS/CSS, installers, Agents, release files and brand asset) remain byte-exact checks.
 
 Do not reapply migration 0009 while readback reports `APPLIED`.
 Do not redeploy solely to reproduce this promotion receipt; future deployment should happen only for a reviewed source change.
@@ -387,7 +391,15 @@ Public runtime asset drift readback:
 python3 apps/commander/scripts/validate_prod_runtime_drift.py --expect-assets current
 ```
 
-Current canonical expectation is `current`. The validator allows only the known Cloudflare Browser Insights beacon injection on HTML before normalized comparison; JavaScript and CSS remain byte-exact.
+Current canonical expectation is `current`. The validator allows only the known Cloudflare Browser Insights beacon injection on HTML before normalized comparison; the other nine critical assets remain byte-exact.
+
+Public fail-closed smoke:
+
+```bash
+python3 apps/commander/scripts/validate_prod_fail_closed.py
+```
+
+This must deny unauthenticated portal reads/mutations, Agent calls without a device credential, internal MCP calls without the product token, cross-origin portal mutation and PROD dev endpoints.
 
 Worker deployment readback:
 
