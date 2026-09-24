@@ -1,6 +1,6 @@
 # H.A.R.A. Commander — successor guide — 2026-09-23
 
-Status: **SOURCE PRE-PROD READY / PROD NOT PROMOTED / HUMAN HOMOLOGATION DEFERRED / DEVICE E2E NOT YET OPEN**
+Status: **PROD PROMOTED / RUNTIME CONVERGED / HUMAN HOMOLOGATION PENDING / DEVICE E2E NOT YET OPEN**
 
 This is the canonical successor guide for the Commander front, created on 2026-09-23 and updated through 2026-09-24 after Login V2 convergence and the full deterministic pre-PROD hardening sweep.
 
@@ -30,7 +30,7 @@ Keep arbitrary shell and generic filesystem access absent.
 - HARA Identity: `https://auth.haralabs.com.br`
 - public MCP target: `https://mcp.haralabs.com.br/mcp`
 
-The human browser homologation test is intentionally deferred until pre-test hardening is reviewed and deliberately deployed.
+The deterministic hardening is promoted to PROD. The next blocking gate is the operator browser homologation before first real device pairing.
 
 ## 3. Login / Identity state — CLOSED technically, browser retest pending
 
@@ -118,18 +118,23 @@ Key merged closures:
 PR #66 is **CLOSED / SUPERSEDED**. Its UI work was preserved by #79, while its stale backend
 was intentionally not merged.
 
-Current source gate:
+Current production gate:
 ```text
 COMMANDER_SOURCE_PREPROD_READY=PASS
 COMMANDER_IDENTITY_LIVE_READONLY=PASS
 COMMANDER_PROD_D1_LIVE_READONLY=PASS
-COMMANDER_PROD_D1_MIGRATION_0009=PENDING_PROMOTION_GATE
-COMMANDER_PROD_WORKER_DEPLOYMENT=PENDING_PROMOTION_GATE
+COMMANDER_PROD_RUNTIME_LIVE_READONLY=PASS
+COMMANDER_PROD_WORKER_LIVE_READONLY=PASS
+COMMANDER_PROD_D1_MIGRATION_0009=APPLIED
+COMMANDER_PROD_RUNTIME_ASSETS=CURRENT
+COMMANDER_PROD_WORKER_DEPLOYMENT=PROVEN
+COMMANDER_PROD_WORKER_VERSION=ae7c9d6c-1d2a-401b-abf0-489f5d09b869
 COMMANDER_HUMAN_HOMOLOGATION=PENDING_OPERATOR_GATE
 COMMANDER_FIRST_DEVICE_E2E=PENDING_HOMOLOGATION
 ```
 
-Source merge alone does **not** publish the Commander Worker. Deployment remains explicit.
+The promoted deployable source was canonical `main` commit `da28e0404df689b9e9943fa4377f51789c9b5dfd`.
+Future source merges still do **not** implicitly publish Commander; later deployments remain explicit.
 
 ## 5. Live product/data facts confirmed
 
@@ -154,6 +159,18 @@ Latest structural PROD readback during the pre-test hardening:
 - one historical expired/unrevoked portal session remains as retention hygiene.
 
 No real production device has been paired yet.
+
+Production promotion receipt (2026-09-24 UTC):
+- pre-migration D1 export: `/tmp/hara-commander-product-prod-before-0009-20260924T043420Z.sql`;
+- export SHA-256: `e3f91038f431b69289d41344ec7c48e74b71fd50fb3b412521ba670279d63b2f`;
+- migration `0009_pairing_supersession.sql`: **APPLIED**;
+- promoted deployable source: `da28e0404df689b9e9943fa4377f51789c9b5dfd`;
+- Cloudflare deployment id: `6ea63b52-875d-4d4c-a7b4-adadd45d518c`;
+- Worker version at 100%: `ae7c9d6c-1d2a-401b-abf0-489f5d09b869`;
+- rollback Worker version: `fe4abe4e-1ce3-484d-aa11-b9535dd8610d`;
+- deployed at: `2026-09-24T04:35:17.783098Z`;
+- public health/auth: **PASS**;
+- public assets: **CURRENT** against canonical deployable source.
 
 ## 6. Device pairing / credential review
 
@@ -194,16 +211,11 @@ Closed:
 
 Do not reopen these as unresolved unless a current runtime/source readback proves regression.
 
-## 8. Remaining pre-PROD gates
+## 8. Remaining gates after PROD promotion
 
-The remaining work is no longer basic source hardening:
+The deterministic source and runtime promotion gates are closed. Remaining work now requires homologation or later product maturity:
 
-1. **Promotion order / runtime convergence**
-   - apply PROD D1 migration `0009_pairing_supersession.sql`;
-   - only after migration success, deploy the current Commander Worker/assets;
-   - verify the deployed runtime against the canonical source.
-
-2. **Human auth homologation**
+1. **Human auth homologation**
    - fresh private browser;
    - login / callback;
    - authenticated header;
@@ -211,49 +223,56 @@ The remaining work is no longer basic source hardening:
    - account switch;
    - no DEV redirect / stale loop.
 
-3. **First real device E2E**
+2. **First real device E2E**
    - first PROD pairing;
    - Agent heartbeat;
    - selected-device online/offline behavior;
    - governed five-tool call path;
    - revoke and expiry behavior.
 
-4. **Quota runtime proof**
+3. **Quota runtime proof**
    - hara-platform PR #1158 closed the source compensation gap;
-   - runtime promotion and real commit/release E2E still require proof.
+   - real commit/release E2E remains pending until a real device call is exercised.
 
-5. **Final client activation contract**
+4. **Final client activation contract**
    - keep ChatGPT/Codex actions disabled / `Em homologação` until ordinary E2E passes;
    - then define the final OAuth/configuration customer flow.
 
-6. **Installer bootstrap supply chain**
+5. **Installer bootstrap supply chain**
    - downloaded Agent artifacts are hash-verified;
    - bootstrap scripts still trust the Commander origin and remain a future maturity hardening target.
 
-7. **Offline-selection semantics**
+6. **Offline-selection semantics**
    - current contract intentionally preserves selection of an ACTIVE but offline device;
    - UI renders it as Offline and invocation refuses an offline device;
    - revisit only if product semantics change.
 
-## 9. Exact production promotion contract
+## 9. Production promotion — CLOSED
 
-Current source references `device_pairing_tokens.superseded_at_utc`.
-
-Therefore deployment ordering is mandatory:
+The promotion was executed in the required order:
 
 ```text
-1. PROD D1 migration 0009_pairing_supersession.sql
-2. verify migration/readback
-3. deploy current Commander Worker + assets
-4. verify health/static/runtime contract
-5. human browser homologation
-6. first real device pairing
-7. governed device-call + quota E2E
+1. pre-migration live gate: migration=PENDING, assets=STALE
+2. D1 export backup + SHA-256 receipt
+3. apply 0009_pairing_supersession.sql
+4. readback: migration=APPLIED
+5. deploy canonical source commit da28e040...
+6. verify Cloudflare Worker version at 100%
+7. verify public health/auth
+8. verify assets=CURRENT
 ```
 
-Never deploy the current Worker before migration 0009.
-The live read-only gate now reads the actual PROD D1 schema and can require migration 0009 to be either `pending` or `applied`; it no longer relies on a hardcoded status string.
-No PROD promotion has been performed by this hardening front.
+Current deployment:
+- Worker version: `ae7c9d6c-1d2a-401b-abf0-489f5d09b869`;
+- rollback version: `fe4abe4e-1ce3-484d-aa11-b9535dd8610d`;
+- migration 0009: **APPLIED**;
+- runtime assets: **CURRENT**;
+- public health/auth: **PASS**.
+
+The HTML runtime validator permits only one known Cloudflare Browser Insights beacon injection when comparing `/`; after removing that single known injected script, the HTML must match source exactly. JavaScript and CSS remain byte-exact checks.
+
+Do not reapply migration 0009 while readback reports `APPLIED`.
+Do not redeploy solely to reproduce this promotion receipt; future deployment should happen only for a reviewed source change.
 
 ## 10. Known non-blocking operational items
 
@@ -270,33 +289,37 @@ Do not:
 - redo the HARA Identity `hara.8` recovery promotion;
 - redo PKCE/account-switch changes already merged;
 - redo OIDC expired-transaction cleanup already merged;
-- expose device tokens or PATs in logs/evidence;
+- expose device tokens, PATs or D1 export download URLs in Git evidence;
 - enable arbitrary shell or generic filesystem access;
 - publish fake ChatGPT/Codex actions;
 - publish Standard/Scale as active plans before their backend contracts exist;
-- start the human browser test while the operator has explicitly deferred it;
-- deploy the Commander Worker implicitly when merging source;
+- reapply migration `0009_pairing_supersession.sql` while PROD readback says `APPLIED`;
+- redeploy the already-promoted Worker only to reproduce evidence;
+- deploy future source implicitly when merging;
 - overwrite Astra's original local dirty UI worktree;
-- merge or revive PR #66 backend; it is superseded by #79;
-- deploy a Worker referencing `superseded_at_utc` before migration 0009.
+- merge or revive PR #66 backend; it is superseded by #79.
 
 ## 12. Exact next gates
 
-Order of execution:
+Order of execution from the current promoted state:
 
-1. Run the consolidated pre-PROD source gate.
-2. If promotion is opened:
-   - apply migration 0009 to PROD D1;
-   - run PROD readback;
-   - deploy current Worker/assets;
-   - verify runtime health and public contract.
-3. Open the human browser homologation gate only after runtime convergence.
-4. Perform login/callback/logout/account-switch tests.
-5. Pair the first real PROD device.
-6. Prove heartbeat, selection, offline behavior, revoke and call expiry.
-7. Prove governed MCP call E2E and quota commit/release.
-8. Only then enable/finalize ChatGPT/Codex customer activation.
-9. Advance billing/commerce only after ordinary auth + device + MCP E2E is stable.
+1. Run the consolidated live-readonly gate and require:
+   - migration 0009 = `APPLIED`;
+   - public assets = `CURRENT`;
+   - Worker version = `ae7c9d6c-1d2a-401b-abf0-489f5d09b869`.
+2. Perform the human browser homologation:
+   - fresh private browser;
+   - login / callback;
+   - authenticated header;
+   - logout;
+   - account switch;
+   - no DEV redirect or stale-login loop.
+3. Pair the first real PROD device.
+4. Prove heartbeat, selected-device online/offline behavior, revoke and call expiry.
+5. Prove governed five-tool MCP call E2E.
+6. Prove quota commit/release with a real call.
+7. Only then enable/finalize ChatGPT/Codex customer activation.
+8. Advance billing/commerce only after ordinary auth + device + MCP E2E is stable.
 
 ## 13. Validation commands
 
@@ -306,23 +329,17 @@ Consolidated pre-PROD gate:
 python3 apps/commander/scripts/validate_preprod_readiness.py
 ```
 
-Include current public Identity and PROD D1 read-only checks before migration 0009:
-
-```bash
-python3 apps/commander/scripts/validate_preprod_readiness.py \
-  --live-readonly \
-  --expect-prod-migration pending \
-  --expect-prod-assets stale
-```
-
-After migration 0009 is intentionally applied, require the schema to be present before Worker promotion:
+Current canonical live-readonly gate after promotion:
 
 ```bash
 python3 apps/commander/scripts/validate_preprod_readiness.py \
   --live-readonly \
   --expect-prod-migration applied \
-  --expect-prod-assets current
+  --expect-prod-assets current \
+  --expect-prod-worker-version ae7c9d6c-1d2a-401b-abf0-489f5d09b869
 ```
+
+This command is the current production convergence proof. If a future reviewed deployment changes the Worker version, update the expected version only after that deployment is intentionally promoted.
 
 Public Identity / Commander login runtime:
 
@@ -359,19 +376,25 @@ Explicit migration-state readback:
 ```bash
 python3 apps/commander/scripts/commander_prod_readback.py \
   --attempts 3 \
-  --expect-migration-0009 pending
+  --expect-migration-0009 applied
 ```
 
-Switch the expectation to `applied` only after the governed migration step has completed.
+Current canonical expectation is `applied`. Do not reapply migration 0009 while this passes.
 
 Public runtime asset drift readback:
 
 ```bash
-python3 apps/commander/scripts/validate_prod_runtime_drift.py --expect-assets stale
+python3 apps/commander/scripts/validate_prod_runtime_drift.py --expect-assets current
 ```
 
-Before promotion, `stale` is the expected state because current PROD has not been promoted to canonical `main`.
-After Worker/assets deployment, rerun with `--expect-assets current` and require exact body hashes for `/`, `/app.js` and `/styles.css`.
+Current canonical expectation is `current`. The validator allows only the known Cloudflare Browser Insights beacon injection on HTML before normalized comparison; JavaScript and CSS remain byte-exact.
+
+Worker deployment readback:
+
+```bash
+python3 apps/commander/scripts/commander_prod_deployment_readback.py \
+  --expect-version ae7c9d6c-1d2a-401b-abf0-489f5d09b869
+```
 
 JavaScript syntax:
 
@@ -404,7 +427,10 @@ git diff --check
 - PR #79 — reconciled Astra UI snapshot — **MERGED**
 - PR #81 — revoked-device claim TOCTOU hardening — **MERGED**
 - PR #82 — invite identity-claim serialization — **MERGED**
+- PR #83 — latest race proofs added to consolidated readiness — **MERGED**
+- PR #84 — migration 0009 state-aware PROD readback — **MERGED**
+- PR #85 — public runtime drift gate — **MERGED**
 - hara-platform PR #1158 — quota finalization compensation source — **MERGED; runtime E2E pending**
-- issue #65 — Commander pre-PROD coordination / residual decisions — **OPEN**
+- issue #65 — Commander post-promotion coordination / residual homologation — **OPEN**
 
 Continue from current `main`, this guide and the newest issue #65 comments. Do not use PR #66 as a backend source.

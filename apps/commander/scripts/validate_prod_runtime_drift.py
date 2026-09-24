@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 from pathlib import Path
 from urllib.request import Request, urlopen
 
@@ -31,6 +32,20 @@ def fetch_json(path: str) -> dict:
         raise RuntimeError(f"RUNTIME_JSON_INVALID:{path}:{status}:{content_type}")
     return json.loads(body)
 
+CF_BEACON_RE = re.compile(
+    rb'\n<script type="module" src="https://static\.cloudflareinsights\.com/'
+    rb'beacon\.min\.js/[^"]+" integrity="[^"]+" data-cf-beacon=\'[^\']+\''
+    rb' crossorigin="anonymous"></script>'
+)
+
+def normalize_asset(path: str, body: bytes) -> tuple[bytes, bool]:
+    if path != "/":
+        return body, False
+    normalized, count = CF_BEACON_RE.subn(b"", body)
+    if count > 1:
+        raise RuntimeError("RUNTIME_HTML_MULTIPLE_CF_BEACONS")
+    return normalized, count == 1
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -46,12 +61,15 @@ def main() -> int:
         source = source_path.read_bytes()
         if status != 200:
             raise RuntimeError(f"RUNTIME_ASSET_HTTP:{path}:{status}")
+        normalized_live, cf_beacon_removed = normalize_asset(path, live)
         rows.append({
             "path": path,
             "content_type": content_type,
             "source_sha256": sha256(source),
             "live_sha256": sha256(live),
-            "current": source == live,
+            "normalized_live_sha256": sha256(normalized_live),
+            "cloudflare_beacon_removed": cf_beacon_removed,
+            "current": source == normalized_live,
         })
 
     current_count = sum(1 for row in rows if row["current"])
