@@ -11,8 +11,8 @@ Full historical authority:
 ## 1. Current authority
 
 Repository:
-- source authority incorporated by this kit through PR #132: `f9354b117a5c54c54207ce4a4155ac449b7db653`
-- latest Commander source merge: PR #132 — portal mutation Origin fail-closed hardening
+- source authority incorporated by this kit through PR #134: `7faaa19e32fb3d892fc70a6212f9303821885619`
+- latest Commander source merge: PR #134 — malformed auth-cookie fail-closed hardening
 - open Commander PRs observed at kit creation: **0**
 
 PROD:
@@ -27,9 +27,9 @@ PROD:
 - Identity live-readonly: **PASS**
 
 DEV:
-- Worker `hara-commander-dev-v2`: `406247fc-9c41-4088-8251-83c0c249ab93`
-- rollback: `5a1185d7-98ac-4d47-87fd-84cf33bbc9da`
-- deployed source: `f9354b117a5c54c54207ce4a4155ac449b7db653`
+- Worker `hara-commander-dev-v2`: `c2acc69c-2773-4c4b-b20a-fbea94b48274`
+- rollback: `406247fc-9c41-4088-8251-83c0c249ab93`
+- deployed source: `7faaa19e32fb3d892fc70a6212f9303821885619`
 - health: **DEV / REMOTE_DEV / HARA Identity configured**
 - bootstrap public assets: byte-equal to canonical source in latest readback
 - versioned DEV config: `apps/commander/wrangler.dev.jsonc`
@@ -59,6 +59,8 @@ Closed in source/runtime:
 - same-origin portal mutation guard
 - missing `Origin` on portal mutations fails closed with `403 PORTAL_ORIGIN_DENIED` in DEV
 - explicit cross-origin portal mutations remain denied with 403
+- malformed percent-encoded session cookies fail closed as unauthenticated instead of surfacing 500
+- logout tolerates malformed session cookies and still clears the browser cookie
 - PROD alternate Worker/version URL surface disabled
 
 Still human-only:
@@ -249,7 +251,7 @@ Latest structural PROD posture:
 - retention-eligible portal sessions = 0
 - device count remains zero until first real pairing
 
-## 7. Recent delivery map — #91 to #132
+## 7. Recent delivery map — #91 to #134
 
 Key progression after the original promotion/UI cleanup:
 
@@ -281,6 +283,7 @@ Key progression after the original promotion/UI cleanup:
 - #128 — current PROD quota-TTL rollout receipt
 - #129 — versioned DEV runtime config + DEV-only binding/readback authority — DEV promoted
 - #132 — portal mutation guard now requires an exact `Origin`; DEV promoted to Worker `406247fc-9c41-4088-8251-83c0c249ab93`, missing-Origin logout probe now returns 403
+- #134 — malformed session-cookie decoding no longer raises 500; DEV promoted to Worker `c2acc69c-2773-4c4b-b20a-fbea94b48274`; live malformed-cookie probes return 401 on session read and 204 + cookie clear on logout
 
 For the earlier #64–#90 history, use the canonical successor guide.
 
