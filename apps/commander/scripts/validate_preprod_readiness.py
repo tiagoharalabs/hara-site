@@ -71,6 +71,7 @@ def main():
         ("COMMANDER_PREPROD_CLAIM_REVOKE_RACE", "validate_claim_revoke_race.py"),
         ("COMMANDER_PREPROD_INVITE_CLAIM_RACE", "validate_invite_claim_race.py"),
         ("COMMANDER_PREPROD_E2E_HARNESS", "validate_e2e_harness.py"),
+        ("COMMANDER_PREPROD_FIRST_DEVICE_PREFLIGHT", "validate_first_device_preflight.py"),
     )
     for label, script in checks:
         run(label, [
