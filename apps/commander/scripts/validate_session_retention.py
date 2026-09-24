@@ -4,12 +4,18 @@ import sqlite3
 
 ROOT = Path(__file__).resolve().parents[3]
 AUTH = (ROOT / "apps/commander/src/auth.js").read_text(encoding="utf-8")
+READBACK = (ROOT / "apps/commander/scripts/commander_prod_readback.py").read_text(encoding="utf-8")
 MIG = ROOT / "apps/commander/migrations"
 
 assert "SESSION_RETENTION_SECONDS = 30 * 24 * 60 * 60" in AUTH
 assert "SESSION_RETENTION_BATCH = 100" in AUTH
 assert "cleanupTerminalPortalSessions" in AUTH
 assert ".run().catch(() => null)" in AUTH
+assert "SESSION_RETENTION_DAYS = 30" in READBACK
+assert "retention_eligible_expired_sessions" in READBACK
+assert "retention_eligible_revoked_sessions" in READBACK
+assert "oldest_expired_age_days" in READBACK
+assert "COMMANDER_PROD_SESSION_RETENTION_ELIGIBLE=" in READBACK
 
 db = sqlite3.connect(":memory:")
 db.executescript((MIG / "0001_product.sql").read_text(encoding="utf-8"))

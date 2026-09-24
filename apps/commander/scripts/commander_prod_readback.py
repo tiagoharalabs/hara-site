@@ -12,6 +12,7 @@ APP = Path(__file__).resolve().parents[1]
 REPO = APP.parents[1]
 CONFIG = APP / "wrangler.jsonc"
 DATABASE = "hara-commander-product-prod"
+SESSION_RETENTION_DAYS = 30
 TRANSIENT_MARKERS = (
     "code: 7403",
     "[code: 7403]",
@@ -39,8 +40,20 @@ QUERIES = {
       (SELECT COUNT(*) FROM entitlements e LEFT JOIN plans p ON p.plan_code=e.plan_code WHERE p.plan_code IS NULL) AS entitlements_orphan_plan,
       (SELECT COUNT(*) FROM identity_bindings b LEFT JOIN users u ON u.subject_id=b.subject_id WHERE u.subject_id IS NULL) AS bindings_orphan_user,
       (SELECT COUNT(*) FROM commander_device_selections s LEFT JOIN commander_devices d ON d.device_id=s.device_id WHERE d.device_id IS NULL) AS selections_orphan_device;""",
-    "session_hygiene": """SELECT
-      (SELECT COUNT(*) FROM portal_sessions WHERE revoked_at_utc IS NULL AND julianday(expires_at_utc) <= julianday('now')) AS expired_unrevoked_sessions;""",
+    "session_hygiene": f"""SELECT
+      (SELECT COUNT(*) FROM portal_sessions
+        WHERE revoked_at_utc IS NULL
+          AND julianday(expires_at_utc) <= julianday('now')) AS expired_unrevoked_sessions,
+      (SELECT COUNT(*) FROM portal_sessions
+        WHERE revoked_at_utc IS NULL
+          AND julianday(expires_at_utc) <= julianday('now', '-{SESSION_RETENTION_DAYS} days')) AS retention_eligible_expired_sessions,
+      (SELECT COUNT(*) FROM portal_sessions
+        WHERE revoked_at_utc IS NOT NULL
+          AND julianday(revoked_at_utc) <= julianday('now', '-{SESSION_RETENTION_DAYS} days')) AS retention_eligible_revoked_sessions,
+      (SELECT ROUND(MAX(julianday('now') - julianday(expires_at_utc)), 2)
+         FROM portal_sessions
+        WHERE revoked_at_utc IS NULL
+          AND julianday(expires_at_utc) <= julianday('now')) AS oldest_expired_age_days;""",
     "migration_0009": """SELECT
       COUNT(*) AS superseded_at_utc_columns
       FROM pragma_table_info('device_pairing_tokens')
@@ -92,7 +105,12 @@ def main() -> int:
     if args.attempts < 1 or args.attempts > 5:
         raise SystemExit("--attempts must be between 1 and 5")
 
-    report = {"state": "PASS", "database": DATABASE, "queries": {}}
+    report = {
+        "state": "PASS",
+        "database": DATABASE,
+        "session_retention_days": SESSION_RETENTION_DAYS,
+        "queries": {},
+    }
     for name, sql in QUERIES.items():
         payload, attempt = execute(sql, wrangler_version=args.wrangler_version, attempts=args.attempts)
         report["queries"][name] = {"attempt": attempt, "row": first_row(payload)}
@@ -116,10 +134,23 @@ def main() -> int:
         )
     report["migration_0009_state"] = migration_state
 
+    session_hygiene = report["queries"]["session_hygiene"]["row"]
+    retention_eligible = (
+        int(session_hygiene.get("retention_eligible_expired_sessions", 0) or 0)
+        + int(session_hygiene.get("retention_eligible_revoked_sessions", 0) or 0)
+    )
+    oldest_expired_age = session_hygiene.get("oldest_expired_age_days")
+
     print(json.dumps(report, indent=2, sort_keys=True))
     print("COMMANDER_PROD_D1_READBACK=PASS")
     print("COMMANDER_PROD_D1_TRANSIENT_RETRY=READY")
     print(f"COMMANDER_PROD_D1_MIGRATION_0009={migration_state}")
+    print(f"COMMANDER_PROD_SESSION_RETENTION_WINDOW_DAYS={SESSION_RETENTION_DAYS}")
+    print(f"COMMANDER_PROD_SESSION_RETENTION_ELIGIBLE={retention_eligible}")
+    print(
+        "COMMANDER_PROD_SESSION_OLDEST_EXPIRED_AGE_DAYS="
+        + ("NONE" if oldest_expired_age is None else str(oldest_expired_age))
+    )
     return 0
 
 
