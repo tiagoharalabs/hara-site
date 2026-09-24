@@ -1,8 +1,8 @@
 # H.A.R.A. Commander — successor guide — 2026-09-23
 
-Status: **LOGIN RUNTIME CONVERGED / PRE-TEST HARDENING IN PROGRESS / HUMAN RETEST DEFERRED / DEVICE E2E NOT YET OPEN**
+Status: **SOURCE PRE-PROD READY / PROD NOT PROMOTED / HUMAN HOMOLOGATION DEFERRED / DEVICE E2E NOT YET OPEN**
 
-This is the canonical successor guide for the Commander front as of 2026-09-23 after the Login V2 runtime convergence work and the pre-test usability/security sweep.
+This is the canonical successor guide for the Commander front, created on 2026-09-23 and updated through 2026-09-24 after Login V2 convergence and the full deterministic pre-PROD hardening sweep.
 
 ## 1. Product boundary
 
@@ -95,46 +95,39 @@ fix(identity): prove Login V2 runtime convergence (#64)
 Do **not** reapply the backend redirect policy unless backend readback proves drift.
 Do **not** edit ZITADEL projections or event-store rows directly.
 
-## 4. Current pre-test hardening
+## 4. Current pre-test hardening — CLOSED IN SOURCE
 
-Active PR:
+The deterministic pre-PROD hardening sweep is consolidated in canonical `main`.
 
-- PR #66 — `fix(commander): harden pretest usability and safety`
-- branch: `fix/commander-ux-pretest-20260923`
-- published head observed during this sweep: `9f53eb0dabf44a8ad3a290b1a0093eb97c1f314f`
-- GitHub Actions `HARA Site Main Provenance Guard`: **SUCCESS** for that published head.
+Key merged closures:
+- #68 runtime reliability: OIDC failure-cookie cleanup, best-effort/coalesced session touch,
+  Agent diagnostics, no idle-poll presence writes, Linux/Windows secret/error hardening;
+- #69 device-call TTL bounded to 50s;
+- #70 OIDC return-target open redirect blocked;
+- #71 REVIEWER least privilege;
+- #72 invalid client input mapped to 400 and alternate Worker surfaces explicitly disabled;
+- #73 pairing-token supersession + migration `0009_pairing_supersession.sql`;
+- #75 governed portal-session retention;
+- #76 device lifecycle race/idempotency hardening;
+- #77 canonical PROD portal schema + retryable pairing-create error;
+- #78 same-origin guard for portal mutations;
+- #79 latest Astra UI snapshot reconciled onto hardened `main`.
 
-The Astra front is actively working on this branch. During the sweep, local uncommitted work was observed in:
-- `apps/commander/public/app.js`
-- `apps/commander/public/index.html`
-- `apps/commander/public/styles.css`
-- `apps/commander/scripts/validate_prod_static.py`
+PR #66 is **CLOSED / SUPERSEDED**. Its UI work was preserved by #79, while its stale backend
+was intentionally not merged.
 
-Do not overwrite or reset those files while Astra is active.
+Current source gate:
+```text
+COMMANDER_SOURCE_PREPROD_READY=PASS
+COMMANDER_IDENTITY_LIVE_READONLY=PASS
+COMMANDER_PROD_D1_LIVE_READONLY=PASS
+COMMANDER_PROD_D1_MIGRATION_0009=PENDING_PROMOTION_GATE
+COMMANDER_PROD_WORKER_DEPLOYMENT=PENDING_PROMOTION_GATE
+COMMANDER_HUMAN_HOMOLOGATION=PENDING_OPERATOR_GATE
+COMMANDER_FIRST_DEVICE_E2E=PENDING_HOMOLOGATION
+```
 
-PR #66 already covers or is actively covering:
-- authenticated-session gating for protected app routes;
-- PROD `?api=` override blocked outside localhost;
-- QA `?scenario=` override blocked outside localhost;
-- auth-error URL/view/banner alignment;
-- honest logout failure behavior;
-- removal of fake/demo production actions;
-- Trial visible quota aligned to live PROD D1: **100 executions/month**;
-- Standard/Scale no longer represented as active commercial PROD plans;
-- selected-device UX: none / online / offline;
-- pairing UX converted to explicit 1 -> 2 -> 3 flow;
-- visible pairing expiry and retry UX;
-- confirmation before device revocation;
-- portal revoke aligned with Agent self-revoke by cancelling pending/executing calls;
-- same-origin enforcement on portal mutation routes;
-- mobile Support access;
-- keyboard focus treatment;
-- customer-facing Portuguese role labels and page titles;
-- removal of dead Google Font dependency blocked by CSP;
-- activity/history no longer falsely represented as available when current portal API exposes aggregate usage only;
-- legal links and revocation-confirmation UX were being refined locally during the latest sweep.
-
-Source merge alone does **not** publish the Commander Worker. Deployment must remain explicit.
+Source merge alone does **not** publish the Commander Worker. Deployment remains explicit.
 
 ## 5. Live product/data facts confirmed
 
@@ -166,7 +159,8 @@ The reviewed pairing model is structurally sound:
 - pairing token is generated randomly;
 - only its SHA-256 hash is stored in D1;
 - pairing is one-time;
-- expiry is checked;
+- a new pairing token supersedes any prior current token for the same tenant/subject;
+- expiry and supersession are checked;
 - device credential is random and only its hash is stored in D1;
 - device selection is tenant-bound;
 - revocation marks the device REVOKED;
@@ -177,245 +171,88 @@ The reviewed pairing model is structurally sound:
 
 Do not weaken these properties.
 
-## 7. Astra coordination authority
+## 7. Closed architecture / security gates
 
-Canonical coordination issue:
+Canonical coordination remains GitHub issue #65.
 
-- GitHub issue #65 — `[ASTRA REVIEW][COMMANDER] Pre-test UX/runtime decisions before browser homologation`
+Closed:
+- PROD portal schema: `hara.commander-portal-dashboard.v1` via #77;
+- OIDC callback terminal failure cleanup via #68;
+- valid-session telemetry no longer gates auth via #68;
+- silent Agent outer-loop failures removed / support diagnostics added via #68;
+- idle call polling no longer mutates presence via #68;
+- REVIEWER tenant-wide destructive authority removed via #71;
+- pairing-token supersession enforced via #73;
+- portal-session retention defined and bounded via #75;
+- selection/revoke/enqueue/complete lifecycle races closed via #76;
+- cross-origin browser portal mutations denied via #78;
+- Astra pre-test UI hardening reconciled via #79.
 
-Use #65 for architecture/contract decisions that should not be silently made by a parallel front.
+Do not reopen these as unresolved unless a current runtime/source readback proves regression.
 
-### Already recorded decisions/questions before this sweep
+## 8. Remaining pre-PROD gates
 
-#### A. PROD dashboard schema still says dev
+The remaining work is no longer basic source hardening:
 
-`/api/portal/dashboard` currently exposes:
+1. **Promotion order / runtime convergence**
+   - apply PROD D1 migration `0009_pairing_supersession.sql`;
+   - only after migration success, deploy the current Commander Worker/assets;
+   - verify the deployed runtime against the canonical source.
+
+2. **Human auth homologation**
+   - fresh private browser;
+   - login / callback;
+   - authenticated header;
+   - logout;
+   - account switch;
+   - no DEV redirect / stale loop.
+
+3. **First real device E2E**
+   - first PROD pairing;
+   - Agent heartbeat;
+   - selected-device online/offline behavior;
+   - governed five-tool call path;
+   - revoke and expiry behavior.
+
+4. **Quota runtime proof**
+   - hara-platform PR #1158 closed the source compensation gap;
+   - runtime promotion and real commit/release E2E still require proof.
+
+5. **Final client activation contract**
+   - keep ChatGPT/Codex actions disabled / `Em homologação` until ordinary E2E passes;
+   - then define the final OAuth/configuration customer flow.
+
+6. **Installer bootstrap supply chain**
+   - downloaded Agent artifacts are hash-verified;
+   - bootstrap scripts still trust the Commander origin and remain a future maturity hardening target.
+
+7. **Offline-selection semantics**
+   - current contract intentionally preserves selection of an ACTIVE but offline device;
+   - UI renders it as Offline and invocation refuses an offline device;
+   - revisit only if product semantics change.
+
+## 9. Exact production promotion contract
+
+Current source references `device_pairing_tokens.superseded_at_utc`.
+
+Therefore deployment ordering is mandatory:
 
 ```text
-hara.commander-portal-dashboard-dev.v1
+1. PROD D1 migration 0009_pairing_supersession.sql
+2. verify migration/readback
+3. deploy current Commander Worker + assets
+4. verify health/static/runtime contract
+5. human browser homologation
+6. first real device pairing
+7. governed device-call + quota E2E
 ```
 
-Decision required:
-- rename to `hara.commander-portal-dashboard.v1`; or
-- carry an explicit compatibility/version transition.
-
-Do not silently mutate a versioned public contract.
-
-#### B. Installer bootstrap supply-chain posture
-
-Current bootstrap remains trust-on-first-web-response:
-
-Linux:
-```text
-curl -fsSL https://commander.haralabs.com.br/install/linux.sh | bash
-```
-
-Windows:
-```text
-irm https://commander.haralabs.com.br/install/windows.ps1 | iex
-```
-
-The downloaded Agent itself is later verified through release manifest + SHA256, but the bootstrap script is trusted directly from the origin.
-
-Product-maturity decision still needed:
-- signed bootstrap;
-- pinned release artifact/hash;
-- packaged installer;
-- or another canonical mechanism.
-
-#### C. Persistent offline selected-device semantics
-
-Current backend permits an ACTIVE device to remain selected while offline.
-
-Current UX direction:
-- no selection -> Aguardando;
-- selected online -> Pronto;
-- selected offline -> Offline.
-
-Astra should confirm whether persistent offline selection is canonical.
-
-## 8. New findings from this parallel sweep
-
-The following were added to issue #65 for Astra.
-
-### D. OIDC callback failure leaves transaction cookie residue — LOW/MEDIUM
-
-On provider cancel/error and several callback-validation failures, `finishLogin()` throws and the global callback handler redirects to `/?auth_error=...#login`.
-
-The transaction cookie `hara_commander_oidc_tx` is not cleared on those terminal failure paths and can remain for up to 10 minutes.
-
-Recommended fix:
-- clear the OIDC transaction cookie on every terminal callback failure;
-- preserve sanitized auth-error redirect;
-- preserve replay/state validation.
-
-Issue comment: `5805482038`.
-
-### E. Valid portal session depends on non-essential D1 write — MEDIUM
-
-`resolvePortalSession()` correctly validates:
-- session exists;
-- not revoked;
-- not expired;
-- user ACTIVE;
-- tenant ACTIVE.
-
-After that, every successful session resolution synchronously executes:
-
-```sql
-UPDATE portal_sessions SET last_seen_at_utc = ? WHERE session_hash = ?
-```
-
-A transient D1 write failure can therefore convert a valid authenticated read into HTTP 500 even though `last_seen_at_utc` is not an authorization predicate.
-
-Recommended direction:
-- make the touch bounded/coalesced;
-- or make it best-effort after successful authorization;
-- keep all expiry/revocation/account checks fail-closed.
-
-Issue comment: `5805482038`.
-
-### F. Agent outer-loop errors are silently swallowed — HIGH usability/operability
-
-Linux Agent:
-
-```python
-except Exception:
-    pass
-```
-
-Windows Agent:
-
-```powershell
-catch {
-}
-```
-
-DNS, TLS, token, API or configuration failures can leave the service/task apparently running with no operator-visible diagnosis.
-
-Recommended pre-homologation minimum:
-- bounded/rate-limited local error log;
-- timestamp + sanitized error class/code only;
-- no token or sensitive payload leakage;
-- Support/Doctor surfaces latest runtime error;
-- Support/Doctor exposes last successful heartbeat;
-- avoid per-poll log spam.
-
-Issue comment: `5805482038`.
-
-### G. HIGH — call polling creates about 43,200 D1 presence writes/day/device
-
-Both Agents currently poll `/api/device/calls/next` every 2 seconds.
-
-There is already an explicit heartbeat every 30 seconds.
-
-However `claimNextDeviceCall()` currently executes:
-
-```sql
-UPDATE commander_devices SET last_seen_at_utc = ?
-```
-
-on every poll, including the 204/no-call path.
-
-Idle cost:
-- ~30 polls/minute;
-- ~43,200 presence writes/day/device;
-- plus the actual heartbeat writes.
-
-Recommended fix before broader customer testing:
-1. remove presence mutation from empty call polling;
-2. treat explicit heartbeat as canonical presence;
-3. optionally refresh on actual call claim only;
-4. consider bounded 5-10s polling with jitter until a proper long-poll/relay mechanism exists;
-5. add a proof that no-call polling does not mutate presence.
-
-Issue comment: `5805490671`.
-
-### H. REVIEWER authorization — CLOSED
-
-PR #71 was rebased onto current `main`, revalidated and merged.
-
-Canonical behavior:
-- `OWNER` / `ADMIN`: may revoke any ACTIVE device in their tenant;
-- `REVIEWER` / `MEMBER`: may revoke only devices they enrolled themselves.
-
-Validation:
-- `COMMANDER_REVIEWER_TENANT_WIDE_REVOKE=DENIED`
-- `COMMANDER_NON_ADMIN_DEVICE_OWNERSHIP_GUARD=PASS`
-
-Canonical merge commit: `dd1752db03290a3650014ad4f0acd098cadfb98d`.
-Do not restore REVIEWER as an admin-equivalent destructive role.
-
-### I. Portal-session retention is undefined
-
-OIDC transactions have bounded expired-row cleanup.
-`portal_sessions` currently have no equivalent cleanup path.
-
-PROD already contains one expired/unrevoked historical session row.
-
-No deletion was executed by this front because retention must be governed.
-
-Decision required:
-- retention window for expired/revoked portal sessions;
-- cleanup owner/mechanism:
-  - bounded login-time hygiene;
-  - scheduled maintenance;
-  - or another governed retention job.
-
-Issue comment: `5805502910`.
-
-## 9. Other unresolved architecture gates already in #65
-
-These remain open unless Astra records an explicit decision.
-
-### Pairing-token supersession — CLOSED IN SOURCE
-
-PR #73 enforces one current unconsumed pairing token per tenant/subject.
-
-Implementation:
-- migration `0009_pairing_supersession.sql` adds `superseded_at_utc`;
-- historical duplicate-current tokens are normalized, preserving the newest current token;
-- a partial unique index prevents more than one unconsumed/unsuperseded token per tenant/subject;
-- creating a new token supersedes the prior current token in the same D1 batch as the new insert;
-- enrollment rejects superseded tokens in both insert and consume predicates.
-
-Validation:
-- `COMMANDER_PAIRING_HISTORICAL_NORMALIZATION=PASS`
-- `COMMANDER_PAIRING_SINGLE_CURRENT_TOKEN=PASS`
-- `COMMANDER_PAIRING_SUPERSEDED_REPLAY=DENIED`
-- `COMMANDER_PAIRING_SUPERSESSION_ATOMIC=PASS`
-
-Canonical merge commit: `d21d5a52e5e4999b06df9e54c57ae3cd4631be2f`.
-
-Important deployment ordering: apply the PROD D1 migration before promoting a Worker version that references `superseded_at_utc`.
-
-### Quota release after CANCELLED / EXPIRED device calls
-
-Revocation now cancels PENDING/EXECUTING calls, but the end-to-end MCP caller/orchestrator still needs proof that terminal `CANCELLED` / `EXPIRED` states reliably cause `/api/internal/mcp/release` for previously RESERVED usage.
-
-Do not assume quota is released until this is traced/proven.
-
-### ChatGPT / Codex activation contract
-
-Production UI should remain honest / disabled / `Em homologação` until first real production pairing and governed client E2E are proven.
-
-Astra should define the final customer action:
-- OAuth launch;
-- client configuration instructions;
-- or another canonical connection flow.
-
-### Product claims
-
-Before any customer-facing activation, revalidate:
-- read-only V1 wording;
-- Trial wording;
-- future Standard/Scale wording;
-- visible grant names;
-- any entitlement/capacity claim.
+Never deploy the current Worker before migration 0009.
+No PROD promotion has been performed by this hardening front.
 
 ## 10. Known non-blocking operational items
 
-These should not be confused with the current login/runtime blocker:
+These are non-blocking operational follow-ups and are not current Commander source blockers:
 - Identity SMTP TLS alignment still reports the historical 587/STARTTLS fallback pending state;
 - Login V2 logs previously showed a custom-translation fetch warning; no user-visible blocker was proven from it;
 - device count remains zero until first production pairing.
@@ -434,40 +271,41 @@ Do not:
 - publish Standard/Scale as active plans before their backend contracts exist;
 - start the human browser test while the operator has explicitly deferred it;
 - deploy the Commander Worker implicitly when merging source;
-- overwrite Astra's active dirty UI files.
+- overwrite Astra's original local dirty UI worktree;
+- merge or revive PR #66 backend; it is superseded by #79;
+- deploy a Worker referencing `superseded_at_utc` before migration 0009.
 
 ## 12. Exact next gates
 
 Order of execution:
 
-1. Astra reviews/absorbs the high-priority #65 findings, especially:
-   - G — D1 write amplification from 2s polling;
-   - F — silent Agent runtime failures.
-2. Resolve or explicitly defer the remaining architecture decisions that affect the browser/device homologation contract:
-   - quota release runtime/E2E proof for CANCELLED/EXPIRED;
-   - dashboard schema naming;
-   - offline selection semantics;
-   - final ChatGPT/Codex activation contract.
-3. Complete PR #66 and CI.
-4. Merge PR #66 without overwriting Astra's active work.
-5. Explicitly deploy the reviewed Commander Worker.
-6. Only then perform the human browser test:
-   - fresh private browser;
-   - login with HARA Identity;
-   - return to Commander PROD;
-   - authenticated user visible in header;
-   - no stale unauthenticated flash;
-   - logout;
-   - `Usar outra conta`;
-   - no DEV redirect;
-   - no stale-login loop.
-7. After login gate passes, perform first real production device pairing on `nucleo-a`.
-8. Prove selected-device online/offline semantics.
-9. Prove governed device-call E2E.
-10. Prove quota commit/release behavior.
-11. Only after ordinary auth + device + MCP E2E is stable should billing/commerce be advanced.
+1. Run the consolidated pre-PROD source gate.
+2. If promotion is opened:
+   - apply migration 0009 to PROD D1;
+   - run PROD readback;
+   - deploy current Worker/assets;
+   - verify runtime health and public contract.
+3. Open the human browser homologation gate only after runtime convergence.
+4. Perform login/callback/logout/account-switch tests.
+5. Pair the first real PROD device.
+6. Prove heartbeat, selection, offline behavior, revoke and call expiry.
+7. Prove governed MCP call E2E and quota commit/release.
+8. Only then enable/finalize ChatGPT/Codex customer activation.
+9. Advance billing/commerce only after ordinary auth + device + MCP E2E is stable.
 
 ## 13. Validation commands
+
+Consolidated pre-PROD gate:
+
+```bash
+python3 apps/commander/scripts/validate_preprod_readiness.py
+```
+
+Include current public Identity and PROD D1 read-only checks:
+
+```bash
+python3 apps/commander/scripts/validate_preprod_readiness.py --live-readonly
+```
 
 Public Identity / Commander login runtime:
 
@@ -516,10 +354,19 @@ git diff --check
 ## 14. Current coordination references
 
 - PR #64 — Login V2 runtime redirect convergence — **MERGED**
-- PR #66 — Commander pre-test usability/safety hardening — **OPEN / ASTRA ACTIVE**
+- PR #66 — old pre-test UX/backend branch — **CLOSED / SUPERSEDED**
+- PR #68 — runtime reliability / Agent hardening — **MERGED**
+- PR #69 — bounded device-call lifecycle — **MERGED**
+- PR #70 — unsafe auth return-target fix — **MERGED**
 - PR #71 — REVIEWER least privilege — **MERGED**
-- PR #73 — pairing token supersession — **MERGED**
-- issue #65 — Astra architectural review / pre-test decisions — **OPEN**
-- this file — canonical successor guide for continuation after the 2026-09-23 sweep
+- PR #72 — PROD surface / input status hardening — **MERGED**
+- PR #73 — pairing-token supersession — **MERGED**
+- PR #75 — portal-session retention — **MERGED**
+- PR #76 — device lifecycle races — **MERGED**
+- PR #77 — production contract cleanup — **MERGED**
+- PR #78 — portal mutation same-origin guard — **MERGED**
+- PR #79 — reconciled Astra UI snapshot — **MERGED**
+- hara-platform PR #1158 — quota finalization compensation source — **MERGED; runtime E2E pending**
+- issue #65 — Commander pre-PROD coordination / residual decisions — **OPEN**
 
-When continuing this front, read this guide, then read the newest comments on issue #65 and the latest head/diff of PR #66 before changing Commander source.
+Continue from current `main`, this guide and the newest issue #65 comments. Do not use PR #66 as a backend source.
