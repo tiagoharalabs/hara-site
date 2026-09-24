@@ -272,11 +272,14 @@ $SecurePairing.Dispose()
 if (-not $Enroll.device_id -or -not $Enroll.device_token) { throw "DEVICE_ENROLLMENT_RESPONSE_INVALID" }
 
 $InstallEnrolled = $true
+$EnrollDeviceId = [string]$Enroll.device_id
 $DeviceTokenForRollback = [string]$Enroll.device_token
+$Enroll.device_token = $null
+$Enroll = $null
 try {
   New-Item -ItemType Directory -Path $Root -Force | Out-Null
-  $EncryptedToken = ConvertTo-SecureString $Enroll.device_token -AsPlainText -Force | ConvertFrom-SecureString
-  $ConfigObject = @{ base_url=$BaseUrl; device_id=[string]$Enroll.device_id; encrypted_device_token=$EncryptedToken; architecture=$Architecture; agent_version="0.3.6" }
+  $EncryptedToken = ConvertTo-SecureString $DeviceTokenForRollback -AsPlainText -Force | ConvertFrom-SecureString
+  $ConfigObject = @{ base_url=$BaseUrl; device_id=$EnrollDeviceId; encrypted_device_token=$EncryptedToken; architecture=$Architecture; agent_version="0.3.6" }
   $ConfigObject | ConvertTo-Json | Set-Content -Path $Config -Encoding UTF8
 
   $Identity = [Security.Principal.WindowsIdentity]::GetCurrent().Name
@@ -316,7 +319,7 @@ try {
   $DeviceTokenForRollback = $null
   Write-Host "HARA_COMMANDER_DEVICE_ENROLLMENT=PASS"
   Write-Host "HARA_COMMANDER_AGENT_TASK=REGISTERED"
-  Write-Host "DEVICE_ID=$($Enroll.device_id)"
+  Write-Host "DEVICE_ID=$EnrollDeviceId"
   Write-Host "DEVICE_TOKEN_EXPOSED=FALSE"
 } catch {
   $OriginalError = $_
@@ -325,7 +328,7 @@ try {
     try {
       $headers = @{ Accept="application/json"; Authorization=("Bearer " + $DeviceTokenForRollback) }
       $result = Invoke-RestMethod -Uri "$BaseUrl/api/device/revoke-self" -Method Post -ContentType "application/json" -Headers $headers -Body "{}" -TimeoutSec 15 -MaximumRedirection 0
-      if ($result.ok -and [string]$result.state -eq "REVOKED" -and [string]$result.device_id -eq [string]$Enroll.device_id) { $RevokeState = "PASS" }
+      if ($result.ok -and [string]$result.state -eq "REVOKED" -and [string]$result.device_id -eq $EnrollDeviceId) { $RevokeState = "PASS" }
     } catch { $RevokeState = "PENDING" }
     Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath $Root -Recurse -Force -ErrorAction SilentlyContinue
