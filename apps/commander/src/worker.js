@@ -938,7 +938,7 @@ async function revokeDeviceSelf(env, request) {
 async function revokePortalDevice(env, session, body) {
   const deviceId = cleanId(body.device_id, 180);
   const revokedAt = nowIso();
-  const privileged = ["OWNER", "ADMIN", "REVIEWER"].includes(String(session.role));
+  const privileged = ["OWNER", "ADMIN"].includes(String(session.role));
   const statement = privileged
     ? env.PRODUCT_DB.prepare(
         `UPDATE commander_devices

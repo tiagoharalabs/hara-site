@@ -112,6 +112,10 @@ enqueue = WORKER.split("async function enqueueDeviceCall", 1)[1].split("async fu
 claim = WORKER.split("async function claimNextDeviceCall", 1)[1].split("async function completeDeviceCall", 1)[0]
 status = WORKER.split("async function deviceCallStatus", 1)[1].split("export default", 1)[0]
 heartbeat = WORKER.split("async function heartbeatDevice", 1)[1].split("async function revokeDeviceSelf", 1)[0]
+revoke = WORKER.split("async function revokePortalDevice", 1)[1].split("async function enqueueDeviceCall", 1)[0]
+assert 'const privileged = ["OWNER", "ADMIN"].includes(String(session.role));' in revoke, "DEVICE_REVOKE_PRIVILEGE_MATRIX_INVALID"
+assert '["OWNER", "ADMIN", "REVIEWER"]' not in revoke, "REVIEWER_TENANT_WIDE_REVOKE_PRESENT"
+assert "enrolled_by_subject_id = ?" in revoke, "NON_ADMIN_DEVICE_OWNERSHIP_GUARD_MISSING"
 assert "UPDATE commander_devices SET last_seen_at_utc" not in claim, "CALL_POLL_PRESENCE_WRITE_PRESENT"
 assert "SET state = 'EXPIRED'" not in claim, "CALL_POLL_EXPIRY_WRITE_PRESENT"
 assert "DEVICE_CALL_TTL_SECONDS = 50" in WORKER and "nowIso(DEVICE_CALL_TTL_SECONDS)" in enqueue, "DEVICE_CALL_TTL_NOT_BOUNDED"
@@ -125,6 +129,8 @@ print("COMMANDER_CALL_POLL_PRESENCE_WRITE=ABSENT")
 print("COMMANDER_CALL_POLL_EXPIRY_WRITE=ABSENT")
 print("COMMANDER_DEVICE_CALL_TTL_BOUNDED=PASS")
 print("COMMANDER_DEVICE_STATUS_CONDITIONAL_EXPIRY_WRITE=PASS")
+print("COMMANDER_REVIEWER_TENANT_WIDE_REVOKE=DENIED")
+print("COMMANDER_NON_ADMIN_DEVICE_OWNERSHIP_GUARD=PASS")
 print("COMMANDER_OIDC_FAILURE_COOKIE_CLEANUP=READY")
 print("COMMANDER_SESSION_TOUCH_BEST_EFFORT=READY")
 print("COMMANDER_AGENT_RUNTIME_DIAGNOSTIC=READY")
