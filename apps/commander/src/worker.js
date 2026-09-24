@@ -111,7 +111,7 @@ function requirePortalMutationOrigin(request) {
   const expectedOrigin = new URL(request.url).origin;
   const origin = request.headers.get("origin");
   const fetchSite = String(request.headers.get("sec-fetch-site") || "").toLowerCase();
-  if (origin && origin !== expectedOrigin) throw new Error("PORTAL_ORIGIN_DENIED");
+  if (!origin || origin !== expectedOrigin) throw new Error("PORTAL_ORIGIN_DENIED");
   if (fetchSite && fetchSite !== "same-origin") throw new Error("PORTAL_ORIGIN_DENIED");
 }
 
