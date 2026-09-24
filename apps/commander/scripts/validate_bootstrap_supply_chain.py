@@ -11,7 +11,18 @@ APP = ROOT / "apps/commander"
 PUBLIC = APP / "public"
 LINUX = (PUBLIC / "install/linux.sh").read_text(encoding="utf-8")
 WINDOWS = (PUBLIC / "install/windows.ps1").read_text(encoding="utf-8")
+INDEX = (PUBLIC / "index.html").read_text(encoding="utf-8")
+APP_JS = (PUBLIC / "app.js").read_text(encoding="utf-8")
 MANIFEST_PATH = PUBLIC / "release/agent-manifest.json"
+
+LINUX_BOOTSTRAP = (
+    "curl -fsS --proto '=https' --tlsv1.2 --location --max-redirs 0 "
+    "https://commander.haralabs.com.br/install/linux.sh | bash"
+)
+WINDOWS_BOOTSTRAP = (
+    "irm https://commander.haralabs.com.br/install/windows.ps1 "
+    "-MaximumRedirection 0 | iex"
+)
 SUMS_PATH = PUBLIC / "release/SHA256SUMS"
 DRIFT = (APP / "scripts/validate_prod_runtime_drift.py").read_text(encoding="utf-8")
 
@@ -60,6 +71,19 @@ def main() -> int:
     need("http://" not in LINUX and "http://" not in WINDOWS, "NO_PLAINTEXT_HTTP")
     need("--insecure" not in LINUX and " -k" not in LINUX, "LINUX_TLS_BYPASS_ABSENT")
     need("-SkipCertificateCheck" not in WINDOWS, "WINDOWS_TLS_BYPASS_ABSENT")
+
+    need(LINUX_BOOTSTRAP in INDEX and LINUX_BOOTSTRAP in APP_JS, "LINUX_BOOTSTRAP_UI_COPY_PARITY")
+    need(WINDOWS_BOOTSTRAP in INDEX and WINDOWS_BOOTSTRAP in APP_JS, "WINDOWS_BOOTSTRAP_UI_COPY_PARITY")
+    need("curl -fsSL https://commander.haralabs.com.br/install/linux.sh | bash" not in INDEX + APP_JS,
+         "LINUX_BOOTSTRAP_REDIRECT_DEFAULT_ABSENT")
+    need("irm https://commander.haralabs.com.br/install/windows.ps1 | iex" not in INDEX + APP_JS,
+         "WINDOWS_BOOTSTRAP_REDIRECT_DEFAULT_ABSENT")
+    need("--proto '=https'" in LINUX_BOOTSTRAP and "--tlsv1.2" in LINUX_BOOTSTRAP,
+         "LINUX_BOOTSTRAP_TLS_PIN")
+    need("--location --max-redirs 0" in LINUX_BOOTSTRAP,
+         "LINUX_BOOTSTRAP_REDIRECT_DENIED")
+    need("-MaximumRedirection 0" in WINDOWS_BOOTSTRAP,
+         "WINDOWS_BOOTSTRAP_REDIRECT_DENIED")
 
     need("/release/agent-manifest.json" in LINUX, "LINUX_MANIFEST_FETCH")
     need("AGENT_SHA256_MISMATCH" in LINUX, "LINUX_SHA_ENFORCEMENT")
