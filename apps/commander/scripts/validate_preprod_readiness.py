@@ -90,6 +90,9 @@ def main():
     print("COMMANDER_SOURCE_PREPROD_READY=PASS")
 
     migration_state_line = None
+    retention_window_line = None
+    retention_eligible_line = None
+    retention_oldest_age_line = None
     runtime_asset_state_line = None
     worker_deployment_state_line = None
     worker_version_line = None
@@ -107,9 +110,20 @@ def main():
         for line in d1_output.splitlines():
             if line.startswith("COMMANDER_PROD_D1_MIGRATION_0009="):
                 migration_state_line = line
-                break
+            elif line.startswith("COMMANDER_PROD_SESSION_RETENTION_WINDOW_DAYS="):
+                retention_window_line = line
+            elif line.startswith("COMMANDER_PROD_SESSION_RETENTION_ELIGIBLE="):
+                retention_eligible_line = line
+            elif line.startswith("COMMANDER_PROD_SESSION_OLDEST_EXPIRED_AGE_DAYS="):
+                retention_oldest_age_line = line
         if migration_state_line is None:
             raise SystemExit("COMMANDER_PROD_D1_MIGRATION_STATE_MISSING")
+        if (
+            retention_window_line is None
+            or retention_eligible_line is None
+            or retention_oldest_age_line is None
+        ):
+            raise SystemExit("COMMANDER_PROD_SESSION_RETENTION_STATE_MISSING")
         runtime_output = run("COMMANDER_PROD_RUNTIME_LIVE_READONLY", [
             sys.executable,
             "apps/commander/scripts/validate_prod_runtime_drift.py",
@@ -151,6 +165,12 @@ def main():
         print(migration_state_line)
     else:
         print("COMMANDER_PROD_D1_MIGRATION_0009=LIVE_READBACK_REQUIRED")
+    if retention_window_line:
+        print(retention_window_line)
+        print(retention_eligible_line)
+        print(retention_oldest_age_line)
+    else:
+        print("COMMANDER_PROD_SESSION_RETENTION_STATE=LIVE_READBACK_REQUIRED")
     if runtime_asset_state_line:
         print(runtime_asset_state_line)
     else:
