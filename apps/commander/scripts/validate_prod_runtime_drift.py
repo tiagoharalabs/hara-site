@@ -57,7 +57,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--expect-assets",
-        choices=("stale", "current", "any"),
+        choices=("stale", "mixed", "current", "any"),
         default="any",
     )
     args = parser.parse_args()
@@ -88,10 +88,8 @@ def main() -> int:
         asset_state = "MIXED"
 
     expected = args.expect_assets.upper()
-    if expected == "CURRENT" and asset_state != "CURRENT":
-        raise RuntimeError(f"RUNTIME_ASSETS_EXPECTED_CURRENT_GOT_{asset_state}")
-    if expected == "STALE" and asset_state != "STALE":
-        raise RuntimeError(f"RUNTIME_ASSETS_EXPECTED_STALE_GOT_{asset_state}")
+    if expected != "ANY" and asset_state != expected:
+        raise RuntimeError(f"RUNTIME_ASSETS_EXPECTED_{expected}_GOT_{asset_state}")
 
     health = fetch_json("/api/health")
     auth = fetch_json("/api/portal/auth-config")
