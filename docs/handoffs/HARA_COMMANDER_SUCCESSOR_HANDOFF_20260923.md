@@ -331,26 +331,20 @@ Recommended fix before broader customer testing:
 
 Issue comment: `5805490671`.
 
-### H. REVIEWER authorization requires explicit decision
+### H. REVIEWER authorization — CLOSED
 
-`revokePortalDevice()` currently treats these as privileged:
+PR #71 was rebased onto current `main`, revalidated and merged.
 
-```text
-OWNER
-ADMIN
-REVIEWER
-```
+Canonical behavior:
+- `OWNER` / `ADMIN`: may revoke any ACTIVE device in their tenant;
+- `REVIEWER` / `MEMBER`: may revoke only devices they enrolled themselves.
 
-Those roles can revoke any ACTIVE device in the tenant.
-`MEMBER` can only revoke a device it enrolled itself.
+Validation:
+- `COMMANDER_REVIEWER_TENANT_WIDE_REVOKE=DENIED`
+- `COMMANDER_NON_ADMIN_DEVICE_OWNERSHIP_GUARD=PASS`
 
-No role-capability matrix was found that establishes REVIEWER as an administrative destructive role.
-
-Because the reviewer identity is currently used for homologation, Astra must confirm:
-- REVIEWER intentionally admin-equivalent; or
-- tenant-wide revocation should be limited to OWNER/ADMIN.
-
-Issue comment: `5805495811`.
+Canonical merge commit: `dd1752db03290a3650014ad4f0acd098cadfb98d`.
+Do not restore REVIEWER as an admin-equivalent destructive role.
 
 ### I. Portal-session retention is undefined
 
@@ -374,15 +368,26 @@ Issue comment: `5805502910`.
 
 These remain open unless Astra records an explicit decision.
 
-### Pairing-token supersession
+### Pairing-token supersession — CLOSED IN SOURCE
 
-Creating a new pairing token does not invalidate previous unconsumed tokens for the same tenant/subject.
+PR #73 enforces one current unconsumed pairing token per tenant/subject.
 
-Decision:
-- allow multiple simultaneously valid one-time tokens; or
-- enforce one active pairing token per tenant/subject.
+Implementation:
+- migration `0009_pairing_supersession.sql` adds `superseded_at_utc`;
+- historical duplicate-current tokens are normalized, preserving the newest current token;
+- a partial unique index prevents more than one unconsumed/unsuperseded token per tenant/subject;
+- creating a new token supersedes the prior current token in the same D1 batch as the new insert;
+- enrollment rejects superseded tokens in both insert and consume predicates.
 
-If enforcing one active token, implement with a safe D1 transition and proof.
+Validation:
+- `COMMANDER_PAIRING_HISTORICAL_NORMALIZATION=PASS`
+- `COMMANDER_PAIRING_SINGLE_CURRENT_TOKEN=PASS`
+- `COMMANDER_PAIRING_SUPERSEDED_REPLAY=DENIED`
+- `COMMANDER_PAIRING_SUPERSESSION_ATOMIC=PASS`
+
+Canonical merge commit: `d21d5a52e5e4999b06df9e54c57ae3cd4631be2f`.
+
+Important deployment ordering: apply the PROD D1 migration before promoting a Worker version that references `superseded_at_utc`.
 
 ### Quota release after CANCELLED / EXPIRED device calls
 
@@ -438,10 +443,8 @@ Order of execution:
 1. Astra reviews/absorbs the high-priority #65 findings, especially:
    - G — D1 write amplification from 2s polling;
    - F — silent Agent runtime failures.
-2. Resolve or explicitly defer architecture decisions that affect the browser/device homologation contract:
-   - pairing-token supersession;
-   - quota release for CANCELLED/EXPIRED;
-   - REVIEWER privileges;
+2. Resolve or explicitly defer the remaining architecture decisions that affect the browser/device homologation contract:
+   - quota release runtime/E2E proof for CANCELLED/EXPIRED;
    - dashboard schema naming;
    - offline selection semantics;
    - final ChatGPT/Codex activation contract.
@@ -484,6 +487,12 @@ Device installers:
 python3 apps/commander/scripts/validate_device_installers.py
 ```
 
+Pairing supersession:
+
+```bash
+python3 apps/commander/scripts/validate_pairing_supersession.py
+```
+
 Production D1 readback:
 
 ```bash
@@ -508,6 +517,8 @@ git diff --check
 
 - PR #64 — Login V2 runtime redirect convergence — **MERGED**
 - PR #66 — Commander pre-test usability/safety hardening — **OPEN / ASTRA ACTIVE**
+- PR #71 — REVIEWER least privilege — **MERGED**
+- PR #73 — pairing token supersession — **MERGED**
 - issue #65 — Astra architectural review / pre-test decisions — **OPEN**
 - this file — canonical successor guide for continuation after the 2026-09-23 sweep
 
