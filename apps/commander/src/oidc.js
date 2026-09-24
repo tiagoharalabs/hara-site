@@ -143,6 +143,12 @@ export async function verifyIdToken({ idToken, metadata, issuer, clientId, nonce
 
   const now = Math.floor(Date.now() / 1000);
   if (!Number.isFinite(claims.exp) || claims.exp < now - 30) throw new Error("OIDC_ID_TOKEN_EXPIRED");
+  if (claims.nbf !== undefined && !Number.isFinite(claims.nbf)) {
+    throw new Error("OIDC_ID_TOKEN_NBF_INVALID");
+  }
+  if (Number.isFinite(claims.nbf) && claims.nbf > now + 30) {
+    throw new Error("OIDC_ID_TOKEN_NOT_YET_VALID");
+  }
   if (Number.isFinite(claims.iat) && claims.iat > now + 60) throw new Error("OIDC_ID_TOKEN_IAT_INVALID");
 
   return claims;
