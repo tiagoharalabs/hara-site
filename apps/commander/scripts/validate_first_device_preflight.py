@@ -22,6 +22,10 @@ need('"LOCAL_RESIDUE_PRESENT"' in SOURCE, "RESIDUE_GUARD")
 need('"DEVICE_ALREADY_ENROLLED"' in SOURCE, "ENROLLMENT_GUARD")
 need('"PERSISTENCE_NOT_READY"' in SOURCE, "PERSISTENCE_GUARD")
 need('"PUBLIC_LOCAL_RELEASE_VERSION_DRIFT"' in SOURCE, "RELEASE_VERSION_GUARD")
+need('"PUBLIC_LOCAL_INSTALLER_DRIFT"' in SOURCE, "INSTALLER_SOURCE_PARITY_GUARD")
+need('"PUBLIC_LOCAL_MANIFEST_DRIFT"' in SOURCE, "MANIFEST_SOURCE_PARITY_GUARD")
+need("NoRedirectHandler" in SOURCE and "NO_REDIRECT_OPENER.open" in SOURCE, "PUBLIC_PARITY_REDIRECT_FAIL_CLOSED")
+need('"PUBLIC_ASSET_REDIRECT_DENIED"' in SOURCE, "PUBLIC_PARITY_REDIRECT_DENIAL_MARKER")
 need('"DEVICE_TOKEN_EXPOSED") == "FALSE"' in SOURCE, "TOKEN_EXPOSURE_GUARD")
 need("COMMANDER_FIRST_DEVICE_CANDIDATE=READY" in SOURCE, "READY_MARKER")
 
@@ -44,6 +48,38 @@ namespace = {
 }
 exec(compile(SOURCE, str(TARGET), "exec"), namespace)
 residue_state = namespace["residue_state"]
+require_public_parity = namespace["require_public_parity"]
+PreflightError = namespace["PreflightError"]
+
+with tempfile.TemporaryDirectory() as tmp:
+    parity_file = Path(tmp) / "asset.bin"
+    parity_file.write_bytes(b"canonical")
+    parity_globals = require_public_parity.__globals__
+    original_fetch_public_bytes = parity_globals["fetch_public_bytes"]
+    try:
+        parity_globals["fetch_public_bytes"] = lambda *_args, **_kwargs: b"canonical"
+        require_public_parity(
+            "https://commander.haralabs.com.br",
+            "/asset.bin",
+            parity_file,
+            "PUBLIC_LOCAL_TEST_DRIFT",
+        )
+        need(True, "PUBLIC_SOURCE_PARITY_MATCH")
+
+        parity_globals["fetch_public_bytes"] = lambda *_args, **_kwargs: b"drifted"
+        try:
+            require_public_parity(
+                "https://commander.haralabs.com.br",
+                "/asset.bin",
+                parity_file,
+                "PUBLIC_LOCAL_TEST_DRIFT",
+            )
+        except PreflightError as exc:
+            need(str(exc) == "PUBLIC_LOCAL_TEST_DRIFT", "PUBLIC_SOURCE_PARITY_DRIFT_DENIED")
+        else:
+            raise SystemExit("COMMANDER_FIRST_DEVICE_PREFLIGHT_PUBLIC_SOURCE_PARITY_DRIFT_DENIED=FAIL")
+    finally:
+        parity_globals["fetch_public_bytes"] = original_fetch_public_bytes
 
 with tempfile.TemporaryDirectory() as tmp:
     root = Path(tmp)
