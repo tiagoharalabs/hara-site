@@ -8,13 +8,10 @@
   <script>
     (()=>{const root=document.documentElement;root.classList.add("auth-bootstrap-pending");setTimeout(()=>root.classList.remove("auth-bootstrap-pending"),3000);try{const saved=localStorage.getItem("hara-theme");const theme=saved||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");root.dataset.theme=theme;root.style.colorScheme=theme}catch(e){}})();
   </script>
-  <style>html.auth-bootstrap-pending body{visibility:hidden}</style>
+  <style>html.auth-bootstrap-pending body>*{visibility:hidden}html.auth-bootstrap-pending body::before{content:"H.A.R.A. COMMANDER · verificando sessão";position:fixed;inset:0;display:grid;place-items:center;visibility:visible;background:#eef8fd;color:#315d78;font:600 12px/1.4 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:.12em}html[data-theme="dark"].auth-bootstrap-pending body::before{background:#061721;color:#a9c8d9}</style>
   <title>H.A.R.A. Commander</title>
   <link rel="icon" type="image/webp" href="./assets/hara-commander-royal.webp?v=20260921-final1" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="./styles.css?v=20260922-dualline1" />
+  <link rel="stylesheet" href="./styles.css?v=20260923-ux1" />
 </head>
 <body>
   <header class="topbar">
@@ -28,7 +25,6 @@
 
     <nav class="topnav" aria-label="Portal Commander">
       <a href="#landing" data-nav="landing">Produto</a>
-      <a href="#plans" data-nav="plans">Planos</a>
       <a href="https://www.haralabs.com.br/support/" target="_blank" rel="noreferrer">Suporte</a>
       <a href="https://www.haralabs.com.br/" target="_blank" rel="noreferrer">H.A.R.A. Labs</a>
     </nav>
@@ -45,14 +41,14 @@
       <div class="top-session-actions" data-auth-session hidden>
         <button class="top-session-user" type="button" data-app-go="dashboard" title="Abrir workspace">
           <span class="top-session-avatar" data-user-initials>HA</span>
-          <span class="top-session-copy"><b data-user-name>Conta HARA</b><small data-user-role>Owner</small></span>
+          <span class="top-session-copy"><b data-user-name>Conta HARA</b><small data-user-role>Proprietário</small></span>
         </button>
         <button class="btn btn-ghost top-logout" type="button" data-logout>Sair</button>
       </div>
     </div>
   </header>
 
-  <div class="system-banner" id="systemBanner" role="status" aria-live="polite" hidden>
+  <div class="system-banner" id="systemBanner" role="status" aria-live="polite" aria-atomic="true" hidden>
     <div>
       <strong id="systemBannerTitle">Estado do Commander</strong>
       <span id="systemBannerMessage">—</span>
@@ -65,10 +61,10 @@
       <div class="landing-shell">
         <div class="hero-copy">
           <span class="eyebrow"><i></i> H.A.R.A. COMMANDER</span>
-          <h1 id="landing-title">Governança para agentes que precisam operar no mundo real.</h1>
+          <h1 id="landing-title">Conecte ChatGPT e Codex ao seu computador com controle H.A.R.A.</h1>
           <p class="hero-lead">
-            Conecte ChatGPT, Codex e outros clientes compatíveis com MCP a funções H.A.R.A.
-            governadas por identidade, entitlement, quota e receipts auditáveis.
+            Instale o Commander Agent no Linux ou Windows, autorize seu cliente de IA e use uma conexão segura de saída —
+            sem abrir portas no roteador e sem entregar sua senha ao H.A.R.A.
           </p>
 
           <div class="hero-actions">
@@ -77,31 +73,31 @@
           </div>
 
           <div class="trust-row" aria-label="Características do produto">
-            <span><b>OAuth</b><small>Identidade governada</small></span>
-            <span><b>MCP</b><small>Integração padronizada</small></span>
-            <span><b>Receipts</b><small>Execução auditável</small></span>
-            <span><b>Read-only V1</b><small>Boundary controlado</small></span>
+            <span><b>Conta H.A.R.A.</b><small>Login centralizado</small></span>
+            <span><b>ChatGPT / Codex</b><small>Integração governada</small></span>
+            <span><b>Comprovantes</b><small>Execuções auditáveis</small></span>
+            <span><b>Somente saída</b><small>Sem portas abertas</small></span>
           </div>
         </div>
 
-        <div class="hero-console" aria-label="Prévia do painel Commander">
+        <div class="hero-console" aria-label="Prévia ilustrativa do painel Commander">
           <div class="console-head">
             <div class="console-brand">
               <img src="./assets/hara-commander-royal.webp?v=20260921-final1" alt="" />
-              <div><strong>Commander</strong><span data-tenant-name>HARA Labs</span></div>
+              <div><strong>Commander</strong><span data-tenant-name>Seu workspace</span></div>
             </div>
-            <span class="status-pill"><i></i> Operacional</span>
+            <span class="status-pill"><i></i> Prévia</span>
           </div>
 
           <div class="metric-grid">
-            <article><span>Plano</span><strong id="landingPlan">Standard</strong><small>Ativo</small></article>
-            <article><span>Uso</span><strong id="landingUsage">0</strong><small id="landingLimit">de 10.000</small></article>
-            <article><span>Conexões</span><strong id="landingConnections">0</strong><small id="landingConnectionsDetail">Nenhuma ativa</small></article>
-            <article><span>Receipts</span><strong>2.184</strong><small>auditáveis</small></article>
+            <article><span>Plano</span><strong id="landingPlan">—</strong><small>após login</small></article>
+            <article><span>Uso</span><strong id="landingUsage">—</strong><small id="landingLimit">após login</small></article>
+            <article><span>Conexões</span><strong id="landingConnections">—</strong><small id="landingConnectionsDetail">após login</small></article>
+            <article><span>Comprovantes</span><strong>—</strong><small>após execuções</small></article>
           </div>
 
           <div class="usage-preview">
-            <div class="usage-title"><span>Uso governado</span><b>Últimos 30 dias</b></div>
+            <div class="usage-title"><span>Uso governado</span><b>Exemplo visual</b></div>
             <div class="mini-chart" aria-hidden="true">
               <span style="height:30%"></span><span style="height:42%"></span><span style="height:36%"></span>
               <span style="height:55%"></span><span style="height:71%"></span><span style="height:62%"></span>
@@ -111,38 +107,44 @@
           </div>
 
           <div class="console-events">
-            <span><i></i> fleet.list <b>PASS</b></span>
-            <span><i></i> receipt committed <b>PASS</b></span>
-            <span><i></i> quota checked <b>PASS</b></span>
+            <span><i></i> Agent conectado <b>EXEMPLO</b></span>
+            <span><i></i> Cliente de IA autorizado <b>EXEMPLO</b></span>
+            <span><i></i> Comprovante auditável <b>EXEMPLO</b></span>
           </div>
         </div>
       </div>
 
       <div class="value-strip">
         <span class="eyebrow"><i></i> PRODUTO H.A.R.A. LABS</span>
-        <h2>Uma camada comercial sem criar um segundo plano de controle.</h2>
+        <h2>Uma conexão simples para a IA operar no seu computador sem expor acesso remoto.</h2>
         <div class="feature-grid">
           <article>
             <span class="feature-no">01</span>
-            <h3>Identidade isolada</h3>
-            <p>Usuários e tenants vinculados a identidade OAuth/OIDC. Senhas ficam no provedor de identidade, não no H.A.R.A.</p>
+            <h3>Login sem compartilhar senha</h3>
+            <p>Sua conta é autenticada pelo HARA Identity. O Commander não recebe nem armazena sua senha.</p>
           </article>
           <article>
             <span class="feature-no">02</span>
-            <h3>Quota transacional</h3>
-            <p>Cada invoke governado pode reservar, confirmar, liberar ou reverter uma unidade sem dupla cobrança por retry.</p>
+            <h3>Uso controlado</h3>
+            <p>Cada execução governada contabiliza o uso de forma consistente, sem cobrança duplicada por repetição técnica.</p>
           </article>
           <article>
             <span class="feature-no">03</span>
-            <h3>Receipts por execução</h3>
-            <p>Uma trilha audível conecta a solicitação do cliente ao resultado retornado pelo H.A.R.A. Services.</p>
+            <h3>Comprovantes por execução</h3>
+            <p>Cada operação concluída pode ser vinculada a um comprovante auditável do resultado retornado.</p>
           </article>
           <article>
             <span class="feature-no">04</span>
-            <h3>Boundary operacional</h3>
-            <p>O Commander não ganha shell arbitrário: a autoridade operacional continua pertencendo ao H.A.R.A. Services.</p>
+            <h3>Sem acesso irrestrito</h3>
+            <p>O Commander expõe somente funções autorizadas e governadas; não oferece shell arbitrário ao cliente de IA.</p>
           </article>
         </div>
+      </div>
+      <div class="product-legal-links" aria-label="Links legais do Commander">
+        <span>H.A.R.A. Commander</span>
+        <a href="https://www.haralabs.com.br/legal/termos/" target="_blank" rel="noreferrer">Termos de Uso</a>
+        <a href="https://www.haralabs.com.br/legal/privacidade/" target="_blank" rel="noreferrer">Privacidade</a>
+        <a href="https://www.haralabs.com.br/support/" target="_blank" rel="noreferrer">Suporte</a>
       </div>
     </section>
 
@@ -152,11 +154,11 @@
         <div class="auth-card">
           <div class="auth-brand">
             <img src="./assets/hara-commander-royal.webp?v=20260921-final1" alt="" />
-            <span><b>H.A.R.A. Commander</b><small>Governed AI Operations</small></span>
+            <span><b>H.A.R.A. Commander</b><small>Conexão segura para IA</small></span>
           </div>
           <span class="eyebrow"><i></i> ACESSO</span>
           <h1 id="login-title">Entre no seu workspace.</h1>
-          <p>Use sua identidade H.A.R.A. para consultar plano, quota, conexões e receipts.</p>
+          <p>Use sua identidade H.A.R.A. para acessar seus computadores, uso e conexões do Commander.</p>
 
           <div class="identity-gateway">
             <span class="identity-gateway-label">HARA IDENTITY</span>
@@ -171,6 +173,7 @@
 
           <p class="auth-switch">Ainda não possui conta? <button type="button" data-go="signup">Criar conta</button></p>
           <p class="auth-note">O H.A.R.A. Commander não recebe nem armazena sua senha.</p>
+          <p class="auth-legal"><a href="https://www.haralabs.com.br/legal/termos/" target="_blank" rel="noreferrer">Termos</a><span>·</span><a href="https://www.haralabs.com.br/legal/privacidade/" target="_blank" rel="noreferrer">Privacidade</a></p>
         </div>
       </div>
     </section>
@@ -199,6 +202,7 @@
 
           <p class="auth-switch">Já possui conta? <button type="button" data-go="login">Entrar</button></p>
           <p class="auth-note">O workspace é associado à sua identidade após o cadastro.</p>
+          <p class="auth-legal"><a href="https://www.haralabs.com.br/legal/termos/" target="_blank" rel="noreferrer">Termos</a><span>·</span><a href="https://www.haralabs.com.br/legal/privacidade/" target="_blank" rel="noreferrer">Privacidade</a></p>
         </div>
       </div>
     </section>
@@ -208,15 +212,15 @@
         <aside class="sidebar">
           <div class="workspace">
             <img src="./assets/hara-commander-royal.webp?v=20260921-final1" alt="" />
-            <span><b>H.A.R.A. Commander</b><small data-tenant-name>HARA Labs</small></span>
+            <span><b>H.A.R.A. Commander</b><small data-tenant-name>Seu workspace</small></span>
           </div>
           <nav class="side-nav" aria-label="Workspace Commander">
-            <button class="active" data-app-go="dashboard"><span>▦</span> Visão geral</button>
-            <button data-app-go="devices"><span>▣</span> Computadores</button>
-            <button data-app-go="usage"><span>⌁</span> Uso & quota</button>
-            <button data-app-go="plans"><span>◇</span> Plano</button>
-            <button data-app-go="connections"><span>⇄</span> Conexões</button>
-            <button data-app-go="security"><span>◈</span> Segurança</button>
+            <button class="active" type="button" data-app-go="dashboard"><span>▦</span> Visão geral</button>
+            <button type="button" data-app-go="devices"><span>▣</span> Computadores</button>
+            <button type="button" data-app-go="usage"><span>⌁</span> Uso & limite</button>
+            <button type="button" data-app-go="plans"><span>◇</span> Plano</button>
+            <button type="button" data-app-go="connections"><span>⇄</span> Conexões</button>
+            <button type="button" data-app-go="security"><span>◈</span> Segurança</button>
           </nav>
           <div class="sidebar-bottom">
             <a href="https://www.haralabs.com.br/support/" target="_blank" rel="noreferrer">Suporte</a>
@@ -227,25 +231,25 @@
         <div class="workspace-main">
           <header class="workspace-head">
             <div>
-              <span class="eyebrow"><i></i> <span data-tenant-name>HARA Labs</span></span>
+              <span class="eyebrow"><i></i> <span data-tenant-name>Seu workspace</span></span>
               <h1 id="dashboard-title">Visão geral</h1>
               <p>Conecte seu computador ao ChatGPT, Codex e outros clientes MCP.</p>
             </div>
-            <div class="user-chip"><span data-user-initials>HA</span><div><b data-user-name>Conta HARA</b><small data-user-role>Owner</small></div></div>
+            <div class="user-chip"><span data-user-initials>HA</span><div><b data-user-name>Conta HARA</b><small data-user-role>Proprietário</small></div></div>
           </header>
 
           <div class="summary-grid">
             <article class="summary-card accent">
-              <span>Plano atual</span><strong id="dashboardPlan">Standard</strong><small>Ativo</small>
+              <span>Plano atual</span><strong id="dashboardPlan">—</strong><small>carregando dados da conta</small>
             </article>
             <article class="summary-card">
-              <span>Uso do período</span><strong><span id="dashboardConsumed">0</span> <em id="dashboardLimit">/ 10.000</em></strong><small id="dashboardPercent">0% utilizado</small>
+              <span>Uso do período</span><strong><span id="dashboardConsumed">—</span> <em id="dashboardLimit"></em></strong><small id="dashboardPercent">carregando limite</small>
             </article>
             <article class="summary-card">
-              <span>Computadores</span><strong id="dashboardConnections">0 conectados</strong><small id="dashboardConnectionsDetail">Instale o Commander Agent</small>
+              <span>Computadores</span><strong id="dashboardConnections">—</strong><small id="dashboardConnectionsDetail">carregando computadores</small>
             </article>
             <article class="summary-card">
-              <span>ChatGPT / Codex</span><strong id="dashboardState">Aguardando</strong><small id="dashboardStateDetail">Conecte um cliente MCP</small>
+              <span>Computador selecionado</span><strong id="dashboardState">—</strong><small id="dashboardStateDetail">carregando seleção</small>
             </article>
           </div>
 
@@ -263,10 +267,10 @@
               <span class="setup-step">02</span>
               <div>
                 <small>CHATGPT / CODEX</small>
-                <h2>Autorize seu cliente de IA</h2>
-                <p>Depois que o computador estiver online, conecte ChatGPT ou Codex ao H.A.R.A. Commander usando sua conta.</p>
+                <h2>Acompanhe as integrações</h2>
+                <p>As conexões com ChatGPT e Codex estão em homologação. Consulte esta área para acompanhar quando a autorização estiver disponível.</p>
               </div>
-              <button class="btn btn-secondary" type="button" data-app-go="connections">Conectar IA</button>
+              <button class="btn btn-secondary" type="button" data-app-go="connections">Ver integrações</button>
             </article>
           </div>
         </div>
@@ -279,27 +283,27 @@
         <div class="workspace-main">
           <header class="workspace-head">
             <div><span class="eyebrow"><i></i> COMPUTADORES</span><h1 id="devices-title">Seus computadores</h1><p>Instale o Commander Agent e mantenha uma conexão segura de saída com sua conta.</p></div>
-            <div class="user-chip"><span data-user-initials>HA</span><div><b data-user-name>Conta HARA</b><small data-user-role>Owner</small></div></div>
+            <div class="user-chip"><span data-user-initials>HA</span><div><b data-user-name>Conta HARA</b><small data-user-role>Proprietário</small></div></div>
           </header>
 
           <div class="device-onboarding">
             <article class="panel device-install-card">
               <div class="panel-head"><div><span>LINUX</span><h2>Instalar no Linux</h2></div><span class="status-pill"><i></i> Disponível</span></div>
-              <p>Gere um código de pareamento e execute o instalador no computador que você quer conectar.</p>
-              <div class="install-command"><code>curl -fsSL https://commander.haralabs.com.br/install/linux.sh | bash</code><button class="btn btn-secondary small" type="button" data-copy-linux>Copiar</button></div>
-              <small class="install-note">Canal outbound ativo. O Agent conecta este computador ao Commander sem abrir portas no roteador.</small>
-              <button class="btn btn-primary" type="button" data-create-pairing>Gerar código de pareamento</button>
+              <p>Primeiro gere um código temporário. Depois execute o instalador no computador que você quer conectar.</p>
+              <button class="btn btn-primary" type="button" data-create-pairing>1. Gerar código de pareamento</button>
+              <div class="install-command"><code>curl -fsSL https://commander.haralabs.com.br/install/linux.sh | bash</code><button class="btn btn-secondary small" type="button" data-copy-linux>2. Copiar comando</button></div>
+              <small class="install-note">3. Execute o comando e cole o código quando o instalador pedir “Pairing token”. A conexão é somente de saída; nenhuma porta do roteador precisa ser aberta.</small>
             </article>
             <article class="panel device-install-card">
               <div class="panel-head"><div><span>WINDOWS</span><h2>Instalar no Windows</h2></div><span class="status-pill"><i></i> Disponível</span></div>
-              <p>O instalador registra o dispositivo e mantém o Commander Agent ativo no logon, sem abrir portas no roteador.</p>
-              <div class="install-command"><code>irm https://commander.haralabs.com.br/install/windows.ps1 | iex</code><button class="btn btn-secondary small" type="button" data-copy-windows>Copiar</button></div>
-              <small class="install-note">Canal outbound ativo. O Agent conecta este computador ao Commander sem abrir portas no roteador.</small>
-              <button class="btn btn-primary" type="button" data-create-pairing>Gerar código de pareamento</button>
+              <p>Primeiro gere um código temporário. Depois execute o instalador no PowerShell do computador que você quer conectar.</p>
+              <button class="btn btn-primary" type="button" data-create-pairing>1. Gerar código de pareamento</button>
+              <div class="install-command"><code>irm https://commander.haralabs.com.br/install/windows.ps1 | iex</code><button class="btn btn-secondary small" type="button" data-copy-windows>2. Copiar comando</button></div>
+              <small class="install-note">3. Execute o comando e cole o código quando o instalador pedir “Pairing token”. O Agent permanece ativo no logon e usa somente conexão de saída.</small>
             </article>
           </div>
 
-          <article class="panel pairing-panel" id="pairingPanel" hidden>
+          <article class="panel pairing-panel" id="pairingPanel" tabindex="-1" aria-live="polite" hidden>
             <div class="panel-head"><div><span>PAREAMENTO</span><h2>Código temporário</h2></div><span id="pairingExpiry">10 minutos</span></div>
             <p>Use este código somente no computador que você está instalando. Ele funciona uma única vez e expira automaticamente.</p>
             <div class="pairing-token"><code id="pairingToken">—</code><button class="btn btn-secondary small" type="button" data-copy-pairing>Copiar código</button></div>
@@ -320,29 +324,29 @@
         <aside class="sidebar" data-sidebar></aside>
         <div class="workspace-main">
           <header class="workspace-head">
-            <div><span class="eyebrow"><i></i> METERING</span><h1 id="usage-title">Uso & quota</h1><p>Consumo comercial separado do tráfego técnico da Cloudflare.</p></div>
-            <div class="user-chip"><span data-user-initials>HA</span><div><b data-user-name>Conta HARA</b><small data-user-role>Owner</small></div></div>
+            <div><span class="eyebrow"><i></i> USO</span><h1 id="usage-title">Uso & limite</h1><p>Acompanhe as execuções governadas e a capacidade disponível do seu plano.</p></div>
+            <div class="user-chip"><span data-user-initials>HA</span><div><b data-user-name>Conta HARA</b><small data-user-role>Proprietário</small></div></div>
           </header>
 
           <div class="quota-hero">
             <div>
-              <span>Quota do período</span>
-              <strong><span id="usageConsumed">0</span> <em id="usageLimit">de 10.000</em></strong>
+              <span>Limite do período</span>
+              <strong><span id="usageConsumed">—</span> <em id="usageLimit"></em></strong>
               <div class="progress"><i id="usageProgress" style="width:0%"></i></div>
-              <small id="usageRemaining">10.000 unidades disponíveis</small>
+              <small id="usageRemaining">Carregando capacidade do plano</small>
             </div>
             <div class="quota-meta">
-              <span><small>Meter</small><b>Governed Invoke</b></span>
+              <span><small>Métrica</small><b>Execução governada</b></span>
               <span><small>Período</small><b id="usagePeriod">—</b></span>
-              <span><small>Idempotência</small><b>Ativa</b></span>
+              <span><small>Repetições</small><b>Sem dupla contagem</b></span>
             </div>
           </div>
 
           <article class="panel table-panel">
-            <div class="panel-head"><div><span>Ledger</span><h2>Eventos recentes</h2></div><button class="btn btn-secondary small" type="button" data-demo-toast="Exportação CSV será ligada ao backend do produto.">Exportar CSV</button></div>
+            <div class="panel-head"><div><span>HISTÓRICO</span><h2>Detalhamento das execuções</h2></div><button class="btn btn-secondary small" type="button" disabled aria-disabled="true" title="Exportação será habilitada junto do histórico detalhado.">Exportar CSV · em breve</button></div>
             <div class="data-table" id="usageLedger">
-              <div class="tr head"><span>Horário</span><span>Função</span><span>Evento</span><span>Unidades</span><span>Receipt</span></div>
-              <div class="empty-state"><strong>Nenhum evento de uso</strong>O ledger será preenchido por operações reais do workspace.</div>
+              <div class="tr head"><span>Horário</span><span>Função</span><span>Evento</span><span>Unidades</span><span>Comprovante</span></div>
+              <div class="empty-state"><strong>Detalhamento em homologação</strong>O uso acima já reflete os dados reais da conta. O histórico por execução ainda não é exibido no portal.</div>
             </div>
           </article>
         </div>
@@ -354,31 +358,31 @@
         <aside class="sidebar" data-sidebar></aside>
         <div class="workspace-main">
           <header class="workspace-head">
-            <div><span class="eyebrow"><i></i> PLANOS</span><h1 id="plans-title">Escolha a capacidade do Commander.</h1><p>Consulte disponibilidade e condições comerciais para cada plano.</p></div>
-            <div class="user-chip"><span data-user-initials>HA</span><div><b data-user-name>Conta HARA</b><small data-user-role>Owner</small></div></div>
+            <div><span class="eyebrow"><i></i> PLANO</span><h1 id="plans-title">Plano do Commander</h1><p>Veja a capacidade atualmente homologada e o que ainda está em preparação.</p></div>
+            <div class="user-chip"><span data-user-initials>HA</span><div><b data-user-name>Conta HARA</b><small data-user-role>Proprietário</small></div></div>
           </header>
 
           <div class="plan-grid">
-            <article class="plan-card">
-              <span class="plan-label">TRIAL</span><h2>Experimentar</h2><p>Para homologar o fluxo do Commander antes de contratar.</p>
-              <strong>1.000 <small>invokes / período</small></strong>
-              <ul><li>1 workspace</li><li>Receipts auditáveis</li><li>Read-only V1</li><li>Suporte padrão</li></ul>
-              <button class="btn btn-secondary btn-block" data-demo-toast="A disponibilidade do Trial depende da elegibilidade do workspace.">Começar trial</button>
-            </article>
             <article class="plan-card featured">
-              <span class="recommended">RECOMENDADO</span><span class="plan-label">STANDARD</span><h2>Operação</h2><p>Para equipes usando o Commander de forma recorrente.</p>
-              <strong>10.000 <small>invokes / período</small></strong>
-              <ul><li>Workspace corporativo</li><li>Quota transacional</li><li>OAuth / OIDC</li><li>Auditoria e receipts</li></ul>
-              <button class="btn btn-primary btn-block" data-demo-toast="Checkout será implementado fora do plugin, no portal H.A.R.A.">Selecionar Standard</button>
+              <span class="recommended">PLANO ATUAL</span><span class="plan-label">TRIAL</span><h2>Homologação</h2><p>Plano atualmente disponível para validar o fluxo completo do Commander.</p>
+              <strong>100 <small>execuções / mês</small></strong>
+              <ul><li>1 workspace</li><li>Comprovantes auditáveis</li><li>Execução read-only governada</li><li>OAuth / OIDC</li></ul>
+              <button class="btn btn-primary btn-block" type="button" disabled aria-disabled="true">Plano atual</button>
             </article>
             <article class="plan-card">
-              <span class="plan-label">SCALE</span><h2>Sob medida</h2><p>Para ambientes com maior volume, governança e suporte dedicado.</p>
-              <strong>Custom <small>capacidade</small></strong>
-              <ul><li>Quota sob medida</li><li>Múltiplos tenants</li><li>Governança expandida</li><li>Suporte dedicado</li></ul>
-              <button class="btn btn-secondary btn-block" data-demo-toast="Fluxo comercial será conectado ao contato corporativo.">Falar com especialista</button>
+              <span class="plan-label">STANDARD</span><h2>Operação</h2><p>Capacidade comercial para uso recorrente, ainda não publicada no catálogo de produção.</p>
+              <strong>Em definição <small>capacidade</small></strong>
+              <ul><li>Workspace corporativo</li><li>Limite de uso governado</li><li>OAuth / OIDC</li><li>Auditoria e comprovantes</li></ul>
+              <button class="btn btn-secondary btn-block" type="button" disabled aria-disabled="true">Em preparação</button>
+            </article>
+            <article class="plan-card">
+              <span class="plan-label">SCALE</span><h2>Sob medida</h2><p>Opção futura para ambientes com necessidades ampliadas de capacidade e governança.</p>
+              <strong>Em definição <small>capacidade</small></strong>
+              <ul><li>Capacidade sob medida</li><li>Governança expandida</li><li>Auditoria e comprovantes</li><li>Suporte dedicado</li></ul>
+              <button class="btn btn-secondary btn-block" type="button" disabled aria-disabled="true">Roadmap</button>
             </article>
           </div>
-          <p class="plan-disclaimer">Limites, recursos e condições podem variar conforme o plano contratado.</p>
+          <p class="plan-disclaimer">Somente o Trial está publicado no catálogo de produção neste momento. Standard e Scale permanecem em preparação.</p>
         </div>
       </div>
     </section>
@@ -388,25 +392,25 @@
         <aside class="sidebar" data-sidebar></aside>
         <div class="workspace-main">
           <header class="workspace-head">
-            <div><span class="eyebrow"><i></i> INTEGRAÇÕES</span><h1 id="connections-title">Conexões</h1><p>Clientes autorizados a acessar seu Commander.</p></div>
-            <div class="user-chip"><span data-user-initials>HA</span><div><b data-user-name>Conta HARA</b><small data-user-role>Owner</small></div></div>
+            <div><span class="eyebrow"><i></i> INTEGRAÇÕES</span><h1 id="connections-title">Conexões</h1><p>Autorize ChatGPT, Codex ou outro cliente MCP a usar o computador selecionado.</p></div>
+            <div class="user-chip"><span data-user-initials>HA</span><div><b data-user-name>Conta HARA</b><small data-user-role>Proprietário</small></div></div>
           </header>
 
           <div class="connection-list" id="connectionList">
             <article class="connection-card">
               <div class="connection-icon openai">AI</div>
-              <div><h2>ChatGPT</h2><p>Plugin H.A.R.A. Commander via Remote MCP + OAuth.</p><span class="status-line connected"><i></i> Pronto para conexão</span></div>
-              <button class="btn btn-primary" data-demo-toast="Na versão integrada, este botão iniciará o OAuth do H.A.R.A. Commander.">Conectar</button>
+              <div><h2>ChatGPT</h2><p>H.A.R.A. Commander via Remote MCP + OAuth.</p><span class="status-line"><i></i> Em homologação</span></div>
+              <button class="btn btn-primary" type="button" disabled aria-disabled="true">Em homologação</button>
             </article>
             <article class="connection-card">
               <div class="connection-icon">CX</div>
-              <div><h2>Codex</h2><p>Cliente compatível com MCP para fluxos técnicos governados.</p><span class="status-line"><i></i> Disponível</span></div>
-              <button class="btn btn-secondary" data-demo-toast="A configuração do Codex será habilitada conforme a disponibilidade da integração.">Configurar</button>
+              <div><h2>Codex</h2><p>Cliente compatível com MCP para fluxos técnicos governados.</p><span class="status-line"><i></i> Em homologação</span></div>
+              <button class="btn btn-secondary" type="button" disabled aria-disabled="true">Em homologação</button>
             </article>
             <article class="connection-card muted">
               <div class="connection-icon">+</div>
-              <div><h2>Outros clientes MCP</h2><p>Expansão futura sob a mesma política de identidade e entitlement.</p><span class="status-line"><i></i> Roadmap</span></div>
-              <button class="btn btn-secondary" disabled>Em breve</button>
+              <div><h2>Outros clientes MCP</h2><p>Expansão futura sob as mesmas regras de identidade e acesso.</p><span class="status-line"><i></i> Roadmap</span></div>
+              <button class="btn btn-secondary" type="button" disabled aria-disabled="true">Em breve</button>
             </article>
           </div>
         </div>
@@ -419,24 +423,24 @@
         <div class="workspace-main">
           <header class="workspace-head">
             <div><span class="eyebrow"><i></i> SEGURANÇA</span><h1 id="security-title">Identidade & sessões</h1><p>Gerencie acessos do workspace sem expor credenciais ao H.A.R.A.</p></div>
-            <div class="user-chip"><span data-user-initials>HA</span><div><b data-user-name>Conta HARA</b><small data-user-role>Owner</small></div></div>
+            <div class="user-chip"><span data-user-initials>HA</span><div><b data-user-name>Conta HARA</b><small data-user-role>Proprietário</small></div></div>
           </header>
 
           <div class="security-grid">
             <article class="panel security-card">
               <div class="panel-head"><div><span>Identidade</span><h2>OAuth / OIDC</h2></div><span class="status-pill"><i></i> Ativo</span></div>
-              <dl><div><dt>Subject</dt><dd data-security-subject>—</dd></div><div><dt>Tenant</dt><dd data-security-tenant>—</dd></div><div><dt>Role</dt><dd data-security-role>—</dd></div><div><dt>Vínculo</dt><dd>issuer + subject</dd></div></dl>
+              <dl><div><dt>Identidade</dt><dd data-security-subject>—</dd></div><div><dt>Workspace</dt><dd data-security-tenant>—</dd></div><div><dt>Perfil</dt><dd data-security-role>—</dd></div><div><dt>Vínculo</dt><dd>HARA Identity</dd></div></dl>
             </article>
             <article class="panel security-card">
-              <div class="panel-head"><div><span>Sessões</span><h2>Dispositivos ativos</h2></div><button class="link-button" data-demo-toast="Revogação será feita no IdP e propagada ao Commander.">Revogar todas</button></div>
+              <div class="panel-head"><div><span>Sessões</span><h2>Sessão web atual</h2></div><button class="link-button" type="button" disabled aria-disabled="true" title="Gerenciamento global de sessões será habilitado após homologação.">Gerenciar sessões · em breve</button></div>
               <div class="session"><i class="ok"></i><div><b>Sessão web atual</b><small>HARA Commander · autenticada pelo HARA Identity</small></div><span>Agora</span></div>
             </article>
             <article class="panel security-card full-panel">
-              <div class="panel-head"><div><span>Autorizações</span><h2>Grants do Commander</h2></div></div>
+              <div class="panel-head"><div><span>Autorizações</span><h2>Permissões do Commander</h2></div></div>
               <div class="grant-grid">
-                <span><i></i><b>COMMANDER_DISCOVERY</b><small>Ativo</small></span>
-                <span><i></i><b>COMMANDER_READ_ONLY_INVOKE</b><small>Ativo</small></span>
-                <span><i></i><b>COMMANDER_RECEIPT_READ</b><small>Ativo</small></span>
+                <span><i></i><b>Descoberta do workspace</b><small>COMMANDER_DISCOVERY · ativo</small></span>
+                <span><i></i><b>Execução governada read-only</b><small>COMMANDER_READ_ONLY_INVOKE · ativo</small></span>
+                <span><i></i><b>Leitura de comprovantes</b><small>COMMANDER_RECEIPT_READ · ativo</small></span>
               </div>
             </article>
           </div>
@@ -450,15 +454,15 @@
   <template id="sidebarTemplate">
     <div class="workspace">
       <img src="./assets/hara-commander-royal.webp?v=20260921-final1" alt="" />
-      <span><b>H.A.R.A. Commander</b><small data-tenant-name>HARA Labs</small></span>
+      <span><b>H.A.R.A. Commander</b><small data-tenant-name>Seu workspace</small></span>
     </div>
     <nav class="side-nav" aria-label="Workspace Commander">
-      <button data-app-go="dashboard"><span>▦</span> Visão geral</button>
-      <button data-app-go="devices"><span>▣</span> Computadores</button>
-      <button data-app-go="usage"><span>⌁</span> Uso & quota</button>
-      <button data-app-go="plans"><span>◇</span> Plano</button>
-      <button data-app-go="connections"><span>⇄</span> Conexões</button>
-      <button data-app-go="security"><span>◈</span> Segurança</button>
+      <button type="button" data-app-go="dashboard"><span>▦</span> Visão geral</button>
+      <button type="button" data-app-go="devices"><span>▣</span> Computadores</button>
+      <button type="button" data-app-go="usage"><span>⌁</span> Uso & limite</button>
+      <button type="button" data-app-go="plans"><span>◇</span> Plano</button>
+      <button type="button" data-app-go="connections"><span>⇄</span> Conexões</button>
+      <button type="button" data-app-go="security"><span>◈</span> Segurança</button>
     </nav>
     <div class="sidebar-bottom">
       <a href="https://www.haralabs.com.br/support/" target="_blank" rel="noreferrer">Suporte</a>
@@ -466,6 +470,6 @@
     </div>
   </template>
 
-  <script src="./app.js?v=20260922-auth2"></script>
+  <script src="./app.js?v=20260923-ux1"></script>
 </body>
 </html>
