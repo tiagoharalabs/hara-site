@@ -111,7 +111,9 @@ Key merged closures:
 - #76 device lifecycle race/idempotency hardening;
 - #77 canonical PROD portal schema + retryable pairing-create error;
 - #78 same-origin guard for portal mutations;
-- #79 latest Astra UI snapshot reconciled onto hardened `main`.
+- #79 latest Astra UI snapshot reconciled onto hardened `main`;
+- #81 revoked-device claim TOCTOU blocked;
+- #82 concurrent invite identity claim serialized.
 
 PR #66 is **CLOSED / SUPERSEDED**. Its UI work was preserved by #79, while its stale backend
 was intentionally not merged.
@@ -186,7 +188,9 @@ Closed:
 - portal-session retention defined and bounded via #75;
 - selection/revoke/enqueue/complete lifecycle races closed via #76;
 - cross-origin browser portal mutations denied via #78;
-- Astra pre-test UI hardening reconciled via #79.
+- Astra pre-test UI hardening reconciled via #79;
+- post-auth device claim cannot race past revocation via #81;
+- concurrent invite claim cannot overwrite the winning identity via #82.
 
 Do not reopen these as unresolved unless a current runtime/source readback proves regression.
 
@@ -366,6 +370,8 @@ git diff --check
 - PR #77 — production contract cleanup — **MERGED**
 - PR #78 — portal mutation same-origin guard — **MERGED**
 - PR #79 — reconciled Astra UI snapshot — **MERGED**
+- PR #81 — revoked-device claim TOCTOU hardening — **MERGED**
+- PR #82 — invite identity-claim serialization — **MERGED**
 - hara-platform PR #1158 — quota finalization compensation source — **MERGED; runtime E2E pending**
 - issue #65 — Commander pre-PROD coordination / residual decisions — **OPEN**
 

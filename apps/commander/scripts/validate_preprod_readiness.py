@@ -46,6 +46,8 @@ def main():
         ("COMMANDER_PREPROD_PAIRING", "validate_pairing_supersession.py"),
         ("COMMANDER_PREPROD_RETENTION", "validate_session_retention.py"),
         ("COMMANDER_PREPROD_ORIGIN", "validate_portal_origin_guard.py"),
+        ("COMMANDER_PREPROD_CLAIM_REVOKE_RACE", "validate_claim_revoke_race.py"),
+        ("COMMANDER_PREPROD_INVITE_CLAIM_RACE", "validate_invite_claim_race.py"),
     )
     for label, script in checks:
         run(label, [
