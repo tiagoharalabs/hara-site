@@ -16,16 +16,19 @@ APP_JS = (PUBLIC / "app.js").read_text(encoding="utf-8")
 MANIFEST_PATH = PUBLIC / "release/agent-manifest.json"
 
 LINUX_BOOTSTRAP = (
+    "(tmp=$(mktemp) && trap 'rm -f $tmp' EXIT && "
     "curl -fsS --proto '=https' --tlsv1.2 --location --max-redirs 0 "
-    "https://commander.haralabs.com.br/install/linux.sh | "
-    "HARA_COMMANDER_URL=https://commander.haralabs.com.br bash"
+    "https://commander.haralabs.com.br/install/linux.sh -o $tmp && "
+    "HARA_COMMANDER_URL=https://commander.haralabs.com.br bash $tmp)"
 )
 WINDOWS_BOOTSTRAP = (
     "$haraPrevUrl=$env:HARA_COMMANDER_URL; try { "
     "$env:HARA_COMMANDER_URL='https://commander.haralabs.com.br'; "
-    "irm https://commander.haralabs.com.br/install/windows.ps1 "
-    "-MaximumRedirection 0 | iex } finally { "
-    "$env:HARA_COMMANDER_URL=$haraPrevUrl }"
+    "$haraBootstrap=irm https://commander.haralabs.com.br/install/windows.ps1 "
+    "-MaximumRedirection 0 -ErrorAction Stop; "
+    "if (-not $haraBootstrap) { throw 'HARA_COMMANDER_BOOTSTRAP_EMPTY' }; "
+    "iex ([string]$haraBootstrap) } finally { "
+    "$haraBootstrap=$null; $env:HARA_COMMANDER_URL=$haraPrevUrl }"
 )
 SUMS_PATH = PUBLIC / "release/SHA256SUMS"
 DRIFT = (APP / "scripts/validate_prod_runtime_drift.py").read_text(encoding="utf-8")
@@ -89,14 +92,39 @@ def main() -> int:
     need("-MaximumRedirection 0" in WINDOWS_BOOTSTRAP,
          "WINDOWS_BOOTSTRAP_REDIRECT_DENIED")
     need(
-        "| HARA_COMMANDER_URL=https://commander.haralabs.com.br bash" in LINUX_BOOTSTRAP,
+        "HARA_COMMANDER_URL=https://commander.haralabs.com.br bash $tmp" in LINUX_BOOTSTRAP,
         "LINUX_BOOTSTRAP_CANONICAL_ORIGIN_PIN",
     )
     need(
+        "| HARA_COMMANDER_URL=https://commander.haralabs.com.br bash" not in LINUX_BOOTSTRAP
+        and " -o $tmp && " in LINUX_BOOTSTRAP
+        and "trap 'rm -f $tmp' EXIT" in LINUX_BOOTSTRAP,
+        "LINUX_BOOTSTRAP_FETCH_FAILURE_PROPAGATES",
+    )
+    need(
         "$env:HARA_COMMANDER_URL='https://commander.haralabs.com.br';" in WINDOWS_BOOTSTRAP
-        and "finally { $env:HARA_COMMANDER_URL=$haraPrevUrl }" in WINDOWS_BOOTSTRAP,
+        and "finally { $haraBootstrap=$null; $env:HARA_COMMANDER_URL=$haraPrevUrl }" in WINDOWS_BOOTSTRAP,
         "WINDOWS_BOOTSTRAP_CANONICAL_ORIGIN_PIN",
     )
+    need(
+        "$haraBootstrap=irm " in WINDOWS_BOOTSTRAP
+        and "-ErrorAction Stop" in WINDOWS_BOOTSTRAP
+        and "| iex" not in WINDOWS_BOOTSTRAP
+        and "HARA_COMMANDER_BOOTSTRAP_EMPTY" in WINDOWS_BOOTSTRAP
+        and "iex ([string]$haraBootstrap)" in WINDOWS_BOOTSTRAP,
+        "WINDOWS_BOOTSTRAP_FETCH_FAILURE_PROPAGATES",
+    )
+
+    fail_chain = subprocess.run(
+        [
+            "bash",
+            "-c",
+            "(tmp=$(mktemp) && trap 'rm -f $tmp' EXIT && false && bash $tmp)",
+        ],
+        cwd=ROOT,
+        check=False,
+    )
+    need(fail_chain.returncode != 0, "LINUX_BOOTSTRAP_FAILURE_CHAIN_FAILS_CLOSED")
 
     need("/release/agent-manifest.json" in LINUX, "LINUX_MANIFEST_FETCH")
     need("AGENT_SHA256_MISMATCH" in LINUX, "LINUX_SHA_ENFORCEMENT")

@@ -788,7 +788,7 @@
     if (copyLinux) {
       event.preventDefault();
       copyText(
-        "curl -fsS --proto '=https' --tlsv1.2 --location --max-redirs 0 https://commander.haralabs.com.br/install/linux.sh | HARA_COMMANDER_URL=https://commander.haralabs.com.br bash",
+        "(tmp=$(mktemp) && trap 'rm -f $tmp' EXIT && curl -fsS --proto '=https' --tlsv1.2 --location --max-redirs 0 https://commander.haralabs.com.br/install/linux.sh -o $tmp && HARA_COMMANDER_URL=https://commander.haralabs.com.br bash $tmp)",
         "Comando Linux copiado."
       );
       return;
@@ -798,7 +798,7 @@
     if (copyWindows) {
       event.preventDefault();
       copyText(
-        "$haraPrevUrl=$env:HARA_COMMANDER_URL; try { $env:HARA_COMMANDER_URL='https://commander.haralabs.com.br'; irm https://commander.haralabs.com.br/install/windows.ps1 -MaximumRedirection 0 | iex } finally { $env:HARA_COMMANDER_URL=$haraPrevUrl }",
+        "$haraPrevUrl=$env:HARA_COMMANDER_URL; try { $env:HARA_COMMANDER_URL='https://commander.haralabs.com.br'; $haraBootstrap=irm https://commander.haralabs.com.br/install/windows.ps1 -MaximumRedirection 0 -ErrorAction Stop; if (-not $haraBootstrap) { throw 'HARA_COMMANDER_BOOTSTRAP_EMPTY' }; iex ([string]$haraBootstrap) } finally { $haraBootstrap=$null; $env:HARA_COMMANDER_URL=$haraPrevUrl }",
         "Comando Windows copiado."
       );
       return;
