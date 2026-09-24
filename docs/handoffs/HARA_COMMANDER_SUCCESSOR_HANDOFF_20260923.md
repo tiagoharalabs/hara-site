@@ -636,13 +636,16 @@ git diff --check
 - PR #122 — Agent 0.3.7 receipt/result binding + proof-before-quota-commit — **MERGED + PROMOTED**
 - PR #125 — canonical device-call expiry cause — **MERGED + PROD PROMOTED**
 - PR #127 — abandoned quota-reservation TTL / crash-safety — **MERGED + PROD PROMOTED**
+- PR #128 — quota TTL PROD rollout receipt / runtime authority — **MERGED**
 - hara-platform PR #1158 — quota finalization compensation source — **MERGED; real-device COMMIT E2E pending**
 - issue #65 — Commander post-promotion coordination / residual homologation — **OPEN**
 
-Canonical repository state at this checkpoint: `main` = `fecd6e79cd9d4d997c4e93ca2143b879153bb197`.
+Canonical repository state at this checkpoint: `main` = `71614660635558122901c352bf94f8a28dc23c01`.
 Current deployed Commander runtime source: `84895dd17489e418b4b207bde405d7db9aa33469`.
 Current PROD Worker: `093ceec9-cacb-4f8b-ba23-bbfc85f7e1aa`; rollback: `382f4b7e-3094-43b9-a013-3b3f46f39fbf`.
 Current DEV Worker: `5a594804-0de5-4aa8-abf4-b669454f020f`; rollback: `80f3b819-e6ae-4a2e-ad61-e94729240957`.
 PRs #110–#112 are operator-tooling/preflight/token-custody hardening. PRs #113/#115/#116/#118 changed deployable/runtime customer assets or behavior and were explicitly promoted.
 
-Continue from current `main`, this guide and the newest issue #65 comments. Do not use PR #66 as a backend source.
+Compact current entrypoint: `docs/handoffs/HARA_COMMANDER_CURRENT_KIT_20260924.md`.
+
+Continue from current `main`, the current kit, this guide and the newest issue #65 comments. Do not use PR #66 as a backend source.
