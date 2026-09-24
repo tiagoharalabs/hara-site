@@ -1131,7 +1131,7 @@ async function enqueueDeviceCall(env, body) {
   const enqueueAt = nowIso();
   await env.PRODUCT_DB.prepare(
     `UPDATE commander_device_calls
-        SET state = 'EXPIRED', completed_at_utc = ?
+        SET state = 'EXPIRED', completed_at_utc = ?, error_code = 'DEVICE_CALL_EXPIRED'
       WHERE tenant_id = ? AND subject_id = ? AND device_id = ?
         AND state IN ('PENDING','EXECUTING')
         AND expires_at_utc <= ?`
@@ -1338,7 +1338,7 @@ async function deviceCallStatus(env, body) {
   ) {
     const expired = await env.PRODUCT_DB.prepare(
       `UPDATE commander_device_calls
-          SET state = 'EXPIRED', completed_at_utc = ?
+          SET state = 'EXPIRED', completed_at_utc = ?, error_code = 'DEVICE_CALL_EXPIRED'
         WHERE call_id = ?
           AND tenant_id = ?
           AND subject_id = ?

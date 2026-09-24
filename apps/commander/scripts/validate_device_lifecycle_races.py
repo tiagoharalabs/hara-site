@@ -204,12 +204,51 @@ db.execute(
     ("2026-09-24T00:10:00.000Z","C-LATE","T1","D1","2026-09-24T00:10:00.000Z"),
 )
 assert db.execute(
-    "SELECT state FROM commander_device_calls WHERE call_id='C-LATE'"
-).fetchone() == ("EXPIRED",)
+    "SELECT state,error_code FROM commander_device_calls WHERE call_id='C-LATE'"
+).fetchone() == ("EXPIRED","DEVICE_CALL_EXPIRED")
+
+# Prove every expiry path records the same canonical terminal cause.
+db.execute(
+    """INSERT INTO commander_device_calls
+       (call_id,request_id,tenant_id,subject_id,device_id,tool_id,payload_json,state,
+        created_at_utc,expires_at_utc,claimed_at_utc,completed_at_utc,result_json,error_code)
+       VALUES ('C-MAINT','REQ-MAINT','T1','S1','D1','hara.health','{}','PENDING',
+               '2026-09-24T00:08:00.000Z','2026-09-24T00:08:50.000Z',NULL,NULL,NULL,NULL)"""
+)
+db.execute(
+    """UPDATE commander_device_calls
+          SET state='EXPIRED',completed_at_utc=?,error_code='DEVICE_CALL_EXPIRED'
+        WHERE tenant_id=? AND subject_id=? AND device_id=?
+          AND state IN ('PENDING','EXECUTING') AND expires_at_utc<=?""",
+    ("2026-09-24T00:10:00.000Z","T1","S1","D1","2026-09-24T00:10:00.000Z"),
+)
+assert db.execute(
+    "SELECT state,error_code FROM commander_device_calls WHERE call_id='C-MAINT'"
+).fetchone() == ("EXPIRED","DEVICE_CALL_EXPIRED"), "MAINTENANCE_EXPIRY_CAUSE_MISSING"
+
+db.execute(
+    """INSERT INTO commander_device_calls
+       (call_id,request_id,tenant_id,subject_id,device_id,tool_id,payload_json,state,
+        created_at_utc,expires_at_utc,claimed_at_utc,completed_at_utc,result_json,error_code)
+       VALUES ('C-STATUS','REQ-STATUS','T1','S1','D1','hara.health','{}','EXECUTING',
+               '2026-09-24T00:08:00.000Z','2026-09-24T00:08:50.000Z',
+               '2026-09-24T00:08:01.000Z',NULL,NULL,NULL)"""
+)
+db.execute(
+    """UPDATE commander_device_calls
+          SET state='EXPIRED',completed_at_utc=?,error_code='DEVICE_CALL_EXPIRED'
+        WHERE call_id=? AND tenant_id=? AND subject_id=?
+          AND state IN ('PENDING','EXECUTING') AND expires_at_utc<=?""",
+    ("2026-09-24T00:10:00.000Z","C-STATUS","T1","S1","2026-09-24T00:10:00.000Z"),
+)
+assert db.execute(
+    "SELECT state,error_code FROM commander_device_calls WHERE call_id='C-STATUS'"
+).fetchone() == ("EXPIRED","DEVICE_CALL_EXPIRED"), "STATUS_EXPIRY_CAUSE_MISSING"
 
 select_block = WORKER.split("async function selectDevice",1)[1].split("async function selectPortalDevice",1)[0]
 enqueue_block = WORKER.split("async function enqueueDeviceCall",1)[1].split("async function claimNextDeviceCall",1)[0]
 complete_block = WORKER.split("async function completeDeviceCall",1)[1].split("async function deviceCallStatus",1)[0]
+status_block = WORKER.split("async function deviceCallStatus",1)[1].split("export default",1)[0]
 revoke_block = WORKER.split("async function revokePortalDevice",1)[1].split("async function enqueueDeviceCall",1)[0]
 heartbeat_block = WORKER.split("async function heartbeatDevice",1)[1].split("async function revokeDeviceSelf",1)[0]
 assert "SELECT ?, ?, d.device_id, ?" in select_block
@@ -224,6 +263,8 @@ assert "d.revoked_at_utc IS NULL" in enqueue_block
 assert "AND expires_at_utc > ?" in complete_block
 assert 'throw new Error("DEVICE_CALL_EXPIRED")' in complete_block
 assert "existing.result_json !== resultJson" in complete_block
+assert "error_code = 'DEVICE_CALL_EXPIRED'" in enqueue_block
+assert "error_code = 'DEVICE_CALL_EXPIRED'" in status_block
 assert "revoked_at_utc IS NULL" in heartbeat_block
 assert 'throw new Error("DEVICE_AUTH_INVALID")' in heartbeat_block
 
@@ -232,6 +273,7 @@ print("COMMANDER_DEVICE_ENQUEUE_REVOKE_RACE=BLOCKED")
 print("COMMANDER_DEVICE_ENQUEUE_IDEMPOTENCY_RACE=BLOCKED")
 print("COMMANDER_DEVICE_ENQUEUE_PAYLOAD_IDEMPOTENCY=STRICT")
 print("COMMANDER_DEVICE_LATE_COMPLETION=EXPIRED")
+print("COMMANDER_DEVICE_EXPIRY_ERROR_CODE=CANONICAL")
 print("COMMANDER_DEVICE_COMPLETION_IDEMPOTENCY=STRICT")
 print("COMMANDER_DEVICE_HEARTBEAT_REVOKE_RACE=BLOCKED")
 print("COMMANDER_PORTAL_REVOKE_CALL_CANCELLATION=ATOMIC")
