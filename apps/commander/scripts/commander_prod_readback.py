@@ -13,6 +13,7 @@ REPO = APP.parents[1]
 CONFIG = APP / "wrangler.jsonc"
 DATABASE = "hara-commander-product-prod"
 SESSION_RETENTION_DAYS = 30
+PAIRING_RETENTION_DAYS = 30
 TRANSIENT_MARKERS = (
     "code: 7403",
     "[code: 7403]",
@@ -39,7 +40,50 @@ QUERIES = {
       (SELECT COUNT(*) FROM entitlements e LEFT JOIN tenants t ON t.tenant_id=e.tenant_id WHERE t.tenant_id IS NULL) AS entitlements_orphan_tenant,
       (SELECT COUNT(*) FROM entitlements e LEFT JOIN plans p ON p.plan_code=e.plan_code WHERE p.plan_code IS NULL) AS entitlements_orphan_plan,
       (SELECT COUNT(*) FROM identity_bindings b LEFT JOIN users u ON u.subject_id=b.subject_id WHERE u.subject_id IS NULL) AS bindings_orphan_user,
-      (SELECT COUNT(*) FROM commander_device_selections s LEFT JOIN commander_devices d ON d.device_id=s.device_id WHERE d.device_id IS NULL) AS selections_orphan_device;""",
+      (SELECT COUNT(*) FROM commander_device_selections s LEFT JOIN commander_devices d ON d.device_id=s.device_id WHERE d.device_id IS NULL) AS selections_orphan_device,
+      (SELECT COUNT(*) FROM device_pairing_tokens p
+        LEFT JOIN commander_devices d ON d.pairing_id=p.pairing_id
+        WHERE p.consumed_at_utc IS NOT NULL AND d.device_id IS NULL) AS consumed_pairing_without_device;""",
+    "pairing_hygiene": f"""SELECT
+      COUNT(*) AS total_pairing_tokens,
+      COALESCE(SUM(CASE
+        WHEN p.consumed_at_utc IS NULL
+         AND p.superseded_at_utc IS NULL
+         AND julianday(p.expires_at_utc) > julianday('now')
+        THEN 1 ELSE 0 END), 0) AS current_valid_pairing_tokens,
+      COALESCE(SUM(CASE
+        WHEN p.consumed_at_utc IS NULL
+         AND (
+           p.superseded_at_utc IS NOT NULL
+           OR julianday(p.expires_at_utc) <= julianday('now')
+         )
+        THEN 1 ELSE 0 END), 0) AS terminal_unconsumed_pairing_tokens,
+      COALESCE(SUM(CASE
+        WHEN p.consumed_at_utc IS NULL
+         AND NOT EXISTS (
+           SELECT 1 FROM commander_devices d WHERE d.pairing_id = p.pairing_id
+         )
+         AND (
+           (
+             p.superseded_at_utc IS NOT NULL
+             AND julianday(p.superseded_at_utc) <= julianday('now', '-{PAIRING_RETENTION_DAYS} days')
+           )
+           OR (
+             p.superseded_at_utc IS NULL
+             AND julianday(p.expires_at_utc) <= julianday('now', '-{PAIRING_RETENTION_DAYS} days')
+           )
+         )
+        THEN 1 ELSE 0 END), 0) AS retention_eligible_pairing_tokens,
+      COALESCE(SUM(CASE
+        WHEN p.consumed_at_utc IS NOT NULL
+        THEN 1 ELSE 0 END), 0) AS consumed_pairing_tokens,
+      COALESCE(SUM(CASE
+        WHEN p.consumed_at_utc IS NOT NULL
+         AND EXISTS (
+           SELECT 1 FROM commander_devices d WHERE d.pairing_id = p.pairing_id
+         )
+        THEN 1 ELSE 0 END), 0) AS consumed_pairings_with_device
+      FROM device_pairing_tokens p;""",
     "session_hygiene": f"""SELECT
       (SELECT COUNT(*) FROM portal_sessions
         WHERE revoked_at_utc IS NULL
@@ -109,6 +153,7 @@ def main() -> int:
         "state": "PASS",
         "database": DATABASE,
         "session_retention_days": SESSION_RETENTION_DAYS,
+        "pairing_retention_days": PAIRING_RETENTION_DAYS,
         "queries": {},
     }
     for name, sql in QUERIES.items():
@@ -134,6 +179,11 @@ def main() -> int:
         )
     report["migration_0009_state"] = migration_state
 
+    pairing_hygiene = report["queries"]["pairing_hygiene"]["row"]
+    pairing_retention_eligible = int(
+        pairing_hygiene.get("retention_eligible_pairing_tokens", 0) or 0
+    )
+
     session_hygiene = report["queries"]["session_hygiene"]["row"]
     retention_eligible = (
         int(session_hygiene.get("retention_eligible_expired_sessions", 0) or 0)
@@ -145,6 +195,20 @@ def main() -> int:
     print("COMMANDER_PROD_D1_READBACK=PASS")
     print("COMMANDER_PROD_D1_TRANSIENT_RETRY=READY")
     print(f"COMMANDER_PROD_D1_MIGRATION_0009={migration_state}")
+    print(f"COMMANDER_PROD_PAIRING_RETENTION_WINDOW_DAYS={PAIRING_RETENTION_DAYS}")
+    print(f"COMMANDER_PROD_PAIRING_RETENTION_ELIGIBLE={pairing_retention_eligible}")
+    print(
+        "COMMANDER_PROD_PAIRING_CURRENT_VALID="
+        + str(int(pairing_hygiene.get("current_valid_pairing_tokens", 0) or 0))
+    )
+    print(
+        "COMMANDER_PROD_PAIRING_TERMINAL_UNCONSUMED="
+        + str(int(pairing_hygiene.get("terminal_unconsumed_pairing_tokens", 0) or 0))
+    )
+    print(
+        "COMMANDER_PROD_PAIRING_CONSUMED_PROVENANCE="
+        + str(int(pairing_hygiene.get("consumed_pairings_with_device", 0) or 0))
+    )
     print(f"COMMANDER_PROD_SESSION_RETENTION_WINDOW_DAYS={SESSION_RETENTION_DAYS}")
     print(f"COMMANDER_PROD_SESSION_RETENTION_ELIGIBLE={retention_eligible}")
     print(

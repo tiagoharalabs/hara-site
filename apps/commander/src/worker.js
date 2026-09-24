@@ -17,6 +17,8 @@ const DEMO_TENANT = "HARA-TENANT-DEMO-0001";
 const MCP_METER_ID = "HARA_COMMANDER_GOVERNED_INVOKE";
 const MCP_SECONDARY_PROVIDER = "CLOUDFLARE_ACCESS";
 const DEVICE_CALL_TTL_SECONDS = 50;
+const PAIRING_RETENTION_SECONDS = 30 * 24 * 60 * 60;
+const PAIRING_RETENTION_BATCH = 100;
 const MCP_TOOL_GRANTS = Object.freeze({
   "hara.health": "COMMANDER_DISCOVERY",
   "hara.functions.list": "COMMANDER_DISCOVERY",
@@ -731,7 +733,35 @@ async function selectPortalDevice(env, session, body) {
   };
 }
 
+async function cleanupTerminalPairingTokens(env) {
+  const cutoff = nowIso(-PAIRING_RETENTION_SECONDS);
+  return env.PRODUCT_DB.prepare(
+    `DELETE FROM device_pairing_tokens
+      WHERE pairing_id IN (
+        SELECT p.pairing_id
+          FROM device_pairing_tokens p
+         WHERE p.consumed_at_utc IS NULL
+           AND NOT EXISTS (
+             SELECT 1
+               FROM commander_devices d
+              WHERE d.pairing_id = p.pairing_id
+           )
+           AND (
+             (p.superseded_at_utc IS NOT NULL AND p.superseded_at_utc <= ?)
+             OR (
+               p.superseded_at_utc IS NULL
+               AND p.expires_at_utc <= ?
+             )
+           )
+         ORDER BY COALESCE(p.superseded_at_utc, p.expires_at_utc) ASC
+         LIMIT ?
+      )`
+  ).bind(cutoff, cutoff, PAIRING_RETENTION_BATCH).run();
+}
+
 async function createDevicePairing(env, session) {
+  await cleanupTerminalPairingTokens(env).catch(() => null);
+
   const token = randomToken(32);
   const tokenHash = await sha256(token);
   const pairingId = "HARA-PAIR-" + crypto.randomUUID();

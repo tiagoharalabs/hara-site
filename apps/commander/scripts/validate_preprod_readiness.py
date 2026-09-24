@@ -66,6 +66,7 @@ def main():
         ("COMMANDER_PREPROD_CONTRACT", "validate_prod_contracts.py"),
         ("COMMANDER_PREPROD_LIFECYCLE", "validate_device_lifecycle_races.py"),
         ("COMMANDER_PREPROD_PAIRING", "validate_pairing_supersession.py"),
+        ("COMMANDER_PREPROD_PAIRING_RETENTION", "validate_pairing_retention.py"),
         ("COMMANDER_PREPROD_RETENTION", "validate_session_retention.py"),
         ("COMMANDER_PREPROD_ORIGIN", "validate_portal_origin_guard.py"),
         ("COMMANDER_PREPROD_CLAIM_REVOKE_RACE", "validate_claim_revoke_race.py"),
@@ -90,6 +91,11 @@ def main():
     print("COMMANDER_SOURCE_PREPROD_READY=PASS")
 
     migration_state_line = None
+    pairing_retention_window_line = None
+    pairing_retention_eligible_line = None
+    pairing_current_valid_line = None
+    pairing_terminal_unconsumed_line = None
+    pairing_consumed_provenance_line = None
     retention_window_line = None
     retention_eligible_line = None
     retention_oldest_age_line = None
@@ -110,6 +116,16 @@ def main():
         for line in d1_output.splitlines():
             if line.startswith("COMMANDER_PROD_D1_MIGRATION_0009="):
                 migration_state_line = line
+            elif line.startswith("COMMANDER_PROD_PAIRING_RETENTION_WINDOW_DAYS="):
+                pairing_retention_window_line = line
+            elif line.startswith("COMMANDER_PROD_PAIRING_RETENTION_ELIGIBLE="):
+                pairing_retention_eligible_line = line
+            elif line.startswith("COMMANDER_PROD_PAIRING_CURRENT_VALID="):
+                pairing_current_valid_line = line
+            elif line.startswith("COMMANDER_PROD_PAIRING_TERMINAL_UNCONSUMED="):
+                pairing_terminal_unconsumed_line = line
+            elif line.startswith("COMMANDER_PROD_PAIRING_CONSUMED_PROVENANCE="):
+                pairing_consumed_provenance_line = line
             elif line.startswith("COMMANDER_PROD_SESSION_RETENTION_WINDOW_DAYS="):
                 retention_window_line = line
             elif line.startswith("COMMANDER_PROD_SESSION_RETENTION_ELIGIBLE="):
@@ -118,6 +134,14 @@ def main():
                 retention_oldest_age_line = line
         if migration_state_line is None:
             raise SystemExit("COMMANDER_PROD_D1_MIGRATION_STATE_MISSING")
+        if (
+            pairing_retention_window_line is None
+            or pairing_retention_eligible_line is None
+            or pairing_current_valid_line is None
+            or pairing_terminal_unconsumed_line is None
+            or pairing_consumed_provenance_line is None
+        ):
+            raise SystemExit("COMMANDER_PROD_PAIRING_RETENTION_STATE_MISSING")
         if (
             retention_window_line is None
             or retention_eligible_line is None
@@ -165,6 +189,14 @@ def main():
         print(migration_state_line)
     else:
         print("COMMANDER_PROD_D1_MIGRATION_0009=LIVE_READBACK_REQUIRED")
+    if pairing_retention_window_line:
+        print(pairing_retention_window_line)
+        print(pairing_retention_eligible_line)
+        print(pairing_current_valid_line)
+        print(pairing_terminal_unconsumed_line)
+        print(pairing_consumed_provenance_line)
+    else:
+        print("COMMANDER_PROD_PAIRING_RETENTION_STATE=LIVE_READBACK_REQUIRED")
     if retention_window_line:
         print(retention_window_line)
         print(retention_eligible_line)
