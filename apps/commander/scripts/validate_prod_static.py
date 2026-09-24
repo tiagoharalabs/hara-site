@@ -43,7 +43,7 @@ need("data-demo-toast" not in HTML and "data-demo-toast" not in JS, "PROD_DEMO_A
 need("Expirado · gere um novo código" in JS, "PAIRING_EXPIRY_UI")
 need("Confirmar revogação" in JS and "data-confirm-revoke" not in HTML and "window.confirm" not in JS, "DEVICE_REVOKE_CONFIRMATION")
 need(WORKER.count("error_code = 'DEVICE_REVOKED'") >= 2, "PORTAL_DEVICE_REVOKE_CANCELS_CALLS")
-need("function requirePortalMutationOrigin" in WORKER and WORKER.count("requirePortalMutationOrigin(request);") >= 4, "PORTAL_MUTATION_ORIGIN_GUARD")
+need("function requirePortalMutationOrigin" in WORKER and 'if (!origin || origin !== expectedOrigin)' in WORKER and WORKER.count("requirePortalMutationOrigin(request);") >= 4, "PORTAL_MUTATION_ORIGIN_GUARD")
 need("fonts.googleapis.com" not in HTML and "fonts.gstatic.com" not in HTML, "EXTERNAL_FONT_DEPENDENCY_ABSENT")
 need("'TRIAL', 'Trial', 'HARA_COMMANDER_GOVERNED_INVOKE', 'CALENDAR_MONTH', 100, 'ACTIVE'" in TRIAL_MIGRATION, "TRIAL_PLAN_CANONICAL_LIMIT")
 need('100 <small>execuções / mês</small>' in HTML and '1.000 <small>invokes / período</small>' not in HTML and '10.000 <small>invokes / período</small>' not in HTML, "TRIAL_PLAN_UI_ALIGNMENT")

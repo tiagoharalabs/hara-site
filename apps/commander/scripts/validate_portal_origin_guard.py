@@ -10,7 +10,7 @@ guard = WORKER.split(
 
 assert 'request.headers.get("origin")' in guard
 assert 'request.headers.get("sec-fetch-site")' in guard
-assert 'origin !== expectedOrigin' in guard
+assert '!origin || origin !== expectedOrigin' in guard
 assert 'fetchSite !== "same-origin"' in guard
 assert 'throw new Error("PORTAL_ORIGIN_DENIED")' in guard
 assert "PORTAL_ORIGIN_DENIED: 403" in WORKER
@@ -38,6 +38,7 @@ assert "requirePortalMutationOrigin(request)" not in device_api.split(
 )[0]
 
 print("COMMANDER_PORTAL_MUTATION_ORIGIN_GUARD=PASS")
+print("COMMANDER_PORTAL_MISSING_ORIGIN_MUTATION=DENIED_403")
 print("COMMANDER_PORTAL_CROSS_ORIGIN_MUTATION=DENIED_403")
 print("COMMANDER_PORTAL_READ_ROUTES_ORIGIN_FREE=PASS")
 print("COMMANDER_DEVICE_AGENT_API_ORIGIN_FREE=PASS")
