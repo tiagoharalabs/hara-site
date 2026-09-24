@@ -321,8 +321,8 @@ The deterministic source and runtime promotion gates are closed. Remaining work 
    - Agent 0.3.5 additionally requires fresh local startup attestation for the expected version before install/update success on both Linux and Windows;
    - Agent 0.3.6 additionally denies HTTP redirects for credential-bearing Agent/installer transport on both platforms;
    - the public runtime drift gate covers installers, Agents, manifest and checksums byte-for-byte;
-   - the customer-visible Linux bootstrap now requires HTTPS/TLS 1.2+ and fails on any redirect before piping to `bash`;
-   - the customer-visible Windows bootstrap now sets `-MaximumRedirection 0` before piping to `iex`;
+   - the customer-visible Linux bootstrap now requires HTTPS/TLS 1.2+, fails on any redirect and pins `HARA_COMMANDER_URL` to the canonical PROD origin before piping to `bash`;
+   - the customer-visible Windows bootstrap now sets `-MaximumRedirection 0`, pins `HARA_COMMANDER_URL` to canonical PROD during execution and restores the caller's previous environment value afterward;
    - the initial bootstrap still trusts the Commander HTTPS origin and has no independent trust anchor yet;
    - independent package/signature trust remains a later product-maturity target and must not be represented as already solved.
 

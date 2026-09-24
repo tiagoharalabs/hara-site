@@ -17,11 +17,15 @@ MANIFEST_PATH = PUBLIC / "release/agent-manifest.json"
 
 LINUX_BOOTSTRAP = (
     "curl -fsS --proto '=https' --tlsv1.2 --location --max-redirs 0 "
-    "https://commander.haralabs.com.br/install/linux.sh | bash"
+    "https://commander.haralabs.com.br/install/linux.sh | "
+    "HARA_COMMANDER_URL=https://commander.haralabs.com.br bash"
 )
 WINDOWS_BOOTSTRAP = (
+    "$haraPrevUrl=$env:HARA_COMMANDER_URL; try { "
+    "$env:HARA_COMMANDER_URL='https://commander.haralabs.com.br'; "
     "irm https://commander.haralabs.com.br/install/windows.ps1 "
-    "-MaximumRedirection 0 | iex"
+    "-MaximumRedirection 0 | iex } finally { "
+    "$env:HARA_COMMANDER_URL=$haraPrevUrl }"
 )
 SUMS_PATH = PUBLIC / "release/SHA256SUMS"
 DRIFT = (APP / "scripts/validate_prod_runtime_drift.py").read_text(encoding="utf-8")
@@ -84,6 +88,15 @@ def main() -> int:
          "LINUX_BOOTSTRAP_REDIRECT_DENIED")
     need("-MaximumRedirection 0" in WINDOWS_BOOTSTRAP,
          "WINDOWS_BOOTSTRAP_REDIRECT_DENIED")
+    need(
+        "| HARA_COMMANDER_URL=https://commander.haralabs.com.br bash" in LINUX_BOOTSTRAP,
+        "LINUX_BOOTSTRAP_CANONICAL_ORIGIN_PIN",
+    )
+    need(
+        "$env:HARA_COMMANDER_URL='https://commander.haralabs.com.br';" in WINDOWS_BOOTSTRAP
+        and "finally { $env:HARA_COMMANDER_URL=$haraPrevUrl }" in WINDOWS_BOOTSTRAP,
+        "WINDOWS_BOOTSTRAP_CANONICAL_ORIGIN_PIN",
+    )
 
     need("/release/agent-manifest.json" in LINUX, "LINUX_MANIFEST_FETCH")
     need("AGENT_SHA256_MISMATCH" in LINUX, "LINUX_SHA_ENFORCEMENT")
