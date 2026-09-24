@@ -26,7 +26,7 @@ def main():
     parser.add_argument(
         "--live-readonly",
         action="store_true",
-        help="also run public Identity and PROD D1 read-only checks",
+        help="also run public Identity, PROD D1/runtime, fail-closed and deployment checks",
     )
     parser.add_argument(
         "--expect-prod-migration",
@@ -115,6 +115,11 @@ def main():
                 break
         if runtime_asset_state_line is None:
             raise SystemExit("COMMANDER_PROD_RUNTIME_ASSET_STATE_MISSING")
+
+        run("COMMANDER_PROD_FAIL_CLOSED_LIVE_READONLY", [
+            sys.executable,
+            "apps/commander/scripts/validate_prod_fail_closed.py",
+        ])
 
         deployment_command = [
             sys.executable,
