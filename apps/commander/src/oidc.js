@@ -150,6 +150,12 @@ export async function verifyIdToken({ idToken, metadata, issuer, clientId, nonce
   ) {
     throw new Error("OIDC_AUDIENCE_MISMATCH");
   }
+  if (
+    claims.azp !== undefined
+    && (typeof claims.azp !== "string" || !claims.azp)
+  ) {
+    throw new Error("OIDC_AUTHORIZED_PARTY_INVALID");
+  }
   if (audiences.length > 1 && !claims.azp) throw new Error("OIDC_AUTHORIZED_PARTY_MISSING");
   if (claims.azp && claims.azp !== clientId) throw new Error("OIDC_AUTHORIZED_PARTY_MISMATCH");
   if (claims.nonce !== nonce) throw new Error("OIDC_NONCE_MISMATCH");
