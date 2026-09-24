@@ -33,7 +33,13 @@ for token in ('platform": "LINUX"', "/api/device/enroll", "/agent/linux.py",
               "hara.commander-device-preflight.v1", "mutation_performed", "preflight_agent"):
     need(LINUX, token, "LINUX_INSTALLER_MISSING")
 assert "cloudflared" not in LINUX.lower()
+assert 'python3 - "$PAIRING_TOKEN"' not in LINUX, "PAIRING_TOKEN_EXPOSED_IN_ARGV"
+assert 'python3 - "$RESPONSE"' not in LINUX, "DEVICE_TOKEN_RESPONSE_EXPOSED_IN_ARGV"
+assert '--data "$PAYLOAD"' not in LINUX, "PAIRING_PAYLOAD_EXPOSED_IN_CURL_ARGV"
+assert "HARA_ROLLBACK_DEVICE_TOKEN=" not in LINUX, "DEVICE_TOKEN_EXPOSED_IN_ROLLBACK_ENV"
+assert "--data-binary @-" in LINUX, "PAIRING_PAYLOAD_STDIN_MISSING"
 print("LINUX_DEVICE_INSTALLER_STATIC=PASS")
+print("LINUX_INSTALLER_SECRET_ARGV_EXPOSURE=FALSE")
 
 for token in ('platform="WINDOWS"', "/api/device/enroll", "/agent/windows.ps1",
               "ConvertFrom-SecureString", "Register-ScheduledTask", "icacls.exe",

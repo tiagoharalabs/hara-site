@@ -147,12 +147,11 @@ PYREMOTE
 
 rollback_enrolled_device() {
   [ -n "${DEVICE_ID:-}" ] && [ -n "${DEVICE_TOKEN:-}" ] || return 1
-  HARA_ROLLBACK_DEVICE_ID="$DEVICE_ID" HARA_ROLLBACK_DEVICE_TOKEN="$DEVICE_TOKEN" \
-    python3 - "$BASE_URL" <<'PYROLLBACK'
-import json,os,sys,urllib.request
+  printf '%s\n' "$DEVICE_TOKEN" | python3 -c '
+import json,sys,urllib.request
 base=sys.argv[1].rstrip("/")
-device_id=os.environ.get("HARA_ROLLBACK_DEVICE_ID","")
-token=os.environ.get("HARA_ROLLBACK_DEVICE_TOKEN","")
+device_id=sys.argv[2]
+token=sys.stdin.readline().rstrip("\n")
 if not device_id or not token: raise SystemExit(2)
 req=urllib.request.Request(
     base+"/api/device/revoke-self", data=b"{}", method="POST",
@@ -162,7 +161,7 @@ with urllib.request.urlopen(req,timeout=15) as response:
     obj=json.loads(response.read().decode() or "{}")
 if not obj.get("ok") or obj.get("state")!="REVOKED" or obj.get("device_id")!=device_id:
     raise SystemExit(3)
-PYROLLBACK
+' "$BASE_URL" "$DEVICE_ID"
 }
 
 cleanup_failed_install() {
@@ -347,30 +346,29 @@ printf '\n'
 DEVICE_NAME="${HOSTNAME:-$(hostname 2>/dev/null || echo linux-device)}"
 ARCH="$(uname -m)"
 
-PAYLOAD="$(python3 - "$PAIRING_TOKEN" "$DEVICE_NAME" "$ARCH" <<'PY'
+PAYLOAD="$(printf '%s\n' "$PAIRING_TOKEN" | python3 -c '
 import json,sys
+token=sys.stdin.readline().rstrip("\n")
 print(json.dumps({
-  "pairing_token": sys.argv[1],
-  "device_name": sys.argv[2],
+  "pairing_token": token,
+  "device_name": sys.argv[1],
   "platform": "LINUX",
-  "architecture": sys.argv[3],
+  "architecture": sys.argv[2],
   "agent_version": "0.3.3",
 }, separators=(",",":")))
-PY
-)"
+' "$DEVICE_NAME" "$ARCH")"
 
-RESPONSE="$(curl -fsS --max-time 30   -H 'content-type: application/json'   -H 'accept: application/json'   --data "$PAYLOAD"   "$BASE_URL/api/device/enroll")"
+RESPONSE="$(printf '%s' "$PAYLOAD" | curl -fsS --max-time 30   -H 'content-type: application/json'   -H 'accept: application/json'   --data-binary @-   "$BASE_URL/api/device/enroll")"
 
-readarray -t VALUES < <(python3 - "$RESPONSE" <<'PY'
+readarray -t VALUES < <(printf '%s' "$RESPONSE" | python3 -c '
 import json,sys
-obj=json.loads(sys.argv[1])
+obj=json.load(sys.stdin)
 for key in ("device_id","device_token"):
     value=obj.get(key)
     if not isinstance(value,str) or not value:
         raise SystemExit("DEVICE_ENROLLMENT_RESPONSE_INVALID")
     print(value)
-PY
-)
+')
 
 DEVICE_ID="${VALUES[0]}"
 DEVICE_TOKEN="${VALUES[1]}"
