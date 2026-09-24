@@ -42,6 +42,26 @@ export function normalizeIssuer(value) {
   return url.toString();
 }
 
+function requireHttpsMetadataEndpoint(value, code) {
+  const text = String(value || "").trim();
+  if (!text) throw new Error("OIDC_DISCOVERY_INCOMPLETE");
+  let url;
+  try {
+    url = new URL(text);
+  } catch (_error) {
+    throw new Error(code);
+  }
+  if (
+    url.protocol !== "https:"
+    || url.username
+    || url.password
+    || url.hash
+  ) {
+    throw new Error(code);
+  }
+  return text;
+}
+
 export async function oidcDiscovery(issuer) {
   const normalized = normalizeIssuer(issuer);
   const endpoint = new URL(".well-known/openid-configuration", normalized).toString();
@@ -51,6 +71,10 @@ export async function oidcDiscovery(issuer) {
   if (normalizeIssuer(metadata.issuer) !== normalized) throw new Error("OIDC_ISSUER_MISMATCH");
   for (const field of ["authorization_endpoint", "token_endpoint", "jwks_uri"]) {
     if (!metadata[field]) throw new Error("OIDC_DISCOVERY_INCOMPLETE");
+    requireHttpsMetadataEndpoint(metadata[field], "OIDC_DISCOVERY_ENDPOINT_INVALID");
+  }
+  if (metadata.userinfo_endpoint) {
+    requireHttpsMetadataEndpoint(metadata.userinfo_endpoint, "OIDC_DISCOVERY_ENDPOINT_INVALID");
   }
   return metadata;
 }
