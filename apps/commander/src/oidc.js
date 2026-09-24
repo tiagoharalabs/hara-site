@@ -65,7 +65,10 @@ function requireHttpsMetadataEndpoint(value, code) {
 export async function oidcDiscovery(issuer) {
   const normalized = normalizeIssuer(issuer);
   const endpoint = new URL(".well-known/openid-configuration", normalized).toString();
-  const response = await fetch(endpoint, { headers: { accept: "application/json" } });
+  const response = await fetch(endpoint, {
+    headers: { accept: "application/json" },
+    redirect: "error",
+  });
   if (!response.ok) throw new Error("OIDC_DISCOVERY_FAILED");
   const metadata = await response.json();
   if (normalizeIssuer(metadata.issuer) !== normalized) throw new Error("OIDC_ISSUER_MISMATCH");
@@ -90,6 +93,7 @@ export async function oidcUserInfo({ metadata, accessToken }) {
       accept: "application/json",
       authorization: "Bearer " + String(accessToken),
     },
+    redirect: "error",
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok || !payload.sub) throw new Error("OIDC_USERINFO_FAILED");
@@ -126,6 +130,7 @@ export async function exchangeAuthorizationCode({ metadata, clientId, clientSecr
     method: "POST",
     headers,
     body: form.toString(),
+    redirect: "error",
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok || !payload.id_token) throw new Error("OIDC_TOKEN_EXCHANGE_FAILED");
@@ -141,7 +146,10 @@ export async function verifyIdToken({ idToken, metadata, issuer, clientId, nonce
 
   if (header.alg !== "RS256" || !header.kid) throw new Error("OIDC_ID_TOKEN_ALG_REJECTED");
 
-  const jwksResponse = await fetch(metadata.jwks_uri, { headers: { accept: "application/json" } });
+  const jwksResponse = await fetch(metadata.jwks_uri, {
+    headers: { accept: "application/json" },
+    redirect: "error",
+  });
   if (!jwksResponse.ok) throw new Error("OIDC_JWKS_FAILED");
   const jwks = await jwksResponse.json();
   const jwk = (jwks.keys || []).find((item) => item.kid === header.kid && item.kty === "RSA");
