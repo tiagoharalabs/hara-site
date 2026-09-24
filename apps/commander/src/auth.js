@@ -22,6 +22,7 @@ const SESSION_COOKIE = "hara_commander_session";
 const TX_COOKIE = "hara_commander_oidc_tx";
 const SESSION_SECONDS = 8 * 60 * 60;
 const TX_SECONDS = 10 * 60;
+const TX_RETENTION_BATCH = 100;
 const SESSION_TOUCH_SECONDS = 5 * 60;
 const SESSION_RETENTION_SECONDS = 30 * 24 * 60 * 60;
 const SESSION_RETENTION_BATCH = 100;
@@ -116,6 +117,20 @@ function authConfig(env) {
   };
 }
 
+async function cleanupExpiredOidcTransactions(env) {
+  const now = nowIso();
+  await env.PRODUCT_DB.prepare(
+    `DELETE FROM oidc_transactions
+      WHERE state_hash IN (
+        SELECT state_hash
+          FROM oidc_transactions
+         WHERE expires_at_utc <= ?
+         ORDER BY expires_at_utc ASC
+         LIMIT ?
+      )`
+  ).bind(now, TX_RETENTION_BATCH).run().catch(() => null);
+}
+
 async function cleanupTerminalPortalSessions(env) {
   const cutoff = nowIso(-SESSION_RETENTION_SECONDS);
   await env.PRODUCT_DB.prepare(
@@ -138,12 +153,11 @@ export async function beginLogin(request, env) {
   const redirectUri = url.origin + "/auth/callback";
   const returnTo = safeReturnTo(url.searchParams.get("return_to"));
 
-  // Bound OIDC transaction retention before creating a new browser flow.
+  // Bound, best-effort OIDC transaction hygiene before creating a new browser flow.
   // Expired rows are no longer useful for replay protection because callbacks
-  // are rejected once their transaction window closes.
-  await env.PRODUCT_DB.prepare(
-    `DELETE FROM oidc_transactions WHERE expires_at_utc <= ?`
-  ).bind(nowIso()).run();
+  // are rejected once their transaction window closes. Cleanup failure must not
+  // independently block a new login attempt.
+  await cleanupExpiredOidcTransactions(env);
 
   // Governed session hygiene: terminal portal sessions are retained for 30 days,
   // then removed in small best-effort batches so cleanup can never block login.

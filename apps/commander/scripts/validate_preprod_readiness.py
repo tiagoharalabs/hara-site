@@ -71,6 +71,7 @@ def main():
         ("COMMANDER_PREPROD_ORIGIN", "validate_portal_origin_guard.py"),
         ("COMMANDER_PREPROD_CLAIM_REVOKE_RACE", "validate_claim_revoke_race.py"),
         ("COMMANDER_PREPROD_INVITE_CLAIM_RACE", "validate_invite_claim_race.py"),
+        ("COMMANDER_PREPROD_OIDC_TX_HYGIENE", "validate_oidc_transaction_hygiene.py"),
         ("COMMANDER_PREPROD_E2E_HARNESS", "validate_e2e_harness.py"),
         ("COMMANDER_PREPROD_FIRST_DEVICE_PREFLIGHT", "validate_first_device_preflight.py"),
     )
@@ -91,6 +92,10 @@ def main():
     print("COMMANDER_SOURCE_PREPROD_READY=PASS")
 
     migration_state_line = None
+    oidc_window_line = None
+    oidc_active_line = None
+    oidc_expired_line = None
+    oidc_active_consumed_line = None
     pairing_retention_window_line = None
     pairing_retention_eligible_line = None
     pairing_current_valid_line = None
@@ -116,6 +121,14 @@ def main():
         for line in d1_output.splitlines():
             if line.startswith("COMMANDER_PROD_D1_MIGRATION_0009="):
                 migration_state_line = line
+            elif line.startswith("COMMANDER_PROD_OIDC_TX_WINDOW_MINUTES="):
+                oidc_window_line = line
+            elif line.startswith("COMMANDER_PROD_OIDC_TX_ACTIVE="):
+                oidc_active_line = line
+            elif line.startswith("COMMANDER_PROD_OIDC_TX_EXPIRED="):
+                oidc_expired_line = line
+            elif line.startswith("COMMANDER_PROD_OIDC_TX_ACTIVE_CONSUMED="):
+                oidc_active_consumed_line = line
             elif line.startswith("COMMANDER_PROD_PAIRING_RETENTION_WINDOW_DAYS="):
                 pairing_retention_window_line = line
             elif line.startswith("COMMANDER_PROD_PAIRING_RETENTION_ELIGIBLE="):
@@ -134,6 +147,13 @@ def main():
                 retention_oldest_age_line = line
         if migration_state_line is None:
             raise SystemExit("COMMANDER_PROD_D1_MIGRATION_STATE_MISSING")
+        if (
+            oidc_window_line is None
+            or oidc_active_line is None
+            or oidc_expired_line is None
+            or oidc_active_consumed_line is None
+        ):
+            raise SystemExit("COMMANDER_PROD_OIDC_TX_STATE_MISSING")
         if (
             pairing_retention_window_line is None
             or pairing_retention_eligible_line is None
@@ -189,6 +209,13 @@ def main():
         print(migration_state_line)
     else:
         print("COMMANDER_PROD_D1_MIGRATION_0009=LIVE_READBACK_REQUIRED")
+    if oidc_window_line:
+        print(oidc_window_line)
+        print(oidc_active_line)
+        print(oidc_expired_line)
+        print(oidc_active_consumed_line)
+    else:
+        print("COMMANDER_PROD_OIDC_TX_STATE=LIVE_READBACK_REQUIRED")
     if pairing_retention_window_line:
         print(pairing_retention_window_line)
         print(pairing_retention_eligible_line)

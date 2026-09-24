@@ -81,7 +81,8 @@ need("SECURITY_HEADERS" in WORKER and '"strict-transport-security"' in WORKER, "
 need("7403" in READBACK and "TRANSIENT_MARKERS" in READBACK, "D1_TRANSIENT_RETRY")
 need("function sanitizeErrorCode" in WORKER and "INVALID_JSON: 400" in WORKER, "ERROR_SANITIZATION")
 need('authorize.searchParams.set("prompt", "select_account")' in AUTH and 'authorize.searchParams.set("max_age", "0")' in AUTH, "OIDC_ACCOUNT_SWITCH")
-need("DELETE FROM oidc_transactions WHERE expires_at_utc <= ?" in AUTH, "OIDC_TX_RETENTION")
+need("cleanupExpiredOidcTransactions" in AUTH and "TX_RETENTION_BATCH = 100" in AUTH and ".run().catch(() => null)" in AUTH, "OIDC_TX_RETENTION")
+need("DELETE FROM oidc_transactions WHERE expires_at_utc <= ?" not in AUTH, "OIDC_TX_UNBOUNDED_DELETE_ABSENT")
 need("julianday(expires_at_utc) > julianday('now')" in READBACK, "D1_ACTIVE_SESSION_TIME_SEMANTICS")
 
 print("COMMANDER_PROD_CONFIG=PASS")
