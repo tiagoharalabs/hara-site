@@ -10,14 +10,57 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
-AGENT_VERSION = "0.3.2"
+AGENT_VERSION = "0.3.3"
 CONFIG_FILE = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home()/".config"))) / "hara-commander/device.env"
 DATA_DIR = Path(os.environ.get("XDG_DATA_HOME", str(Path.home()/".local/share"))) / "hara-commander"
 RECEIPT_DIR = DATA_DIR / "receipts"
+STATUS_FILE = DATA_DIR / "runtime-status.json"
 FUNCTION_ID = "device.info"
 
 def utcnow():
     return datetime.now(timezone.utc).isoformat()
+
+def safe_error_code(exc):
+    if isinstance(exc, urllib.error.HTTPError):
+        return f"HTTP_{int(exc.code)}"
+    if isinstance(exc, urllib.error.URLError):
+        return "NETWORK_ERROR"
+    raw = str(exc or "").strip().upper()
+    if raw and len(raw) <= 80 and all(c.isalnum() or c == "_" for c in raw):
+        return raw
+    name = type(exc).__name__.upper()
+    if name and len(name) <= 80 and all(c.isalnum() or c == "_" for c in name):
+        return name
+    return "RUNTIME_ERROR"
+
+def write_runtime_status(*, heartbeat_at=None, error_code=None, error_at=None):
+    DATA_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
+    current = {}
+    if STATUS_FILE.is_file():
+        try:
+            current = json.loads(STATUS_FILE.read_text(encoding="utf-8"))
+        except Exception:
+            current = {}
+    payload = {
+        "schema":"hara.commander-agent-runtime-status.v1",
+        "agent_version":AGENT_VERSION,
+        "last_successful_heartbeat_at_utc": heartbeat_at if heartbeat_at is not None else current.get("last_successful_heartbeat_at_utc"),
+        "last_runtime_error_code":error_code,
+        "last_runtime_error_at_utc":error_at,
+        "updated_at_utc":utcnow(),
+    }
+    tmp = STATUS_FILE.with_suffix(".tmp")
+    tmp.write_text(json.dumps(payload,sort_keys=True,separators=(",",":")),encoding="utf-8")
+    os.chmod(tmp,0o600)
+    tmp.replace(STATUS_FILE)
+    os.chmod(STATUS_FILE,0o600)
+
+def try_write_runtime_status(**kwargs):
+    try:
+        write_runtime_status(**kwargs)
+        return True
+    except Exception:
+        return False
 
 def load_config():
     data = {}
@@ -171,12 +214,13 @@ def complete(config, call, state, result, error_code=None):
 def execute_call(config,call):
     try:
         complete(config,call,"COMPLETED",execute_tool(config,call))
-    except ValueError as exc:
+    except Exception as exc:
+        code=safe_error_code(exc)
         complete(config,call,"FAILED",{
             "state":"DENIED","operational_authority":"HARA_SERVICES",
             "runtime_authority_from_chatgpt":False,"mutation_performed":False,
-            "result":{},"blocker":{"code":str(exc)},
-        },str(exc))
+            "result":{},"blocker":{"code":code},
+        },code)
 
 def self_test():
     global RECEIPT_DIR
@@ -210,6 +254,8 @@ def main():
     config=load_config()
     RECEIPT_DIR.mkdir(parents=True,exist_ok=True,mode=0o700)
     last_heartbeat=0.0
+    last_error_code=None
+    last_error_write=0.0
     while True:
         now=time.monotonic()
         try:
@@ -218,10 +264,16 @@ def main():
                     "device_id":config["HARA_DEVICE_ID"],"architecture":config["HARA_DEVICE_ARCH"],"agent_version":AGENT_VERSION,
                 })
                 last_heartbeat=now
+                last_error_code=None
+                try_write_runtime_status(heartbeat_at=utcnow(),error_code=None,error_at=None)
             call=post_json(config["HARA_COMMANDER_URL"]+"/api/device/calls/next",config["HARA_DEVICE_TOKEN"],{})
             if call: execute_call(config,call)
-        except Exception:
-            pass
+        except Exception as exc:
+            code=safe_error_code(exc)
+            if code != last_error_code or now-last_error_write>=60:
+                try_write_runtime_status(error_code=code,error_at=utcnow())
+                last_error_code=code
+                last_error_write=now
         time.sleep(2)
 
 if __name__=="__main__":

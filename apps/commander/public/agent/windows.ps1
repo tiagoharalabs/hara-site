@@ -2,13 +2,56 @@ $ErrorActionPreference = "Stop"
 $Root = Join-Path $env:LOCALAPPDATA "HARA Commander"
 $ConfigPath = Join-Path $Root "device.json"
 $ReceiptDir = Join-Path $Root "receipts"
-$AgentVersion = "0.3.2"
+$RuntimeStatus = Join-Path $Root "runtime-status.json"
+$AgentVersion = "0.3.3"
 $FunctionId = "device.info"
 
 function Get-PlainText([Security.SecureString]$SecureValue) {
   $ptr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecureValue)
   try { return [Runtime.InteropServices.Marshal]::PtrToStringBSTR($ptr) }
   finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ptr) }
+}
+
+function Get-SafeErrorCode($ErrorRecord) {
+  try {
+    if ($ErrorRecord.Exception.Response -and $ErrorRecord.Exception.Response.StatusCode) {
+      return "HTTP_" + [int]$ErrorRecord.Exception.Response.StatusCode
+    }
+  } catch {}
+  $raw=[string]$ErrorRecord.Exception.Message
+  if ($raw -match "^[A-Z][A-Z0-9_]{0,79}$") { return $raw }
+  $name=[string]$ErrorRecord.Exception.GetType().Name
+  $normalized=($name -replace "[^A-Za-z0-9_]", "_").ToUpperInvariant()
+  if ($normalized -match "^[A-Z][A-Z0-9_]{0,79}$") { return $normalized }
+  return "RUNTIME_ERROR"
+}
+function Set-RuntimeStatus([string]$HeartbeatAt=$null,[string]$ErrorCode=$null,[string]$ErrorAt=$null) {
+  New-Item -ItemType Directory -Path $Root -Force | Out-Null
+  $existing=$null
+  if (Test-Path -LiteralPath $RuntimeStatus -PathType Leaf) {
+    try { $existing=Get-Content -Raw -LiteralPath $RuntimeStatus | ConvertFrom-Json } catch { $existing=$null }
+  }
+  $lastHeartbeat=if ($null -ne $HeartbeatAt) {$HeartbeatAt} elseif ($existing) {[string]$existing.last_successful_heartbeat_at_utc} else {$null}
+  $payload=[ordered]@{
+    schema="hara.commander-agent-runtime-status.v1"
+    agent_version=$AgentVersion
+    last_successful_heartbeat_at_utc=$lastHeartbeat
+    last_runtime_error_code=$ErrorCode
+    last_runtime_error_at_utc=$ErrorAt
+    updated_at_utc=[DateTime]::UtcNow.ToString("o")
+  }
+  $tmp=$RuntimeStatus+".tmp"
+  $payload | ConvertTo-Json -Compress | Set-Content -LiteralPath $tmp -Encoding UTF8
+  Move-Item -Force -LiteralPath $tmp -Destination $RuntimeStatus
+}
+
+function Try-SetRuntimeStatus([string]$HeartbeatAt=$null,[string]$ErrorCode=$null,[string]$ErrorAt=$null) {
+  try {
+    Set-RuntimeStatus -HeartbeatAt $HeartbeatAt -ErrorCode $ErrorCode -ErrorAt $ErrorAt
+    return $true
+  } catch {
+    return $false
+  }
 }
 
 function Get-DeviceInfo($Cfg) {
@@ -136,6 +179,8 @@ function Complete-Call($Cfg,[string]$Token,$Call,[string]$State,$Result,[string]
 }
 
 $LastHeartbeat=[datetime]::MinValue
+$LastErrorCode=$null
+$LastErrorWrite=[datetime]::MinValue
 while ($true) {
   try {
     $Cfg=Get-Content -Raw -Path $ConfigPath | ConvertFrom-Json
@@ -148,6 +193,8 @@ while ($true) {
         agent_version=$AgentVersion
       } 20 | Out-Null
       $LastHeartbeat=Get-Date
+      $LastErrorCode=$null
+      Try-SetRuntimeStatus -HeartbeatAt ([DateTime]::UtcNow.ToString("o")) | Out-Null
     }
     try {
       $Call=Send-Json "$($Cfg.base_url)/api/device/calls/next" $DeviceToken @{} 25
@@ -159,7 +206,7 @@ while ($true) {
         $result=Invoke-Tool $Cfg $Call
         Complete-Call $Cfg $DeviceToken $Call "COMPLETED" $result
       } catch {
-        $code=[string]$_.Exception.Message
+        $code=Get-SafeErrorCode $_
         $denied=@{
           state="DENIED";operational_authority="HARA_SERVICES"
           runtime_authority_from_chatgpt=$false;mutation_performed=$false
@@ -168,8 +215,16 @@ while ($true) {
         Complete-Call $Cfg $DeviceToken $Call "FAILED" $denied $code
       }
     }
-    $DeviceToken=$null
   } catch {
+    $code=Get-SafeErrorCode $_
+    $now=Get-Date
+    if ($code -ne $LastErrorCode -or ($now-$LastErrorWrite).TotalSeconds -ge 60) {
+      Try-SetRuntimeStatus -ErrorCode $code -ErrorAt ([DateTime]::UtcNow.ToString("o")) | Out-Null
+      $LastErrorCode=$code
+      $LastErrorWrite=$now
+    }
+  } finally {
+    $DeviceToken=$null
   }
   Start-Sleep -Seconds 2
 }

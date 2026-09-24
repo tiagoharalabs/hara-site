@@ -9,6 +9,7 @@ CONFIG_FILE="$CONFIG_DIR/device.env"
 AGENT="$BIN_DIR/hara-commander-agent"
 UNIT="$SYSTEMD_DIR/hara-commander-agent.service"
 SERVICE="hara-commander-agent.service"
+STATUS_FILE="$BIN_DIR/runtime-status.json"
 ACTION="${1:-install}"
 ACTION="${ACTION#--}"
 
@@ -120,7 +121,7 @@ if not base or not token or not device_id:
     raise SystemExit(2)
 if action=="heartbeat":
     endpoint="/api/device/heartbeat"
-    payload={"device_id":device_id,"architecture":arch,"agent_version":"0.3.2"}
+    payload={"device_id":device_id,"architecture":arch,"agent_version":"0.3.3"}
 elif action=="revoke":
     endpoint="/api/device/revoke-self"
     payload={}
@@ -155,7 +156,7 @@ token=os.environ.get("HARA_ROLLBACK_DEVICE_TOKEN","")
 if not device_id or not token: raise SystemExit(2)
 req=urllib.request.Request(
     base+"/api/device/revoke-self", data=b"{}", method="POST",
-    headers={"content-type":"application/json","accept":"application/json","authorization":"Bearer "+token,"user-agent":"HARA-Commander-Installer-Rollback/0.3.2"},
+    headers={"content-type":"application/json","accept":"application/json","authorization":"Bearer "+token,"user-agent":"HARA-Commander-Installer-Rollback/0.3.3"},
 )
 with urllib.request.urlopen(req,timeout=15) as response:
     obj=json.loads(response.read().decode() or "{}")
@@ -220,11 +221,11 @@ support_agent() {
   local active=FALSE enabled=FALSE
   systemctl --user is-active --quiet "$SERVICE" 2>/dev/null && active=TRUE || true
   systemctl --user is-enabled --quiet "$SERVICE" 2>/dev/null && enabled=TRUE || true
-  python3 - "$CONFIG_FILE" "$AGENT" "$UNIT" "$active" "$enabled" <<'PYSUPPORT'
+  python3 - "$CONFIG_FILE" "$AGENT" "$UNIT" "$STATUS_FILE" "$active" "$enabled" <<'PYSUPPORT'
 import hashlib,json,os,platform,stat,sys
 from pathlib import Path
-config_path=Path(sys.argv[1]); agent_path=Path(sys.argv[2]); unit_path=Path(sys.argv[3])
-active=sys.argv[4]=="TRUE"; enabled=sys.argv[5]=="TRUE"
+config_path=Path(sys.argv[1]); agent_path=Path(sys.argv[2]); unit_path=Path(sys.argv[3]); status_path=Path(sys.argv[4])
+active=sys.argv[5]=="TRUE"; enabled=sys.argv[6]=="TRUE"
 values={}
 if config_path.is_file():
     for raw in config_path.read_text(encoding="utf-8").splitlines():
@@ -241,6 +242,10 @@ if agent_path.is_file():
     agent_sha=hashlib.sha256(agent_path.read_bytes()).hexdigest()
 mode=None
 if config_path.exists(): mode=oct(stat.S_IMODE(config_path.stat().st_mode))[2:]
+runtime={}
+if status_path.is_file():
+    try: runtime=json.loads(status_path.read_text(encoding="utf-8"))
+    except Exception: runtime={}
 report={
   "schema":"hara.commander-support-report.v1",
   "platform":"LINUX",
@@ -256,6 +261,9 @@ report={
   "service_enabled":enabled,
   "device_token_present":bool(config_path.is_file() and any(line.startswith("HARA_DEVICE_TOKEN=") for line in config_path.read_text(encoding="utf-8").splitlines())),
   "device_token_exposed":False,
+  "last_successful_heartbeat_at_utc":runtime.get("last_successful_heartbeat_at_utc"),
+  "last_runtime_error_code":runtime.get("last_runtime_error_code"),
+  "last_runtime_error_at_utc":runtime.get("last_runtime_error_at_utc"),
 }
 print(json.dumps(report,separators=(",",":"),sort_keys=True))
 PYSUPPORT
@@ -346,7 +354,7 @@ print(json.dumps({
   "device_name": sys.argv[2],
   "platform": "LINUX",
   "architecture": sys.argv[3],
-  "agent_version": "0.3.2",
+  "agent_version": "0.3.3",
 }, separators=(",",":")))
 PY
 )"

@@ -1,5 +1,6 @@
 import { DurableObject } from "cloudflare:workers";
 import {
+  authCallbackFailureResponse,
   authStatus,
   beginLogin,
   finishLogin,
@@ -1075,10 +1076,6 @@ async function claimNextDeviceCall(env, request) {
       RETURNING call_id, request_id, tool_id, payload_json, expires_at_utc`
   ).bind(now, device.device_id, now).all();
 
-  await env.PRODUCT_DB.prepare(
-    `UPDATE commander_devices SET last_seen_at_utc = ? WHERE device_id = ? AND state = 'ACTIVE'`
-  ).bind(now, device.device_id).run();
-
   const row = (result.results || [])[0];
   if (!row) return null;
 
@@ -1560,15 +1557,7 @@ export default {
       };
 
       if (requestUrl.pathname === "/auth/callback") {
-        const safeCode = /^[A-Z0-9_]{1,80}$/.test(code) ? code : "AUTH_CALLBACK_FAILED";
-        return new Response(null, {
-          status: 302,
-          headers: {
-            ...SECURITY_HEADERS,
-            location: "/?auth_error=" + encodeURIComponent(safeCode) + "#login",
-            "cache-control": "no-store",
-          },
-        });
+        return authCallbackFailureResponse(error);
       }
 
       return json({ ok: false, code }, statusMap[code] || 500);
