@@ -13,6 +13,8 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
+APP = Path(__file__).resolve().parents[1]
+RELEASE_MANIFEST = APP / "public/release/agent-manifest.json"
 DEFAULT_ORIGIN = "https://commander.haralabs.com.br"
 FUNCTION_ID = "device.info"
 TOOLS = (
@@ -43,6 +45,18 @@ def load_token(path: Path) -> str:
     if len(token) < 48:
         raise HarnessError("MCP_PRODUCT_TOKEN_INVALID")
     return token
+
+def stable_agent_version() -> str:
+    if not RELEASE_MANIFEST.is_file():
+        raise HarnessError("AGENT_RELEASE_MANIFEST_MISSING")
+    try:
+        manifest = json.loads(RELEASE_MANIFEST.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise HarnessError("AGENT_RELEASE_MANIFEST_INVALID") from exc
+    version = str(manifest.get("agent_version") or "").strip()
+    if not version:
+        raise HarnessError("AGENT_RELEASE_VERSION_MISSING")
+    return version
 
 def clean_origin(value: str) -> str:
     origin = value.rstrip("/")
@@ -374,6 +388,8 @@ def validate_tool_result(
     tool_id: str,
     wrapper: dict,
     *,
+    expected_device_id: str,
+    expected_agent_version: str,
     expected_receipt_sha256: str | None = None,
 ) -> None:
     if wrapper.get("state") != "PASS":
@@ -398,8 +414,12 @@ def validate_tool_result(
         ):
             raise HarnessError("DEVICE_HEALTH_SEMANTICS_INVALID")
         device = inner.get("device") or {}
-        if not isinstance(device, dict) or not str(device.get("agent_version") or ""):
+        if not isinstance(device, dict):
             raise HarnessError("DEVICE_HEALTH_DEVICE_INVALID")
+        if str(device.get("device_id") or "") != expected_device_id:
+            raise HarnessError("DEVICE_HEALTH_DEVICE_ID_MISMATCH")
+        if str(device.get("agent_version") or "") != expected_agent_version:
+            raise HarnessError("DEVICE_HEALTH_AGENT_VERSION_MISMATCH")
     elif tool_id == "hara.functions.list":
         functions = inner.get("functions")
         if not isinstance(functions, list):
@@ -410,7 +430,13 @@ def validate_tool_result(
             and item.get("function_id") == FUNCTION_ID
             and item.get("state") == "ACTIVE"
         ]
-        if len(matches) != 1:
+        if (
+            len(matches) != 1
+            or inner.get("registered_function_count") != 1
+            or inner.get("executable_function_count") != 1
+            or inner.get("active_function_count") != 1
+            or inner.get("domains") != ["DEVICE"]
+        ):
             raise HarnessError("DEVICE_FUNCTION_LIST_SEMANTICS_INVALID")
     elif tool_id == "hara.functions.describe":
         semantics = inner.get("EXECUTION_SEMANTICS") or {}
@@ -435,13 +461,18 @@ def validate_tool_result(
             stdout = json.loads(str(inner.get("stdout") or ""))
         except json.JSONDecodeError as exc:
             raise HarnessError("DEVICE_FUNCTION_INVOKE_STDOUT_INVALID") from exc
-        if not isinstance(stdout, dict) or not str(stdout.get("agent_version") or ""):
+        if not isinstance(stdout, dict):
             raise HarnessError("DEVICE_FUNCTION_INVOKE_DEVICE_INVALID")
+        if str(stdout.get("device_id") or "") != expected_device_id:
+            raise HarnessError("DEVICE_FUNCTION_INVOKE_DEVICE_ID_MISMATCH")
+        if str(stdout.get("agent_version") or "") != expected_agent_version:
+            raise HarnessError("DEVICE_FUNCTION_INVOKE_AGENT_VERSION_MISMATCH")
     elif tool_id == "hara.receipts.get":
         if not expected_receipt_sha256:
             raise HarnessError("RECEIPT_REQUIRED")
         if (
             inner.get("schema") != "hara.commander-device-receipt.v1"
+            or inner.get("device_id") != expected_device_id
             or inner.get("tool_id") != "hara.functions.invoke"
             or inner.get("function_id_if_any") != FUNCTION_ID
             or inner.get("operational_authority") != "HARA_SERVICES"
@@ -463,6 +494,8 @@ def execute_remote_tool(
     subject: str,
     tool_id: str,
     *,
+    expected_agent_version: str,
+    expected_device_id: str | None = None,
     receipt_sha256: str | None = None,
     timeout: float = 45.0,
 ) -> dict:
@@ -495,11 +528,24 @@ def execute_remote_tool(
             tool_payload(tool_id, receipt_sha256),
         )
         call_id = str(call.get("call_id") or "")
+        call_device_id = str(call.get("device_id") or "")
         if not call_id:
             raise HarnessError("DEVICE_CALL_ID_MISSING")
+        if not call_device_id:
+            raise HarnessError("DEVICE_CALL_DEVICE_ID_MISSING")
+        if expected_device_id and call_device_id != expected_device_id:
+            raise HarnessError("DEVICE_CALL_SELECTED_DEVICE_CHANGED")
         terminal = wait_terminal(
             origin, token, issuer, subject, call_id, timeout
         )
+        if str(terminal.get("call_id") or "") != call_id:
+            raise HarnessError("DEVICE_CALL_STATUS_ID_MISMATCH")
+        if str(terminal.get("request_id") or "") != req_id:
+            raise HarnessError("DEVICE_CALL_STATUS_REQUEST_ID_MISMATCH")
+        if str(terminal.get("device_id") or "") != call_device_id:
+            raise HarnessError("DEVICE_CALL_STATUS_DEVICE_ID_MISMATCH")
+        if str(terminal.get("tool_id") or "") != tool_id:
+            raise HarnessError("DEVICE_CALL_STATUS_TOOL_ID_MISMATCH")
         state = str(terminal.get("state") or "")
         if state != "COMPLETED":
             code = str(terminal.get("error_code") or state or "DEVICE_CALL_FAILED")
@@ -509,6 +555,8 @@ def execute_remote_tool(
         validate_tool_result(
             tool_id,
             result,
+            expected_device_id=call_device_id,
+            expected_agent_version=expected_agent_version,
             expected_receipt_sha256=receipt_sha256,
         )
         bridge_receipt = str(result.get("bridge_receipt_sha256") or "").lower()
@@ -547,6 +595,8 @@ def execute_remote_tool(
         return {
             "tool_id": tool_id,
             "call_id": call_id,
+            "request_id": req_id,
+            "device_id": call_device_id,
             "receipt_sha256": bridge_receipt or None,
             "state": state,
         }
@@ -570,12 +620,38 @@ def five_tool(
     issuer: str,
     subject: str,
     timeout: float,
+    expected_agent_version: str,
 ) -> None:
-    execute_remote_tool(origin, token, issuer, subject, "hara.health", timeout=timeout)
-    execute_remote_tool(origin, token, issuer, subject, "hara.functions.list", timeout=timeout)
-    execute_remote_tool(origin, token, issuer, subject, "hara.functions.describe", timeout=timeout)
+    health = execute_remote_tool(
+        origin,
+        token,
+        issuer,
+        subject,
+        "hara.health",
+        expected_agent_version=expected_agent_version,
+        timeout=timeout,
+    )
+    device_id = str(health["device_id"])
+    for tool_id in ("hara.functions.list", "hara.functions.describe"):
+        execute_remote_tool(
+            origin,
+            token,
+            issuer,
+            subject,
+            tool_id,
+            expected_agent_version=expected_agent_version,
+            expected_device_id=device_id,
+            timeout=timeout,
+        )
     invoked = execute_remote_tool(
-        origin, token, issuer, subject, "hara.functions.invoke", timeout=timeout
+        origin,
+        token,
+        issuer,
+        subject,
+        "hara.functions.invoke",
+        expected_agent_version=expected_agent_version,
+        expected_device_id=device_id,
+        timeout=timeout,
     )
     execute_remote_tool(
         origin,
@@ -583,6 +659,8 @@ def five_tool(
         issuer,
         subject,
         "hara.receipts.get",
+        expected_agent_version=expected_agent_version,
+        expected_device_id=device_id,
         receipt_sha256=str(invoked["receipt_sha256"]),
         timeout=timeout,
     )
@@ -636,7 +714,14 @@ def main() -> int:
         if args.mode == "quota-roundtrip":
             quota_roundtrip(origin, token, issuer, subject)
         else:
-            five_tool(origin, token, issuer, subject, args.timeout)
+            five_tool(
+                origin,
+                token,
+                issuer,
+                subject,
+                args.timeout,
+                stable_agent_version(),
+            )
     finally:
         token = ""
     print("COMMANDER_E2E_SECRET_EXPOSED=FALSE")
