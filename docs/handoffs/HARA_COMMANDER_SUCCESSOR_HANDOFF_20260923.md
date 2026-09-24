@@ -637,13 +637,15 @@ git diff --check
 - PR #125 — canonical device-call expiry cause — **MERGED + PROD PROMOTED**
 - PR #127 — abandoned quota-reservation TTL / crash-safety — **MERGED + PROD PROMOTED**
 - PR #128 — quota TTL PROD rollout receipt / runtime authority — **MERGED**
+- PR #129 — versioned DEV runtime config / DEV-only binding authority — **MERGED**
 - hara-platform PR #1158 — quota finalization compensation source — **MERGED; real-device COMMIT E2E pending**
 - issue #65 — Commander post-promotion coordination / residual homologation — **OPEN**
 
-Canonical repository state at this checkpoint: `main` = `71614660635558122901c352bf94f8a28dc23c01`.
+Source authority incorporated by this checkpoint through PR #129: `7f1f24e2399666017c7a6e7cf2f09b5273121d95`.
 Current deployed Commander runtime source: `84895dd17489e418b4b207bde405d7db9aa33469`.
 Current PROD Worker: `093ceec9-cacb-4f8b-ba23-bbfc85f7e1aa`; rollback: `382f4b7e-3094-43b9-a013-3b3f46f39fbf`.
 Current DEV Worker: `5a594804-0de5-4aa8-abf4-b669454f020f`; rollback: `80f3b819-e6ae-4a2e-ad61-e94729240957`.
+Versioned DEV authority: `apps/commander/wrangler.dev.jsonc`, bound to DEV-only D1 / `REMOTE_DEV`; secrets remain external to Git and anti-cross-environment validation is mandatory.
 PRs #110–#112 are operator-tooling/preflight/token-custody hardening. PRs #113/#115/#116/#118 changed deployable/runtime customer assets or behavior and were explicitly promoted.
 
 Compact current entrypoint: `docs/handoffs/HARA_COMMANDER_CURRENT_KIT_20260924.md`.
