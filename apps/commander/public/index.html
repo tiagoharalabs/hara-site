@@ -289,14 +289,14 @@
               <div class="panel-head"><div><span>LINUX</span><h2>Instalar no Linux</h2></div><span class="status-pill"><i></i> Disponível</span></div>
               <p>Primeiro gere um código temporário. Depois execute o instalador no computador que você quer conectar.</p>
               <button class="btn btn-primary" type="button" data-create-pairing>1. Gerar código de pareamento</button>
-              <div class="install-command"><code>curl -fsSL https://commander.haralabs.com.br/install/linux.sh | bash</code><button class="btn btn-secondary small" type="button" data-copy-linux>2. Copiar comando</button></div>
+              <div class="install-command"><code>curl -fsS --proto '=https' --tlsv1.2 --location --max-redirs 0 https://commander.haralabs.com.br/install/linux.sh | bash</code><button class="btn btn-secondary small" type="button" data-copy-linux>2. Copiar comando</button></div>
               <small class="install-note">3. Execute o comando e cole o código quando o instalador pedir “Pairing token”. A conexão é somente de saída; nenhuma porta do roteador precisa ser aberta.</small>
             </article>
             <article class="panel device-install-card">
               <div class="panel-head"><div><span>WINDOWS</span><h2>Instalar no Windows</h2></div><span class="status-pill"><i></i> Disponível</span></div>
               <p>Primeiro gere um código temporário. Depois execute o instalador no PowerShell do computador que você quer conectar.</p>
               <button class="btn btn-primary" type="button" data-create-pairing>1. Gerar código de pareamento</button>
-              <div class="install-command"><code>irm https://commander.haralabs.com.br/install/windows.ps1 | iex</code><button class="btn btn-secondary small" type="button" data-copy-windows>2. Copiar comando</button></div>
+              <div class="install-command"><code>irm https://commander.haralabs.com.br/install/windows.ps1 -MaximumRedirection 0 | iex</code><button class="btn btn-secondary small" type="button" data-copy-windows>2. Copiar comando</button></div>
               <small class="install-note">3. Execute o comando e cole o código quando o instalador pedir “Pairing token”. O Agent permanece ativo no logon e usa somente conexão de saída.</small>
             </article>
           </div>

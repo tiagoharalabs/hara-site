@@ -57,6 +57,8 @@ Agent distribution is bound to a deterministic stable-channel release manifest:
 
 `apps/commander/scripts/build_release_manifest.py` derives Agent version and SHA-256/size metadata from the canonical Linux/Windows Agents and installers. `--check` fails if any release artifact drifts without regenerating the manifest. Linux and Windows installers verify the downloaded Agent SHA-256 and declared Agent version before install/update, then run their existing validation/rollback path. Initial enrollment is transactional: if local bootstrap fails after the device is created, the installer attempts authenticated self-revocation and removes partial local state before returning failure.
 
+The customer-visible bootstrap commands also fail closed on redirects: Linux requires HTTPS/TLS 1.2+ and zero redirects before piping to `bash`; Windows uses `-MaximumRedirection 0` before piping to `iex`. This narrows the initial web-origin trust surface but does not create an independent trust anchor.
+
 This is integrity metadata, not code-signing. Native Windows EXE/MSI packaging and publisher signing remain a later distribution gate after the Linux selected-device path is terminal and before an external Windows canary is sent to a third party.
 
 ## Runtime surface

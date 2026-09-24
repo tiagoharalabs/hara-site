@@ -788,7 +788,7 @@
     if (copyLinux) {
       event.preventDefault();
       copyText(
-        "curl -fsSL https://commander.haralabs.com.br/install/linux.sh | bash",
+        "curl -fsS --proto '=https' --tlsv1.2 --location --max-redirs 0 https://commander.haralabs.com.br/install/linux.sh | bash",
         "Comando Linux copiado."
       );
       return;
@@ -798,7 +798,7 @@
     if (copyWindows) {
       event.preventDefault();
       copyText(
-        "irm https://commander.haralabs.com.br/install/windows.ps1 | iex",
+        "irm https://commander.haralabs.com.br/install/windows.ps1 -MaximumRedirection 0 | iex",
         "Comando Windows copiado."
       );
       return;
