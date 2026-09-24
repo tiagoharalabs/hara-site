@@ -129,7 +129,7 @@ COMMANDER_PROD_WORKER_LIVE_READONLY=PASS
 COMMANDER_PROD_D1_MIGRATION_0009=APPLIED
 COMMANDER_PROD_RUNTIME_ASSETS=CURRENT
 COMMANDER_PROD_WORKER_DEPLOYMENT=PROVEN
-COMMANDER_PROD_WORKER_VERSION=ae7c9d6c-1d2a-401b-abf0-489f5d09b869
+COMMANDER_PROD_WORKER_VERSION=6d018e75-6c43-4efe-bf29-c277a49d4f2c
 COMMANDER_HUMAN_HOMOLOGATION=PENDING_OPERATOR_GATE
 COMMANDER_FIRST_DEVICE_E2E=PENDING_HOMOLOGATION
 ```
@@ -174,6 +174,16 @@ Production promotion receipt (2026-09-24 UTC):
 - public fail-closed smoke: **PASS**;
 - 10 critical public assets (UI, installers, Agents, release manifest/checksums and brand asset): **CURRENT** against canonical deployable source.
 
+Subsequent UX-only deployment (2026-09-24 UTC):
+- source `main`: `f5d0b13cc4e1f2250b3d9ae71fee636f2d3f6e71`;
+- removed six duplicated internal `user-chip` identity cards; global top-header identity remains canonical;
+- PROD Worker version: `6d018e75-6c43-4efe-bf29-c277a49d4f2c`;
+- PROD rollback version: `ae7c9d6c-1d2a-401b-abf0-489f5d09b869`;
+- DEV Worker `hara-commander-dev-v2`: `8022e192-dc12-4fa7-9416-0404b76873cf`;
+- DEV rollback version: `964936c0-c921-4b43-82ac-aff9b54ed491`;
+- DEV D1 migration 0009: **APPLIED** after backup; DEV health remains `DEV / REMOTE_DEV`;
+- PROD and DEV rendered `user-chip` count: **0**.
+
 ## 6. Device pairing / credential review
 
 The reviewed pairing model is structurally sound:
@@ -211,7 +221,8 @@ Closed:
 - post-auth device claim cannot race past revocation via #81;
 - concurrent invite claim cannot overwrite the winning identity via #82;
 - post-deploy public fail-closed checks deny unauthenticated portal/device/internal MCP access and disable PROD dev routes;
-- runtime drift proof covers all 10 critical public customer assets, not only the UI shell.
+- runtime drift proof covers all 10 critical public customer assets, not only the UI shell;
+- signed-in identity is rendered once in the global top header; duplicated internal workspace user chips were removed via #89.
 
 Do not reopen these as unresolved unless a current runtime/source readback proves regression.
 
@@ -267,8 +278,8 @@ The promotion was executed in the required order:
 ```
 
 Current deployment:
-- Worker version: `ae7c9d6c-1d2a-401b-abf0-489f5d09b869`;
-- rollback version: `fe4abe4e-1ce3-484d-aa11-b9535dd8610d`;
+- Worker version: `6d018e75-6c43-4efe-bf29-c277a49d4f2c`;
+- rollback version: `ae7c9d6c-1d2a-401b-abf0-489f5d09b869`;
 - migration 0009: **APPLIED**;
 - runtime assets: **CURRENT**;
 - public health/auth: **PASS**.
@@ -310,7 +321,7 @@ Order of execution from the current promoted state:
 1. Run the consolidated live-readonly gate and require:
    - migration 0009 = `APPLIED`;
    - public assets = `CURRENT`;
-   - Worker version = `ae7c9d6c-1d2a-401b-abf0-489f5d09b869`.
+   - Worker version = `6d018e75-6c43-4efe-bf29-c277a49d4f2c`.
 2. Perform the human browser homologation:
    - fresh private browser;
    - login / callback;
@@ -340,7 +351,7 @@ python3 apps/commander/scripts/validate_preprod_readiness.py \
   --live-readonly \
   --expect-prod-migration applied \
   --expect-prod-assets current \
-  --expect-prod-worker-version ae7c9d6c-1d2a-401b-abf0-489f5d09b869
+  --expect-prod-worker-version 6d018e75-6c43-4efe-bf29-c277a49d4f2c
 ```
 
 This command is the current production convergence proof. If a future reviewed deployment changes the Worker version, update the expected version only after that deployment is intentionally promoted.
@@ -405,7 +416,7 @@ Worker deployment readback:
 
 ```bash
 python3 apps/commander/scripts/commander_prod_deployment_readback.py \
-  --expect-version ae7c9d6c-1d2a-401b-abf0-489f5d09b869
+  --expect-version 6d018e75-6c43-4efe-bf29-c277a49d4f2c
 ```
 
 JavaScript syntax:
@@ -444,6 +455,7 @@ git diff --check
 - PR #85 — public runtime drift gate — **MERGED**
 - PR #86 — PROD promotion receipt / Worker deployment proof — **MERGED**
 - PR #87 — post-deploy fail-closed + 10-asset runtime gates — **MERGED**
+- PR #89 — single signed-in identity in workspace UI — **MERGED**
 - hara-platform PR #1158 — quota finalization compensation source — **MERGED; runtime E2E pending**
 - issue #65 — Commander post-promotion coordination / residual homologation — **OPEN**
 
