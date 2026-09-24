@@ -8,6 +8,8 @@ import subprocess
 import sys
 from collections.abc import Mapping
 from pathlib import Path
+from urllib.error import HTTPError, URLError
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 ROOT = Path(__file__).resolve().parents[3]
 APP = ROOT / "apps/commander"
@@ -17,6 +19,35 @@ DEFAULT_ORIGIN = "https://commander.haralabs.com.br"
 
 class PreflightError(RuntimeError):
     pass
+
+class NoRedirectHandler(HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise HTTPError(req.full_url, code, "REDIRECT_DENIED", headers, fp)
+
+NO_REDIRECT_OPENER = build_opener(NoRedirectHandler)
+
+def fetch_public_bytes(origin: str, path: str) -> bytes:
+    req = Request(
+        origin + path,
+        headers={"User-Agent": "HARA-Commander-FirstDevice-Preflight/1"},
+    )
+    try:
+        with NO_REDIRECT_OPENER.open(req, timeout=15) as response:
+            if int(response.status) != 200:
+                raise PreflightError("PUBLIC_ASSET_HTTP_INVALID")
+            return response.read()
+    except HTTPError as exc:
+        if 300 <= int(exc.code) < 400:
+            raise PreflightError("PUBLIC_ASSET_REDIRECT_DENIED") from exc
+        raise PreflightError("PUBLIC_ASSET_HTTP_INVALID") from exc
+    except URLError as exc:
+        raise PreflightError("PUBLIC_ASSET_NETWORK_ERROR") from exc
+
+def require_public_parity(origin: str, path: str, local_path: Path, code: str) -> None:
+    public_bytes = fetch_public_bytes(origin, path)
+    local_bytes = local_path.read_bytes()
+    if public_bytes != local_bytes:
+        raise PreflightError(code)
 
 def run_installer(action: str, origin: str) -> str:
     env = os.environ.copy()
@@ -93,6 +124,19 @@ def main() -> int:
     need(INSTALLER.is_file(), "INSTALLER_MISSING")
     need(MANIFEST.is_file(), "RELEASE_MANIFEST_MISSING")
 
+    require_public_parity(
+        origin,
+        "/install/linux.sh",
+        INSTALLER,
+        "PUBLIC_LOCAL_INSTALLER_DRIFT",
+    )
+    require_public_parity(
+        origin,
+        "/release/agent-manifest.json",
+        MANIFEST,
+        "PUBLIC_LOCAL_MANIFEST_DRIFT",
+    )
+
     status = parse_status(run_installer("status", origin))
     need(status.get("HARA_COMMANDER_DEVICE_ENROLLED") == "FALSE", "DEVICE_ALREADY_ENROLLED")
     need(status.get("HARA_COMMANDER_AGENT_ACTIVE") == "FALSE", "AGENT_ALREADY_ACTIVE")
@@ -131,6 +175,8 @@ def main() -> int:
         "persistence_ready": True,
         "commander_health": True,
         "release_manifest": True,
+        "installer_source_current": True,
+        "release_manifest_source_current": True,
         "mutation_performed": False,
         "device_token_exposed": False,
     }
@@ -140,6 +186,8 @@ def main() -> int:
     print("COMMANDER_FIRST_DEVICE_CANDIDATE_STATUS=PASS")
     print("COMMANDER_FIRST_DEVICE_CANDIDATE_RESIDUE=ABSENT")
     print("COMMANDER_FIRST_DEVICE_CANDIDATE_PERSISTENCE=READY")
+    print("COMMANDER_FIRST_DEVICE_INSTALLER_SOURCE=CURRENT")
+    print("COMMANDER_FIRST_DEVICE_MANIFEST_SOURCE=CURRENT")
     print("COMMANDER_FIRST_DEVICE_CANDIDATE_MUTATION=FALSE")
     print("COMMANDER_FIRST_DEVICE_CANDIDATE_TOKEN_EXPOSED=FALSE")
     print("COMMANDER_FIRST_DEVICE_CANDIDATE=READY")
