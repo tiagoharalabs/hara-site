@@ -347,9 +347,9 @@ The promotion was executed in the required order:
 ```
 
 Current deployment:
-- deployable source: `fecd6e79cd9d4d997c4e93ca2143b879153bb197`;
-- Worker version: `afbba7d5-5219-4abc-be06-7df48d218505`;
-- rollback version: `cd1d27b8-a574-46ff-83f9-f05f8cdef5bb`;
+- deployable source: `15b52110b5a580f6066e46fe859a6b455424e47c`;
+- Worker version: `d0c2b2a2-59ba-45b8-af6d-5ce22465a8d8`;
+- rollback version: `afbba7d5-5219-4abc-be06-7df48d218505`;
 - deployed after PR #118 canonical bootstrap-origin pinning;
 - migration 0009: **APPLIED**;
 - runtime assets: **CURRENT**;
@@ -359,11 +359,13 @@ Current deployment:
 - pairing/session retention eligibility: **0** in latest readback;
 - Agent release: **0.3.6**;
 - Agent startup attestation on install/update: **READY**;
-- customer-visible Linux/Windows bootstrap commands deny redirects and pin enrollment to canonical PROD even when a stale `HARA_COMMANDER_URL` is inherited.
+- customer-visible Linux/Windows bootstrap commands deny redirects and pin enrollment to canonical PROD even when a stale `HARA_COMMANDER_URL` is inherited;
+- Linux customer bootstrap no longer uses `curl | bash`: fetch completes into a `mktemp` file before execution, so download failure propagates instead of being masked by an empty successful `bash`;
+- Windows customer bootstrap no longer uses `irm | iex`: fetch is terminating (`-ErrorAction Stop`), empty content is rejected, and execution occurs only after successful fetch.
 
 Current DEV runtime:
-- Worker `hara-commander-dev-v2`: `27de9c54-2dda-4462-82d9-a13772ce0d95`;
-- rollback DEV Worker: `0e466497-0ccf-4cbc-bc1c-83de0d82243f`;
+- Worker `hara-commander-dev-v2`: `80f3b819-e6ae-4a2e-ad61-e94729240957`;
+- rollback DEV Worker: `27de9c54-2dda-4462-82d9-a13772ce0d95`;
 - health: **DEV / REMOTE_DEV / HARA Identity configured**;
 - bootstrap command assets: byte-equal to canonical source after propagation readback.
 
@@ -434,7 +436,7 @@ python3 apps/commander/scripts/validate_preprod_readiness.py \
   --live-readonly \
   --expect-prod-migration applied \
   --expect-prod-assets current \
-  --expect-prod-worker-version afbba7d5-5219-4abc-be06-7df48d218505
+  --expect-prod-worker-version d0c2b2a2-59ba-45b8-af6d-5ce22465a8d8
 ```
 
 This command is the current production convergence proof. If a future reviewed deployment changes the Worker version, update the expected version only after that deployment is intentionally promoted.
@@ -519,7 +521,7 @@ Worker deployment readback:
 
 ```bash
 python3 apps/commander/scripts/commander_prod_deployment_readback.py \
-  --expect-version afbba7d5-5219-4abc-be06-7df48d218505
+  --expect-version d0c2b2a2-59ba-45b8-af6d-5ce22465a8d8
 ```
 
 E2E harness source contract:
@@ -620,13 +622,14 @@ git diff --check
 - PR #116 — customer bootstrap redirect denial / Linux TLS floor — **MERGED + PROMOTED**
 - PR #117 — bootstrap redirect-hardening rollout authority — **MERGED**
 - PR #118 — customer bootstrap canonical enrollment-origin pin — **MERGED + PROMOTED**
+- PR #120 — bootstrap fetch-failure propagation / pipe masking closure — **MERGED + PROMOTED**
 - hara-platform PR #1158 — quota finalization compensation source — **MERGED; real-device COMMIT E2E pending**
 - issue #65 — Commander post-promotion coordination / residual homologation — **OPEN**
 
 Canonical repository state at this checkpoint: `main` = `fecd6e79cd9d4d997c4e93ca2143b879153bb197`.
-Current deployed Commander runtime source: `fecd6e79cd9d4d997c4e93ca2143b879153bb197`.
-Current PROD Worker: `afbba7d5-5219-4abc-be06-7df48d218505`; rollback: `cd1d27b8-a574-46ff-83f9-f05f8cdef5bb`.
-Current DEV Worker: `27de9c54-2dda-4462-82d9-a13772ce0d95`; rollback: `0e466497-0ccf-4cbc-bc1c-83de0d82243f`.
+Current deployed Commander runtime source: `15b52110b5a580f6066e46fe859a6b455424e47c`.
+Current PROD Worker: `d0c2b2a2-59ba-45b8-af6d-5ce22465a8d8`; rollback: `afbba7d5-5219-4abc-be06-7df48d218505`.
+Current DEV Worker: `80f3b819-e6ae-4a2e-ad61-e94729240957`; rollback: `27de9c54-2dda-4462-82d9-a13772ce0d95`.
 PRs #110–#112 are operator-tooling/preflight/token-custody hardening. PRs #113/#115/#116/#118 changed deployable/runtime customer assets or behavior and were explicitly promoted.
 
 Continue from current `main`, this guide and the newest issue #65 comments. Do not use PR #66 as a backend source.
