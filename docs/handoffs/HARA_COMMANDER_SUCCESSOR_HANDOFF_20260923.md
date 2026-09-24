@@ -349,7 +349,7 @@ The promotion was executed in the required order:
 ```
 
 Current deployment:
-- deployable source: `15b52110b5a580f6066e46fe859a6b455424e47c`;
+- deployable source: `285dbffc4bd9dec6106d019d9950180bde6bfe86`;
 - Worker version: `f72ea822-dc27-4aaa-9136-d489f478fb26`;
 - rollback version: `d0c2b2a2-59ba-45b8-af6d-5ce22465a8d8`;
 - deployed after PR #118 canonical bootstrap-origin pinning;
@@ -381,8 +381,8 @@ Do not redeploy solely to reproduce this promotion receipt; future deployment sh
 ## 10. Known non-blocking operational items
 
 These are non-blocking operational follow-ups and are not current Commander source blockers:
-- Identity SMTP 587/STARTTLS remains a **non-blocking fallback/maturity item**. Supported Admin REST read was previously authority-blocked (HTTP 403), and the current automation environment will not expose/manipulate the PAT to bypass that safely. The existing read-only backend validator currently reports `IDENTITY_SMTP_BRANDING=PASS`, TLS enabled on the provider, and `IDENTITY_SMTP_TLS_ALIGNMENT=PENDING_587_STARTTLS_FALLBACK`. The observed `ZITADEL_TLS_ENABLED=false` is only the internal ZITADEL listener behind the TLS proxy, not SMTP evidence. A supported Admin-API helper exists to align to port 465, but it was **not** executed because password-preservation semantics on the deprecated full-config endpoint are not explicit enough for a safe blind mutation;
-- Login V2 custom-translation warning previously recurred as `Error fetching custom translations: Error: fetch() returned undefined`. The running v4.16 bundle shows this warning comes from `getHostedLoginTranslation()`, after which bundled locale JSON remains the fallback. A fresh one-hour log window on 2026-09-24 showed **0 occurrences** while the container remained healthy. Treat this as upstream/transient unless current logs and user-visible behavior prove regression; do not patch around it blindly;
+- Identity SMTP 587/STARTTLS remains a **non-blocking fallback/maturity item**. Fresh read-only backend validation on 2026-09-24 reports `IDENTITY_SMTP_BRANDING=PASS`, healthy runtime, TLS enabled on the provider, and `IDENTITY_SMTP_TLS_ALIGNMENT=PENDING_587_STARTTLS_FALLBACK`. A supported Admin-API helper exists to align to `smtp.zoho.com:465`, but it was **not** executed because the full-config update body includes SMTP password and current ZITADEL 4.x has recent upstream defects around SMTP password update paths. Do not perform a blind 587→465 mutation without an explicit credential-preservation + provider-test procedure;
+- Login V2 custom-translation warning is **currently recurring**. Live logs on 2026-09-24 show both `Error fetching custom translations: Error: fetch() returned undefined` and ZITADEL API warnings `HostedLoginTranslationNotFound-pt`. The white-label helper already classifies `pt` readback as `DEFERRED_UPSTREAM_V4_16_SYSTEM_LOCALE_MISSING`; bundled locale JSON remains the login fallback and container health remains PASS. Treat this as an active upstream/non-blocking operational residue, not as a resolved warning. Do not disable Portuguese or patch around it blindly;
 - device count remains zero until first production pairing.
 
 ## 11. Do not repeat
