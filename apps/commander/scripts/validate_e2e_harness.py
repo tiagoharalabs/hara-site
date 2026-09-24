@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from pathlib import Path
 import ast
+import hashlib
 import json
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -48,6 +49,17 @@ need("DEVICE_CALL_STATUS_DEVICE_ID_MISMATCH" in SOURCE, "STATUS_DEVICE_CORRELATI
 need("DEVICE_HEALTH_AGENT_VERSION_MISMATCH" in SOURCE, "AGENT_VERSION_GUARD")
 need("RELEASE_MANIFEST" in SOURCE and "stable_agent_version" in SOURCE, "RELEASE_MANIFEST_VERSION_GUARD")
 need("expected_receipt_request_id" in SOURCE, "RECEIPT_REQUEST_CORRELATION_GUARD")
+need("result_stdout_sha256" in SOURCE, "RECEIPT_STDOUT_BINDING_GUARD")
+need("defer_invoke_quota_commit=True" in SOURCE, "DEFERRED_INVOKE_COMMIT_GUARD")
+five_tool_source = SOURCE.split("def five_tool(", 1)[1].split("def parser()", 1)[0]
+need(
+    five_tool_source.index('"hara.receipts.get"') < five_tool_source.index("committed = commit_quota("),
+    "RECEIPT_PROOF_BEFORE_QUOTA_COMMIT",
+)
+need(
+    "COMMANDER_E2E_RECEIPT_PROOF_FAILURE_RELEASE=PASS" in five_tool_source,
+    "RECEIPT_PROOF_FAILURE_RELEASE_GUARD",
+)
 
 namespace = {
     "__name__": "commander_e2e_harness_test",
@@ -128,11 +140,13 @@ description = base_wrapper({
 validate_tool_result("hara.functions.describe", description, expected_device_id=EXPECTED_DEVICE, expected_agent_version=EXPECTED_VERSION)
 need(True, "SEMANTIC_FUNCTION_DESCRIBE")
 
+INVOKE_STDOUT = json.dumps({"device_id": EXPECTED_DEVICE, "agent_version": EXPECTED_VERSION})
+INVOKE_STDOUT_SHA256 = hashlib.sha256(INVOKE_STDOUT.encode("utf-8")).hexdigest()
 invoked = base_wrapper({
     "function_id": "device.info",
     "risk_class": "READ_ONLY",
     "process_exit_code": 0,
-    "stdout": json.dumps({"device_id": EXPECTED_DEVICE, "agent_version": EXPECTED_VERSION}),
+    "stdout": INVOKE_STDOUT,
     "domain_success_inferred": False,
 }, bridge_receipt_sha256="a" * 64)
 validate_tool_result("hara.functions.invoke", invoked, expected_device_id=EXPECTED_DEVICE, expected_agent_version=EXPECTED_VERSION)
@@ -150,6 +164,8 @@ receipt = {
     "mutation_class": "READ_ONLY_OR_NONE_V1",
     "state": "PASS",
     "payload_values_persisted": False,
+    "result_binding": "STDOUT_SHA256_V1",
+    "result_stdout_sha256": INVOKE_STDOUT_SHA256,
     "completed_at_utc": "2026-09-24T00:00:00Z",
 }
 receipt_sha = canonical_json_sha256(receipt)
@@ -160,9 +176,31 @@ validate_tool_result(
     expected_agent_version=EXPECTED_VERSION,
     expected_receipt_sha256=receipt_sha,
     expected_receipt_request_id="req",
+    expected_receipt_stdout_sha256=INVOKE_STDOUT_SHA256,
 )
 need(True, "SEMANTIC_RECEIPT_CORRELATION")
 
+wrong_stdout_receipt = dict(receipt)
+wrong_stdout_receipt["result_stdout_sha256"] = "0" * 64
+try:
+    validate_tool_result(
+        "hara.receipts.get",
+        base_wrapper(wrong_stdout_receipt),
+        expected_device_id=EXPECTED_DEVICE,
+        expected_agent_version=EXPECTED_VERSION,
+        expected_receipt_sha256=canonical_json_sha256(wrong_stdout_receipt),
+        expected_receipt_request_id="req",
+        expected_receipt_stdout_sha256=INVOKE_STDOUT_SHA256,
+    )
+except HarnessError as exc:
+    need(
+        str(exc) == "DEVICE_RECEIPT_SEMANTICS_INVALID",
+        "SEMANTIC_RECEIPT_STDOUT_MISMATCH_DENIED",
+    )
+else:
+    raise SystemExit(
+        "COMMANDER_E2E_HARNESS_SEMANTIC_RECEIPT_STDOUT_MISMATCH_DENIED=FAIL"
+    )
 
 wrong_request_receipt = dict(receipt)
 wrong_request_receipt["request_id"] = "other-request"
@@ -174,6 +212,7 @@ try:
         expected_agent_version=EXPECTED_VERSION,
         expected_receipt_sha256=canonical_json_sha256(wrong_request_receipt),
         expected_receipt_request_id="req",
+        expected_receipt_stdout_sha256=INVOKE_STDOUT_SHA256,
     )
 except HarnessError as exc:
     need(str(exc) == "DEVICE_RECEIPT_SEMANTICS_INVALID", "SEMANTIC_RECEIPT_REQUEST_MISMATCH_DENIED")
@@ -190,6 +229,7 @@ try:
         expected_agent_version=EXPECTED_VERSION,
         expected_receipt_sha256=receipt_sha,
         expected_receipt_request_id="req",
+        expected_receipt_stdout_sha256=INVOKE_STDOUT_SHA256,
     )
 except HarnessError as exc:
     need(str(exc) == "DEVICE_RECEIPT_CORRELATION_INVALID", "SEMANTIC_RECEIPT_MISMATCH_DENIED")
@@ -233,6 +273,101 @@ except HarnessError as exc:
     need(str(exc) == "DEVICE_HEALTH_DEVICE_ID_MISMATCH", "SEMANTIC_WRONG_DEVICE_DENIED")
 else:
     raise SystemExit("COMMANDER_E2E_HARNESS_SEMANTIC_WRONG_DEVICE_DENIED=FAIL")
+
+five_tool = namespace["five_tool"]
+five_globals = five_tool.__globals__
+original_execute_remote_tool = five_globals["execute_remote_tool"]
+original_commit_quota = five_globals["commit_quota"]
+original_release_quota = five_globals["release_quota"]
+original_reconcile_usage_state = five_globals["reconcile_usage_state"]
+
+success_events = []
+def success_execute(_origin, _token, _issuer, _subject, tool_id, **kwargs):
+    success_events.append(tool_id)
+    if tool_id == "hara.health":
+        return {"device_id": EXPECTED_DEVICE}
+    if tool_id == "hara.functions.invoke":
+        assert kwargs.get("defer_invoke_quota_commit") is True
+        return {
+            "device_id": EXPECTED_DEVICE,
+            "request_id": "invoke-request",
+            "receipt_sha256": "a" * 64,
+            "result_stdout_sha256": INVOKE_STDOUT_SHA256,
+            "quota_reserved_for_caller": True,
+        }
+    if tool_id == "hara.receipts.get":
+        assert kwargs.get("expected_receipt_stdout_sha256") == INVOKE_STDOUT_SHA256
+        success_events.append("RECEIPT_PROVEN")
+    return {"device_id": EXPECTED_DEVICE}
+
+def success_commit(_origin, _token, _issuer, _subject, request_id, receipt_sha256):
+    assert "RECEIPT_PROVEN" in success_events
+    assert request_id == "invoke-request"
+    assert receipt_sha256 == "a" * 64
+    success_events.append("QUOTA_COMMITTED")
+    return {"usage": {"state": "COMMITTED"}}
+
+five_globals["execute_remote_tool"] = success_execute
+five_globals["commit_quota"] = success_commit
+five_globals["release_quota"] = lambda *_a, **_k: (_ for _ in ()).throw(
+    AssertionError("UNEXPECTED_RELEASE_ON_SUCCESS")
+)
+five_globals["reconcile_usage_state"] = lambda *_a, **_k: (_ for _ in ()).throw(
+    AssertionError("UNEXPECTED_RECONCILE_ON_SUCCESS")
+)
+try:
+    five_tool("https://commander.haralabs.com.br", "token", "issuer", "subject", 10, EXPECTED_VERSION)
+finally:
+    five_globals["execute_remote_tool"] = original_execute_remote_tool
+    five_globals["commit_quota"] = original_commit_quota
+    five_globals["release_quota"] = original_release_quota
+    five_globals["reconcile_usage_state"] = original_reconcile_usage_state
+
+need(
+    success_events.index("RECEIPT_PROVEN") < success_events.index("QUOTA_COMMITTED"),
+    "DYNAMIC_RECEIPT_PROOF_BEFORE_COMMIT",
+)
+
+failure_events = []
+def failure_execute(_origin, _token, _issuer, _subject, tool_id, **kwargs):
+    failure_events.append(tool_id)
+    if tool_id == "hara.health":
+        return {"device_id": EXPECTED_DEVICE}
+    if tool_id == "hara.functions.invoke":
+        return {
+            "device_id": EXPECTED_DEVICE,
+            "request_id": "invoke-request-fail",
+            "receipt_sha256": "b" * 64,
+            "result_stdout_sha256": INVOKE_STDOUT_SHA256,
+            "quota_reserved_for_caller": True,
+        }
+    if tool_id == "hara.receipts.get":
+        raise HarnessError("DEVICE_RECEIPT_SEMANTICS_INVALID")
+    return {"device_id": EXPECTED_DEVICE}
+
+five_globals["execute_remote_tool"] = failure_execute
+five_globals["commit_quota"] = lambda *_a, **_k: failure_events.append("UNEXPECTED_COMMIT")
+def failure_release(_origin, _token, _issuer, _subject, request_id):
+    assert request_id == "invoke-request-fail"
+    failure_events.append("QUOTA_RELEASED")
+    return {"usage": {"state": "RELEASED"}}
+five_globals["release_quota"] = failure_release
+five_globals["reconcile_usage_state"] = original_reconcile_usage_state
+try:
+    try:
+        five_tool("https://commander.haralabs.com.br", "token", "issuer", "subject", 10, EXPECTED_VERSION)
+    except HarnessError as exc:
+        assert str(exc) == "DEVICE_RECEIPT_SEMANTICS_INVALID"
+    else:
+        raise AssertionError("RECEIPT_FAILURE_NOT_PROPAGATED")
+finally:
+    five_globals["execute_remote_tool"] = original_execute_remote_tool
+    five_globals["commit_quota"] = original_commit_quota
+    five_globals["release_quota"] = original_release_quota
+    five_globals["reconcile_usage_state"] = original_reconcile_usage_state
+
+need("UNEXPECTED_COMMIT" not in failure_events, "DYNAMIC_BAD_RECEIPT_NOT_COMMITTED")
+need(failure_events.count("QUOTA_RELEASED") == 1, "DYNAMIC_BAD_RECEIPT_RELEASED")
 
 reconcile = namespace["reconcile_usage_state"]
 globals_ = reconcile.__globals__

@@ -87,7 +87,7 @@ function Invoke-DeviceAction {
   try {
     $headers = @{ Accept="application/json"; Authorization=("Bearer " + $token) }
     if ($Kind -eq "heartbeat") {
-      $payload = @{ device_id=[string]$cfg.device_id; architecture=[string]$cfg.architecture; agent_version="0.3.6" } | ConvertTo-Json -Compress
+      $payload = @{ device_id=[string]$cfg.device_id; architecture=[string]$cfg.architecture; agent_version="0.3.7" } | ConvertTo-Json -Compress
       $result = Invoke-RestMethod -Uri "$base/api/device/heartbeat" -Method Post -ContentType "application/json" -Headers $headers -Body $payload -TimeoutSec 15 -MaximumRedirection 0
       if (-not $result.ok -or [string]$result.device_id -ne [string]$cfg.device_id) { throw "REMOTE_HEARTBEAT_INVALID" }
       return $result
@@ -264,7 +264,7 @@ if ([string]::IsNullOrWhiteSpace($PairingToken)) { throw "Pairing token cannot b
 
 $DeviceName = $env:COMPUTERNAME
 $Architecture = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant()
-$Payload = @{ pairing_token=$PairingToken; device_name=$DeviceName; platform="WINDOWS"; architecture=$Architecture; agent_version="0.3.6" } | ConvertTo-Json -Compress
+$Payload = @{ pairing_token=$PairingToken; device_name=$DeviceName; platform="WINDOWS"; architecture=$Architecture; agent_version="0.3.7" } | ConvertTo-Json -Compress
 $Enroll = Invoke-RestMethod -Uri "$BaseUrl/api/device/enroll" -Method Post -ContentType "application/json" -Headers @{ Accept="application/json" } -Body $Payload -TimeoutSec 30 -MaximumRedirection 0
 $PairingToken = $null
 $Payload = $null
@@ -279,7 +279,7 @@ $Enroll = $null
 try {
   New-Item -ItemType Directory -Path $Root -Force | Out-Null
   $EncryptedToken = ConvertTo-SecureString $DeviceTokenForRollback -AsPlainText -Force | ConvertFrom-SecureString
-  $ConfigObject = @{ base_url=$BaseUrl; device_id=$EnrollDeviceId; encrypted_device_token=$EncryptedToken; architecture=$Architecture; agent_version="0.3.6" }
+  $ConfigObject = @{ base_url=$BaseUrl; device_id=$EnrollDeviceId; encrypted_device_token=$EncryptedToken; architecture=$Architecture; agent_version="0.3.7" }
   $ConfigObject | ConvertTo-Json | Set-Content -Path $Config -Encoding UTF8
 
   $Identity = [Security.Principal.WindowsIdentity]::GetCurrent().Name

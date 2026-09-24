@@ -3,7 +3,7 @@ $Root = Join-Path $env:LOCALAPPDATA "HARA Commander"
 $ConfigPath = Join-Path $Root "device.json"
 $ReceiptDir = Join-Path $Root "receipts"
 $RuntimeStatus = Join-Path $Root "runtime-status.json"
-$AgentVersion = "0.3.6"
+$AgentVersion = "0.3.7"
 $FunctionId = "device.info"
 
 function Get-PlainText([Security.SecureString]$SecureValue) {
@@ -105,8 +105,20 @@ function Invoke-LocalFunction($Cfg,[string]$Id,$Arguments) {
     domain_success_inferred=$false
   }
 }
-function New-Receipt($Cfg,$Call,[string]$State) {
+function Get-Utf8Sha256([string]$Text) {
+  $bytes=[Text.Encoding]::UTF8.GetBytes([string]$Text)
+  $sha=[Security.Cryptography.SHA256]::Create()
+  try { return ($sha.ComputeHash($bytes) | ForEach-Object {$_.ToString("x2")}) -join "" }
+  finally { $sha.Dispose() }
+}
+function New-Receipt($Cfg,$Call,[string]$State,$Result) {
   New-Item -ItemType Directory -Path $ReceiptDir -Force | Out-Null
+  $resultBinding="NONE"
+  $resultStdoutSha256=$null
+  if ([string]$Call.tool_id -eq "hara.functions.invoke") {
+    $resultBinding="STDOUT_SHA256_V1"
+    $resultStdoutSha256=Get-Utf8Sha256 ([string]$Result.stdout)
+  }
   $receipt = [ordered]@{
     schema="hara.commander-device-receipt.v1"
     request_id=[string]$Call.request_id
@@ -119,6 +131,8 @@ function New-Receipt($Cfg,$Call,[string]$State) {
     mutation_class="READ_ONLY_OR_NONE_V1"
     state=$State
     payload_values_persisted=$false
+    result_binding=$resultBinding
+    result_stdout_sha256=$resultStdoutSha256
     completed_at_utc=[DateTime]::UtcNow.ToString("o")
   }
   $json = $receipt | ConvertTo-Json -Depth 6 -Compress
@@ -161,7 +175,7 @@ function Invoke-Tool($Cfg,$Call) {
     }
   } else { throw "TOOL_ID_INVALID" }
 
-  $receipt=New-Receipt $Cfg $Call "PASS"
+  $receipt=New-Receipt $Cfg $Call "PASS" $result
   return @{
     state="PASS";operational_authority="HARA_SERVICES"
     runtime_authority_from_chatgpt=$false;mutation_performed=$false
@@ -211,6 +225,9 @@ function Invoke-AgentSelfTest {
     $base.payload=[pscustomobject]@{receipt_id_or_sha256=$receipt}
     $read=Invoke-Tool $cfg ([pscustomobject]$base)
     if ([string]$read.result.tool_id -ne "hara.functions.invoke") { throw "SELF_TEST_RECEIPTS_GET_FAILED" }
+    $expectedStdoutSha=Get-Utf8Sha256 ([string]$invoked.result.stdout)
+    if ([string]$read.result.result_binding -ne "STDOUT_SHA256_V1") { throw "SELF_TEST_RECEIPT_RESULT_BINDING_FAILED" }
+    if ([string]$read.result.result_stdout_sha256 -ne $expectedStdoutSha) { throw "SELF_TEST_RECEIPT_RESULT_SHA_FAILED" }
 
     $blocked=$false
     try { Invoke-LocalFunction $cfg "shell.run" ([pscustomobject]@{argv=@()}) | Out-Null }

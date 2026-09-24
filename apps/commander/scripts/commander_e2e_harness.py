@@ -415,6 +415,7 @@ def validate_tool_result(
     expected_agent_version: str,
     expected_receipt_sha256: str | None = None,
     expected_receipt_request_id: str | None = None,
+    expected_receipt_stdout_sha256: str | None = None,
 ) -> None:
     if wrapper.get("state") != "PASS":
         raise HarnessError("DEVICE_TOOL_RESULT_STATE_INVALID")
@@ -492,7 +493,11 @@ def validate_tool_result(
         if str(stdout.get("agent_version") or "") != expected_agent_version:
             raise HarnessError("DEVICE_FUNCTION_INVOKE_AGENT_VERSION_MISMATCH")
     elif tool_id == "hara.receipts.get":
-        if not expected_receipt_sha256 or not expected_receipt_request_id:
+        if (
+            not expected_receipt_sha256
+            or not expected_receipt_request_id
+            or not expected_receipt_stdout_sha256
+        ):
             raise HarnessError("RECEIPT_REQUIRED")
         if (
             inner.get("schema") != "hara.commander-device-receipt.v1"
@@ -506,6 +511,8 @@ def validate_tool_result(
             or inner.get("mutation_class") != "READ_ONLY_OR_NONE_V1"
             or inner.get("state") != "PASS"
             or inner.get("payload_values_persisted") is not False
+            or inner.get("result_binding") != "STDOUT_SHA256_V1"
+            or inner.get("result_stdout_sha256") != expected_receipt_stdout_sha256
         ):
             raise HarnessError("DEVICE_RECEIPT_SEMANTICS_INVALID")
         if canonical_json_sha256(inner) != expected_receipt_sha256.lower():
@@ -524,6 +531,8 @@ def execute_remote_tool(
     expected_device_id: str | None = None,
     receipt_sha256: str | None = None,
     expected_receipt_request_id: str | None = None,
+    expected_receipt_stdout_sha256: str | None = None,
+    defer_invoke_quota_commit: bool = False,
     timeout: float = 45.0,
 ) -> dict:
     req_id = request_id(tool_id.split(".")[-1].upper())
@@ -586,7 +595,14 @@ def execute_remote_tool(
             expected_agent_version=expected_agent_version,
             expected_receipt_sha256=receipt_sha256,
             expected_receipt_request_id=expected_receipt_request_id,
+            expected_receipt_stdout_sha256=expected_receipt_stdout_sha256,
         )
+        inner_result = result.get("result") or {}
+        result_stdout_sha256 = None
+        if tool_id == "hara.functions.invoke":
+            result_stdout_sha256 = hashlib.sha256(
+                str(inner_result.get("stdout") or "").encode("utf-8")
+            ).hexdigest()
         bridge_receipt = str(result.get("bridge_receipt_sha256") or "").lower()
         if tool_id == "hara.functions.invoke":
             if (
@@ -594,30 +610,33 @@ def execute_remote_tool(
                 or any(c not in "0123456789abcdef" for c in bridge_receipt)
             ):
                 raise HarnessError("DEVICE_RECEIPT_SHA256_MISSING")
-            try:
-                committed = commit_quota(
-                    origin,
-                    token,
-                    issuer,
-                    subject,
-                    req_id,
-                    bridge_receipt,
-                )
-                usage = committed.get("usage") or {}
-                if usage.get("state") != "COMMITTED":
-                    raise HarnessError("MCP_QUOTA_COMMIT_STATE_INVALID")
-            except HarnessError:
-                reconcile_usage_state(
-                    origin,
-                    token,
-                    issuer,
-                    subject,
-                    req_id,
-                    "COMMITTED",
-                    receipt_sha256=bridge_receipt,
-                )
-                print("COMMANDER_E2E_QUOTA_COMMIT_RECONCILED=PASS")
-            reserved = False
+            if defer_invoke_quota_commit:
+                reserved = False
+            else:
+                try:
+                    committed = commit_quota(
+                        origin,
+                        token,
+                        issuer,
+                        subject,
+                        req_id,
+                        bridge_receipt,
+                    )
+                    usage = committed.get("usage") or {}
+                    if usage.get("state") != "COMMITTED":
+                        raise HarnessError("MCP_QUOTA_COMMIT_STATE_INVALID")
+                except HarnessError:
+                    reconcile_usage_state(
+                        origin,
+                        token,
+                        issuer,
+                        subject,
+                        req_id,
+                        "COMMITTED",
+                        receipt_sha256=bridge_receipt,
+                    )
+                    print("COMMANDER_E2E_QUOTA_COMMIT_RECONCILED=PASS")
+                reserved = False
 
         print(f"COMMANDER_E2E_TOOL_{tool_id.upper().replace('.', '_')}=PASS")
         return {
@@ -626,6 +645,10 @@ def execute_remote_tool(
             "request_id": req_id,
             "device_id": call_device_id,
             "receipt_sha256": bridge_receipt or None,
+            "result_stdout_sha256": result_stdout_sha256,
+            "quota_reserved_for_caller": bool(
+                tool_id == "hara.functions.invoke" and defer_invoke_quota_commit
+            ),
             "state": state,
         }
     finally:
@@ -679,20 +702,75 @@ def five_tool(
         "hara.functions.invoke",
         expected_agent_version=expected_agent_version,
         expected_device_id=device_id,
+        defer_invoke_quota_commit=True,
         timeout=timeout,
     )
-    execute_remote_tool(
-        origin,
-        token,
-        issuer,
-        subject,
-        "hara.receipts.get",
-        expected_agent_version=expected_agent_version,
-        expected_device_id=device_id,
-        receipt_sha256=str(invoked["receipt_sha256"]),
-        expected_receipt_request_id=str(invoked["request_id"]),
-        timeout=timeout,
-    )
+    invoke_request_id = str(invoked["request_id"])
+    invoke_receipt_sha256 = str(invoked["receipt_sha256"])
+    invoke_stdout_sha256 = str(invoked["result_stdout_sha256"])
+    invoke_reserved = bool(invoked.get("quota_reserved_for_caller"))
+    if not invoke_reserved:
+        raise HarnessError("MCP_QUOTA_RESERVATION_HANDOFF_INVALID")
+    try:
+        execute_remote_tool(
+            origin,
+            token,
+            issuer,
+            subject,
+            "hara.receipts.get",
+            expected_agent_version=expected_agent_version,
+            expected_device_id=device_id,
+            receipt_sha256=invoke_receipt_sha256,
+            expected_receipt_request_id=invoke_request_id,
+            expected_receipt_stdout_sha256=invoke_stdout_sha256,
+            timeout=timeout,
+        )
+        print("COMMANDER_E2E_RECEIPT_RESULT_BINDING=PASS")
+        try:
+            committed = commit_quota(
+                origin,
+                token,
+                issuer,
+                subject,
+                invoke_request_id,
+                invoke_receipt_sha256,
+            )
+            usage = committed.get("usage") or {}
+            if usage.get("state") != "COMMITTED":
+                raise HarnessError("MCP_QUOTA_COMMIT_STATE_INVALID")
+        except HarnessError:
+            reconcile_usage_state(
+                origin,
+                token,
+                issuer,
+                subject,
+                invoke_request_id,
+                "COMMITTED",
+                receipt_sha256=invoke_receipt_sha256,
+            )
+            print("COMMANDER_E2E_QUOTA_COMMIT_RECONCILED=PASS")
+        invoke_reserved = False
+    finally:
+        if invoke_reserved:
+            try:
+                release_quota(
+                    origin,
+                    token,
+                    issuer,
+                    subject,
+                    invoke_request_id,
+                )
+                print("COMMANDER_E2E_RECEIPT_PROOF_FAILURE_RELEASE=PASS")
+            except Exception:
+                reconcile_usage_state(
+                    origin,
+                    token,
+                    issuer,
+                    subject,
+                    invoke_request_id,
+                    "RELEASED",
+                )
+                print("COMMANDER_E2E_RECEIPT_PROOF_FAILURE_RELEASE_RECONCILED=PASS")
     print("COMMANDER_E2E_FIVE_TOOL=PASS")
     print("COMMANDER_E2E_QUOTA_COMMIT=PASS")
 

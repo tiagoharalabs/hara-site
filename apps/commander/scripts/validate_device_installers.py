@@ -26,7 +26,7 @@ def need(text: str, token: str, code: str) -> None:
     assert token in text, f"{code}:{token}"
 
 for token in ('platform": "LINUX"', "/api/device/enroll", "/agent/linux.py",
-              "systemctl --user enable --now", "chmod 600", '"agent_version": "0.3.6"',
+              "systemctl --user enable --now", "chmod 600", '"agent_version": "0.3.7"',
               "HARA_COMMANDER_AGENT_UPDATE=PASS", "HARA_COMMANDER_AGENT_UNINSTALL=PASS",
               "HARA_COMMANDER_AGENT_VERSION=", "HARA_COMMANDER_AGENT_DOCTOR=PASS",
               "/api/device/revoke-self", "SERVER_DEVICE_REVOKE=",
@@ -51,7 +51,7 @@ print("LINUX_INSTALLER_SECRET_ARGV_EXPOSURE=FALSE")
 
 for token in ('platform="WINDOWS"', "/api/device/enroll", "/agent/windows.ps1",
               "ConvertFrom-SecureString", "Register-ScheduledTask", "icacls.exe",
-              'agent_version="0.3.6"', "HARA_COMMANDER_AGENT_UPDATE=PASS",
+              'agent_version="0.3.7"', "HARA_COMMANDER_AGENT_UPDATE=PASS",
               "HARA_COMMANDER_AGENT_UNINSTALL=PASS", "HARA_COMMANDER_AGENT_VERSION=",
               "HARA_COMMANDER_AGENT_DOCTOR=PASS", "/api/device/revoke-self",
               "SERVER_DEVICE_REVOKE=", "HARA_COMMANDER_AGENT_UPDATE_ROLLBACK_READY=TRUE",
@@ -82,7 +82,7 @@ print("WINDOWS_INSTALLER_REDIRECT_FAIL_CLOSED=PASS")
 print("WINDOWS_INSTALLER_DEVICE_TOKEN_MEMORY_HYGIENE=PASS")
 
 assert MANIFEST.get("schema") == "hara.commander-agent-release.v1"
-assert MANIFEST.get("agent_version") == "0.3.6"
+assert MANIFEST.get("agent_version") == "0.3.7"
 entries = {item["path"]: item for item in MANIFEST.get("files", [])}
 for rel in ("agent/linux.py", "agent/windows.ps1", "install/linux.sh", "install/windows.ps1"):
     path = PUBLIC / rel
@@ -104,6 +104,11 @@ for forbidden in ("subprocess.", "os.system(", "shell=True", "paramiko", "ssh ")
 for forbidden in ("Invoke-Expression", "Start-Process", "cmd.exe", "powershell.exe -Command"):
     assert forbidden not in WINDOWS_AGENT, f"WINDOWS_AGENT_ARBITRARY_EXEC:{forbidden}"
 assert "UNKNOWN_FUNCTION_ID" in LINUX_AGENT and "UNKNOWN_FUNCTION_ID" in WINDOWS_AGENT
+for token in ("STDOUT_SHA256_V1", "result_stdout_sha256"):
+    assert token in LINUX_AGENT, f"LINUX_AGENT_RECEIPT_RESULT_BINDING_MISSING:{token}"
+    assert token in WINDOWS_AGENT, f"WINDOWS_AGENT_RECEIPT_RESULT_BINDING_MISSING:{token}"
+assert 'hashlib.sha256(stdout.encode("utf-8"))' in LINUX_AGENT, "LINUX_AGENT_RECEIPT_STDOUT_SHA_MISSING"
+assert "Get-Utf8Sha256 ([string]$Result.stdout)" in WINDOWS_AGENT, "WINDOWS_AGENT_RECEIPT_STDOUT_SHA_MISSING"
 assert "urllib.request.urlopen(req, timeout=25)" not in LINUX_AGENT, "LINUX_AGENT_REDIRECT_FOLLOW_PRESENT"
 assert "NoRedirectHandler" in LINUX_AGENT and "NO_REDIRECT_OPENER.open(req, timeout=25)" in LINUX_AGENT, "LINUX_AGENT_REDIRECT_FAIL_CLOSED_MISSING"
 windows_agent_web_calls = [line for line in WINDOWS_AGENT.splitlines() if "Invoke-RestMethod" in line]
@@ -211,7 +216,7 @@ with tempfile.TemporaryDirectory(prefix="hara-agent-startup-") as tmp:
                     break
             time.sleep(0.1)
         assert startup, "LINUX_AGENT_STARTUP_STATUS_MISSING"
-        assert startup.get("agent_version") == "0.3.6", "LINUX_AGENT_STARTUP_VERSION_INVALID"
+        assert startup.get("agent_version") == "0.3.7", "LINUX_AGENT_STARTUP_VERSION_INVALID"
         assert startup.get("started_at_utc"), "LINUX_AGENT_STARTUP_ATTESTATION_MISSING"
     finally:
         proc.terminate()

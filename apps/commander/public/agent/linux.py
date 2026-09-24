@@ -10,7 +10,7 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
-AGENT_VERSION = "0.3.6"
+AGENT_VERSION = "0.3.7"
 CONFIG_FILE = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home()/".config"))) / "hara-commander/device.env"
 DATA_DIR = Path(os.environ.get("XDG_DATA_HOME", str(Path.home()/".local/share"))) / "hara-commander"
 RECEIPT_DIR = DATA_DIR / "receipts"
@@ -148,13 +148,20 @@ def invoke(config, function_id, arguments):
         "stdout":json.dumps(result,sort_keys=True,separators=(",",":")),
         "domain_success_inferred":False,
     }
-def write_receipt(config, call, state):
+def write_receipt(config, call, state, result=None):
     RECEIPT_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
+    tool_id = str(call.get("tool_id") or "")
+    result_binding = "NONE"
+    result_stdout_sha256 = None
+    if tool_id == "hara.functions.invoke":
+        stdout = str((result or {}).get("stdout") or "")
+        result_binding = "STDOUT_SHA256_V1"
+        result_stdout_sha256 = hashlib.sha256(stdout.encode("utf-8")).hexdigest()
     receipt = {
         "schema":"hara.commander-device-receipt.v1",
         "request_id":str(call.get("request_id") or ""),
         "device_id":config["HARA_DEVICE_ID"],
-        "tool_id":str(call.get("tool_id") or ""),
+        "tool_id":tool_id,
         "function_id_if_any":(call.get("payload") or {}).get("function_id"),
         "transport_mode":"OUTBOUND_RELAY",
         "operational_authority":"HARA_SERVICES",
@@ -162,6 +169,8 @@ def write_receipt(config, call, state):
         "mutation_class":"READ_ONLY_OR_NONE_V1",
         "state":state,
         "payload_values_persisted":False,
+        "result_binding":result_binding,
+        "result_stdout_sha256":result_stdout_sha256,
         "completed_at_utc":utcnow(),
     }
     raw=json.dumps(receipt,sort_keys=True,separators=(",",":")).encode()
@@ -207,7 +216,7 @@ def execute_tool(config, call):
         }
     else:
         raise ValueError("TOOL_ID_INVALID")
-    sha=write_receipt(config,call,"PASS")
+    sha=write_receipt(config,call,"PASS",result)
     return {
         "state":"PASS","operational_authority":"HARA_SERVICES",
         "runtime_authority_from_chatgpt":False,"mutation_performed":False,
@@ -245,6 +254,9 @@ def self_test():
         sha=inv["bridge_receipt_sha256"]
         got=execute_tool(cfg,{**base,"request_id":"selftest-005","tool_id":"hara.receipts.get","payload":{"receipt_id_or_sha256":sha}})
         assert got["result"]["tool_id"]=="hara.functions.invoke"
+        expected_stdout_sha=hashlib.sha256(str(inv["result"]["stdout"]).encode("utf-8")).hexdigest()
+        assert got["result"]["result_binding"]=="STDOUT_SHA256_V1"
+        assert got["result"]["result_stdout_sha256"]==expected_stdout_sha
         try:
             execute_tool(cfg,{**base,"request_id":"selftest-006","tool_id":"hara.functions.invoke","payload":{"function_id":"shell.run","arguments":{"argv":[]}}})
             raise AssertionError("ARBITRARY_FUNCTION_NOT_DENIED")
