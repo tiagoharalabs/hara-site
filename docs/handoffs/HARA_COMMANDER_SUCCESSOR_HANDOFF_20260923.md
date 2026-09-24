@@ -129,7 +129,7 @@ COMMANDER_PROD_WORKER_LIVE_READONLY=PASS
 COMMANDER_PROD_D1_MIGRATION_0009=APPLIED
 COMMANDER_PROD_RUNTIME_ASSETS=CURRENT
 COMMANDER_PROD_WORKER_DEPLOYMENT=PROVEN
-COMMANDER_PROD_WORKER_VERSION=f96d5690-7681-4976-b86b-94fe66ea842c
+COMMANDER_PROD_WORKER_VERSION=5fce4f09-8db4-44a0-a5d6-b237c5288e75
 COMMANDER_HUMAN_HOMOLOGATION=PENDING_OPERATOR_GATE
 COMMANDER_FIRST_DEVICE_E2E=PENDING_HOMOLOGATION
 ```
@@ -199,6 +199,22 @@ Agent 0.3.4 / technical hardening deployment (2026-09-24 UTC):
 - server-side five-tool payload contract: **PASS**;
 - initial bootstrap trust remains `WEB_ORIGIN`; independent trust anchor remains **PENDING_MATURITY**;
 - no PowerShell runtime was already available on the reviewed Linux infrastructure, so this front did not claim an independent Windows runtime execution proof; the 0.3.4 Windows installer itself requires its dynamic Agent self-test fail-closed during install/update.
+
+
+Agent 0.3.5 startup-attestation deployment (2026-09-24 UTC):
+- source `main`: `85ec98591842c0e82fc67873fda1937c1fc8eee7`;
+- PR #97 hardened the operator E2E harness to reconcile ambiguous quota commit/release outcomes through idempotent request-state readback;
+- PR #98 released Agent **0.3.5**;
+- both Agents now persist `started_at_utc` only after required local configuration is successfully loaded; Windows additionally proves its encrypted device token can be decrypted;
+- Linux and Windows installers/updates require a fresh startup marker for the expected Agent version before declaring success;
+- failed startup attestation preserves existing revoke/rollback behavior;
+- dynamic Linux startup proof passes even with an intentionally unreachable network endpoint, proving startup attestation is local rather than network-coupled;
+- PROD Worker version: `5fce4f09-8db4-44a0-a5d6-b237c5288e75`;
+- rollback Worker version: `532bb762-c2b2-443d-8527-ada001bbce39`;
+- deployment id: `e22da847-4641-413d-a6e0-f5dd547b072f`;
+- 10/10 public runtime assets: **CURRENT**;
+- fail-closed live smoke: **PASS**;
+- full live-readonly gate: **PASS**.
 
 ## 6. Device pairing / credential review
 
@@ -273,7 +289,8 @@ The deterministic source and runtime promotion gates are closed. Remaining work 
 5. **Installer bootstrap supply chain**
    - release manifest + SHA256SUMS cover both installers and both Agents;
    - Linux enforces Agent SHA-256, release version and dynamic self-test before acceptance;
-   - live Agent 0.3.4 adds the same fail-closed functional self-test requirement to Windows install and update, after SHA/version/syntax validation;
+   - Agent 0.3.5 adds the same fail-closed functional self-test requirement to Windows install and update, after SHA/version/syntax validation;
+- Agent 0.3.5 additionally requires fresh local startup attestation for the expected version before install/update success on both Linux and Windows;
    - the public runtime drift gate covers installers, Agents, manifest and checksums byte-for-byte;
    - the initial `curl | bash` / `irm | iex` bootstrap still trusts the Commander HTTPS origin and has no independent trust anchor yet;
    - independent package/signature trust remains a later product-maturity target and must not be represented as already solved.
@@ -299,12 +316,16 @@ The promotion was executed in the required order:
 ```
 
 Current deployment:
-- Worker version: `f96d5690-7681-4976-b86b-94fe66ea842c`;
-- rollback version: `0f1028a0-797a-470e-a825-68d3e607cf67`;
+- deployable source: `85ec98591842c0e82fc67873fda1937c1fc8eee7`;
+- Worker version: `5fce4f09-8db4-44a0-a5d6-b237c5288e75`;
+- rollback version: `532bb762-c2b2-443d-8527-ada001bbce39`;
+- deployment id: `e22da847-4641-413d-a6e0-f5dd547b072f`;
 - migration 0009: **APPLIED**;
 - runtime assets: **CURRENT**;
 - public health/auth: **PASS**;
-- Agent release: **0.3.4**.
+- public fail-closed smoke: **PASS**;
+- Agent release: **0.3.5**;
+- Agent startup attestation on install/update: **READY**.
 
 The HTML runtime validator permits only one known Cloudflare Browser Insights beacon injection when comparing `/`; after removing that single known injected script, the HTML must match source exactly. The other nine critical assets (JS/CSS, installers, Agents, release files and brand asset) remain byte-exact checks.
 
@@ -373,7 +394,7 @@ python3 apps/commander/scripts/validate_preprod_readiness.py \
   --live-readonly \
   --expect-prod-migration applied \
   --expect-prod-assets current \
-  --expect-prod-worker-version f96d5690-7681-4976-b86b-94fe66ea842c
+  --expect-prod-worker-version 5fce4f09-8db4-44a0-a5d6-b237c5288e75
 ```
 
 This command is the current production convergence proof. If a future reviewed deployment changes the Worker version, update the expected version only after that deployment is intentionally promoted.
@@ -450,7 +471,7 @@ Worker deployment readback:
 
 ```bash
 python3 apps/commander/scripts/commander_prod_deployment_readback.py \
-  --expect-version f96d5690-7681-4976-b86b-94fe66ea842c
+  --expect-version 5fce4f09-8db4-44a0-a5d6-b237c5288e75
 ```
 
 E2E harness source contract:
@@ -485,7 +506,7 @@ python3 apps/commander/scripts/commander_e2e_harness.py five-tool \
   --subject '<oidc-subject>'
 ```
 
-The harness never prints the product token. Its invoke leg reserves quota, releases on failure, and commits only after a completed Agent call returns a 64-hex receipt SHA-256.
+The harness never prints the product token. Its invoke leg reserves quota, releases on failure, and commits only after a completed Agent call returns a 64-hex receipt SHA-256. If a commit/release response is lost after server processing, it now reconciles the same request_id through the existing idempotent authorize readback; COMMITTED is accepted only with the exact receipt SHA-256 and RELEASED only from the terminal RELEASED state.
 
 JavaScript syntax:
 
