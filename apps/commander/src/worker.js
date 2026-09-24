@@ -1168,12 +1168,17 @@ async function claimNextDeviceCall(env, request) {
     `UPDATE commander_device_calls
         SET state = 'EXECUTING', claimed_at_utc = ?
       WHERE call_id = (
-        SELECT call_id
-          FROM commander_device_calls
-         WHERE device_id = ?
-           AND state = 'PENDING'
-           AND expires_at_utc > ?
-         ORDER BY created_at_utc
+        SELECT c.call_id
+          FROM commander_device_calls c
+          JOIN commander_devices d
+            ON d.device_id = c.device_id
+           AND d.tenant_id = c.tenant_id
+         WHERE c.device_id = ?
+           AND c.state = 'PENDING'
+           AND c.expires_at_utc > ?
+           AND d.state = 'ACTIVE'
+           AND d.revoked_at_utc IS NULL
+         ORDER BY c.created_at_utc
          LIMIT 1
       )
       RETURNING call_id, request_id, tool_id, payload_json, expires_at_utc`
