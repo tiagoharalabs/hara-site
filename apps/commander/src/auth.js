@@ -31,11 +31,16 @@ function nowIso(offsetSeconds = 0) {
   return new Date(Date.now() + offsetSeconds * 1000).toISOString();
 }
 
-function cookieValue(request, name) {
+export function cookieValue(request, name) {
   const header = request.headers.get("cookie") || "";
   for (const part of header.split(";")) {
     const [key, ...rest] = part.trim().split("=");
-    if (key === name) return decodeURIComponent(rest.join("="));
+    if (key !== name) continue;
+    try {
+      return decodeURIComponent(rest.join("="));
+    } catch (_error) {
+      return null;
+    }
   }
   return null;
 }
