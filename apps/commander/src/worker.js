@@ -1407,9 +1407,6 @@ export default {
         return json({
           ok: true,
           service: "hara-commander",
-          environment: env.ENVIRONMENT,
-          storage_mode: env.STORAGE_MODE,
-          auth: authStatus(env),
         });
       }
 

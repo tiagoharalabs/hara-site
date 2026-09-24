@@ -93,7 +93,7 @@ def main() -> int:
 
     health = fetch_json("/api/health")
     auth = fetch_json("/api/portal/auth-config")
-    if health.get("ok") is not True or health.get("environment") != "PROD":
+    if health != {"ok": True, "service": "hara-commander"}:
         raise RuntimeError("RUNTIME_HEALTH_INVALID")
     if auth.get("configured") is not True:
         raise RuntimeError("RUNTIME_AUTH_NOT_CONFIGURED")
