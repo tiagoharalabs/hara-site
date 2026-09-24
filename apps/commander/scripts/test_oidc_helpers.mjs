@@ -90,6 +90,50 @@ await assert.rejects(
   /OIDC_ID_TOKEN_NBF_INVALID/,
 );
 
+const missingIat = await signJwt({ ...baseClaims, azp: clientId, iat: undefined });
+await assert.rejects(
+  verifyIdToken({ idToken: missingIat, metadata, issuer, clientId, nonce }),
+  /OIDC_ID_TOKEN_IAT_INVALID/,
+);
+
+const stringIat = await signJwt({ ...baseClaims, azp: clientId, iat: "now" });
+await assert.rejects(
+  verifyIdToken({ idToken: stringIat, metadata, issuer, clientId, nonce }),
+  /OIDC_ID_TOKEN_IAT_INVALID/,
+);
+
+const malformedAudience = await signJwt({
+  ...baseClaims,
+  aud: [clientId, 42],
+  azp: clientId,
+});
+await assert.rejects(
+  verifyIdToken({ idToken: malformedAudience, metadata, issuer, clientId, nonce }),
+  /OIDC_AUDIENCE_MISMATCH/,
+);
+
+const unicodeSubject = await signJwt({
+  ...baseClaims,
+  sub: "subject-ç",
+  azp: clientId,
+});
+await assert.rejects(
+  verifyIdToken({ idToken: unicodeSubject, metadata, issuer, clientId, nonce }),
+  /OIDC_SUBJECT_INVALID/,
+);
+
+for (const badIssuer of [
+  "https://auth.example.test/?unexpected=1",
+  "https://auth.example.test/#fragment",
+  "https://user:pass@auth.example.test/",
+]) {
+  const token = await signJwt({ ...baseClaims, iss: badIssuer, azp: clientId });
+  await assert.rejects(
+    verifyIdToken({ idToken: token, metadata, issuer, clientId, nonce }),
+    /OIDC_ISSUER_INVALID/,
+  );
+}
+
 globalThis.fetch = originalFetch;
 
 console.log("COMMANDER_OIDC_AZP_VALID=PASS");
@@ -97,3 +141,7 @@ console.log("COMMANDER_OIDC_MULTI_AUD_MISSING_AZP=DENIED");
 console.log("COMMANDER_OIDC_WRONG_AZP=DENIED");
 console.log("COMMANDER_OIDC_FUTURE_NBF=DENIED");
 console.log("COMMANDER_OIDC_INVALID_NBF=DENIED");
+console.log("COMMANDER_OIDC_REQUIRED_IAT=ENFORCED");
+console.log("COMMANDER_OIDC_AUDIENCE_SHAPE=ENFORCED");
+console.log("COMMANDER_OIDC_SUBJECT_SHAPE=ENFORCED");
+console.log("COMMANDER_OIDC_ISSUER_COMPONENTS=ENFORCED");

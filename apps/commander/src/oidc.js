@@ -29,10 +29,16 @@ export function normalizeIssuer(value) {
   const issuer = String(value || "").trim();
   if (!issuer) throw new Error("OIDC_NOT_CONFIGURED");
   const url = new URL(issuer);
-  if (url.protocol !== "https:") throw new Error("OIDC_ISSUER_INVALID");
+  if (
+    url.protocol !== "https:"
+    || url.username
+    || url.password
+    || url.search
+    || url.hash
+  ) {
+    throw new Error("OIDC_ISSUER_INVALID");
+  }
   if (!url.pathname.endsWith("/")) url.pathname += "/";
-  url.search = "";
-  url.hash = "";
   return url.toString();
 }
 
@@ -133,13 +139,24 @@ export async function verifyIdToken({ idToken, metadata, issuer, clientId, nonce
   if (!valid) throw new Error("OIDC_ID_TOKEN_SIGNATURE_INVALID");
 
   const expectedIssuer = normalizeIssuer(issuer);
-  if (normalizeIssuer(claims.iss) !== expectedIssuer) throw new Error("OIDC_ISSUER_MISMATCH");
+  if (typeof claims.iss !== "string" || normalizeIssuer(claims.iss) !== expectedIssuer) {
+    throw new Error("OIDC_ISSUER_MISMATCH");
+  }
   const audiences = Array.isArray(claims.aud) ? claims.aud : [claims.aud];
-  if (!audiences.includes(clientId)) throw new Error("OIDC_AUDIENCE_MISMATCH");
+  if (
+    audiences.length === 0
+    || audiences.some((audience) => typeof audience !== "string" || !audience)
+    || !audiences.includes(clientId)
+  ) {
+    throw new Error("OIDC_AUDIENCE_MISMATCH");
+  }
   if (audiences.length > 1 && !claims.azp) throw new Error("OIDC_AUTHORIZED_PARTY_MISSING");
   if (claims.azp && claims.azp !== clientId) throw new Error("OIDC_AUTHORIZED_PARTY_MISMATCH");
   if (claims.nonce !== nonce) throw new Error("OIDC_NONCE_MISMATCH");
   if (!claims.sub || typeof claims.sub !== "string") throw new Error("OIDC_SUBJECT_MISSING");
+  if (claims.sub.length > 255 || !/^[ -~]+$/.test(claims.sub)) {
+    throw new Error("OIDC_SUBJECT_INVALID");
+  }
 
   const now = Math.floor(Date.now() / 1000);
   if (!Number.isFinite(claims.exp) || claims.exp < now - 30) throw new Error("OIDC_ID_TOKEN_EXPIRED");
@@ -149,7 +166,9 @@ export async function verifyIdToken({ idToken, metadata, issuer, clientId, nonce
   if (Number.isFinite(claims.nbf) && claims.nbf > now + 30) {
     throw new Error("OIDC_ID_TOKEN_NOT_YET_VALID");
   }
-  if (Number.isFinite(claims.iat) && claims.iat > now + 60) throw new Error("OIDC_ID_TOKEN_IAT_INVALID");
+  if (!Number.isFinite(claims.iat) || claims.iat > now + 60) {
+    throw new Error("OIDC_ID_TOKEN_IAT_INVALID");
+  }
 
   return claims;
 }
