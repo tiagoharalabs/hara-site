@@ -115,6 +115,67 @@ def authorize(
         raise HarnessError(str(decision.get("code") or "MCP_AUTHORIZE_DENIED"))
     return decision
 
+def usage_replay(
+    origin: str,
+    token: str,
+    issuer: str,
+    subject: str,
+    req_id: str,
+) -> dict:
+    return post_json(
+        origin,
+        "/api/internal/mcp/authorize",
+        token,
+        {
+            "issuer": issuer,
+            "subject": subject,
+            "tool_id": "hara.functions.invoke",
+            "request_id": req_id,
+            "function_id": FUNCTION_ID,
+        },
+    )
+
+def reconcile_usage_state(
+    origin: str,
+    token: str,
+    issuer: str,
+    subject: str,
+    req_id: str,
+    expected_state: str,
+    *,
+    receipt_sha256: str | None = None,
+    attempts: int = 3,
+) -> dict:
+    if expected_state not in {"RELEASED", "COMMITTED"}:
+        raise HarnessError("MCP_QUOTA_RECONCILE_EXPECTATION_INVALID")
+    last_error = None
+    for attempt in range(attempts):
+        try:
+            replay = usage_replay(origin, token, issuer, subject, req_id)
+            usage = replay.get("usage") or {}
+            state = str(usage.get("state") or "")
+            if expected_state == "RELEASED":
+                if (
+                    replay.get("allowed") is False
+                    and replay.get("code") == "REQUEST_USAGE_TERMINAL"
+                    and state == "RELEASED"
+                ):
+                    return usage
+            elif (
+                replay.get("allowed") is True
+                and replay.get("code") == "ALLOW"
+                and state == "COMMITTED"
+            ):
+                observed_receipt = str(usage.get("receipt_sha256") or "").lower()
+                if receipt_sha256 is None or observed_receipt == receipt_sha256.lower():
+                    return usage
+                last_error = "MCP_QUOTA_RECONCILE_RECEIPT_MISMATCH"
+        except HarnessError as exc:
+            last_error = str(exc)
+        if attempt + 1 < attempts:
+            time.sleep(0.35)
+    raise HarnessError(last_error or "MCP_QUOTA_RECONCILE_INVALID")
+
 def release_quota(
     origin: str,
     token: str,
@@ -245,10 +306,16 @@ def quota_roundtrip(
         if usage.get("state") == "COMMITTED":
             raise HarnessError("MCP_QUOTA_REQUEST_ID_COLLISION")
         reserved = True
-        released = release_quota(origin, token, issuer, subject, req_id)
-        released_usage = released.get("usage") or {}
-        if released_usage.get("state") != "RELEASED":
-            raise HarnessError("MCP_QUOTA_RELEASE_STATE_INVALID")
+        try:
+            released = release_quota(origin, token, issuer, subject, req_id)
+            released_usage = released.get("usage") or {}
+            if released_usage.get("state") != "RELEASED":
+                raise HarnessError("MCP_QUOTA_RELEASE_STATE_INVALID")
+        except HarnessError:
+            reconcile_usage_state(
+                origin, token, issuer, subject, req_id, "RELEASED"
+            )
+            print("COMMANDER_E2E_QUOTA_RELEASE_RECONCILED=PASS")
         reserved = False
 
         replay = post_json(
@@ -276,7 +343,13 @@ def quota_roundtrip(
                 release_quota(origin, token, issuer, subject, req_id)
                 print("COMMANDER_E2E_QUOTA_CLEANUP=PASS")
             except Exception:
-                print("COMMANDER_E2E_QUOTA_CLEANUP=PENDING")
+                try:
+                    reconcile_usage_state(
+                        origin, token, issuer, subject, req_id, "RELEASED"
+                    )
+                    print("COMMANDER_E2E_QUOTA_CLEANUP_RECONCILED=PASS")
+                except Exception:
+                    print("COMMANDER_E2E_QUOTA_CLEANUP=PENDING")
 
 def tool_payload(tool_id: str, receipt_sha256: str | None = None) -> dict:
     if tool_id in {"hara.health", "hara.functions.list"}:
@@ -345,17 +418,29 @@ def execute_remote_tool(
         if tool_id == "hara.functions.invoke":
             if len(bridge_receipt) != 64:
                 raise HarnessError("DEVICE_RECEIPT_SHA256_MISSING")
-            committed = commit_quota(
-                origin,
-                token,
-                issuer,
-                subject,
-                req_id,
-                bridge_receipt,
-            )
-            usage = committed.get("usage") or {}
-            if usage.get("state") != "COMMITTED":
-                raise HarnessError("MCP_QUOTA_COMMIT_STATE_INVALID")
+            try:
+                committed = commit_quota(
+                    origin,
+                    token,
+                    issuer,
+                    subject,
+                    req_id,
+                    bridge_receipt,
+                )
+                usage = committed.get("usage") or {}
+                if usage.get("state") != "COMMITTED":
+                    raise HarnessError("MCP_QUOTA_COMMIT_STATE_INVALID")
+            except HarnessError:
+                reconcile_usage_state(
+                    origin,
+                    token,
+                    issuer,
+                    subject,
+                    req_id,
+                    "COMMITTED",
+                    receipt_sha256=bridge_receipt,
+                )
+                print("COMMANDER_E2E_QUOTA_COMMIT_RECONCILED=PASS")
             reserved = False
 
         print(f"COMMANDER_E2E_TOOL_{tool_id.upper().replace('.', '_')}=PASS")
@@ -371,7 +456,13 @@ def execute_remote_tool(
                 release_quota(origin, token, issuer, subject, req_id)
                 print("COMMANDER_E2E_INVOKE_QUOTA_CLEANUP=PASS")
             except Exception:
-                print("COMMANDER_E2E_INVOKE_QUOTA_CLEANUP=PENDING")
+                try:
+                    reconcile_usage_state(
+                        origin, token, issuer, subject, req_id, "RELEASED"
+                    )
+                    print("COMMANDER_E2E_INVOKE_QUOTA_CLEANUP_RECONCILED=PASS")
+                except Exception:
+                    print("COMMANDER_E2E_INVOKE_QUOTA_CLEANUP=PENDING")
 
 def five_tool(
     origin: str,
