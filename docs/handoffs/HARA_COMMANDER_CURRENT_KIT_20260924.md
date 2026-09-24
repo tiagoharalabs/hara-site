@@ -11,8 +11,8 @@ Full historical authority:
 ## 1. Current authority
 
 Repository:
-- canonical `main`: `71614660635558122901c352bf94f8a28dc23c01`
-- latest merge: PR #128 — quota TTL rollout receipt
+- source authority incorporated by this kit through PR #129: `7f1f24e2399666017c7a6e7cf2f09b5273121d95`
+- latest source/config merge before this kit: PR #129 — versioned DEV runtime authority
 - open Commander PRs observed at kit creation: **0**
 
 PROD:
@@ -31,6 +31,11 @@ DEV:
 - rollback: `80f3b819-e6ae-4a2e-ad61-e94729240957`
 - health: **DEV / REMOTE_DEV / HARA Identity configured**
 - bootstrap public assets: byte-equal to canonical source in latest readback
+- versioned DEV config: `apps/commander/wrangler.dev.jsonc`
+- DEV config explicitly binds `hara-commander-product-dev` / `REMOTE_DEV`, never PROD routes/D1
+- DEV secrets remain external to Git
+- static anti-cross-environment validation is mandatory in source readiness
+- live DEV deployment/binding/health readback exists
 - do not infer DEV bindings/config from PROD when promoting backend behavior
 
 Agent release authority:
@@ -271,6 +276,7 @@ Key progression after the original promotion/UI cleanup:
 - #125 — canonical device-call expiry cause
 - #127 — abandoned quota reservation TTL / crash safety
 - #128 — current PROD quota-TTL rollout receipt
+- #129 — versioned DEV runtime config + DEV-only binding/readback authority
 
 For the earlier #64–#90 history, use the canonical successor guide.
 
