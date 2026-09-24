@@ -108,13 +108,23 @@ print("AGENT_FAILED_INSTALL_ROLLBACK=READY")
 print("AGENT_SUPPORT_REPORT_SANITIZED=READY")
 print("AGENT_DEVICE_PREFLIGHT_NON_MUTATING=READY")
 
+enqueue = WORKER.split("async function enqueueDeviceCall", 1)[1].split("async function claimNextDeviceCall", 1)[0]
 claim = WORKER.split("async function claimNextDeviceCall", 1)[1].split("async function completeDeviceCall", 1)[0]
+status = WORKER.split("async function deviceCallStatus", 1)[1].split("export default", 1)[0]
 heartbeat = WORKER.split("async function heartbeatDevice", 1)[1].split("async function revokeDeviceSelf", 1)[0]
 assert "UPDATE commander_devices SET last_seen_at_utc" not in claim, "CALL_POLL_PRESENCE_WRITE_PRESENT"
+assert "SET state = 'EXPIRED'" not in claim, "CALL_POLL_EXPIRY_WRITE_PRESENT"
+assert "DEVICE_CALL_TTL_SECONDS = 50" in WORKER and "nowIso(DEVICE_CALL_TTL_SECONDS)" in enqueue, "DEVICE_CALL_TTL_NOT_BOUNDED"
+assert "SET state = 'EXPIRED'" in enqueue, "ENQUEUE_STALE_CALL_CLEANUP_MISSING"
+assert status.index("let row = await readCall()") < status.index("SET state = 'EXPIRED'"), "DEVICE_STATUS_UNCONDITIONAL_EXPIRY_WRITE"
+assert "RETURNING call_id, request_id, device_id, tool_id, state" in status, "DEVICE_STATUS_EXPIRY_RETURNING_MISSING"
 assert "UPDATE commander_devices" in heartbeat and "last_seen_at_utc" in heartbeat, "HEARTBEAT_PRESENCE_WRITE_MISSING"
 assert "authCallbackFailureResponse" in WORKER and "clearCookie(TX_COOKIE" in AUTH, "OIDC_CALLBACK_COOKIE_CLEANUP_MISSING"
 assert "SESSION_TOUCH_SECONDS" in AUTH and ".run().catch(() => null)" in AUTH, "PORTAL_SESSION_TOUCH_NOT_BEST_EFFORT"
 print("COMMANDER_CALL_POLL_PRESENCE_WRITE=ABSENT")
+print("COMMANDER_CALL_POLL_EXPIRY_WRITE=ABSENT")
+print("COMMANDER_DEVICE_CALL_TTL_BOUNDED=PASS")
+print("COMMANDER_DEVICE_STATUS_CONDITIONAL_EXPIRY_WRITE=PASS")
 print("COMMANDER_OIDC_FAILURE_COOKIE_CLEANUP=READY")
 print("COMMANDER_SESSION_TOUCH_BEST_EFFORT=READY")
 print("COMMANDER_AGENT_RUNTIME_DIAGNOSTIC=READY")
