@@ -47,6 +47,49 @@ raise SystemExit(1)
 PY
 }
 
+read_runtime_status_value() {
+  local key="$1"
+  [ -f "$STATUS_FILE" ] || return 1
+  python3 - "$STATUS_FILE" "$key" <<'PY'
+import json,sys
+from pathlib import Path
+obj=json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+value=obj.get(sys.argv[2])
+if value is None or value == "":
+    raise SystemExit(1)
+print(value)
+PY
+}
+
+wait_for_agent_startup() {
+  local expected_version="$1"
+  local previous_started="${2:-}"
+  local attempt
+  for attempt in 1 2 3 4 5 6 7 8 9 10; do
+    if python3 - "$STATUS_FILE" "$expected_version" "$previous_started" <<'PY'
+import json,sys
+from pathlib import Path
+path=Path(sys.argv[1]); expected=sys.argv[2]; previous=sys.argv[3]
+if not path.is_file():
+    raise SystemExit(1)
+try:
+    obj=json.loads(path.read_text(encoding="utf-8"))
+except Exception:
+    raise SystemExit(1)
+started=str(obj.get("started_at_utc") or "")
+version=str(obj.get("agent_version") or "")
+if version == expected and started and started != previous:
+    raise SystemExit(0)
+raise SystemExit(1)
+PY
+    then
+      return 0
+    fi
+    sleep 1
+  done
+  return 1
+}
+
 download_agent() {
   mkdir -p "$BIN_DIR"
   local tmp manifest expected_sha expected_version actual_sha actual_version
@@ -121,7 +164,7 @@ if not base or not token or not device_id:
     raise SystemExit(2)
 if action=="heartbeat":
     endpoint="/api/device/heartbeat"
-    payload={"device_id":device_id,"architecture":arch,"agent_version":"0.3.4"}
+    payload={"device_id":device_id,"architecture":arch,"agent_version":"0.3.5"}
 elif action=="revoke":
     endpoint="/api/device/revoke-self"
     payload={}
@@ -155,7 +198,7 @@ token=sys.stdin.readline().rstrip("\n")
 if not device_id or not token: raise SystemExit(2)
 req=urllib.request.Request(
     base+"/api/device/revoke-self", data=b"{}", method="POST",
-    headers={"content-type":"application/json","accept":"application/json","authorization":"Bearer "+token,"user-agent":"HARA-Commander-Installer-Rollback/0.3.4"},
+    headers={"content-type":"application/json","accept":"application/json","authorization":"Bearer "+token,"user-agent":"HARA-Commander-Installer-Rollback/0.3.5"},
 )
 with urllib.request.urlopen(req,timeout=15) as response:
     obj=json.loads(response.read().decode() or "{}")
@@ -295,14 +338,16 @@ case "$ACTION" in
     [ -f "$UNIT" ] || { echo 'AGENT_SERVICE_NOT_INSTALLED' >&2; exit 6; }
     configured_url="$(read_config_value HARA_COMMANDER_URL 2>/dev/null || true)"
     [ -z "$configured_url" ] || BASE_URL="${configured_url%/}"
+    previous_started="$(read_runtime_status_value started_at_utc 2>/dev/null || true)"
     backup="$AGENT.rollback"
     rm -f "$backup"
     [ ! -f "$AGENT" ] || cp -p "$AGENT" "$backup"
     download_agent
+    expected_version="$(python3 "$AGENT" --version)"
     systemctl --user daemon-reload
     systemctl --user restart "$SERVICE"
     sleep 1
-    if ! systemctl --user is-active --quiet "$SERVICE"; then
+    if ! systemctl --user is-active --quiet "$SERVICE" || ! wait_for_agent_startup "$expected_version" "$previous_started"; then
       if [ -f "$backup" ]; then
         mv -f "$backup" "$AGENT"
         chmod 700 "$AGENT"
@@ -314,6 +359,7 @@ case "$ACTION" in
       exit 7
     fi
     rm -f "$backup"
+    printf 'HARA_COMMANDER_AGENT_STARTUP_ATTESTATION=PASS\n'
     printf 'HARA_COMMANDER_AGENT_UPDATE=PASS\n'
     printf 'HARA_COMMANDER_AGENT_UPDATE_ROLLBACK_READY=TRUE\n'
     status_agent; exit 0 ;;
@@ -354,7 +400,7 @@ print(json.dumps({
   "device_name": sys.argv[1],
   "platform": "LINUX",
   "architecture": sys.argv[2],
-  "agent_version": "0.3.4",
+  "agent_version": "0.3.5",
 }, separators=(",",":")))
 ' "$DEVICE_NAME" "$ARCH")"
 
@@ -387,6 +433,7 @@ EOF
 chmod 600 "$CONFIG_FILE"
 
 download_agent
+expected_version="$(python3 "$AGENT" --version)"
 
 cat >"$UNIT" <<EOF
 [Unit]
@@ -411,10 +458,11 @@ systemctl --user daemon-reload
 systemctl --user enable --now hara-commander-agent.service
 
 sleep 1
-if ! systemctl --user is-active --quiet hara-commander-agent.service; then
-  echo 'HARA Commander Agent failed to start.' >&2
+if ! systemctl --user is-active --quiet hara-commander-agent.service || ! wait_for_agent_startup "$expected_version" ""; then
+  echo 'HARA Commander Agent failed startup attestation.' >&2
   exit 4
 fi
+printf 'HARA_COMMANDER_AGENT_STARTUP_ATTESTATION=PASS\n'
 
 INSTALL_ENROLLED=FALSE
 trap - EXIT

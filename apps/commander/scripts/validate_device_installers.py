@@ -2,7 +2,10 @@
 from pathlib import Path
 import hashlib
 import json
+import os
 import subprocess
+import tempfile
+import time
 
 ROOT = Path(__file__).resolve().parents[3]
 PUBLIC = ROOT / "apps/commander/public"
@@ -21,7 +24,7 @@ def need(text: str, token: str, code: str) -> None:
     assert token in text, f"{code}:{token}"
 
 for token in ('platform": "LINUX"', "/api/device/enroll", "/agent/linux.py",
-              "systemctl --user enable --now", "chmod 600", '"agent_version": "0.3.4"',
+              "systemctl --user enable --now", "chmod 600", '"agent_version": "0.3.5"',
               "HARA_COMMANDER_AGENT_UPDATE=PASS", "HARA_COMMANDER_AGENT_UNINSTALL=PASS",
               "HARA_COMMANDER_AGENT_VERSION=", "HARA_COMMANDER_AGENT_DOCTOR=PASS",
               "/api/device/revoke-self", "SERVER_DEVICE_REVOKE=",
@@ -43,7 +46,7 @@ print("LINUX_INSTALLER_SECRET_ARGV_EXPOSURE=FALSE")
 
 for token in ('platform="WINDOWS"', "/api/device/enroll", "/agent/windows.ps1",
               "ConvertFrom-SecureString", "Register-ScheduledTask", "icacls.exe",
-              'agent_version="0.3.4"', "HARA_COMMANDER_AGENT_UPDATE=PASS",
+              'agent_version="0.3.5"', "HARA_COMMANDER_AGENT_UPDATE=PASS",
               "HARA_COMMANDER_AGENT_UNINSTALL=PASS", "HARA_COMMANDER_AGENT_VERSION=",
               "HARA_COMMANDER_AGENT_DOCTOR=PASS", "/api/device/revoke-self",
               "SERVER_DEVICE_REVOKE=", "HARA_COMMANDER_AGENT_UPDATE_ROLLBACK_READY=TRUE",
@@ -60,7 +63,7 @@ assert "DEVICE_TOKEN_EXPOSED=FALSE" in WINDOWS
 print("WINDOWS_DEVICE_INSTALLER_STATIC=PASS")
 
 assert MANIFEST.get("schema") == "hara.commander-agent-release.v1"
-assert MANIFEST.get("agent_version") == "0.3.4"
+assert MANIFEST.get("agent_version") == "0.3.5"
 entries = {item["path"]: item for item in MANIFEST.get("files", [])}
 for rel in ("agent/linux.py", "agent/windows.ps1", "install/linux.sh", "install/windows.ps1"):
     path = PUBLIC / rel
@@ -89,9 +92,61 @@ assert "except Exception:\n            pass" not in LINUX_AGENT, "LINUX_AGENT_SI
 assert "catch {\n  }\n  Start-Sleep" not in WINDOWS_AGENT, "WINDOWS_AGENT_SILENT_RUNTIME_ERROR"
 assert "safe_error_code" in LINUX_AGENT and "Get-SafeErrorCode" in WINDOWS_AGENT, "AGENT_ERROR_SANITIZATION_MISSING"
 assert "runtime-status.json" in LINUX_AGENT and "runtime-status.json" in WINDOWS_AGENT, "AGENT_RUNTIME_STATUS_MISSING"
+assert "started_at_utc" in LINUX_AGENT and "started_at_utc" in WINDOWS_AGENT, "AGENT_STARTUP_ATTESTATION_STATUS_MISSING"
+assert "wait_for_agent_startup" in LINUX and "Wait-AgentStartup" in WINDOWS, "INSTALLER_STARTUP_ATTESTATION_WAIT_MISSING"
+assert LINUX.count("HARA_COMMANDER_AGENT_STARTUP_ATTESTATION=PASS") >= 2, "LINUX_STARTUP_ATTESTATION_NOT_REQUIRED_FOR_INSTALL_AND_UPDATE"
+assert WINDOWS.count("HARA_COMMANDER_AGENT_STARTUP_ATTESTATION=PASS") >= 2, "WINDOWS_STARTUP_ATTESTATION_NOT_REQUIRED_FOR_INSTALL_AND_UPDATE"
 assert "last_runtime_error_code" in LINUX and "last_runtime_error_code" in WINDOWS, "SUPPORT_RUNTIME_DIAGNOSTIC_MISSING"
 assert "device.info" in LINUX_AGENT and "device.info" in WINDOWS_AGENT
 subprocess.run([str(PUBLIC / "agent/linux.py"), "--self-test"], check=True)
+with tempfile.TemporaryDirectory(prefix="hara-agent-startup-") as tmp:
+    root = Path(tmp)
+    config_home = root / "config"
+    data_home = root / "data"
+    config_dir = config_home / "hara-commander"
+    config_dir.mkdir(parents=True)
+    (config_dir / "device.env").write_text(
+        "\n".join((
+            "HARA_COMMANDER_URL=https://127.0.0.1:9",
+            "HARA_DEVICE_ID=HARA-DEVICE-STARTUP-TEST",
+            "HARA_DEVICE_TOKEN=" + ("x" * 64),
+            "HARA_DEVICE_ARCH=x86_64",
+            "",
+        )),
+        encoding="utf-8",
+    )
+    env = os.environ.copy()
+    env["XDG_CONFIG_HOME"] = str(config_home)
+    env["XDG_DATA_HOME"] = str(data_home)
+    proc = subprocess.Popen(
+        [str(PUBLIC / "agent/linux.py")],
+        env=env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    try:
+        status_path = data_home / "hara-commander" / "runtime-status.json"
+        startup = None
+        for _ in range(30):
+            if status_path.is_file():
+                try:
+                    startup = json.loads(status_path.read_text(encoding="utf-8"))
+                except json.JSONDecodeError:
+                    startup = None
+                if startup and startup.get("started_at_utc"):
+                    break
+            time.sleep(0.1)
+        assert startup, "LINUX_AGENT_STARTUP_STATUS_MISSING"
+        assert startup.get("agent_version") == "0.3.5", "LINUX_AGENT_STARTUP_VERSION_INVALID"
+        assert startup.get("started_at_utc"), "LINUX_AGENT_STARTUP_ATTESTATION_MISSING"
+    finally:
+        proc.terminate()
+        try:
+            proc.wait(timeout=3)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait(timeout=3)
+print("COMMANDER_AGENT_STARTUP_ATTESTATION=PASS")
 print("COMMANDER_EXACT_FIVE_TOOL_AGENT=PASS")
 print("ARBITRARY_SHELL_EXPOSED=FALSE")
 
