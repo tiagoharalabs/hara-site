@@ -347,11 +347,10 @@ The promotion was executed in the required order:
 ```
 
 Current deployment:
-- deployable source: `021b32476074c2b7655337a5d902ff19a3ffa855`;
-- Worker version: `daf0cc4b-9372-4165-8c94-c2decefa221f`;
-- rollback version: `cb80f974-cb21-4ae7-9d5d-fc2271eacd8e`;
-- deployment id: `03f57aee-7194-484c-a42e-314482f5e6c6`;
-- deployed at: `2026-09-24T19:42:20.099217Z`;
+- deployable source: `4b01c401501197e18cb660a9a1c47ab806b3aa4d`;
+- Worker version: `cd1d27b8-a574-46ff-83f9-f05f8cdef5bb`;
+- rollback version: `a98b1f18-e22a-4335-b51c-e33f0b954b6f`;
+- deployed after PR #116 bootstrap redirect hardening;
 - migration 0009: **APPLIED**;
 - runtime assets: **CURRENT**;
 - public health/auth: **PASS**;
@@ -359,7 +358,14 @@ Current deployment:
 - OIDC transaction hygiene: **PASS**, 10-minute window, expired=0 in latest readback;
 - pairing/session retention eligibility: **0** in latest readback;
 - Agent release: **0.3.6**;
-- Agent startup attestation on install/update: **READY**.
+- Agent startup attestation on install/update: **READY**;
+- customer-visible Linux/Windows bootstrap commands deny redirects before execution.
+
+Current DEV runtime:
+- Worker `hara-commander-dev-v2`: `0e466497-0ccf-4cbc-bc1c-83de0d82243f`;
+- rollback DEV Worker: `15fa9e05-4179-4c43-95ea-f692c46edfc1`;
+- health: **DEV / REMOTE_DEV / HARA Identity configured**;
+- bootstrap command assets: byte-equal to canonical source after cache-busted readback.
 
 The HTML runtime validator permits only one known Cloudflare Browser Insights beacon injection when comparing `/`; after removing that single known injected script, the HTML must match source exactly. The other nine critical assets (JS/CSS, installers, Agents, release files and brand asset) remain byte-exact checks.
 
@@ -428,7 +434,7 @@ python3 apps/commander/scripts/validate_preprod_readiness.py \
   --live-readonly \
   --expect-prod-migration applied \
   --expect-prod-assets current \
-  --expect-prod-worker-version daf0cc4b-9372-4165-8c94-c2decefa221f
+  --expect-prod-worker-version cd1d27b8-a574-46ff-83f9-f05f8cdef5bb
 ```
 
 This command is the current production convergence proof. If a future reviewed deployment changes the Worker version, update the expected version only after that deployment is intentionally promoted.
@@ -513,7 +519,7 @@ Worker deployment readback:
 
 ```bash
 python3 apps/commander/scripts/commander_prod_deployment_readback.py \
-  --expect-version daf0cc4b-9372-4165-8c94-c2decefa221f
+  --expect-version cd1d27b8-a574-46ff-83f9-f05f8cdef5bb
 ```
 
 E2E harness source contract:
@@ -609,11 +615,16 @@ git diff --check
 - PR #111 — first-device public/local installer + manifest parity — **MERGED**
 - PR #112 — MCP token symlink-bypass closure / failure-output redaction — **MERGED**
 - PR #113 — Agent 0.3.6 redirect fail-closed release — **MERGED + PROMOTED**
+- PR #114 — Agent 0.3.6 rollout authority / MIXED drift modeling — **MERGED**
+- PR #115 — Windows device-token plaintext lifetime minimization — **MERGED + PROMOTED**
+- PR #116 — customer bootstrap redirect denial / Linux TLS floor — **MERGED + PROMOTED**
 - hara-platform PR #1158 — quota finalization compensation source — **MERGED; real-device COMMIT E2E pending**
 - issue #65 — Commander post-promotion coordination / residual homologation — **OPEN**
 
-Canonical repository state at this checkpoint: `main` = `021b32476074c2b7655337a5d902ff19a3ffa855`.
-Current deployed Commander runtime source: `021b32476074c2b7655337a5d902ff19a3ffa855`.
-PRs #110–#112 are operator-tooling/preflight/token-custody hardening. PR #113 changed public release assets and was explicitly promoted to DEV and PROD.
+Canonical repository state at this checkpoint: `main` = `4b01c401501197e18cb660a9a1c47ab806b3aa4d`.
+Current deployed Commander runtime source: `4b01c401501197e18cb660a9a1c47ab806b3aa4d`.
+Current PROD Worker: `cd1d27b8-a574-46ff-83f9-f05f8cdef5bb`; rollback: `a98b1f18-e22a-4335-b51c-e33f0b954b6f`.
+Current DEV Worker: `0e466497-0ccf-4cbc-bc1c-83de0d82243f`; rollback: `15fa9e05-4179-4c43-95ea-f692c46edfc1`.
+PRs #110–#112 are operator-tooling/preflight/token-custody hardening. PRs #113/#115/#116 changed deployable/runtime customer assets or behavior and were explicitly promoted.
 
 Continue from current `main`, this guide and the newest issue #65 comments. Do not use PR #66 as a backend source.
