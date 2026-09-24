@@ -66,6 +66,7 @@ def main():
         ("COMMANDER_PREPROD_ORIGIN", "validate_portal_origin_guard.py"),
         ("COMMANDER_PREPROD_CLAIM_REVOKE_RACE", "validate_claim_revoke_race.py"),
         ("COMMANDER_PREPROD_INVITE_CLAIM_RACE", "validate_invite_claim_race.py"),
+        ("COMMANDER_PREPROD_E2E_HARNESS", "validate_e2e_harness.py"),
     )
     for label, script in checks:
         run(label, [
