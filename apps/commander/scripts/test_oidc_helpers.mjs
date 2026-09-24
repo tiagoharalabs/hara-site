@@ -17,10 +17,11 @@ publicJwk.alg = "RS256";
 publicJwk.use = "sig";
 
 const originalFetch = globalThis.fetch;
+let jwksKeys = [publicJwk];
 globalThis.fetch = async (url, init = {}) => {
   assert.equal(String(url), metadata.jwks_uri);
   assert.equal(init.redirect, "error");
-  return Response.json({ keys: [publicJwk] });
+  return Response.json({ keys: jwksKeys });
 };
 
 function encodedJson(value) {
@@ -54,6 +55,26 @@ assert.equal(
   (await verifyIdToken({ idToken: valid, metadata, issuer, clientId, nonce })).sub,
   "subject-1",
 );
+
+for (const incompatibleKey of [
+  { ...publicJwk, use: "enc" },
+  { ...publicJwk, alg: "RS512" },
+  { ...publicJwk, key_ops: ["encrypt"] },
+  { ...publicJwk, key_ops: "verify" },
+]) {
+  jwksKeys = [incompatibleKey];
+  await assert.rejects(
+    verifyIdToken({ idToken: valid, metadata, issuer, clientId, nonce }),
+    /OIDC_SIGNING_KEY_NOT_FOUND/,
+  );
+}
+
+jwksKeys = [{ ...publicJwk, use: "enc" }, publicJwk];
+assert.equal(
+  (await verifyIdToken({ idToken: valid, metadata, issuer, clientId, nonce })).sub,
+  "subject-1",
+);
+jwksKeys = [publicJwk];
 
 const missingAzp = await signJwt(baseClaims);
 await assert.rejects(
@@ -146,6 +167,7 @@ for (const badIssuer of [
 globalThis.fetch = originalFetch;
 
 console.log("COMMANDER_OIDC_AZP_VALID=PASS");
+console.log("COMMANDER_OIDC_JWKS_SIGNING_KEY_METADATA=ENFORCED");
 console.log("COMMANDER_OIDC_MULTI_AUD_MISSING_AZP=DENIED");
 console.log("COMMANDER_OIDC_WRONG_AZP=DENIED");
 console.log("COMMANDER_OIDC_AZP_SHAPE=ENFORCED");

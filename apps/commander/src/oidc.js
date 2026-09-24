@@ -152,7 +152,18 @@ export async function verifyIdToken({ idToken, metadata, issuer, clientId, nonce
   });
   if (!jwksResponse.ok) throw new Error("OIDC_JWKS_FAILED");
   const jwks = await jwksResponse.json();
-  const jwk = (jwks.keys || []).find((item) => item.kid === header.kid && item.kty === "RSA");
+  const keys = Array.isArray(jwks?.keys) ? jwks.keys : [];
+  const jwk = keys.find((item) => (
+    item
+    && item.kid === header.kid
+    && item.kty === "RSA"
+    && (!item.use || item.use === "sig")
+    && (!item.alg || item.alg === "RS256")
+    && (
+      !item.key_ops
+      || (Array.isArray(item.key_ops) && item.key_ops.includes("verify"))
+    )
+  ));
   if (!jwk) throw new Error("OIDC_SIGNING_KEY_NOT_FOUND");
 
   const key = await crypto.subtle.importKey(
