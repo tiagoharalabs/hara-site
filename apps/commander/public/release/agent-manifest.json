@@ -1,26 +1,26 @@
 {
-  "agent_version": "0.3.3",
+  "agent_version": "0.3.4",
   "channel": "stable",
   "files": [
     {
       "bytes": 11435,
       "path": "agent/linux.py",
-      "sha256": "aee9af3bc2d1302ad3c3b92ed43fdd4d32e2ce119ae0c3fad41fd1346972d70c"
+      "sha256": "ae0aec2ce67347794d761bb01699e9f21c8f6e1e836bbcaad54f73997aa9f54a"
     },
     {
-      "bytes": 9028,
+      "bytes": 11557,
       "path": "agent/windows.ps1",
-      "sha256": "4960e63723d8f7f1e992a2f19972e61e746f13f0710acc63dcb9a8192b6bcd76"
+      "sha256": "98914a23ab8c899c0b98e805b93688530751e49d90cb495817ddb629a4f1a261"
     },
     {
       "bytes": 16327,
       "path": "install/linux.sh",
-      "sha256": "e5c71ac6ce81e3385aa7bb275f0c64e74af9667eb99e457b6f7caa3c765c1492"
+      "sha256": "f53b600c81fc949dd563c9b6d9a838e57ab2e64b25ccfea974f646b0900f20fb"
     },
     {
-      "bytes": 15627,
+      "bytes": 16288,
       "path": "install/windows.ps1",
-      "sha256": "0e8b59ffd8f6432fa55890e1080f4d1975c16cea911100c42aff0e60ef065952"
+      "sha256": "d910470d2cbe34e941e76d6c6fa7cd0138da310fe3d2e91b345af73f671228a5"
     }
   ],
   "product": "H.A.R.A. Commander",

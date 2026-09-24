@@ -21,7 +21,7 @@ def need(text: str, token: str, code: str) -> None:
     assert token in text, f"{code}:{token}"
 
 for token in ('platform": "LINUX"', "/api/device/enroll", "/agent/linux.py",
-              "systemctl --user enable --now", "chmod 600", '"agent_version": "0.3.3"',
+              "systemctl --user enable --now", "chmod 600", '"agent_version": "0.3.4"',
               "HARA_COMMANDER_AGENT_UPDATE=PASS", "HARA_COMMANDER_AGENT_UNINSTALL=PASS",
               "HARA_COMMANDER_AGENT_VERSION=", "HARA_COMMANDER_AGENT_DOCTOR=PASS",
               "/api/device/revoke-self", "SERVER_DEVICE_REVOKE=",
@@ -43,7 +43,7 @@ print("LINUX_INSTALLER_SECRET_ARGV_EXPOSURE=FALSE")
 
 for token in ('platform="WINDOWS"', "/api/device/enroll", "/agent/windows.ps1",
               "ConvertFrom-SecureString", "Register-ScheduledTask", "icacls.exe",
-              'agent_version="0.3.3"', "HARA_COMMANDER_AGENT_UPDATE=PASS",
+              'agent_version="0.3.4"', "HARA_COMMANDER_AGENT_UPDATE=PASS",
               "HARA_COMMANDER_AGENT_UNINSTALL=PASS", "HARA_COMMANDER_AGENT_VERSION=",
               "HARA_COMMANDER_AGENT_DOCTOR=PASS", "/api/device/revoke-self",
               "SERVER_DEVICE_REVOKE=", "HARA_COMMANDER_AGENT_UPDATE_ROLLBACK_READY=TRUE",
@@ -51,7 +51,8 @@ for token in ('platform="WINDOWS"', "/api/device/enroll", "/agent/windows.ps1",
               "AGENT_VERSION_MANIFEST_MISMATCH", "HARA_COMMANDER_AGENT_INTEGRITY=PASS",
               "HARA_COMMANDER_FAILED_INSTALL_ROLLBACK=", "$InstallEnrolled",
               "hara.commander-support-report.v1", "device_token_exposed", "Show-SupportReport",
-              "hara.commander-device-preflight.v1", "mutation_performed", "Invoke-Preflight"):
+              "hara.commander-device-preflight.v1", "mutation_performed", "Invoke-Preflight",
+              "Assert-AgentSelfTest", "AGENT_SELF_TEST_FAILED", "HARA_COMMANDER_AGENT_SELF_TEST=PASS"):
     need(WINDOWS, token, "WINDOWS_INSTALLER_MISSING")
 assert "cloudflared" not in WINDOWS.lower()
 assert "encrypted_device_token" in WINDOWS
@@ -59,7 +60,7 @@ assert "DEVICE_TOKEN_EXPOSED=FALSE" in WINDOWS
 print("WINDOWS_DEVICE_INSTALLER_STATIC=PASS")
 
 assert MANIFEST.get("schema") == "hara.commander-agent-release.v1"
-assert MANIFEST.get("agent_version") == "0.3.3"
+assert MANIFEST.get("agent_version") == "0.3.4"
 entries = {item["path"]: item for item in MANIFEST.get("files", [])}
 for rel in ("agent/linux.py", "agent/windows.ps1", "install/linux.sh", "install/windows.ps1"):
     path = PUBLIC / rel
@@ -81,6 +82,9 @@ for forbidden in ("subprocess.", "os.system(", "shell=True", "paramiko", "ssh ")
 for forbidden in ("Invoke-Expression", "Start-Process", "cmd.exe", "powershell.exe -Command"):
     assert forbidden not in WINDOWS_AGENT, f"WINDOWS_AGENT_ARBITRARY_EXEC:{forbidden}"
 assert "UNKNOWN_FUNCTION_ID" in LINUX_AGENT and "UNKNOWN_FUNCTION_ID" in WINDOWS_AGENT
+assert "COMMANDER_WINDOWS_AGENT_SELF_TEST=PASS" in WINDOWS_AGENT, "WINDOWS_AGENT_SELF_TEST_MISSING"
+assert 'if ($args -contains "--self-test")' in WINDOWS_AGENT, "WINDOWS_AGENT_SELF_TEST_ENTRYPOINT_MISSING"
+assert WINDOWS.count("Assert-AgentSelfTest $") >= 2, "WINDOWS_INSTALLER_SELF_TEST_NOT_REQUIRED_FOR_INSTALL_AND_UPDATE"
 assert "except Exception:\n            pass" not in LINUX_AGENT, "LINUX_AGENT_SILENT_RUNTIME_ERROR"
 assert "catch {\n  }\n  Start-Sleep" not in WINDOWS_AGENT, "WINDOWS_AGENT_SILENT_RUNTIME_ERROR"
 assert "safe_error_code" in LINUX_AGENT and "Get-SafeErrorCode" in WINDOWS_AGENT, "AGENT_ERROR_SANITIZATION_MISSING"
