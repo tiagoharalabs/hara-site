@@ -40,6 +40,11 @@ def main():
         default="stale",
         help="expected public Commander asset state during live read-only validation",
     )
+    parser.add_argument(
+        "--expect-prod-worker-version",
+        default="",
+        help="optional exact Cloudflare Worker version expected at 100 percent",
+    )
     args = parser.parse_args()
 
     run("COMMANDER_PREPROD_APP_JS", [
@@ -80,6 +85,8 @@ def main():
 
     migration_state_line = None
     runtime_asset_state_line = None
+    worker_deployment_state_line = None
+    worker_version_line = None
     if args.live_readonly:
         run("COMMANDER_IDENTITY_LIVE_READONLY", [
             sys.executable,
@@ -109,13 +116,39 @@ def main():
         if runtime_asset_state_line is None:
             raise SystemExit("COMMANDER_PROD_RUNTIME_ASSET_STATE_MISSING")
 
+        deployment_command = [
+            sys.executable,
+            "apps/commander/scripts/commander_prod_deployment_readback.py",
+        ]
+        if args.expect_prod_worker_version:
+            deployment_command += [
+                "--expect-version", args.expect_prod_worker_version,
+            ]
+        deployment_output = run(
+            "COMMANDER_PROD_WORKER_LIVE_READONLY",
+            deployment_command,
+        )
+        for line in deployment_output.splitlines():
+            if line.startswith("COMMANDER_PROD_WORKER_DEPLOYMENT="):
+                worker_deployment_state_line = line
+            elif line.startswith("COMMANDER_PROD_WORKER_VERSION="):
+                worker_version_line = line
+        if worker_deployment_state_line is None or worker_version_line is None:
+            raise SystemExit("COMMANDER_PROD_WORKER_STATE_MISSING")
+
     if migration_state_line:
         print(migration_state_line)
+    else:
+        print("COMMANDER_PROD_D1_MIGRATION_0009=LIVE_READBACK_REQUIRED")
     if runtime_asset_state_line:
         print(runtime_asset_state_line)
     else:
-        print("COMMANDER_PROD_D1_MIGRATION_0009=PENDING_PROMOTION_GATE")
-    print("COMMANDER_PROD_WORKER_DEPLOYMENT=PENDING_PROMOTION_GATE")
+        print("COMMANDER_PROD_RUNTIME_ASSETS=LIVE_READBACK_REQUIRED")
+    if worker_deployment_state_line:
+        print(worker_deployment_state_line)
+        print(worker_version_line)
+    else:
+        print("COMMANDER_PROD_WORKER_DEPLOYMENT=LIVE_READBACK_REQUIRED")
     print("COMMANDER_HUMAN_HOMOLOGATION=PENDING_OPERATOR_GATE")
     print("COMMANDER_FIRST_DEVICE_E2E=PENDING_HOMOLOGATION")
 
