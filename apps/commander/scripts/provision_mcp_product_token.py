@@ -112,9 +112,8 @@ def main() -> int:
     )
     if result.returncode != 0:
         print("MCP_PRODUCT_WORKER_SECRET=FAIL")
-        detail = (result.stderr or result.stdout or "").strip()
-        if detail:
-            print(detail)
+        print(f"MCP_PRODUCT_WORKER_SECRET_EXIT_CODE={result.returncode}")
+        print("MCP_PRODUCT_WORKER_SECRET_DETAIL=REDACTED")
         return result.returncode or 1
 
     print("MCP_PRODUCT_TOKEN_FILE=PASS")
