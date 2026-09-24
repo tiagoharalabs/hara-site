@@ -14,6 +14,7 @@ CONFIG = APP / "wrangler.jsonc"
 DATABASE = "hara-commander-product-prod"
 SESSION_RETENTION_DAYS = 30
 PAIRING_RETENTION_DAYS = 30
+OIDC_TRANSACTION_WINDOW_MINUTES = 10
 TRANSIENT_MARKERS = (
     "code: 7403",
     "[code: 7403]",
@@ -44,6 +45,19 @@ QUERIES = {
       (SELECT COUNT(*) FROM device_pairing_tokens p
         LEFT JOIN commander_devices d ON d.pairing_id=p.pairing_id
         WHERE p.consumed_at_utc IS NOT NULL AND d.device_id IS NULL) AS consumed_pairing_without_device;""",
+    "oidc_transaction_hygiene": """SELECT
+      COUNT(*) AS total_oidc_transactions,
+      COALESCE(SUM(CASE
+        WHEN julianday(expires_at_utc) > julianday('now')
+        THEN 1 ELSE 0 END), 0) AS active_oidc_transactions,
+      COALESCE(SUM(CASE
+        WHEN julianday(expires_at_utc) <= julianday('now')
+        THEN 1 ELSE 0 END), 0) AS expired_oidc_transactions,
+      COALESCE(SUM(CASE
+        WHEN consumed_at_utc IS NOT NULL
+         AND julianday(expires_at_utc) > julianday('now')
+        THEN 1 ELSE 0 END), 0) AS active_consumed_oidc_transactions
+      FROM oidc_transactions;""",
     "pairing_hygiene": f"""SELECT
       COUNT(*) AS total_pairing_tokens,
       COALESCE(SUM(CASE
@@ -154,6 +168,7 @@ def main() -> int:
         "database": DATABASE,
         "session_retention_days": SESSION_RETENTION_DAYS,
         "pairing_retention_days": PAIRING_RETENTION_DAYS,
+        "oidc_transaction_window_minutes": OIDC_TRANSACTION_WINDOW_MINUTES,
         "queries": {},
     }
     for name, sql in QUERIES.items():
@@ -179,6 +194,7 @@ def main() -> int:
         )
     report["migration_0009_state"] = migration_state
 
+    oidc_hygiene = report["queries"]["oidc_transaction_hygiene"]["row"]
     pairing_hygiene = report["queries"]["pairing_hygiene"]["row"]
     pairing_retention_eligible = int(
         pairing_hygiene.get("retention_eligible_pairing_tokens", 0) or 0
@@ -195,6 +211,19 @@ def main() -> int:
     print("COMMANDER_PROD_D1_READBACK=PASS")
     print("COMMANDER_PROD_D1_TRANSIENT_RETRY=READY")
     print(f"COMMANDER_PROD_D1_MIGRATION_0009={migration_state}")
+    print(f"COMMANDER_PROD_OIDC_TX_WINDOW_MINUTES={OIDC_TRANSACTION_WINDOW_MINUTES}")
+    print(
+        "COMMANDER_PROD_OIDC_TX_ACTIVE="
+        + str(int(oidc_hygiene.get("active_oidc_transactions", 0) or 0))
+    )
+    print(
+        "COMMANDER_PROD_OIDC_TX_EXPIRED="
+        + str(int(oidc_hygiene.get("expired_oidc_transactions", 0) or 0))
+    )
+    print(
+        "COMMANDER_PROD_OIDC_TX_ACTIVE_CONSUMED="
+        + str(int(oidc_hygiene.get("active_consumed_oidc_transactions", 0) or 0))
+    )
     print(f"COMMANDER_PROD_PAIRING_RETENTION_WINDOW_DAYS={PAIRING_RETENTION_DAYS}")
     print(f"COMMANDER_PROD_PAIRING_RETENTION_ELIGIBLE={pairing_retention_eligible}")
     print(
