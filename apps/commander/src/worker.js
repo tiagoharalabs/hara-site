@@ -1540,6 +1540,8 @@ export default {
       const statusMap = {
         RUNTIME_ENV_INVALID: 500,
         INVALID_JSON: 400,
+        INVALID_IDENTIFIER: 400,
+        INVALID_OPAQUE_VALUE: 400,
         DEV_ENDPOINT_DISABLED: 404,
         DEV_ACCESS_DENIED: 401,
         MCP_PRODUCT_ACCESS_DENIED: 401,
