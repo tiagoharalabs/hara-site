@@ -73,6 +73,7 @@ def main():
         ("COMMANDER_PREPROD_INVITE_CLAIM_RACE", "validate_invite_claim_race.py"),
         ("COMMANDER_PREPROD_OIDC_TX_HYGIENE", "validate_oidc_transaction_hygiene.py"),
         ("COMMANDER_PREPROD_E2E_HARNESS", "validate_e2e_harness.py"),
+        ("COMMANDER_PREPROD_MCP_TOKEN_STORAGE", "validate_mcp_product_token_storage.py"),
         ("COMMANDER_PREPROD_FIRST_DEVICE_PREFLIGHT", "validate_first_device_preflight.py"),
     )
     for label, script in checks:
