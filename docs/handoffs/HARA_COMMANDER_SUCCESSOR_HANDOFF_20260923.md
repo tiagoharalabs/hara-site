@@ -247,7 +247,8 @@ The deterministic source and runtime promotion gates are closed. Remaining work 
 
 3. **Quota runtime proof**
    - hara-platform PR #1158 closed the source compensation gap;
-   - real commit/release E2E remains pending until a real device call is exercised.
+   - live PROD reserve -> release -> terminal replay denial is now proven with `commander_e2e_harness.py quota-roundtrip`, with net usage zero;
+   - real COMMIT remains pending until a real `hara.functions.invoke` finishes on a paired device and returns a receipt SHA-256.
 
 4. **Final client activation contract**
    - keep ChatGPT/Codex actions disabled / `Em homologação` until ordinary E2E passes;
@@ -331,8 +332,8 @@ Order of execution from the current promoted state:
    - no DEV redirect or stale-login loop.
 3. Pair the first real PROD device.
 4. Prove heartbeat, selected-device online/offline behavior, revoke and call expiry.
-5. Prove governed five-tool MCP call E2E.
-6. Prove quota commit/release with a real call.
+5. Run the canonical `commander_e2e_harness.py five-tool` proof against the paired/selected online device.
+6. Require the invoke leg to COMMIT quota with the Agent-generated receipt and the receipts.get leg to retrieve that receipt; release is already proven live independently.
 7. Only then enable/finalize ChatGPT/Codex customer activation.
 8. Advance billing/commerce only after ordinary auth + device + MCP E2E is stable.
 
@@ -418,6 +419,32 @@ Worker deployment readback:
 python3 apps/commander/scripts/commander_prod_deployment_readback.py \
   --expect-version 6d018e75-6c43-4efe-bf29-c277a49d4f2c
 ```
+
+E2E harness source contract:
+
+```bash
+python3 apps/commander/scripts/validate_e2e_harness.py
+```
+
+Reversible live quota proof (requires the local 0600 MCP product-token file and the OIDC identity passed at runtime; never commit either value):
+
+```bash
+python3 apps/commander/scripts/commander_e2e_harness.py quota-roundtrip \
+  --token-file /path/to/local/mcp-product-token \
+  --issuer https://auth.haralabs.com.br/ \
+  --subject '<oidc-subject>'
+```
+
+After the first real device is paired, selected and online, run the same harness in full mode:
+
+```bash
+python3 apps/commander/scripts/commander_e2e_harness.py five-tool \
+  --token-file /path/to/local/mcp-product-token \
+  --issuer https://auth.haralabs.com.br/ \
+  --subject '<oidc-subject>'
+```
+
+The harness never prints the product token. Its invoke leg reserves quota, releases on failure, and commits only after a completed Agent call returns a 64-hex receipt SHA-256.
 
 JavaScript syntax:
 
