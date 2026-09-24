@@ -371,13 +371,18 @@ Current deployment:
 - PR #127 adds a 600-second crash-safety TTL for quota reservations: stale `RESERVED` state becomes terminal `RELEASED` with `units=0`; fresh reservations and all `COMMITTED` charges are preserved;
 - PR #127 PROD rollout: source `84895dd17489e418b4b207bde405d7db9aa33469`, deployment `723af9a0-10f6-4e01-bdcf-b5701801309e`, Worker `093ceec9-cacb-4f8b-ba23-bbfc85f7e1aa`, rollback `382f4b7e-3094-43b9-a013-3b3f46f39fbf`, deployed `2026-09-24T22:12:44.446644Z`; no public asset upload was required;
 - live PROD `quota-roundtrip` after #127 proves RESERVE -> RELEASE -> terminal replay denial with `COMMANDER_E2E_QUOTA_NET_USAGE=ZERO` and `COMMANDER_E2E_SECRET_EXPOSED=FALSE`;
-- DEV expiry normalization is intentionally not promoted from PROD config guesswork; use only a reviewed DEV binding/config authority when aligning DEV.
+- DEV runtime configuration is now versioned as `apps/commander/wrangler.dev.jsonc`, reconstructed from live Cloudflare authority and guarded against PROD D1/routes/secrets-in-source drift;
+- PR #129 aligned DEV using the versioned config only; no pending D1 migrations were observed before deploy;
+- strict post-deploy readback requires explicit `AUTH_CLIENT_AUTH=BASIC`, DEV-only D1, the three expected secret binding names and `DEV / REMOTE_DEV` health.
 
 Current DEV runtime:
-- Worker `hara-commander-dev-v2`: `5a594804-0de5-4aa8-abf4-b669454f020f`;
-- rollback DEV Worker: `80f3b819-e6ae-4a2e-ad61-e94729240957`;
+- Worker `hara-commander-dev-v2`: `5a1185d7-98ac-4d47-87fd-84cf33bbc9da`;
+- rollback DEV Worker: `5a594804-0de5-4aa8-abf4-b669454f020f`;
+- deployable source: `7f1f24e2399666017c7a6e7cf2f09b5273121d95`;
+- D1: `hara-commander-product-dev` / `698afbb9-e4eb-4c4e-98f2-f5abe28219d3`;
 - health: **DEV / REMOTE_DEV / HARA Identity configured**;
-- bootstrap command assets: byte-equal to canonical source after propagation readback.
+- secret bindings present by name only: `AUTH_CLIENT_SECRET`, `DEV_ACCESS_TOKEN`, `MCP_PRODUCT_TOKEN`;
+- PROD isolation revalidated after DEV deployment; PROD Worker remained `093ceec9-cacb-4f8b-ba23-bbfc85f7e1aa` and full live-readonly PROD gate remained PASS.
 
 The HTML runtime validator permits only one known Cloudflare Browser Insights beacon injection when comparing `/`; after removing that single known injected script, the HTML must match source exactly. The other nine critical assets (JS/CSS, installers, Agents, release files and brand asset) remain byte-exact checks.
 
@@ -576,6 +581,14 @@ node --check apps/commander/src/worker.js
 node --check apps/commander/src/auth.js
 ```
 
+DEV runtime configuration / live readback:
+
+```bash
+python3 apps/commander/scripts/validate_dev_config.py
+python3 apps/commander/scripts/commander_dev_deployment_readback.py \
+  --expect-version 5a1185d7-98ac-4d47-87fd-84cf33bbc9da
+```
+
 Repository hygiene:
 
 ```bash
@@ -637,14 +650,14 @@ git diff --check
 - PR #125 — canonical device-call expiry cause — **MERGED + PROD PROMOTED**
 - PR #127 — abandoned quota-reservation TTL / crash-safety — **MERGED + PROD PROMOTED**
 - PR #128 — quota TTL PROD rollout receipt / runtime authority — **MERGED**
-- PR #129 — versioned DEV runtime config / DEV-only binding authority — **MERGED**
+- PR #129 — versioned DEV runtime config / environment isolation — **MERGED + DEV PROMOTED**
 - hara-platform PR #1158 — quota finalization compensation source — **MERGED; real-device COMMIT E2E pending**
 - issue #65 — Commander post-promotion coordination / residual homologation — **OPEN**
 
 Source authority incorporated by this checkpoint through PR #129: `7f1f24e2399666017c7a6e7cf2f09b5273121d95`.
 Current deployed Commander runtime source: `84895dd17489e418b4b207bde405d7db9aa33469`.
 Current PROD Worker: `093ceec9-cacb-4f8b-ba23-bbfc85f7e1aa`; rollback: `382f4b7e-3094-43b9-a013-3b3f46f39fbf`.
-Current DEV Worker: `5a594804-0de5-4aa8-abf4-b669454f020f`; rollback: `80f3b819-e6ae-4a2e-ad61-e94729240957`.
+Current DEV Worker: `5a1185d7-98ac-4d47-87fd-84cf33bbc9da`; rollback: `5a594804-0de5-4aa8-abf4-b669454f020f`.
 Versioned DEV authority: `apps/commander/wrangler.dev.jsonc`, bound to DEV-only D1 / `REMOTE_DEV`; secrets remain external to Git and anti-cross-environment validation is mandatory.
 PRs #110–#112 are operator-tooling/preflight/token-custody hardening. PRs #113/#115/#116/#118 changed deployable/runtime customer assets or behavior and were explicitly promoted.
 
