@@ -100,6 +100,14 @@ function requireMcpProductToken(request, env) {
   }
 }
 
+function requirePortalMutationOrigin(request) {
+  const expectedOrigin = new URL(request.url).origin;
+  const origin = request.headers.get("origin");
+  const fetchSite = String(request.headers.get("sec-fetch-site") || "").toLowerCase();
+  if (origin && origin !== expectedOrigin) throw new Error("PORTAL_ORIGIN_DENIED");
+  if (fetchSite && fetchSite !== "same-origin") throw new Error("PORTAL_ORIGIN_DENIED");
+}
+
 function cleanId(value, max = 180) {
   const text = String(value || "").trim();
   if (!text || text.length > max || !/^[A-Za-z0-9_.:-]+$/.test(text)) {
@@ -1366,6 +1374,7 @@ export default {
       }
 
       if (url.pathname === "/auth/logout" && request.method === "POST") {
+        requirePortalMutationOrigin(request);
         return await logout(request, env);
       }
 
@@ -1412,12 +1421,14 @@ export default {
       }
 
       if (url.pathname === "/api/portal/devices/pairing" && request.method === "POST") {
+        requirePortalMutationOrigin(request);
         const session = await resolvePortalSession(request, env);
         if (!session) return json({ ok: false, code: "AUTH_REQUIRED" }, 401);
         return json(await createDevicePairing(env, session), 201);
       }
 
       if (url.pathname === "/api/portal/devices/revoke" && request.method === "POST") {
+        requirePortalMutationOrigin(request);
         const session = await resolvePortalSession(request, env);
         if (!session) return json({ ok: false, code: "AUTH_REQUIRED" }, 401);
         const body = await request.json();
@@ -1425,6 +1436,7 @@ export default {
       }
 
       if (url.pathname === "/api/portal/devices/select" && request.method === "POST") {
+        requirePortalMutationOrigin(request);
         const session = await resolvePortalSession(request, env);
         if (!session) return json({ ok: false, code: "AUTH_REQUIRED" }, 401);
         const body = await request.json();
@@ -1664,6 +1676,7 @@ export default {
         DEV_ENDPOINT_DISABLED: 404,
         DEV_ACCESS_DENIED: 401,
         MCP_PRODUCT_ACCESS_DENIED: 401,
+        PORTAL_ORIGIN_DENIED: 403,
         AUTH_REQUIRED: 401,
         OIDC_NOT_CONFIGURED: 503,
         IDENTITY_NOT_PROVISIONED: 403,
