@@ -391,6 +391,7 @@ def validate_tool_result(
     expected_device_id: str,
     expected_agent_version: str,
     expected_receipt_sha256: str | None = None,
+    expected_receipt_request_id: str | None = None,
 ) -> None:
     if wrapper.get("state") != "PASS":
         raise HarnessError("DEVICE_TOOL_RESULT_STATE_INVALID")
@@ -468,13 +469,15 @@ def validate_tool_result(
         if str(stdout.get("agent_version") or "") != expected_agent_version:
             raise HarnessError("DEVICE_FUNCTION_INVOKE_AGENT_VERSION_MISMATCH")
     elif tool_id == "hara.receipts.get":
-        if not expected_receipt_sha256:
+        if not expected_receipt_sha256 or not expected_receipt_request_id:
             raise HarnessError("RECEIPT_REQUIRED")
         if (
             inner.get("schema") != "hara.commander-device-receipt.v1"
+            or inner.get("request_id") != expected_receipt_request_id
             or inner.get("device_id") != expected_device_id
             or inner.get("tool_id") != "hara.functions.invoke"
             or inner.get("function_id_if_any") != FUNCTION_ID
+            or inner.get("transport_mode") != "OUTBOUND_RELAY"
             or inner.get("operational_authority") != "HARA_SERVICES"
             or inner.get("execution_authority") != "HARA_COMMANDER_AGENT"
             or inner.get("mutation_class") != "READ_ONLY_OR_NONE_V1"
@@ -497,6 +500,7 @@ def execute_remote_tool(
     expected_agent_version: str,
     expected_device_id: str | None = None,
     receipt_sha256: str | None = None,
+    expected_receipt_request_id: str | None = None,
     timeout: float = 45.0,
 ) -> dict:
     req_id = request_id(tool_id.split(".")[-1].upper())
@@ -558,6 +562,7 @@ def execute_remote_tool(
             expected_device_id=call_device_id,
             expected_agent_version=expected_agent_version,
             expected_receipt_sha256=receipt_sha256,
+            expected_receipt_request_id=expected_receipt_request_id,
         )
         bridge_receipt = str(result.get("bridge_receipt_sha256") or "").lower()
         if tool_id == "hara.functions.invoke":
@@ -662,6 +667,7 @@ def five_tool(
         expected_agent_version=expected_agent_version,
         expected_device_id=device_id,
         receipt_sha256=str(invoked["receipt_sha256"]),
+        expected_receipt_request_id=str(invoked["request_id"]),
         timeout=timeout,
     )
     print("COMMANDER_E2E_FIVE_TOOL=PASS")

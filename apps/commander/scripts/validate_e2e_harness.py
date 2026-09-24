@@ -47,6 +47,7 @@ need("DEVICE_CALL_SELECTED_DEVICE_CHANGED" in SOURCE, "SELECTED_DEVICE_STABILITY
 need("DEVICE_CALL_STATUS_DEVICE_ID_MISMATCH" in SOURCE, "STATUS_DEVICE_CORRELATION_GUARD")
 need("DEVICE_HEALTH_AGENT_VERSION_MISMATCH" in SOURCE, "AGENT_VERSION_GUARD")
 need("RELEASE_MANIFEST" in SOURCE and "stable_agent_version" in SOURCE, "RELEASE_MANIFEST_VERSION_GUARD")
+need("expected_receipt_request_id" in SOURCE, "RECEIPT_REQUEST_CORRELATION_GUARD")
 
 namespace = {
     "__name__": "commander_e2e_harness_test",
@@ -158,8 +159,26 @@ validate_tool_result(
     expected_device_id=EXPECTED_DEVICE,
     expected_agent_version=EXPECTED_VERSION,
     expected_receipt_sha256=receipt_sha,
+    expected_receipt_request_id="req",
 )
 need(True, "SEMANTIC_RECEIPT_CORRELATION")
+
+
+wrong_request_receipt = dict(receipt)
+wrong_request_receipt["request_id"] = "other-request"
+try:
+    validate_tool_result(
+        "hara.receipts.get",
+        base_wrapper(wrong_request_receipt),
+        expected_device_id=EXPECTED_DEVICE,
+        expected_agent_version=EXPECTED_VERSION,
+        expected_receipt_sha256=canonical_json_sha256(wrong_request_receipt),
+        expected_receipt_request_id="req",
+    )
+except HarnessError as exc:
+    need(str(exc) == "DEVICE_RECEIPT_SEMANTICS_INVALID", "SEMANTIC_RECEIPT_REQUEST_MISMATCH_DENIED")
+else:
+    raise SystemExit("COMMANDER_E2E_HARNESS_SEMANTIC_RECEIPT_REQUEST_MISMATCH_DENIED=FAIL")
 
 bad_receipt = dict(receipt)
 bad_receipt["completed_at_utc"] = "2026-09-24T00:00:01Z"
@@ -170,6 +189,7 @@ try:
         expected_device_id=EXPECTED_DEVICE,
         expected_agent_version=EXPECTED_VERSION,
         expected_receipt_sha256=receipt_sha,
+        expected_receipt_request_id="req",
     )
 except HarnessError as exc:
     need(str(exc) == "DEVICE_RECEIPT_CORRELATION_INVALID", "SEMANTIC_RECEIPT_MISMATCH_DENIED")
