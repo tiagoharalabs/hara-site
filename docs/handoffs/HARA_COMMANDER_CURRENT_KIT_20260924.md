@@ -27,8 +27,9 @@ PROD:
 - Identity live-readonly: **PASS**
 
 DEV:
-- Worker `hara-commander-dev-v2`: `5a594804-0de5-4aa8-abf4-b669454f020f`
-- rollback: `80f3b819-e6ae-4a2e-ad61-e94729240957`
+- Worker `hara-commander-dev-v2`: `5a1185d7-98ac-4d47-87fd-84cf33bbc9da`
+- rollback: `5a594804-0de5-4aa8-abf4-b669454f020f`
+- deployed source: `7f1f24e2399666017c7a6e7cf2f09b5273121d95`
 - health: **DEV / REMOTE_DEV / HARA Identity configured**
 - bootstrap public assets: byte-equal to canonical source in latest readback
 - versioned DEV config: `apps/commander/wrangler.dev.jsonc`
@@ -276,7 +277,7 @@ Key progression after the original promotion/UI cleanup:
 - #125 — canonical device-call expiry cause
 - #127 — abandoned quota reservation TTL / crash safety
 - #128 — current PROD quota-TTL rollout receipt
-- #129 — versioned DEV runtime config + DEV-only binding/readback authority
+- #129 — versioned DEV runtime config + DEV-only binding/readback authority — DEV promoted
 
 For the earlier #64–#90 history, use the canonical successor guide.
 
