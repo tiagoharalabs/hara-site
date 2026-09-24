@@ -3,7 +3,7 @@ $Root = Join-Path $env:LOCALAPPDATA "HARA Commander"
 $ConfigPath = Join-Path $Root "device.json"
 $ReceiptDir = Join-Path $Root "receipts"
 $RuntimeStatus = Join-Path $Root "runtime-status.json"
-$AgentVersion = "0.3.4"
+$AgentVersion = "0.3.5"
 $FunctionId = "device.info"
 
 function Get-PlainText([Security.SecureString]$SecureValue) {
@@ -25,16 +25,18 @@ function Get-SafeErrorCode($ErrorRecord) {
   if ($normalized -match "^[A-Z][A-Z0-9_]{0,79}$") { return $normalized }
   return "RUNTIME_ERROR"
 }
-function Set-RuntimeStatus([string]$HeartbeatAt=$null,[string]$ErrorCode=$null,[string]$ErrorAt=$null) {
+function Set-RuntimeStatus([string]$HeartbeatAt=$null,[string]$ErrorCode=$null,[string]$ErrorAt=$null,[string]$StartedAt=$null) {
   New-Item -ItemType Directory -Path $Root -Force | Out-Null
   $existing=$null
   if (Test-Path -LiteralPath $RuntimeStatus -PathType Leaf) {
     try { $existing=Get-Content -Raw -LiteralPath $RuntimeStatus | ConvertFrom-Json } catch { $existing=$null }
   }
   $lastHeartbeat=if ($null -ne $HeartbeatAt) {$HeartbeatAt} elseif ($existing) {[string]$existing.last_successful_heartbeat_at_utc} else {$null}
+  $startedAt=if ($null -ne $StartedAt) {$StartedAt} elseif ($existing) {[string]$existing.started_at_utc} else {$null}
   $payload=[ordered]@{
     schema="hara.commander-agent-runtime-status.v1"
     agent_version=$AgentVersion
+    started_at_utc=$startedAt
     last_successful_heartbeat_at_utc=$lastHeartbeat
     last_runtime_error_code=$ErrorCode
     last_runtime_error_at_utc=$ErrorAt
@@ -45,9 +47,9 @@ function Set-RuntimeStatus([string]$HeartbeatAt=$null,[string]$ErrorCode=$null,[
   Move-Item -Force -LiteralPath $tmp -Destination $RuntimeStatus
 }
 
-function Try-SetRuntimeStatus([string]$HeartbeatAt=$null,[string]$ErrorCode=$null,[string]$ErrorAt=$null) {
+function Try-SetRuntimeStatus([string]$HeartbeatAt=$null,[string]$ErrorCode=$null,[string]$ErrorAt=$null,[string]$StartedAt=$null) {
   try {
-    Set-RuntimeStatus -HeartbeatAt $HeartbeatAt -ErrorCode $ErrorCode -ErrorAt $ErrorAt
+    Set-RuntimeStatus -HeartbeatAt $HeartbeatAt -ErrorCode $ErrorCode -ErrorAt $ErrorAt -StartedAt $StartedAt
     return $true
   } catch {
     return $false
@@ -225,6 +227,26 @@ function Invoke-AgentSelfTest {
 }
 
 if ($args -contains "--self-test") { Invoke-AgentSelfTest; exit 0 }
+
+try {
+  $StartupCfg=Get-Content -Raw -Path $ConfigPath | ConvertFrom-Json
+  if (
+    -not $StartupCfg.base_url
+    -or -not $StartupCfg.device_id
+    -or -not $StartupCfg.encrypted_device_token
+    -or -not $StartupCfg.architecture
+  ) { throw "DEVICE_CONFIG_INVALID" }
+  $StartupSecureToken=ConvertTo-SecureString ([string]$StartupCfg.encrypted_device_token)
+  $StartupToken=Get-PlainText $StartupSecureToken
+  if ([string]::IsNullOrWhiteSpace($StartupToken)) { throw "DEVICE_CONFIG_INVALID" }
+  $StartupToken=$null
+  if (-not (Try-SetRuntimeStatus -StartedAt ([DateTime]::UtcNow.ToString("o"))) {
+    throw "RUNTIME_STATUS_STARTUP_WRITE_FAILED"
+  }
+} catch {
+  $code=Get-SafeErrorCode $_
+  throw $code
+}
 
 $LastHeartbeat=[datetime]::MinValue
 $LastErrorCode=$null

@@ -14,6 +14,33 @@ function Get-InstalledDevice {
   try { return Get-Content -Raw -LiteralPath $Config | ConvertFrom-Json } catch { return $null }
 }
 
+function Get-RuntimeStartedAt {
+  if (-not (Test-Path -LiteralPath $RuntimeStatus -PathType Leaf)) { return "" }
+  try {
+    $status=Get-Content -Raw -LiteralPath $RuntimeStatus | ConvertFrom-Json
+    return [string]$status.started_at_utc
+  } catch {
+    return ""
+  }
+}
+
+function Wait-AgentStartup([string]$ExpectedVersion,[string]$PreviousStarted,[int]$Seconds=10) {
+  for ($i=0; $i -lt $Seconds; $i++) {
+    if (Test-Path -LiteralPath $RuntimeStatus -PathType Leaf) {
+      try {
+        $status=Get-Content -Raw -LiteralPath $RuntimeStatus | ConvertFrom-Json
+        $started=[string]$status.started_at_utc
+        $version=[string]$status.agent_version
+        if ($version -eq $ExpectedVersion -and $started -and $started -ne $PreviousStarted) {
+          return $true
+        }
+      } catch {}
+    }
+    Start-Sleep -Seconds 1
+  }
+  return $false
+}
+
 function Get-AgentReleaseMetadata {
   $manifest = Invoke-RestMethod -Uri "$BaseUrl/release/agent-manifest.json" -Method Get -Headers @{ Accept="application/json" } -TimeoutSec 30
   if (-not $manifest -or [string]$manifest.schema -ne "hara.commander-agent-release.v1") { throw "AGENT_RELEASE_MANIFEST_INVALID" }
@@ -60,7 +87,7 @@ function Invoke-DeviceAction {
   try {
     $headers = @{ Accept="application/json"; Authorization=("Bearer " + $token) }
     if ($Kind -eq "heartbeat") {
-      $payload = @{ device_id=[string]$cfg.device_id; architecture=[string]$cfg.architecture; agent_version="0.3.4" } | ConvertTo-Json -Compress
+      $payload = @{ device_id=[string]$cfg.device_id; architecture=[string]$cfg.architecture; agent_version="0.3.5" } | ConvertTo-Json -Compress
       $result = Invoke-RestMethod -Uri "$base/api/device/heartbeat" -Method Post -ContentType "application/json" -Headers $headers -Body $payload -TimeoutSec 15
       if (-not $result.ok -or [string]$result.device_id -ne [string]$cfg.device_id) { throw "REMOTE_HEARTBEAT_INVALID" }
       return $result
@@ -172,6 +199,7 @@ if ($Action -eq "update") {
   if (-not (Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue)) { throw "AGENT_TASK_NOT_INSTALLED" }
   $cfg = Get-InstalledDevice
   if ($cfg -and $cfg.base_url) { $BaseUrl = ([string]$cfg.base_url).TrimEnd("/") }
+  $PreviousStarted = Get-RuntimeStartedAt
   $tmp = $Agent + ".update"
   $backup = $Agent + ".rollback"
   Remove-Item -Force $tmp,$backup -ErrorAction SilentlyContinue
@@ -181,13 +209,20 @@ if ($Action -eq "update") {
   [System.Management.Automation.Language.Parser]::ParseFile($tmp,[ref]$tokens,[ref]$errors) | Out-Null
   if ($errors.Count -ne 0) { Remove-Item -Force $tmp; throw "AGENT_UPDATE_SYNTAX_INVALID" }
   Assert-AgentSelfTest $tmp
+  $VersionMatch=Select-String -LiteralPath $tmp -Pattern '^\$AgentVersion = "([^"]+)"$' | Select-Object -First 1
+  if (-not $VersionMatch -or -not $VersionMatch.Matches.Count) { throw "AGENT_VERSION_NOT_FOUND" }
+  $ExpectedVersion=[string]$VersionMatch.Matches[0].Groups[1].Value
   if (Test-Path -LiteralPath $Agent -PathType Leaf) { Copy-Item -Force $Agent $backup }
   Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
   Move-Item -Force $tmp $Agent
   Start-ScheduledTask -TaskName $TaskName
   Start-Sleep -Seconds 2
   $task = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
-  if (-not $task -or [string]$task.State -ne "Running") {
+  if (
+    -not $task
+    -or [string]$task.State -ne "Running"
+    -or -not (Wait-AgentStartup $ExpectedVersion $PreviousStarted 10)
+  ) {
     Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
     if (Test-Path -LiteralPath $backup -PathType Leaf) {
       Move-Item -Force $backup $Agent
@@ -197,6 +232,7 @@ if ($Action -eq "update") {
     throw "AGENT_UPDATE_START_FAILED"
   }
   Remove-Item -Force $backup -ErrorAction SilentlyContinue
+  Write-Host "HARA_COMMANDER_AGENT_STARTUP_ATTESTATION=PASS"
   Write-Host "HARA_COMMANDER_AGENT_UPDATE=PASS"
   Write-Host "HARA_COMMANDER_AGENT_UPDATE_ROLLBACK_READY=TRUE"
   Show-Status
@@ -228,7 +264,7 @@ if ([string]::IsNullOrWhiteSpace($PairingToken)) { throw "Pairing token cannot b
 
 $DeviceName = $env:COMPUTERNAME
 $Architecture = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant()
-$Payload = @{ pairing_token=$PairingToken; device_name=$DeviceName; platform="WINDOWS"; architecture=$Architecture; agent_version="0.3.4" } | ConvertTo-Json -Compress
+$Payload = @{ pairing_token=$PairingToken; device_name=$DeviceName; platform="WINDOWS"; architecture=$Architecture; agent_version="0.3.5" } | ConvertTo-Json -Compress
 $Enroll = Invoke-RestMethod -Uri "$BaseUrl/api/device/enroll" -Method Post -ContentType "application/json" -Headers @{ Accept="application/json" } -Body $Payload -TimeoutSec 30
 $PairingToken = $null
 $SecurePairing.Dispose()
@@ -239,7 +275,7 @@ $DeviceTokenForRollback = [string]$Enroll.device_token
 try {
   New-Item -ItemType Directory -Path $Root -Force | Out-Null
   $EncryptedToken = ConvertTo-SecureString $Enroll.device_token -AsPlainText -Force | ConvertFrom-SecureString
-  $ConfigObject = @{ base_url=$BaseUrl; device_id=[string]$Enroll.device_id; encrypted_device_token=$EncryptedToken; architecture=$Architecture; agent_version="0.3.4" }
+  $ConfigObject = @{ base_url=$BaseUrl; device_id=[string]$Enroll.device_id; encrypted_device_token=$EncryptedToken; architecture=$Architecture; agent_version="0.3.5" }
   $ConfigObject | ConvertTo-Json | Set-Content -Path $Config -Encoding UTF8
 
   $Identity = [Security.Principal.WindowsIdentity]::GetCurrent().Name
@@ -254,6 +290,9 @@ try {
   [System.Management.Automation.Language.Parser]::ParseFile($InstallTmp,[ref]$tokens,[ref]$errors) | Out-Null
   if ($errors.Count -ne 0) { Remove-Item -Force $InstallTmp; throw "AGENT_INSTALL_SYNTAX_INVALID" }
   Assert-AgentSelfTest $InstallTmp
+  $VersionMatch=Select-String -LiteralPath $InstallTmp -Pattern '^\$AgentVersion = "([^"]+)"$' | Select-Object -First 1
+  if (-not $VersionMatch -or -not $VersionMatch.Matches.Count) { throw "AGENT_VERSION_NOT_FOUND" }
+  $ExpectedVersion=[string]$VersionMatch.Matches[0].Groups[1].Value
   Move-Item -Force $InstallTmp $Agent
   & icacls.exe $Agent /inheritance:r /grant:r "$Identity:F" | Out-Null
 
@@ -266,7 +305,11 @@ try {
   Start-ScheduledTask -TaskName $TaskName
   Start-Sleep -Seconds 2
   $Task = Get-ScheduledTask -TaskName $TaskName
-  if (-not $Task) { throw "HARA Commander Agent scheduled task was not created." }
+  if (
+    -not $Task
+    -or -not (Wait-AgentStartup $ExpectedVersion "" 10)
+  ) { throw "HARA Commander Agent failed startup attestation." }
+  Write-Host "HARA_COMMANDER_AGENT_STARTUP_ATTESTATION=PASS"
 
   $InstallEnrolled = $false
   $DeviceTokenForRollback = $null

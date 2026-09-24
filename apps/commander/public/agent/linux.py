@@ -10,7 +10,7 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
-AGENT_VERSION = "0.3.4"
+AGENT_VERSION = "0.3.5"
 CONFIG_FILE = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home()/".config"))) / "hara-commander/device.env"
 DATA_DIR = Path(os.environ.get("XDG_DATA_HOME", str(Path.home()/".local/share"))) / "hara-commander"
 RECEIPT_DIR = DATA_DIR / "receipts"
@@ -33,7 +33,7 @@ def safe_error_code(exc):
         return name
     return "RUNTIME_ERROR"
 
-def write_runtime_status(*, heartbeat_at=None, error_code=None, error_at=None):
+def write_runtime_status(*, heartbeat_at=None, error_code=None, error_at=None, started_at=None):
     DATA_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
     current = {}
     if STATUS_FILE.is_file():
@@ -44,6 +44,7 @@ def write_runtime_status(*, heartbeat_at=None, error_code=None, error_at=None):
     payload = {
         "schema":"hara.commander-agent-runtime-status.v1",
         "agent_version":AGENT_VERSION,
+        "started_at_utc": started_at if started_at is not None else current.get("started_at_utc"),
         "last_successful_heartbeat_at_utc": heartbeat_at if heartbeat_at is not None else current.get("last_successful_heartbeat_at_utc"),
         "last_runtime_error_code":error_code,
         "last_runtime_error_at_utc":error_at,
@@ -253,6 +254,8 @@ def main():
         self_test(); return
     config=load_config()
     RECEIPT_DIR.mkdir(parents=True,exist_ok=True,mode=0o700)
+    if not try_write_runtime_status(started_at=utcnow(), error_code=None, error_at=None):
+        raise RuntimeError("RUNTIME_STATUS_STARTUP_WRITE_FAILED")
     last_heartbeat=0.0
     last_error_code=None
     last_error_write=0.0
