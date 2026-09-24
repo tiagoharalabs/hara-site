@@ -56,6 +56,9 @@ def main():
     run("COMMANDER_PREPROD_AUTH_JS", [
         "node", "--check", "apps/commander/src/auth.js",
     ])
+    run("COMMANDER_PREPROD_DEVICE_TOOL_CONTRACT", [
+        "node", "apps/commander/scripts/validate_device_tool_contract.mjs",
+    ])
     checks = (
         ("COMMANDER_PREPROD_UI", "validate_prod_static.py"),
         ("COMMANDER_PREPROD_AGENT", "validate_device_installers.py"),
