@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 from pathlib import Path
 import hashlib
+import http.server
 import json
 import os
 import subprocess
 import tempfile
+import threading
 import time
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -24,7 +26,7 @@ def need(text: str, token: str, code: str) -> None:
     assert token in text, f"{code}:{token}"
 
 for token in ('platform": "LINUX"', "/api/device/enroll", "/agent/linux.py",
-              "systemctl --user enable --now", "chmod 600", '"agent_version": "0.3.5"',
+              "systemctl --user enable --now", "chmod 600", '"agent_version": "0.3.6"',
               "HARA_COMMANDER_AGENT_UPDATE=PASS", "HARA_COMMANDER_AGENT_UNINSTALL=PASS",
               "HARA_COMMANDER_AGENT_VERSION=", "HARA_COMMANDER_AGENT_DOCTOR=PASS",
               "/api/device/revoke-self", "SERVER_DEVICE_REVOKE=",
@@ -36,6 +38,9 @@ for token in ('platform": "LINUX"', "/api/device/enroll", "/agent/linux.py",
               "hara.commander-device-preflight.v1", "mutation_performed", "preflight_agent"):
     need(LINUX, token, "LINUX_INSTALLER_MISSING")
 assert "cloudflared" not in LINUX.lower()
+assert "urllib.request.urlopen(req,timeout=15)" not in LINUX, "LINUX_INSTALLER_REDIRECT_FOLLOW_PRESENT"
+assert LINUX.count("class NoRedirectHandler(urllib.request.HTTPRedirectHandler)") >= 2, "LINUX_INSTALLER_REDIRECT_HANDLER_MISSING"
+assert LINUX.count("opener.open(req,timeout=15)") >= 2, "LINUX_INSTALLER_REDIRECT_FAIL_CLOSED_MISSING"
 assert 'python3 - "$PAIRING_TOKEN"' not in LINUX, "PAIRING_TOKEN_EXPOSED_IN_ARGV"
 assert 'python3 - "$RESPONSE"' not in LINUX, "DEVICE_TOKEN_RESPONSE_EXPOSED_IN_ARGV"
 assert '--data "$PAYLOAD"' not in LINUX, "PAIRING_PAYLOAD_EXPOSED_IN_CURL_ARGV"
@@ -46,7 +51,7 @@ print("LINUX_INSTALLER_SECRET_ARGV_EXPOSURE=FALSE")
 
 for token in ('platform="WINDOWS"', "/api/device/enroll", "/agent/windows.ps1",
               "ConvertFrom-SecureString", "Register-ScheduledTask", "icacls.exe",
-              'agent_version="0.3.5"', "HARA_COMMANDER_AGENT_UPDATE=PASS",
+              'agent_version="0.3.6"', "HARA_COMMANDER_AGENT_UPDATE=PASS",
               "HARA_COMMANDER_AGENT_UNINSTALL=PASS", "HARA_COMMANDER_AGENT_VERSION=",
               "HARA_COMMANDER_AGENT_DOCTOR=PASS", "/api/device/revoke-self",
               "SERVER_DEVICE_REVOKE=", "HARA_COMMANDER_AGENT_UPDATE_ROLLBACK_READY=TRUE",
@@ -58,12 +63,20 @@ for token in ('platform="WINDOWS"', "/api/device/enroll", "/agent/windows.ps1",
               "Assert-AgentSelfTest", "AGENT_SELF_TEST_FAILED", "HARA_COMMANDER_AGENT_SELF_TEST=PASS"):
     need(WINDOWS, token, "WINDOWS_INSTALLER_MISSING")
 assert "cloudflared" not in WINDOWS.lower()
+windows_web_calls = [
+    line for line in WINDOWS.splitlines()
+    if "Invoke-RestMethod" in line or "Invoke-WebRequest" in line
+]
+assert len(windows_web_calls) == 9, f"WINDOWS_INSTALLER_WEB_CALL_COUNT:{len(windows_web_calls)}"
+assert all("-MaximumRedirection 0" in line for line in windows_web_calls), "WINDOWS_INSTALLER_REDIRECT_FOLLOW_PRESENT"
+assert "$PairingToken = $null" in WINDOWS and "$Payload = $null" in WINDOWS, "WINDOWS_PAIRING_SECRET_MEMORY_CLEAR_MISSING"
 assert "encrypted_device_token" in WINDOWS
 assert "DEVICE_TOKEN_EXPOSED=FALSE" in WINDOWS
 print("WINDOWS_DEVICE_INSTALLER_STATIC=PASS")
+print("WINDOWS_INSTALLER_REDIRECT_FAIL_CLOSED=PASS")
 
 assert MANIFEST.get("schema") == "hara.commander-agent-release.v1"
-assert MANIFEST.get("agent_version") == "0.3.5"
+assert MANIFEST.get("agent_version") == "0.3.6"
 entries = {item["path"]: item for item in MANIFEST.get("files", [])}
 for rel in ("agent/linux.py", "agent/windows.ps1", "install/linux.sh", "install/windows.ps1"):
     path = PUBLIC / rel
@@ -85,6 +98,10 @@ for forbidden in ("subprocess.", "os.system(", "shell=True", "paramiko", "ssh ")
 for forbidden in ("Invoke-Expression", "Start-Process", "cmd.exe", "powershell.exe -Command"):
     assert forbidden not in WINDOWS_AGENT, f"WINDOWS_AGENT_ARBITRARY_EXEC:{forbidden}"
 assert "UNKNOWN_FUNCTION_ID" in LINUX_AGENT and "UNKNOWN_FUNCTION_ID" in WINDOWS_AGENT
+assert "urllib.request.urlopen(req, timeout=25)" not in LINUX_AGENT, "LINUX_AGENT_REDIRECT_FOLLOW_PRESENT"
+assert "NoRedirectHandler" in LINUX_AGENT and "NO_REDIRECT_OPENER.open(req, timeout=25)" in LINUX_AGENT, "LINUX_AGENT_REDIRECT_FAIL_CLOSED_MISSING"
+windows_agent_web_calls = [line for line in WINDOWS_AGENT.splitlines() if "Invoke-RestMethod" in line]
+assert windows_agent_web_calls and all("-MaximumRedirection 0" in line for line in windows_agent_web_calls), "WINDOWS_AGENT_REDIRECT_FOLLOW_PRESENT"
 assert "COMMANDER_WINDOWS_AGENT_SELF_TEST=PASS" in WINDOWS_AGENT, "WINDOWS_AGENT_SELF_TEST_MISSING"
 assert 'if ($args -contains "--self-test")' in WINDOWS_AGENT, "WINDOWS_AGENT_SELF_TEST_ENTRYPOINT_MISSING"
 assert WINDOWS.count("Assert-AgentSelfTest $") >= 2, "WINDOWS_INSTALLER_SELF_TEST_NOT_REQUIRED_FOR_INSTALL_AND_UPDATE"
@@ -98,6 +115,57 @@ assert LINUX.count("HARA_COMMANDER_AGENT_STARTUP_ATTESTATION=PASS") >= 2, "LINUX
 assert WINDOWS.count("HARA_COMMANDER_AGENT_STARTUP_ATTESTATION=PASS") >= 2, "WINDOWS_STARTUP_ATTESTATION_NOT_REQUIRED_FOR_INSTALL_AND_UPDATE"
 assert "last_runtime_error_code" in LINUX and "last_runtime_error_code" in WINDOWS, "SUPPORT_RUNTIME_DIAGNOSTIC_MISSING"
 assert "device.info" in LINUX_AGENT and "device.info" in WINDOWS_AGENT
+
+linux_namespace = {
+    "__name__": "hara_commander_linux_agent_redirect_test",
+    "__file__": str(PUBLIC / "agent/linux.py"),
+}
+exec(compile(LINUX_AGENT, str(PUBLIC / "agent/linux.py"), "exec"), linux_namespace)
+linux_post_json = linux_namespace["post_json"]
+linux_urllib_error = linux_namespace["urllib"].error
+redirect_probe = {"sink_hits": 0, "sink_authorization": None}
+
+class RedirectProbeHandler(http.server.BaseHTTPRequestHandler):
+    def do_POST(self):
+        if self.path == "/start":
+            self.send_response(302)
+            self.send_header("Location", "/sink")
+            self.end_headers()
+            return
+        if self.path == "/sink":
+            redirect_probe["sink_hits"] += 1
+            redirect_probe["sink_authorization"] = self.headers.get("Authorization")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(b"{}")
+            return
+        self.send_response(404)
+        self.end_headers()
+    def log_message(self, _format, *_args):
+        return
+
+server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), RedirectProbeHandler)
+thread = threading.Thread(target=server.serve_forever, daemon=True)
+thread.start()
+try:
+    url = f"http://127.0.0.1:{server.server_address[1]}/start"
+    try:
+        linux_post_json(url, "redirect-canary-token", {})
+    except linux_urllib_error.HTTPError as exc:
+        assert int(exc.code) == 302, f"LINUX_AGENT_REDIRECT_CODE:{exc.code}"
+    else:
+        raise AssertionError("LINUX_AGENT_REDIRECT_FOLLOWED")
+finally:
+    server.shutdown()
+    server.server_close()
+    thread.join(timeout=2)
+
+assert redirect_probe["sink_hits"] == 0, "LINUX_AGENT_REDIRECT_DESTINATION_REACHED"
+assert redirect_probe["sink_authorization"] is None, "LINUX_AGENT_BEARER_LEAKED_ON_REDIRECT"
+print("LINUX_AGENT_REDIRECT_RUNTIME_DENIED=PASS")
+print("LINUX_AGENT_REDIRECT_BEARER_LEAK=FALSE")
+
 subprocess.run([str(PUBLIC / "agent/linux.py"), "--self-test"], check=True)
 with tempfile.TemporaryDirectory(prefix="hara-agent-startup-") as tmp:
     root = Path(tmp)
@@ -137,7 +205,7 @@ with tempfile.TemporaryDirectory(prefix="hara-agent-startup-") as tmp:
                     break
             time.sleep(0.1)
         assert startup, "LINUX_AGENT_STARTUP_STATUS_MISSING"
-        assert startup.get("agent_version") == "0.3.5", "LINUX_AGENT_STARTUP_VERSION_INVALID"
+        assert startup.get("agent_version") == "0.3.6", "LINUX_AGENT_STARTUP_VERSION_INVALID"
         assert startup.get("started_at_utc"), "LINUX_AGENT_STARTUP_ATTESTATION_MISSING"
     finally:
         proc.terminate()
@@ -160,6 +228,7 @@ print("PORTAL_DEVICE_SELECTION=PASS")
 print("PER_DEVICE_CLOUDFLARED_DEPENDENCY=FALSE")
 print("OUTBOUND_CALL_CHANNEL_FIVE_TOOL_READY=PASS")
 print("AGENT_REMOTE_SELF_REVOKE=PASS")
+print("COMMANDER_AGENT_REDIRECT_FAIL_CLOSED=PASS")
 print("AGENT_DOCTOR_REMOTE_HEARTBEAT=PASS")
 print("AGENT_UPDATE_ROLLBACK_SAFE=PASS")
 print("AGENT_DOWNLOAD_INTEGRITY_ENFORCED=PASS")
