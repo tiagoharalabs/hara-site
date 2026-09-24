@@ -136,6 +136,8 @@ export async function verifyIdToken({ idToken, metadata, issuer, clientId, nonce
   if (normalizeIssuer(claims.iss) !== expectedIssuer) throw new Error("OIDC_ISSUER_MISMATCH");
   const audiences = Array.isArray(claims.aud) ? claims.aud : [claims.aud];
   if (!audiences.includes(clientId)) throw new Error("OIDC_AUDIENCE_MISMATCH");
+  if (audiences.length > 1 && !claims.azp) throw new Error("OIDC_AUTHORIZED_PARTY_MISSING");
+  if (claims.azp && claims.azp !== clientId) throw new Error("OIDC_AUTHORIZED_PARTY_MISMATCH");
   if (claims.nonce !== nonce) throw new Error("OIDC_NONCE_MISMATCH");
   if (!claims.sub || typeof claims.sub !== "string") throw new Error("OIDC_SUBJECT_MISSING");
 
