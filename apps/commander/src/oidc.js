@@ -104,7 +104,15 @@ function formUrlEncodeComponent(value) {
   return new URLSearchParams([["v", String(value)]]).toString().slice(2);
 }
 
-export async function exchangeAuthorizationCode({ metadata, clientId, clientSecret, code, verifier, redirectUri }) {
+export async function exchangeAuthorizationCode({
+  metadata,
+  clientId,
+  clientSecret,
+  clientAuth,
+  code,
+  verifier,
+  redirectUri,
+}) {
   const form = new URLSearchParams({
     grant_type: "authorization_code",
     code,
@@ -117,13 +125,16 @@ export async function exchangeAuthorizationCode({ metadata, clientId, clientSecr
     accept: "application/json",
   };
 
-  if (clientSecret) {
+  if (clientAuth === "BASIC") {
+    if (!clientSecret) throw new Error("OIDC_CLIENT_AUTH_INVALID");
     const basic = btoa(
       formUrlEncodeComponent(clientId) + ":" + formUrlEncodeComponent(clientSecret),
     );
     headers.authorization = "Basic " + basic;
-  } else {
+  } else if (clientAuth === "NONE") {
     form.set("client_id", clientId);
+  } else {
+    throw new Error("OIDC_CLIENT_AUTH_INVALID");
   }
 
   const response = await fetch(metadata.token_endpoint, {
