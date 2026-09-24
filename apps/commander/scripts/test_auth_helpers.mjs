@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { safeReturnTo } from "../src/auth.js";
+import { cookieValue, logout, resolvePortalSession, safeReturnTo } from "../src/auth.js";
 
 const fallback = "/#dashboard";
 
@@ -31,3 +31,25 @@ assert.equal(
 
 console.log("COMMANDER_AUTH_RETURN_TO_SAME_ORIGIN=PASS");
 console.log("COMMANDER_AUTH_RETURN_TO_BACKSLASH_OPEN_REDIRECT=BLOCKED");
+
+const malformedCookieRequest = new Request("https://commander.haralabs.com.br/api/portal/session", {
+  headers: { cookie: "hara_commander_session=%E0%A4%A" },
+});
+assert.equal(cookieValue(malformedCookieRequest, "hara_commander_session"), null);
+assert.equal(await resolvePortalSession(malformedCookieRequest, {}), null);
+
+const malformedLogoutRequest = new Request("https://commander.haralabs.com.br/auth/logout", {
+  method: "POST",
+  headers: { cookie: "hara_commander_session=%E0%A4%A" },
+});
+const malformedLogoutResponse = await logout(malformedLogoutRequest, {});
+assert.equal(malformedLogoutResponse.status, 204);
+assert.equal(
+  (malformedLogoutResponse.headers.get("set-cookie") || "").includes(
+    "hara_commander_session=; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=0"
+  ),
+  true,
+);
+
+console.log("COMMANDER_AUTH_MALFORMED_COOKIE=IGNORED");
+console.log("COMMANDER_AUTH_MALFORMED_COOKIE_LOGOUT=CLEARS_SESSION");
