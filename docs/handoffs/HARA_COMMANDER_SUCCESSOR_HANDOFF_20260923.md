@@ -137,7 +137,7 @@ COMMANDER_HUMAN_HOMOLOGATION=PENDING_OPERATOR_GATE
 COMMANDER_FIRST_DEVICE_E2E=PENDING_HOMOLOGATION
 ```
 
-The original production promotion used canonical `main` commit `da28e0404df689b9e9943fa4377f51789c9b5dfd`. The current deployed runtime has since advanced through reviewed hardening to source `021b32476074c2b7655337a5d902ff19a3ffa855` (PR #113 Agent 0.3.6 redirect fail-closed release). PRs #110–#112 are operator-tooling/preflight/token-custody hardening; #113 required and received an explicit DEV/PROD asset promotion.
+The original production promotion used canonical `main` commit `da28e0404df689b9e9943fa4377f51789c9b5dfd`. The current deployed runtime has since advanced through reviewed hardening to source `285dbffc4bd9dec6106d019d9950180bde6bfe86` (PR #122 Agent 0.3.7 receipt/result binding). PRs #110–#112 remain operator-tooling/preflight/token-custody hardening; #113 introduced Agent 0.3.6 redirect fail-closed transport and #122 is the current promoted Agent release authority.
 Future source merges still do **not** implicitly publish Commander; later deployments remain explicit.
 
 ## 5. Live product/data facts confirmed
@@ -240,7 +240,7 @@ Agent 0.3.6 redirect fail-closed deployment (2026-09-24 UTC):
 - DEV deployed at: `2026-09-24T19:41:05.035211Z`;
 - six release assets were the only pre-deploy drift; all ten critical PROD assets are now **CURRENT**;
 - full live-readonly gate and fail-closed smoke: **PASS**;
-- `nucleo-a` first-device candidate is **READY** on Linux x86_64 with public installer/manifest byte parity and Agent **0.3.6**.
+- `nucleo-a` first-device candidate is **READY** on Linux x86_64 with public installer/manifest byte parity and Agent **0.3.7**.
 
 ## 6. Device pairing / credential review
 
@@ -305,7 +305,7 @@ The deterministic source and runtime promotion gates are closed. Remaining work 
    - selected-device online/offline behavior;
    - governed five-tool call path;
    - revoke and expiry behavior.
-   - current candidate evidence: `nucleo-a` is **READY** on Linux x86_64 with no prior Commander enrollment/residue, systemd-user persistence ready, public installer/manifest byte parity and public Agent 0.3.6 reachable; custom XDG roots are inspected correctly and relative XDG roots fail closed.
+   - current candidate evidence: `nucleo-a` is **READY** on Linux x86_64 with no prior Commander enrollment/residue, systemd-user persistence ready, public installer/manifest byte parity and public Agent 0.3.7 reachable; custom XDG roots are inspected correctly and relative XDG roots fail closed.
 
 3. **Quota runtime proof**
    - hara-platform PR #1158 closed the source compensation gap;
@@ -359,7 +359,7 @@ Current deployment:
 - public fail-closed smoke: **PASS**;
 - OIDC transaction hygiene: **PASS**, 10-minute window, expired=0 in latest readback;
 - pairing/session retention eligibility: **0** in latest readback;
-- Agent release: **0.3.6**;
+- Agent release: **0.3.7**;
 - Agent startup attestation on install/update: **READY**;
 - customer-visible Linux/Windows bootstrap commands deny redirects and pin enrollment to canonical PROD even when a stale `HARA_COMMANDER_URL` is inherited;
 - Linux customer bootstrap no longer uses `curl | bash`: fetch completes into a `mktemp` file before execution, so download failure propagates instead of being masked by an empty successful `bash`;
