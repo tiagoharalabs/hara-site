@@ -55,6 +55,7 @@ need('payload?.code === "ENTITLEMENT_NOT_FOUND"' in JS and "Plano não disponív
 need(JS.index("await hydrateSessionHeader()") < JS.index("route(initialRoute, false)"), "AUTH_BOOTSTRAP_ORDER")
 need(".system-banner.show{display:flex}" in CSS and ".workspace-mode .system-banner.show" not in CSS, "AUTH_BANNER_GLOBAL_VISIBILITY")
 need(".sidebar-bottom{display:flex;flex-direction:row" in CSS and ".sidebar-bottom [data-logout]{display:none}" in CSS, "MOBILE_SUPPORT_LINK_READY")
+need('OWNER: "Proprietário"' in JS and 'data-user-role>Owner<' not in HTML and 'usage: "Uso & limite · H.A.R.A. Commander"' in JS, "PORTUGUESE_ROLE_AND_TITLE_UX")
 
 prod = "https://commander.haralabs.com.br"
 dev = "hara-commander-dev-v2.tiago-sartori.workers.dev"
@@ -103,6 +104,7 @@ print("COMMANDER_PROD_ENTITLEMENT_ERROR_SEMANTICS=PASS")
 print("COMMANDER_PROD_AUTH_BOOTSTRAP_ORDER=PASS")
 print("COMMANDER_PROD_AUTH_BANNER_GLOBAL_VISIBILITY=PASS")
 print("COMMANDER_PROD_MOBILE_SUPPORT_LINK=PASS")
+print("COMMANDER_PROD_PORTUGUESE_ROLE_AND_TITLE_UX=PASS")
 print("COMMANDER_PROD_LIGHT_HEADER_SIGNATURE=PASS")
 print("COMMANDER_PROD_DARK_HEADER_SIGNATURE=PASS")
 print("COMMANDER_PROD_DEV_SNAPSHOT_ARCHIVE=ABSENT")

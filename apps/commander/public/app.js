@@ -14,7 +14,7 @@
     signup: "Criar conta · H.A.R.A. Commander",
     dashboard: "Visão geral · H.A.R.A. Commander",
     devices: "Computadores · H.A.R.A. Commander",
-    usage: "Uso & quota · H.A.R.A. Commander",
+    usage: "Uso & limite · H.A.R.A. Commander",
     plans: "Plano · H.A.R.A. Commander",
     connections: "Conexões · H.A.R.A. Commander",
     security: "Segurança · H.A.R.A. Commander",
@@ -200,10 +200,21 @@
     return (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase();
   }
 
+  function roleLabel(value) {
+    const role = String(value || "").trim().toUpperCase();
+    const labels = {
+      OWNER: "Proprietário",
+      ADMIN: "Administrador",
+      MEMBER: "Membro",
+      REVIEWER: "Revisor",
+    };
+    return labels[role] || (role ? role.charAt(0) + role.slice(1).toLowerCase() : "Proprietário");
+  }
+
   function applyIdentityFields(payload) {
     const tenantName = String(payload?.tenant?.display_name || "Seu workspace");
     const userName = String(payload?.subject?.display_name || "Conta HARA");
-    const userRole = String(payload?.subject?.role || "Owner");
+    const userRole = roleLabel(payload?.subject?.role);
     document.querySelectorAll("[data-tenant-name]").forEach((node) => { node.textContent = tenantName; });
     document.querySelectorAll("[data-user-name]").forEach((node) => { node.textContent = userName; });
     const subjectId = String(payload?.subject?.subject_id || "—");
@@ -212,7 +223,7 @@
     document.querySelectorAll("[data-user-initials]").forEach((node) => { node.textContent = initials(userName); });
     document.querySelectorAll("[data-security-subject]").forEach((node) => { node.textContent = subjectId; });
     document.querySelectorAll("[data-security-tenant]").forEach((node) => { node.textContent = tenantId; });
-    document.querySelectorAll("[data-security-role]").forEach((node) => { node.textContent = userRole.toUpperCase(); });
+    document.querySelectorAll("[data-security-role]").forEach((node) => { node.textContent = userRole; });
   }
 
   function applyIdentity(payload) {
