@@ -17,8 +17,9 @@ publicJwk.alg = "RS256";
 publicJwk.use = "sig";
 
 const originalFetch = globalThis.fetch;
-globalThis.fetch = async (url) => {
+globalThis.fetch = async (url, init = {}) => {
   assert.equal(String(url), metadata.jwks_uri);
+  assert.equal(init.redirect, "error");
   return Response.json({ keys: [publicJwk] });
 };
 
