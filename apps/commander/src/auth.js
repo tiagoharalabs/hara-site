@@ -65,9 +65,24 @@ export function authCallbackFailureResponse(error) {
   return new Response(null, { status: 302, headers });
 }
 
-function safeReturnTo(value) {
-  const text = String(value || "/#dashboard");
-  if (!text.startsWith("/") || text.startsWith("//") || text.length > 500) return "/#dashboard";
+const SAFE_RETURN_ORIGIN = "https://commander.invalid";
+
+export function safeReturnTo(value) {
+  const fallback = "/#dashboard";
+  const text = String(value || fallback);
+  if (
+    !text.startsWith("/")
+    || text.length > 500
+    || /[\\\u0000-\u001f\u007f]/.test(text)
+  ) return fallback;
+  try {
+    const resolved = new URL(text, SAFE_RETURN_ORIGIN);
+    if (resolved.origin !== SAFE_RETURN_ORIGIN || !resolved.pathname.startsWith("/")) {
+      return fallback;
+    }
+  } catch (_error) {
+    return fallback;
+  }
   return text;
 }
 
