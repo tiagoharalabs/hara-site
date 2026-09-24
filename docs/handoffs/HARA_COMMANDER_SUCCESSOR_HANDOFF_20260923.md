@@ -132,12 +132,12 @@ COMMANDER_PROD_SESSION_RETENTION_ELIGIBLE=0
 COMMANDER_PROD_SESSION_OLDEST_EXPIRED_AGE_DAYS=1.28
 COMMANDER_PROD_RUNTIME_ASSETS=CURRENT
 COMMANDER_PROD_WORKER_DEPLOYMENT=PROVEN
-COMMANDER_PROD_WORKER_VERSION=382f4b7e-3094-43b9-a013-3b3f46f39fbf
+COMMANDER_PROD_WORKER_VERSION=093ceec9-cacb-4f8b-ba23-bbfc85f7e1aa
 COMMANDER_HUMAN_HOMOLOGATION=PENDING_OPERATOR_GATE
 COMMANDER_FIRST_DEVICE_E2E=PENDING_HOMOLOGATION
 ```
 
-The original production promotion used canonical `main` commit `da28e0404df689b9e9943fa4377f51789c9b5dfd`. The current deployed runtime has since advanced through reviewed hardening to source `d580d7d82c29f853f6c072328764cf09e700003f` (PR #125 canonical expiry-cause normalization), while Agent release authority remains 0.3.7 from PR #122. PRs #110–#112 remain operator-tooling/preflight/token-custody hardening; #113 introduced Agent 0.3.6 redirect fail-closed transport and #122 remains the current promoted Agent release authority.
+The original production promotion used canonical `main` commit `da28e0404df689b9e9943fa4377f51789c9b5dfd`. The current deployed runtime has since advanced through reviewed hardening to source `84895dd17489e418b4b207bde405d7db9aa33469` (PR #127 abandoned quota-reservation TTL), while Agent release authority remains 0.3.7 from PR #122. PRs #110–#112 remain operator-tooling/preflight/token-custody hardening; #113 introduced Agent 0.3.6 redirect fail-closed transport and #122 remains the current promoted Agent release authority.
 Future source merges still do **not** implicitly publish Commander; later deployments remain explicit.
 
 ## 5. Live product/data facts confirmed
@@ -349,9 +349,9 @@ The promotion was executed in the required order:
 ```
 
 Current deployment:
-- deployable source: `d580d7d82c29f853f6c072328764cf09e700003f`;
-- Worker version: `382f4b7e-3094-43b9-a013-3b3f46f39fbf`;
-- rollback version: `f72ea822-dc27-4aaa-9136-d489f478fb26`;
+- deployable source: `84895dd17489e418b4b207bde405d7db9aa33469`;
+- Worker version: `093ceec9-cacb-4f8b-ba23-bbfc85f7e1aa`;
+- rollback version: `382f4b7e-3094-43b9-a013-3b3f46f39fbf`;
 - deployed after PR #118 canonical bootstrap-origin pinning;
 - migration 0009: **APPLIED**;
 - runtime assets: **CURRENT**;
@@ -368,6 +368,9 @@ Current deployment:
 - five-tool E2E now proves `receipt.get` correlation before quota COMMIT; receipt proof failure releases the reservation instead of charging it.
 - PR #125 normalizes all device-call expiry paths to persist `error_code=DEVICE_CALL_EXPIRED`; late completion, enqueue cleanup and status-triggered expiry now share one canonical terminal cause;
 - PR #125 PROD rollout: source `d580d7d82c29f853f6c072328764cf09e700003f`, deployment `6c646890-5db4-4a9f-be64-848c11468d40`, Worker `382f4b7e-3094-43b9-a013-3b3f46f39fbf`, rollback `f72ea822-dc27-4aaa-9136-d489f478fb26`, deployed `2026-09-24T22:04:07.05583Z`;
+- PR #127 adds a 600-second crash-safety TTL for quota reservations: stale `RESERVED` state becomes terminal `RELEASED` with `units=0`; fresh reservations and all `COMMITTED` charges are preserved;
+- PR #127 PROD rollout: source `84895dd17489e418b4b207bde405d7db9aa33469`, deployment `723af9a0-10f6-4e01-bdcf-b5701801309e`, Worker `093ceec9-cacb-4f8b-ba23-bbfc85f7e1aa`, rollback `382f4b7e-3094-43b9-a013-3b3f46f39fbf`, deployed `2026-09-24T22:12:44.446644Z`; no public asset upload was required;
+- live PROD `quota-roundtrip` after #127 proves RESERVE -> RELEASE -> terminal replay denial with `COMMANDER_E2E_QUOTA_NET_USAGE=ZERO` and `COMMANDER_E2E_SECRET_EXPOSED=FALSE`;
 - DEV expiry normalization is intentionally not promoted from PROD config guesswork; use only a reviewed DEV binding/config authority when aligning DEV.
 
 Current DEV runtime:
@@ -413,7 +416,7 @@ Order of execution from the current promoted state:
 1. Run the consolidated live-readonly gate and require:
    - migration 0009 = `APPLIED`;
    - public assets = `CURRENT`;
-   - Worker version = `382f4b7e-3094-43b9-a013-3b3f46f39fbf`.
+   - Worker version = `093ceec9-cacb-4f8b-ba23-bbfc85f7e1aa`.
 2. Perform the human browser homologation:
    - fresh private browser;
    - login / callback;
@@ -443,7 +446,7 @@ python3 apps/commander/scripts/validate_preprod_readiness.py \
   --live-readonly \
   --expect-prod-migration applied \
   --expect-prod-assets current \
-  --expect-prod-worker-version 382f4b7e-3094-43b9-a013-3b3f46f39fbf
+  --expect-prod-worker-version 093ceec9-cacb-4f8b-ba23-bbfc85f7e1aa
 ```
 
 This command is the current production convergence proof. If a future reviewed deployment changes the Worker version, update the expected version only after that deployment is intentionally promoted.
@@ -528,7 +531,7 @@ Worker deployment readback:
 
 ```bash
 python3 apps/commander/scripts/commander_prod_deployment_readback.py \
-  --expect-version 382f4b7e-3094-43b9-a013-3b3f46f39fbf
+  --expect-version 093ceec9-cacb-4f8b-ba23-bbfc85f7e1aa
 ```
 
 E2E harness source contract:
@@ -632,12 +635,13 @@ git diff --check
 - PR #120 — bootstrap fetch-failure propagation / pipe masking closure — **MERGED + PROMOTED**
 - PR #122 — Agent 0.3.7 receipt/result binding + proof-before-quota-commit — **MERGED + PROMOTED**
 - PR #125 — canonical device-call expiry cause — **MERGED + PROD PROMOTED**
+- PR #127 — abandoned quota-reservation TTL / crash-safety — **MERGED + PROD PROMOTED**
 - hara-platform PR #1158 — quota finalization compensation source — **MERGED; real-device COMMIT E2E pending**
 - issue #65 — Commander post-promotion coordination / residual homologation — **OPEN**
 
 Canonical repository state at this checkpoint: `main` = `fecd6e79cd9d4d997c4e93ca2143b879153bb197`.
-Current deployed Commander runtime source: `d580d7d82c29f853f6c072328764cf09e700003f`.
-Current PROD Worker: `382f4b7e-3094-43b9-a013-3b3f46f39fbf`; rollback: `f72ea822-dc27-4aaa-9136-d489f478fb26`.
+Current deployed Commander runtime source: `84895dd17489e418b4b207bde405d7db9aa33469`.
+Current PROD Worker: `093ceec9-cacb-4f8b-ba23-bbfc85f7e1aa`; rollback: `382f4b7e-3094-43b9-a013-3b3f46f39fbf`.
 Current DEV Worker: `5a594804-0de5-4aa8-abf4-b669454f020f`; rollback: `80f3b819-e6ae-4a2e-ad61-e94729240957`.
 PRs #110–#112 are operator-tooling/preflight/token-custody hardening. PRs #113/#115/#116/#118 changed deployable/runtime customer assets or behavior and were explicitly promoted.
 
