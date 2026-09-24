@@ -308,20 +308,46 @@ async function resolveOrClaimIdentity(env, claims) {
 
   await env.PRODUCT_DB.batch([
     env.PRODUCT_DB.prepare(
-      `UPDATE users
-          SET oidc_issuer = ?, oidc_subject = ?, email = ?, display_name = ?
-        WHERE subject_id = ? AND state = 'ACTIVE'`
-    ).bind(issuer, subject, email, displayName, target.subject_id),
-    env.PRODUCT_DB.prepare(
       `UPDATE identity_invites
           SET state = 'CLAIMED', claimed_at_utc = ?, claimed_issuer = ?, claimed_subject = ?
         WHERE invite_id = ? AND state = 'ACTIVE'`
     ).bind(claimedAt, issuer, subject, invite.invite_id),
     env.PRODUCT_DB.prepare(
+      `UPDATE users
+          SET oidc_issuer = ?, oidc_subject = ?, email = ?, display_name = ?
+        WHERE subject_id = ?
+          AND state = 'ACTIVE'
+          AND EXISTS (
+            SELECT 1
+              FROM identity_invites i
+             WHERE i.invite_id = ?
+               AND i.state = 'CLAIMED'
+               AND i.claimed_at_utc = ?
+               AND i.claimed_issuer = ?
+               AND i.claimed_subject = ?
+          )`
+    ).bind(
+      issuer, subject, email, displayName, target.subject_id,
+      invite.invite_id, claimedAt, issuer, subject,
+    ),
+    env.PRODUCT_DB.prepare(
       `INSERT OR IGNORE INTO identity_bindings
-        (identity_binding_id, subject_id, provider_code, issuer, external_subject, state, created_at_utc, revoked_at_utc)
-       VALUES (?, ?, 'PRIMARY_OIDC', ?, ?, 'ACTIVE', ?, NULL)`
-    ).bind("PRIMARY:" + target.subject_id, target.subject_id, issuer, subject, claimedAt),
+        (identity_binding_id, subject_id, provider_code, issuer, external_subject,
+         state, created_at_utc, revoked_at_utc)
+       SELECT ?, ?, 'PRIMARY_OIDC', ?, ?, 'ACTIVE', ?, NULL
+        WHERE EXISTS (
+          SELECT 1
+            FROM identity_invites i
+           WHERE i.invite_id = ?
+             AND i.state = 'CLAIMED'
+             AND i.claimed_at_utc = ?
+             AND i.claimed_issuer = ?
+             AND i.claimed_subject = ?
+        )`
+    ).bind(
+      "PRIMARY:" + target.subject_id, target.subject_id, issuer, subject, claimedAt,
+      invite.invite_id, claimedAt, issuer, subject,
+    ),
   ]);
 
   user = await env.PRODUCT_DB.prepare(
