@@ -35,13 +35,33 @@ class NoRedirectHandler(HTTPRedirectHandler):
 NO_REDIRECT_OPENER = build_opener(NoRedirectHandler)
 
 def load_token(path: Path) -> str:
-    if not path.is_file():
-        raise HarnessError("MCP_PRODUCT_TOKEN_FILE_MISSING")
-    if os.name != "nt":
-        mode = stat.S_IMODE(path.stat().st_mode)
-        if mode & 0o077:
-            raise HarnessError("MCP_PRODUCT_TOKEN_FILE_PERMISSIONS")
-    token = path.read_text(encoding="utf-8").strip()
+    flags = os.O_RDONLY
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    try:
+        fd = os.open(path, flags)
+    except FileNotFoundError as exc:
+        raise HarnessError("MCP_PRODUCT_TOKEN_FILE_MISSING") from exc
+    except OSError as exc:
+        raise HarnessError("MCP_PRODUCT_TOKEN_FILE_UNSAFE") from exc
+
+    try:
+        info = os.fstat(fd)
+        if not stat.S_ISREG(info.st_mode):
+            raise HarnessError("MCP_PRODUCT_TOKEN_FILE_UNSAFE")
+        if os.name != "nt":
+            if hasattr(os, "getuid") and info.st_uid != os.getuid():
+                raise HarnessError("MCP_PRODUCT_TOKEN_FILE_OWNER")
+            mode = stat.S_IMODE(info.st_mode)
+            if mode & 0o077:
+                raise HarnessError("MCP_PRODUCT_TOKEN_FILE_PERMISSIONS")
+        with os.fdopen(fd, "r", encoding="utf-8", closefd=True) as handle:
+            fd = -1
+            token = handle.read().strip()
+    finally:
+        if fd >= 0:
+            os.close(fd)
+
     if len(token) < 48:
         raise HarnessError("MCP_PRODUCT_TOKEN_INVALID")
     return token
