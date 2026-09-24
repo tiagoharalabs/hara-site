@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import stat
@@ -364,6 +365,97 @@ def tool_payload(tool_id: str, receipt_sha256: str | None = None) -> dict:
         return {"receipt_id_or_sha256": receipt_sha256}
     raise HarnessError("TOOL_ID_INVALID")
 
+
+def canonical_json_sha256(value: dict) -> str:
+    raw = json.dumps(value, sort_keys=True, separators=(",", ":")).encode()
+    return hashlib.sha256(raw).hexdigest()
+
+def validate_tool_result(
+    tool_id: str,
+    wrapper: dict,
+    *,
+    expected_receipt_sha256: str | None = None,
+) -> None:
+    if wrapper.get("state") != "PASS":
+        raise HarnessError("DEVICE_TOOL_RESULT_STATE_INVALID")
+    if wrapper.get("operational_authority") != "HARA_SERVICES":
+        raise HarnessError("DEVICE_TOOL_AUTHORITY_INVALID")
+    if wrapper.get("runtime_authority_from_chatgpt") is not False:
+        raise HarnessError("DEVICE_TOOL_RUNTIME_AUTHORITY_INVALID")
+    if wrapper.get("mutation_performed") is not False:
+        raise HarnessError("DEVICE_TOOL_MUTATION_FLAG_INVALID")
+    if wrapper.get("blocker") is not None:
+        raise HarnessError("DEVICE_TOOL_BLOCKER_PRESENT")
+    inner = wrapper.get("result")
+    if not isinstance(inner, dict):
+        raise HarnessError("DEVICE_TOOL_RESULT_INVALID")
+
+    if tool_id == "hara.health":
+        if (
+            inner.get("services_bridge_state") != "PASS"
+            or inner.get("hara_services_state") != "PASS"
+            or inner.get("authority") != "HARA_SERVICES"
+        ):
+            raise HarnessError("DEVICE_HEALTH_SEMANTICS_INVALID")
+        device = inner.get("device") or {}
+        if not isinstance(device, dict) or not str(device.get("agent_version") or ""):
+            raise HarnessError("DEVICE_HEALTH_DEVICE_INVALID")
+    elif tool_id == "hara.functions.list":
+        functions = inner.get("functions")
+        if not isinstance(functions, list):
+            raise HarnessError("DEVICE_FUNCTION_LIST_INVALID")
+        matches = [
+            item for item in functions
+            if isinstance(item, dict)
+            and item.get("function_id") == FUNCTION_ID
+            and item.get("state") == "ACTIVE"
+        ]
+        if len(matches) != 1:
+            raise HarnessError("DEVICE_FUNCTION_LIST_SEMANTICS_INVALID")
+    elif tool_id == "hara.functions.describe":
+        semantics = inner.get("EXECUTION_SEMANTICS") or {}
+        authority = inner.get("AUTHORITY") or {}
+        if (
+            inner.get("function_id") != FUNCTION_ID
+            or inner.get("state") != "ACTIVE"
+            or semantics.get("risk_class") != "READ_ONLY"
+            or semantics.get("change_intent_required") is not False
+            or authority.get("fail_closed") is not True
+        ):
+            raise HarnessError("DEVICE_FUNCTION_DESCRIBE_SEMANTICS_INVALID")
+    elif tool_id == "hara.functions.invoke":
+        if (
+            inner.get("function_id") != FUNCTION_ID
+            or inner.get("risk_class") != "READ_ONLY"
+            or inner.get("process_exit_code") != 0
+            or inner.get("domain_success_inferred") is not False
+        ):
+            raise HarnessError("DEVICE_FUNCTION_INVOKE_SEMANTICS_INVALID")
+        try:
+            stdout = json.loads(str(inner.get("stdout") or ""))
+        except json.JSONDecodeError as exc:
+            raise HarnessError("DEVICE_FUNCTION_INVOKE_STDOUT_INVALID") from exc
+        if not isinstance(stdout, dict) or not str(stdout.get("agent_version") or ""):
+            raise HarnessError("DEVICE_FUNCTION_INVOKE_DEVICE_INVALID")
+    elif tool_id == "hara.receipts.get":
+        if not expected_receipt_sha256:
+            raise HarnessError("RECEIPT_REQUIRED")
+        if (
+            inner.get("schema") != "hara.commander-device-receipt.v1"
+            or inner.get("tool_id") != "hara.functions.invoke"
+            or inner.get("function_id_if_any") != FUNCTION_ID
+            or inner.get("operational_authority") != "HARA_SERVICES"
+            or inner.get("execution_authority") != "HARA_COMMANDER_AGENT"
+            or inner.get("mutation_class") != "READ_ONLY_OR_NONE_V1"
+            or inner.get("state") != "PASS"
+            or inner.get("payload_values_persisted") is not False
+        ):
+            raise HarnessError("DEVICE_RECEIPT_SEMANTICS_INVALID")
+        if canonical_json_sha256(inner) != expected_receipt_sha256.lower():
+            raise HarnessError("DEVICE_RECEIPT_CORRELATION_INVALID")
+    else:
+        raise HarnessError("TOOL_ID_INVALID")
+
 def execute_remote_tool(
     origin: str,
     token: str,
@@ -414,9 +506,17 @@ def execute_remote_tool(
             raise HarnessError(code)
 
         result = terminal.get("result") or {}
-        bridge_receipt = str(result.get("bridge_receipt_sha256") or "")
+        validate_tool_result(
+            tool_id,
+            result,
+            expected_receipt_sha256=receipt_sha256,
+        )
+        bridge_receipt = str(result.get("bridge_receipt_sha256") or "").lower()
         if tool_id == "hara.functions.invoke":
-            if len(bridge_receipt) != 64:
+            if (
+                len(bridge_receipt) != 64
+                or any(c not in "0123456789abcdef" for c in bridge_receipt)
+            ):
                 raise HarnessError("DEVICE_RECEIPT_SHA256_MISSING")
             try:
                 committed = commit_quota(

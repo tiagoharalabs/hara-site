@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from pathlib import Path
 import ast
+import json
 
 ROOT = Path(__file__).resolve().parents[3]
 HARNESS = ROOT / "apps/commander/scripts/commander_e2e_harness.py"
@@ -67,6 +68,110 @@ for bad_origin in (
         assert str(exc) == "COMMANDER_ORIGIN_NOT_CANONICAL"
     else:
         raise SystemExit("COMMANDER_E2E_HARNESS_NONCANONICAL_ORIGIN_ALLOWED=FAIL")
+
+
+validate_tool_result = namespace["validate_tool_result"]
+canonical_json_sha256 = namespace["canonical_json_sha256"]
+
+def base_wrapper(inner: dict, *, bridge_receipt_sha256=None) -> dict:
+    wrapper = {
+        "state": "PASS",
+        "operational_authority": "HARA_SERVICES",
+        "runtime_authority_from_chatgpt": False,
+        "mutation_performed": False,
+        "result": inner,
+        "blocker": None,
+    }
+    if bridge_receipt_sha256 is not None:
+        wrapper["bridge_receipt_sha256"] = bridge_receipt_sha256
+    return wrapper
+
+health = base_wrapper({
+    "services_bridge_state": "PASS",
+    "hara_services_state": "PASS",
+    "registered_function_count": 1,
+    "executable_function_count": 1,
+    "authority": "HARA_SERVICES",
+    "device": {"agent_version": "0.3.5"},
+})
+validate_tool_result("hara.health", health)
+need(True, "SEMANTIC_HEALTH")
+
+listing = base_wrapper({
+    "registered_function_count": 1,
+    "executable_function_count": 1,
+    "active_function_count": 1,
+    "domains": ["DEVICE"],
+    "functions": [{"function_id": "device.info", "state": "ACTIVE"}],
+})
+validate_tool_result("hara.functions.list", listing)
+need(True, "SEMANTIC_FUNCTION_LIST")
+
+description = base_wrapper({
+    "function_id": "device.info",
+    "state": "ACTIVE",
+    "EXECUTION_SEMANTICS": {
+        "risk_class": "READ_ONLY",
+        "change_intent_required": False,
+    },
+    "AUTHORITY": {"fail_closed": True},
+})
+validate_tool_result("hara.functions.describe", description)
+need(True, "SEMANTIC_FUNCTION_DESCRIBE")
+
+invoked = base_wrapper({
+    "function_id": "device.info",
+    "risk_class": "READ_ONLY",
+    "process_exit_code": 0,
+    "stdout": json.dumps({"agent_version": "0.3.5"}),
+    "domain_success_inferred": False,
+}, bridge_receipt_sha256="a" * 64)
+validate_tool_result("hara.functions.invoke", invoked)
+need(True, "SEMANTIC_FUNCTION_INVOKE")
+
+receipt = {
+    "schema": "hara.commander-device-receipt.v1",
+    "request_id": "req",
+    "device_id": "device",
+    "tool_id": "hara.functions.invoke",
+    "function_id_if_any": "device.info",
+    "transport_mode": "OUTBOUND_RELAY",
+    "operational_authority": "HARA_SERVICES",
+    "execution_authority": "HARA_COMMANDER_AGENT",
+    "mutation_class": "READ_ONLY_OR_NONE_V1",
+    "state": "PASS",
+    "payload_values_persisted": False,
+    "completed_at_utc": "2026-09-24T00:00:00Z",
+}
+receipt_sha = canonical_json_sha256(receipt)
+validate_tool_result(
+    "hara.receipts.get",
+    base_wrapper(receipt),
+    expected_receipt_sha256=receipt_sha,
+)
+need(True, "SEMANTIC_RECEIPT_CORRELATION")
+
+bad_receipt = dict(receipt)
+bad_receipt["device_id"] = "other-device"
+try:
+    validate_tool_result(
+        "hara.receipts.get",
+        base_wrapper(bad_receipt),
+        expected_receipt_sha256=receipt_sha,
+    )
+except HarnessError as exc:
+    need(str(exc) == "DEVICE_RECEIPT_CORRELATION_INVALID", "SEMANTIC_RECEIPT_MISMATCH_DENIED")
+else:
+    raise SystemExit("COMMANDER_E2E_HARNESS_SEMANTIC_RECEIPT_MISMATCH_DENIED=FAIL")
+
+bad_health = base_wrapper(dict(health["result"]))
+bad_health["result"]["services_bridge_state"] = "FAIL"
+try:
+    validate_tool_result("hara.health", bad_health)
+except HarnessError as exc:
+    need(str(exc) == "DEVICE_HEALTH_SEMANTICS_INVALID", "SEMANTIC_BAD_HEALTH_DENIED")
+else:
+    raise SystemExit("COMMANDER_E2E_HARNESS_SEMANTIC_BAD_HEALTH_DENIED=FAIL")
 
 reconcile = namespace["reconcile_usage_state"]
 globals_ = reconcile.__globals__
