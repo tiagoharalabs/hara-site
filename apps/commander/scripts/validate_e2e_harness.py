@@ -43,6 +43,11 @@ need("reconcile_usage_state" in SOURCE, "QUOTA_RECONCILE_HELPER")
 need("COMMANDER_E2E_QUOTA_COMMIT_RECONCILED=PASS" in SOURCE, "COMMIT_RECONCILE_MARKER")
 need("COMMANDER_E2E_QUOTA_RELEASE_RECONCILED=PASS" in SOURCE, "RELEASE_RECONCILE_MARKER")
 need("MCP_QUOTA_RECONCILE_RECEIPT_MISMATCH" in SOURCE, "RECONCILE_RECEIPT_GUARD")
+need("DEVICE_CALL_SELECTED_DEVICE_CHANGED" in SOURCE, "SELECTED_DEVICE_STABILITY_GUARD")
+need("DEVICE_CALL_STATUS_DEVICE_ID_MISMATCH" in SOURCE, "STATUS_DEVICE_CORRELATION_GUARD")
+need("DEVICE_HEALTH_AGENT_VERSION_MISMATCH" in SOURCE, "AGENT_VERSION_GUARD")
+need("RELEASE_MANIFEST" in SOURCE and "stable_agent_version" in SOURCE, "RELEASE_MANIFEST_VERSION_GUARD")
+need("expected_receipt_request_id" in SOURCE, "RECEIPT_REQUEST_CORRELATION_GUARD")
 
 namespace = {
     "__name__": "commander_e2e_harness_test",
@@ -72,6 +77,10 @@ for bad_origin in (
 
 validate_tool_result = namespace["validate_tool_result"]
 canonical_json_sha256 = namespace["canonical_json_sha256"]
+stable_agent_version = namespace["stable_agent_version"]
+EXPECTED_DEVICE = "device"
+EXPECTED_VERSION = stable_agent_version()
+need(bool(EXPECTED_VERSION), "STABLE_AGENT_VERSION")
 
 def base_wrapper(inner: dict, *, bridge_receipt_sha256=None) -> dict:
     wrapper = {
@@ -92,9 +101,9 @@ health = base_wrapper({
     "registered_function_count": 1,
     "executable_function_count": 1,
     "authority": "HARA_SERVICES",
-    "device": {"agent_version": "0.3.5"},
+    "device": {"device_id": EXPECTED_DEVICE, "agent_version": EXPECTED_VERSION},
 })
-validate_tool_result("hara.health", health)
+validate_tool_result("hara.health", health, expected_device_id=EXPECTED_DEVICE, expected_agent_version=EXPECTED_VERSION)
 need(True, "SEMANTIC_HEALTH")
 
 listing = base_wrapper({
@@ -104,7 +113,7 @@ listing = base_wrapper({
     "domains": ["DEVICE"],
     "functions": [{"function_id": "device.info", "state": "ACTIVE"}],
 })
-validate_tool_result("hara.functions.list", listing)
+validate_tool_result("hara.functions.list", listing, expected_device_id=EXPECTED_DEVICE, expected_agent_version=EXPECTED_VERSION)
 need(True, "SEMANTIC_FUNCTION_LIST")
 
 description = base_wrapper({
@@ -116,23 +125,23 @@ description = base_wrapper({
     },
     "AUTHORITY": {"fail_closed": True},
 })
-validate_tool_result("hara.functions.describe", description)
+validate_tool_result("hara.functions.describe", description, expected_device_id=EXPECTED_DEVICE, expected_agent_version=EXPECTED_VERSION)
 need(True, "SEMANTIC_FUNCTION_DESCRIBE")
 
 invoked = base_wrapper({
     "function_id": "device.info",
     "risk_class": "READ_ONLY",
     "process_exit_code": 0,
-    "stdout": json.dumps({"agent_version": "0.3.5"}),
+    "stdout": json.dumps({"device_id": EXPECTED_DEVICE, "agent_version": EXPECTED_VERSION}),
     "domain_success_inferred": False,
 }, bridge_receipt_sha256="a" * 64)
-validate_tool_result("hara.functions.invoke", invoked)
+validate_tool_result("hara.functions.invoke", invoked, expected_device_id=EXPECTED_DEVICE, expected_agent_version=EXPECTED_VERSION)
 need(True, "SEMANTIC_FUNCTION_INVOKE")
 
 receipt = {
     "schema": "hara.commander-device-receipt.v1",
     "request_id": "req",
-    "device_id": "device",
+    "device_id": EXPECTED_DEVICE,
     "tool_id": "hara.functions.invoke",
     "function_id_if_any": "device.info",
     "transport_mode": "OUTBOUND_RELAY",
@@ -147,17 +156,40 @@ receipt_sha = canonical_json_sha256(receipt)
 validate_tool_result(
     "hara.receipts.get",
     base_wrapper(receipt),
+    expected_device_id=EXPECTED_DEVICE,
+    expected_agent_version=EXPECTED_VERSION,
     expected_receipt_sha256=receipt_sha,
+    expected_receipt_request_id="req",
 )
 need(True, "SEMANTIC_RECEIPT_CORRELATION")
 
+
+wrong_request_receipt = dict(receipt)
+wrong_request_receipt["request_id"] = "other-request"
+try:
+    validate_tool_result(
+        "hara.receipts.get",
+        base_wrapper(wrong_request_receipt),
+        expected_device_id=EXPECTED_DEVICE,
+        expected_agent_version=EXPECTED_VERSION,
+        expected_receipt_sha256=canonical_json_sha256(wrong_request_receipt),
+        expected_receipt_request_id="req",
+    )
+except HarnessError as exc:
+    need(str(exc) == "DEVICE_RECEIPT_SEMANTICS_INVALID", "SEMANTIC_RECEIPT_REQUEST_MISMATCH_DENIED")
+else:
+    raise SystemExit("COMMANDER_E2E_HARNESS_SEMANTIC_RECEIPT_REQUEST_MISMATCH_DENIED=FAIL")
+
 bad_receipt = dict(receipt)
-bad_receipt["device_id"] = "other-device"
+bad_receipt["completed_at_utc"] = "2026-09-24T00:00:01Z"
 try:
     validate_tool_result(
         "hara.receipts.get",
         base_wrapper(bad_receipt),
+        expected_device_id=EXPECTED_DEVICE,
+        expected_agent_version=EXPECTED_VERSION,
         expected_receipt_sha256=receipt_sha,
+        expected_receipt_request_id="req",
     )
 except HarnessError as exc:
     need(str(exc) == "DEVICE_RECEIPT_CORRELATION_INVALID", "SEMANTIC_RECEIPT_MISMATCH_DENIED")
@@ -167,11 +199,40 @@ else:
 bad_health = base_wrapper(dict(health["result"]))
 bad_health["result"]["services_bridge_state"] = "FAIL"
 try:
-    validate_tool_result("hara.health", bad_health)
+    validate_tool_result("hara.health", bad_health, expected_device_id=EXPECTED_DEVICE, expected_agent_version=EXPECTED_VERSION)
 except HarnessError as exc:
     need(str(exc) == "DEVICE_HEALTH_SEMANTICS_INVALID", "SEMANTIC_BAD_HEALTH_DENIED")
 else:
     raise SystemExit("COMMANDER_E2E_HARNESS_SEMANTIC_BAD_HEALTH_DENIED=FAIL")
+
+
+bad_version = base_wrapper(json.loads(json.dumps(health["result"])))
+bad_version["result"]["device"]["agent_version"] = "0.0.0-stale"
+try:
+    validate_tool_result(
+        "hara.health",
+        bad_version,
+        expected_device_id=EXPECTED_DEVICE,
+        expected_agent_version=EXPECTED_VERSION,
+    )
+except HarnessError as exc:
+    need(str(exc) == "DEVICE_HEALTH_AGENT_VERSION_MISMATCH", "SEMANTIC_STALE_AGENT_DENIED")
+else:
+    raise SystemExit("COMMANDER_E2E_HARNESS_SEMANTIC_STALE_AGENT_DENIED=FAIL")
+
+bad_device = base_wrapper(json.loads(json.dumps(health["result"])))
+bad_device["result"]["device"]["device_id"] = "other-device"
+try:
+    validate_tool_result(
+        "hara.health",
+        bad_device,
+        expected_device_id=EXPECTED_DEVICE,
+        expected_agent_version=EXPECTED_VERSION,
+    )
+except HarnessError as exc:
+    need(str(exc) == "DEVICE_HEALTH_DEVICE_ID_MISMATCH", "SEMANTIC_WRONG_DEVICE_DENIED")
+else:
+    raise SystemExit("COMMANDER_E2E_HARNESS_SEMANTIC_WRONG_DEVICE_DENIED=FAIL")
 
 reconcile = namespace["reconcile_usage_state"]
 globals_ = reconcile.__globals__
