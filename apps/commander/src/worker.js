@@ -6,6 +6,7 @@ import {
   finishLogin,
   logout,
   resolvePortalSession,
+  runAuthRetentionMaintenance,
 } from "./auth.js";
 import { normalizeIssuer, randomToken, sha256 } from "./oidc.js";
 import {
@@ -1858,5 +1859,9 @@ export default {
 
       return json({ ok: false, code }, statusMap[code] || 500);
     }
+  },
+  async scheduled(_event, env, ctx) {
+    requireRuntime(env);
+    ctx.waitUntil(runAuthRetentionMaintenance(env));
   }
 };

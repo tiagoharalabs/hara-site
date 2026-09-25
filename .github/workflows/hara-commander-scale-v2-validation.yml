@@ -6,12 +6,14 @@ on:
     paths:
       - "apps/commander/**"
       - "docs/architecture/HARA_COMMANDER_SCALE_V2_EVENT_TRANSPORT.md"
+      - "docs/architecture/HARA_COMMANDER_SCALE_V2_HUMAN_10K.md"
       - ".github/workflows/hara-commander-scale-v2-validation.yml"
   push:
     branches: [main]
     paths:
       - "apps/commander/**"
       - "docs/architecture/HARA_COMMANDER_SCALE_V2_EVENT_TRANSPORT.md"
+      - "docs/architecture/HARA_COMMANDER_SCALE_V2_HUMAN_10K.md"
       - ".github/workflows/hara-commander-scale-v2-validation.yml"
   workflow_dispatch:
 
@@ -45,6 +47,8 @@ jobs:
         run: |
           set -Eeuo pipefail
           node --check apps/commander/src/worker.js
+          node --check apps/commander/src/auth.js
+          node --check apps/commander/src/oidc.js
           node --check apps/commander/src/device-channel.mjs
           echo "COMMANDER_EVENT_V2_JS_SYNTAX=PASS"
 
@@ -53,7 +57,11 @@ jobs:
         run: |
           set -Eeuo pipefail
           python3 apps/commander/scripts/commander_scale_capacity_model.py --check
+          python3 apps/commander/scripts/commander_human_scale_capacity_model.py --check
           python3 apps/commander/scripts/validate_commander_scale_model.py
+          python3 apps/commander/scripts/validate_human_scale_v2.py
+          python3 apps/commander/scripts/validate_oidc_transaction_hygiene.py
+          python3 apps/commander/scripts/validate_session_retention.py
           python3 apps/commander/scripts/validate_device_channel_source.py
           python3 apps/commander/scripts/validate_event_v2_wiring.py
           python3 apps/commander/scripts/validate_event_v2_websocket_client.py
