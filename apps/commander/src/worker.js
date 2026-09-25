@@ -175,10 +175,12 @@ function cleanAgentValue(value, max = 80) {
 }
 
 function deviceOnline(lastSeenAtUtc, tunnelMode = "OUTBOUND_RELAY", now = Date.now()) {
+  const mode = String(tunnelMode || "");
+  if (mode === "EVENT_V2_OFFLINE") return false;
   if (!lastSeenAtUtc) return false;
   const seen = Date.parse(String(lastSeenAtUtc));
   if (!Number.isFinite(seen)) return false;
-  const onlineWindowMs = String(tunnelMode || "") === "EVENT_V2"
+  const onlineWindowMs = mode === "EVENT_V2"
     ? 7 * 60 * 60 * 1000
     : 90_000;
   return now - seen <= onlineWindowMs;
@@ -1242,7 +1244,7 @@ async function enqueueDeviceCall(env, body) {
         AND (
           (d.tunnel_mode = 'EVENT_V2' AND d.last_seen_at_utc >= ?)
           OR
-          (d.tunnel_mode <> 'EVENT_V2' AND d.last_seen_at_utc >= ?)
+          (d.tunnel_mode NOT IN ('EVENT_V2','EVENT_V2_OFFLINE') AND d.last_seen_at_utc >= ?)
         )
         AND s.subject_id = ?`
   ).bind(
