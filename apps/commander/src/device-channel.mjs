@@ -206,19 +206,6 @@ export class DeviceChannel extends DurableObject {
     if (
       payload
       && payload.schema === EVENT_SCHEMA
-      && payload.type === "PING"
-      && Object.keys(payload).sort().join(",") === "schema,type"
-    ) {
-      socket.send(JSON.stringify({
-        schema: EVENT_SCHEMA,
-        type: "PONG",
-      }));
-      return;
-    }
-
-    if (
-      payload
-      && payload.schema === EVENT_SCHEMA
       && payload.type === "LIVENESS"
       && Object.keys(payload).sort().join(",") === "schema,type"
     ) {
