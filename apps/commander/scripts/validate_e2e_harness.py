@@ -41,6 +41,10 @@ need('origin != DEFAULT_ORIGIN' in SOURCE, "CANONICAL_ORIGIN_EXACT_GUARD")
 need("NoRedirectHandler" in SOURCE and "NO_REDIRECT_OPENER.open" in SOURCE, "REDIRECT_FAIL_CLOSED")
 need("COMMANDER_REDIRECT_DENIED" in SOURCE, "REDIRECT_DENIAL_MARKER")
 need("reconcile_usage_state" in SOURCE, "QUOTA_RECONCILE_HELPER")
+need("except (URLError, TimeoutError)" in SOURCE, "NETWORK_TIMEOUT_SANITIZED")
+need("reconcile_ambiguous_reservation" in SOURCE, "AMBIGUOUS_RESERVATION_RECONCILE_HELPER")
+need("COMMANDER_E2E_QUOTA_AMBIGUOUS_RESERVATION_RECONCILED=PASS" in SOURCE, "AMBIGUOUS_RECONCILE_MARKER")
+need("COMMANDER_E2E_QUOTA_AMBIGUOUS_TERMINAL_STATE=RELEASED" in SOURCE, "AMBIGUOUS_RELEASED_MARKER")
 need("COMMANDER_E2E_QUOTA_COMMIT_RECONCILED=PASS" in SOURCE, "COMMIT_RECONCILE_MARKER")
 need("COMMANDER_E2E_QUOTA_RELEASE_RECONCILED=PASS" in SOURCE, "RELEASE_RECONCILE_MARKER")
 need("MCP_QUOTA_RECONCILE_RECEIPT_MISMATCH" in SOURCE, "RECONCILE_RECEIPT_GUARD")
@@ -449,6 +453,92 @@ try:
 finally:
     globals_["post_json"] = original_post_json
     globals_["time"].sleep = original_sleep
+
+quota_roundtrip = namespace["quota_roundtrip"]
+quota_globals = quota_roundtrip.__globals__
+original_authorize = quota_globals["authorize"]
+original_ambiguous_reconcile = quota_globals["reconcile_ambiguous_reservation"]
+original_release_for_quota = quota_globals["release_quota"]
+
+ambiguous_events = []
+def timeout_authorize(*_args, **_kwargs):
+    ambiguous_events.append("AUTHORIZE_TIMEOUT")
+    raise HarnessError("COMMANDER_NETWORK_ERROR")
+
+def ambiguous_release_reconcile(*_args, **_kwargs):
+    ambiguous_events.append("AMBIGUOUS_RECONCILED")
+    return {"ok": True, "state": "RELEASED"}
+
+quota_globals["authorize"] = timeout_authorize
+quota_globals["reconcile_ambiguous_reservation"] = ambiguous_release_reconcile
+quota_globals["release_quota"] = lambda *_a, **_k: (_ for _ in ()).throw(
+    AssertionError("FINALLY_MUST_NOT_DOUBLE_RELEASE_AMBIGUOUS_REQUEST")
+)
+try:
+    try:
+        quota_roundtrip(
+            "https://commander.haralabs.com.br",
+            "token",
+            "issuer",
+            "subject",
+        )
+    except HarnessError as exc:
+        need(str(exc) == "COMMANDER_NETWORK_ERROR", "AMBIGUOUS_TIMEOUT_CLASSIFIED")
+    else:
+        raise SystemExit("COMMANDER_E2E_HARNESS_AMBIGUOUS_TIMEOUT_CLASSIFIED=FAIL")
+finally:
+    quota_globals["authorize"] = original_authorize
+    quota_globals["reconcile_ambiguous_reservation"] = original_ambiguous_reconcile
+    quota_globals["release_quota"] = original_release_for_quota
+
+need(
+    ambiguous_events == ["AUTHORIZE_TIMEOUT", "AMBIGUOUS_RECONCILED"],
+    "AMBIGUOUS_TIMEOUT_RELEASE_RECONCILED",
+)
+
+ambiguous_helper = namespace["reconcile_ambiguous_reservation"]
+helper_globals = ambiguous_helper.__globals__
+original_helper_release = helper_globals["release_quota"]
+original_helper_sleep = helper_globals["time"].sleep
+helper_globals["time"].sleep = lambda _seconds: None
+try:
+    sequence = iter((
+        HarnessError("COMMANDER_NETWORK_ERROR"),
+        {"usage": {"ok": True, "state": "RELEASED"}},
+    ))
+    def transient_release(*_args, **_kwargs):
+        value = next(sequence)
+        if isinstance(value, Exception):
+            raise value
+        return value
+    helper_globals["release_quota"] = transient_release
+    recovered = ambiguous_helper(
+        "https://commander.haralabs.com.br",
+        "token",
+        "issuer",
+        "subject",
+        "req",
+    )
+    need(recovered.get("state") == "RELEASED", "AMBIGUOUS_RELEASE_RETRY")
+
+    helper_globals["release_quota"] = lambda *_a, **_k: {
+        "usage": {"ok": False, "code": "RESERVATION_NOT_FOUND"}
+    }
+    absent = ambiguous_helper(
+        "https://commander.haralabs.com.br",
+        "token",
+        "issuer",
+        "subject",
+        "req-absent",
+    )
+    need(
+        absent.get("state") == "ABSENT"
+        and absent.get("code") == "RESERVATION_NOT_FOUND",
+        "AMBIGUOUS_ABSENT_SAFE",
+    )
+finally:
+    helper_globals["release_quota"] = original_helper_release
+    helper_globals["time"].sleep = original_helper_sleep
 
 print("COMMANDER_E2E_HARNESS_CANONICAL_ORIGIN=PASS")
 print("COMMANDER_E2E_HARNESS_REDIRECT_FAIL_CLOSED=PASS")
