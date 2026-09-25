@@ -21,9 +21,7 @@
   });
   const params = new URLSearchParams(location.search);
   const root = document.documentElement;
-  const themeBtn = document.querySelector(".theme-toggle");
   const themeMeta = document.querySelector('meta[name="theme-color"]');
-  const brandLink = document.querySelector(".brand");
   const guestActions = document.querySelector("[data-auth-guest]");
   const sessionActions = document.querySelector("[data-auth-session]");
   const localHost = location.hostname === "127.0.0.1" || location.hostname === "localhost";
@@ -45,22 +43,11 @@
 
   function syncThemeUi() {
     const dark = currentTheme() === "dark";
-    if (themeBtn) {
-      themeBtn.setAttribute("aria-pressed", String(dark));
-      themeBtn.setAttribute("aria-label", dark ? "Ativar modo claro" : "Ativar modo escuro");
-      themeBtn.title = dark ? "Modo claro" : "Modo escuro";
-    }
     if (themeMeta) themeMeta.setAttribute("content", dark ? "#061721" : "#f7fcff");
     root.style.colorScheme = dark ? "dark" : "light";
   }
 
   syncThemeUi();
-  themeBtn?.addEventListener("click", () => {
-    const next = currentTheme() === "dark" ? "light" : "dark";
-    root.dataset.theme = next;
-    try { localStorage.setItem("hara-theme", next); } catch (_error) {}
-    syncThemeUi();
-  });
 
   function validApiBase(value) {
     if (!value) return null;
@@ -127,7 +114,6 @@
     sessionAuthenticated = false;
     if (guestActions) guestActions.hidden = false;
     if (sessionActions) sessionActions.hidden = true;
-    if (brandLink) brandLink.href = "#landing";
     document.body.classList.remove("session-authenticated");
   }
 
@@ -135,7 +121,6 @@
     sessionAuthenticated = true;
     if (guestActions) guestActions.hidden = true;
     if (sessionActions) sessionActions.hidden = false;
-    if (brandLink) brandLink.href = "#dashboard";
     document.body.classList.add("session-authenticated");
     applyIdentityFields(payload);
   }
