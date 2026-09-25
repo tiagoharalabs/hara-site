@@ -42,6 +42,7 @@
   let pairingExpiryTimer = null;
   const revokeConfirmTimers = new Map();
   let currentView = null;
+  let deviceTab = "active";
 
   function currentTheme() {
     return root.dataset.theme === "dark" ? "dark" : "light";
@@ -352,14 +353,30 @@
     }).format(date);
   }
 
+  function setDeviceTab(next) {
+    deviceTab = next === "history" ? "history" : "active";
+    document.querySelectorAll("[data-device-tab]").forEach((button) => {
+      const active = button.dataset.deviceTab === deviceTab;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-selected", String(active));
+      button.tabIndex = active ? 0 : -1;
+    });
+    if (devicesCache) renderDevices(devicesCache);
+  }
+
   function renderDevices(payload) {
     const list = document.getElementById("deviceList");
     const devices = Array.isArray(payload?.devices) ? payload.devices : [];
+    const activeDevices = devices.filter((device) => device.state === "ACTIVE");
+    const revokedDevices = devices.filter((device) => device.state === "REVOKED");
+    const visibleDevices = deviceTab === "history" ? revokedDevices : activeDevices;
     const onlineCount = Number(payload?.online_count || 0);
-    const selectedDevice = devices.find((device) => Boolean(device.selected)) || null;
+    const selectedDevice = activeDevices.find((device) => Boolean(device.selected)) || null;
 
+    setText("deviceActiveCount", number(activeDevices.length));
+    setText("deviceHistoryCount", number(revokedDevices.length));
     setText("dashboardConnections", number(onlineCount) + " online");
-    setText("dashboardConnectionsDetail", devices.length ? devices.length + (devices.length === 1 ? " computador pareado" : " computadores pareados") : "Instale o Commander Agent");
+    setText("dashboardConnectionsDetail", activeDevices.length ? activeDevices.length + (activeDevices.length === 1 ? " computador ativo" : " computadores ativos") : "Instale o Commander Agent");
     const devicesCard = document.getElementById("dashboardDevicesCard");
     if (devicesCard) {
       devicesCard.classList.toggle("state-ready", onlineCount > 0);
@@ -368,7 +385,7 @@
     setText("landingConnections", number(onlineCount));
     setText("landingConnectionsDetail", onlineCount ? "Commander Agent online" : "Nenhum computador online");
     if (!selectedDevice) {
-      setState("Aguardando", devices.length ? "Selecione um computador" : "Conecte seu computador");
+      setState("Aguardando", activeDevices.length ? "Selecione um computador" : "Conecte seu computador");
     } else if (selectedDevice.online) {
       setState("Pronto", String(selectedDevice.device_name || "Computador") + " está online", true);
     } else {
@@ -377,20 +394,27 @@
 
     if (!list) return;
     list.replaceChildren();
+    list.dataset.deviceTab = deviceTab;
 
-    if (!devices.length) {
+    if (!visibleDevices.length) {
       const empty = document.createElement("div");
       empty.className = "empty-state";
       const title = document.createElement("strong");
-      title.textContent = "Nenhum computador conectado";
-      empty.append(title, document.createTextNode("Use o fluxo guiado acima para gerar o código, instalar o Agent e aguardar o primeiro heartbeat."));
+      if (deviceTab === "history") {
+        title.textContent = "Nenhum computador no histórico";
+        empty.append(title, document.createTextNode("Computadores revogados aparecerão aqui sem permanecer na lista de ativos."));
+      } else {
+        title.textContent = "Nenhum computador ativo";
+        empty.append(title, document.createTextNode("Use o fluxo guiado acima para conectar um computador."));
+      }
       list.append(empty);
       return;
     }
 
-    devices.forEach((device) => {
+    visibleDevices.forEach((device) => {
       const row = document.createElement("div");
       row.className = "device-row";
+      if (device.state === "REVOKED") row.classList.add("historical");
 
       const icon = document.createElement("span");
       icon.className = "device-platform";
@@ -403,7 +427,7 @@
       const name = document.createElement("b");
       name.textContent = String(device.device_name || "Computador");
       titleLine.append(name);
-      if (device.selected) {
+      if (device.selected && device.state === "ACTIVE") {
         const selectedBadge = document.createElement("span");
         selectedBadge.className = "device-selected-badge";
         selectedBadge.textContent = "Selecionado";
@@ -417,7 +441,7 @@
       body.append(titleLine, meta);
 
       const state = document.createElement("span");
-      state.className = "device-state " + (device.online ? "online" : device.state === "REVOKED" ? "revoked" : "offline");
+      state.className = "device-state " + (device.state === "REVOKED" ? "revoked" : device.online ? "online" : "offline");
       state.textContent = device.state === "REVOKED" ? "Revogado" : device.online ? "Online" : "Offline";
 
       row.append(icon, body, state);
@@ -962,6 +986,13 @@
       return;
     }
 
+    const deviceTabButton = event.target.closest("[data-device-tab]");
+    if (deviceTabButton) {
+      event.preventDefault();
+      setDeviceTab(deviceTabButton.dataset.deviceTab);
+      return;
+    }
+
     const osChoice = event.target.closest("[data-os-choice]");
     if (osChoice) {
       event.preventDefault();
@@ -1019,6 +1050,14 @@
       const nextOs = osChoice.dataset.osChoice === "linux" ? "windows" : "linux";
       setInstallOs(nextOs);
       document.querySelector('[data-os-choice="' + nextOs + '"]')?.focus();
+      return;
+    }
+    const deviceTabButton = event.target.closest?.("[data-device-tab]");
+    if (deviceTabButton && ["ArrowLeft", "ArrowRight"].includes(event.key)) {
+      event.preventDefault();
+      const nextTab = deviceTabButton.dataset.deviceTab === "active" ? "history" : "active";
+      setDeviceTab(nextTab);
+      document.querySelector('[data-device-tab="' + nextTab + '"]')?.focus();
       return;
     }
     if (event.key === "Escape") closeMobileMoreMenus();
