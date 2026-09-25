@@ -124,7 +124,7 @@ def post_json(origin: str, path: str, token: str, body: dict) -> dict:
             obj = {}
         code = str(obj.get("code") or f"HTTP_{exc.code}")
         raise HarnessError(code) from exc
-    except URLError as exc:
+    except (URLError, TimeoutError) as exc:
         raise HarnessError("COMMANDER_NETWORK_ERROR") from exc
 
 def request_id(prefix: str) -> str:
@@ -231,6 +231,47 @@ def release_quota(
         raise HarnessError("MCP_QUOTA_RELEASE_INVALID")
     return obj
 
+def reconcile_ambiguous_reservation(
+    origin: str,
+    token: str,
+    issuer: str,
+    subject: str,
+    req_id: str,
+    *,
+    attempts: int = 3,
+) -> dict:
+    """Resolve an authorize request whose response may have been lost.
+
+    Only the release endpoint is used here. Replaying authorize is unsafe for
+    an unknown request because an absent request_id could create a new
+    reservation during the reconciliation attempt.
+    """
+    last_error = None
+    for attempt in range(attempts):
+        try:
+            released = release_quota(origin, token, issuer, subject, req_id)
+            usage = released.get("usage") or {}
+            state = str(usage.get("state") or "")
+            code = str(usage.get("code") or "")
+            if usage.get("ok") is True and state == "RELEASED":
+                return usage
+            if code == "RESERVATION_NOT_FOUND":
+                return {
+                    "ok": True,
+                    "state": "ABSENT",
+                    "code": "RESERVATION_NOT_FOUND",
+                }
+            if state == "COMMITTED":
+                raise HarnessError("MCP_QUOTA_AMBIGUOUS_ALREADY_COMMITTED")
+            last_error = code or state or "MCP_QUOTA_AMBIGUOUS_RELEASE_INVALID"
+        except HarnessError as exc:
+            if str(exc) == "MCP_QUOTA_AMBIGUOUS_ALREADY_COMMITTED":
+                raise
+            last_error = str(exc)
+        if attempt + 1 < attempts:
+            time.sleep(0.35)
+    raise HarnessError(last_error or "MCP_QUOTA_AMBIGUOUS_RECONCILE_FAILED")
+
 def commit_quota(
     origin: str,
     token: str,
@@ -326,7 +367,9 @@ def quota_roundtrip(
 ) -> None:
     req_id = request_id("QUOTA")
     reserved = False
+    authorize_attempted = False
     try:
+        authorize_attempted = True
         decision = authorize(
             origin,
             token,
@@ -375,6 +418,23 @@ def quota_roundtrip(
         print("COMMANDER_E2E_QUOTA_RELEASE=PASS")
         print("COMMANDER_E2E_QUOTA_RELEASE_REPLAY=DENIED")
         print("COMMANDER_E2E_QUOTA_NET_USAGE=ZERO")
+    except HarnessError as exc:
+        if (
+            authorize_attempted
+            and not reserved
+            and str(exc) == "COMMANDER_NETWORK_ERROR"
+        ):
+            reconciled = reconcile_ambiguous_reservation(
+                origin, token, issuer, subject, req_id
+            )
+            if reconciled.get("state") == "RELEASED":
+                print("COMMANDER_E2E_QUOTA_AMBIGUOUS_RESERVATION_RECONCILED=PASS")
+                print("COMMANDER_E2E_QUOTA_AMBIGUOUS_TERMINAL_STATE=RELEASED")
+            elif reconciled.get("state") == "ABSENT":
+                print("COMMANDER_E2E_QUOTA_AMBIGUOUS_RESERVATION_ABSENT=PASS")
+            else:
+                raise HarnessError("MCP_QUOTA_AMBIGUOUS_RECONCILE_INVALID") from exc
+        raise
     finally:
         if reserved:
             try:
