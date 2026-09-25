@@ -296,3 +296,176 @@ html[data-theme="dark"] .connection-readiness{background:rgba(9,29,42,.94);borde
   .connection-readiness{grid-template-columns:1fr;gap:8px}.connection-readiness>i{width:1px;height:10px;margin-left:14px}.connection-card{grid-template-columns:42px 1fr}.connection-card .btn{grid-column:2}.connection-features{gap:5px}
   .device-skeleton{grid-template-columns:40px 1fr}.device-skeleton>em{display:none}
 }
+
+
+/* UX Wave 3 — compact computers workspace and readable navigation */
+@media(min-width:761px){
+  .side-nav button,.side-nav-link{
+    font-size:14px;
+    line-height:1.25;
+    padding:13px 15px;
+    gap:13px;
+  }
+  .side-nav .nav-icon{
+    width:21px;
+    height:21px;
+    flex-basis:21px;
+  }
+  .top-session-user{
+    padding:7px 11px 7px 8px;
+    gap:10px;
+  }
+  .top-session-avatar{
+    width:32px;
+    height:32px;
+    font-size:10px;
+  }
+  .top-session-copy b{
+    max-width:180px;
+    font-size:12px;
+  }
+  .top-session-copy small{
+    margin-top:4px;
+    font-size:8px;
+  }
+  .top-logout{
+    font-size:11px;
+  }
+}
+
+.devices-workspace-head{margin-bottom:16px}
+.devices-workspace-head h1{margin:0 0 5px;font-size:29px}
+.devices-workspace-head p{font-size:12px}
+
+.devices-section-tabs{
+  display:flex;
+  align-items:center;
+  gap:24px;
+  margin:0 0 14px;
+  border-bottom:1px solid var(--line);
+}
+.devices-section-tabs button{
+  position:relative;
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  border:0;
+  background:transparent;
+  color:#688496;
+  padding:0 2px 11px;
+  font-size:12px;
+  font-weight:800;
+  cursor:pointer;
+}
+.devices-section-tabs button::after{
+  content:"";
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:-1px;
+  height:2px;
+  border-radius:2px;
+  background:transparent;
+}
+.devices-section-tabs button:hover{color:#234e68}
+.devices-section-tabs button.active{color:var(--ink)}
+.devices-section-tabs button.active::after{background:var(--gold)}
+
+.devices-section-panel[hidden]{display:none!important}
+.devices-panel-compact{
+  margin-top:0;
+  padding:12px 16px 10px;
+}
+.devices-toolbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  min-height:38px;
+}
+.devices-toolbar .device-tabs{
+  margin-top:0;
+  padding:3px;
+}
+.devices-toolbar .device-tabs button{
+  padding:7px 11px;
+  font-size:10px;
+}
+.devices-refresh{font-size:10px}
+
+.devices-panel-compact .device-list{margin-top:5px}
+.devices-panel-compact .device-row{
+  grid-template-columns:38px minmax(0,1fr) auto auto;
+  gap:11px;
+  min-height:58px;
+  padding:9px 8px;
+  border-radius:8px;
+}
+.devices-panel-compact .device-platform{
+  width:34px;
+  height:34px;
+  border-radius:9px;
+  font-size:8px;
+}
+.devices-panel-compact .device-copy{gap:3px}
+.devices-panel-compact .device-copy b{font-size:12px}
+.devices-panel-compact .device-copy small{
+  font-size:9px;
+  line-height:1.35;
+}
+.devices-panel-compact .device-selected-badge{
+  padding:3px 6px;
+  font-size:7px;
+}
+.devices-panel-compact .device-state{
+  padding:5px 8px;
+  font-size:9px;
+}
+.devices-panel-compact .device-actions{gap:9px}
+.devices-panel-compact .device-actions .link-button{font-size:10px}
+.devices-panel-compact .empty-state{
+  min-height:120px;
+  padding:26px 16px;
+}
+
+.devices-section-panel .device-onboarding{margin-top:0}
+.devices-section-panel .device-onboarding-flow{
+  margin-top:0;
+  padding:18px 20px;
+}
+.devices-section-panel .device-install-card>p{
+  margin:8px 0 2px;
+  max-width:850px;
+}
+.devices-section-panel .onboarding-step,
+.devices-section-panel .onboarding-finish{
+  padding:12px 0;
+}
+.devices-section-panel .onboarding-step:first-of-type{margin-top:8px}
+.devices-section-panel .onboarding-step-no{
+  width:29px;
+  height:29px;
+  border-radius:9px;
+}
+.devices-section-panel .pairing-inline{
+  margin-left:49px;
+  padding:11px 12px;
+}
+
+html[data-theme="dark"] .devices-section-tabs{border-bottom-color:#1f465b}
+html[data-theme="dark"] .devices-section-tabs button{color:#8eabba}
+html[data-theme="dark"] .devices-section-tabs button:hover,
+html[data-theme="dark"] .devices-section-tabs button.active{color:#edf8fd}
+
+@media(max-width:760px){
+  .workspace-mode .side-nav>button,
+  .workspace-mode .side-nav>.side-nav-link{font-size:9px}
+  .devices-workspace-head{margin-bottom:14px}
+  .devices-section-tabs{gap:18px;margin-bottom:12px}
+  .devices-section-tabs button{font-size:11px;padding-bottom:10px}
+  .devices-panel-compact{padding:10px 12px}
+  .devices-toolbar{align-items:flex-start}
+  .devices-panel-compact .device-row{grid-template-columns:36px 1fr auto;padding:10px 4px}
+  .devices-panel-compact .device-actions{grid-column:2/4}
+  .devices-section-panel .device-onboarding-flow{padding:16px}
+}

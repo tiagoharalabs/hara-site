@@ -42,6 +42,7 @@
   let pairingExpiryTimer = null;
   const revokeConfirmTimers = new Map();
   let currentView = null;
+  let deviceSectionTab = "devices";
   let deviceTab = "active";
 
   function currentTheme() {
@@ -353,6 +354,20 @@
     }).format(date);
   }
 
+  function setDeviceSectionTab(next) {
+    deviceSectionTab = next === "connect" ? "connect" : "devices";
+    document.querySelectorAll("[data-device-section-tab]").forEach((button) => {
+      const active = button.dataset.deviceSectionTab === deviceSectionTab;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-selected", String(active));
+      button.tabIndex = active ? 0 : -1;
+    });
+    document.querySelectorAll("[data-device-section-panel]").forEach((panel) => {
+      panel.hidden = panel.dataset.deviceSectionPanel !== deviceSectionTab;
+    });
+    if (deviceSectionTab === "devices" && devicesCache) renderDevices(devicesCache);
+  }
+
   function setDeviceTab(next) {
     deviceTab = next === "history" ? "history" : "active";
     document.querySelectorAll("[data-device-tab]").forEach((button) => {
@@ -404,8 +419,8 @@
         title.textContent = "Nenhum computador no histórico";
         empty.append(title, document.createTextNode("Computadores revogados aparecerão aqui sem permanecer na lista de ativos."));
       } else {
-        title.textContent = "Nenhum computador ativo";
-        empty.append(title, document.createTextNode("Use o fluxo guiado acima para conectar um computador."));
+        title.textContent = "Nenhum dispositivo ativo";
+        empty.append(title, document.createTextNode("Abra “Conectar novo” para adicionar seu primeiro dispositivo."));
       }
       list.append(empty);
       return;
@@ -430,7 +445,7 @@
       if (device.selected && device.state === "ACTIVE") {
         const selectedBadge = document.createElement("span");
         selectedBadge.className = "device-selected-badge";
-        selectedBadge.textContent = "Selecionado";
+        selectedBadge.textContent = "Em uso";
         titleLine.append(selectedBadge);
         row.classList.add("selected");
       }
@@ -455,7 +470,7 @@
         select.type = "button";
         select.disabled = Boolean(device.selected);
         select.dataset.selectDevice = String(device.device_id);
-        select.textContent = device.selected ? "Selecionado" : "Usar este";
+        select.textContent = device.selected ? "Em uso" : "Usar";
         actions.append(select);
 
         const revoke = document.createElement("button");
@@ -914,6 +929,7 @@
       return;
     }
     if (next === "devices") {
+      setDeviceSectionTab("devices");
       loadDevices();
     } else if (appViews.has(next) || (next === "landing" && localHost)) {
       loadProductDashboard();
@@ -986,6 +1002,13 @@
       return;
     }
 
+    const deviceSectionTabButton = event.target.closest("[data-device-section-tab]");
+    if (deviceSectionTabButton) {
+      event.preventDefault();
+      setDeviceSectionTab(deviceSectionTabButton.dataset.deviceSectionTab);
+      return;
+    }
+
     const deviceTabButton = event.target.closest("[data-device-tab]");
     if (deviceTabButton) {
       event.preventDefault();
@@ -1052,6 +1075,15 @@
       document.querySelector('[data-os-choice="' + nextOs + '"]')?.focus();
       return;
     }
+    const deviceSectionTabButton = event.target.closest?.("[data-device-section-tab]");
+    if (deviceSectionTabButton && ["ArrowLeft", "ArrowRight"].includes(event.key)) {
+      event.preventDefault();
+      const nextSection = deviceSectionTabButton.dataset.deviceSectionTab === "devices" ? "connect" : "devices";
+      setDeviceSectionTab(nextSection);
+      document.querySelector('[data-device-section-tab="' + nextSection + '"]')?.focus();
+      return;
+    }
+
     const deviceTabButton = event.target.closest?.("[data-device-tab]");
     if (deviceTabButton && ["ArrowLeft", "ArrowRight"].includes(event.key)) {
       event.preventDefault();

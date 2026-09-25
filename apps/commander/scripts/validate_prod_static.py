@@ -42,8 +42,8 @@ auth_config_block = WORKER.split('if (url.pathname === "/api/portal/auth-config"
 need('return json({ configured: authStatus(env).configured });' in auth_config_block and 'provider:' not in auth_config_block and 'client_auth:' not in auth_config_block, "PUBLIC_AUTH_CONFIG_MINIMIZED")
 need('DEV_ENDPOINT_DISABLED: 404' in WORKER, "DEV_DISABLED_STATUS")
 need("auth-bootstrap-pending" in HTML, "AUTH_FIRST_PAINT")
-need("styles.css?v=20260925-history1" in HTML, "STYLE_CACHE_KEY")
-need("app.js?v=20260925-history1" in HTML, "SCRIPT_CACHE_KEY")
+need("styles.css?v=20260925-devicesux1" in HTML, "STYLE_CACHE_KEY")
+need("app.js?v=20260925-devicesux1" in HTML, "SCRIPT_CACHE_KEY")
 need('const apiBase = localHost' in JS and ': location.origin;' in JS, "PROD_API_OVERRIDE_BLOCKED")
 need('const scenario = localHost' in JS, "PROD_SCENARIO_OVERRIDE_BLOCKED")
 need('appViews.has(requested) && !sessionAuthenticated' in JS, "PROTECTED_ROUTE_GUARD")
@@ -66,12 +66,30 @@ need(
     "DEVICE_SELECTION_STATE_UX",
 )
 need(
+    'data-device-section-tab="devices"' in HTML
+    and 'data-device-section-tab="connect"' in HTML
+    and 'data-device-section-panel="devices"' in HTML
+    and 'data-device-section-panel="connect"' in HTML
+    and 'function setDeviceSectionTab(next)' in JS
+    and 'setDeviceSectionTab("devices")' in JS
+    and ".devices-section-tabs" in CSS
+    and ".devices-panel-compact" in CSS,
+    "DEVICE_WORKSPACE_INFORMATION_ARCHITECTURE",
+)
+need(
+    "UX Wave 3 — compact computers workspace and readable navigation" in CSS
+    and "font-size:14px" in CSS
+    and ".top-session-copy b" in CSS
+    and ".devices-workspace-head" in CSS,
+    "DEVICE_WORKSPACE_DENSITY_AND_NAV_LEGIBILITY",
+)
+need(
     HTML.count("data-create-pairing") == 1
     and 'data-os-choice="linux"' in HTML
     and 'data-os-choice="windows"' in HTML
     and 'data-os-panel="linux"' in HTML
     and 'data-os-panel="windows"' in HTML
-    and "Aguarde o computador aparecer abaixo" in HTML
+    and "Aguarde o dispositivo aparecer em Dispositivos" in HTML
     and 'tabindex="-1" aria-live="polite"' in HTML
     and 'function setInstallOs(os)' in JS,
     "PAIRING_ONBOARDING_ORDER",
