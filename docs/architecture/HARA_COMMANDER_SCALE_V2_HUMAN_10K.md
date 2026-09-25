@@ -162,6 +162,86 @@ QUOTA PLANE
 
 A future split must preserve exact tenant identity, session revocation, receipt binding and quota semantics.
 
+## 10k cost envelope — pricing snapshot 2026-09-25
+
+This is a planning upper bound for the **human portal only**, not a prediction of normal customer behavior and not inclusive of the #163 device plane.
+
+Using the intentionally aggressive UI caps already enforced in source:
+
+```text
+peak active humans = 2,000
+active window = 8h/day
+passive product reads = max 2/min/browser
+passive device reads = max 4/min/browser
+combined dynamic portal requests = max 200/s
+monthly dynamic portal requests at that continuous stress = 172.8M
+```
+
+Cloudflare Workers Standard currently includes 10M requests/month and charges $0.30 per additional million. Under this deliberately pessimistic human-portal stress envelope, request overage is approximately **$48.84/month**, or **$53.84 including the $5 Workers subscription**, before CPU charges. Real normal usage should be materially lower because the cap assumes every one of the 2,000 active users continually drives the UI at the TTL ceiling for eight hours every day.
+
+Current source:
+https://developers.cloudflare.com/workers/platform/pricing/
+
+For D1, the current Workers Paid allowance is 25B rows read/month and 50M rows written/month. The exact billable rows must be taken from D1 analytics; the local model uses a conservative logical approximation:
+
+```text
+172.8M session resolutions/month
+x 3 logical authority rows (session + user + tenant)
+= 518.4M logical rows/month
+= ~2.1% of the 25B included read allowance
+
+10x read-scan safety multiplier
+= 5.184B
+= ~20.7% of included read allowance
+
+session liveness writes + every registered user logging in daily
+with 6 writes/login headroom
+= ~2.76M modeled writes/month
+= ~5.5% of the 50M included write allowance
+```
+
+Current source:
+https://developers.cloudflare.com/d1/platform/pricing/
+
+The repository model is `apps/commander/scripts/commander_human_10k_cost_model.py`. Pricing constants are a dated snapshot and MUST be refreshed before a commercial pricing decision.
+
+## 10k indexed session proof
+
+The Scale V2 CI creates a 10,000-session SQLite dataset using the canonical Commander schema and proves that the current session-resolution join starts from the primary-key/indexed `session_hash` lookup and then reaches indexed user/tenant primary keys.
+
+This does not substitute for D1 production latency/load testing, but it prevents a schema regression from silently turning session resolution into a 10k-row scan.
+
+## Hot-tenant quota boundary
+
+The current consumer product auto-provision path creates a distinct tenant for each new production identity, so the normal 10k individual-user case naturally spreads quota coordination across many `TenantQuota` Durable Objects.
+
+A future enterprise/team tenant is the adversarial case. The stress model assumes all 2,000 peak-active humans share one tenant and each can sustain one governed invoke per minute:
+
+```text
+quota status from product UI = ~66.7 req/s
+reserve + terminal transition for invokes = ~66.7 req/s
+single hot tenant total = ~133.3 req/s
+```
+
+Cloudflare documents a ~1,000 req/s soft limit for an individual Durable Object and roughly 200–500 req/s for complex operations. The 10k target therefore does **not** justify quota sharding now, but a large-team launch MUST load-test the real quota implementation before onboarding a tenant expected to approach this envelope.
+
+Current sources:
+https://developers.cloudflare.com/durable-objects/reference/faq/
+https://developers.cloudflare.com/durable-objects/best-practices/rules-of-durable-objects/
+
+### Sharding policy
+
+Do not shard D1 or TenantQuota merely because 10,000 accounts exist.
+
+A split requires measured evidence such as:
+- sustained per-tenant quota traffic approaching the complex-operation envelope;
+- overload responses;
+- unacceptable p95/p99 latency;
+- D1 rows-read/written analytics materially approaching the paid-plan allowance;
+- database-size or query-latency evidence.
+
+Until then, indexes, bounded client traffic, Event V2 and per-device/per-tenant Durable Object partitioning are cheaper and simpler than premature physical sharding.
+
 ## HARA Identity / Storage boundary
 
 HARA Identity is self-hosted and remains independent from device count. The Storage host is the primary Identity host today. Scale pressure should be measured in human login bursts and PostgreSQL/ZITADEL latency, not in number of Agents.
