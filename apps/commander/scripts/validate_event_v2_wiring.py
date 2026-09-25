@@ -2,7 +2,7 @@
 """Static guard for Commander Event V2 Worker wiring.
 
 This is source-only validation. It must prove the new channel is DEV-bound and
-feature-disabled by default, while PROD remains free of the new binding until a
+feature-enabled only for the DEV canary, while PROD remains free of the new binding until a
 separate canary/cutover gate.
 """
 
@@ -74,7 +74,7 @@ def main() -> int:
     }
     assert bindings.get("DEVICE_CHANNEL") == "DeviceChannel"
     assert any(
-        row.get("tag") == "v2" and "DeviceChannel" in row.get("new_classes", [])
+        row.get("tag") == "v2" and "DeviceChannel" in row.get("new_sqlite_classes", [])
         for row in dev["migrations"]
     )
 
@@ -84,7 +84,7 @@ def main() -> int:
     assert '"DeviceChannel"' not in prod_raw
 
     print("COMMANDER_EVENT_V2_WORKER_WIRING=PASS")
-    print("COMMANDER_EVENT_V2_DEV_BINDING=PASS")
+    print("COMMANDER_EVENT_V2_DEV_BINDING_SQLITE=PASS")
     print("COMMANDER_EVENT_V2_DEV_CANARY=ON")
     print("COMMANDER_EVENT_V2_PROD_BINDING=ABSENT")
     print("COMMANDER_EVENT_V2_NOTIFY_AFTER_DURABLE_INSERT=PASS")

@@ -64,8 +64,8 @@ need(len(prod_migrations) == 1, "PROD_DO_BASELINE_MIGRATION_COUNT")
 need(len(dev_migrations) == 2, "DEV_DO_MIGRATION_COUNT")
 need(dev_migrations[0] == prod_migrations[0], "DEV_DO_V1_PROD_BASELINE")
 need(
-    dev_migrations[1] == {"tag": "v2", "new_classes": ["DeviceChannel"]},
-    "DEV_DO_V2_DEVICE_CHANNEL",
+    dev_migrations[1] == {"tag": "v2", "new_sqlite_classes": ["DeviceChannel"]},
+    "DEV_DO_V2_DEVICE_CHANNEL_SQLITE",
 )
 
 raw = DEV_PATH.read_text(encoding="utf-8")
@@ -86,7 +86,7 @@ print("COMMANDER_DEV_CONFIG_ENVIRONMENT=DEV")
 print("COMMANDER_DEV_CONFIG_STORAGE=REMOTE_DEV")
 print("COMMANDER_DEV_CONFIG_D1=DEV_ONLY")
 print("COMMANDER_DEV_CONFIG_DO_TENANT_QUOTA=PASS")
-print("COMMANDER_DEV_CONFIG_DO_DEVICE_CHANNEL=PASS")
+print("COMMANDER_DEV_CONFIG_DO_DEVICE_CHANNEL_SQLITE=PASS")
 print("COMMANDER_DEV_CONFIG_EVENT_V2_CANARY=ENABLED")
 print("COMMANDER_DEV_CONFIG_MIGRATION_BASELINE=PASS")
 print("COMMANDER_DEV_CONFIG_ROUTES=ABSENT")
