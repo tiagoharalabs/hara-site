@@ -676,14 +676,18 @@ git diff --check
 - PR #144 — constrained JWKS signing-key selection — **MERGED**
 - PR #145 — explicit OIDC client-auth-mode enforcement — **MERGED**
 - PR #146 — Cloudflare-compatible OIDC redirect hotfix — **MERGED + DEV PROMOTED + LIVE LOGIN RE-PROVEN**
+- PR #147 — OIDC hardening/live-bisect authority refresh — **MERGED**
+- PR #148 — live login/PKCE/account-switch DEV readback gate — **MERGED**
+- PR #149 — token-gated rich DEV health diagnostics — **MERGED + DEV PROMOTED**
+- PR #150 — public health metadata minimization — **MERGED + DEV PROMOTED + LIVE PROVEN**
 - hara-platform PR #1158 — quota finalization compensation source — **MERGED; real-device COMMIT E2E pending**
 - issue #65 — Commander post-promotion coordination / residual homologation — **OPEN**
 
-Source authority incorporated by this checkpoint through PR #146: `427e6a0c09a0a912e7b9e95ee808b8f0cd58bd7c`.
+Source authority incorporated by this checkpoint through PR #150: `f7abdb8ed151a033e855faf979e8fa0295bd5d2a`.
 Current deployed PROD Commander runtime source: `84895dd17489e418b4b207bde405d7db9aa33469`.
 Current PROD Worker: `093ceec9-cacb-4f8b-ba23-bbfc85f7e1aa`; rollback: `382f4b7e-3094-43b9-a013-3b3f46f39fbf`.
-Current DEV source: `427e6a0c09a0a912e7b9e95ee808b8f0cd58bd7c`.
-Current DEV Worker: `4e641bb4-1daf-471f-800e-bfdf13edb3f6`; rollback: `6fca61dd-5844-4128-bb8b-96fa106d1f29`.
+Current DEV source: `f7abdb8ed151a033e855faf979e8fa0295bd5d2a`.
+Current DEV Worker: `a60a3408-4358-429a-af9a-0b1c406882b0`; rollback: `2eabd96b-78f4-4dc1-a488-b2195ad5d13d`.
 Versioned DEV authority: `apps/commander/wrangler.dev.jsonc`, bound to DEV-only D1 / `REMOTE_DEV`; secrets remain external to Git and anti-cross-environment validation is mandatory.
 PRs #110–#112 are operator-tooling/preflight/token-custody hardening. PRs #113/#115/#116/#118 changed deployable/runtime customer assets or behavior and were explicitly promoted.
 
