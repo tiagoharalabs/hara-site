@@ -1,22 +1,41 @@
 # H.A.R.A. Commander — Current Kit — 2026-09-24
 
-Status: **DEV FRONT CLOSED / PROD LIVE / AGENT 0.3.7 / TEST HOMOLOGATION NEXT / FIRST DEVICE READY BUT NOT YET PAIRED**
+Status: **V1 PROD HOMOLOGATION PASS / AGENT 0.3.7 BASELINE PROVEN / NUCLEO-A PAIRED / EVENT V2 #163 NEXT**
 
 This file is the compact operational entrypoint for the current Commander state.
 
-Current transition authority:
-- `docs/handoffs/HARA_COMMANDER_DEV_TO_TEST_HANDOFF_20260925.md`
+Current execution authority:
+- GitHub issue **#163** — sole Event V2/device-scale implementation owner
+- PR **#188** — current source branch for private/low-cost Event V2 transport
+- GitHub issue **#167** — human/session/D1/Identity cost only; no device-transport implementation
 
-Full historical authority:
-- `docs/handoffs/HARA_COMMANDER_SUCCESSOR_HANDOFF_20260923.md`
-- GitHub issue #65
+Terminal/historical authority:
+- GitHub issue **#65** — **CLOSED / Gate 0–8 PASS / V1 PROD homologation complete**
+- `docs/handoffs/HARA_COMMANDER_DEV_TO_TEST_HANDOFF_20260925.md` — historical transition/test order
+- `docs/handoffs/HARA_COMMANDER_SUCCESSOR_HANDOFF_20260923.md` — historical guide
+
+Current anti-concurrency map:
+
+```text
+COMMANDER_V1_PROD_HOMOLOGATION=PASS
+FIRST_REAL_DEVICE=nucleo-a
+STABLE_AGENT=0.3.7
+EVENT_V2_OWNER=#163
+CURRENT_EVENT_V2_PR=#188
+HUMAN_SCALE_OWNER=#167
+PR_#172=DRAFT_DEFERRED
+HARA_PLATFORM_#1000=V1_AGENT_CAPABILITY_NO_PARALLEL_EVENT_V2
+HARA_PLATFORM_#851=PRODUCT_ACCEPTANCE_ONLY
+HARA_PLATFORM_#1189=HOLD_NO_PARALLEL_RUNTIME_RETIREMENT
+```
 
 ## 1. Current authority
 
 Repository:
-- source authority incorporated by this kit through PR #160: `d70f5e3856bcc33982a23ca78d8ad0e7340910a9`
-- latest Commander source merge: PR #160 — stabilize desktop/mobile navigation after real-browser UX Wave 2 smoke
-- open Commander PRs observed at kit creation: **0**
+- canonical `main` observed at this currentness update: `f5ffa530bca18a34e7193b164c6bf5d3c61b1965` (PR #187)
+- current Event V2 source remains unmerged on PR #188
+- PR #172 is preserved as **draft/deferred future 10k-human evidence**
+- do not infer current PROD runtime IDs from this repository-currentness line; use the newest #65 terminal evidence/live readback for runtime proof
 
 PROD:
 - origin: `https://commander.haralabs.com.br`
