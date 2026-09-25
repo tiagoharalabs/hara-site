@@ -30,7 +30,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/css/styles.css?v=14">
 <link rel="stylesheet" href="/assets/css/v14.css?v=15.1">
-<link rel="stylesheet" href="/assets/css/v16.css?v=16.3.4">
+<link rel="stylesheet" href="/assets/css/v16.css?v=16.3.5">
 </head><body><a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
 <header class="site-header" id="top">
   <div class="nav-shell">
@@ -51,7 +51,6 @@
 <main id="conteudo">
 <section class="subhero trust-hero">
   <div class="page-shell subhero-inner">
-    <div class="section-kicker"><i></i>Segurança & Trust</div>
     <h1>Segurança, identidade e governança.</h1>
     <p>Esta página descreve controles, princípios e fatos públicos da arquitetura H.A.R.A. Onde uma capacidade ainda está em desenvolvimento ou depende de configuração específica, isso é indicado explicitamente.</p>
   </div>
@@ -67,7 +66,7 @@
 </section>
 
 <section class="content-section"><div class="page-shell">
-  <div class="section-head"><div class="section-kicker"><i></i>Modelo de controle</div><h2>Controles distribuídos ao longo do fluxo.</h2><p>Segurança não fica concentrada em um único componente. Identidade, política, integração, execução e evidência participam da decisão de permitir ou limitar uma ação.</p></div>
+  <div class="section-head"><div class="section-kicker">Modelo de controle</div><h2>Controles distribuídos ao longo do fluxo.</h2><p>Segurança não fica concentrada em um único componente. Identidade, política, integração, execução e evidência participam da decisão de permitir ou limitar uma ação.</p></div>
   <div class="trust-control-grid">
     <article><span>01</span><div><h3>Identidade</h3><p>Determina quem inicia a sessão ou solicita uma capacidade.</p></div></article>
     <article><span>02</span><div><h3>Autorização</h3><p>Restringe o conjunto de funções disponível ao contexto autenticado.</p></div></article>
@@ -79,7 +78,7 @@
 </div></section>
 
 <section class="content-section alt"><div class="page-shell trust-two-col">
-  <div><div class="section-kicker"><i></i>Identidade</div><h2>Autenticação separada da aplicação.</h2></div>
+  <div><div class="section-kicker">Identidade</div><h2>Autenticação separada da aplicação.</h2></div>
   <div class="trust-facts">
     <p><strong>H.A.R.A Identity</strong> é operado de forma self-hosted e atende o domínio público <strong>auth.haralabs.com.br</strong>.</p>
     <p>Quando a autenticação é delegada a um provedor externo de identidade, a aplicação consumidora não precisa receber a senha usada nesse provedor. Claims, tokens e dados de sessão podem participar do fluxo conforme a configuração.</p>
@@ -88,7 +87,7 @@
 </div></section>
 
 <section class="content-section"><div class="page-shell">
-  <div class="section-head"><div class="section-kicker"><i></i>Dados e terceiros</div><h2>Processamento depende do caminho arquitetural escolhido.</h2><p>A H.A.R.A não assume que todos os dados devam sair do ambiente da organização. Também não assume que tudo precise permanecer local. O fluxo é definido por necessidade, sensibilidade e integração.</p></div>
+  <div class="section-head"><div class="section-kicker">Dados e terceiros</div><h2>Processamento depende do caminho arquitetural escolhido.</h2><p>A H.A.R.A não assume que todos os dados devam sair do ambiente da organização. Também não assume que tudo precise permanecer local. O fluxo é definido por necessidade, sensibilidade e integração.</p></div>
   <div class="fact-grid trust-data-grid">
     <article class="fact-card"><small>LOCAL</small><h3>Workloads locais</h3><p>Podem ser utilizados quando privacidade, latência, continuidade ou custo justificarem execução sob infraestrutura controlada.</p></article>
     <article class="fact-card"><small>CLOUD</small><h3>Serviços externos</h3><p>Podem participar quando capacidade, elasticidade ou uma integração específica justificarem seu uso.</p></article>
@@ -98,7 +97,7 @@
 </div></section>
 
 <section class="content-section alt"><div class="page-shell">
-  <div class="section-head"><div class="section-kicker"><i></i>Postura pública</div><h2>O que afirmamos e o que não afirmamos.</h2></div>
+  <div class="section-head"><div class="section-kicker">Postura pública</div><h2>O que afirmamos e o que não afirmamos.</h2></div>
   <div class="trust-claim-table" role="table" aria-label="Postura pública de segurança">
     <div class="trust-claim-row head" role="row"><span>Área</span><span>Posição pública</span></div>
     <div class="trust-claim-row" role="row"><strong>Identidade</strong><span>Self-hosted e integrada à arquitetura de acesso.</span></div>

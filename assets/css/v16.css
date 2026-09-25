@@ -538,3 +538,105 @@ html[data-theme="dark"] .gold-btn,
 html[data-theme="dark"] .dark-btn{
   box-shadow:0 2px 8px rgba(0,0,0,.12);
 }
+
+
+/* UX restraint v16.3.5: hierarchy without decorative title bars; controls without glow */
+.eyebrow,
+.section-kicker{
+  gap:0;
+}
+.eyebrow i,
+.section-kicker i{
+  display:none;
+}
+
+/* Button-like controls: solid surfaces, almost no persistent shadow */
+.button,
+.nav-cta,
+.theme-toggle,
+.obs-refresh,
+.menu-button,
+.gold-btn,
+.dark-btn{
+  box-shadow:0 1px 3px rgba(8,44,74,.035);
+  filter:none;
+}
+.button.primary{
+  box-shadow:0 1px 3px rgba(51,150,205,.045);
+}
+.gold-btn{
+  box-shadow:0 1px 3px rgba(233,177,40,.04);
+}
+@media (hover:hover){
+  .button:hover,
+  .nav-cta:hover,
+  .theme-toggle:hover,
+  .obs-refresh:hover,
+  .menu-button:hover,
+  .gold-btn:hover,
+  .dark-btn:hover{
+    transform:translateY(-1px);
+    box-shadow:0 2px 6px rgba(8,44,74,.055);
+  }
+  .button.primary:hover{
+    box-shadow:0 2px 6px rgba(51,150,205,.06);
+  }
+  .gold-btn:hover{
+    box-shadow:0 2px 6px rgba(233,177,40,.055);
+  }
+}
+.button:active,
+.nav-cta:active,
+.theme-toggle:active,
+.obs-refresh:active,
+.menu-button:active,
+.gold-btn:active,
+.dark-btn:active{
+  transform:translateY(0) scale(.985);
+  box-shadow:none;
+}
+.button:focus-visible,
+.nav-cta:focus-visible,
+.theme-toggle:focus-visible,
+.obs-refresh:focus-visible,
+.menu-button:focus-visible,
+.gold-btn:focus-visible,
+.dark-btn:focus-visible{
+  outline:2px solid #5aaed8;
+  outline-offset:3px;
+  box-shadow:none;
+  filter:none;
+}
+html[data-theme="dark"] .button,
+html[data-theme="dark"] .nav-cta,
+html[data-theme="dark"] .theme-toggle,
+html[data-theme="dark"] .obs-refresh,
+html[data-theme="dark"] .menu-button,
+html[data-theme="dark"] .gold-btn,
+html[data-theme="dark"] .dark-btn{
+  box-shadow:0 1px 3px rgba(0,0,0,.10);
+}
+
+/* Clickable content cards may lift, but should not emit a halo. */
+a.fact-card:hover,
+a.pillar-card:hover,
+a.case-card:hover,
+a.link-card:hover,
+a.contact-card:hover,
+a.support-card:hover,
+a.legal-card:hover,
+a.obs-executive-card:hover,
+a.obs-live-card:hover{
+  box-shadow:0 5px 14px rgba(26,86,125,.055);
+}
+html[data-theme="dark"] a.fact-card:hover,
+html[data-theme="dark"] a.pillar-card:hover,
+html[data-theme="dark"] a.case-card:hover,
+html[data-theme="dark"] a.link-card:hover,
+html[data-theme="dark"] a.contact-card:hover,
+html[data-theme="dark"] a.support-card:hover,
+html[data-theme="dark"] a.legal-card:hover,
+html[data-theme="dark"] a.obs-executive-card:hover,
+html[data-theme="dark"] a.obs-live-card:hover{
+  box-shadow:0 5px 14px rgba(0,0,0,.13);
+}
