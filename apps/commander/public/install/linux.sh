@@ -176,7 +176,7 @@ else:
     raise SystemExit(2)
 req=urllib.request.Request(
     base+endpoint, data=json.dumps(payload,separators=(",",":")).encode(), method="POST",
-    headers={"content-type":"application/json","accept":"application/json","authorization":"Bearer "+token},
+    headers={"content-type":"application/json","accept":"application/json","user-agent":"HARA-Commander-Installer/0.3.7","authorization":"Bearer "+token},
 )
 try:
     with opener.open(req,timeout=15) as response:
