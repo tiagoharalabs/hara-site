@@ -34,6 +34,7 @@
   let retryAction = null;
   let authProviderConfigured = false;
   let sessionAuthenticated = false;
+  let skipNextWorkspaceLoad = false;
   let pairingExpiryTimer = null;
   const revokeConfirmTimers = new Map();
   let currentView = null;
@@ -292,6 +293,38 @@
     } catch (_error) {
       // Session chrome must never depend on quota/telemetry availability.
       return false;
+    }
+  }
+
+  async function loadPortalBootstrap() {
+    if (!remotePortal) return null;
+    try {
+      const response = await fetch("/api/portal/bootstrap", {
+        cache: "no-store",
+        credentials: "same-origin",
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (response.status === 401) {
+        setGuestHeader();
+        return false;
+      }
+      if (response.status === 403 && payload?.code === "ENTITLEMENT_NOT_FOUND") {
+        applyIdentity(payload);
+        setState("Aguardando", "Plano ativo necessário");
+        showBanner(
+          "warning",
+          "Plano não disponível",
+          "Sua conta está autenticada, mas ainda não possui um plano ativo do Commander.",
+        );
+        return true;
+      }
+      if (!response.ok) throw new Error("HTTP_" + response.status);
+      applyDashboard(payload);
+      renderDevices(payload.device_state);
+      return true;
+    } catch (_error) {
+      // Bootstrap is an optimization only. Fall back to the existing split reads.
+      return null;
     }
   }
 
@@ -809,6 +842,10 @@
       showBanner("info", "Acesso protegido", "Entre com HARA Identity para acessar seu workspace.", "Entrar", () => startRemoteAuth(false));
       return;
     }
+    if (skipNextWorkspaceLoad && appViews.has(next)) {
+      skipNextWorkspaceLoad = false;
+      return;
+    }
     if (next === "devices") {
       hydrateSessionHeader();
       loadDevices();
@@ -970,7 +1007,20 @@
       const initialRoute = location.hash.slice(1) || "landing";
 
       if (remotePortal) {
-        const authenticated = await hydrateSessionHeader();
+        let authenticated;
+        if (initialRoute === "dashboard") {
+          const hydrated = await loadPortalBootstrap();
+          if (hydrated === true) {
+            authenticated = true;
+            skipNextWorkspaceLoad = true;
+          } else if (hydrated === false) {
+            authenticated = false;
+          } else {
+            authenticated = await hydrateSessionHeader();
+          }
+        } else {
+          authenticated = await hydrateSessionHeader();
+        }
         if (!authenticated) setGuestHeader();
       } else {
         setGuestHeader();
