@@ -59,7 +59,9 @@ jobs:
           set -Eeuo pipefail
           python3 apps/commander/scripts/commander_scale_capacity_model.py --check
           python3 apps/commander/scripts/commander_human_scale_capacity_model.py --check
+          python3 apps/commander/scripts/commander_human_10k_cost_model.py --check
           python3 apps/commander/scripts/validate_commander_scale_model.py
+          python3 apps/commander/scripts/validate_human_10k_session_index.py
           python3 apps/commander/scripts/validate_human_scale_v2.py
           python3 apps/commander/scripts/validate_human_bootstrap_v2.py
           python3 apps/commander/scripts/validate_human_passive_cost_v2.py
