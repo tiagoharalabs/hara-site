@@ -111,6 +111,8 @@ export class DeviceChannel extends DurableObject {
         const tenantId = cleanIdentifier(request.headers.get("x-hara-tenant-id"), 180);
         const deviceId = cleanIdentifier(request.headers.get("x-hara-device-id"), 180);
 
+        await markConnected(this.env, tenantId, deviceId);
+
         for (const prior of this.ctx.getWebSockets()) {
           try {
             const priorAttachment = prior.deserializeAttachment() || {};
@@ -123,8 +125,6 @@ export class DeviceChannel extends DurableObject {
             // Best effort only. The new authenticated channel remains authoritative.
           }
         }
-
-        await markConnected(this.env, tenantId, deviceId);
 
         const pair = new WebSocketPair();
         const [client, server] = Object.values(pair);
@@ -188,7 +188,7 @@ export class DeviceChannel extends DurableObject {
     }
   }
 
-  webSocketMessage(socket, message) {
+  async webSocketMessage(socket, message) {
     let payload;
     try {
       const raw = typeof message === "string"
@@ -207,6 +207,7 @@ export class DeviceChannel extends DurableObject {
       payload
       && payload.schema === EVENT_SCHEMA
       && payload.type === "PING"
+      && Object.keys(payload).sort().join(",") === "schema,type"
     ) {
       socket.send(JSON.stringify({
         schema: EVENT_SCHEMA,
@@ -222,19 +223,19 @@ export class DeviceChannel extends DurableObject {
       && Object.keys(payload).sort().join(",") === "schema,type"
     ) {
       const attachment = socket.deserializeAttachment();
-      Promise.resolve()
-        .then(() => refreshLiveness(
+      try {
+        await refreshLiveness(
           this.env,
           attachment?.tenant_id,
           attachment?.device_id,
-        ))
-        .catch(() => {
-          try {
-            socket.close(1011, "CHANNEL_LIVENESS_FAILED");
-          } catch (_error) {
-            // Best effort only.
-          }
-        });
+        );
+      } catch (_error) {
+        try {
+          socket.close(1011, "CHANNEL_LIVENESS_FAILED");
+        } catch (_closeError) {
+          // Best effort only.
+        }
+      }
       return;
     }
 
