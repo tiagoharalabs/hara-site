@@ -11,16 +11,25 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 CLIENT = ROOT / "experimental" / "event_v2_websocket.py"
+LOOP = ROOT / "experimental" / "event_v2_agent_loop.py"
 
 
-def load_client():
-    spec = importlib.util.spec_from_file_location("event_v2_websocket", CLIENT)
+def load_module(path, name):
+    spec = importlib.util.spec_from_file_location(name, path)
     if spec is None or spec.loader is None:
         raise RuntimeError("EVENT_V2_CLIENT_IMPORT_FAILED")
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     return module
+
+
+def load_client():
+    return load_module(CLIENT, "event_v2_websocket")
+
+
+def load_loop():
+    return load_module(LOOP, "event_v2_agent_loop")
 
 
 def expect_code(fn, code):
@@ -30,6 +39,24 @@ def expect_code(fn, code):
         assert str(exc) == code, (str(exc), code)
         return
     raise AssertionError("expected error " + code)
+
+
+class FakeAgent:
+    def __init__(self, calls):
+        self.calls = list(calls)
+        self.post_count = 0
+        self.executed = []
+
+    def post_json(self, url, token, payload):
+        assert url.endswith("/api/device/calls/next")
+        assert token == "test-token"
+        assert payload == {}
+        self.post_count += 1
+        return self.calls.pop(0) if self.calls else None
+
+    def execute_call(self, config, call):
+        assert config["HARA_DEVICE_ID"] == "D1"
+        self.executed.append(call["call_id"])
 
 
 class IdleSocket:
@@ -52,6 +79,7 @@ class IdleSocket:
 
 def main() -> int:
     client = load_client()
+    loop = load_loop()
 
     # RFC 6455 handshake example.
     key = "dGhlIHNhbXBsZSBub25jZQ=="
@@ -146,6 +174,54 @@ def main() -> int:
         "EVENT_V2_CONTROL_PAYLOAD_TOO_LARGE",
     )
 
+    # Only the expected bounded wake event shape is accepted.
+    call_payload = b'{"schema":"hara.commander-device-event.v2","type":"CALL_AVAILABLE","call_id":"HARA-CALL-1"}'
+    event = client.parse_event_frame(client.ServerFrame(0x1, call_payload, len(call_payload) + 2))
+    assert event["call_id"] == "HARA-CALL-1"
+    expect_code(
+        lambda: client.parse_event_frame(client.ServerFrame(
+            0x1,
+            b'{"schema":"hara.commander-device-event.v2","type":"CALL_AVAILABLE","call_id":"C1","content":"no"}',
+            100,
+        )),
+        "EVENT_V2_EVENT_FIELDS_DENIED",
+    )
+    expect_code(
+        lambda: client.parse_event_frame(client.ServerFrame(
+            0x1,
+            b'{"schema":"hara.commander-device-event.v2","type":"COMMAND_CONTENT"}',
+            80,
+        )),
+        "EVENT_V2_EVENT_TYPE_DENIED",
+    )
+
+    # Durable-call drain is bounded and the event call_id is not used as
+    # execution authority.
+    fake_agent = FakeAgent([
+        {"call_id": "C-DURABLE-1"},
+        None,
+    ])
+    cfg = {
+        "HARA_COMMANDER_URL": "https://commander.example.test",
+        "HARA_DEVICE_TOKEN": "test-token",
+        "HARA_DEVICE_ID": "D1",
+    }
+    assert loop.drain_durable_calls(fake_agent, cfg) == 1
+    assert fake_agent.executed == ["C-DURABLE-1"]
+    assert fake_agent.post_count == 2
+    try:
+        loop.drain_durable_calls(fake_agent, cfg, max_calls=9)
+    except RuntimeError as exc:
+        assert str(exc) == "EVENT_V2_DRAIN_BOUND_INVALID"
+    else:
+        raise AssertionError("drain > 8 must fail")
+
+    loop_source = LOOP.read_text(encoding="utf-8")
+    assert "time.sleep(2)" not in loop_source
+    assert "/api/device/heartbeat" not in loop_source
+    assert "MAX_DRAIN_CALLS = 8" in loop_source
+    assert "CALL_AVAILABLE" in loop_source
+
     # Credential validation must not echo the supplied value.
     secret = "DO_NOT_ECHO_THIS_SECRET"
     try:
@@ -166,6 +242,9 @@ def main() -> int:
     print("COMMANDER_EVENT_V2_RECONNECT_MAX_SECONDS=60")
     print("COMMANDER_EVENT_V2_PROTOCOL_KEEPALIVE_IDLE_SECONDS=60")
     print("COMMANDER_EVENT_V2_APPLICATION_HEARTBEAT_ON_IDLE=ABSENT")
+    print("COMMANDER_EVENT_V2_WAKE_EVENT_FIELDS=BOUNDED")
+    print("COMMANDER_EVENT_V2_DURABLE_DRAIN=BOUNDED_8")
+    print("COMMANDER_EVENT_V2_IDLE_HTTP_POLLING=ABSENT")
     return 0
 
 
