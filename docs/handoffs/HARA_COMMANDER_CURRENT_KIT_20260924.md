@@ -11,8 +11,8 @@ Full historical authority:
 ## 1. Current authority
 
 Repository:
-- source authority incorporated by this kit through PR #146: `427e6a0c09a0a912e7b9e95ee808b8f0cd58bd7c`
-- latest Commander source merge: PR #146 — OIDC redirect hotfix after live DEV bisect
+- source authority incorporated by this kit through PR #150: `f7abdb8ed151a033e855faf979e8fa0295bd5d2a`
+- latest Commander source merge: PR #150 — public health metadata minimization after DEV health hardening
 - open Commander PRs observed at kit creation: **0**
 
 PROD:
@@ -27,9 +27,9 @@ PROD:
 - Identity live-readonly: **PASS**
 
 DEV:
-- Worker `hara-commander-dev-v2`: `4e641bb4-1daf-471f-800e-bfdf13edb3f6`
-- rollback: `6fca61dd-5844-4128-bb8b-96fa106d1f29`
-- deployed source: `427e6a0c09a0a912e7b9e95ee808b8f0cd58bd7c`
+- Worker `hara-commander-dev-v2`: `a60a3408-4358-429a-af9a-0b1c406882b0`
+- rollback: `2eabd96b-78f4-4dc1-a488-b2195ad5d13d`
+- deployed source: `f7abdb8ed151a033e855faf979e8fa0295bd5d2a`
 - health: **DEV / REMOTE_DEV / HARA Identity configured**
 - bootstrap public assets: byte-equal to canonical source in latest readback
 - versioned DEV config: `apps/commander/wrangler.dev.jsonc`
@@ -311,6 +311,10 @@ Key progression after the original promotion/UI cleanup:
 - #144 — JWKS signing-key metadata selection hardening
 - #145 — explicit `AUTH_CLIENT_AUTH` enforcement
 - #146 — live-regression hotfix: Discovery/JWKS reads restored to compatible fetch behavior; Token/UserInfo remain manual-redirect fail-closed; DEV promoted and login 302 re-proven
+- #147 — canonical docs updated after OIDC hardening/live bisect
+- #148 — DEV deployment readback now requires live login redirect, PKCE S256, transaction-cookie and account-switch proof
+- #149 — rich `/api/dev/health` diagnostics require `DEV_ACCESS_TOKEN`
+- #150 — public `/api/health` minimized to `{ok, service}`; runtime fingerprinting removed; DEV promoted to Worker `a60a3408-4358-429a-af9a-0b1c406882b0`, rollback `2eabd96b-78f4-4dc1-a488-b2195ad5d13d`
 
 For the earlier #64–#90 history, use the canonical successor guide.
 
