@@ -29,7 +29,7 @@
     "AUTH_CLIENT_ID": "391790882505949187",
     "AUTH_PROVIDER_LABEL": "HARA Identity",
     "AUTH_CLIENT_AUTH": "BASIC",
-    "DEVICE_EVENT_V2_ENABLED": "false"
+    "DEVICE_EVENT_V2_ENABLED": "true"
   },
   "d1_databases": [
     {
