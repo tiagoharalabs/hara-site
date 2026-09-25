@@ -110,7 +110,7 @@ def main() -> int:
 
     # Client frames are masked; decoding the masked bytes with the known mask
     # must recover the exact payload.
-    payload = b'{"schema":"hara.commander-device-event.v2","type":"PING"}'
+    payload = b'{"schema":"hara.commander-device-event.v2","type":"LIVENESS"}'
     mask = b"\x01\x02\x03\x04"
     frame = client.encode_client_frame(0x1, payload, mask_key=mask)
     assert frame[1] & 0x80
