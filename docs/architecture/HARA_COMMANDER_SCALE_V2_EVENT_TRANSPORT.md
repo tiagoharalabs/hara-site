@@ -196,8 +196,8 @@ Rules:
 - normal traffic resets the keepalive timer;
 - incoming WebSocket protocol ping frames are handled by the Cloudflare runtime
   without waking the Durable Object;
-- application-level JSON `PING/PONG` remains protocol-compatible for bounded
-  diagnostics but is not the steady-state heartbeat;
+- application-level JSON `PING/PONG` is denied on the customer channel; protocol
+  control frames are the only idle keepalive;
 - D1 is updated immediately for meaningful durable transitions such as connect,
   revoke, supersession, version change or terminal lifecycle events;
 - a very low-frequency durable liveness checkpoint may be emitted at most once
