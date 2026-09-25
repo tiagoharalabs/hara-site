@@ -4,11 +4,21 @@
   const btn=document.querySelector('.menu-button');
   const menu=document.querySelector('.mobile-menu');
   const themeBtn=document.querySelector('.theme-toggle');
+  const neonBtn=document.querySelector('.neon-toggle');
   const themeMeta=document.querySelector('meta[name="theme-color"]');
   const media=matchMedia('(prefers-color-scheme: dark)');
 
   const currentTheme=()=>root.dataset.theme==='dark'?'dark':'light';
   const savedTheme=()=>{try{return localStorage.getItem('hara-theme')}catch(e){return null}};
+  const currentNeon=()=>root.dataset.neon==='on';
+  const syncNeonUI=()=>{
+    const on=currentNeon();
+    if(neonBtn){
+      neonBtn.setAttribute('aria-pressed',String(on));
+      neonBtn.setAttribute('aria-label',on?'Desativar Neon':'Ativar Neon');
+      neonBtn.title=on?'Neon ON':'Neon OFF';
+    }
+  };
   const syncThemeUI=()=>{
     const dark=currentTheme()==='dark';
     if(themeBtn){
@@ -20,12 +30,21 @@
     root.style.colorScheme=dark?'dark':'light';
   };
   syncThemeUI();
+  if(!root.dataset.neon) root.dataset.neon='off';
+  syncNeonUI();
 
   themeBtn?.addEventListener('click',()=>{
     const next=currentTheme()==='dark'?'light':'dark';
     root.dataset.theme=next;
     try{localStorage.setItem('hara-theme',next)}catch(e){}
     syncThemeUI();
+  });
+
+  neonBtn?.addEventListener('click',()=>{
+    const next=currentNeon()?'off':'on';
+    root.dataset.neon=next;
+    try{localStorage.setItem('hara-neon',next)}catch(e){}
+    syncNeonUI();
   });
 
   media.addEventListener?.('change',event=>{
