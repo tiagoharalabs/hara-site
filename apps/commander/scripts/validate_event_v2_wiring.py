@@ -43,9 +43,7 @@ def main() -> int:
         assert marker in worker, f"missing Worker Event V2 marker: {marker}"
 
     insert_at = worker.index("INSERT OR IGNORE INTO commander_device_calls")
-    notify_at = worker.index(
-        "await notifyDeviceEventChannel(env, context.tenant_id, deviceId, callId)"
-    )
+    notify_at = worker.index("const notification = await notifyDeviceEventChannel(")
     assert notify_at > insert_at, "event notification must occur only after durable call insert"
     undelivered_at = worker.index("DEVICE_EVENT_UNDELIVERED")
     assert undelivered_at > notify_at, "undelivered Event V2 call must cancel after notify attempt"
