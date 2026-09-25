@@ -1518,6 +1518,47 @@ export default {
         });
       }
 
+      if (url.pathname === "/api/portal/bootstrap" && request.method === "GET") {
+        const session = await resolvePortalSession(request, env);
+        if (!session) return json({ ok: false, code: "AUTH_REQUIRED" }, 401);
+
+        const [payload, devices] = await Promise.all([
+          dashboardForSubject(env, session.subject_id, session.tenant_id),
+          listDevices(env, session),
+        ]);
+
+        const subject = {
+          subject_id: session.subject_id,
+          display_name: session.display_name,
+          role: session.role
+        };
+        if (!payload) {
+          return json({
+            ok: false,
+            code: "ENTITLEMENT_NOT_FOUND",
+            subject,
+            tenant: {
+              tenant_id: session.tenant_id,
+              display_name: session.tenant_name
+            }
+          }, 403);
+        }
+
+        return json({
+          schema: "hara.commander-portal-bootstrap.v1",
+          subject,
+          tenant: payload.tenant,
+          entitlement: payload.entitlement,
+          usage: payload.usage,
+          device_state: {
+            schema: "hara.commander-device-list.v1",
+            devices,
+            active_count: devices.filter((device) => device.state === "ACTIVE").length,
+            online_count: devices.filter((device) => device.online).length,
+          }
+        });
+      }
+
       if (url.pathname === "/api/portal/dashboard" && request.method === "GET") {
         const session = await resolvePortalSession(request, env);
         if (!session) return json({ ok: false, code: "AUTH_REQUIRED" }, 401);
