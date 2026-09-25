@@ -11,7 +11,7 @@
   <style>html.auth-bootstrap-pending body>*{visibility:hidden}html.auth-bootstrap-pending body::before{content:"H.A.R.A. COMMANDER · verificando sessão";position:fixed;inset:0;display:grid;place-items:center;visibility:visible;background:#eef8fd;color:#315d78;font:600 12px/1.4 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:.12em}html[data-theme="dark"].auth-bootstrap-pending body::before{background:#061721;color:#a9c8d9}</style>
   <title>H.A.R.A. Commander</title>
   <link rel="icon" type="image/webp" href="./assets/hara-commander-royal.webp?v=20260921-final1" />
-  <link rel="stylesheet" href="./styles.css?v=20260924-nav1" />
+  <link rel="stylesheet" href="./styles.css?v=20260924-nav2" />
 </head>
 <body>
   <header class="topbar">
@@ -24,6 +24,10 @@
     </a>
 
     <div class="top-actions">
+      <button class="theme-toggle" type="button" aria-label="Ativar modo escuro" aria-pressed="false" title="Alternar tema">
+        <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 15.2A8.5 8.5 0 0 1 8.8 4 8.5 8.5 0 1 0 20 15.2Z"/></svg>
+        <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.5"/><path d="M12 2v2.2M12 19.8V22M4.93 4.93l1.56 1.56M17.51 17.51l1.56 1.56M2 12h2.2M19.8 12H22M4.93 19.07l1.56-1.56M17.51 6.49l1.56-1.56"/></svg>
+      </button>
       <div class="top-guest-actions" data-auth-guest>
         <button class="btn btn-ghost" type="button" data-go="login">Entrar</button>
         <button class="btn btn-primary" type="button" data-go="signup">Criar conta</button>
@@ -451,6 +455,6 @@
     </nav>
   </template>
 
-  <script src="./app.js?v=20260924-nav1"></script>
+  <script src="./app.js?v=20260924-nav2"></script>
 </body>
 </html>
