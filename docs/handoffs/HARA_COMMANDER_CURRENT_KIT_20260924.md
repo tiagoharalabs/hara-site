@@ -11,27 +11,29 @@ Full historical authority:
 ## 1. Current authority
 
 Repository:
-- source authority incorporated by this kit through PR #156: `b598fab38cb2482aa0b949c08c21185da9d40e36`
-- latest Commander source merge: PR #156 — restore the operator-requested light/dark theme toggle without changing the approved workspace layout
+- source authority incorporated by this kit through PR #160: `d70f5e3856bcc33982a23ca78d8ad0e7340910a9`
+- latest Commander source merge: PR #160 — stabilize desktop/mobile navigation after real-browser UX Wave 2 smoke
 - open Commander PRs observed at kit creation: **0**
 
 PROD:
 - origin: `https://commander.haralabs.com.br`
-- deployed source: `b598fab38cb2482aa0b949c08c21185da9d40e36`
-- Worker: `f54d495a-25c9-42a5-9336-f634b23c92d6`
-- rollback Worker: `2a4ca063-32e4-4efa-92fb-3f775fdbf753`
-- deployment: `22ce9653-1c03-48fc-859d-5b98e58b2157`
+- deployed source: `d70f5e3856bcc33982a23ca78d8ad0e7340910a9`
+- Worker: `e7e7cc1f-2867-4066-a4b8-e29ed2056ee4`
+- rollback Worker: `f54d495a-25c9-42a5-9336-f634b23c92d6`
+- deployment: `1c5f16b2-5df2-4d40-89a5-aa248d52e9f5`
 - migration 0009: **APPLIED**
 - critical public assets: **CURRENT**
+- UX Wave 2 #158–#160 live on PROD: onboarding/dashboard/device states/Connections/accessibility/mobile/loading — **PASS**
+- real-browser desktop/mobile viewport smoke after #160 — **PASS**
 - approved #154/#156 navigation + single sun/moon theme toggle live on PROD: **PASS**
 - public health/auth-config minimal contracts: **PASS**
 - public fail-closed smoke: **PASS**
 - Identity live-readonly: **PASS**
 
 DEV:
-- Worker `hara-commander-dev-v2`: `442691d0-a862-4e9f-b1fe-69eb98ce66e8`
-- rollback: `b46fd897-8a7e-4093-b588-deff5008366e`
-- deployed source: `b598fab38cb2482aa0b949c08c21185da9d40e36`
+- Worker `hara-commander-dev-v2`: `cd641a3b-bd82-4694-93f0-f846a3acee41`
+- rollback: `46aa8ef3-f07d-4ce8-bc3f-2ed43e7b7f23`
+- deployed source: `d70f5e3856bcc33982a23ca78d8ad0e7340910a9`
 - health: **DEV / REMOTE_DEV / HARA Identity configured**
 - bootstrap public assets: byte-equal to canonical source in latest readback
 - versioned DEV config: `apps/commander/wrangler.dev.jsonc`
@@ -119,6 +121,7 @@ Closed:
 - pairing expiry/copy state hardened
 - offline device is visually distinguishable from online/no-selection
 - operator-approved workspace navigation from #154/#156 is canonical: single H.A.R.A. Labs Commander brand in the header, no duplicate sidebar brand, no center Produto/H.A.R.A. Labs navigation, one light/dark sun-moon theme toggle in the top-right header, Suporte inside the sidebar, top-right account + Sair, custom SVG menu icons and hover/active motion
+- UX Wave 2 from #158–#160 is canonical and PROD-proven: single guided pairing flow, real quota progress/status cards, Trial temporary-plan treatment, selected/online/offline device hierarchy, honest ChatGPT/Codex readiness, keyboard/focus accessibility, bottom mobile navigation with Mais, skeleton/loading states and real-browser desktop/mobile smoke
 
 ### Agent / device security
 
@@ -271,7 +274,7 @@ Latest structural PROD posture:
 - retention-eligible portal sessions = 0
 - device count remains zero until first real pairing
 
-## 7. Recent delivery map — #91 to #156
+## 7. Recent delivery map — #91 to #160
 
 Key progression after the original promotion/UI cleanup:
 
@@ -324,6 +327,9 @@ Key progression after the original promotion/UI cleanup:
 - #154 — operator-approved workspace navigation/layout: header brand only, support moved into sidebar, duplicate sidebar brand/logout removed, custom SVG navigation icons + hover/active motion; DEV promoted to Worker `b46fd897-8a7e-4093-b588-deff5008366e`
 - #155 — canonical kit/successor guide synchronized after the approved layout rollout
 - #156 — restored the operator-requested single sun/moon theme toggle while preserving the approved navigation; DEV promoted to Worker `442691d0-a862-4e9f-b1fe-69eb98ce66e8`; PROD promoted to Worker `f54d495a-25c9-42a5-9336-f634b23c92d6`, rollback `2a4ca063-32e4-4efa-92fb-3f775fdbf753`
+- #158 — dashboard/device onboarding Wave 2A: quota progress, Trial status treatment, selected/online/offline device hierarchy and one guided Linux/Windows pairing flow
+- #159 — UX Wave 2B: honest Connections readiness, accessibility/focus/keyboard, mobile bottom navigation and loading/empty-state polish
+- #160 — real-browser viewport correction: Mais hard-hidden on desktop and primary mobile navigation hard-visible; final DEV Worker `cd641a3b-bd82-4694-93f0-f846a3acee41`; PROD Worker `e7e7cc1f-2867-4066-a4b8-e29ed2056ee4`, rollback `f54d495a-25c9-42a5-9336-f634b23c92d6`
 
 For the earlier #64–#90 history, use the canonical successor guide.
 
@@ -372,27 +378,25 @@ Astra should focus on UX/information architecture, not backend security:
    - H.A.R.A. Labs Commander brand appears only in the top-left header and opens the H.A.R.A. Labs site
    - do not reintroduce center product links or duplicate sidebar branding; the single sun/moon theme toggle restored by #156 is canonical
 
-2. Pairing onboarding UX:
-   - pairing token is OS-independent
-   - prefer one clear flow: generate token -> choose Linux/Windows -> copy installer -> paste token
-   - do not change one-current-token backend semantics
+2. Pairing onboarding UX — **CLOSED by PR #158**:
+   - canonical flow is generate token -> choose Linux/Windows -> copy installer -> paste token -> wait for heartbeat
+   - pairing token remains OS-independent and backend one-current-token semantics are unchanged
 
-3. Connections / ChatGPT / Codex:
-   - refine disabled/homologation states
-   - improve explanatory copy and eventual activation flow
-   - do not enable real CTA before real-device E2E
+3. Connections / ChatGPT / Codex — **CLOSED for pre-E2E UX by PR #159**:
+   - ChatGPT/Codex remain explicitly in homologation
+   - activation order and proven capabilities are shown without a fake CTA
+   - do not enable authorization before real-device E2E
 
-4. Offline selected-device presentation:
-   - backend semantics remain persistent selection while ACTIVE/offline
+4. Offline selected-device presentation — **CLOSED by PR #158**:
+   - persistent selection / ACTIVE-offline semantics preserved
+   - selected, online, offline and last-contact presentation is canonical
    - invocation remains denied offline
-   - Astra may improve wording/status hierarchy only
 
-5. Responsive/workspace polish:
-   - header/sidebar density
-   - empty states
-   - device onboarding hierarchy
-   - mobile behavior
-   - never reintroduce duplicate signed-in identity
+5. Responsive/workspace polish — **CLOSED for current V1 by PR #159/#160**:
+   - desktop sidebar remains canonical
+   - mobile uses bottom navigation: Visão geral / Computadores / Conexões / Mais
+   - Mais owns Uso / Plano / Segurança / Suporte on mobile
+   - skip-link, focus-visible, keyboard OS selector, loading skeletons and reduced-motion support are canonical
 
 ## 9. Non-blocking operational residues
 

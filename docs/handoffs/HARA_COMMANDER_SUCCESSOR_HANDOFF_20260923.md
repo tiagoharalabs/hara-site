@@ -686,14 +686,17 @@ git diff --check
 - PR #154 — operator-approved Commander workspace navigation/layout — **MERGED + DEV PROMOTED + PROD PROMOTED + LIVE PROVEN**
 - PR #155 — canonical authority refresh after approved layout rollout — **MERGED**
 - PR #156 — restore single sun/moon light/dark theme toggle without changing approved navigation — **MERGED + DEV PROMOTED + PROD PROMOTED + LIVE PROVEN**
+- PR #158 — dashboard/device onboarding UX Wave 2A — **MERGED + DEV/PROD PROMOTED + LIVE PROVEN**
+- PR #159 — Connections/accessibility/mobile/loading UX Wave 2B — **MERGED + DEV/PROD PROMOTED + LIVE PROVEN**
+- PR #160 — real-browser desktop/mobile viewport stabilization — **MERGED + DEV/PROD PROMOTED + LIVE PROVEN**
 - hara-platform PR #1158 — quota finalization compensation source — **MERGED; real-device COMMIT E2E pending**
 - issue #65 — Commander post-promotion coordination / residual homologation — **OPEN**
 
-Source authority incorporated by this checkpoint through PR #156: `b598fab38cb2482aa0b949c08c21185da9d40e36`.
-Current deployed PROD Commander runtime source: `b598fab38cb2482aa0b949c08c21185da9d40e36`.
-Current PROD Worker: `f54d495a-25c9-42a5-9336-f634b23c92d6`; rollback: `2a4ca063-32e4-4efa-92fb-3f775fdbf753`; deployment: `22ce9653-1c03-48fc-859d-5b98e58b2157`.
-Current DEV source: `b598fab38cb2482aa0b949c08c21185da9d40e36`.
-Current DEV Worker: `442691d0-a862-4e9f-b1fe-69eb98ce66e8`; rollback: `b46fd897-8a7e-4093-b588-deff5008366e`.
+Source authority incorporated by this checkpoint through PR #160: `d70f5e3856bcc33982a23ca78d8ad0e7340910a9`.
+Current deployed PROD Commander runtime source: `d70f5e3856bcc33982a23ca78d8ad0e7340910a9`.
+Current PROD Worker: `e7e7cc1f-2867-4066-a4b8-e29ed2056ee4`; rollback: `f54d495a-25c9-42a5-9336-f634b23c92d6`; deployment: `1c5f16b2-5df2-4d40-89a5-aa248d52e9f5`.
+Current DEV source: `d70f5e3856bcc33982a23ca78d8ad0e7340910a9`.
+Current DEV Worker: `cd641a3b-bd82-4694-93f0-f846a3acee41`; rollback: `46aa8ef3-f07d-4ce8-bc3f-2ed43e7b7f23`.
 Versioned DEV authority: `apps/commander/wrangler.dev.jsonc`, bound to DEV-only D1 / `REMOTE_DEV`; secrets remain external to Git and anti-cross-environment validation is mandatory.
 PRs #110–#112 are operator-tooling/preflight/token-custody hardening. PRs #113/#115/#116/#118 changed deployable/runtime customer assets or behavior and were explicitly promoted.
 
