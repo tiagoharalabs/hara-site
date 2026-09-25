@@ -12,6 +12,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 CLIENT = ROOT / "experimental" / "event_v2_websocket.py"
 LOOP = ROOT / "experimental" / "event_v2_agent_loop.py"
+CUSTOMER_AGENT = ROOT / "experimental" / "event_v2_customer_agent.py"
 
 
 def load_module(path, name):
@@ -30,6 +31,10 @@ def load_client():
 
 def load_loop():
     return load_module(LOOP, "event_v2_agent_loop")
+
+
+def load_customer_agent():
+    return load_module(CUSTOMER_AGENT, "event_v2_customer_agent_test")
 
 
 def expect_code(fn, code):
@@ -80,6 +85,7 @@ class IdleSocket:
 def main() -> int:
     client = load_client()
     loop = load_loop()
+    customer_agent = load_customer_agent()
 
     # RFC 6455 handshake example.
     key = "dGhlIHNhbXBsZSBub25jZQ=="
@@ -222,6 +228,15 @@ def main() -> int:
     assert "MAX_DRAIN_CALLS = 8" in loop_source
     assert "CALL_AVAILABLE" in loop_source
 
+    # Customer Event V2 authority must no longer claim the internal HARA
+    # Services control plane.
+    customer_agent.self_test()
+    customer_source = CUSTOMER_AGENT.read_text(encoding="utf-8")
+    assert '"operational_authority": "HARA_SERVICES"' not in customer_source
+    assert '"services_bridge_state"' not in customer_source
+    assert 'OPERATIONAL_AUTHORITY = "HARA_COMMANDER"' in customer_source
+    assert 'TRANSPORT_MODE = "EVENT_V2"' in customer_source
+
     # Credential validation must not echo the supplied value.
     secret = "DO_NOT_ECHO_THIS_SECRET"
     try:
@@ -245,6 +260,8 @@ def main() -> int:
     print("COMMANDER_EVENT_V2_WAKE_EVENT_FIELDS=BOUNDED")
     print("COMMANDER_EVENT_V2_DURABLE_DRAIN=BOUNDED_8")
     print("COMMANDER_EVENT_V2_IDLE_HTTP_POLLING=ABSENT")
+    print("COMMANDER_EVENT_V2_PUBLIC_AUTHORITY=HARA_COMMANDER")
+    print("COMMANDER_EVENT_V2_INTERNAL_SERVICES_AUTHORITY=ABSENT")
     return 0
 
 
