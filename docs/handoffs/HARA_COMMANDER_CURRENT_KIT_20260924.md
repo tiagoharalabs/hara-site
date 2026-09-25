@@ -11,25 +11,27 @@ Full historical authority:
 ## 1. Current authority
 
 Repository:
-- source authority incorporated by this kit through PR #154: `8d7bf9eacf855b8c288619ad17875a245433ef73`
-- latest Commander source merge: PR #154 — operator-approved workspace navigation/layout
+- source authority incorporated by this kit through PR #156: `b598fab38cb2482aa0b949c08c21185da9d40e36`
+- latest Commander source merge: PR #156 — restore the operator-requested light/dark theme toggle without changing the approved workspace layout
 - open Commander PRs observed at kit creation: **0**
 
 PROD:
 - origin: `https://commander.haralabs.com.br`
-- deployed source: `84895dd17489e418b4b207bde405d7db9aa33469`
-- Worker: `093ceec9-cacb-4f8b-ba23-bbfc85f7e1aa`
-- rollback Worker: `382f4b7e-3094-43b9-a013-3b3f46f39fbf`
-- deployment: `723af9a0-10f6-4e01-bdcf-b5701801309e`
+- deployed source: `b598fab38cb2482aa0b949c08c21185da9d40e36`
+- Worker: `f54d495a-25c9-42a5-9336-f634b23c92d6`
+- rollback Worker: `2a4ca063-32e4-4efa-92fb-3f775fdbf753`
+- deployment: `22ce9653-1c03-48fc-859d-5b98e58b2157`
 - migration 0009: **APPLIED**
 - critical public assets: **CURRENT**
+- approved #154/#156 navigation + single sun/moon theme toggle live on PROD: **PASS**
+- public health/auth-config minimal contracts: **PASS**
 - public fail-closed smoke: **PASS**
 - Identity live-readonly: **PASS**
 
 DEV:
-- Worker `hara-commander-dev-v2`: `b46fd897-8a7e-4093-b588-deff5008366e`
-- rollback: `38366557-1ffb-4eeb-a489-eeb4ec1d0891`
-- deployed source: `8d7bf9eacf855b8c288619ad17875a245433ef73`
+- Worker `hara-commander-dev-v2`: `442691d0-a862-4e9f-b1fe-69eb98ce66e8`
+- rollback: `b46fd897-8a7e-4093-b588-deff5008366e`
+- deployed source: `b598fab38cb2482aa0b949c08c21185da9d40e36`
 - health: **DEV / REMOTE_DEV / HARA Identity configured**
 - bootstrap public assets: byte-equal to canonical source in latest readback
 - versioned DEV config: `apps/commander/wrangler.dev.jsonc`
@@ -116,7 +118,7 @@ Closed:
 - mobile support access preserved
 - pairing expiry/copy state hardened
 - offline device is visually distinguishable from online/no-selection
-- operator-approved workspace navigation from #154 is canonical: single H.A.R.A. Labs Commander brand in the header, no duplicate sidebar brand, no center Produto/H.A.R.A. Labs navigation, no theme control in the header, Suporte inside the sidebar, top-right account + Sair, custom SVG menu icons and hover/active motion
+- operator-approved workspace navigation from #154/#156 is canonical: single H.A.R.A. Labs Commander brand in the header, no duplicate sidebar brand, no center Produto/H.A.R.A. Labs navigation, one light/dark sun-moon theme toggle in the top-right header, Suporte inside the sidebar, top-right account + Sair, custom SVG menu icons and hover/active motion
 
 ### Agent / device security
 
@@ -269,7 +271,7 @@ Latest structural PROD posture:
 - retention-eligible portal sessions = 0
 - device count remains zero until first real pairing
 
-## 7. Recent delivery map — #91 to #154
+## 7. Recent delivery map — #91 to #156
 
 Key progression after the original promotion/UI cleanup:
 
@@ -319,7 +321,9 @@ Key progression after the original promotion/UI cleanup:
 - #151 — canonical kit/successor guide synchronized through #150
 - #152 — public `/api/portal/auth-config` minimized to `{configured}`; provider/client-auth fingerprinting removed; DEV promoted to Worker `38366557-1ffb-4eeb-a489-eeb4ec1d0891`, rollback `a60a3408-4358-429a-af9a-0b1c406882b0`
 - #153 — canonical kit/successor guide synchronized through #152
-- #154 — operator-approved workspace navigation/layout: header brand only, support moved into sidebar, duplicate sidebar brand/logout removed, custom SVG navigation icons + hover/active motion; DEV promoted to Worker `b46fd897-8a7e-4093-b588-deff5008366e`, rollback `38366557-1ffb-4eeb-a489-eeb4ec1d0891`
+- #154 — operator-approved workspace navigation/layout: header brand only, support moved into sidebar, duplicate sidebar brand/logout removed, custom SVG navigation icons + hover/active motion; DEV promoted to Worker `b46fd897-8a7e-4093-b588-deff5008366e`
+- #155 — canonical kit/successor guide synchronized after the approved layout rollout
+- #156 — restored the operator-requested single sun/moon theme toggle while preserving the approved navigation; DEV promoted to Worker `442691d0-a862-4e9f-b1fe-69eb98ce66e8`; PROD promoted to Worker `f54d495a-25c9-42a5-9336-f634b23c92d6`, rollback `2a4ca063-32e4-4efa-92fb-3f775fdbf753`
 
 For the earlier #64–#90 history, use the canonical successor guide.
 
@@ -366,7 +370,7 @@ Astra should focus on UX/information architecture, not backend security:
    - `Sair` is canonical in the top-right session controls
    - `Suporte` is canonical inside the sidebar menu
    - H.A.R.A. Labs Commander brand appears only in the top-left header and opens the H.A.R.A. Labs site
-   - do not reintroduce center product links, header theme control or duplicate sidebar branding
+   - do not reintroduce center product links or duplicate sidebar branding; the single sun/moon theme toggle restored by #156 is canonical
 
 2. Pairing onboarding UX:
    - pairing token is OS-independent
