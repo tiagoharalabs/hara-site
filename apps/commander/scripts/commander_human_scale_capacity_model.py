@@ -12,6 +12,8 @@ NEW_SESSION_TOUCH_SECONDS = 30 * 60
 OLD_LOGIN_RETENTION_OPS = 2
 NEW_LOGIN_RETENTION_OPS = 0
 OIDC_PUBLIC_CACHE_TTL_SECONDS = 5 * 60
+PORTAL_DASHBOARD_CACHE_SECONDS = 30
+PORTAL_DEVICES_CACHE_SECONDS = 15
 DASHBOARD_INITIAL_SESSION_READS_BEFORE = 3
 DASHBOARD_INITIAL_SESSION_READS_AFTER = 1
 
@@ -32,6 +34,9 @@ class Scenario:
     dashboard_initial_session_reads_before: int
     dashboard_initial_session_reads_after: int
     dashboard_initial_session_read_reduction_percent: float
+    passive_dashboard_refreshes_per_minute_cap: float
+    passive_devices_refreshes_per_minute_cap: float
+    passive_combined_refreshes_per_minute_cap: float
 
 
 def scenario(registered_users: int) -> Scenario:
@@ -58,6 +63,12 @@ def scenario(registered_users: int) -> Scenario:
         dashboard_initial_session_read_reduction_percent=100 * (
             1 - DASHBOARD_INITIAL_SESSION_READS_AFTER / DASHBOARD_INITIAL_SESSION_READS_BEFORE
         ),
+        passive_dashboard_refreshes_per_minute_cap=60 / PORTAL_DASHBOARD_CACHE_SECONDS,
+        passive_devices_refreshes_per_minute_cap=60 / PORTAL_DEVICES_CACHE_SECONDS,
+        passive_combined_refreshes_per_minute_cap=(
+            60 / PORTAL_DASHBOARD_CACHE_SECONDS
+            + 60 / PORTAL_DEVICES_CACHE_SECONDS
+        ),
     )
 
 
@@ -74,6 +85,9 @@ def validate(rows):
     assert tenk.dashboard_initial_session_reads_before == 3
     assert tenk.dashboard_initial_session_reads_after == 1
     assert round(tenk.dashboard_initial_session_read_reduction_percent, 1) == 66.7
+    assert tenk.passive_dashboard_refreshes_per_minute_cap == 2
+    assert tenk.passive_devices_refreshes_per_minute_cap == 4
+    assert tenk.passive_combined_refreshes_per_minute_cap == 6
 
 
 def main():
