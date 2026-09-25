@@ -42,7 +42,7 @@ auth_config_block = WORKER.split('if (url.pathname === "/api/portal/auth-config"
 need('return json({ configured: authStatus(env).configured });' in auth_config_block and 'provider:' not in auth_config_block and 'client_auth:' not in auth_config_block, "PUBLIC_AUTH_CONFIG_MINIMIZED")
 need('DEV_ENDPOINT_DISABLED: 404' in WORKER, "DEV_DISABLED_STATUS")
 need("auth-bootstrap-pending" in HTML, "AUTH_FIRST_PAINT")
-need("styles.css?v=20260925-devicesux1" in HTML, "STYLE_CACHE_KEY")
+need("styles.css?v=20260925-polish1" in HTML, "STYLE_CACHE_KEY")
 need("app.js?v=20260925-devicesux1" in HTML, "SCRIPT_CACHE_KEY")
 need('const apiBase = localHost' in JS and ': location.origin;' in JS, "PROD_API_OVERRIDE_BLOCKED")
 need('const scenario = localHost' in JS, "PROD_SCENARIO_OVERRIDE_BLOCKED")
@@ -75,6 +75,21 @@ need(
     and ".devices-section-tabs" in CSS
     and ".devices-panel-compact" in CSS,
     "DEVICE_WORKSPACE_INFORMATION_ARCHITECTURE",
+)
+need(
+    '<span class="eyebrow"><i></i> USO</span>' not in HTML
+    and '<span class="eyebrow"><i></i> PLANO</span>' not in HTML
+    and '<span class="eyebrow"><i></i> INTEGRAÇÕES</span>' not in HTML
+    and '<span class="eyebrow"><i></i> SEGURANÇA</span>' not in HTML
+    and '<h1 id="plans-title">Plano</h1>' in HTML
+    and '<h1 id="usage-title">Uso e limites</h1>' in HTML,
+    "WORKSPACE_SINGLE_TITLE_HIERARCHY",
+)
+need(
+    "UX polish: single page title, larger useful content, restrained glow" in CSS
+    and "font-size:24px" in CSS
+    and "box-shadow:0 2px 7px rgba(218,156,19,.07)" in CSS,
+    "WORKSPACE_TYPOGRAPHY_AND_LOW_GLOW",
 )
 need(
     "UX Wave 3 — compact computers workspace and readable navigation" in CSS

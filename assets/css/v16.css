@@ -493,3 +493,48 @@ html[data-theme="dark"] .skip-link{background:#eaf6fc;color:#061b2b}
   .trust-control-grid h3{font-size:.94rem}
   .support-card h3{font-size:1.02rem}
 }
+
+
+/* Visual restraint: solid enterprise controls, minimal persistent glow */
+.button,
+.nav-cta,
+.gold-btn,
+.dark-btn{
+  box-shadow:0 2px 8px rgba(8,44,74,.06);
+}
+.button.primary{
+  box-shadow:0 2px 8px rgba(51,150,205,.08);
+}
+.gold-btn{
+  box-shadow:0 2px 8px rgba(233,177,40,.07);
+}
+.nav-cta{
+  box-shadow:0 2px 8px rgba(8,44,74,.07);
+}
+@media (hover:hover){
+  .button:hover,
+  .nav-cta:hover,
+  .gold-btn:hover,
+  .dark-btn:hover{
+    box-shadow:0 4px 10px rgba(8,44,74,.08);
+  }
+  .button.primary:hover{
+    box-shadow:0 4px 10px rgba(51,150,205,.09);
+  }
+  .gold-btn:hover{
+    box-shadow:0 4px 10px rgba(233,177,40,.08);
+  }
+}
+.button:focus-visible,
+.nav-cta:focus-visible,
+.theme-toggle:focus-visible{
+  outline:2px solid #5aaed8;
+  outline-offset:3px;
+  box-shadow:none;
+}
+html[data-theme="dark"] .button,
+html[data-theme="dark"] .nav-cta,
+html[data-theme="dark"] .gold-btn,
+html[data-theme="dark"] .dark-btn{
+  box-shadow:0 2px 8px rgba(0,0,0,.12);
+}
