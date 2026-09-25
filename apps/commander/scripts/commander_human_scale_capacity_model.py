@@ -12,6 +12,8 @@ NEW_SESSION_TOUCH_SECONDS = 30 * 60
 OLD_LOGIN_RETENTION_OPS = 2
 NEW_LOGIN_RETENTION_OPS = 0
 OIDC_PUBLIC_CACHE_TTL_SECONDS = 5 * 60
+DASHBOARD_INITIAL_SESSION_READS_BEFORE = 3
+DASHBOARD_INITIAL_SESSION_READS_AFTER = 1
 
 
 @dataclass(frozen=True)
@@ -27,6 +29,9 @@ class Scenario:
     old_login_retention_ops_per_second: int
     new_login_retention_ops_per_second: int
     oidc_origin_fetch_pattern: str
+    dashboard_initial_session_reads_before: int
+    dashboard_initial_session_reads_after: int
+    dashboard_initial_session_read_reduction_percent: float
 
 
 def scenario(registered_users: int) -> Scenario:
@@ -48,6 +53,11 @@ def scenario(registered_users: int) -> Scenario:
         old_login_retention_ops_per_second=login_burst * OLD_LOGIN_RETENTION_OPS,
         new_login_retention_ops_per_second=login_burst * NEW_LOGIN_RETENTION_OPS,
         oidc_origin_fetch_pattern="cache-miss-bounded-not-login-linear",
+        dashboard_initial_session_reads_before=DASHBOARD_INITIAL_SESSION_READS_BEFORE,
+        dashboard_initial_session_reads_after=DASHBOARD_INITIAL_SESSION_READS_AFTER,
+        dashboard_initial_session_read_reduction_percent=100 * (
+            1 - DASHBOARD_INITIAL_SESSION_READS_AFTER / DASHBOARD_INITIAL_SESSION_READS_BEFORE
+        ),
     )
 
 
@@ -61,6 +71,9 @@ def validate(rows):
     assert tenk.old_login_retention_ops_per_second == 200
     assert tenk.new_login_retention_ops_per_second == 0
     assert OIDC_PUBLIC_CACHE_TTL_SECONDS == 300
+    assert tenk.dashboard_initial_session_reads_before == 3
+    assert tenk.dashboard_initial_session_reads_after == 1
+    assert round(tenk.dashboard_initial_session_read_reduction_percent, 1) == 66.7
 
 
 def main():
