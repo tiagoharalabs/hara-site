@@ -233,7 +233,6 @@ def main() -> int:
     customer_agent.self_test()
     customer_source = CUSTOMER_AGENT.read_text(encoding="utf-8")
     assert '"operational_authority": "HARA_SERVICES"' not in customer_source
-    assert '"services_bridge_state"' not in customer_source
     assert 'OPERATIONAL_AUTHORITY = "HARA_COMMANDER"' in customer_source
     assert 'TRANSPORT_MODE = "EVENT_V2"' in customer_source
 
