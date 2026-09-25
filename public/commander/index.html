@@ -7,6 +7,7 @@
 <script>
 (()=>{try{const saved=localStorage.getItem("hara-theme");const theme=saved||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.dataset.theme=theme;document.documentElement.style.colorScheme=theme;const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=theme==="dark"?"#061721":"#eef8fd"}catch(e){}})();
 </script>
+<script>(()=>{try{document.documentElement.dataset.neon=localStorage.getItem("hara-neon")==="on"?"on":"off"}catch(e){document.documentElement.dataset.neon="off"}})();</script>
 <meta name="description" content="H.A.R.A Commander. IA que age. Controle que continua seu. Em breve.">
 <title>H.A.R.A Commander | H.A.R.A Labs</title>
 <link rel="canonical" href="https://www.haralabs.com.br/commander/">
@@ -30,7 +31,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/css/styles.css?v=14">
 <link rel="stylesheet" href="/assets/css/v14.css?v=15.1">
-<link rel="stylesheet" href="/assets/css/v16.css?v=16.3.5">
+<link rel="stylesheet" href="/assets/css/v16.css?v=16.3.6">
 </head><body><a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
 <header class="site-header" id="top">
   <div class="nav-shell">
@@ -44,6 +45,7 @@
   <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 15.2A8.5 8.5 0 0 1 8.8 4 8.5 8.5 0 1 0 20 15.2Z"/></svg>
   <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.5"/><path d="M12 2v2.2M12 19.8V22M4.93 4.93l1.56 1.56M17.51 17.51l1.56 1.56M2 12h2.2M19.8 12H22M4.93 19.07l1.56-1.56M17.51 6.49l1.56-1.56"/></svg>
 </button>
+    <button class="neon-toggle" type="button" aria-label="Ativar Neon" aria-pressed="false" title="Neon OFF"><span class="neon-dot" aria-hidden="true"></span><span class="neon-label">Neon</span></button>
     <button class="menu-button" aria-label="Abrir menu" aria-expanded="false"><span></span><span></span></button>
   </div>
   <div class="mobile-menu" aria-hidden="true"><a href="/solucoes/">Soluções</a><a href="/arquitetura/">Arquitetura</a><a href="/seguranca/">Segurança</a><a href="/produtos/" aria-current="page">Produtos</a><a href="/empresa/">Empresa</a><a href="/contato/">Contato</a></div>
@@ -97,5 +99,5 @@
   </div>
   <div class="page-shell footer-bottom"><span>© 2026 H.A.R.A Labs. Todos os direitos reservados.</span><span>Documentação institucional pública.</span></div>
 </footer>
-<script src="/assets/js/script.js?v=14"></script>
+<script src="/assets/js/script.js?v=15"></script>
 </body></html>
