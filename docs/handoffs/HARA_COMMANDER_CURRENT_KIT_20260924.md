@@ -1,8 +1,11 @@
 # H.A.R.A. Commander — Current Kit — 2026-09-24
 
-Status: **PROD PROMOTED / RUNTIME CONVERGED / AGENT 0.3.7 / FIRST DEVICE READY FOR OPERATOR / HUMAN HOMOLOGATION PENDING**
+Status: **DEV FRONT CLOSED / PROD LIVE / AGENT 0.3.7 / TEST HOMOLOGATION NEXT / FIRST DEVICE READY BUT NOT YET PAIRED**
 
 This file is the compact operational entrypoint for the current Commander state.
+
+Current transition authority:
+- `docs/handoffs/HARA_COMMANDER_DEV_TO_TEST_HANDOFF_20260925.md`
 
 Full historical authority:
 - `docs/handoffs/HARA_COMMANDER_SUCCESSOR_HANDOFF_20260923.md`
@@ -245,7 +248,7 @@ python3 apps/commander/scripts/validate_preprod_readiness.py \
   --live-readonly \
   --expect-prod-migration applied \
   --expect-prod-assets current \
-  --expect-prod-worker-version 093ceec9-cacb-4f8b-ba23-bbfc85f7e1aa
+  --expect-prod-worker-version e7e7cc1f-2867-4066-a4b8-e29ed2056ee4
 ```
 
 Expected high-level state:
@@ -261,7 +264,7 @@ COMMANDER_PROD_SESSION_RETENTION_WINDOW_DAYS=30
 COMMANDER_PROD_SESSION_RETENTION_ELIGIBLE=0
 COMMANDER_PROD_RUNTIME_ASSETS=CURRENT
 COMMANDER_PROD_WORKER_DEPLOYMENT=PROVEN
-COMMANDER_PROD_WORKER_VERSION=093ceec9-cacb-4f8b-ba23-bbfc85f7e1aa
+COMMANDER_PROD_WORKER_VERSION=e7e7cc1f-2867-4066-a4b8-e29ed2056ee4
 COMMANDER_HUMAN_HOMOLOGATION=PENDING_OPERATOR_GATE
 COMMANDER_FIRST_DEVICE_E2E=PENDING_HOMOLOGATION
 ```
@@ -274,7 +277,7 @@ Latest structural PROD posture:
 - retention-eligible portal sessions = 0
 - device count remains zero until first real pairing
 
-## 7. Recent delivery map — #91 to #160
+## 7. Recent delivery map — #91 to #161
 
 Key progression after the original promotion/UI cleanup:
 
@@ -330,10 +333,15 @@ Key progression after the original promotion/UI cleanup:
 - #158 — dashboard/device onboarding Wave 2A: quota progress, Trial status treatment, selected/online/offline device hierarchy and one guided Linux/Windows pairing flow
 - #159 — UX Wave 2B: honest Connections readiness, accessibility/focus/keyboard, mobile bottom navigation and loading/empty-state polish
 - #160 — real-browser viewport correction: Mais hard-hidden on desktop and primary mobile navigation hard-visible; final DEV Worker `cd641a3b-bd82-4694-93f0-f846a3acee41`; PROD Worker `e7e7cc1f-2867-4066-a4b8-e29ed2056ee4`, rollback `f54d495a-25c9-42a5-9336-f634b23c92d6`
+- #161 — canonical docs synchronized after UX Wave 2 PROD rollout; no runtime mutation
 
 For the earlier #64–#90 history, use the canonical successor guide.
 
-## 8. Remaining work — by owner
+## 8. Remaining work — dedicated TEST/HOMOLOGATION front
+
+The development/UX front is **CLOSED**. Do not start another polish wave before the real campaign unless a test exposes a concrete defect.
+
+Canonical transition handoff: `docs/handoffs/HARA_COMMANDER_DEV_TO_TEST_HANDOFF_20260925.md`.
 
 ### Operator / human gate
 
@@ -429,13 +437,13 @@ Do not:
 - infer DEV binding/config from PROD
 - weaken pairing supersession, receipt binding or quota terminal-state semantics
 
-## 11. Handoff order for the next front
+## 11. Handoff order for the TEST front
 
 Read in this order:
 1. this kit
-2. `docs/handoffs/HARA_COMMANDER_SUCCESSOR_HANDOFF_20260923.md`
-3. newest issue #65 comments
-4. current `main`
-5. only then open a new branch
+2. `docs/handoffs/HARA_COMMANDER_DEV_TO_TEST_HANDOFF_20260925.md`
+3. `docs/handoffs/HARA_COMMANDER_SUCCESSOR_HANDOFF_20260923.md`
+4. issue #65 current body + newest comments
+5. current `main`
 
-If Astra is activated, use the ownership split in section 8 and coordinate through issue #65 before editing overlapping UI files.
+The next front owns PROD human homologation and first-device E2E. It should not perform feature work unless testing exposes a concrete defect. Coordinate all findings through issue #65.
