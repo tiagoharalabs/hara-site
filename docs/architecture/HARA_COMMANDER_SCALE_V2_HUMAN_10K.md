@@ -49,7 +49,29 @@ A device MUST NOT perform human OIDC login. Cloudflare Access MUST NOT become th
 
 This remains acceptable as an initial architecture target, but it is now explicitly measured. If measured load approaches the single-database budget, the next step is a session-plane abstraction or read scaling; not ad-hoc query duplication.
 
-### 2. Non-authoritative session liveness writes
+### 2. Repeated session resolution on initial dashboard
+
+Before the second #167 package, a normal authenticated dashboard entry performed separate `session`, `dashboard` and `devices` requests. Each path independently resolved the same portal session.
+
+The optimized remote dashboard bootstrap now performs one authenticated request:
+
+```text
+GET /api/portal/bootstrap
+  -> resolve session once
+  -> dashboard data
+  -> device list
+```
+
+The old split endpoints remain available for targeted refresh and as a browser fallback. Session expiry and revocation are still checked against D1 on the bootstrap request.
+
+```text
+initial dashboard session resolutions
+before=3
+after=1
+reduction=66.7%
+```
+
+### 3. Non-authoritative session liveness writes
 
 Before #167, each active session could update `last_seen_at_utc` every 5 minutes. This field does not control the fixed 8h session expiry and does not control revocation.
 
@@ -64,7 +86,7 @@ reduction: ~83.3%
 
 Expiry and revocation semantics are unchanged.
 
-### 3. Retention cleanup in login hot path
+### 4. Retention cleanup in login hot path
 
 Before #167, every login start ran:
 - expired OIDC transaction cleanup;
@@ -74,7 +96,7 @@ At a synthetic 100 login/s burst, that could add up to 200 maintenance operation
 
 #167 moves this best-effort hygiene to an hourly Worker scheduled event. Retention remains bounded in batches of 100; authorization never depended on cleanup succeeding.
 
-### 4. OIDC discovery/JWKS origin amplification
+### 5. OIDC discovery/JWKS origin amplification
 
 Before #167:
 - login start fetched OIDC discovery;
@@ -87,7 +109,7 @@ This scaled origin traffic roughly with login attempts.
 
 The cache is an accelerator only; issuer, endpoint, algorithm, audience, nonce, expiry and signature checks remain authoritative.
 
-### 5. TenantQuota hot-tenant boundary
+### 6. TenantQuota hot-tenant boundary
 
 Quota is currently one Durable Object per tenant. This scales horizontally across many tenants, but a single very large tenant can become a per-object hotspot.
 
@@ -102,7 +124,7 @@ Do not shard quota pre-emptively. Before a redesign, measure at least:
 
 If one-tenant saturation is demonstrated, introduce a governed quota-shard contract while preserving idempotency and total tenant quota authority.
 
-### 6. PRODUCT_DB decomposition seam
+### 7. PRODUCT_DB decomposition seam
 
 The current D1 database contains product identity, sessions, devices and calls. For the 10k target, premature physical sharding is not required, but code and migrations must not assume that a single database is the permanent architecture.
 
