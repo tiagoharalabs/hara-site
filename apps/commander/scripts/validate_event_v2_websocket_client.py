@@ -147,9 +147,9 @@ def main() -> int:
     assert policy.delay(0, 0.0) == 0.0
     assert policy.delay(0, 0.5) == 0.5
     assert policy.delay(1, 0.5) == 1.0
-    assert policy.delay(5, 0.5) == 16.0
-    assert policy.delay(6, 0.5) == 30.0
-    assert 59.0 < policy.delay(20, 0.999) < 60.0
+    assert policy.delay(5, 0.5) == 7.5
+    assert policy.delay(6, 0.5) == 7.5
+    assert 14.9 < policy.delay(20, 0.999) < 15.0
     expect_code(
         lambda: policy.delay(-1, 0.5),
         "EVENT_V2_RECONNECT_ATTEMPT_INVALID",
@@ -239,7 +239,7 @@ def main() -> int:
     print("COMMANDER_EVENT_V2_SERVER_FRAME_BOUNDS=PASS")
     print("COMMANDER_EVENT_V2_CLIENT_SECRET_ECHO=ABSENT")
     print("COMMANDER_EVENT_V2_RECONNECT_FULL_JITTER=PASS")
-    print("COMMANDER_EVENT_V2_RECONNECT_MAX_SECONDS=60")
+    print("COMMANDER_EVENT_V2_RECONNECT_MAX_SECONDS=15")
     print("COMMANDER_EVENT_V2_PROTOCOL_KEEPALIVE_IDLE_SECONDS=60")
     print("COMMANDER_EVENT_V2_APPLICATION_HEARTBEAT_ON_IDLE=ABSENT")
     print("COMMANDER_EVENT_V2_WAKE_EVENT_FIELDS=BOUNDED")
