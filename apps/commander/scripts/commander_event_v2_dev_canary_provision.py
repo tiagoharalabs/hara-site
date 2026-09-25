@@ -17,6 +17,7 @@ host and SSH access to the HARA-owned canary host.
 from __future__ import annotations
 
 import argparse
+import ast
 import hashlib
 import json
 import os
@@ -304,13 +305,15 @@ def self_check() -> None:
         if not (ROOT / path).is_file():
             raise fail("CANARY_SOURCE_MISSING:" + path)
     source = Path(__file__).read_text(encoding="utf-8")
-    forbidden_prints = (
-        "print(pairing_token",
-        "print(device_token",
-        "print(config)",
-    )
-    if any(marker in source for marker in forbidden_prints):
-        raise fail("CANARY_SECRET_PRINT_SURFACE")
+    tree = ast.parse(source)
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        if not isinstance(node.func, ast.Name) or node.func.id != "print":
+            continue
+        rendered = " ".join(ast.dump(arg) for arg in node.args)
+        if any(name in rendered for name in ("pairing_token", "device_token", "config")):
+            raise fail("CANARY_SECRET_PRINT_SURFACE")
     if "rm -rf" in source:
         raise fail("CANARY_GENERIC_DELETE_DENIED")
     print("COMMANDER_EVENT_V2_DEV_CANARY_PROVISION_SOURCE=PASS")
