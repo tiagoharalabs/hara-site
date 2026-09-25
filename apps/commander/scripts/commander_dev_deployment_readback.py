@@ -177,6 +177,13 @@ def main():
     if quota.get("type") != "durable_object_namespace" or quota.get("class_name") != "TenantQuota":
         raise RuntimeError("DEV_QUOTA_BINDING_DRIFT")
 
+    device_channel = by_name.get("DEVICE_CHANNEL") or {}
+    if (
+        device_channel.get("type") != "durable_object_namespace"
+        or device_channel.get("class_name") != "DeviceChannel"
+    ):
+        raise RuntimeError("DEV_DEVICE_CHANNEL_BINDING_DRIFT")
+
     secret_names = {
         item.get("name")
         for item in bindings
@@ -209,6 +216,8 @@ def main():
     print("COMMANDER_DEV_CONFIG_LIVE=PASS")
     print("COMMANDER_DEV_D1_LIVE=DEV_ONLY")
     print("COMMANDER_DEV_SECRETS_LIVE=PASS")
+    print("COMMANDER_DEV_DEVICE_CHANNEL_LIVE=PASS")
+    print("COMMANDER_DEV_EVENT_V2_CANARY=ENABLED")
     print("COMMANDER_DEV_HEALTH=PASS")
     print("COMMANDER_DEV_LOGIN_REDIRECT_LIVE=PASS")
     print("COMMANDER_DEV_LOGIN_PKCE_LIVE=S256")
