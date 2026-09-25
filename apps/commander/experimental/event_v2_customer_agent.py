@@ -104,6 +104,29 @@ def read_receipt(identifier):
     return BASELINE.read_receipt(identifier)
 
 
+def device_info(config):
+    return {
+        **BASELINE.device_info(config),
+        "tunnel_mode": TRANSPORT_MODE,
+    }
+
+
+def invoke(config, function_id, arguments):
+    if function_id != BASELINE.FUNCTION_ID:
+        raise ValueError("UNKNOWN_FUNCTION_ID")
+    argv = arguments.get("argv") if isinstance(arguments, dict) else None
+    if argv != []:
+        raise ValueError("FUNCTION_ARGUMENTS_DENIED")
+    result = device_info(config)
+    return {
+        "function_id": BASELINE.FUNCTION_ID,
+        "risk_class": "READ_ONLY",
+        "process_exit_code": 0,
+        "stdout": json.dumps(result, sort_keys=True, separators=(",", ":")),
+        "domain_success_inferred": False,
+    }
+
+
 def _response(result, blocker=None, receipt_sha=None):
     payload = {
         "state": "PASS" if blocker is None else "DENIED",
@@ -129,10 +152,7 @@ def execute_tool(config, call):
             "registered_function_count": 1,
             "executable_function_count": 1,
             "authority": OPERATIONAL_AUTHORITY,
-            "device": {
-                **BASELINE.device_info(config),
-                "tunnel_mode": TRANSPORT_MODE,
-            },
+            "device": device_info(config),
         }
     elif tool == "hara.functions.list":
         if payload:
@@ -141,7 +161,7 @@ def execute_tool(config, call):
     elif tool == "hara.functions.describe":
         result = BASELINE.describe(str(payload.get("function_id") or ""))
     elif tool == "hara.functions.invoke":
-        result = BASELINE.invoke(
+        result = invoke(
             config,
             str(payload.get("function_id") or ""),
             payload.get("arguments") or {},
@@ -220,6 +240,8 @@ def self_test():
                     },
                 },
             )
+            stdout_obj = json.loads(invoke_result["result"]["stdout"])
+            assert stdout_obj["tunnel_mode"] == TRANSPORT_MODE
             receipt = BASELINE.read_receipt(
                 invoke_result["bridge_receipt_sha256"]
             )
