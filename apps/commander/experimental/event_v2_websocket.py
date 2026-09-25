@@ -30,6 +30,10 @@ from urllib.parse import urlsplit
 WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 MAX_HEADER_BYTES = 16 * 1024
 MAX_EVENT_BYTES = 4 * 1024
+KEEPALIVE_IDLE_SECONDS = 60.0
+RECONNECT_BASE_SECONDS = 1.0
+RECONNECT_MAX_SECONDS = 60.0
+MAX_CONTROL_PAYLOAD_BYTES = 125
 
 
 class EventV2Error(RuntimeError):
@@ -142,6 +146,20 @@ class ServerFrame:
     consumed: int
 
 
+@dataclass(frozen=True)
+class ReconnectPolicy:
+    base_seconds: float = RECONNECT_BASE_SECONDS
+    max_seconds: float = RECONNECT_MAX_SECONDS
+
+    def delay(self, attempt: int, random_unit: float) -> float:
+        if attempt < 0:
+            raise fail("EVENT_V2_RECONNECT_ATTEMPT_INVALID")
+        if not 0.0 <= random_unit < 1.0:
+            raise fail("EVENT_V2_RECONNECT_RANDOM_INVALID")
+        cap = min(self.max_seconds, self.base_seconds * (2 ** attempt))
+        return random_unit * cap
+
+
 def decode_server_frame(raw: bytes, max_bytes: int = MAX_EVENT_BYTES) -> ServerFrame:
     if len(raw) < 2:
         raise fail("EVENT_V2_FRAME_INCOMPLETE")
@@ -248,8 +266,50 @@ def send_text(sock: socket.socket, text: str) -> None:
     sock.sendall(encode_client_frame(0x1, payload))
 
 
+def send_ping(sock: socket.socket, payload: bytes = b"") -> None:
+    payload = bytes(payload)
+    if len(payload) > MAX_CONTROL_PAYLOAD_BYTES:
+        raise fail("EVENT_V2_CONTROL_PAYLOAD_TOO_LARGE")
+    sock.sendall(encode_client_frame(0x9, payload))
+
+
 def send_pong(sock: socket.socket, payload: bytes) -> None:
+    payload = bytes(payload)
+    if len(payload) > MAX_CONTROL_PAYLOAD_BYTES:
+        raise fail("EVENT_V2_CONTROL_PAYLOAD_TOO_LARGE")
     sock.sendall(encode_client_frame(0xA, payload))
+
+
+def recv_event_or_keepalive(
+    sock: socket.socket,
+    idle_seconds: float = KEEPALIVE_IDLE_SECONDS,
+) -> ServerFrame | None:
+    if idle_seconds <= 0:
+        raise fail("EVENT_V2_KEEPALIVE_INTERVAL_INVALID")
+
+    prior_timeout = sock.gettimeout()
+    try:
+        sock.settimeout(idle_seconds)
+        try:
+            frame = recv_server_frame(sock)
+        except socket.timeout:
+            # Protocol PING is transport keepalive only. Cloudflare's
+            # hibernation runtime answers incoming protocol PING with PONG
+            # without invoking the Durable Object message handler.
+            send_ping(sock)
+            return None
+
+        if frame.opcode == 0x9:
+            # Standards-compliant fallback for servers/proxies that send PING.
+            send_pong(sock, frame.payload)
+            return None
+        if frame.opcode == 0xA:
+            return None
+        if frame.opcode == 0x8:
+            raise fail("EVENT_V2_SERVER_CLOSED")
+        return frame
+    finally:
+        sock.settimeout(prior_timeout)
 
 
 def close_socket(sock: socket.socket, code: int = 1000) -> None:
