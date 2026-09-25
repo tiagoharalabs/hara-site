@@ -8,11 +8,11 @@
 (()=>{try{const saved=localStorage.getItem("hara-theme");const theme=saved||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.dataset.theme=theme;document.documentElement.style.colorScheme=theme;const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=theme==="dark"?"#061721":"#eef8fd"}catch(e){}})();
 </script>
 <meta name="description" content="Observabilidade pública e sanitizada da plataforma H.A.R.A Labs.">
-<title>Observabilidade — H.A.R.A Labs</title>
+<title>Observabilidade | H.A.R.A Labs</title>
 <link rel="canonical" href="https://www.haralabs.com.br/observabilidade/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="H.A.R.A Labs">
-<meta property="og:title" content="Observabilidade — H.A.R.A Labs">
+<meta property="og:title" content="Observabilidade | H.A.R.A Labs">
 <meta property="og:description" content="Visão pública e sanitizada do estado operacional da plataforma H.A.R.A.">
 <meta property="og:url" content="https://www.haralabs.com.br/observabilidade/">
 <meta property="og:image" content="https://www.haralabs.com.br/assets/images/hero-ia-realidade-sep.png">
@@ -20,8 +20,8 @@
 <meta property="og:locale" content="pt_BR">
 <meta property="og:image:width" content="1672">
 <meta property="og:image:height" content="941">
-<meta property="og:image:alt" content="H.A.R.A Labs — infraestrutura corporativa de IA">
-<meta name="twitter:title" content="Observabilidade — H.A.R.A Labs">
+<meta property="og:image:alt" content="H.A.R.A Labs | infraestrutura corporativa de IA">
+<meta name="twitter:title" content="Observabilidade | H.A.R.A Labs">
 <meta name="twitter:description" content="Visão pública e sanitizada do estado operacional da plataforma H.A.R.A.">
 <meta name="twitter:image" content="https://www.haralabs.com.br/assets/images/hero-ia-realidade-sep.png">
 <link rel="icon" href="/assets/images/hara-logo-web.webp" type="image/webp">
@@ -30,7 +30,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/css/styles.css?v=14">
 <link rel="stylesheet" href="/assets/css/v14.css?v=15.1">
-<link rel="stylesheet" href="/assets/css/v16.css?v=16.3.2">
+<link rel="stylesheet" href="/assets/css/v16.css?v=16.3.3">
 <link rel="stylesheet" href="./styles.css?v=15.3">
 </head>
 <body>
@@ -38,7 +38,7 @@
 
 <header class="site-header" id="top">
   <div class="nav-shell">
-    <a class="brand" href="/" aria-label="H.A.R.A Labs — início">
+    <a class="brand" href="/" aria-label="H.A.R.A Labs, início">
       <img decoding="async" src="/assets/images/hara-logo-web.webp" alt="" class="brand-logo">
       <span class="brand-word">H.A.R.A <b>Labs</b></span>
     </a>
@@ -74,8 +74,8 @@
         <h1>Estado operacional público.</h1>
         <p>Visão sanitizada da saúde da plataforma H.A.R.A. Os dados publicados são agregados e não expõem endereços privados, endpoints internos ou a superfície bruta de telemetria.</p>
         <div class="obs-meta">
-          <span>Atualização <strong id="generatedAt">—</strong></span>
-          <span>Frescor <strong id="freshness">—</strong></span>
+          <span>Atualização <strong id="generatedAt">…</strong></span>
+          <span>Frescor <strong id="freshness">…</strong></span>
           <button id="refreshButton" class="obs-refresh" type="button">Atualizar dados</button>
         </div>
       </div>
@@ -99,22 +99,22 @@
       <div class="summary-grid" aria-label="Resumo operacional">
         <article class="summary-card emphasis">
           <span class="label">Estado geral</span>
-          <strong id="overallState">—</strong>
+          <strong id="overallState">…</strong>
           <p id="overallMessage">Aguardando snapshot.</p>
         </article>
         <article class="summary-card">
           <span class="label">Cobertura de observação</span>
-          <strong><span id="coverageUp">—</span>/<span id="coverageTotal">—</span></strong>
+          <strong><span id="coverageUp">…</span>/<span id="coverageTotal">…</span></strong>
           <p>Alvos disponíveis na camada de observação agregada.</p>
         </article>
         <article class="summary-card">
           <span class="label">Frota observada</span>
-          <strong><span id="fleetUp">—</span>/<span id="fleetTotal">—</span></strong>
+          <strong><span id="fleetUp">…</span>/<span id="fleetTotal">…</span></strong>
           <p id="fleetDetail">Disponibilidade agregada da frota.</p>
         </article>
         <article class="summary-card">
           <span class="label">Incidentes atuais</span>
-          <strong id="incidentsCurrent">—</strong>
+          <strong id="incidentsCurrent">…</strong>
           <p id="incidentsDetail">Estado operacional corrente.</p>
         </article>
       </div>

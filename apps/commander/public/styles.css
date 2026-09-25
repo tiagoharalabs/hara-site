@@ -469,3 +469,76 @@ html[data-theme="dark"] .devices-section-tabs button.active{color:#edf8fd}
   .devices-panel-compact .device-actions{grid-column:2/4}
   .devices-section-panel .device-onboarding-flow{padding:16px}
 }
+
+
+/* UX polish: single page title, larger useful content, restrained glow */
+.workspace-head{
+  margin-bottom:20px;
+}
+.workspace-head h1,
+.devices-workspace-head h1{
+  margin:0 0 5px;
+  font-size:24px;
+  line-height:1.12;
+  letter-spacing:-.025em;
+}
+.workspace-head p,
+.devices-workspace-head p{
+  font-size:13px;
+  line-height:1.5;
+}
+.summary-card span{font-size:10px}
+.summary-card small{font-size:9px}
+.panel-head span{font-size:9px}
+.panel-head h2{font-size:16px}
+.plan-label{font-size:9px}
+.plan-card>p{font-size:11px;line-height:1.6}
+.plan-card li{font-size:10px}
+.plan-card>strong small{font-size:10px}
+.devices-panel-compact .device-copy b{font-size:13px}
+.devices-panel-compact .device-copy small{font-size:10px;line-height:1.4}
+.devices-panel-compact .device-state{font-size:9px}
+.connection-card p{font-size:11px;line-height:1.6}
+.connection-features li{font-size:10px}
+.status-line{font-size:9px}
+.quota-meta small{font-size:9px}
+.quota-meta b{font-size:11px}
+.data-table .tr{font-size:10px}
+
+.btn-primary{
+  box-shadow:0 2px 7px rgba(218,156,19,.07);
+}
+.theme-toggle,
+.top-session-user{
+  box-shadow:0 2px 7px rgba(22,78,117,.05);
+}
+.theme-toggle:hover,
+.top-session-user:hover{
+  box-shadow:0 3px 9px rgba(22,78,117,.07);
+}
+.side-nav button:hover .nav-icon,
+.side-nav-link:hover .nav-icon,
+.side-nav button.active .nav-icon{
+  filter:none;
+}
+.side-nav button.active::before{
+  box-shadow:none;
+}
+.os-picker button.active,
+.device-tabs button.active{
+  box-shadow:0 1px 4px rgba(28,78,111,.06);
+}
+.btn:focus-visible,
+.side-nav button:focus-visible,
+.side-nav-link:focus-visible,
+.theme-toggle:focus-visible,
+.top-session-user:focus-visible{
+  outline:2px solid #55acd4;
+  outline-offset:2px;
+  box-shadow:none;
+}
+html[data-theme="dark"] .btn-primary,
+html[data-theme="dark"] .theme-toggle,
+html[data-theme="dark"] .top-session-user{
+  box-shadow:0 2px 7px rgba(0,0,0,.12);
+}
