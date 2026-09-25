@@ -42,8 +42,8 @@ auth_config_block = WORKER.split('if (url.pathname === "/api/portal/auth-config"
 need('return json({ configured: authStatus(env).configured });' in auth_config_block and 'provider:' not in auth_config_block and 'client_auth:' not in auth_config_block, "PUBLIC_AUTH_CONFIG_MINIMIZED")
 need('DEV_ENDPOINT_DISABLED: 404' in WORKER, "DEV_DISABLED_STATUS")
 need("auth-bootstrap-pending" in HTML, "AUTH_FIRST_PAINT")
-need("styles.css?v=20260924-ux2a" in HTML, "STYLE_CACHE_KEY")
-need("app.js?v=20260924-ux2a" in HTML, "SCRIPT_CACHE_KEY")
+need("styles.css?v=20260924-ux2b" in HTML, "STYLE_CACHE_KEY")
+need("app.js?v=20260924-ux2b" in HTML, "SCRIPT_CACHE_KEY")
 need('const apiBase = localHost' in JS and ': location.origin;' in JS, "PROD_API_OVERRIDE_BLOCKED")
 need('const scenario = localHost' in JS, "PROD_SCENARIO_OVERRIDE_BLOCKED")
 need('appViews.has(requested) && !sessionAuthenticated' in JS, "PROTECTED_ROUTE_GUARD")
@@ -84,6 +84,38 @@ need(
     "DASHBOARD_STATUS_SUMMARY",
 )
 need("Detalhamento em homologação" in HTML and "renderActivity(" not in JS and "activityList" not in JS, "USAGE_DETAIL_HONEST_STATE")
+need(
+    'class="skip-link" href="#mainContent"' in HTML
+    and '<main id="mainContent" tabindex="-1">' in HTML
+    and ":focus-visible" in CSS
+    and 'aria-label="Sistema operacional"' in HTML
+    and '["ArrowLeft", "ArrowRight"]' in JS,
+    "ACCESSIBILITY_NAVIGATION",
+)
+need(
+    'class="connection-readiness"' in HTML
+    and HTML.count('class="integration-badge"') >= 2
+    and "Cinco ferramentas governadas" in HTML
+    and "Ainda não disponível" in HTML
+    and "Aguardando homologação do primeiro dispositivo real" in HTML,
+    "CONNECTIONS_HONEST_READINESS",
+)
+need(
+    'data-mobile-more' in HTML
+    and 'data-mobile-more-menu' in HTML
+    and "function toggleMobileMore(button)" in JS
+    and "closeMobileMoreMenus()" in JS
+    and ".workspace-mode .sidebar{position:fixed" in CSS
+    and ".mobile-more-menu:not([hidden]){display:flex}" in CSS,
+    "MOBILE_NAVIGATION",
+)
+need(
+    "function renderDeviceLoading()" in JS
+    and 'list.setAttribute("aria-busy", "true")' in JS
+    and "device-skeleton" in CSS
+    and "body.product-loading .summary-card::after" in CSS,
+    "LOADING_EMPTY_STATES",
+)
 need('payload?.code === "ENTITLEMENT_NOT_FOUND"' in JS and "Plano não disponível" in JS, "ENTITLEMENT_ERROR_SEMANTICS")
 need(JS.index("await hydrateSessionHeader()") < JS.index("route(initialRoute, false)"), "AUTH_BOOTSTRAP_ORDER")
 need(".system-banner.show{display:flex}" in CSS and ".workspace-mode .system-banner.show" not in CSS, "AUTH_BANNER_GLOBAL_VISIBILITY")
@@ -95,7 +127,8 @@ need(
     and '<a class="brand" href="https://www.haralabs.com.br/"' in HTML
     and '<div class="workspace">' not in HTML
     and "sidebar-bottom" not in HTML
-    and 'class="side-nav-link" href="https://www.haralabs.com.br/support/"' in HTML
+    and "side-nav-link" in HTML
+    and 'href="https://www.haralabs.com.br/support/"' in HTML
     and HTML.count('class="nav-icon"') >= 7
     and "<span>▦</span>" not in HTML
     and "<span>▣</span>" not in HTML,
@@ -165,6 +198,10 @@ print("COMMANDER_PROD_DEVICE_SELECTION_STATE_UX=PASS")
 print("COMMANDER_PROD_PAIRING_ONBOARDING_ORDER=PASS")
 print("COMMANDER_PROD_DASHBOARD_STATUS_SUMMARY=PASS")
 print("COMMANDER_PROD_USAGE_DETAIL_HONEST_STATE=PASS")
+print("COMMANDER_PROD_ACCESSIBILITY_NAVIGATION=PASS")
+print("COMMANDER_PROD_CONNECTIONS_HONEST_READINESS=PASS")
+print("COMMANDER_PROD_MOBILE_NAVIGATION=PASS")
+print("COMMANDER_PROD_LOADING_EMPTY_STATES=PASS")
 print("COMMANDER_PROD_ENTITLEMENT_ERROR_SEMANTICS=PASS")
 print("COMMANDER_PROD_AUTH_BOOTSTRAP_ORDER=PASS")
 print("COMMANDER_PROD_AUTH_BANNER_GLOBAL_VISIBILITY=PASS")

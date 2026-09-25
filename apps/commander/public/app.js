@@ -196,6 +196,10 @@
 
   function setLoading(active) {
     document.body.classList.toggle("product-loading", active);
+    document.querySelectorAll(".workspace-main").forEach((node) => {
+      const busy = Boolean(active && node.closest(".view.active"));
+      node.setAttribute("aria-busy", String(busy));
+    });
   }
 
   function initials(value) {
@@ -403,6 +407,20 @@
     return true;
   }
 
+  function renderDeviceLoading() {
+    const list = document.getElementById("deviceList");
+    if (!list) return;
+    list.setAttribute("aria-busy", "true");
+    list.replaceChildren();
+    for (let index = 0; index < 2; index += 1) {
+      const row = document.createElement("div");
+      row.className = "device-skeleton";
+      row.setAttribute("aria-hidden", "true");
+      row.innerHTML = '<i></i><span><b></b><small></small></span><em></em>';
+      list.append(row);
+    }
+  }
+
   async function loadDevices(trigger = null) {
     if (!remotePortal) return;
     const originalLabel = trigger?.textContent || "Atualizar";
@@ -410,6 +428,7 @@
       trigger.disabled = true;
       trigger.textContent = "Atualizando…";
     }
+    renderDeviceLoading();
     try {
       const response = await fetch("/api/portal/devices", { cache: "no-store", credentials: "same-origin" });
       if (handlePortalAuthFailure(response, "Entre novamente para consultar seus computadores.")) return;
@@ -427,6 +446,8 @@
         list.append(empty);
       }
     } finally {
+      const list = document.getElementById("deviceList");
+      if (list) list.setAttribute("aria-busy", "false");
       if (trigger?.isConnected) {
         trigger.disabled = false;
         trigger.textContent = originalLabel;
@@ -726,6 +747,26 @@
     });
   }
 
+  function closeMobileMoreMenus() {
+    document.querySelectorAll("[data-mobile-more]").forEach((button) => {
+      button.setAttribute("aria-expanded", "false");
+    });
+    document.querySelectorAll("[data-mobile-more-menu]").forEach((menu) => {
+      menu.hidden = true;
+    });
+  }
+
+  function toggleMobileMore(button) {
+    const nav = button.closest(".side-nav");
+    const menu = nav?.querySelector("[data-mobile-more-menu]");
+    if (!menu) return;
+    const opening = menu.hidden;
+    closeMobileMoreMenus();
+    menu.hidden = !opening;
+    button.setAttribute("aria-expanded", String(opening));
+    if (opening) menu.querySelector("button, a")?.focus({ preventScroll: true });
+  }
+
   function showToast(message) {
     toast.textContent = message;
     toast.classList.add("show");
@@ -753,6 +794,11 @@
       if (active) link.setAttribute("aria-current", "page");
       else link.removeAttribute("aria-current");
     });
+    const secondaryActive = ["usage", "plans", "security"].includes(next);
+    document.querySelectorAll("[data-mobile-more]").forEach((button) => {
+      button.classList.toggle("active", secondaryActive);
+    });
+    closeMobileMoreMenus();
     document.body.classList.toggle("workspace-mode", appViews.has(next));
     if (location.hash !== "#" + next) {
       if (push) history.pushState(null, "", "#" + next);
@@ -782,6 +828,14 @@
   }
 
   document.addEventListener("click", (event) => {
+    const mobileMore = event.target.closest("[data-mobile-more]");
+    if (mobileMore) {
+      event.preventDefault();
+      toggleMobileMore(mobileMore);
+      return;
+    }
+    if (!event.target.closest("[data-mobile-more-menu]")) closeMobileMoreMenus();
+
     const go = event.target.closest("[data-go]");
     if (go) {
       event.preventDefault();
@@ -877,6 +931,18 @@
       return;
     }
 
+  });
+
+  document.addEventListener("keydown", (event) => {
+    const osChoice = event.target.closest?.("[data-os-choice]");
+    if (osChoice && ["ArrowLeft", "ArrowRight"].includes(event.key)) {
+      event.preventDefault();
+      const nextOs = osChoice.dataset.osChoice === "linux" ? "windows" : "linux";
+      setInstallOs(nextOs);
+      document.querySelector('[data-os-choice="' + nextOs + '"]')?.focus();
+      return;
+    }
+    if (event.key === "Escape") closeMobileMoreMenus();
   });
 
   document.querySelectorAll("[data-auth-form]").forEach((form) => {
