@@ -55,6 +55,8 @@ def main() -> int:
     assert "tunnel_mode = 'EVENT_V2_OFFLINE'" in source
     assert "last_seen_at_utc = ?" in source
     assert 'Object.keys(payload).sort().join(",") === "schema,type"' in source
+    assert 'payload.type === "PING"' not in source
+    assert 'type: "PONG"' not in source
 
     print("COMMANDER_EVENT_V2_DEVICE_CHANNEL_SOURCE=PASS")
     print("COMMANDER_EVENT_V2_HIBERNATION=PASS")
@@ -63,6 +65,7 @@ def main() -> int:
     print("COMMANDER_EVENT_V2_CONNECT_DISCONNECT_PRESENCE=PASS")
     print("COMMANDER_EVENT_V2_LIVENESS_CONTENT_FIELDS=DENIED")
     print("COMMANDER_EVENT_V2_DO_TIMERS=ABSENT")
+    print("COMMANDER_EVENT_V2_APPLICATION_PING=DENIED")
     return 0
 
 
