@@ -12,6 +12,8 @@ import {
   DEVICE_FUNCTION_ID,
   canonicalDeviceToolPayload,
 } from "./device-tool-contract.mjs";
+import { DeviceChannel, deviceChannelName } from "./device-channel.mjs";
+export { DeviceChannel };
 
 const DEMO_TENANT = "HARA-TENANT-DEMO-0001";
 const MCP_METER_ID = "HARA_COMMANDER_GOVERNED_INVOKE";
@@ -188,6 +190,62 @@ function boundedJson(value, maxBytes, code) {
     throw new Error(code);
   }
   return text;
+}
+
+function eventV2Enabled(env) {
+  return String(env.DEVICE_EVENT_V2_ENABLED || "").trim().toLowerCase() === "true";
+}
+
+async function openDeviceEventChannel(env, request) {
+  if (!eventV2Enabled(env)) throw new Error("DEVICE_EVENT_V2_DISABLED");
+  if (!env.DEVICE_CHANNEL) throw new Error("DEVICE_EVENT_V2_BINDING_MISSING");
+  if (String(request.headers.get("upgrade") || "").toLowerCase() !== "websocket") {
+    return json({ ok: false, code: "DEVICE_EVENT_V2_UPGRADE_REQUIRED" }, 426);
+  }
+
+  const device = await resolveDeviceCredential(env, request);
+  const stub = env.DEVICE_CHANNEL.getByName(
+    deviceChannelName(device.tenant_id, device.device_id)
+  );
+  const headers = new Headers();
+  headers.set("Upgrade", "websocket");
+  headers.set("x-hara-channel-authenticated", "1");
+  headers.set("x-hara-tenant-id", device.tenant_id);
+  headers.set("x-hara-device-id", device.device_id);
+
+  return stub.fetch(new Request("https://device-channel/connect", {
+    method: "GET",
+    headers,
+  }));
+}
+
+async function notifyDeviceEventChannel(env, tenantId, deviceId, callId) {
+  if (!eventV2Enabled(env) || !env.DEVICE_CHANNEL) {
+    return { attempted: false, delivered: 0 };
+  }
+
+  try {
+    const stub = env.DEVICE_CHANNEL.getByName(deviceChannelName(tenantId, deviceId));
+    const response = await stub.fetch(new Request("https://device-channel/notify", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-hara-channel-authenticated": "1",
+      },
+      body: JSON.stringify({ call_id: callId }),
+    }));
+    if (!response.ok) {
+      return { attempted: true, delivered: 0 };
+    }
+    const payload = await response.json().catch(() => ({}));
+    return {
+      attempted: true,
+      delivered: Number(payload.delivered || 0),
+    };
+  } catch (_error) {
+    // D1 call state remains authoritative. Event delivery is an accelerator only.
+    return { attempted: true, delivered: 0 };
+  }
 }
 
 export class TenantQuota extends DurableObject {
@@ -1207,6 +1265,8 @@ async function enqueueDeviceCall(env, body) {
     throw new Error("DEVICE_CALL_ENQUEUE_CONFLICT");
   }
 
+  await notifyDeviceEventChannel(env, context.tenant_id, deviceId, callId);
+
   return {
     schema: "hara.commander-device-call.v1",
     existing: false,
@@ -1505,6 +1565,10 @@ export default {
         return json(await selectPortalDevice(env, session, body));
       }
 
+      if (url.pathname === "/api/device/channel" && request.method === "GET") {
+        return await openDeviceEventChannel(env, request);
+      }
+
       if (url.pathname === "/api/device/enroll" && request.method === "POST") {
         const body = await request.json();
         return json(await enrollDevice(env, body), 201);
@@ -1764,6 +1828,8 @@ export default {
         DEVICE_PAIRING_CREATE_FAILED: 503,
         DEVICE_AUTH_REQUIRED: 401,
         DEVICE_AUTH_INVALID: 401,
+        DEVICE_EVENT_V2_DISABLED: 404,
+        DEVICE_EVENT_V2_BINDING_MISSING: 503,
         DEVICE_ID_MISMATCH: 403,
         DEVICE_NOT_FOUND: 404,
         DEVICE_SELECTION_REQUIRED: 409,
