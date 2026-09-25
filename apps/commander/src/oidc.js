@@ -1,5 +1,26 @@
 const encoder = new TextEncoder();
 
+const OIDC_PUBLIC_CACHE_TTL_MS = 5 * 60 * 1000;
+const discoveryCache = new Map();
+const jwksCache = new Map();
+
+function cacheGet(cache, key) {
+  const entry = cache.get(key);
+  if (!entry || entry.expires_at_ms <= Date.now()) {
+    cache.delete(key);
+    return null;
+  }
+  return entry.value;
+}
+
+function cachePut(cache, key, value) {
+  cache.set(key, {
+    value,
+    expires_at_ms: Date.now() + OIDC_PUBLIC_CACHE_TTL_MS,
+  });
+  return value;
+}
+
 function b64url(bytes) {
   let binary = "";
   const view = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
@@ -64,6 +85,9 @@ function requireHttpsMetadataEndpoint(value, code) {
 
 export async function oidcDiscovery(issuer) {
   const normalized = normalizeIssuer(issuer);
+  const cached = cacheGet(discoveryCache, normalized);
+  if (cached) return cached;
+
   const endpoint = new URL(".well-known/openid-configuration", normalized).toString();
   const response = await fetch(endpoint, {
     headers: { accept: "application/json" },
@@ -78,7 +102,37 @@ export async function oidcDiscovery(issuer) {
   if (metadata.userinfo_endpoint) {
     requireHttpsMetadataEndpoint(metadata.userinfo_endpoint, "OIDC_DISCOVERY_ENDPOINT_INVALID");
   }
-  return metadata;
+  return cachePut(discoveryCache, normalized, metadata);
+}
+
+async function oidcJwks(metadata, { forceRefresh = false } = {}) {
+  const uri = requireHttpsMetadataEndpoint(metadata?.jwks_uri, "OIDC_DISCOVERY_ENDPOINT_INVALID");
+  if (!forceRefresh) {
+    const cached = cacheGet(jwksCache, uri);
+    if (cached) return cached;
+  }
+
+  const response = await fetch(uri, {
+    headers: { accept: "application/json" },
+  });
+  if (!response.ok) throw new Error("OIDC_JWKS_FAILED");
+  const payload = await response.json();
+  const keys = Array.isArray(payload?.keys) ? payload.keys : [];
+  return cachePut(jwksCache, uri, keys);
+}
+
+function selectSigningJwk(keys, header) {
+  return keys.find((item) => (
+    item
+    && item.kid === header.kid
+    && item.kty === "RSA"
+    && (!item.use || item.use === "sig")
+    && (!item.alg || item.alg === "RS256")
+    && (
+      !item.key_ops
+      || (Array.isArray(item.key_ops) && item.key_ops.includes("verify"))
+    )
+  ));
 }
 
 export async function pkceChallenge(verifier) {
@@ -162,23 +216,13 @@ export async function verifyIdToken({ idToken, metadata, issuer, clientId, nonce
 
   if (header.alg !== "RS256" || !header.kid) throw new Error("OIDC_ID_TOKEN_ALG_REJECTED");
 
-  const jwksResponse = await fetch(metadata.jwks_uri, {
-    headers: { accept: "application/json" },
-  });
-  if (!jwksResponse.ok) throw new Error("OIDC_JWKS_FAILED");
-  const jwks = await jwksResponse.json();
-  const keys = Array.isArray(jwks?.keys) ? jwks.keys : [];
-  const jwk = keys.find((item) => (
-    item
-    && item.kid === header.kid
-    && item.kty === "RSA"
-    && (!item.use || item.use === "sig")
-    && (!item.alg || item.alg === "RS256")
-    && (
-      !item.key_ops
-      || (Array.isArray(item.key_ops) && item.key_ops.includes("verify"))
-    )
-  ));
+  let keys = await oidcJwks(metadata);
+  let jwk = selectSigningJwk(keys, header);
+  if (!jwk) {
+    // Key rotation must not be blocked by a still-valid short cache entry.
+    keys = await oidcJwks(metadata, { forceRefresh: true });
+    jwk = selectSigningJwk(keys, header);
+  }
   if (!jwk) throw new Error("OIDC_SIGNING_KEY_NOT_FOUND");
 
   const key = await crypto.subtle.importKey(
