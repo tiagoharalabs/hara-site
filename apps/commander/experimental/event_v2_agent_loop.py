@@ -25,7 +25,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 COMMANDER = HERE.parent
 TRANSPORT_PATH = HERE / "event_v2_websocket.py"
-AGENT_PATH = COMMANDER / "public" / "agent" / "linux.py"
+AGENT_PATH = HERE / "event_v2_customer_agent.py"
 MAX_DRAIN_CALLS = 8
 STABLE_CONNECTION_SECONDS = 60.0
 
@@ -43,7 +43,7 @@ def _load(path: Path, name: str):
 def load_modules():
     return (
         _load(TRANSPORT_PATH, "hara_event_v2_transport"),
-        _load(AGENT_PATH, "hara_agent_v1_baseline"),
+        _load(AGENT_PATH, "hara_event_v2_customer_agent"),
     )
 
 
