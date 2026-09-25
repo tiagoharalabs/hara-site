@@ -49,8 +49,24 @@ need(d1["database_name"] != prod["d1_databases"][0]["database_name"], "DEV_D1_NA
 need(d1["migrations_dir"] == "migrations", "DEV_D1_MIGRATIONS")
 
 do_bindings = dev["durable_objects"]["bindings"]
-need(do_bindings == [{"name": "TENANT_QUOTA", "class_name": "TenantQuota"}], "DEV_DO_BINDING")
-need(dev["migrations"] == prod["migrations"], "DEV_DO_MIGRATION_CONTRACT")
+need(
+    do_bindings == [
+        {"name": "TENANT_QUOTA", "class_name": "TenantQuota"},
+        {"name": "DEVICE_CHANNEL", "class_name": "DeviceChannel"},
+    ],
+    "DEV_DO_BINDINGS",
+)
+need(vars_.get("DEVICE_EVENT_V2_ENABLED") == "false", "DEV_EVENT_V2_DEFAULT_DISABLED")
+
+dev_migrations = dev["migrations"]
+prod_migrations = prod["migrations"]
+need(len(prod_migrations) == 1, "PROD_DO_BASELINE_MIGRATION_COUNT")
+need(len(dev_migrations) == 2, "DEV_DO_MIGRATION_COUNT")
+need(dev_migrations[0] == prod_migrations[0], "DEV_DO_V1_PROD_BASELINE")
+need(
+    dev_migrations[1] == {"tag": "v2", "new_classes": ["DeviceChannel"]},
+    "DEV_DO_V2_DEVICE_CHANNEL",
+)
 
 raw = DEV_PATH.read_text(encoding="utf-8")
 for secret in ("AUTH_CLIENT_SECRET", "DEV_ACCESS_TOKEN", "MCP_PRODUCT_TOKEN"):
@@ -69,6 +85,10 @@ print("COMMANDER_DEV_CONFIG_NAME=PASS")
 print("COMMANDER_DEV_CONFIG_ENVIRONMENT=DEV")
 print("COMMANDER_DEV_CONFIG_STORAGE=REMOTE_DEV")
 print("COMMANDER_DEV_CONFIG_D1=DEV_ONLY")
+print("COMMANDER_DEV_CONFIG_DO_TENANT_QUOTA=PASS")
+print("COMMANDER_DEV_CONFIG_DO_DEVICE_CHANNEL=PASS")
+print("COMMANDER_DEV_CONFIG_EVENT_V2_DEFAULT=DISABLED")
+print("COMMANDER_DEV_CONFIG_MIGRATION_BASELINE=PASS")
 print("COMMANDER_DEV_CONFIG_ROUTES=ABSENT")
 print("COMMANDER_DEV_CONFIG_SECRETS=EXTERNAL")
 print("COMMANDER_DEV_CONFIG=PASS")
