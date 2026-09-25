@@ -80,9 +80,21 @@ User/device identifiers must not become Prometheus labels.
 
 ### Services
 
-`hara-telemetry-collector` is the canonical collection/normalization point for external product metrics and local fleet telemetry.
+`hara-telemetry-collector` is the canonical NOC collection/normalization point for external product metrics and local fleet telemetry.
 
 It should poll aggregated provider metrics at bounded intervals rather than ingesting every customer request.
+
+For the customer plane:
+
+```text
+HARA_SERVICES_INLINE_CUSTOMER_PROXY=FALSE
+HARA_SERVICES_NOC_AGGREGATION=TRUE
+CUSTOMER_CONTENT_TO_SERVICES=FALSE
+```
+
+Services receives health/capacity/cost facts, not routine customer payloads.
+
+The HARA-owned internal MCP/OpenAI engineering path is a separate operator-controlled plane and may be monitored more deeply.
 
 ### Storage
 
@@ -144,6 +156,19 @@ Errors and security events must use aggregate counters and bounded diagnostic sa
 
 Telemetry collection must have a documented operational/security/capacity purpose, minimum necessary fields, bounded retention and a user-facing privacy description.
 
+The default customer contract is content-blind:
+
+```text
+CUSTOMER_CONTENT_COLLECTION=FALSE
+CUSTOMER_CONTENT_FOR_MODEL_TRAINING=FALSE
+CUSTOMER_OPERATIONAL_METADATA_ONLY=TRUE
+CUSTOMER_TRAFFIC_INSPECTION_DEFAULT=FALSE
+```
+
+Use native Cloudflare aggregate metrics first. Application telemetry exists only
+to fill operational gaps such as connection/reconnect, delivery latency,
+error-class and quota/cost signals.
+
 Operational telemetry and optional marketing analytics are separate systems and must not share an implicit legal/consent model.
 
 ## Scale decision
@@ -167,3 +192,31 @@ CUSTOM_TELEMETRY_IS_SAMPLED=TRUE
 CUSTOMER_CONTENT_IN_TELEMETRY=FALSE
 CUSTOMER_ACCESS_SEAT_COST=FALSE
 ```
+
+
+## NOC flow
+
+```text
+Cloudflare Workers / D1 / Durable Objects
+        |
+        | aggregate provider metrics
+        v
+HARA Services telemetry collector
+        |
+        +--> capacity
+        +--> cost
+        +--> error-rate
+        +--> latency
+        +--> reconnect pressure
+        +--> alerting
+
+Storage / ZITADEL / PostgreSQL
+        |
+        +--> Identity health metrics
+        |
+        v
+HARA Services
+```
+
+The NOC must be capable of answering "is the service healthy and where is it
+hot?" without needing to know "what did the customer ask or execute?".

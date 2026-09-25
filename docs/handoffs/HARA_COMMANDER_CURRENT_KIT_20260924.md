@@ -1,22 +1,41 @@
 # H.A.R.A. Commander — Current Kit — 2026-09-24
 
-Status: **DEV FRONT CLOSED / PROD LIVE / AGENT 0.3.7 / TEST HOMOLOGATION NEXT / FIRST DEVICE READY BUT NOT YET PAIRED**
+Status: **V1 PROD HOMOLOGATION PASS / AGENT 0.3.7 BASELINE PROVEN / NUCLEO-A PAIRED / EVENT V2 #163 NEXT**
 
 This file is the compact operational entrypoint for the current Commander state.
 
-Current transition authority:
-- `docs/handoffs/HARA_COMMANDER_DEV_TO_TEST_HANDOFF_20260925.md`
+Current execution authority:
+- GitHub issue **#163** — sole Event V2/device-scale implementation owner
+- PR **#188** — current source branch for private/low-cost Event V2 transport
+- GitHub issue **#167** — human/session/D1/Identity cost only; no device-transport implementation
 
-Full historical authority:
-- `docs/handoffs/HARA_COMMANDER_SUCCESSOR_HANDOFF_20260923.md`
-- GitHub issue #65
+Terminal/historical authority:
+- GitHub issue **#65** — **CLOSED / Gate 0–8 PASS / V1 PROD homologation complete**
+- `docs/handoffs/HARA_COMMANDER_DEV_TO_TEST_HANDOFF_20260925.md` — historical transition/test order
+- `docs/handoffs/HARA_COMMANDER_SUCCESSOR_HANDOFF_20260923.md` — historical guide
+
+Current anti-concurrency map:
+
+```text
+COMMANDER_V1_PROD_HOMOLOGATION=PASS
+FIRST_REAL_DEVICE=nucleo-a
+STABLE_AGENT=0.3.7
+EVENT_V2_OWNER=#163
+CURRENT_EVENT_V2_PR=#188
+HUMAN_SCALE_OWNER=#167
+PR_#172=DRAFT_DEFERRED
+HARA_PLATFORM_#1000=V1_AGENT_CAPABILITY_NO_PARALLEL_EVENT_V2
+HARA_PLATFORM_#851=PRODUCT_ACCEPTANCE_ONLY
+HARA_PLATFORM_#1189=HOLD_NO_PARALLEL_RUNTIME_RETIREMENT
+```
 
 ## 1. Current authority
 
 Repository:
-- source authority incorporated by this kit through PR #160: `d70f5e3856bcc33982a23ca78d8ad0e7340910a9`
-- latest Commander source merge: PR #160 — stabilize desktop/mobile navigation after real-browser UX Wave 2 smoke
-- open Commander PRs observed at kit creation: **0**
+- canonical `main` observed at this currentness update: `f5ffa530bca18a34e7193b164c6bf5d3c61b1965` (PR #187)
+- current Event V2 source remains unmerged on PR #188
+- PR #172 is preserved as **draft/deferred future 10k-human evidence**
+- do not infer current PROD runtime IDs from this repository-currentness line; use the newest #65 terminal evidence/live readback for runtime proof
 
 PROD:
 - origin: `https://commander.haralabs.com.br`
@@ -46,10 +65,109 @@ DEV:
 - live DEV deployment/binding/health readback exists
 - do not infer DEV bindings/config from PROD when promoting backend behavior
 
+## 1.1 Canonical customer architecture / cost law
+
+This kit now carries two deliberately different MCP/data paths.
+
+### H.A.R.A.-owned internal path
+
+Our own engineering/agent path may traverse Services:
+
+```text
+OpenAI / HARA operator clients
+  -> mcp.haralabs.com.br
+  -> Cloudflare Tunnel
+  -> HARA Services
+  -> governed H.A.R.A. functions / receipts
+```
+
+This is H.A.R.A.-owned traffic and may be deeply monitored for engineering,
+debugging, agent improvement and reliability under normal HARA governance.
+
+### Customer product path
+
+Normal customer device traffic MUST NOT traverse HARA Services:
+
+```text
+ChatGPT / Codex
+  -> Commander / Cloudflare edge
+  -> D1 + TenantQuota + DeviceChannel
+  -> outbound Event V2 WebSocket
+  -> HARA Agent
+  -> customer machine
+```
+
+Canonical invariants:
+
+```text
+CUSTOMER_TRAFFIC_THROUGH_HARA_SERVICES=FALSE
+HARA_SERVICES_CUSTOMER_PROXY=FALSE
+CUSTOMER_AGENT_CHANNEL=OUTBOUND_EVENT_V2
+CUSTOMER_CONTENT_COLLECTION=FALSE
+CUSTOMER_CONTENT_FOR_MODEL_TRAINING=FALSE
+CUSTOMER_TRAFFIC_INSPECTION_DEFAULT=FALSE
+CUSTOMER_OPERATIONAL_METADATA_ONLY=TRUE
+HARA_SERVICES_NOC_AGGREGATION=TRUE
+INTERNAL_HARA_MCP_MONITORING=ALLOWED
+```
+
+### Event V2 economy target
+
+After the V1 real-device baseline is terminal, the next transport canary targets:
+
+```text
+IDLE_HTTP_POLLING=FALSE
+HTTP_HEARTBEAT_30S=FALSE
+SOCKET_PRESENCE=PRIMARY_EPHEMERAL_SIGNAL
+APPLICATION_JSON_PING_STEADY_STATE=FALSE
+WEBSOCKET_PROTOCOL_PING_IDLE_TARGET=60s
+DURABLE_LIVENESS_CHECKPOINT_TARGET=6h
+RECONNECT_FULL_JITTER=TRUE
+RECONNECT_MAX_TARGET=15s
+POLL_V1_FALLBACK_DEFAULT=OFF
+```
+
+D1 writes should follow meaningful state transitions and rare durable checkpoints,
+not repetitive "ONLINE" writes.
+
+For 1,000 continuously connected devices, a six-hour durable checkpoint represents
+at most roughly 4,000 checkpoint opportunities/day before coalescing with real
+state changes, instead of 2.88 million 30-second heartbeat requests/day.
+
+### Privacy/NOC boundary
+
+HARA Services may aggregate operational metrics from Cloudflare/Commander and
+Storage Identity for NOC purposes:
+
+- connected-device counts;
+- connection duration;
+- reconnect/fallback pressure;
+- p50/p95/p99 delivery latency;
+- success/error/timeout classes;
+- Worker/D1/DO resource/cost counters;
+- bounded bytes/messages counters;
+- Agent version/state;
+- quota/cost aggregates.
+
+Routine NOC telemetry must not contain prompts, command payloads/results,
+customer files, arbitrary filesystem contents, Authorization/Cookie headers or
+OAuth/session/device/pairing secrets.
+
+What the customer sees locally in their own console/logs is a separate boundary:
+local execution output may be visible to that customer, but it is not routine
+content telemetry exported to HARA Services.
+
+Canonical detail:
+- `docs/architecture/HARA_COMMANDER_SCALE_V2_EVENT_TRANSPORT.md`
+- `docs/architecture/HARA_COMMANDER_PRIVACY_FIRST_TELEMETRY.md`
+
 Agent release authority:
 - stable Agent: **0.3.7**
 - manifest: `apps/commander/public/release/agent-manifest.json`
 - Linux/Windows Agent + installers are covered by release manifest and SHA256SUMS
+- Agent 0.3.7 polling/30s heartbeat remains the **homologation baseline only**
+- post-baseline customer transport target is Event V2/WebSocket Hibernation under issue #163
+- Scale V2 architecture source is default-off/source-only until V1 E2E is terminal
 
 ## 2. What is already closed
 
@@ -135,8 +253,9 @@ Current release **0.3.7** includes:
 - Linux config file mode / secret custody hardening
 - Windows encrypted device token + ACLs
 - bounded/rate-limited operator diagnostics
-- explicit heartbeat as presence authority
+- V1 explicit heartbeat as presence authority **for the current 0.3.7 homologation baseline**
 - no idle poll presence writes
+- V2 target removes the 30-second HTTP heartbeat and derives live presence from the WebSocket channel
 - startup attestation on install/update
 - redirect fail-closed transport on Linux/Windows
 - canonical PROD enrollment-origin pinning
@@ -361,8 +480,8 @@ These are not source defects:
 
 ### Deterministic/backend front
 
-After operator pairing:
-- prove heartbeat and online/offline state
+After operator pairing, first prove the current V1 baseline:
+- prove 0.3.7 heartbeat and online/offline state
 - prove selected-device behavior
 - prove revoke + expiry behavior
 - run canonical five-tool E2E
@@ -370,6 +489,19 @@ After operator pairing:
 - prove quota COMMIT
 - prove `receipts.get` correlation
 - preserve zero secret/token leakage in evidence
+- observe the Agent/local console behavior and classify what is customer-local output versus exportable operational metadata
+
+Only after the V1 baseline is terminal, advance the already source-prepared Event V2 canary:
+- one HARA-owned device first
+- prove idle 2-second polling = 0
+- prove 30-second HTTP heartbeat = 0 on the Event path
+- prove WebSocket connect/disconnect presence
+- prove protocol keepalive does not become application telemetry spam
+- prove rare/coalesced durable liveness checkpoint behavior
+- prove exponential reconnect + full jitter + bounded maximum
+- prove D1 remains durable truth if an event notification is lost
+- repeat lifecycle + five tools + receipts + quota under Event V2
+- prove rollback to V1 remains available until V2 acceptance is terminal
 
 Can continue before pairing only on deterministic maturity items:
 - independent bootstrap/package trust-anchor design
@@ -436,6 +568,10 @@ Do not:
 - redeploy PROD just to reproduce evidence
 - infer DEV binding/config from PROD
 - weaken pairing supersession, receipt binding or quota terminal-state semantics
+- route normal customer command traffic through HARA Services
+- collect customer command/file/conversation content as routine telemetry
+- use customer content for model training
+- reintroduce fixed 2-second idle polling as an Event V2 fallback
 
 ## 11. Handoff order for the TEST front
 
