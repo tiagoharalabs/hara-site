@@ -1277,7 +1277,35 @@ async function enqueueDeviceCall(env, body) {
     throw new Error("DEVICE_CALL_ENQUEUE_CONFLICT");
   }
 
-  await notifyDeviceEventChannel(env, context.tenant_id, deviceId, callId);
+  const notification = await notifyDeviceEventChannel(
+    env,
+    context.tenant_id,
+    deviceId,
+    callId,
+  );
+  if (
+    eventV2Enabled(env)
+    && notification.attempted
+    && notification.delivered < 1
+  ) {
+    const cancelledAt = nowIso();
+    await env.PRODUCT_DB.prepare(
+      `UPDATE commander_device_calls
+          SET state = 'CANCELLED',
+              completed_at_utc = ?,
+              error_code = 'DEVICE_EVENT_UNDELIVERED'
+        WHERE call_id = ?
+          AND tenant_id = ?
+          AND device_id = ?
+          AND state = 'PENDING'`
+    ).bind(
+      cancelledAt,
+      callId,
+      context.tenant_id,
+      deviceId,
+    ).run();
+    throw new Error("DEVICE_OFFLINE");
+  }
 
   return {
     schema: "hara.commander-device-call.v1",
