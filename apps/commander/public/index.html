@@ -314,7 +314,11 @@
 
           <article class="panel devices-panel">
             <div class="panel-head"><div><span>DISPOSITIVOS</span><h2>Computadores conectados</h2></div><button class="link-button" type="button" data-refresh-devices>Atualizar</button></div>
-            <div class="device-list" id="deviceList">
+            <div class="device-tabs" role="tablist" aria-label="Filtrar computadores">
+              <button class="active" type="button" role="tab" aria-selected="true" tabindex="0" data-device-tab="active">Ativos <span id="deviceActiveCount">0</span></button>
+              <button type="button" role="tab" aria-selected="false" tabindex="-1" data-device-tab="history">Histórico <span id="deviceHistoryCount">0</span></button>
+            </div>
+            <div class="device-list" id="deviceList" role="tabpanel" aria-live="polite">
               <div class="empty-state"><strong>Nenhum computador conectado</strong>Instale o Commander Agent para começar.</div>
             </div>
           </article>
