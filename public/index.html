@@ -7,6 +7,7 @@
 <script>
 (()=>{try{const saved=localStorage.getItem("hara-theme");const theme=saved||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.dataset.theme=theme;document.documentElement.style.colorScheme=theme;const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=theme==="dark"?"#061721":"#eef8fd"}catch(e){}})();
 </script>
+<script>(()=>{try{document.documentElement.dataset.neon=localStorage.getItem("hara-neon")==="on"?"on":"off"}catch(e){document.documentElement.dataset.neon="off"}})();</script>
 <meta name="description" content="H.A.R.A Labs. infraestrutura corporativa de IA híbrida, segura e governada.">
 <link rel="canonical" href="https://www.haralabs.com.br/">
 <meta property="og:type" content="website">
@@ -30,7 +31,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/css/styles.css?v=14">
 <link rel="stylesheet" href="/assets/css/v14.css?v=15.1">
-<link rel="stylesheet" href="/assets/css/v16.css?v=16.3.3">
+<link rel="stylesheet" href="/assets/css/v16.css?v=16.3.6">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"H.A.R.A Labs","legalName":"Irmãos Sartori Tecnologia da Informação Ltda","url":"https://www.haralabs.com.br/","email":"contato@haralabs.com.br","taxID":"18.061.774/0001-98","logo":"https://www.haralabs.com.br/assets/images/hara-logo-web.webp","sameAs":["https://www.linkedin.com/company/hara-labs/"]}</script>
 </head>
 <body>
@@ -68,6 +69,7 @@
       <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 15.2A8.5 8.5 0 0 1 8.8 4 8.5 8.5 0 1 0 20 15.2Z"/></svg>
       <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.5"/><path d="M12 2v2.2M12 19.8V22M4.93 4.93l1.56 1.56M17.51 17.51l1.56 1.56M2 12h2.2M19.8 12H22M4.93 19.07l1.56-1.56M17.51 6.49l1.56-1.56"/></svg>
     </button>
+    <button class="neon-toggle" type="button" aria-label="Ativar Neon" aria-pressed="false" title="Neon OFF"><span class="neon-dot" aria-hidden="true"></span><span class="neon-label">Neon</span></button>
     <button class="menu-button" aria-label="Abrir menu" aria-expanded="false"><span></span><span></span></button>
   </div>
   <div class="mobile-menu" aria-hidden="true">
@@ -80,7 +82,7 @@
   <div class="hero-orb orb-a"></div><div class="hero-orb orb-b"></div>
   <div class="page-shell hero-grid">
     <div class="hero-copy reveal">
-      <div class="eyebrow"><i></i> Infraestrutura de IA para empresas</div>
+      <div class="eyebrow"> Infraestrutura de IA para empresas</div>
       <h1>Infraestrutura<br>corporativa de IA<br><em>híbrida.</em></h1>
       <p class="hero-lead">A H.A.R.A Labs projeta infraestrutura de IA para ambientes corporativos que combinam recursos locais, cloud e edge. A composição técnica é definida por requisitos de dados, integração, segurança, desempenho e continuidade.</p>
       <div class="hero-actions"><a class="button primary" href="/contato/">Solicitar avaliação executiva <span>→</span></a><a class="button secondary" href="/arquitetura/">Conhecer a arquitetura <span>→</span></a></div>
@@ -124,7 +126,7 @@
 <section class="section thesis" id="visao">
   <div class="page-shell thesis-grid">
     <div class="thesis-copy reveal">
-      <div class="section-kicker"><i></i>Operação corporativa</div>
+      <div class="section-kicker">Operação corporativa</div>
       <h2>Requisitos para colocar IA em produção.</h2>
       <p>Operar IA conectada a dados, sistemas e processos reais exige identidade, controle de acesso, gestão de custo, continuidade, auditoria e responsabilidade operacional.</p>
       <p class="thesis-emphasis">A H.A.R.A organiza essas capacidades para que a IA participe da operação dentro de limites definidos pela organização.</p>
@@ -149,7 +151,7 @@
 
 <section class="section solutions" id="solucoes">
   <div class="page-shell split-heading reveal">
-    <div><div class="section-kicker"><i></i>Implantação</div><h2>Arquitetura híbrida por requisito.</h2><p>Cada workload é posicionado conforme desempenho, custo, privacidade, latência, risco e necessidade de continuidade.</p><a class="section-link" href="/arquitetura/">Explorar a arquitetura <span>→</span></a></div>
+    <div><div class="section-kicker">Implantação</div><h2>Arquitetura híbrida por requisito.</h2><p>Cada workload é posicionado conforme desempenho, custo, privacidade, latência, risco e necessidade de continuidade.</p><a class="section-link" href="/arquitetura/">Explorar a arquitetura <span>→</span></a></div>
     <div class="solution-grid">
       <article class="solution-card"><div class="icon-box"><svg><use href="#i-building"/></svg></div><h3>On-site</h3><p>IA próxima da operação, mesmo em ambientes isolados.</p><ul><li>Edge e ambientes restritos</li><li>Baixa latência</li><li>Operação autônoma</li></ul></article>
       <article class="solution-card featured"><div class="icon-box"><svg><use href="#i-server"/></svg></div><h3>On-premise</h3><p>Dados, modelos e integrações no ambiente da organização.</p><ul><li>Dados e modelos locais</li><li>Integração com legado</li><li>Total privacidade</li></ul></article>
@@ -160,7 +162,7 @@
 
 <section class="section architecture" id="arquitetura">
   <div class="page-shell architecture-grid">
-    <div class="architecture-copy reveal"><div class="section-kicker"><i></i>Arquitetura</div><h2>Controle sobre dados, políticas e infraestrutura.</h2><p>A H.A.R.A combina recursos locais e externos sem tornar acesso irrestrito um requisito para usar IA. O posicionamento de cada capacidade depende do contexto operacional.</p><a class="section-link" href="/arquitetura/">Conhecer a arquitetura em detalhes <span>→</span></a></div>
+    <div class="architecture-copy reveal"><div class="section-kicker">Arquitetura</div><h2>Controle sobre dados, políticas e infraestrutura.</h2><p>A H.A.R.A combina recursos locais e externos sem tornar acesso irrestrito um requisito para usar IA. O posicionamento de cada capacidade depende do contexto operacional.</p><a class="section-link" href="/arquitetura/">Conhecer a arquitetura em detalhes <span>→</span></a></div>
     <div class="orbit-panel reveal delay">
       <div class="orbit-ring ring1"></div><div class="orbit-ring ring2"></div>
       <div class="orbit-center"><img decoding="async" src="/assets/images/hara-logo-web.webp" alt=""><strong>H.A.R.A</strong><span>Arquitetura híbrida</span></div>
@@ -175,7 +177,7 @@
 
 <section class="section security" id="seguranca">
   <div class="page-shell">
-    <div class="section-title reveal"><div class="section-kicker"><i></i>Segurança</div><h2>Controles em todas as camadas.</h2><p>Identidade, menor privilégio, políticas, evidência e continuidade aplicados de forma proporcional ao risco.</p></div>
+    <div class="section-title reveal"><div class="section-kicker">Segurança</div><h2>Controles em todas as camadas.</h2><p>Identidade, menor privilégio, políticas, evidência e continuidade aplicados de forma proporcional ao risco.</p></div>
     <div class="security-grid">
       <article class="security-card reveal"><div class="icon-box"><svg><use href="#i-lock"/></svg></div><h3>Menor privilégio</h3><p>Privilégios limitados ao escopo necessário.</p><a href="/seguranca/" aria-label="Saiba mais sobre menor privilégio">→</a></article>
       <article class="security-card reveal"><div class="icon-box"><svg><use href="#i-user"/></svg></div><h3>Identidade e política</h3><p>Acesso governado por contexto.</p><a href="/seguranca/" aria-label="Saiba mais sobre identidade e política">→</a></article>
@@ -187,7 +189,7 @@
 
 <section class="section integrations" id="integracoes">
   <div class="page-shell integrations-grid">
-    <div class="integration-copy reveal"><div class="section-kicker"><i></i>Integrações</div><h2>Funções autorizadas conectadas à IA.</h2><p>A H.A.R.A conecta modelos a funções autorizadas da empresa: consultar, analisar, criar, atualizar ou executar, com identidade, escopo, política e evidência.</p><a class="section-link" href="/commander/">Conhecer o Commander <span>→</span></a></div>
+    <div class="integration-copy reveal"><div class="section-kicker">Integrações</div><h2>Funções autorizadas conectadas à IA.</h2><p>A H.A.R.A conecta modelos a funções autorizadas da empresa: consultar, analisar, criar, atualizar ou executar, com identidade, escopo, política e evidência.</p><a class="section-link" href="/commander/">Conhecer o Commander <span>→</span></a></div>
     <div class="integration-board reveal delay">
       <div class="stack systems"><strong>Seus sistemas</strong><span>ERP <em>SAP · Oracle · TOTVS</em></span><span>CRM <em>Salesforce · HubSpot</em></span><span>SQL <em>PostgreSQL · SQL Server</em></span><span>Docs <em>SharePoint · Google Drive</em></span></div>
       <div class="mcp-core"><span>MCP</span><img decoding="async" src="/assets/images/hara-logo-web.webp" alt=""><strong>H.A.R.A</strong><small>Conector universal</small></div>
@@ -200,7 +202,7 @@
 
 <section class="commander" id="commander">
   <div class="page-shell commander-grid">
-    <div class="commander-copy reveal"><div class="section-kicker gold"><i></i>H.A.R.A Commander · em desenvolvimento</div><h2>Camada operacional em construção.</h2><p>O Commander está sendo desenvolvido como superfície de operação para modelos, integrações, políticas e evidências. A página pública descreve a direção arquitetural, não uma oferta comercial disponível.</p><a class="button gold-btn" href="/commander/">Ver direção do produto <span>→</span></a></div>
+    <div class="commander-copy reveal"><div class="section-kicker gold">H.A.R.A Commander · em desenvolvimento</div><h2>Camada operacional em construção.</h2><p>O Commander está sendo desenvolvido como superfície de operação para modelos, integrações, políticas e evidências. A página pública descreve a direção arquitetural, não uma oferta comercial disponível.</p><a class="button gold-btn" href="/commander/">Ver direção do produto <span>→</span></a></div>
     <div class="commander-ui reveal delay">
       <div class="console-nav"><img decoding="async" src="/assets/images/hara-logo-web.webp" alt=""><strong>H.A.R.A Commander</strong><span>Visão geral</span><span>Modelos</span><span>Integrações</span><span>Segurança</span><span>Auditoria</span></div>
       <div class="console-main"><div class="console-top"><article><small>Infraestrutura</small><b>● Saudável</b></article><article><small>Modelos</small><b>12 ativos</b></article><article><small>Integrações</small><b>28 conectadas</b></article><article><small>Solicitações</small><b>1.2k hoje</b></article></div><div class="chart-card"><span>Uso de IA</span><svg viewBox="0 0 500 130"><path d="M10 110 C70 100,80 65,130 78 S220 25,270 58 S360 98,410 54 S455 30,490 36"/></svg></div><div class="events"><span>● model.deployed <b>10:24</b></span><span>● integration.synced <b>09:18</b></span><span>● policy.updated <b>08:41</b></span></div></div>
@@ -212,7 +214,7 @@
 <section class="section business-value" id="valor">
   <div class="page-shell">
     <div class="value-heading reveal">
-      <div class="section-kicker"><i></i>Casos de uso</div>
+      <div class="section-kicker">Casos de uso</div>
       <h2>Casos de uso sobre uma base comum.</h2>
       <p>A mesma base de segurança, integrações e conhecimento pode servir diferentes áreas sem criar uma nova ilha de IA para cada problema.</p>
     </div>
@@ -229,7 +231,7 @@
 
 <section class="section company" id="empresa">
   <div class="page-shell company-grid">
-    <div class="section-title reveal"><div class="section-kicker"><i></i>Sobre a H.A.R.A Labs</div><h2>Engenharia para ambientes corporativos reais.</h2><p>Projetamos infraestrutura de IA considerando sistemas existentes, dados sensíveis, requisitos de segurança e continuidade operacional.</p></div>
+    <div class="section-title reveal"><div class="section-kicker">Sobre a H.A.R.A Labs</div><h2>Engenharia para ambientes corporativos reais.</h2><p>Projetamos infraestrutura de IA considerando sistemas existentes, dados sensíveis, requisitos de segurança e continuidade operacional.</p></div>
     <div class="value-grid">
       <article class="reveal"><svg><use href="#i-target"/></svg><h3>Foco em resultado</h3><p>Objetivos definidos por processo e resultado esperado.</p></article>
       <article class="reveal"><svg><use href="#i-users"/></svg><h3>Experiência real</h3><p>Expertise em ambientes críticos.</p></article>
@@ -242,7 +244,7 @@
 <section class="section start-path" id="como-comecamos">
   <div class="page-shell">
     <div class="start-heading reveal">
-      <div class="section-kicker"><i></i>Como começamos</div>
+      <div class="section-kicker">Como começamos</div>
       <h2>Diagnóstico antes da definição de arquitetura.</h2>
       <p>Mapeamos processo, dados, sistemas, restrições, risco e objetivo antes de definir modelos, integrações e implantação.</p>
     </div>
@@ -278,6 +280,6 @@
   </div>
   <div class="page-shell footer-bottom"><span>© 2026 H.A.R.A Labs. Todos os direitos reservados.</span><span>Documentação institucional pública.</span></div>
 </footer>
-<script src="/assets/js/script.js?v=14"></script>
+<script src="/assets/js/script.js?v=15"></script>
 </body>
 </html>
