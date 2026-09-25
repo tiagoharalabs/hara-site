@@ -174,10 +174,14 @@ function cleanAgentValue(value, max = 80) {
   return text;
 }
 
-function deviceOnline(lastSeenAtUtc, now = Date.now()) {
+function deviceOnline(lastSeenAtUtc, tunnelMode = "OUTBOUND_RELAY", now = Date.now()) {
   if (!lastSeenAtUtc) return false;
   const seen = Date.parse(String(lastSeenAtUtc));
-  return Number.isFinite(seen) && now - seen <= 90_000;
+  if (!Number.isFinite(seen)) return false;
+  const onlineWindowMs = String(tunnelMode || "") === "EVENT_V2"
+    ? 7 * 60 * 60 * 1000
+    : 90_000;
+  return now - seen <= onlineWindowMs;
 }
 
 function boundedJson(value, maxBytes, code) {
@@ -909,7 +913,7 @@ async function listDevices(env, session) {
     agent_version: row.agent_version,
     tunnel_mode: row.tunnel_mode,
     state: row.state,
-    online: row.state === "ACTIVE" && deviceOnline(row.last_seen_at_utc, now),
+    online: row.state === "ACTIVE" && deviceOnline(row.last_seen_at_utc, row.tunnel_mode, now),
     selected: Boolean(row.selected) && row.state === "ACTIVE" && !row.revoked_at_utc,
     created_at_utc: row.created_at_utc,
     last_seen_at_utc: row.last_seen_at_utc,
@@ -1197,7 +1201,7 @@ async function enqueueDeviceCall(env, body) {
   }
 
   const device = await env.PRODUCT_DB.prepare(
-    `SELECT device_id, tenant_id, state, last_seen_at_utc, revoked_at_utc
+    `SELECT device_id, tenant_id, state, tunnel_mode, last_seen_at_utc, revoked_at_utc
        FROM commander_devices
       WHERE device_id = ? AND tenant_id = ?
       LIMIT 1`
@@ -1205,7 +1209,7 @@ async function enqueueDeviceCall(env, body) {
   if (!device || device.state !== "ACTIVE" || device.revoked_at_utc) {
     throw new Error("DEVICE_NOT_FOUND");
   }
-  if (!deviceOnline(device.last_seen_at_utc)) throw new Error("DEVICE_OFFLINE");
+  if (!deviceOnline(device.last_seen_at_utc, device.tunnel_mode)) throw new Error("DEVICE_OFFLINE");
 
   const enqueueAt = nowIso();
   await env.PRODUCT_DB.prepare(
@@ -1220,6 +1224,7 @@ async function enqueueDeviceCall(env, body) {
   const createdAt = nowIso();
   const expiresAt = nowIso(DEVICE_CALL_TTL_SECONDS);
   const onlineCutoff = new Date(Date.now() - 90_000).toISOString();
+  const eventV2Cutoff = new Date(Date.now() - 7 * 60 * 60 * 1000).toISOString();
   const inserted = await env.PRODUCT_DB.prepare(
     `INSERT OR IGNORE INTO commander_device_calls
       (call_id, request_id, tenant_id, subject_id, device_id, tool_id, payload_json,
@@ -1234,11 +1239,15 @@ async function enqueueDeviceCall(env, body) {
         AND d.tenant_id = ?
         AND d.state = 'ACTIVE'
         AND d.revoked_at_utc IS NULL
-        AND d.last_seen_at_utc >= ?
+        AND (
+          (d.tunnel_mode = 'EVENT_V2' AND d.last_seen_at_utc >= ?)
+          OR
+          (d.tunnel_mode <> 'EVENT_V2' AND d.last_seen_at_utc >= ?)
+        )
         AND s.subject_id = ?`
   ).bind(
     callId, requestId, context.tenant_id, context.subject_id, toolId, payloadJson,
-    createdAt, expiresAt, deviceId, context.tenant_id, onlineCutoff, context.subject_id
+    createdAt, expiresAt, deviceId, context.tenant_id, eventV2Cutoff, onlineCutoff, context.subject_id
   ).run();
 
   if (!inserted.meta?.changes) {
@@ -1254,7 +1263,7 @@ async function enqueueDeviceCall(env, body) {
     }
 
     const currentDevice = await env.PRODUCT_DB.prepare(
-      `SELECT state, last_seen_at_utc, revoked_at_utc
+      `SELECT state, tunnel_mode, last_seen_at_utc, revoked_at_utc
          FROM commander_devices
         WHERE device_id = ? AND tenant_id = ?
         LIMIT 1`
@@ -1262,7 +1271,7 @@ async function enqueueDeviceCall(env, body) {
     if (!currentDevice || currentDevice.state !== "ACTIVE" || currentDevice.revoked_at_utc) {
       throw new Error("DEVICE_NOT_FOUND");
     }
-    if (!deviceOnline(currentDevice.last_seen_at_utc)) throw new Error("DEVICE_OFFLINE");
+    if (!deviceOnline(currentDevice.last_seen_at_utc, currentDevice.tunnel_mode)) throw new Error("DEVICE_OFFLINE");
     throw new Error("DEVICE_CALL_ENQUEUE_CONFLICT");
   }
 
