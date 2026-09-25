@@ -47,6 +47,19 @@ IDEMPOTENT_RETRY_NO_DOUBLE_CHARGE=true
 
 Transport permission never becomes execution authorization.
 
+Customer transport separation is also mandatory:
+
+```text
+CUSTOMER_TRAFFIC_THROUGH_HARA_SERVICES=false
+CUSTOMER_AGENT_CHANNEL=OUTBOUND_TO_CLOUDFLARE_EVENT_V2
+HARA_SERVICES_CUSTOMER_PROXY=false
+HARA_SERVICES_ROLE_FOR_CUSTOMER_PLANE=NOC_CONTROL_ONLY
+INTERNAL_HARA_MCP_MONITORING=ALLOWED
+CUSTOMER_CONTENT_MONITORING=false
+```
+
+The HARA-owned internal MCP path may continue to traverse HARA Services and may be deeply monitored under operator governance. This exception does not extend to customer traffic.
+
 ## 3. Target topology
 
 ```text
@@ -157,26 +170,67 @@ The final choice must preserve current race/revoke guarantees.
 Agent -> Server control messages are bounded and typed. No free-form command
 message is accepted.
 
-## 8. Presence
+## 8. Presence and low-cost heartbeat
 
-V1 presence is based on a 30-second heartbeat and a 90-second online window.
+V1 presence is based on a 30-second HTTP heartbeat and a 90-second online window.
 
-V2 should derive fast connection presence from the event channel while retaining
-a lower-frequency durable liveness write so transient socket state is not the
-only historical truth.
+V2 removes that steady-state cost pattern.
 
-Target:
+Target policy:
+
+```text
+HTTP_HEARTBEAT_30S=FALSE
+IDLE_HTTP_POLLING=FALSE
+SOCKET_PRESENCE=PRIMARY_EPHEMERAL_SIGNAL
+APPLICATION_JSON_PING_STEADY_STATE=FALSE
+WEBSOCKET_PROTOCOL_PING_IDLE_TARGET=60s
+DURABLE_LIVENESS_CHECKPOINT_TARGET=6h
+D1_WRITE_ON_MEANINGFUL_STATE_CHANGE=TRUE
+```
+
+Rules:
 
 - socket connect/disconnect = fast ephemeral presence;
-- bounded durable liveness checkpoint = durable dashboard state;
-- no 30-second D1 write requirement unless measurements justify it;
-- revocation closes or invalidates the active channel.
+- protocol-level WebSocket ping is only a transport keepalive after an idle
+  interval, not a product heartbeat;
+- normal traffic resets the keepalive timer;
+- incoming WebSocket protocol ping frames are handled by the Cloudflare runtime
+  without waking the Durable Object;
+- application-level JSON `PING/PONG` remains protocol-compatible for bounded
+  diagnostics but is not the steady-state heartbeat;
+- D1 is updated immediately for meaningful durable transitions such as connect,
+  revoke, supersession, version change or terminal lifecycle events;
+- a very low-frequency durable liveness checkpoint may be emitted at most once
+  per target interval when no other durable event has refreshed state;
+- the initial durable checkpoint target is **6 hours**, then measured and tuned;
+- dashboard live presence should prefer DeviceChannel socket state. Historical
+  D1 state must be labeled stale/last-known rather than pretending it is live.
 
-Exact interval is selected from load/cost tests.
+For 1,000 continuously connected devices, a 6-hour durable checkpoint is only
+about 4,000 checkpoint opportunities/day before coalescing with real state
+changes, instead of 2.88 million 30-second heartbeats/day.
+
+Exact production values remain canary-measured, but any change that materially
+increases idle writes requires cost evidence.
 
 ## 9. Failure and reconnect semantics
 
-Agent reconnect uses exponential backoff with jitter and an upper bound.
+Agent reconnect uses exponential backoff with full jitter and an upper bound.
+
+Source target:
+
+```text
+RECONNECT_INITIAL_MAX=1s
+RECONNECT_EXPONENTIAL=true
+RECONNECT_FULL_JITTER=true
+RECONNECT_MAX=60s
+SYNCHRONIZED_RECONNECT=DENY
+POLL_V1_FALLBACK_DEFAULT=OFF
+```
+
+If an explicit temporary polling fallback is ever enabled, it must start slow,
+back off, jitter, and remain bounded. The old fixed 2-second idle loop is not a
+valid fallback.
 
 During EVENT_V2 outage:
 
@@ -255,3 +309,58 @@ separate explicit operator gate.
 6. reconnect/fallback tests;
 7. isolated load harness;
 8. canary package only after current #65 E2E baseline closes.
+
+
+## 13. Customer privacy and NOC observability
+
+The customer data plane and HARA NOC plane are deliberately separate.
+
+```text
+CUSTOMER
+ChatGPT/Codex
+  -> Commander edge
+  -> D1 / TenantQuota / DeviceChannel
+  -> outbound Agent channel
+  -> customer machine
+
+NOC
+Cloudflare native aggregate metrics
+  + Storage Identity metrics
+  + bounded metadata-only Commander metrics
+  -> HARA Services
+  -> alerts / capacity / cost / reliability
+```
+
+HARA Services consumes aggregate or pseudonymous operational facts. It does not
+sit inline with the customer command stream.
+
+Allowed customer operational telemetry:
+
+- active/connected device counts;
+- connection duration;
+- reconnect/fallback counters;
+- send-to-ack latency distributions;
+- success/failure/timeout classes;
+- Worker/D1/DO request and resource counters;
+- bytes/messages counters;
+- agent version/state;
+- quota/cost aggregates.
+
+Routine customer telemetry must not contain:
+
+- prompt/conversation text;
+- command payloads or command results;
+- customer file contents;
+- arbitrary filesystem contents;
+- Authorization/Cookie headers;
+- OAuth, session, pairing or device secrets.
+
+```text
+CUSTOMER_CONTENT_PRIVATE_BY_DEFAULT=true
+CUSTOMER_CONTENT_FOR_MODEL_TRAINING=false
+CUSTOMER_TRAFFIC_INSPECTION_DEFAULT=false
+NOC_METADATA_ONLY=true
+```
+
+This privacy boundary does not restrict deep monitoring of HARA-owned internal
+MCP/OpenAI engineering traffic.
