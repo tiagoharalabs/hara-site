@@ -42,8 +42,8 @@ auth_config_block = WORKER.split('if (url.pathname === "/api/portal/auth-config"
 need('return json({ configured: authStatus(env).configured });' in auth_config_block and 'provider:' not in auth_config_block and 'client_auth:' not in auth_config_block, "PUBLIC_AUTH_CONFIG_MINIMIZED")
 need('DEV_ENDPOINT_DISABLED: 404' in WORKER, "DEV_DISABLED_STATUS")
 need("auth-bootstrap-pending" in HTML, "AUTH_FIRST_PAINT")
-need("styles.css?v=20260924-ux2c" in HTML, "STYLE_CACHE_KEY")
-need("app.js?v=20260924-ux2b" in HTML, "SCRIPT_CACHE_KEY")
+need("styles.css?v=20260925-history1" in HTML, "STYLE_CACHE_KEY")
+need("app.js?v=20260925-history1" in HTML, "SCRIPT_CACHE_KEY")
 need('const apiBase = localHost' in JS and ': location.origin;' in JS, "PROD_API_OVERRIDE_BLOCKED")
 need('const scenario = localHost' in JS, "PROD_SCENARIO_OVERRIDE_BLOCKED")
 need('appViews.has(requested) && !sessionAuthenticated' in JS, "PROTECTED_ROUTE_GUARD")
@@ -58,7 +58,7 @@ need("'TRIAL', 'Trial', 'HARA_COMMANDER_GOVERNED_INVOKE', 'CALENDAR_MONTH', 100,
 need('100 <small>execuções / mês</small>' in HTML and '1.000 <small>invokes / período</small>' not in HTML and '10.000 <small>invokes / período</small>' not in HTML, "TRIAL_PLAN_UI_ALIGNMENT")
 need("10000" not in HTML and "10000" not in JS and "10.000" not in HTML and "1.000" not in HTML, "FALSE_QUOTA_CLAIMS_ABSENT")
 need(
-    'devices.find((device) => Boolean(device.selected))' in JS
+    'activeDevices.find((device) => Boolean(device.selected))' in JS
     and 'setState("Offline"' in JS
     and 'setState("Pronto"' in JS
     and "device-selected-badge" in JS
