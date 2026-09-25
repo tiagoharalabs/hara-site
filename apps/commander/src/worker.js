@@ -1424,7 +1424,7 @@ export default {
       }
 
       if (url.pathname === "/api/portal/auth-config" && request.method === "GET") {
-        return json(authStatus(env));
+        return json({ configured: authStatus(env).configured });
       }
 
       if (url.pathname === "/auth/login" && request.method === "GET") {
