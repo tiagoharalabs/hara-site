@@ -11,8 +11,8 @@ Full historical authority:
 ## 1. Current authority
 
 Repository:
-- source authority incorporated by this kit through PR #150: `f7abdb8ed151a033e855faf979e8fa0295bd5d2a`
-- latest Commander source merge: PR #150 — public health metadata minimization after DEV health hardening
+- source authority incorporated by this kit through PR #152: `1877190331aa8cfa9aff933c82fa90e308e86341`
+- latest Commander source merge: PR #152 — public auth-config metadata minimization
 - open Commander PRs observed at kit creation: **0**
 
 PROD:
@@ -27,9 +27,9 @@ PROD:
 - Identity live-readonly: **PASS**
 
 DEV:
-- Worker `hara-commander-dev-v2`: `a60a3408-4358-429a-af9a-0b1c406882b0`
-- rollback: `2eabd96b-78f4-4dc1-a488-b2195ad5d13d`
-- deployed source: `f7abdb8ed151a033e855faf979e8fa0295bd5d2a`
+- Worker `hara-commander-dev-v2`: `38366557-1ffb-4eeb-a489-eeb4ec1d0891`
+- rollback: `a60a3408-4358-429a-af9a-0b1c406882b0`
+- deployed source: `1877190331aa8cfa9aff933c82fa90e308e86341`
 - health: **DEV / REMOTE_DEV / HARA Identity configured**
 - bootstrap public assets: byte-equal to canonical source in latest readback
 - versioned DEV config: `apps/commander/wrangler.dev.jsonc`
@@ -315,6 +315,8 @@ Key progression after the original promotion/UI cleanup:
 - #148 — DEV deployment readback now requires live login redirect, PKCE S256, transaction-cookie and account-switch proof
 - #149 — rich `/api/dev/health` diagnostics require `DEV_ACCESS_TOKEN`
 - #150 — public `/api/health` minimized to `{ok, service}`; runtime fingerprinting removed; DEV promoted to Worker `a60a3408-4358-429a-af9a-0b1c406882b0`, rollback `2eabd96b-78f4-4dc1-a488-b2195ad5d13d`
+- #151 — canonical kit/successor guide synchronized through #150
+- #152 — public `/api/portal/auth-config` minimized to `{configured}`; provider/client-auth fingerprinting removed; DEV promoted to Worker `38366557-1ffb-4eeb-a489-eeb4ec1d0891`, rollback `a60a3408-4358-429a-af9a-0b1c406882b0`
 
 For the earlier #64–#90 history, use the canonical successor guide.
 
