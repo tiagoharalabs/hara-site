@@ -69,6 +69,7 @@ jobs:
           python3 apps/commander/scripts/validate_session_retention.py
           python3 apps/commander/scripts/validate_device_channel_source.py
           python3 apps/commander/scripts/validate_event_v2_wiring.py
+          python3 apps/commander/scripts/validate_event_v2_schema_0011.py
           python3 apps/commander/scripts/validate_event_v2_websocket_client.py
           python3 apps/commander/scripts/commander_event_v2_dev_canary_provision.py --check
           python3 apps/commander/scripts/validate_customer_privacy_noc_contract.py
