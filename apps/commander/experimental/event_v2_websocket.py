@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import json
 import os
 import socket
 import ssl
@@ -34,6 +35,8 @@ KEEPALIVE_IDLE_SECONDS = 60.0
 RECONNECT_BASE_SECONDS = 1.0
 RECONNECT_MAX_SECONDS = 60.0
 MAX_CONTROL_PAYLOAD_BYTES = 125
+EVENT_SCHEMA = "hara.commander-device-event.v2"
+DURABLE_LIVENESS_SECONDS = 6 * 60 * 60
 
 
 class EventV2Error(RuntimeError):
@@ -264,6 +267,42 @@ def open_event_socket(base_url: str, token: str, timeout: float = 25.0) -> ssl.S
 def send_text(sock: socket.socket, text: str) -> None:
     payload = str(text).encode("utf-8")
     sock.sendall(encode_client_frame(0x1, payload))
+
+
+def send_liveness(sock: socket.socket) -> None:
+    send_text(sock, json.dumps(
+        {"schema": EVENT_SCHEMA, "type": "LIVENESS"},
+        separators=(",", ":"),
+        sort_keys=True,
+    ))
+
+
+def parse_event_frame(frame: ServerFrame) -> dict:
+    if frame.opcode != 0x1:
+        raise fail("EVENT_V2_EVENT_FRAME_REQUIRED")
+    try:
+        raw = frame.payload.decode("utf-8")
+        payload = json.loads(raw)
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise fail("EVENT_V2_EVENT_INVALID") from exc
+    if not isinstance(payload, dict) or payload.get("schema") != EVENT_SCHEMA:
+        raise fail("EVENT_V2_EVENT_INVALID")
+    if payload.get("type") != "CALL_AVAILABLE":
+        raise fail("EVENT_V2_EVENT_TYPE_DENIED")
+    if set(payload) != {"schema", "type", "call_id"}:
+        raise fail("EVENT_V2_EVENT_FIELDS_DENIED")
+    call_id = str(payload.get("call_id") or "")
+    if (
+        not call_id
+        or len(call_id) > 180
+        or any(not (ch.isalnum() or ch in "_.:-") for ch in call_id)
+    ):
+        raise fail("EVENT_V2_CALL_ID_INVALID")
+    return {
+        "schema": EVENT_SCHEMA,
+        "type": "CALL_AVAILABLE",
+        "call_id": call_id,
+    }
 
 
 def send_ping(sock: socket.socket, payload: bytes = b"") -> None:
