@@ -42,7 +42,7 @@ auth_config_block = WORKER.split('if (url.pathname === "/api/portal/auth-config"
 need('return json({ configured: authStatus(env).configured });' in auth_config_block and 'provider:' not in auth_config_block and 'client_auth:' not in auth_config_block, "PUBLIC_AUTH_CONFIG_MINIMIZED")
 need('DEV_ENDPOINT_DISABLED: 404' in WORKER, "DEV_DISABLED_STATUS")
 need("auth-bootstrap-pending" in HTML, "AUTH_FIRST_PAINT")
-need("styles.css?v=20260924-ux2b" in HTML, "STYLE_CACHE_KEY")
+need("styles.css?v=20260924-ux2c" in HTML, "STYLE_CACHE_KEY")
 need("app.js?v=20260924-ux2b" in HTML, "SCRIPT_CACHE_KEY")
 need('const apiBase = localHost' in JS and ': location.origin;' in JS, "PROD_API_OVERRIDE_BLOCKED")
 need('const scenario = localHost' in JS, "PROD_SCENARIO_OVERRIDE_BLOCKED")
@@ -106,6 +106,9 @@ need(
     and "function toggleMobileMore(button)" in JS
     and "closeMobileMoreMenus()" in JS
     and ".workspace-mode .sidebar{position:fixed" in CSS
+    and ".side-nav>.mobile-more-toggle,.mobile-more-menu{display:none!important}" in CSS
+    and ".workspace-mode .side-nav>[data-app-go]:not(.desktop-secondary),.workspace-mode .side-nav>.mobile-more-toggle{display:flex!important" in CSS
+    and ".workspace-mode .side-nav>.desktop-secondary{display:none!important}" in CSS
     and ".mobile-more-menu:not([hidden]){display:flex}" in CSS,
     "MOBILE_NAVIGATION",
 )
