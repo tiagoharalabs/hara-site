@@ -314,8 +314,15 @@ def self_check() -> None:
         rendered = " ".join(ast.dump(arg) for arg in node.args)
         if any(name in rendered for name in ("pairing_token", "device_token", "config")):
             raise fail("CANARY_SECRET_PRINT_SURFACE")
-    if "rm -rf" in source:
-        raise fail("CANARY_GENERIC_DELETE_DENIED")
+    # Fail closed on an actual generic recursive-delete command without making
+    # this validator self-match its own policy string.
+    forbidden_delete_tokens = ("rm", "-" + "r" + "f")
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Constant) or not isinstance(node.value, str):
+            continue
+        normalized = " ".join(node.value.split())
+        if " ".join(forbidden_delete_tokens) in normalized:
+            raise fail("CANARY_GENERIC_DELETE_DENIED")
     print("COMMANDER_EVENT_V2_DEV_CANARY_PROVISION_SOURCE=PASS")
     print("COMMANDER_EVENT_V2_DEV_CANARY_TOKEN_OUTPUT=ABSENT")
     print("COMMANDER_EVENT_V2_DEV_CANARY_PROD_AGENT_MUTATION=ABSENT")
