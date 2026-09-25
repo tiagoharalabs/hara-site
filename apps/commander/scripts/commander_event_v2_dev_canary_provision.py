@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import base64
 import hashlib
 import json
 import os
@@ -123,6 +124,11 @@ def quote_sql(value: str) -> str:
     return "'" + str(value).replace("'", "''") + "'"
 
 
+def worker_sha256(value: str) -> str:
+    digest = hashlib.sha256(str(value).encode("utf-8")).digest()
+    return base64.urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")
+
+
 def create_pairing_token() -> tuple[str, str]:
     created_dt = datetime.now(timezone.utc)
     created = created_dt.isoformat(timespec="milliseconds").replace("+00:00", "Z")
@@ -131,7 +137,7 @@ def create_pairing_token() -> tuple[str, str]:
     ).replace("+00:00", "Z")
     pairing_id = "HARA-PAIR-CANARY-" + str(uuid.uuid4())
     pairing_token = secrets.token_urlsafe(32)
-    token_hash = hashlib.sha256(pairing_token.encode("utf-8")).hexdigest()
+    token_hash = worker_sha256(pairing_token)
 
     sql = f"""
 UPDATE device_pairing_tokens
@@ -301,6 +307,7 @@ printf 'PROD_AGENT_BASELINE_ACTIVE=TRUE\n'
 
 def self_check() -> None:
     load_dev_config()
+    assert worker_sha256("abc") == "ungWv48Bz-pBQUDeXa4iI7ADYaOWF3qctBD_YfIAFa0"
     for path in SOURCE_FILES:
         if not (ROOT / path).is_file():
             raise fail("CANARY_SOURCE_MISSING:" + path)
@@ -326,6 +333,7 @@ def self_check() -> None:
     print("COMMANDER_EVENT_V2_DEV_CANARY_PROVISION_SOURCE=PASS")
     print("COMMANDER_EVENT_V2_DEV_CANARY_TOKEN_OUTPUT=ABSENT")
     print("COMMANDER_EVENT_V2_DEV_CANARY_PROD_AGENT_MUTATION=ABSENT")
+    print("COMMANDER_EVENT_V2_DEV_CANARY_TOKEN_HASH=WORKER_BASE64URL_SHA256")
 
 
 def main() -> int:
