@@ -42,8 +42,8 @@ auth_config_block = WORKER.split('if (url.pathname === "/api/portal/auth-config"
 need('return json({ configured: authStatus(env).configured });' in auth_config_block and 'provider:' not in auth_config_block and 'client_auth:' not in auth_config_block, "PUBLIC_AUTH_CONFIG_MINIMIZED")
 need('DEV_ENDPOINT_DISABLED: 404' in WORKER, "DEV_DISABLED_STATUS")
 need("auth-bootstrap-pending" in HTML, "AUTH_FIRST_PAINT")
-need("styles.css?v=20260924-nav1" in HTML, "STYLE_CACHE_KEY")
-need("app.js?v=20260924-nav1" in HTML, "SCRIPT_CACHE_KEY")
+need("styles.css?v=20260924-nav2" in HTML, "STYLE_CACHE_KEY")
+need("app.js?v=20260924-nav2" in HTML, "SCRIPT_CACHE_KEY")
 need('const apiBase = localHost' in JS and ': location.origin;' in JS, "PROD_API_OVERRIDE_BLOCKED")
 need('const scenario = localHost' in JS, "PROD_SCENARIO_OVERRIDE_BLOCKED")
 need('appViews.has(requested) && !sessionAuthenticated' in JS, "PROTECTED_ROUTE_GUARD")
@@ -65,7 +65,9 @@ need(JS.index("await hydrateSessionHeader()") < JS.index("route(initialRoute, fa
 need(".system-banner.show{display:flex}" in CSS and ".workspace-mode .system-banner.show" not in CSS, "AUTH_BANNER_GLOBAL_VISIBILITY")
 need(
     'class="topnav"' not in HTML
-    and "theme-toggle" not in HTML
+    and HTML.count('class="theme-toggle"') == 1
+    and "theme-icon-moon" in HTML
+    and "theme-icon-sun" in HTML
     and '<a class="brand" href="https://www.haralabs.com.br/"' in HTML
     and '<div class="workspace">' not in HTML
     and "sidebar-bottom" not in HTML
@@ -81,7 +83,13 @@ need(
     and ".side-nav button.active::before" in CSS,
     "APPROVED_NAV_INTERACTION",
 )
-need("brandLink" not in JS and "themeBtn" not in JS, "APPROVED_HEADER_BEHAVIOR")
+need(
+    "brandLink" not in JS
+    and 'const themeBtn = document.querySelector(".theme-toggle");' in JS
+    and 'localStorage.setItem("hara-theme", next)' in JS
+    and 'html[data-theme="dark"] .theme-icon-sun{display:block}' in CSS,
+    "APPROVED_HEADER_BEHAVIOR",
+)
 need('OWNER: "Proprietário"' in JS and 'data-user-role>Owner<' not in HTML and 'usage: "Uso & limite · H.A.R.A. Commander"' in JS, "PORTUGUESE_ROLE_AND_TITLE_UX")
 need("https://www.haralabs.com.br/legal/termos/" in HTML and "https://www.haralabs.com.br/legal/privacidade/" in HTML and 'class="auth-legal"' in HTML and 'class="product-legal-links"' in HTML, "LEGAL_LINKS_READY")
 need("#dashboardInvokes" not in CSS and ".activity-list" not in CSS, "DEAD_ACTIVITY_CSS_ABSENT")
