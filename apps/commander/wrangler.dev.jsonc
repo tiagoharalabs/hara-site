@@ -23,7 +23,8 @@
     "AUTH_ISSUER": "https://auth.haralabs.com.br/",
     "AUTH_CLIENT_ID": "391790882505949187",
     "AUTH_PROVIDER_LABEL": "HARA Identity",
-    "AUTH_CLIENT_AUTH": "BASIC"
+    "AUTH_CLIENT_AUTH": "BASIC",
+    "DEVICE_EVENT_V2_ENABLED": "false"
   },
   "d1_databases": [
     {
@@ -38,6 +39,10 @@
       {
         "name": "TENANT_QUOTA",
         "class_name": "TenantQuota"
+      },
+      {
+        "name": "DEVICE_CHANNEL",
+        "class_name": "DeviceChannel"
       }
     ]
   },
@@ -46,6 +51,12 @@
       "tag": "v1",
       "new_sqlite_classes": [
         "TenantQuota"
+      ]
+    },
+    {
+      "tag": "v2",
+      "new_classes": [
+        "DeviceChannel"
       ]
     }
   ]

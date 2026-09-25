@@ -1,0 +1,58 @@
+name: HARA Commander Scale V2 Validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "apps/commander/**"
+      - "docs/architecture/HARA_COMMANDER_SCALE_V2_EVENT_TRANSPORT.md"
+      - ".github/workflows/hara-commander-scale-v2-validation.yml"
+  push:
+    branches: [main]
+    paths:
+      - "apps/commander/**"
+      - "docs/architecture/HARA_COMMANDER_SCALE_V2_EVENT_TRANSPORT.md"
+      - ".github/workflows/hara-commander-scale-v2-validation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate Commander scale/event source
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact revision without external actions
+        shell: bash
+        env:
+          HARA_GIT_TOKEN: ${{ github.token }}
+          HARA_REPOSITORY: ${{ github.repository }}
+          HARA_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -Eeuo pipefail
+          HARA_BASIC_AUTH="$(printf 'x-access-token:%s' "$HARA_GIT_TOKEN" | base64 -w0)"
+          git init --quiet .
+          git remote add origin "https://github.com/${HARA_REPOSITORY}.git"
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic ${HARA_BASIC_AUTH}" fetch --quiet --no-tags --depth=1 origin "$HARA_HEAD_SHA"
+          git checkout --quiet --detach FETCH_HEAD
+          test "$(git rev-parse HEAD)" = "$HARA_HEAD_SHA"
+          unset HARA_GIT_TOKEN HARA_BASIC_AUTH
+
+      - name: Validate Event V2 JavaScript syntax
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          node --check apps/commander/src/worker.js
+          node --check apps/commander/src/device-channel.mjs
+          echo "COMMANDER_EVENT_V2_JS_SYNTAX=PASS"
+
+      - name: Validate capacity and transport guards
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 apps/commander/scripts/commander_scale_capacity_model.py --check
+          python3 apps/commander/scripts/validate_commander_scale_model.py
+          python3 apps/commander/scripts/validate_device_channel_source.py
+          python3 apps/commander/scripts/validate_event_v2_wiring.py
