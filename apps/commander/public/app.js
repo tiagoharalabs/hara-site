@@ -22,6 +22,7 @@
   const params = new URLSearchParams(location.search);
   const root = document.documentElement;
   const themeBtn = document.querySelector(".theme-toggle");
+  const neonBtn = document.querySelector(".neon-toggle");
   const themeMeta = document.querySelector('meta[name="theme-color"]');
   const guestActions = document.querySelector("[data-auth-guest]");
   const sessionActions = document.querySelector("[data-auth-session]");
@@ -49,6 +50,18 @@
     return root.dataset.theme === "dark" ? "dark" : "light";
   }
 
+  function currentNeon() {
+    return root.dataset.neon === "on";
+  }
+
+  function syncNeonUi() {
+    const on = currentNeon();
+    if (!neonBtn) return;
+    neonBtn.setAttribute("aria-pressed", String(on));
+    neonBtn.setAttribute("aria-label", on ? "Desativar Neon" : "Ativar Neon");
+    neonBtn.title = on ? "Neon ON" : "Neon OFF";
+  }
+
   function syncThemeUi() {
     const dark = currentTheme() === "dark";
     if (themeBtn) {
@@ -61,11 +74,20 @@
   }
 
   syncThemeUi();
+  if (!root.dataset.neon) root.dataset.neon = "off";
+  syncNeonUi();
   themeBtn?.addEventListener("click", () => {
     const next = currentTheme() === "dark" ? "light" : "dark";
     root.dataset.theme = next;
     try { localStorage.setItem("hara-theme", next); } catch (_error) {}
     syncThemeUi();
+  });
+
+  neonBtn?.addEventListener("click", () => {
+    const next = currentNeon() ? "off" : "on";
+    root.dataset.neon = next;
+    try { localStorage.setItem("hara-neon", next); } catch (_error) {}
+    syncNeonUi();
   });
 
   function validApiBase(value) {
