@@ -32,6 +32,8 @@ Agent:
 - stable release: **0.3.7**
 - governed surface: exactly five device tools
 - arbitrary shell/filesystem access: **ABSENT BY CONTRACT**
+- 0.3.7 polling/heartbeat remains the V1 homologation baseline
+- Event V2 is the post-baseline scale/cost target and remains source-only/default-off until V1 E2E is terminal
 
 ## 2. What this front closed
 
@@ -110,6 +112,26 @@ Structural PROD state at handoff remains intentionally pre-pairing:
 
 ## 4. Test front — exact next scope
 
+### Product data-plane law for all new testing
+
+The test front must keep the internal H.A.R.A. path and customer product path separate.
+
+```text
+INTERNAL_HARA_MCP
+OpenAI -> Cloudflare Tunnel -> Services -> H.A.R.A.
+MONITORING=ALLOWED
+
+CUSTOMER_PRODUCT
+ChatGPT/Codex -> Commander edge -> DeviceChannel -> outbound Agent
+HARA_SERVICES_INLINE=FALSE
+CONTENT_TELEMETRY=FALSE
+OPERATIONAL_METADATA_ONLY=TRUE
+```
+
+Customer-local console/log output belongs to the customer machine. Tests may use
+that local output as operator evidence, but normal product telemetry must not
+export command/result/file/conversation content to Services.
+
 The next front is **homologation/testing**, not another polish wave.
 
 Run in this order:
@@ -128,14 +150,15 @@ Run in this order:
    - Agent 0.3.7
    - do not create the pairing token before the operator begins this phase
 
-3. real device lifecycle:
+3. real device lifecycle — V1 baseline:
    - pairing
-   - heartbeat
+   - current 0.3.7 heartbeat
    - online/offline
    - selected-device persistence
    - pairing expiry
    - pairing supersession
    - revoke behavior
+   - observe local Agent/console execution output and prove no secrets are leaked into published evidence
 
 4. governed five-tool E2E:
    - stable selected device
@@ -160,6 +183,27 @@ Run in this order:
    - zero pairing/device/product/OAuth token leakage
    - no session cookie/client secret in Git evidence
    - sanitize screenshots/logs/comments before publishing
+   - distinguish customer-local console content from metadata eligible for NOC aggregation
+
+8. Event V2 scale/cost canary — **only after V1 baseline is terminal**:
+   - one HARA-owned device first
+   - customer path must bypass HARA Services
+   - outbound authenticated WebSocket to Commander/Cloudflare
+   - idle HTTP polling = 0
+   - 30-second HTTP heartbeat = 0 on the Event path
+   - protocol keepalive target = 60s idle, not app-level telemetry spam
+   - durable liveness checkpoint target = 6h, coalesced with meaningful state changes
+   - reconnect = exponential + full jitter + bounded maximum
+   - fixed 2-second fallback = denied
+   - D1 durable truth survives dropped notification/reconnect
+   - repeat lifecycle, five-tool, receipt and quota parity
+   - rollback to V1 remains proven until V2 terminal acceptance
+
+9. NOC evidence — source/test first:
+   - Cloudflare native Worker/D1/DO aggregate metrics are primary
+   - Services consumes aggregate capacity/cost/reliability signals asynchronously
+   - customer content is not exported to Services
+   - internal H.A.R.A. MCP monitoring remains unrestricted by this customer privacy boundary
 
 ## 5. Acceptance boundary
 
@@ -195,7 +239,11 @@ Do not:
 - enable arbitrary shell/filesystem access
 - weaken pairing supersession, receipt binding or quota terminal semantics
 - treat DEV behavior as proof of PROD behavior
-- mix new feature work into the test campaign unless a test exposes a concrete defect
+- mix unrelated feature work into the V1 test campaign unless a test exposes a concrete defect
+- route customer command traffic through HARA Services
+- collect customer content for routine telemetry or model training
+- treat local customer console output as permission to export that content
+- reintroduce fixed 2-second polling as Event V2 fallback
 
 ## 8. Read order
 
