@@ -35,6 +35,10 @@
   let authProviderConfigured = false;
   let sessionAuthenticated = false;
   let skipNextWorkspaceLoad = false;
+  let dashboardCache = null;
+  let dashboardCacheAt = 0;
+  let devicesCache = null;
+  let devicesCacheAt = 0;
   let pairingExpiryTimer = null;
   const revokeConfirmTimers = new Map();
   let currentView = null;
@@ -76,6 +80,8 @@
     ? (validApiBase(params.get("api")) || "http://127.0.0.1:9192")
     : location.origin;
   const dashboardPath = localHost ? "/api/dev/dashboard" : "/api/portal/dashboard";
+  const PORTAL_DASHBOARD_CACHE_MS = 30 * 1000;
+  const PORTAL_DEVICES_CACHE_MS = 15 * 1000;
 
   function startRemoteAuth(signup = false, forceLogin = false) {
     if (!remotePortal) {
@@ -125,6 +131,10 @@
 
   function setGuestHeader() {
     sessionAuthenticated = false;
+    dashboardCache = null;
+    dashboardCacheAt = 0;
+    devicesCache = null;
+    devicesCacheAt = 0;
     if (guestActions) guestActions.hidden = false;
     if (sessionActions) sessionActions.hidden = true;
     document.body.classList.remove("session-authenticated");
@@ -321,6 +331,10 @@
       if (!response.ok) throw new Error("HTTP_" + response.status);
       applyDashboard(payload);
       renderDevices(payload.device_state);
+      dashboardCache = payload;
+      dashboardCacheAt = Date.now();
+      devicesCache = payload.device_state;
+      devicesCacheAt = Date.now();
       return true;
     } catch (_error) {
       // Bootstrap is an optimization only. Fall back to the existing split reads.
@@ -454,8 +468,18 @@
     }
   }
 
-  async function loadDevices(trigger = null) {
+  async function loadDevices(trigger = null, force = false) {
     if (!remotePortal) return;
+    const forceRefresh = force || Boolean(trigger);
+    if (
+      !forceRefresh
+      && devicesCache
+      && Date.now() - devicesCacheAt < PORTAL_DEVICES_CACHE_MS
+    ) {
+      renderDevices(devicesCache);
+      return;
+    }
+
     const originalLabel = trigger?.textContent || "Atualizar";
     if (trigger) {
       trigger.disabled = true;
@@ -466,7 +490,10 @@
       const response = await fetch("/api/portal/devices", { cache: "no-store", credentials: "same-origin" });
       if (handlePortalAuthFailure(response, "Entre novamente para consultar seus computadores.")) return;
       if (!response.ok) throw new Error("HTTP_" + response.status);
-      renderDevices(await response.json());
+      const payload = await response.json();
+      devicesCache = payload;
+      devicesCacheAt = Date.now();
+      renderDevices(payload);
     } catch (_error) {
       const list = document.getElementById("deviceList");
       if (list) {
@@ -573,7 +600,7 @@
       if (handlePortalAuthFailure(response, "Entre novamente para selecionar o computador.")) return;
       if (!response.ok) throw new Error("HTTP_" + response.status);
       showToast("Computador selecionado para o Commander.");
-      await loadDevices();
+      await loadDevices(null, true);
     } catch (_error) {
       showToast("Não foi possível selecionar o computador.");
     } finally {
@@ -622,7 +649,7 @@
       if (handlePortalAuthFailure(response, "Entre novamente para revogar o computador.")) return;
       if (!response.ok) throw new Error("HTTP_" + response.status);
       showToast("Computador revogado.");
-      await loadDevices();
+      await loadDevices(null, true);
     } catch (_error) {
       showToast("Não foi possível revogar o computador.");
     } finally {
@@ -726,8 +753,20 @@
     }
   }
 
-  async function loadProductDashboard() {
+  async function loadProductDashboard(force = false) {
     hideBanner();
+
+    if (
+      remotePortal
+      && !force
+      && dashboardCache
+      && Date.now() - dashboardCacheAt < PORTAL_DASHBOARD_CACHE_MS
+    ) {
+      applyDashboard(dashboardCache);
+      applyScenario(scenario, dashboardCache);
+      return;
+    }
+
     setLoading(true);
 
     if (scenario === "loading") {
@@ -764,6 +803,10 @@
       }
       if (!response.ok) throw new Error("HTTP_" + response.status);
       const payload = await response.json();
+      if (remotePortal) {
+        dashboardCache = payload;
+        dashboardCacheAt = Date.now();
+      }
       applyDashboard(payload);
       applyScenario(scenario, payload);
     } catch (_error) {
@@ -847,7 +890,6 @@
       return;
     }
     if (next === "devices") {
-      hydrateSessionHeader();
       loadDevices();
     } else if (appViews.has(next) || (next === "landing" && localHost)) {
       loadProductDashboard();
@@ -1008,7 +1050,7 @@
 
       if (remotePortal) {
         let authenticated;
-        if (initialRoute === "dashboard") {
+        if (appViews.has(initialRoute)) {
           const hydrated = await loadPortalBootstrap();
           if (hydrated === true) {
             authenticated = true;

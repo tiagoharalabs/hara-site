@@ -62,6 +62,7 @@ jobs:
           python3 apps/commander/scripts/validate_commander_scale_model.py
           python3 apps/commander/scripts/validate_human_scale_v2.py
           python3 apps/commander/scripts/validate_human_bootstrap_v2.py
+          python3 apps/commander/scripts/validate_human_passive_cost_v2.py
           python3 apps/commander/scripts/validate_oidc_transaction_hygiene.py
           python3 apps/commander/scripts/validate_session_retention.py
           python3 apps/commander/scripts/validate_device_channel_source.py

@@ -86,7 +86,23 @@ reduction: ~83.3%
 
 Expiry and revocation semantics are unchanged.
 
-### 4. Retention cleanup in login hot path
+### 4. Passive browser request budget
+
+The portal has no background network polling loop. Route changes can still cause repeated product/device reads, so #167 now applies short in-memory browser TTLs to passive navigation:
+
+```text
+dashboard/product TTL = 30s
+devices TTL = 15s
+passive dashboard cap = 2 refreshes/minute/browser
+passive devices cap = 4 refreshes/minute/browser
+combined passive cap = 6 refreshes/minute/browser
+```
+
+User-initiated device refreshes bypass the cache. Device selection/revocation also force a fresh device read after mutation.
+
+These browser caches are presentation accelerators only. They do not authorize a command, reserve quota, validate a device credential or revoke a session. Server-side authority remains unchanged.
+
+### 5. Retention cleanup in login hot path
 
 Before #167, every login start ran:
 - expired OIDC transaction cleanup;
@@ -96,7 +112,7 @@ At a synthetic 100 login/s burst, that could add up to 200 maintenance operation
 
 #167 moves this best-effort hygiene to an hourly Worker scheduled event. Retention remains bounded in batches of 100; authorization never depended on cleanup succeeding.
 
-### 5. OIDC discovery/JWKS origin amplification
+### 6. OIDC discovery/JWKS origin amplification
 
 Before #167:
 - login start fetched OIDC discovery;
@@ -109,7 +125,7 @@ This scaled origin traffic roughly with login attempts.
 
 The cache is an accelerator only; issuer, endpoint, algorithm, audience, nonce, expiry and signature checks remain authoritative.
 
-### 6. TenantQuota hot-tenant boundary
+### 7. TenantQuota hot-tenant boundary
 
 Quota is currently one Durable Object per tenant. This scales horizontally across many tenants, but a single very large tenant can become a per-object hotspot.
 
@@ -124,7 +140,7 @@ Do not shard quota pre-emptively. Before a redesign, measure at least:
 
 If one-tenant saturation is demonstrated, introduce a governed quota-shard contract while preserving idempotency and total tenant quota authority.
 
-### 7. PRODUCT_DB decomposition seam
+### 8. PRODUCT_DB decomposition seam
 
 The current D1 database contains product identity, sessions, devices and calls. For the 10k target, premature physical sharding is not required, but code and migrations must not assume that a single database is the permanent architecture.
 
@@ -166,7 +182,7 @@ PREMATURE_DB_SHARDING=FALSE
 ## Acceptance for the 10k target
 
 - deterministic 1k/10k capacity model passes;
-- 2k-active / 200-session-read/s envelope remains explicit;
+- 2k-active / 200-session-read/s stress envelope remains explicit and is now grounded by browser TTL caps;
 - session telemetry writes reduced >=80% from the old 5-minute cadence;
 - retention cleanup is absent from login hot path;
 - public OIDC metadata fetches are bounded by short cache entries;
