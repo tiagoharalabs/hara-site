@@ -8,6 +8,7 @@ ROOT = Path(__file__).resolve().parents[3]
 MIG = ROOT / "apps/commander/migrations"
 AUTH = (ROOT / "apps/commander/src/auth.js").read_text(encoding="utf-8")
 READBACK = (ROOT / "apps/commander/scripts/commander_prod_readback.py").read_text(encoding="utf-8")
+WORKER = (ROOT / "apps/commander/src/worker.js").read_text(encoding="utf-8")
 
 db = sqlite3.connect(":memory:")
 db.executescript((MIG / "0001_product.sql").read_text(encoding="utf-8"))
@@ -91,7 +92,13 @@ assert "WHERE expires_at_utc <= ?" in block
 assert "ORDER BY expires_at_utc ASC" in block
 assert "LIMIT ?" in block
 assert ".run().catch(() => null)" in block
-assert "await cleanupExpiredOidcTransactions(env)" in begin
+assert "await cleanupExpiredOidcTransactions(env)" not in begin
+maintenance = AUTH.split("export async function runAuthRetentionMaintenance", 1)[1].split(
+    "export async function beginLogin", 1
+)[0]
+assert "await cleanupExpiredOidcTransactions(env)" in maintenance
+assert "runAuthRetentionMaintenance" in WORKER
+assert "async scheduled(_event, env, ctx)" in WORKER
 assert "DELETE FROM oidc_transactions WHERE expires_at_utc <= ?" not in AUTH
 assert "OIDC_TRANSACTION_WINDOW_MINUTES = 10" in READBACK
 assert "expired_oidc_transactions" in READBACK
@@ -102,4 +109,5 @@ print("COMMANDER_OIDC_TX_CLEANUP_BATCH_100=PASS")
 print("COMMANDER_OIDC_TX_ACTIVE_UNCONSUMED_PRESERVED=PASS")
 print("COMMANDER_OIDC_TX_ACTIVE_CONSUMED_REPLAY_WINDOW_PRESERVED=PASS")
 print("COMMANDER_OIDC_TX_CLEANUP_BEST_EFFORT=PASS")
+print("COMMANDER_OIDC_TX_CLEANUP_OFF_LOGIN_HOT_PATH=PASS")
 print("COMMANDER_OIDC_TX_READBACK_SANITIZED=PASS")
