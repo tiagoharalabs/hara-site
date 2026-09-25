@@ -32,6 +32,12 @@ def main() -> int:
         "notifyDeviceEventChannel",
         "x-hara-channel-authenticated",
         "D1 call state remains authoritative",
+        'tunnelMode = "OUTBOUND_RELAY"',
+        'mode === "EVENT_V2_OFFLINE"',
+        'mode === "EVENT_V2"',
+        "eventV2Cutoff",
+        "d.tunnel_mode = 'EVENT_V2'",
+        "d.tunnel_mode NOT IN ('EVENT_V2','EVENT_V2_OFFLINE')",
     ]
     for marker in required_worker:
         assert marker in worker, f"missing Worker Event V2 marker: {marker}"
@@ -41,6 +47,10 @@ def main() -> int:
         "await notifyDeviceEventChannel(env, context.tenant_id, deviceId, callId)"
     )
     assert notify_at > insert_at, "event notification must occur only after durable call insert"
+
+    assert "deviceOnline(row.last_seen_at_utc, row.tunnel_mode, now)" in worker
+    assert "deviceOnline(device.last_seen_at_utc, device.tunnel_mode)" in worker
+    assert "deviceOnline(currentDevice.last_seen_at_utc, currentDevice.tunnel_mode)" in worker
 
     # The Worker must authenticate the original upgrade before constructing the
     # internal DO request. The bearer credential must not be copied into that request.
@@ -74,6 +84,9 @@ def main() -> int:
     print("COMMANDER_EVENT_V2_DEV_DEFAULT=OFF")
     print("COMMANDER_EVENT_V2_PROD_BINDING=ABSENT")
     print("COMMANDER_EVENT_V2_NOTIFY_AFTER_DURABLE_INSERT=PASS")
+    print("COMMANDER_EVENT_V2_PRESENCE_USES_TRANSPORT_STATE=PASS")
+    print("COMMANDER_EVENT_V2_V1_90S_WINDOW_PRESERVED=PASS")
+    print("COMMANDER_EVENT_V2_LIVENESS_WINDOW_HOURS=7")
     return 0
 
 
