@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import importlib.util
+import socket
 import struct
 import sys
 from pathlib import Path
@@ -29,6 +30,24 @@ def expect_code(fn, code):
         assert str(exc) == code, (str(exc), code)
         return
     raise AssertionError("expected error " + code)
+
+
+class IdleSocket:
+    def __init__(self):
+        self.timeout = None
+        self.sent = []
+
+    def gettimeout(self):
+        return self.timeout
+
+    def settimeout(self, value):
+        self.timeout = value
+
+    def read(self, _count):
+        raise socket.timeout()
+
+    def sendall(self, data):
+        self.sent.append(bytes(data))
 
 
 def main() -> int:
@@ -95,6 +114,38 @@ def main() -> int:
     d126 = client.decode_server_frame(raw126)
     assert d126.payload == p126
 
+    # Full-jitter reconnect policy is deterministic under injected entropy.
+    policy = client.ReconnectPolicy()
+    assert policy.delay(0, 0.0) == 0.0
+    assert policy.delay(0, 0.5) == 0.5
+    assert policy.delay(1, 0.5) == 1.0
+    assert policy.delay(5, 0.5) == 16.0
+    assert policy.delay(6, 0.5) == 30.0
+    assert 59.0 < policy.delay(20, 0.999) < 60.0
+    expect_code(
+        lambda: policy.delay(-1, 0.5),
+        "EVENT_V2_RECONNECT_ATTEMPT_INVALID",
+    )
+    expect_code(
+        lambda: policy.delay(0, 1.0),
+        "EVENT_V2_RECONNECT_RANDOM_INVALID",
+    )
+
+    # Idle receive emits one RFC6455 protocol PING, not an application JSON
+    # heartbeat, and restores the caller's socket timeout.
+    idle = IdleSocket()
+    assert client.KEEPALIVE_IDLE_SECONDS == 60.0
+    assert client.recv_event_or_keepalive(idle) is None
+    assert idle.timeout is None
+    assert len(idle.sent) == 1
+    ping = idle.sent[0]
+    assert ping[0] == 0x89  # FIN + protocol PING opcode
+    assert ping[1] & 0x80   # client control frames remain masked
+    expect_code(
+        lambda: client.send_ping(idle, b"x" * 126),
+        "EVENT_V2_CONTROL_PAYLOAD_TOO_LARGE",
+    )
+
     # Credential validation must not echo the supplied value.
     secret = "DO_NOT_ECHO_THIS_SECRET"
     try:
@@ -111,6 +162,10 @@ def main() -> int:
     print("COMMANDER_EVENT_V2_CLIENT_MASKING=PASS")
     print("COMMANDER_EVENT_V2_SERVER_FRAME_BOUNDS=PASS")
     print("COMMANDER_EVENT_V2_CLIENT_SECRET_ECHO=ABSENT")
+    print("COMMANDER_EVENT_V2_RECONNECT_FULL_JITTER=PASS")
+    print("COMMANDER_EVENT_V2_RECONNECT_MAX_SECONDS=60")
+    print("COMMANDER_EVENT_V2_PROTOCOL_KEEPALIVE_IDLE_SECONDS=60")
+    print("COMMANDER_EVENT_V2_APPLICATION_HEARTBEAT_ON_IDLE=ABSENT")
     return 0
 
 
