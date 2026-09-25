@@ -38,6 +38,8 @@ need('requireDev(env)' in WORKER, "DEV_REQUIRE_GATE")
 need('url.pathname === "/api/health"' in WORKER, "PROD_HEALTH")
 health_block = WORKER.split('if (url.pathname === "/api/health" && request.method === "GET") {', 1)[1].split('if (url.pathname === "/api/dev/health"', 1)[0]
 need('environment:' not in health_block and 'storage_mode:' not in health_block and 'auth:' not in health_block, "PUBLIC_HEALTH_METADATA_MINIMIZED")
+auth_config_block = WORKER.split('if (url.pathname === "/api/portal/auth-config" && request.method === "GET") {', 1)[1].split('if (url.pathname === "/auth/login"', 1)[0]
+need('return json({ configured: authStatus(env).configured });' in auth_config_block and 'provider:' not in auth_config_block and 'client_auth:' not in auth_config_block, "PUBLIC_AUTH_CONFIG_MINIMIZED")
 need('DEV_ENDPOINT_DISABLED: 404' in WORKER, "DEV_DISABLED_STATUS")
 need("auth-bootstrap-pending" in HTML, "AUTH_FIRST_PAINT")
 need("styles.css?v=20260923-ux1" in HTML, "STYLE_CACHE_KEY")
