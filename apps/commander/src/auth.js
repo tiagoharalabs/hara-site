@@ -23,7 +23,7 @@ const TX_COOKIE = "hara_commander_oidc_tx";
 const SESSION_SECONDS = 8 * 60 * 60;
 const TX_SECONDS = 10 * 60;
 const TX_RETENTION_BATCH = 100;
-const SESSION_TOUCH_SECONDS = 5 * 60;
+const SESSION_TOUCH_SECONDS = 30 * 60;
 const SESSION_RETENTION_SECONDS = 30 * 24 * 60 * 60;
 const SESSION_RETENTION_BATCH = 100;
 
@@ -161,6 +161,11 @@ async function cleanupTerminalPortalSessions(env) {
   ).bind(cutoff, cutoff).run().catch(() => null);
 }
 
+export async function runAuthRetentionMaintenance(env) {
+  await cleanupExpiredOidcTransactions(env);
+  await cleanupTerminalPortalSessions(env);
+}
+
 export async function beginLogin(request, env) {
   const config = authConfig(env);
   const metadata = await oidcDiscovery(config.issuer);
@@ -168,15 +173,8 @@ export async function beginLogin(request, env) {
   const redirectUri = url.origin + "/auth/callback";
   const returnTo = safeReturnTo(url.searchParams.get("return_to"));
 
-  // Bound, best-effort OIDC transaction hygiene before creating a new browser flow.
-  // Expired rows are no longer useful for replay protection because callbacks
-  // are rejected once their transaction window closes. Cleanup failure must not
-  // independently block a new login attempt.
-  await cleanupExpiredOidcTransactions(env);
-
-  // Governed session hygiene: terminal portal sessions are retained for 30 days,
-  // then removed in small best-effort batches so cleanup can never block login.
-  await cleanupTerminalPortalSessions(env);
+  // Retention hygiene runs on the Worker's scheduled maintenance path.
+  // Login remains independent from non-authoritative cleanup work.
 
   const state = randomToken(32);
   const browserBinding = randomToken(32);
