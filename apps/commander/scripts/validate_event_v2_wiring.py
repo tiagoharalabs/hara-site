@@ -47,6 +47,12 @@ def main() -> int:
         "await notifyDeviceEventChannel(env, context.tenant_id, deviceId, callId)"
     )
     assert notify_at > insert_at, "event notification must occur only after durable call insert"
+    undelivered_at = worker.index("DEVICE_EVENT_UNDELIVERED")
+    assert undelivered_at > notify_at, "undelivered Event V2 call must cancel after notify attempt"
+    notify_guard = worker[notify_at:undelivered_at + 800]
+    assert "notification.delivered < 1" in notify_guard
+    assert 'throw new Error("DEVICE_OFFLINE")' in notify_guard
+    assert "state = 'CANCELLED'" in notify_guard
 
     assert "deviceOnline(row.last_seen_at_utc, row.tunnel_mode, now)" in worker
     assert "deviceOnline(device.last_seen_at_utc, device.tunnel_mode)" in worker
@@ -87,6 +93,7 @@ def main() -> int:
     print("COMMANDER_EVENT_V2_PRESENCE_USES_TRANSPORT_STATE=PASS")
     print("COMMANDER_EVENT_V2_V1_90S_WINDOW_PRESERVED=PASS")
     print("COMMANDER_EVENT_V2_LIVENESS_WINDOW_HOURS=7")
+    print("COMMANDER_EVENT_V2_UNDELIVERED_CALL=CANCELLED_FAIL_CLOSED")
     return 0
 
 
