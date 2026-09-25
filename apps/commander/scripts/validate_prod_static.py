@@ -42,8 +42,18 @@ auth_config_block = WORKER.split('if (url.pathname === "/api/portal/auth-config"
 need('return json({ configured: authStatus(env).configured });' in auth_config_block and 'provider:' not in auth_config_block and 'client_auth:' not in auth_config_block, "PUBLIC_AUTH_CONFIG_MINIMIZED")
 need('DEV_ENDPOINT_DISABLED: 404' in WORKER, "DEV_DISABLED_STATUS")
 need("auth-bootstrap-pending" in HTML, "AUTH_FIRST_PAINT")
-need("styles.css?v=20260925-polish1" in HTML, "STYLE_CACHE_KEY")
-need("app.js?v=20260925-devicesux1" in HTML, "SCRIPT_CACHE_KEY")
+need("styles.css?v=20260925-neon1" in HTML, "STYLE_CACHE_KEY")
+need("app.js?v=20260925-neon1" in HTML, "SCRIPT_CACHE_KEY")
+need(
+    'class="neon-toggle"' in HTML
+    and 'class="neon-icon"' in HTML
+    and 'localStorage.getItem("hara-neon")' in HTML
+    and 'const neonBtn = document.querySelector(".neon-toggle")' in JS
+    and 'localStorage.setItem("hara-neon", next)' in JS
+    and 'html[data-neon="on"] .neon-toggle' in CSS
+    and 'H.A.R.A Neon bolt control' in CSS,
+    "NEON_BOLT_APPEARANCE_MODE",
+)
 need('const apiBase = localHost' in JS and ': location.origin;' in JS, "PROD_API_OVERRIDE_BLOCKED")
 need('const scenario = localHost' in JS, "PROD_SCENARIO_OVERRIDE_BLOCKED")
 need('appViews.has(requested) && !sessionAuthenticated' in JS, "PROTECTED_ROUTE_GUARD")

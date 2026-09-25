@@ -542,3 +542,49 @@ html[data-theme="dark"] .theme-toggle,
 html[data-theme="dark"] .top-session-user{
   box-shadow:0 2px 7px rgba(0,0,0,.12);
 }
+
+
+/* H.A.R.A Neon bolt control. OFF is quiet; ON restores micro-accent only. */
+.neon-toggle{
+  flex:0 0 auto;
+  display:grid;
+  place-items:center;
+  width:38px;
+  height:38px;
+  padding:0;
+  border:1px solid #c7dfec;
+  border-radius:10px;
+  background:rgba(255,255,255,.76);
+  color:#8298a5;
+  cursor:pointer;
+  box-shadow:none;
+  filter:none;
+  transition:transform .18s ease,background-color .25s ease,border-color .25s ease,color .25s ease,box-shadow .25s ease;
+}
+.neon-icon{width:18px;height:18px;fill:currentColor;opacity:.66;filter:none;transition:opacity .18s ease,filter .18s ease,color .18s ease}
+.neon-toggle:hover{transform:translateY(-1px);background:#fff;border-color:#abd4e8}
+.neon-toggle:active{transform:translateY(0) scale(.985);box-shadow:none}
+.neon-toggle:focus-visible{outline:2px solid #55acd4;outline-offset:2px;box-shadow:none}
+html[data-theme="dark"] .neon-toggle{border-color:#244b61;background:#0d293b;color:#78909e}
+html[data-theme="dark"] .neon-toggle:hover{background:#12344a;border-color:#35637b}
+
+html[data-neon="on"] .neon-toggle{
+  color:#e9b128;
+  border-color:rgba(233,177,40,.30);
+  background:#fffaf0;
+  box-shadow:0 0 5px rgba(233,177,40,.05);
+}
+html[data-theme="dark"][data-neon="on"] .neon-toggle{
+  color:#f1b82d;
+  border-color:rgba(241,184,45,.27);
+  background:#102c3d;
+  box-shadow:0 0 5px rgba(241,184,45,.05);
+}
+html[data-neon="on"] .neon-icon{opacity:1;filter:drop-shadow(0 0 3px rgba(233,177,40,.42))}
+html[data-neon="on"] .btn-primary{box-shadow:0 3px 9px rgba(218,156,19,.085),0 0 5px rgba(233,177,40,.035)}
+html[data-neon="on"] .side-nav button.active .nav-icon{filter:drop-shadow(0 0 3px rgba(49,189,244,.12))}
+html[data-neon="on"] .brand img{filter:drop-shadow(0 0 3px rgba(49,189,244,.08))}
+html[data-neon="on"] .device-state.online{box-shadow:0 0 4px rgba(48,169,108,.06)}
+@media(prefers-reduced-motion:reduce){
+  .neon-toggle,.neon-icon{transition:none!important}
+}

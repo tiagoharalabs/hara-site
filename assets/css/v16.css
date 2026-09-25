@@ -642,90 +642,82 @@ html[data-theme="dark"] a.obs-live-card:hover{
 }
 
 
-/* Neon preference v16.3.6
-   Corporate mode remains default. Neon is explicit user opt-in. */
+/* Neon preference v16.3.7
+   Bolt-only H.A.R.A control. OFF is quiet; ON adds micro-accents. */
 .neon-toggle{
-  min-width:68px;
-  min-height:42px;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  gap:7px;
-  padding:0 10px;
+  width:42px;
+  height:42px;
+  flex:0 0 42px;
+  display:grid;
+  place-items:center;
+  padding:0;
   border:1px solid var(--line);
   border-radius:9px;
-  color:#557891;
+  color:#7f96a4;
   background:rgba(255,255,255,.72);
-  font:inherit;
-  font-size:.68rem;
-  font-weight:800;
-  letter-spacing:.02em;
   cursor:pointer;
-  box-shadow:0 1px 3px rgba(8,44,74,.035);
+  box-shadow:none;
+  filter:none;
   transition:border-color .18s ease,background-color .18s ease,color .18s ease,box-shadow .18s ease,transform .18s ease;
 }
-.neon-dot{
-  width:8px;
-  height:8px;
-  flex:0 0 auto;
-  border-radius:50%;
-  background:#7f9aaa;
-  box-shadow:none;
-  transition:background-color .18s ease,box-shadow .18s ease,transform .18s ease;
+.neon-icon{
+  width:18px;
+  height:18px;
+  fill:currentColor;
+  stroke:none;
+  opacity:.68;
+  filter:none;
+  transition:opacity .18s ease,color .18s ease,filter .18s ease,transform .18s ease;
 }
 html[data-theme="dark"] .neon-toggle{
   border-color:#1d4154;
   background:#0a2636;
-  color:#8fabb9;
+  color:#78909e;
 }
-.neon-toggle:hover{transform:translateY(-1px)}
+.neon-toggle:hover{transform:translateY(-1px);border-color:#a9c7d7}
 .neon-toggle:active{transform:translateY(0) scale(.985);box-shadow:none}
 .neon-toggle:focus-visible{outline:2px solid #5aaed8;outline-offset:3px;box-shadow:none}
 
 html[data-neon="on"] .neon-toggle{
-  color:var(--navy);
-  border-color:rgba(57,162,223,.55);
-  background:rgba(229,247,255,.92);
-  box-shadow:0 0 10px rgba(57,162,223,.15);
+  color:#e9b128;
+  border-color:rgba(233,177,40,.30);
+  background:rgba(255,250,233,.80);
+  box-shadow:0 0 5px rgba(233,177,40,.045);
 }
-html[data-neon="on"] .neon-dot{
-  background:#39a2df;
-  box-shadow:0 0 7px rgba(57,162,223,.65),0 0 14px rgba(57,162,223,.24);
+html[data-neon="on"] .neon-icon{
+  opacity:1;
+  filter:drop-shadow(0 0 3px rgba(233,177,40,.40));
 }
 html[data-theme="dark"][data-neon="on"] .neon-toggle{
-  color:#dff6ff;
-  border-color:rgba(49,189,244,.48);
-  background:#092a3b;
-  box-shadow:0 0 12px rgba(49,189,244,.15);
-}
-html[data-neon="on"] .button.primary,
-html[data-neon="on"] .nav-cta{
-  box-shadow:0 5px 16px rgba(51,150,205,.16),0 0 12px rgba(57,162,223,.10);
-}
-html[data-neon="on"] .gold-btn{
-  box-shadow:0 5px 16px rgba(233,177,40,.14),0 0 12px rgba(233,177,40,.10);
-}
-html[data-neon="on"] .theme-toggle{
-  box-shadow:0 0 9px rgba(57,162,223,.09);
-}
-html[data-neon="on"] .main-nav a[aria-current="page"]{
-  box-shadow:inset 0 -1px 0 rgba(57,162,223,.35),0 0 9px rgba(57,162,223,.06);
-}
-html[data-neon="on"] .brand-logo{
-  filter:drop-shadow(0 0 7px rgba(57,162,223,.16));
-}
-html[data-neon="on"] .section-link{
-  text-shadow:0 0 8px rgba(57,162,223,.13);
+  color:#f1b82d;
+  border-color:rgba(241,184,45,.27);
+  background:#0b2938;
+  box-shadow:0 0 5px rgba(241,184,45,.05);
 }
 
-@media(max-width:760px){
-  .neon-toggle{min-width:42px;width:42px;padding:0}
-  .neon-label{display:none}
-  .neon-dot{width:10px;height:10px}
+/* Micro-accents only: Neon never overrides the corporate composition. */
+html[data-neon="on"] .button.primary,
+html[data-neon="on"] .nav-cta{
+  box-shadow:0 3px 9px rgba(51,150,205,.085),0 0 5px rgba(57,162,223,.035);
+}
+html[data-neon="on"] .gold-btn{
+  box-shadow:0 3px 9px rgba(233,177,40,.08),0 0 5px rgba(233,177,40,.035);
+}
+html[data-neon="on"] .theme-toggle{
+  box-shadow:0 0 4px rgba(57,162,223,.035);
+}
+html[data-neon="on"] .main-nav a[aria-current="page"]{
+  box-shadow:inset 0 -1px 0 rgba(57,162,223,.24);
+}
+html[data-neon="on"] .brand-logo{
+  filter:drop-shadow(0 0 3px rgba(57,162,223,.08));
+}
+html[data-neon="on"] .section-link{
+  text-shadow:0 0 4px rgba(57,162,223,.055);
 }
 @media(prefers-reduced-motion:reduce){
   html[data-neon="on"] .neon-toggle,
-  html[data-neon="on"] .neon-dot,
+  html[data-neon="on"] .neon-icon,
   html[data-neon="on"] .button,
   html[data-neon="on"] .nav-cta,
   html[data-neon="on"] .gold-btn{
