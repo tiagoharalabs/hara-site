@@ -20,6 +20,13 @@ def main() -> int:
         "SUPERSEDED_BY_NEW_CHANNEL",
         "webSocketMessage",
         "getWebSockets",
+        "markConnected",
+        "refreshLiveness",
+        "markDisconnected",
+        "EVENT_V2_OFFLINE",
+        'payload.type === "LIVENESS"',
+        "async webSocketClose",
+        "deserializeAttachment",
     ]
     for marker in required:
         assert marker in source, f"missing required marker: {marker}"
@@ -34,6 +41,8 @@ def main() -> int:
         "device_token",
         "authorization",
         "eval(",
+        "setInterval(",
+        "setTimeout(",
     ]
     for marker in forbidden:
         assert marker not in source, f"forbidden Event V2 marker: {marker}"
@@ -42,11 +51,18 @@ def main() -> int:
     assert "/connect" in source
     assert "/notify" in source
     assert "/status" in source
+    assert "tunnel_mode = 'EVENT_V2'" in source
+    assert "tunnel_mode = 'EVENT_V2_OFFLINE'" in source
+    assert "last_seen_at_utc = ?" in source
+    assert 'Object.keys(payload).sort().join(",") === "schema,type"' in source
 
     print("COMMANDER_EVENT_V2_DEVICE_CHANNEL_SOURCE=PASS")
     print("COMMANDER_EVENT_V2_HIBERNATION=PASS")
     print("COMMANDER_EVENT_V2_SECRET_ATTACHMENT=ABSENT")
     print("COMMANDER_EVENT_V2_ARBITRARY_EXECUTION_SURFACE=ABSENT")
+    print("COMMANDER_EVENT_V2_CONNECT_DISCONNECT_PRESENCE=PASS")
+    print("COMMANDER_EVENT_V2_LIVENESS_CONTENT_FIELDS=DENIED")
+    print("COMMANDER_EVENT_V2_DO_TIMERS=ABSENT")
     return 0
 
 
