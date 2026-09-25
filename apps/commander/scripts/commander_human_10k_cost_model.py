@@ -92,8 +92,8 @@ def build():
             "single_tenant_stress_rps": float(single_hot_tenant_quota_rps),
             "cloudflare_single_do_soft_limit_rps": float(DO_SOFT_LIMIT_RPS),
             "complex_operation_planning_floor_rps": float(DO_COMPLEX_PLANNING_FLOOR_RPS),
-            "percent_of_soft_limit": round(100 * single_hot_tenant_quota_rps / DO_SOFT_LIMIT_RPS, 2),
-            "percent_of_complex_planning_floor": round(100 * single_hot_tenant_quota_rps / DO_COMPLEX_PLANNING_FLOOR_RPS, 2),
+            "percent_of_soft_limit": float(round(100 * single_hot_tenant_quota_rps / DO_SOFT_LIMIT_RPS, 2)),
+            "percent_of_complex_planning_floor": float(round(100 * single_hot_tenant_quota_rps / DO_COMPLEX_PLANNING_FLOOR_RPS, 2)),
         },
         "pricing_sources": {
             "workers": "https://developers.cloudflare.com/workers/platform/pricing/",
