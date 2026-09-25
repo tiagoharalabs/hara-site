@@ -682,14 +682,16 @@ git diff --check
 - PR #150 — public health metadata minimization — **MERGED + DEV PROMOTED + LIVE PROVEN**
 - PR #151 — canonical authority refresh through #150 — **MERGED**
 - PR #152 — public auth-config metadata minimization — **MERGED + DEV PROMOTED + LIVE PROVEN**
+- PR #153 — canonical authority refresh through #152 — **MERGED**
+- PR #154 — operator-approved Commander workspace navigation/layout — **MERGED + DEV PROMOTED + LIVE PROVEN**
 - hara-platform PR #1158 — quota finalization compensation source — **MERGED; real-device COMMIT E2E pending**
 - issue #65 — Commander post-promotion coordination / residual homologation — **OPEN**
 
-Source authority incorporated by this checkpoint through PR #152: `1877190331aa8cfa9aff933c82fa90e308e86341`.
+Source authority incorporated by this checkpoint through PR #154: `8d7bf9eacf855b8c288619ad17875a245433ef73`.
 Current deployed PROD Commander runtime source: `84895dd17489e418b4b207bde405d7db9aa33469`.
 Current PROD Worker: `093ceec9-cacb-4f8b-ba23-bbfc85f7e1aa`; rollback: `382f4b7e-3094-43b9-a013-3b3f46f39fbf`.
-Current DEV source: `1877190331aa8cfa9aff933c82fa90e308e86341`.
-Current DEV Worker: `38366557-1ffb-4eeb-a489-eeb4ec1d0891`; rollback: `a60a3408-4358-429a-af9a-0b1c406882b0`.
+Current DEV source: `8d7bf9eacf855b8c288619ad17875a245433ef73`.
+Current DEV Worker: `b46fd897-8a7e-4093-b588-deff5008366e`; rollback: `38366557-1ffb-4eeb-a489-eeb4ec1d0891`.
 Versioned DEV authority: `apps/commander/wrangler.dev.jsonc`, bound to DEV-only D1 / `REMOTE_DEV`; secrets remain external to Git and anti-cross-environment validation is mandatory.
 PRs #110–#112 are operator-tooling/preflight/token-custody hardening. PRs #113/#115/#116/#118 changed deployable/runtime customer assets or behavior and were explicitly promoted.
 
