@@ -42,8 +42,8 @@ auth_config_block = WORKER.split('if (url.pathname === "/api/portal/auth-config"
 need('return json({ configured: authStatus(env).configured });' in auth_config_block and 'provider:' not in auth_config_block and 'client_auth:' not in auth_config_block, "PUBLIC_AUTH_CONFIG_MINIMIZED")
 need('DEV_ENDPOINT_DISABLED: 404' in WORKER, "DEV_DISABLED_STATUS")
 need("auth-bootstrap-pending" in HTML, "AUTH_FIRST_PAINT")
-need("styles.css?v=20260924-nav2" in HTML, "STYLE_CACHE_KEY")
-need("app.js?v=20260924-nav2" in HTML, "SCRIPT_CACHE_KEY")
+need("styles.css?v=20260924-ux2a" in HTML, "STYLE_CACHE_KEY")
+need("app.js?v=20260924-ux2a" in HTML, "SCRIPT_CACHE_KEY")
 need('const apiBase = localHost' in JS and ': location.origin;' in JS, "PROD_API_OVERRIDE_BLOCKED")
 need('const scenario = localHost' in JS, "PROD_SCENARIO_OVERRIDE_BLOCKED")
 need('appViews.has(requested) && !sessionAuthenticated' in JS, "PROTECTED_ROUTE_GUARD")
@@ -57,8 +57,32 @@ need("fonts.googleapis.com" not in HTML and "fonts.gstatic.com" not in HTML, "EX
 need("'TRIAL', 'Trial', 'HARA_COMMANDER_GOVERNED_INVOKE', 'CALENDAR_MONTH', 100, 'ACTIVE'" in TRIAL_MIGRATION, "TRIAL_PLAN_CANONICAL_LIMIT")
 need('100 <small>execuções / mês</small>' in HTML and '1.000 <small>invokes / período</small>' not in HTML and '10.000 <small>invokes / período</small>' not in HTML, "TRIAL_PLAN_UI_ALIGNMENT")
 need("10000" not in HTML and "10000" not in JS and "10.000" not in HTML and "1.000" not in HTML, "FALSE_QUOTA_CLAIMS_ABSENT")
-need('devices.find((device) => Boolean(device.selected))' in JS and 'setState("Offline"' in JS and 'setState("Pronto"' in JS, "DEVICE_SELECTION_STATE_UX")
-need("1. Gerar código de pareamento" in HTML and "2. Copiar comando" in HTML and "Pairing token" in HTML and 'tabindex="-1" aria-live="polite"' in HTML, "PAIRING_ONBOARDING_ORDER")
+need(
+    'devices.find((device) => Boolean(device.selected))' in JS
+    and 'setState("Offline"' in JS
+    and 'setState("Pronto"' in JS
+    and "device-selected-badge" in JS
+    and 'row.classList.add("selected")' in JS,
+    "DEVICE_SELECTION_STATE_UX",
+)
+need(
+    HTML.count("data-create-pairing") == 1
+    and 'data-os-choice="linux"' in HTML
+    and 'data-os-choice="windows"' in HTML
+    and 'data-os-panel="linux"' in HTML
+    and 'data-os-panel="windows"' in HTML
+    and "Aguarde o computador aparecer abaixo" in HTML
+    and 'tabindex="-1" aria-live="polite"' in HTML
+    and 'function setInstallOs(os)' in JS,
+    "PAIRING_ONBOARDING_ORDER",
+)
+need(
+    'id="dashboardUsageProgress"' in HTML
+    and 'id="dashboardPlanDetail"' in HTML
+    and 'planCard.classList.toggle("trial", isTrial)' in JS
+    and 'dashboardProgress.setAttribute("aria-valuenow"' in JS,
+    "DASHBOARD_STATUS_SUMMARY",
+)
 need("Detalhamento em homologação" in HTML and "renderActivity(" not in JS and "activityList" not in JS, "USAGE_DETAIL_HONEST_STATE")
 need('payload?.code === "ENTITLEMENT_NOT_FOUND"' in JS and "Plano não disponível" in JS, "ENTITLEMENT_ERROR_SEMANTICS")
 need(JS.index("await hydrateSessionHeader()") < JS.index("route(initialRoute, false)"), "AUTH_BOOTSTRAP_ORDER")
@@ -139,6 +163,7 @@ print("COMMANDER_PROD_TRIAL_PLAN_UI_ALIGNMENT=PASS")
 print("COMMANDER_PROD_FALSE_QUOTA_CLAIMS=ABSENT")
 print("COMMANDER_PROD_DEVICE_SELECTION_STATE_UX=PASS")
 print("COMMANDER_PROD_PAIRING_ONBOARDING_ORDER=PASS")
+print("COMMANDER_PROD_DASHBOARD_STATUS_SUMMARY=PASS")
 print("COMMANDER_PROD_USAGE_DETAIL_HONEST_STATE=PASS")
 print("COMMANDER_PROD_ENTITLEMENT_ERROR_SEMANTICS=PASS")
 print("COMMANDER_PROD_AUTH_BOOTSTRAP_ORDER=PASS")

@@ -166,6 +166,12 @@
       node.textContent = label;
       node.classList.toggle("healthy", healthy);
     }
+    const card = document.getElementById("dashboardSelectedCard");
+    if (card) {
+      card.classList.toggle("state-ready", healthy);
+      card.classList.toggle("state-offline", label === "Offline");
+      card.classList.toggle("state-waiting", label === "Aguardando");
+    }
     setText("dashboardStateDetail", detail);
   }
 
@@ -242,9 +248,22 @@
     setText("landingUsage", number(consumed));
     setText("landingLimit", limit == null ? "sem limite" : "de " + number(limit));
     setText("dashboardPlan", plan);
+    const planCard = document.getElementById("planSummaryCard");
+    const isTrial = String(plan).trim().toUpperCase() === "TRIAL";
+    if (planCard) planCard.classList.toggle("trial", isTrial);
+    setText("dashboardPlanDetail", isTrial ? "Plano temporário de homologação" : "Plano ativo");
     setText("dashboardConsumed", number(consumed));
     setText("dashboardLimit", limit == null ? "/ sem limite" : "/ " + number(limit));
     setText("dashboardPercent", limit == null ? "Plano sem limite definido" : percent.toFixed(2).replace(".", ",") + "% utilizado");
+    const dashboardBar = document.getElementById("dashboardUsageProgress");
+    if (dashboardBar) dashboardBar.style.width = (limit == null ? 0 : percent) + "%";
+    const dashboardProgress = dashboardBar?.parentElement;
+    if (dashboardProgress) dashboardProgress.setAttribute("aria-valuenow", String(Math.round(percent)));
+    const usageCard = document.getElementById("usageSummaryCard");
+    if (usageCard) {
+      usageCard.classList.toggle("usage-warning", percent >= 80 && percent < 100);
+      usageCard.classList.toggle("usage-exhausted", percent >= 100);
+    }
     setText("usageConsumed", number(consumed));
     setText("usageLimit", limit == null ? "sem limite" : "de " + number(limit));
     setText("usageRemaining", remaining == null ? "Capacidade sem limite definido" : number(remaining) + " unidades disponíveis");
@@ -290,6 +309,11 @@
 
     setText("dashboardConnections", number(onlineCount) + " online");
     setText("dashboardConnectionsDetail", devices.length ? devices.length + (devices.length === 1 ? " computador pareado" : " computadores pareados") : "Instale o Commander Agent");
+    const devicesCard = document.getElementById("dashboardDevicesCard");
+    if (devicesCard) {
+      devicesCard.classList.toggle("state-ready", onlineCount > 0);
+      devicesCard.classList.toggle("state-waiting", onlineCount === 0);
+    }
     setText("landingConnections", number(onlineCount));
     setText("landingConnectionsDetail", onlineCount ? "Commander Agent online" : "Nenhum computador online");
     if (!selectedDevice) {
@@ -308,7 +332,7 @@
       empty.className = "empty-state";
       const title = document.createElement("strong");
       title.textContent = "Nenhum computador conectado";
-      empty.append(title, document.createTextNode("Instale o Commander Agent para começar."));
+      empty.append(title, document.createTextNode("Use o fluxo guiado acima para gerar o código, instalar o Agent e aguardar o primeiro heartbeat."));
       list.append(empty);
       return;
     }
@@ -323,13 +347,23 @@
 
       const body = document.createElement("div");
       body.className = "device-copy";
+      const titleLine = document.createElement("div");
+      titleLine.className = "device-title-line";
       const name = document.createElement("b");
       name.textContent = String(device.device_name || "Computador");
+      titleLine.append(name);
+      if (device.selected) {
+        const selectedBadge = document.createElement("span");
+        selectedBadge.className = "device-selected-badge";
+        selectedBadge.textContent = "Selecionado";
+        titleLine.append(selectedBadge);
+        row.classList.add("selected");
+      }
       const meta = document.createElement("small");
       const arch = device.architecture ? " · " + String(device.architecture) : "";
       const agentVersion = device.agent_version ? " · Agent " + String(device.agent_version) : "";
-      meta.textContent = String(device.platform || "—") + arch + agentVersion + " · " + formatDeviceSeen(device.last_seen_at_utc);
-      body.append(name, meta);
+      meta.textContent = String(device.platform || "—") + arch + agentVersion + " · Último contato: " + formatDeviceSeen(device.last_seen_at_utc);
+      body.append(titleLine, meta);
 
       const state = document.createElement("span");
       state.className = "device-state " + (device.online ? "online" : device.state === "REVOKED" ? "revoked" : "offline");
@@ -546,6 +580,19 @@
     }
   }
 
+  function setInstallOs(os) {
+    const target = os === "windows" ? "windows" : "linux";
+    document.querySelectorAll("[data-os-choice]").forEach((button) => {
+      const active = button.dataset.osChoice === target;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-selected", String(active));
+      button.tabIndex = active ? 0 : -1;
+    });
+    document.querySelectorAll("[data-os-panel]").forEach((panel) => {
+      panel.hidden = panel.dataset.osPanel !== target;
+    });
+  }
+
   async function copyText(value, successMessage) {
     const text = String(value || "");
     try {
@@ -726,6 +773,7 @@
   }
 
   copySidebars();
+  setInstallOs("linux");
 
   if (bannerAction) {
     bannerAction.addEventListener("click", () => {
@@ -778,6 +826,13 @@
     if (refreshDevices) {
       event.preventDefault();
       loadDevices(refreshDevices);
+      return;
+    }
+
+    const osChoice = event.target.closest("[data-os-choice]");
+    if (osChoice) {
+      event.preventDefault();
+      setInstallOs(osChoice.dataset.osChoice);
       return;
     }
 
