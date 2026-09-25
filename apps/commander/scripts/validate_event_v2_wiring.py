@@ -67,7 +67,7 @@ def main() -> int:
     assert 'headers.set("authorization"' not in open_block.lower()
 
     dev = json.loads(dev_raw)
-    assert dev["vars"]["DEVICE_EVENT_V2_ENABLED"] == "false"
+    assert dev["vars"]["DEVICE_EVENT_V2_ENABLED"] == "true"
     bindings = {
         row["name"]: row["class_name"]
         for row in dev["durable_objects"]["bindings"]
@@ -85,7 +85,7 @@ def main() -> int:
 
     print("COMMANDER_EVENT_V2_WORKER_WIRING=PASS")
     print("COMMANDER_EVENT_V2_DEV_BINDING=PASS")
-    print("COMMANDER_EVENT_V2_DEV_DEFAULT=OFF")
+    print("COMMANDER_EVENT_V2_DEV_CANARY=ON")
     print("COMMANDER_EVENT_V2_PROD_BINDING=ABSENT")
     print("COMMANDER_EVENT_V2_NOTIFY_AFTER_DURABLE_INSERT=PASS")
     print("COMMANDER_EVENT_V2_PRESENCE_USES_TRANSPORT_STATE=PASS")
