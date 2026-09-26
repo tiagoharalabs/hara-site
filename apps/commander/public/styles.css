@@ -872,3 +872,121 @@ html[data-theme="dark"][data-neon="on"] .device-tabs button.active,
 html[data-theme="dark"][data-neon="on"] .os-picker button.active{
   box-shadow:0 0 10px rgba(255,200,61,.10);
 }
+
+
+/* H.A.R.A Commander light-theme blue coherence v6.
+   Light mode uses blue for identity/action/selection.
+   Gold remains semantic warning only. Dark mode remains gold. */
+
+html[data-theme="light"] .topbar,
+html:not([data-theme="dark"]) .topbar{
+  border-top-color:rgba(57,162,223,.88);
+  border-bottom-color:rgba(57,162,223,.70);
+}
+
+/* Primary actions are blue in light mode, independent of Neon. */
+html[data-theme="light"] .btn-primary,
+html:not([data-theme="dark"]) .btn-primary{
+  background:#2f9fd8;
+  color:#fff;
+}
+html[data-theme="light"] .btn-primary:hover,
+html:not([data-theme="dark"]) .btn-primary:hover{
+  background:#238fc8;
+}
+
+/* Trial is a plan state, not a warning: make it part of the blue product identity. */
+html[data-theme="light"] .summary-card.accent.trial,
+html:not([data-theme="dark"]) .summary-card.accent.trial{
+  background:linear-gradient(135deg,#0f6f9f,#174f76);
+  border-color:#45a9dc;
+  color:#fff;
+  box-shadow:0 8px 26px rgba(47,159,216,.12);
+}
+html[data-theme="light"] .summary-card.accent.trial::after,
+html:not([data-theme="dark"]) .summary-card.accent.trial::after{
+  background:rgba(104,203,247,.16);
+  border-color:rgba(104,203,247,.34);
+  color:#dff6ff;
+}
+html[data-theme="light"] .summary-card.accent.trial span,
+html:not([data-theme="dark"]) .summary-card.accent.trial span{
+  color:#a9dcf4;
+}
+html[data-theme="light"] .summary-card.accent.trial small,
+html:not([data-theme="dark"]) .summary-card.accent.trial small{
+  color:#c0e4f4;
+}
+
+/* Light-mode selection/navigation identity. */
+html[data-theme="light"] .side-nav button.active::before,
+html:not([data-theme="dark"]) .side-nav button.active::before{
+  background:#39a2df;
+}
+html[data-theme="light"] .side-nav button.active .nav-icon,
+html:not([data-theme="dark"]) .side-nav button.active .nav-icon{
+  stroke:#39a2df;
+}
+html[data-theme="light"] .devices-section-tabs button.active::after,
+html:not([data-theme="dark"]) .devices-section-tabs button.active::after{
+  background:#39a2df;
+}
+html[data-theme="light"] .device-tabs button.active,
+html[data-theme="light"] .os-picker button.active,
+html:not([data-theme="dark"]) .device-tabs button.active,
+html:not([data-theme="dark"]) .os-picker button.active{
+  border-color:#58b6e4;
+}
+
+/* Neon ON strengthens the same blue language instead of changing hue. */
+html[data-theme="light"][data-neon="on"] .btn-primary,
+html:not([data-theme="dark"])[data-neon="on"] .btn-primary{
+  background:#2f9fd8;
+  box-shadow:0 6px 18px rgba(47,159,216,.25),0 0 18px rgba(57,162,223,.22);
+}
+html[data-theme="light"][data-neon="on"] .summary-card.accent.trial,
+html:not([data-theme="dark"])[data-neon="on"] .summary-card.accent.trial{
+  box-shadow:0 8px 28px rgba(47,159,216,.20),0 0 20px rgba(57,162,223,.16);
+}
+html[data-theme="light"][data-neon="on"] .brand img,
+html:not([data-theme="dark"])[data-neon="on"] .brand img{
+  filter:
+    drop-shadow(0 0 7px rgba(57,162,223,.78))
+    drop-shadow(0 0 16px rgba(57,162,223,.46))
+    drop-shadow(0 0 30px rgba(57,162,223,.20));
+}
+html[data-theme="light"][data-neon="on"] .side-nav button.active,
+html:not([data-theme="dark"])[data-neon="on"] .side-nav button.active{
+  background:linear-gradient(90deg,rgba(203,238,253,.98),rgba(232,248,255,.92));
+  color:#0c5278;
+  box-shadow:inset 0 0 0 1px rgba(57,162,223,.24),0 0 13px rgba(57,162,223,.28),0 0 26px rgba(57,162,223,.11);
+}
+html[data-theme="light"][data-neon="on"] .side-nav button.active::before,
+html:not([data-theme="dark"])[data-neon="on"] .side-nav button.active::before{
+  background:#39a2df;
+  box-shadow:0 0 8px rgba(57,162,223,.62),0 0 16px rgba(57,162,223,.24);
+}
+html[data-theme="light"][data-neon="on"] .side-nav button.active .nav-icon,
+html:not([data-theme="dark"])[data-neon="on"] .side-nav button.active .nav-icon{
+  stroke:#239bd8;
+  filter:drop-shadow(0 0 6px rgba(57,162,223,.62)) drop-shadow(0 0 12px rgba(57,162,223,.24));
+}
+
+/* Dark mode keeps gold identity/action selection as previously approved. */
+html[data-theme="dark"] .btn-primary{
+  background:#f0b82e;
+  color:#08283e;
+}
+html[data-theme="dark"] .btn-primary:hover{
+  background:#ffc844;
+}
+html[data-theme="dark"] .summary-card.accent.trial{
+  background:linear-gradient(135deg,#3a2b08,#6b4b08);
+  border-color:#b98212;
+}
+html[data-theme="dark"] .side-nav button.active::before{
+  background:#ffc83d;
+}
+html[data-theme="dark"] .side-nav button.active .nav-icon{
+  stroke:#f2f8fb;
+}
