@@ -218,11 +218,7 @@ if ($Action -eq "update") {
   Start-ScheduledTask -TaskName $TaskName
   Start-Sleep -Seconds 2
   $task = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
-  if (
-    -not $task
-    -or [string]$task.State -ne "Running"
-    -or -not (Wait-AgentStartup $ExpectedVersion $PreviousStarted 10)
-  ) {
+  if (-not $task -or [string]$task.State -ne "Running" -or -not (Wait-AgentStartup $ExpectedVersion $PreviousStarted 10)) {
     Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
     if (Test-Path -LiteralPath $backup -PathType Leaf) {
       Move-Item -Force $backup $Agent
@@ -309,10 +305,7 @@ try {
   Start-ScheduledTask -TaskName $TaskName
   Start-Sleep -Seconds 2
   $Task = Get-ScheduledTask -TaskName $TaskName
-  if (
-    -not $Task
-    -or -not (Wait-AgentStartup $ExpectedVersion "" 10)
-  ) { throw "HARA Commander Agent failed startup attestation." }
+  if (-not $Task -or -not (Wait-AgentStartup $ExpectedVersion "" 10)) { throw "HARA Commander Agent failed startup attestation." }
   Write-Host "HARA_COMMANDER_AGENT_STARTUP_ATTESTATION=PASS"
 
   $InstallEnrolled = $false
