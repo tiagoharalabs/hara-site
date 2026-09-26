@@ -147,7 +147,8 @@ def main() -> int:
     assert "execution_mode: executionMode" in transient_block
     assert "committedReplayReceipt" in transient_block
     assert "TRANSIENT_REPLAY_RECEIPT_MISMATCH" in transient_block
-    assert "TRANSIENT_SAFE_PREEXEC_RELEASE_CODES.has(code)" in transient_block
+    assert "TRANSIENT_SAFE_PREEXEC_RELEASE_CODES.has(rawCode)" in transient_block
+    assert "throw new Error(transientPublicErrorCode(rawCode))" in transient_block
     assert 'throw new Error("REQUEST_USAGE_TERMINAL")' in transient_block
     assert 'throw new Error("DEVICE_CALL_RECEIPT_INVALID")' in transient_block
     assert transient_block.index("quota.reserve(") < transient_block.index(
