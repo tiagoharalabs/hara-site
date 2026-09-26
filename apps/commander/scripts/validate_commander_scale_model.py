@@ -9,6 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 MODEL = ROOT / "commander_scale_capacity_model.py"
 ACTIVE_MODEL = ROOT / "commander_event_v2_active_1k_model.py"
+EXPIRY_INDEX_VALIDATOR = ROOT / "validate_event_v2_expiry_index_candidate.py"
 
 
 def load_model():
@@ -24,6 +25,8 @@ def main() -> int:
     model["self_check"]()
     active = load_active_model()
     active["self_check"]()
+    expiry_candidate = runpy.run_path(str(EXPIRY_INDEX_VALIDATOR))
+    assert expiry_candidate["main"]() == 0
 
     expected = {
         100: 50.0,
@@ -53,6 +56,7 @@ def main() -> int:
     print("COMMANDER_SCALE_EVENT_V2_ACTIVE_1K_MODEL=PASS")
     print("COMMANDER_SCALE_EVENT_V2_1K_10_CALLS_DEVICE_DAY_HTTP=41333")
     print("COMMANDER_SCALE_EVENT_V2_1K_100_CALLS_DEVICE_DAY_HTTP=413333")
+    print("COMMANDER_SCALE_EVENT_V2_EXPIRY_INDEX_CANDIDATE=SOURCE_ONLY_PASS")
     return 0
 
 

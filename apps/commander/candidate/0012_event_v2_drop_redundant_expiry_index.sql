@@ -1,0 +1,22 @@
+-- H.A.R.A. Commander Event V2 candidate only.
+--
+-- This file is intentionally OUTSIDE apps/commander/migrations.
+-- It MUST NOT be applied automatically to DEV or PROD.
+--
+-- Promotion gate:
+--   1. PR #243 device-local query plans remain canonical.
+--   2. Offline query-plan proof passes with this index absent.
+--   3. Bounded DEV D1 insights measure rows-read/rows-written before/after.
+--   4. Shared DEV is coordinated with #189/#240.
+--   5. A separate explicit migration promotion is reviewed.
+--
+-- Rationale:
+-- idx_device_calls_expiry(state, expires_at_utc) is no longer selected by the
+-- active Event V2 runtime hot paths after #243. Retaining a secondary index on
+-- mutable call state may add index maintenance to call state transitions.
+--
+-- SOURCE_ONLY=TRUE
+-- DEV_APPLY=DENY
+-- PROD_APPLY=DENY
+
+DROP INDEX IF EXISTS idx_device_calls_expiry;

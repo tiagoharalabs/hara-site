@@ -327,6 +327,36 @@ D1 rows read/written are intentionally not guessed from statement counts. That
 dimension remains MEASURE_LIVE using D1 query metadata before any higher-scale
 claim.
 
+## 10.3 Source-only redundant expiry-index candidate
+
+After the device-local query-plan hardening in PR #243, the active call runtime
+paths no longer select the global idx_device_calls_expiry state/expiry index.
+The index remains present in D1 and therefore remains a candidate source of
+secondary-index maintenance during mutable call state transitions.
+
+The non-executable candidate is intentionally stored outside the migrations
+directory:
+
+apps/commander/candidate/0012_event_v2_drop_redundant_expiry_index.sql
+
+Current gate:
+
+    EXPIRY_INDEX_CANDIDATE=SOURCE_ONLY
+    PR243_DEVICE_LOCAL_QUERY_PLAN=REQUIRED
+    OFFLINE_QUERY_PLAN_DELTA=NONE
+    DEV_APPLY=DENY
+    PROD_APPLY=DENY
+    D1_ROWS_WRITTEN_SAVINGS=MEASURE_LIVE
+
+The validator rebuilds the 0011 schema in memory, compares the bounded runtime
+query plans before and after removing only the expiry index, and requires the
+device-local poll index, tenant index, primary-key plans, foreign keys and
+integrity to remain unchanged.
+
+Promotion into apps/commander/migrations is a separate decision after a bounded
+DEV D1-insights A/B measurement and shared-DEV coordination. This candidate
+must not be treated as a pending migration.
+
 ## 11. Capacity acceptance
 
 A 20k claim requires measurements, not architecture prose.
