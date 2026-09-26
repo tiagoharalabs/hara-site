@@ -23,6 +23,7 @@ D1_INCLUDED_ROWS_WRITTEN_MONTH = 50_000_000
 D1_EXCESS_USD_PER_MILLION_ROWS_WRITTEN = 1.00
 D1_ROWS_READ_PER_TRANSIENT_HTTP = 13
 D1_ROWS_WRITTEN_PER_TRANSIENT_HTTP = 0
+ANALYTICS_ENGINE_INCLUDED_POINTS_MONTH = 10_000_000
 MEASURED_LINUX_HEALTH_P95_SECONDS = 0.439385
 MEASURED_LINUX_INVOKE_P95_SECONDS = 0.711329
 MEASURED_LINUX_REPLAY_P95_SECONDS = 0.541461
@@ -53,6 +54,9 @@ class TransientBudget:
     d1_rows_written_day: int
     d1_rows_written_month: int
     d1_excess_rows_written_usd_month: float
+    learning_datapoints_day: int
+    learning_datapoints_month: int
+    learning_within_published_included_points: bool
 
 
 def transient_budget(
@@ -128,6 +132,9 @@ def transient_budget(
         d1_write_rounded_millions * D1_EXCESS_USD_PER_MILLION_ROWS_WRITTEN
     )
 
+    learning_datapoints_day = calls_day
+    learning_datapoints_month = learning_datapoints_day * DAYS_PER_MONTH
+
     return TransientBudget(
         devices=devices,
         calls_per_device_day=calls_per_device_day,
@@ -149,6 +156,11 @@ def transient_budget(
         d1_rows_written_day=d1_rows_written_day,
         d1_rows_written_month=d1_rows_written_month,
         d1_excess_rows_written_usd_month=d1_write_cost,
+        learning_datapoints_day=learning_datapoints_day,
+        learning_datapoints_month=learning_datapoints_month,
+        learning_within_published_included_points=(
+            learning_datapoints_month <= ANALYTICS_ENGINE_INCLUDED_POINTS_MONTH
+        ),
     )
 
 
@@ -180,6 +192,8 @@ def self_check() -> None:
     assert measured.d1_control_rows_written_day == 5_000
     assert measured.d1_rows_written_month == 150_000
     assert measured.d1_excess_rows_written_usd_month == 0
+    assert measured.learning_datapoints_month == 300_000
+    assert measured.learning_within_published_included_points is True
 
     heavy_measured = transient_budget(
         1_000,
@@ -192,6 +206,8 @@ def self_check() -> None:
     assert math.isclose(heavy_measured.do_excess_request_usd_month, 1.35, rel_tol=0, abs_tol=1e-12)
     assert heavy_measured.do_duration_gb_seconds_month == 375_000
     assert heavy_measured.d1_rows_read_month == 39_000_000
+    assert heavy_measured.learning_datapoints_month == 3_000_000
+    assert heavy_measured.learning_within_published_included_points is True
 
     heavy = transient_budget(1_000, 100, 10.0)
     assert heavy.calls_day == 100_000
@@ -220,6 +236,9 @@ def main() -> int:
         print("COMMANDER_TRANSIENT_1K_10_CALLS_D1_ROWS_READ_MONTH=3900000")
         print("COMMANDER_TRANSIENT_1K_10_CALLS_D1_CONTROL_ROWS_WRITTEN_MONTH=150000")
         print("COMMANDER_TRANSIENT_1K_10_CALLS_DO_GB_SECONDS_MONTH=37500")
+        print("COMMANDER_TRANSIENT_1K_10_CALLS_LEARNING_POINTS_MONTH=300000")
+        print("COMMANDER_TRANSIENT_1K_100_CALLS_LEARNING_POINTS_MONTH=3000000")
+        print("COMMANDER_TRANSIENT_LEARNING_PUBLISHED_INCLUDED_POINTS_MONTH=10000000")
         return 0
 
     print(
