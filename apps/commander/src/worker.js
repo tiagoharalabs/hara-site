@@ -355,10 +355,7 @@ async function dispatchTransientDeviceCall(env, body) {
   const requiredGrant = MCP_TOOL_GRANTS[toolId];
   if (!requiredGrant) throw new Error("DEVICE_CALL_TOOL_DENIED");
 
-  const context = await mcpProductContext(env, body.issuer, body.subject, {
-    provider_code: body.provider_code,
-    email: body.email,
-  });
+  const context = await mcpProductContext(env, body.issuer, body.subject, mcpBootstrapHints(body));
   if (!context.ok) throw new Error(context.code);
   if (!context.grants.includes(requiredGrant)) throw new Error("GRANT_MISSING");
 
@@ -898,6 +895,16 @@ async function ensureSecondaryMcpBinding(env, {
   }
 
   return { ok: true, subject_id: targetSubjectId, existing: false };
+}
+
+function mcpBootstrapHints(body) {
+  const providerCode = String(body?.provider_code || "").trim();
+  const email = String(body?.email || "").trim();
+  if (!providerCode && !email) return null;
+  return {
+    provider_code: body.provider_code,
+    email: body.email,
+  };
 }
 
 async function mcpProductContext(env, issuer, oidcSubject, bootstrap = null) {
@@ -1522,10 +1529,7 @@ async function enqueueDeviceCall(env, body) {
   const requiredGrant = MCP_TOOL_GRANTS[toolId];
   if (!requiredGrant) throw new Error("DEVICE_CALL_TOOL_DENIED");
 
-  const context = await mcpProductContext(env, body.issuer, body.subject, {
-    provider_code: body.provider_code,
-    email: body.email,
-  });
+  const context = await mcpProductContext(env, body.issuer, body.subject, mcpBootstrapHints(body));
   if (!context.ok) throw new Error(context.code);
   if (!context.grants.includes(requiredGrant)) throw new Error("GRANT_MISSING");
 
@@ -1852,10 +1856,7 @@ async function completeDeviceCall(env, request, body) {
 
 async function deviceCallStatus(env, body) {
   const callId = cleanId(body.call_id, 180);
-  const context = await mcpProductContext(env, body.issuer, body.subject, {
-    provider_code: body.provider_code,
-    email: body.email,
-  });
+  const context = await mcpProductContext(env, body.issuer, body.subject, mcpBootstrapHints(body));
   if (!context.ok) throw new Error(context.code);
 
   const now = nowIso();
@@ -2146,10 +2147,7 @@ export default {
           });
         }
 
-        const context = await mcpProductContext(env, body.issuer, body.subject, {
-          provider_code: body.provider_code,
-          email: body.email,
-        });
+        const context = await mcpProductContext(env, body.issuer, body.subject, mcpBootstrapHints(body));
         if (!context.ok) {
           return internalJson({
             schema: "hara.commander-mcp-product-decision.v1",

@@ -114,6 +114,12 @@ def main() -> int:
     # DEV-only transient RPC owns its invoke quota lifecycle so the optimized
     # data plane cannot become a billing bypass. Customer payload/result remain
     # out of commander_device_calls on this path.
+    bootstrap_at = worker.index("function mcpBootstrapHints")
+    bootstrap_end = worker.index("async function mcpProductContext", bootstrap_at)
+    bootstrap_block = worker[bootstrap_at:bootstrap_end]
+    assert 'if (!providerCode && !email) return null;' in bootstrap_block
+    assert worker.count("mcpBootstrapHints(body)") - 1 == 4
+
     transient_at = worker.index("async function dispatchTransientDeviceCall")
     transient_end = worker.index("export class TenantQuota", transient_at)
     transient_block = worker[transient_at:transient_end]
@@ -182,6 +188,7 @@ def main() -> int:
     assert "MCP_PRODUCT_CANARY_TOKEN" not in prod_raw
 
     print("COMMANDER_EVENT_V2_WORKER_WIRING=PASS")
+    print("COMMANDER_MCP_BOOTSTRAP_ONLY_WHEN_HINTED=PASS")
     print("COMMANDER_EVENT_V2_DEV_BINDING_SQLITE=PASS")
     print("COMMANDER_EVENT_V2_DEV_CANARY=ON")
     print("COMMANDER_EVENT_V2_PROD_BINDING=ABSENT")

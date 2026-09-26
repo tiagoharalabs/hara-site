@@ -71,6 +71,7 @@ def main() -> int:
     assert "result_json" not in dispatcher
     assert "canonicalDeviceToolPayload" in dispatcher
     assert "mcpProductContext" in dispatcher
+    assert "mcpBootstrapHints(body)" in dispatcher
     assert "selectedDeviceForSubject" in dispatcher
     assert 'selection.tunnel_mode || "") !== "EVENT_V2"' in dispatcher
     assert "persisted_customer_payload: false" in dispatcher
@@ -137,6 +138,7 @@ def main() -> int:
 
     print("COMMANDER_EVENT_V2_TRANSIENT_RPC_SOURCE=PASS")
     print("COMMANDER_EVENT_V2_TRANSIENT_RPC_ENV=DEV_ONLY")
+    print("COMMANDER_MCP_EMPTY_BOOTSTRAP_HINTS=IDENTITY_NOT_PROVISIONED")
     print("COMMANDER_EVENT_V2_TRANSIENT_RPC_D1_CONTENT_PERSISTENCE=ZERO")
     print("COMMANDER_EVENT_V2_LEARNING_PLANE=DERIVED_METADATA_ONLY")
     print("COMMANDER_EVENT_V2_LOCAL_IDEMPOTENCY_LEDGER_LINUX=PASS")
