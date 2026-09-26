@@ -129,6 +129,8 @@ def main() -> int:
     assert 'reservation.state === "COMMITTED"' in transient_block
     assert "executionMode = TRANSIENT_REPLAY_ONLY" in transient_block
     assert "execution_mode: executionMode" in transient_block
+    assert "committedReplayReceipt" in transient_block
+    assert "TRANSIENT_REPLAY_RECEIPT_MISMATCH" in transient_block
     assert "TRANSIENT_SAFE_PREEXEC_RELEASE_CODES.has(code)" in transient_block
     assert 'throw new Error("REQUEST_USAGE_TERMINAL")' in transient_block
     assert 'throw new Error("DEVICE_CALL_RECEIPT_INVALID")' in transient_block
@@ -209,6 +211,7 @@ def main() -> int:
     print("COMMANDER_EVENT_V2_TRANSIENT_QUOTA_RESERVE_COMMIT_RELEASE=SOURCE_PASS")
     print("COMMANDER_EVENT_V2_TRANSIENT_AMBIGUOUS_TIMEOUT=KEEP_RESERVED")
     print("COMMANDER_EVENT_V2_TRANSIENT_COMMITTED_RETRY=REPLAY_ONLY")
+    print("COMMANDER_EVENT_V2_TRANSIENT_REPLAY_QUOTA_RPC=RESERVE_ONLY")
     print("COMMANDER_EVENT_V2_TRANSIENT_D1_CUSTOMER_CONTENT=ABSENT")
     return 0
 

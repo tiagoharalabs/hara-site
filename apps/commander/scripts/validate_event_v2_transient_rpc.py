@@ -47,6 +47,8 @@ def main() -> int:
     assert "quota.release(" in worker
     assert "TRANSIENT_SAFE_PREEXEC_RELEASE_CODES" in worker
     assert "REQUEST_USAGE_TERMINAL" in worker
+    assert "TRANSIENT_COMMITTED_RECEIPT_INVALID" in worker
+    assert "TRANSIENT_REPLAY_RECEIPT_MISMATCH" in worker
     assert 'type: "CALL_TRANSIENT"' in channel
     assert 'payload.type === "CALL_RESULT"' in channel
     assert "MAX_TRANSIENT_INFLIGHT = 1" in channel
@@ -73,6 +75,14 @@ def main() -> int:
     assert 'selection.tunnel_mode || "") !== "EVENT_V2"' in dispatcher
     assert "persisted_customer_payload: false" in dispatcher
     assert "persisted_customer_result: false" in dispatcher
+    assert "committedReplayReceipt" in dispatcher
+    assert 'executionMode === TRANSIENT_REPLAY_ONLY' in dispatcher
+    assert 'receiptSha256 !== committedReplayReceipt' in dispatcher
+    replay_at = dispatcher.index("if (executionMode === TRANSIENT_REPLAY_ONLY)")
+    replay_end = dispatcher.index("} else {", replay_at)
+    replay_block = dispatcher[replay_at:replay_end]
+    assert "quota.commit(" not in replay_block
+    assert "usage = reservation" in replay_block
 
     assert 'event["type"] == "CALL_TRANSIENT"' in loop
     assert "execute_transient_call" in loop
@@ -133,6 +143,8 @@ def main() -> int:
     print("COMMANDER_EVENT_V2_LOCAL_LEDGER_RAW_PAYLOAD=ABSENT")
     print("COMMANDER_EVENT_V2_TRANSIENT_QUOTA_ORCHESTRATION=SOURCE_READY")
     print("COMMANDER_EVENT_V2_TRANSIENT_COMMITTED_RETRY=REPLAY_ONLY")
+    print("COMMANDER_EVENT_V2_TRANSIENT_REPLAY_SECOND_COMMIT_RPC=ABSENT")
+    print("COMMANDER_EVENT_V2_TRANSIENT_REPLAY_RECEIPT_BINDING=LOCAL_COMPARE")
     print("COMMANDER_EVENT_V2_SERIES100_PROBE_SOURCE=PASS")
     print("COMMANDER_EVENT_V2_MEASURED_D1_ROWS_READ_PER_HTTP=13")
     print("COMMANDER_EVENT_V2_MEASURED_D1_ROWS_WRITTEN_PER_HTTP=0")
