@@ -205,7 +205,7 @@ def main() -> int:
     transient_payload = (
         b'{"schema":"hara.commander-device-event.v2","type":"CALL_TRANSIENT",'
         b'"call_id":"HARA-TRANSIENT-1","request_id":"REQ-1",'
-        b'"tool_id":"hara.health","payload":{}}'
+        b'"tool_id":"hara.health","execution_mode":"EXECUTE_OR_REPLAY","payload":{}}'
     )
     transient = client.parse_event_frame(
         client.ServerFrame(0x1, transient_payload, len(transient_payload) + 4)
@@ -213,6 +213,7 @@ def main() -> int:
     assert transient["type"] == "CALL_TRANSIENT"
     assert transient["request_id"] == "REQ-1"
     assert transient["tool_id"] == "hara.health"
+    assert transient["execution_mode"] == "EXECUTE_OR_REPLAY"
     assert transient["payload"] == {}
 
     result_socket = IdleSocket()

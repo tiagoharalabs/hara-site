@@ -29,6 +29,12 @@ const DEVICE_CALL_TTL_SECONDS = 50;
 const DEVICE_CALL_ACTIVE_QUEUE_LIMIT = 16;
 const DEVICE_CALL_EXPIRY_MAINTENANCE_BATCH = 5000;
 const EVENT_V2_TERMINAL_FAST_PATH_WAIT_MS = 500;
+const TRANSIENT_EXECUTE_OR_REPLAY = "EXECUTE_OR_REPLAY";
+const TRANSIENT_REPLAY_ONLY = "REPLAY_ONLY";
+const TRANSIENT_SAFE_PREEXEC_RELEASE_CODES = new Set([
+  "CHANNEL_TRANSIENT_OFFLINE",
+  "CHANNEL_TRANSIENT_BUSY",
+]);
 const QUOTA_RESERVATION_TTL_SECONDS = 10 * 60;
 const PAIRING_RETENTION_SECONDS = 30 * 24 * 60 * 60;
 const PAIRING_RETENTION_BATCH = 100;
@@ -377,31 +383,114 @@ async function dispatchTransientDeviceCall(env, body) {
     throw new Error("DEVICE_TRANSIENT_REQUIRES_EVENT_V2");
   }
 
+  let quota = null;
+  let reservation = null;
+  let executionMode = TRANSIENT_EXECUTE_OR_REPLAY;
+  if (toolId === "hara.functions.invoke") {
+    const functionId = cleanId(canonicalPayload.function_id, 180);
+    if (functionId !== DEVICE_FUNCTION_ID) throw new Error("POLICY_DENIED");
+    quota = env.TENANT_QUOTA.getByName(context.tenant_id);
+    reservation = await quota.reserve(
+      requestId,
+      context.subject_id,
+      mcpPeriodKey(context),
+      functionId,
+      context.unit_limit,
+    );
+    if (!reservation.ok) {
+      throw new Error(String(reservation.code || "QUOTA_DENIED"));
+    }
+    if (reservation.existing && reservation.state === "RELEASED") {
+      throw new Error("REQUEST_USAGE_TERMINAL");
+    }
+    if (reservation.state === "COMMITTED") {
+      executionMode = TRANSIENT_REPLAY_ONLY;
+    } else if (reservation.state !== "RESERVED") {
+      throw new Error("TRANSIENT_QUOTA_STATE_INVALID");
+    }
+  }
+
   const callId = "HARA-TRANSIENT-" + crypto.randomUUID();
   const stub = env.DEVICE_CHANNEL.getByName(
     deviceChannelName(context.tenant_id, deviceId),
   );
-  const response = await stub.fetch(new Request("https://device-channel/dispatch", {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-hara-channel-authenticated": "1",
-    },
-    body: JSON.stringify({
-      call_id: callId,
-      request_id: requestId,
-      tool_id: toolId,
-      payload: canonicalPayload,
-    }),
-  }));
+
+  let response;
+  try {
+    response = await stub.fetch(new Request("https://device-channel/dispatch", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-hara-channel-authenticated": "1",
+      },
+      body: JSON.stringify({
+        call_id: callId,
+        request_id: requestId,
+        tool_id: toolId,
+        execution_mode: executionMode,
+        payload: canonicalPayload,
+      }),
+    }));
+  } catch (error) {
+    // Transport exceptions after dispatch are ambiguous: the Agent may have
+    // executed and persisted a local replay result. Keep RESERVED so retry can
+    // reconcile through the same request_id instead of allowing a free replay.
+    throw error;
+  }
+
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(String(payload.code || "DEVICE_TRANSIENT_RPC_FAILED"));
+    const code = String(payload.code || "DEVICE_TRANSIENT_RPC_FAILED");
+    if (
+      quota
+      && reservation?.state === "RESERVED"
+      && TRANSIENT_SAFE_PREEXEC_RELEASE_CODES.has(code)
+    ) {
+      await quota.release(requestId, context.subject_id, context.unit_limit);
+    }
+    throw new Error(code);
+  }
+
+  let usage = null;
+  let receiptSha256 = null;
+  if (toolId === "hara.functions.invoke") {
+    if (payload.state === "FAILED") {
+      if (reservation?.state === "RESERVED") {
+        usage = await quota.release(
+          requestId,
+          context.subject_id,
+          context.unit_limit,
+        );
+      } else {
+        usage = reservation;
+      }
+    } else if (payload.state === "COMPLETED") {
+      receiptSha256 = String(
+        payload.result?.bridge_receipt_sha256 || "",
+      ).trim().toLowerCase();
+      if (!/^[0-9a-f]{64}$/.test(receiptSha256)) {
+        // Do not release an ambiguous successful execution. The reservation
+        // expires fail-closed unless a retry can recover the local receipt.
+        throw new Error("DEVICE_CALL_RECEIPT_INVALID");
+      }
+      usage = await quota.commit(
+        requestId,
+        context.subject_id,
+        receiptSha256,
+        context.unit_limit,
+      );
+      if (!usage.ok) {
+        throw new Error(String(usage.code || "TRANSIENT_QUOTA_COMMIT_FAILED"));
+      }
+    } else {
+      throw new Error("CHANNEL_TRANSIENT_RESULT_INVALID");
+    }
   }
 
   return {
     schema: "hara.commander-device-transient-call.v1",
     transport_mode: "EVENT_V2_TRANSIENT_RPC",
+    execution_mode: executionMode,
     persisted_customer_payload: false,
     persisted_customer_result: false,
     request_id: requestId,
@@ -411,9 +500,12 @@ async function dispatchTransientDeviceCall(env, body) {
     state: payload.state,
     result: payload.result ?? {},
     error_code: payload.error_code || null,
+    receipt_sha256: receiptSha256,
+    usage,
     learning_signal: payload.learning_signal,
   };
 }
+
 
 export class TenantQuota extends DurableObject {
   constructor(ctx, env) {
@@ -2157,6 +2249,11 @@ export default {
         CHANNEL_TRANSIENT_RESULT_INVALID: 502,
         CHANNEL_LEARNING_SIGNAL_INVALID: 502,
         DEVICE_TRANSIENT_RPC_FAILED: 502,
+        TRANSIENT_QUOTA_STATE_INVALID: 409,
+        TRANSIENT_QUOTA_COMMIT_FAILED: 502,
+        REQUEST_USAGE_TERMINAL: 409,
+        QUOTA_DENIED: 429,
+        QUOTA_EXCEEDED: 429,
         DEVICE_ID_MISMATCH: 403,
         DEVICE_NOT_FOUND: 404,
         DEVICE_SELECTION_REQUIRED: 409,

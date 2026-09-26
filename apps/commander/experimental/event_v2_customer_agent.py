@@ -407,6 +407,18 @@ def execute_transient_call(config, call, *, monotonic=time.monotonic) -> dict:
             error_code = existing["error_code"]
             result = existing["result"]
 
+    execution_mode = str(call.get("execution_mode") or "").strip().upper()
+    if execution_mode not in {"EXECUTE_OR_REPLAY", "REPLAY_ONLY"}:
+        state = "FAILED"
+        error_code = "TRANSIENT_EXECUTION_MODE_INVALID"
+        result = _response({}, blocker={"code": error_code})
+        should_persist = False
+    elif existing is None and should_persist and execution_mode == "REPLAY_ONLY":
+        state = "FAILED"
+        error_code = "TRANSIENT_REPLAY_MISS"
+        result = _response({}, blocker={"code": error_code})
+        should_persist = False
+
     if existing is None and should_persist:
         state = "COMPLETED"
         error_code = None
@@ -527,6 +539,7 @@ def self_test():
                     "call_id": "transient-c1",
                     "request_id": "transient-r1",
                     "tool_id": "hara.health",
+                    "execution_mode": "EXECUTE_OR_REPLAY",
                     "payload": {},
                 },
                 monotonic=lambda: next(ticks),
@@ -548,6 +561,7 @@ def self_test():
                 "call_id": "ledger-c1",
                 "request_id": "ledger-r1",
                 "tool_id": "hara.health",
+                "execution_mode": "EXECUTE_OR_REPLAY",
                 "payload": {},
             }
             first_ticks = iter([20.0, 20.020])
@@ -579,6 +593,25 @@ def self_test():
             )
             assert conflict["state"] == "FAILED"
             assert conflict["error_code"] == "IDEMPOTENCY_CONFLICT"
+
+            replay_miss_ticks = iter([23.0, 23.001])
+            replay_miss = execute_transient_call(
+                cfg,
+                {
+                    **base,
+                    "call_id": "ledger-c4",
+                    "request_id": "ledger-r-missing",
+                    "tool_id": "hara.health",
+                    "execution_mode": "REPLAY_ONLY",
+                    "payload": {},
+                },
+                monotonic=lambda: next(replay_miss_ticks),
+            )
+            assert replay_miss["state"] == "FAILED"
+            assert replay_miss["error_code"] == "TRANSIENT_REPLAY_MISS"
+            assert not _transient_ledger_path({
+                "request_id": "ledger-r-missing"
+            }).exists()
 
             connected = write_event_v2_status(
                 connected=True,

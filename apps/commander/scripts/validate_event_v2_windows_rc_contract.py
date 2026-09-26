@@ -115,6 +115,10 @@ def main() -> int:
         "$MaxTransientResultBytes = 327680",
         'if ($type -eq "CALL_TRANSIENT")',
         "WINDOWS_EVENT_V2_TRANSIENT_PAYLOAD_INVALID",
+        "WINDOWS_EVENT_V2_TRANSIENT_EXECUTION_MODE_INVALID",
+        "EXECUTE_OR_REPLAY",
+        "REPLAY_ONLY",
+        "execution_mode = $executionMode",
         "Send-EventV2TransientResult",
         "WINDOWS_EVENT_V2_TRANSIENT_RESULT_TOO_LARGE",
         "COMMANDER_WINDOWS_EVENT_V2_TRANSIENT_FRAME=SOURCE_READY",
@@ -171,6 +175,8 @@ def main() -> int:
         "Set-TransientLedgerEntry",
         "IDEMPOTENCY_CONFLICT",
         "Invoke-TransientCall",
+        "TRANSIENT_REPLAY_MISS",
+        '$executionMode -eq "REPLAY_ONLY"',
         "New-TransientLearningSignal",
         'transport_mode = "EVENT_V2_TRANSIENT_RPC"',
         "customer_content_collected = $false",
@@ -290,6 +296,8 @@ def main() -> int:
     print("COMMANDER_WINDOWS_EVENT_V2_TRANSIENT_LEARNING=METADATA_ONLY")
     print("COMMANDER_WINDOWS_EVENT_V2_LEARNING_SCHEMA_BINDING=PASS")
     print("COMMANDER_WINDOWS_EVENT_V2_RUNTIME_PARITY_CLAIM=FALSE")
+    print("COMMANDER_WINDOWS_EVENT_V2_TRANSIENT_EXECUTION_MODE=SOURCE_PASS")
+    print("COMMANDER_WINDOWS_EVENT_V2_COMMITTED_RETRY=REPLAY_ONLY")
     return 0
 
 

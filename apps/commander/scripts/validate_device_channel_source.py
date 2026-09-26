@@ -35,6 +35,8 @@ def main() -> int:
         'payload.type === "LIVENESS"',
         "async webSocketClose",
         "deserializeAttachment",
+        "CHANNEL_TRANSIENT_EXECUTION_MODE_INVALID",
+        "execution_mode: executionMode",
     ]
     for marker in required:
         assert marker in source, f"missing required marker: {marker}"
@@ -80,6 +82,7 @@ def main() -> int:
     print("COMMANDER_EVENT_V2_TRANSIENT_DISCONNECT_COALESCE=30_60S")
     print("COMMANDER_EVENT_V2_RECONNECT_FRESH_PRESENCE_WRITE=SKIPPED")
     print("COMMANDER_EVENT_V2_APPLICATION_PING=DENIED")
+    print("COMMANDER_EVENT_V2_TRANSIENT_EXECUTION_MODE=SERVER_SELECTED")
 
     # Security issue #189 Gate 1 is mandatory in the existing Commander CI chain.
     import runpy
