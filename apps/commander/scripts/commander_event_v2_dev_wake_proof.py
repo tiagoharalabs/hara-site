@@ -191,7 +191,8 @@ def self_check() -> None:
     require_dev_config()
     source = Path(__file__).read_text(encoding="utf-8")
     assert DEFAULT_ORIGIN_NOT_PRESENT(source)
-    assert "commander.haralabs.com.br/api" not in source
+    forbidden_prod_path = "commander." + "haralabs.com.br" + "/api"
+    assert forbidden_prod_path not in source
     assert 'x-hara-mcp-product-token' in source
     assert 'MCP_PRODUCT_TOKEN' in source
 
