@@ -18,6 +18,8 @@ MODEL = COMMANDER / "scripts" / "commander_event_v2_transient_1k_model.py"
 LIVE_PROBE = COMMANDER / "scripts" / "commander_event_v2_transient_live_probe.py"
 SERIES_PROBE = COMMANDER / "scripts" / "commander_event_v2_transient_series_probe.py"
 DO_ANALYTICS_PROBE = COMMANDER / "scripts" / "commander_do_analytics_probe.py"
+MULTIDEVICE_LAB = COMMANDER / "scripts" / "commander_event_v2_dev_multidevice_lab.py"
+MULTIDEVICE_PROBE = COMMANDER / "scripts" / "commander_event_v2_dev_multidevice_probe.py"
 
 
 def block(text: str, start: str, end: str) -> str:
@@ -37,6 +39,8 @@ def main() -> int:
     live_probe = LIVE_PROBE.read_text(encoding="utf-8")
     series_probe = SERIES_PROBE.read_text(encoding="utf-8")
     do_analytics_probe = DO_ANALYTICS_PROBE.read_text(encoding="utf-8")
+    multidevice_lab = MULTIDEVICE_LAB.read_text(encoding="utf-8")
+    multidevice_probe = MULTIDEVICE_PROBE.read_text(encoding="utf-8")
 
     assert dev["vars"]["DEVICE_EVENT_V2_TRANSIENT_RPC_ENABLED"] == "true"
     assert "DEVICE_EVENT_V2_TRANSIENT_RPC_ENABLED" not in prod
@@ -166,12 +170,32 @@ def main() -> int:
     assert "print(token" not in do_analytics_probe
     assert '"authorization": "Bearer " + token' in do_analytics_probe
 
+    for required in (
+        "MAX_DEVICES = 10",
+        "hara.commander-event-v2-multidevice-lab.v1",
+        "MULTIDEVICE_DISTINCT_IDENTITIES=REQUIRED",
+        "MULTIDEVICE_PROD_MUTATION=ABSENT",
+    ):
+        assert required in multidevice_lab, required
+    assert "device_token" not in "\n".join(
+        line for line in multidevice_lab.splitlines()
+        if "print(" in line and "TOKEN_EXPOSED" not in line
+    )
+    assert "MAX_DEVICES = 10" in multidevice_probe
+    assert "MULTIDEVICE_PROBE_AGGREGATE_OUTPUT=TRUE" in multidevice_probe
+    assert "MULTIDEVICE_PROBE_CUSTOMER_CONTENT_OUTPUT=ABSENT" in multidevice_probe
+
     model = runpy.run_path(str(MODEL))
     model["self_check"]()
     series = runpy.run_path(str(SERIES_PROBE))
     series["self_check"]()
     do_analytics = runpy.run_path(str(DO_ANALYTICS_PROBE))
     do_analytics["self_check"]()
+
+    multidevice_lab_module = runpy.run_path(str(MULTIDEVICE_LAB))
+    multidevice_lab_module["self_check"]()
+    multidevice_probe_module = runpy.run_path(str(MULTIDEVICE_PROBE))
+    multidevice_probe_module["self_check"]()
 
     print("COMMANDER_EVENT_V2_TRANSIENT_RPC_SOURCE=PASS")
     print("COMMANDER_EVENT_V2_TRANSIENT_RPC_ENV=DEV_ONLY")
@@ -191,6 +215,8 @@ def main() -> int:
     print("COMMANDER_EVENT_V2_MEASURED_D1_ROWS_WRITTEN_PER_HTTP=0")
     print("COMMANDER_EVENT_V2_DO_ANALYTICS_COLLECTOR=SOURCE_READY")
     print("COMMANDER_EVENT_V2_DO_ANALYTICS_WRANGLER_OAUTH_REUSE=DENY")
+    print("COMMANDER_EVENT_V2_MULTIDEVICE_LAB=SOURCE_READY")
+    print("COMMANDER_EVENT_V2_MULTIDEVICE_CONCURRENCY_PROBE=SOURCE_READY")
     print("COMMANDER_EVENT_V2_PUBLIC_AGENT_MUTATION=FALSE")
     print("COMMANDER_EVENT_V2_PROD_CUTOVER=DENY")
     return 0
