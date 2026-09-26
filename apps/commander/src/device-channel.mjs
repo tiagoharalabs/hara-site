@@ -3,24 +3,54 @@ import { DurableObject } from "cloudflare:workers";
 const CHANNEL_SCHEMA = "hara.commander-device-channel.v2";
 const EVENT_SCHEMA = "hara.commander-device-event.v2";
 const MAX_NOTIFY_BYTES = 4096;
+const CONNECT_REFRESH_MS = 5 * 60 * 60 * 1000;
+const OFFLINE_GRACE_BASE_MS = 30 * 1000;
+const OFFLINE_GRACE_JITTER_MS = 30 * 1000;
+const PENDING_OFFLINE_KEY = "pending_offline";
 
 function nowIso() {
   return new Date().toISOString();
 }
 
+function stableJitterMs(value) {
+  let hash = 2166136261;
+  for (const char of String(value || "")) {
+    hash ^= char.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0) % OFFLINE_GRACE_JITTER_MS;
+}
+
+async function clearPendingOffline(ctx) {
+  await ctx.storage.deleteAlarm();
+  await ctx.storage.delete(PENDING_OFFLINE_KEY);
+}
+
 async function markConnected(env, tenantId, deviceId) {
   if (!env.PRODUCT_DB) throw new Error("CHANNEL_PRODUCT_DB_REQUIRED");
   const seenAt = nowIso();
+  const refreshCutoff = new Date(Date.now() - CONNECT_REFRESH_MS).toISOString();
   const result = await env.PRODUCT_DB.prepare(
     `UPDATE commander_devices
         SET tunnel_mode = 'EVENT_V2', last_seen_at_utc = ?
       WHERE tenant_id = ?
         AND device_id = ?
         AND state = 'ACTIVE'
-        AND revoked_at_utc IS NULL`
-  ).bind(seenAt, tenantId, deviceId).run();
-  if (!result.meta?.changes) throw new Error("CHANNEL_DEVICE_NOT_ACTIVE");
-  return seenAt;
+        AND revoked_at_utc IS NULL
+        AND (
+          tunnel_mode != 'EVENT_V2'
+          OR last_seen_at_utc IS NULL
+          OR last_seen_at_utc < ?
+        )`
+  ).bind(seenAt, tenantId, deviceId, refreshCutoff).run();
+
+  // The Worker authenticated this device immediately before handing the request
+  // to the DO. A zero-change update therefore means presence is already fresh,
+  // not that the channel is unauthenticated.
+  return {
+    seen_at_utc: seenAt,
+    durable_write: Boolean(result.meta?.changes),
+  };
 }
 
 async function refreshLiveness(env, tenantId, deviceId) {
@@ -53,6 +83,29 @@ async function markDisconnected(env, attachment) {
         AND state = 'ACTIVE'
         AND revoked_at_utc IS NULL`
   ).bind(seenAt, tenantId, deviceId).run();
+}
+
+
+async function scheduleDisconnected(ctx, attachment) {
+  if (!attachment || attachment.superseded) return;
+
+  const stillConnected = ctx.getWebSockets().some(
+    (socket) => socket.readyState === WebSocket.OPEN
+  );
+  if (stillConnected) return;
+
+  const tenantId = cleanIdentifier(attachment.tenant_id, 180);
+  const deviceId = cleanIdentifier(attachment.device_id, 180);
+  const dueAtMs = Date.now()
+    + OFFLINE_GRACE_BASE_MS
+    + stableJitterMs(deviceId);
+
+  await ctx.storage.put(PENDING_OFFLINE_KEY, {
+    tenant_id: tenantId,
+    device_id: deviceId,
+    scheduled_at_ms: dueAtMs,
+  });
+  await ctx.storage.setAlarm(dueAtMs);
 }
 
 function cleanIdentifier(value, max = 220) {
@@ -111,6 +164,7 @@ export class DeviceChannel extends DurableObject {
         const tenantId = cleanIdentifier(request.headers.get("x-hara-tenant-id"), 180);
         const deviceId = cleanIdentifier(request.headers.get("x-hara-device-id"), 180);
 
+        await clearPendingOffline(this.ctx);
         await markConnected(this.env, tenantId, deviceId);
 
         for (const prior of this.ctx.getWebSockets()) {
@@ -230,12 +284,30 @@ export class DeviceChannel extends DurableObject {
   }
 
   async webSocketClose(socket, _code, _reason, _wasClean) {
-    // Cloudflare compatibility dates >= 2026-04-07 auto-complete close handshakes.
+    // Short network blips are coalesced in the per-device DO instead of
+    // amplifying into an immediate OFFLINE -> ONLINE D1 write pair.
     try {
-      await markDisconnected(this.env, socket.deserializeAttachment());
+      await scheduleDisconnected(this.ctx, socket.deserializeAttachment());
     } catch (_error) {
       // Presence will fail stale after the bounded Event V2 liveness window.
     }
+  }
+
+  async alarm() {
+    const pending = await this.ctx.storage.get(PENDING_OFFLINE_KEY);
+    if (!pending) return;
+
+    const reconnected = this.ctx.getWebSockets().some(
+      (socket) => socket.readyState === WebSocket.OPEN
+    );
+    if (reconnected) {
+      await this.ctx.storage.delete(PENDING_OFFLINE_KEY);
+      return;
+    }
+
+    // Let an uncaught failure retry under the Durable Objects alarm contract.
+    await markDisconnected(this.env, pending);
+    await this.ctx.storage.delete(PENDING_OFFLINE_KEY);
   }
 
   webSocketError(socket, _error) {
