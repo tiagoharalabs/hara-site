@@ -1318,14 +1318,18 @@ async function enqueueDeviceCall(env, body) {
     throw new Error("DEVICE_CALL_ENQUEUE_CONFLICT");
   }
 
-  const notification = await notifyDeviceEventChannel(
-    env,
-    context.tenant_id,
-    deviceId,
-    callId,
-  );
+  const useEventV2 = String(device.tunnel_mode || "") === "EVENT_V2";
+  const notification = useEventV2
+    ? await notifyDeviceEventChannel(
+        env,
+        context.tenant_id,
+        deviceId,
+        callId,
+      )
+    : { attempted: false, delivered: 0 };
   if (
-    eventV2Enabled(env)
+    useEventV2
+    && eventV2Enabled(env)
     && notification.attempted
     && notification.delivered < 1
   ) {
