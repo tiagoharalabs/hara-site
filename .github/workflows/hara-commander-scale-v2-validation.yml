@@ -87,3 +87,6 @@ jobs:
           python3 apps/commander/scripts/commander_event_v2_dev_quota_probe.py --check
           python3 apps/commander/scripts/provision_dev_canary_mcp_token.py --check
           python3 apps/commander/scripts/validate_customer_privacy_noc_contract.py
+          python3 apps/commander/scripts/commander_event_v2_dev_multidevice_lab.py --check
+          python3 apps/commander/scripts/commander_event_v2_dev_multidevice_probe.py --check
+          python3 apps/commander/scripts/validate_event_v2_transient_rpc.py
