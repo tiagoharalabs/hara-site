@@ -38,6 +38,10 @@ const TRANSIENT_SAFE_PREEXEC_RELEASE_CODES = new Set([
   "CHANNEL_TRANSIENT_OFFLINE",
   "CHANNEL_TRANSIENT_BUSY",
 ]);
+
+function transientPublicErrorCode(code) {
+  return code === "CHANNEL_TRANSIENT_OFFLINE" ? "DEVICE_OFFLINE" : code;
+}
 const QUOTA_RESERVATION_TTL_SECONDS = 10 * 60;
 const PAIRING_RETENTION_SECONDS = 30 * 24 * 60 * 60;
 const PAIRING_RETENTION_BATCH = 100;
@@ -510,15 +514,15 @@ async function dispatchTransientDeviceCall(env, body) {
 
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const code = String(payload.code || "DEVICE_TRANSIENT_RPC_FAILED");
+    const rawCode = String(payload.code || "DEVICE_TRANSIENT_RPC_FAILED");
     if (
       quota
       && reservation?.state === "RESERVED"
-      && TRANSIENT_SAFE_PREEXEC_RELEASE_CODES.has(code)
+      && TRANSIENT_SAFE_PREEXEC_RELEASE_CODES.has(rawCode)
     ) {
       await quota.release(requestId, context.subject_id, context.unit_limit);
     }
-    throw new Error(code);
+    throw new Error(transientPublicErrorCode(rawCode));
   }
 
   let usage = null;

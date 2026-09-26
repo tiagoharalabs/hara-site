@@ -52,6 +52,8 @@ def main() -> int:
     assert "quota.commit(" in worker
     assert "quota.release(" in worker
     assert "TRANSIENT_SAFE_PREEXEC_RELEASE_CODES" in worker
+    assert "function transientPublicErrorCode(code)" in worker
+    assert 'code === "CHANNEL_TRANSIENT_OFFLINE" ? "DEVICE_OFFLINE" : code' in worker
     assert "REQUEST_USAGE_TERMINAL" in worker
     assert "TRANSIENT_COMMITTED_RECEIPT_INVALID" in worker
     assert "TRANSIENT_REPLAY_RECEIPT_MISMATCH" in worker
@@ -94,6 +96,9 @@ def main() -> int:
     assert 'selection.tunnel_mode || "") !== "EVENT_V2"' in dispatcher
     assert "persisted_customer_payload: false" in dispatcher
     assert "persisted_customer_result: false" in dispatcher
+    assert 'const rawCode = String(payload.code || "DEVICE_TRANSIENT_RPC_FAILED")' in dispatcher
+    assert "TRANSIENT_SAFE_PREEXEC_RELEASE_CODES.has(rawCode)" in dispatcher
+    assert "throw new Error(transientPublicErrorCode(rawCode))" in dispatcher
     assert "committedReplayReceipt" in dispatcher
     assert 'executionMode === TRANSIENT_REPLAY_ONLY' in dispatcher
     assert 'receiptSha256 !== committedReplayReceipt' in dispatcher

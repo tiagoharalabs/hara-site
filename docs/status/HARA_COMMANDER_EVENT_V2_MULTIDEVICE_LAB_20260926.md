@@ -287,3 +287,78 @@ failures identify `TEMPLATE_CONTEXT_QUERY`, `FIXTURE_BATCH`, or
 `SELECTION_BATCH` without printing SQL or secrets.
 
 The 50-device live rung must be retried only after this hardening passes CI.
+
+
+## 50-device live rung — first wave and offline race
+
+After #269 hardened provisioning, a fresh run was created:
+
+```text
+RUN_ID=md-20260926221942-0bd7ea80
+DEVICES=50
+PROVISION=PASS
+TOKEN_EXPOSED=FALSE
+INITIAL_ALIVE=50
+INITIAL_CONNECTED=50
+INITIAL_ERROR_CODES=NONE
+```
+
+Initial concurrent wave:
+
+```text
+REQUESTED_CYCLES=50
+COMPLETED_CYCLES=50
+FAILED_CYCLES=0
+WAVE_WALL_MAX_MS=2567.125
+CYCLE_P50_MS=2224.200
+CYCLE_P95_MS=2373.115
+CYCLE_P99_MS=2436.433
+INVOKE_P95_MS=811.408
+REPLAY_P95_MS=660.119
+PRIVACY_FAILURES=0
+SEMANTIC_FAILURES=0
+ERROR_CLASSES=NONE
+```
+
+D1 readback after the wave:
+
+```text
+DEVICE_ROWS=50
+EVENT_V2_ROWS=50
+ACTIVE_ROWS=50
+DURABLE_CALL_ROWS=0
+```
+
+The 50 agents were then stopped gracefully:
+
+```text
+STOPPED=50
+LOCAL_ALIVE=0
+LOCAL_CONNECTED=0
+LOCAL_ERROR_CODES=NONE
+```
+
+A 50-way offline health wave had no unexpected successful execution, but the
+public error contract split while D1 presence metadata was still inside its
+grace window. A second bounded-concurrency readback observed:
+
+```text
+DEVICE_OFFLINE=39
+CHANNEL_TRANSIENT_OFFLINE=11
+UNEXPECTED_SUCCESS=0
+```
+
+Both codes are fail-closed, but exposing the internal
+`CHANNEL_TRANSIENT_OFFLINE` creates an unnecessary race-dependent public
+contract. The source fix maps only the pre-dispatch
+`CHANNEL_TRANSIENT_OFFLINE` case to `DEVICE_OFFLINE`. It does not map
+`CHANNEL_TRANSIENT_DISCONNECTED`, because disconnect after dispatch remains
+execution-ambiguous and must preserve its distinct fail-closed semantics.
+
+```text
+FIFTY_DEVICE_STEADY_WAVE=PASS
+FIFTY_DEVICE_DURABLE_CALL_ROWS=0
+FIFTY_DEVICE_OFFLINE_UNEXPECTED_SUCCESS=0
+FIFTY_DEVICE_PROOF_TERMINAL=NO_PENDING_OFFLINE_NORMALIZATION_AND_RECONNECT_RETEST
+PROD_CUTOVER=DENY
+```
