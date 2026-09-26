@@ -21,7 +21,7 @@ apps/commander/scripts/commander_event_v2_dev_multidevice_lab.py
 apps/commander/scripts/commander_event_v2_dev_multidevice_probe.py
 ```
 
-The lab provisioner is bounded to 2..10 logical devices. Every device receives:
+The lab provisioner is bounded to 2..50 logical devices. Every device receives:
 
 ```text
 distinct DEV subject
@@ -231,3 +231,27 @@ PROD_CUTOVER=DENY
 
 This result closes the previously pending bounded multi-device concurrency proof
 at 10 distinct devices. It does not claim a 50- or 100-device live proof.
+
+
+## Next bounded scale rung — 50 devices
+
+After the clean 10-device live proof, the source bound is raised to 50 devices
+without changing the proven transport/privacy contract.
+
+Provisioning is also optimized so DEV subject/identity/entitlement/pairing
+fixtures are written in one D1 batch and device selections in one D1 batch.
+Enrollment and per-device secret delivery remain isolated and secret-safe.
+
+```text
+SOURCE_MAX_DEVICES=50
+NEXT_LIVE_RUNG=50
+D1_FIXTURE_BATCHING=TRUE
+D1_SELECTION_BATCHING=TRUE
+DEVICE_TOKEN_OUTPUT=ABSENT
+PAIRING_TOKEN_OUTPUT=ABSENT
+AUTO_DELETE=ABSENT
+PROD_CUTOVER=DENY
+```
+
+The existing `PASS_10_DEVICES` proof remains canonical until a separate
+50-device live run passes and is published.

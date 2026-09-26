@@ -171,7 +171,7 @@ def main() -> int:
     assert '"authorization": "Bearer " + token' in do_analytics_probe
 
     for required in (
-        "MAX_DEVICES = 10",
+        "MAX_DEVICES = 50",
         "hara.commander-event-v2-multidevice-lab.v1",
         "MULTIDEVICE_DISTINCT_IDENTITIES=REQUIRED",
         "MULTIDEVICE_PROD_MUTATION=ABSENT",
@@ -181,7 +181,7 @@ def main() -> int:
         line for line in multidevice_lab.splitlines()
         if "print(" in line and "TOKEN_EXPOSED" not in line
     )
-    assert "MAX_DEVICES = 10" in multidevice_probe
+    assert "MAX_DEVICES = 50" in multidevice_probe
     assert "MULTIDEVICE_PROBE_AGGREGATE_OUTPUT=TRUE" in multidevice_probe
     assert "MULTIDEVICE_PROBE_CUSTOMER_CONTENT_OUTPUT=ABSENT" in multidevice_probe
 

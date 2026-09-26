@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Bounded DEV-only Event V2 multi-device lab.
 
-Creates 2..10 distinct H.A.R.A.-owned DEV subjects/devices for concurrency
+Creates 2..50 distinct H.A.R.A.-owned DEV subjects/devices for concurrency
 testing. Secrets stay only in isolated mode-0600 device.env files on the target.
 The operator manifest contains identifiers only. PROD and public Agent 0.3.7 are
 not modified. No automatic deletion is implemented.
@@ -38,7 +38,7 @@ WRANGLER_VERSION = "4.137.0"
 DEFAULT_TARGET_HOST = "nucleo-a"
 REMOTE_BASE = "/tmp_hara/commander-event-v2-multidevice"
 MIN_DEVICES = 2
-MAX_DEVICES = 10
+MAX_DEVICES = 50
 
 SOURCE_FILES = (
     "apps/commander/experimental/event_v2_websocket.py",
@@ -219,14 +219,29 @@ def stage_sources(target: str, root: str) -> None:
         raise fail("MULTIDEVICE_SOURCE_STAGE_FAILED")
 
 
-def create_subject(tenant_id: str, plan_code: str, run_id: str, index: int) -> tuple[str, str]:
-    suffix = f"{run_id}-{index:02d}"
-    subject_id = "HARA-SUBJECT-EV2-" + suffix.upper()
-    external_subject = "hara-event-v2-" + suffix
-    entitlement_id = "HARA-ENT-EV2-" + suffix.upper()
-    binding_id = "PRIMARY:EV2:" + suffix.upper()
-    created = utcnow()
-    d1_execute(f"""
+def create_subjects_and_pairings(
+    tenant_id: str,
+    plan_code: str,
+    run_id: str,
+    count: int,
+) -> list[dict]:
+    fixtures = []
+    statements = []
+    for index in range(count):
+        suffix = f"{run_id}-{index:02d}"
+        subject_id = "HARA-SUBJECT-EV2-" + suffix.upper()
+        external_subject = "hara-event-v2-" + suffix
+        entitlement_id = "HARA-ENT-EV2-" + suffix.upper()
+        binding_id = "PRIMARY:EV2:" + suffix.upper()
+        pairing_id = "HARA-PAIR-EV2-MD-" + str(uuid.uuid4())
+        pairing_token = secrets.token_urlsafe(32)
+        token_hash = worker_sha256(pairing_token)
+        created_dt = datetime.now(timezone.utc)
+        created = created_dt.isoformat(timespec="milliseconds").replace("+00:00", "Z")
+        expires = (created_dt + timedelta(minutes=10)).isoformat(
+            timespec="milliseconds"
+        ).replace("+00:00", "Z")
+        statements.append(f"""
 INSERT INTO users
   (subject_id, tenant_id, oidc_issuer, oidc_subject, email, display_name, state, role, created_at_utc)
 VALUES
@@ -245,20 +260,7 @@ INSERT INTO entitlements
 VALUES
   ({quote_sql(entitlement_id)}, {quote_sql(tenant_id)}, {quote_sql(subject_id)},
    {quote_sql(plan_code)}, 'ACTIVE', {quote_sql(created)}, NULL);
-""")
-    return subject_id, external_subject
 
-
-def create_pairing(tenant_id: str, subject_id: str) -> str:
-    created_dt = datetime.now(timezone.utc)
-    created = created_dt.isoformat(timespec="milliseconds").replace("+00:00", "Z")
-    expires = (created_dt + timedelta(minutes=10)).isoformat(
-        timespec="milliseconds"
-    ).replace("+00:00", "Z")
-    pairing_id = "HARA-PAIR-EV2-MD-" + str(uuid.uuid4())
-    pairing_token = secrets.token_urlsafe(32)
-    token_hash = worker_sha256(pairing_token)
-    d1_execute(f"""
 INSERT INTO device_pairing_tokens
   (pairing_id, token_hash, tenant_id, subject_id, created_at_utc, expires_at_utc,
    consumed_at_utc, superseded_at_utc)
@@ -266,7 +268,14 @@ VALUES
   ({quote_sql(pairing_id)}, {quote_sql(token_hash)}, {quote_sql(tenant_id)},
    {quote_sql(subject_id)}, {quote_sql(created)}, {quote_sql(expires)}, NULL, NULL);
 """)
-    return pairing_token
+        fixtures.append({
+            "index": index,
+            "subject_id": subject_id,
+            "subject": external_subject,
+            "pairing_token": pairing_token,
+        })
+    d1_execute("\n".join(statements))
+    return fixtures
 
 
 def enroll(pairing_token: str, name: str) -> tuple[str, str]:
@@ -296,15 +305,29 @@ def enroll(pairing_token: str, name: str) -> tuple[str, str]:
     return device_id, device_token
 
 
-def select_device(tenant_id: str, subject_id: str, device_id: str) -> None:
-    d1_execute(f"""
-INSERT INTO commander_device_selections
-  (tenant_id, subject_id, device_id, selected_at_utc)
-VALUES
-  ({quote_sql(tenant_id)}, {quote_sql(subject_id)}, {quote_sql(device_id)}, {quote_sql(utcnow())})
-ON CONFLICT(tenant_id, subject_id)
-DO UPDATE SET device_id=excluded.device_id, selected_at_utc=excluded.selected_at_utc;
-""")
+def select_devices(tenant_id: str, devices: list[dict]) -> None:
+    values = []
+    selected_at = utcnow()
+    for row in devices:
+        values.append(
+            "("
+            + ",".join((
+                quote_sql(tenant_id),
+                quote_sql(str(row["subject_id"])),
+                quote_sql(str(row["device_id"])),
+                quote_sql(selected_at),
+            ))
+            + ")"
+        )
+    if not values:
+        raise fail("MULTIDEVICE_SELECTION_EMPTY")
+    d1_execute(
+        "INSERT INTO commander_device_selections "
+        "(tenant_id, subject_id, device_id, selected_at_utc) VALUES "
+        + ",".join(values)
+        + " ON CONFLICT(tenant_id, subject_id) DO UPDATE SET "
+          "device_id=excluded.device_id, selected_at_utc=excluded.selected_at_utc;"
+    )
 
 
 def write_device_config(target: str, root: str, index: int, device_id: str, device_token: str) -> None:
@@ -384,22 +407,29 @@ def provision(count: int, target: str, manifest_path: Path) -> dict:
     run_id = make_run_id()
     root = preflight_target(target, run_id)
     stage_sources(target, root)
+    fixtures = create_subjects_and_pairings(tenant_id, plan_code, run_id, count)
     devices = []
-    for index in range(count):
-        subject_id, subject = create_subject(tenant_id, plan_code, run_id, index)
-        pairing_token = create_pairing(tenant_id, subject_id)
+    for fixture in fixtures:
+        index = int(fixture["index"])
+        pairing_token = str(fixture["pairing_token"])
         try:
             device_id, device_token = enroll(
                 pairing_token, f"nucleo-a-event-v2-md-{run_id}-{index:02d}"
             )
         finally:
+            fixture["pairing_token"] = ""
             pairing_token = ""
         try:
-            select_device(tenant_id, subject_id, device_id)
             write_device_config(target, root, index, device_id, device_token)
         finally:
             device_token = ""
-        devices.append({"index": index, "subject": subject, "subject_id": subject_id, "device_id": device_id})
+        devices.append({
+            "index": index,
+            "subject": str(fixture["subject"]),
+            "subject_id": str(fixture["subject_id"]),
+            "device_id": device_id,
+        })
+    select_devices(tenant_id, devices)
     manifest = {
         "schema": "hara.commander-event-v2-multidevice-lab.v1",
         "environment": "DEV",
@@ -517,12 +547,14 @@ printf 'MULTIDEVICE_AGENT_STOPPED=TRUE\n'
 
 def self_check() -> None:
     load_dev_config()
-    assert MIN_DEVICES == 2 and MAX_DEVICES == 10
+    assert MIN_DEVICES == 2 and MAX_DEVICES == 50
     assert remote_root("md-20260926123456-1234abcd").startswith("/tmp_hara/")
     assert worker_sha256("abc") == "ungWv48Bz-pBQUDeXa4iI7ADYaOWF3qctBD_YfIAFa0"
     for item in SOURCE_FILES:
         assert (ROOT / item).is_file()
     source = Path(__file__).read_text(encoding="utf-8")
+    assert "create_subjects_and_pairings" in source
+    assert "select_devices" in source
     tree = ast.parse(source)
     for node in ast.walk(tree):
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "print":
@@ -537,7 +569,7 @@ def self_check() -> None:
     forbidden_prod = "https://commander." + "haralabs.com.br"
     assert forbidden_prod not in source
     print("COMMANDER_EVENT_V2_MULTIDEVICE_LAB_SOURCE=PASS")
-    print("COMMANDER_EVENT_V2_MULTIDEVICE_MAX_DEVICES=10")
+    print("COMMANDER_EVENT_V2_MULTIDEVICE_MAX_DEVICES=50")
     print("COMMANDER_EVENT_V2_MULTIDEVICE_DISTINCT_IDENTITIES=REQUIRED")
     print("COMMANDER_EVENT_V2_MULTIDEVICE_SECRET_OUTPUT=ABSENT")
     print("COMMANDER_EVENT_V2_MULTIDEVICE_AUTO_DELETE=ABSENT")
@@ -552,7 +584,7 @@ def main() -> int:
     mode.add_argument("--start-manifest", action="store_true")
     mode.add_argument("--status-manifest", action="store_true")
     mode.add_argument("--stop-manifest", action="store_true")
-    parser.add_argument("--count", type=int, default=10)
+    parser.add_argument("--count", type=int, default=50)
     parser.add_argument("--target-host", default=DEFAULT_TARGET_HOST)
     parser.add_argument("--manifest")
     args = parser.parse_args()
