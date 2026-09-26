@@ -42,7 +42,7 @@ auth_config_block = WORKER.split('if (url.pathname === "/api/portal/auth-config"
 need('return json({ configured: authStatus(env).configured });' in auth_config_block and 'provider:' not in auth_config_block and 'client_auth:' not in auth_config_block, "PUBLIC_AUTH_CONFIG_MINIMIZED")
 need('DEV_ENDPOINT_DISABLED: 404' in WORKER, "DEV_DISABLED_STATUS")
 need("auth-bootstrap-pending" in HTML, "AUTH_FIRST_PAINT")
-need("styles.css?v=20260925-neon6" in HTML, "STYLE_CACHE_KEY")
+need("styles.css?v=20260925-neon7" in HTML, "STYLE_CACHE_KEY")
 need("app.js?v=20260925-neon1" in HTML, "SCRIPT_CACHE_KEY")
 need(
     'class="neon-toggle"' in HTML
@@ -84,6 +84,13 @@ need(
     and "background:linear-gradient(135deg,#0f6f9f,#174f76)" in CSS
     and "drop-shadow(0 0 16px rgba(57,162,223,.46))" in CSS,
     "COMMANDER_LIGHT_BLUE_COHERENCE",
+)
+need(
+    "H.A.R.A Commander active-nav surface lock v7" in CSS
+    and 'html[data-theme="light"][data-neon="off"] .side-nav button.active' in CSS
+    and 'html[data-theme="light"][data-neon="on"] .side-nav button.active' in CSS
+    and "background:linear-gradient(90deg,#0d3d5f,#0b304a)" in CSS,
+    "COMMANDER_ACTIVE_NAV_SURFACE_LOCK",
 )
 need('const apiBase = localHost' in JS and ': location.origin;' in JS, "PROD_API_OVERRIDE_BLOCKED")
 need('const scenario = localHost' in JS, "PROD_SCENARIO_OVERRIDE_BLOCKED")
