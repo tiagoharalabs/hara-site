@@ -38,10 +38,16 @@ function Connect-EventV2Client($Client,[Uri]$Uri,[Threading.CancellationToken]$C
   }
 }
 
-function Receive-EventV2Text($Client,[Threading.CancellationToken]$CancellationToken) {
+function Receive-EventV2Text($Client,[Threading.CancellationToken]$CancellationToken,$ShutdownTask=$null) {
   $buffer = New-Object byte[] $MaxEventBytes
   $segment = [ArraySegment[byte]]::new($buffer)
-  $result = $Client.ReceiveAsync($segment,$CancellationToken).GetAwaiter().GetResult()
+  $receiveTask = $Client.ReceiveAsync($segment,$CancellationToken)
+  if ($null -ne $ShutdownTask) {
+    $waitTasks = [Threading.Tasks.Task[]]@([Threading.Tasks.Task]$receiveTask,[Threading.Tasks.Task]$ShutdownTask)
+    $completed = [Threading.Tasks.Task]::WaitAny($waitTasks)
+    if ($completed -eq 1) { throw "WINDOWS_EVENT_V2_LOCAL_SHUTDOWN_REQUESTED" }
+  }
+  $result = $receiveTask.GetAwaiter().GetResult()
   if ($result.MessageType -eq [System.Net.WebSockets.WebSocketMessageType]::Close) {
     throw "WINDOWS_EVENT_V2_SERVER_CLOSED"
   }

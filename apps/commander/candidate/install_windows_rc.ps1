@@ -15,6 +15,7 @@ $RcEventAgent = Join-Path $RcRoot "event_v2_windows_agent.ps1"
 $RcTransport = Join-Path $RcRoot "event_v2_windows_transport.ps1"
 $EventStatus = Join-Path $StableRoot "event-v2-status.json"
 $ExpectedDevOrigin = "https://hara-commander-dev-v2.tiago-sartori.workers.dev"
+$ShutdownPipeName = "hara-commander-event-v2-rc-stop"
 
 $Here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $CommanderRoot = Split-Path -Parent $Here
@@ -65,6 +66,37 @@ function Stop-TaskSafe([string]$Name) {
   throw "WINDOWS_RC_TASK_STOP_FAILED"
 }
 
+function Request-RcGracefulShutdown {
+  $pipe = $null
+  try {
+    $pipe = [System.IO.Pipes.NamedPipeClientStream]::new(
+      ".",$ShutdownPipeName,[System.IO.Pipes.PipeDirection]::Out
+    )
+    $pipe.Connect(1500)
+    return $true
+  } catch {
+    return $false
+  } finally {
+    if ($null -ne $pipe) { try { $pipe.Dispose() } catch {} }
+  }
+}
+
+function Stop-RcTaskSafe {
+  $task = Get-ScheduledTask -TaskName $RcTaskName -ErrorAction SilentlyContinue
+  if (-not $task -or [string]$task.State -ne "Running") { return "NOT_RUNNING" }
+
+  if (Request-RcGracefulShutdown) {
+    for ($i=0; $i -lt 10; $i++) {
+      $task = Get-ScheduledTask -TaskName $RcTaskName -ErrorAction SilentlyContinue
+      if (-not $task -or [string]$task.State -ne "Running") { return "GRACEFUL" }
+      Start-Sleep -Seconds 1
+    }
+  }
+
+  Stop-TaskSafe $RcTaskName
+  return "FALLBACK"
+}
+
 function Disable-TaskSafe([string]$Name) {
   Disable-ScheduledTask -TaskName $Name -ErrorAction Stop | Out-Null
 }
@@ -110,8 +142,32 @@ function Wait-EventConnection([string]$PreviousUpdated,[int]$Seconds=20) {
   return $false
 }
 
+function Wait-EventDisconnection([string]$PreviousUpdated,[int]$Seconds=10) {
+  for ($i=0; $i -lt $Seconds; $i++) {
+    if (Test-Path -LiteralPath $EventStatus -PathType Leaf) {
+      try {
+        $obj = Get-Content -Raw -LiteralPath $EventStatus | ConvertFrom-Json
+        if (
+          [string]$obj.schema -eq "hara.commander-event-v2-runtime-status.v1"
+          -and [string]$obj.transport_mode -eq "EVENT_V2"
+          -and $obj.connected -eq $false
+          -and [string]$obj.updated_at_utc
+          -and [string]$obj.updated_at_utc -ne $PreviousUpdated
+        ) { return $true }
+      } catch {}
+    }
+    Start-Sleep -Seconds 1
+  }
+  return $false
+}
+
 function Rollback-ToStable {
-  Stop-TaskSafe $RcTaskName
+  $previous = Get-EventStatusUpdated
+  $shutdownMode = Stop-RcTaskSafe
+  $cleanDisconnect = $false
+  if ($shutdownMode -eq "GRACEFUL") {
+    $cleanDisconnect = Wait-EventDisconnection $previous 10
+  }
   Disable-TaskSafe $RcTaskName
   if (-not (Get-ScheduledTask -TaskName $StableTaskName -ErrorAction SilentlyContinue)) {
     throw "WINDOWS_RC_STABLE_TASK_MISSING"
@@ -123,6 +179,17 @@ function Rollback-ToStable {
   Write-Host "COMMANDER_WINDOWS_RC_TASK=INACTIVE"
   Write-Host "COMMANDER_WINDOWS_RC_DEVICE_REPAIRING=FALSE"
   Write-Host "COMMANDER_WINDOWS_RC_TOKEN_EXPOSED=FALSE"
+  Write-Host ("COMMANDER_WINDOWS_RC_SHUTDOWN_MODE=" + $shutdownMode)
+  if ($shutdownMode -eq "GRACEFUL" -and $cleanDisconnect) {
+    Write-Host "COMMANDER_WINDOWS_RC_COOPERATIVE_SHUTDOWN=PASS"
+    Write-Host "COMMANDER_WINDOWS_RC_CLEAN_DISCONNECT=PASS"
+  } elseif ($shutdownMode -eq "NOT_RUNNING") {
+    Write-Host "COMMANDER_WINDOWS_RC_COOPERATIVE_SHUTDOWN=NOT_REQUIRED"
+    Write-Host "COMMANDER_WINDOWS_RC_CLEAN_DISCONNECT=NOT_REQUIRED"
+  } else {
+    Write-Host "COMMANDER_WINDOWS_RC_COOPERATIVE_SHUTDOWN=FALLBACK"
+    Write-Host "COMMANDER_WINDOWS_RC_CLEAN_DISCONNECT=UNPROVEN"
+  }
 }
 
 function Install-Rc {
@@ -161,6 +228,7 @@ function Install-Rc {
   Write-Host "COMMANDER_WINDOWS_RC_EVENT_V2_ORIGIN=DEV_ONLY"
   Write-Host "COMMANDER_WINDOWS_RC_DEVICE_REPAIRING=FALSE"
   Write-Host "COMMANDER_WINDOWS_RC_TOKEN_EXPOSED=FALSE"
+  Write-Host "COMMANDER_WINDOWS_RC_COOPERATIVE_SHUTDOWN=READY"
 }
 
 function Activate-EventV2 {
@@ -200,6 +268,7 @@ function Activate-EventV2 {
   Write-Host "COMMANDER_WINDOWS_RC_STABLE_TASK=INACTIVE"
   Write-Host "COMMANDER_WINDOWS_RC_TASK=ACTIVE"
   Write-Host "COMMANDER_WINDOWS_RC_TOKEN_EXPOSED=FALSE"
+  Write-Host "COMMANDER_WINDOWS_RC_COOPERATIVE_SHUTDOWN=READY"
 }
 
 function Show-Status {
@@ -235,6 +304,7 @@ function Invoke-SelfCheck {
   Write-Host "COMMANDER_WINDOWS_RC_REUSES_EXISTING_IDENTITY=TRUE"
   Write-Host "COMMANDER_WINDOWS_RC_DEVICE_REPAIRING=FALSE"
   Write-Host "COMMANDER_WINDOWS_RC_TOKEN_EXPOSED=FALSE"
+  Write-Host "COMMANDER_WINDOWS_RC_COOPERATIVE_SHUTDOWN=READY"
 }
 
 switch ($Action) {

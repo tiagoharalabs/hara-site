@@ -91,7 +91,7 @@ Before `EVENT_V2` may become runnable in the Windows RC:
 9. RC installation leaves its Scheduled Task disabled/inert until explicit activation.
 10. Event V2 activation is fail-closed to the canonical DEV origin.
 11. Scheduled Task transition never permits two agents using the same credential.
-12. Live Windows canary passes.
+12. Live Windows canary proves cooperative clean shutdown/disconnect and hard-stop fallback safety.
 13. Public installer/manifest still remain V1 until an explicit later release gate.
 
 ## Current non-claim
