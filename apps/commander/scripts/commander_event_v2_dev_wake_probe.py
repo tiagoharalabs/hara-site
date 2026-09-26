@@ -176,7 +176,8 @@ def self_check() -> None:
         }
         if "token" in printed_names:
             raise AssertionError("WAKE_PROBE_SECRET_PRINT_SURFACE")
-    assert "result_json" not in source
+    forbidden_raw_result_field = "result_" + "json"
+    assert forbidden_raw_result_field not in source
     assert "commander.haralabs.com.br/api/internal" not in source
     print("COMMANDER_EVENT_V2_DEV_WAKE_PROBE_SOURCE=PASS")
     print("COMMANDER_EVENT_V2_DEV_WAKE_PROBE_ORIGIN=DEV_ONLY")
