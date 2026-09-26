@@ -53,6 +53,62 @@ def try_write_runtime_status(**kwargs):
     return BASELINE.try_write_runtime_status(**kwargs)
 
 
+def _event_status_file():
+    return BASELINE.DATA_DIR / "event-v2-status.json"
+
+
+def write_event_v2_status(
+    *,
+    connected: bool,
+    connected_at_utc=None,
+    disconnected_at_utc=None,
+    error_code=None,
+):
+    BASELINE.DATA_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
+    path = _event_status_file()
+    current = {}
+    if path.is_file():
+        try:
+            current = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            current = {}
+
+    payload = {
+        "schema": "hara.commander-event-v2-runtime-status.v1",
+        "transport_mode": TRANSPORT_MODE,
+        "connected": bool(connected),
+        "connected_at_utc": (
+            connected_at_utc
+            if connected_at_utc is not None
+            else current.get("connected_at_utc")
+        ),
+        "disconnected_at_utc": (
+            disconnected_at_utc
+            if disconnected_at_utc is not None
+            else current.get("disconnected_at_utc")
+        ),
+        "last_error_code": error_code,
+        "updated_at_utc": utcnow(),
+    }
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(
+        json.dumps(payload, sort_keys=True, separators=(",", ":")),
+        encoding="utf-8",
+    )
+    os.chmod(tmp, 0o600)
+    tmp.replace(path)
+    os.chmod(path, 0o600)
+    return payload
+
+
+def try_write_event_v2_status(**kwargs):
+    try:
+        write_event_v2_status(**kwargs)
+        return True
+    except Exception:
+        return False
+
+
 def load_config():
     return BASELINE.load_config()
 
@@ -211,9 +267,12 @@ def self_test():
     import tempfile
 
     original_receipt_dir = BASELINE.RECEIPT_DIR
+    original_data_dir = BASELINE.DATA_DIR
     try:
         with tempfile.TemporaryDirectory() as temp:
-            BASELINE.RECEIPT_DIR = Path(temp)
+            temp_path = Path(temp)
+            BASELINE.RECEIPT_DIR = temp_path / "receipts"
+            BASELINE.DATA_DIR = temp_path / "data"
             cfg = {
                 "HARA_DEVICE_ID": "event-v2-selftest",
                 "HARA_DEVICE_ARCH": "test",
@@ -250,6 +309,26 @@ def self_test():
             assert receipt["execution_authority"] == EXECUTION_AUTHORITY
             assert receipt["payload_values_persisted"] is False
 
+            connected = write_event_v2_status(
+                connected=True,
+                connected_at_utc="2026-09-26T00:00:00+00:00",
+                disconnected_at_utc=None,
+                error_code=None,
+            )
+            assert connected["connected"] is True
+            assert connected["transport_mode"] == "EVENT_V2"
+            status_path = _event_status_file()
+            assert status_path.is_file()
+            assert (status_path.stat().st_mode & 0o777) == 0o600
+
+            disconnected = write_event_v2_status(
+                connected=False,
+                disconnected_at_utc="2026-09-26T00:01:00+00:00",
+                error_code="NETWORK_ERROR",
+            )
+            assert disconnected["connected"] is False
+            assert disconnected["last_error_code"] == "NETWORK_ERROR"
+
             try:
                 execute_tool(
                     cfg,
@@ -268,12 +347,15 @@ def self_test():
                 raise AssertionError("EVENT_V2_ARBITRARY_FUNCTION_NOT_DENIED")
     finally:
         BASELINE.RECEIPT_DIR = original_receipt_dir
+        BASELINE.DATA_DIR = original_data_dir
 
     print("COMMANDER_EVENT_V2_CUSTOMER_AGENT_AUTHORITY=PASS")
     print("COMMANDER_EVENT_V2_CUSTOMER_AUTHORITY=HARA_COMMANDER")
     print("COMMANDER_EVENT_V2_TRANSPORT_MODE=EVENT_V2")
     print("COMMANDER_EVENT_V2_HARA_SERVICES_DATA_PATH=ABSENT")
     print("COMMANDER_EVENT_V2_ARBITRARY_FUNCTION=DENIED")
+    print("COMMANDER_EVENT_V2_RUNTIME_STATUS=PASS")
+    print("COMMANDER_EVENT_V2_RUNTIME_STATUS_MODE=0600")
 
 
 if __name__ == "__main__":

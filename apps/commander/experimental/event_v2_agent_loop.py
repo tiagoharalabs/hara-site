@@ -77,6 +77,15 @@ def run_connected_session(
         config["HARA_DEVICE_TOKEN"],
     )
     connected_at = monotonic()
+    connected_at_utc = agent.utcnow()
+    if not agent.try_write_event_v2_status(
+        connected=True,
+        connected_at_utc=connected_at_utc,
+        disconnected_at_utc=None,
+        error_code=None,
+    ):
+        transport.close_socket(sock)
+        raise RuntimeError("EVENT_V2_STATUS_WRITE_FAILED")
     last_liveness = connected_at
     steps = 0
     drained = 0
@@ -110,6 +119,11 @@ def run_connected_session(
         }
     finally:
         transport.close_socket(sock)
+        agent.try_write_event_v2_status(
+            connected=False,
+            disconnected_at_utc=agent.utcnow(),
+            error_code=None,
+        )
 
 
 def run_forever(
@@ -136,6 +150,11 @@ def run_forever(
             connected_seconds = time.monotonic() - started
             code = agent.safe_error_code(exc)
             agent.try_write_runtime_status(error_code=code, error_at=agent.utcnow())
+            agent.try_write_event_v2_status(
+                connected=False,
+                disconnected_at_utc=agent.utcnow(),
+                error_code=code,
+            )
 
         if connected_seconds >= STABLE_CONNECTION_SECONDS:
             attempt = 0
@@ -157,7 +176,9 @@ def main() -> int:
         assert transport.DURABLE_LIVENESS_SECONDS == 21600
         print("COMMANDER_EVENT_V2_AGENT_LOOP_SOURCE=PASS")
         print("COMMANDER_EVENT_V2_IDLE_POLLING=ABSENT")
+        assert hasattr(agent, "try_write_event_v2_status")
         print("COMMANDER_EVENT_V2_RECONCILIATION_DRAIN=BOUNDED_8")
+        print("COMMANDER_EVENT_V2_CONNECTION_STATUS=LOCAL_0600")
         return 0
 
     config = agent.load_config()
