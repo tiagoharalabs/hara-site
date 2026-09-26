@@ -201,6 +201,46 @@ def main() -> int:
         "EVENT_V2_EVENT_TYPE_DENIED",
     )
 
+    # DEV-only transient RPC carries one bounded, typed call over the socket.
+    transient_payload = (
+        b'{"schema":"hara.commander-device-event.v2","type":"CALL_TRANSIENT",'
+        b'"call_id":"HARA-TRANSIENT-1","request_id":"REQ-1",'
+        b'"tool_id":"hara.health","payload":{}}'
+    )
+    transient = client.parse_event_frame(
+        client.ServerFrame(0x1, transient_payload, len(transient_payload) + 4)
+    )
+    assert transient["type"] == "CALL_TRANSIENT"
+    assert transient["request_id"] == "REQ-1"
+    assert transient["tool_id"] == "hara.health"
+    assert transient["payload"] == {}
+
+    result_socket = IdleSocket()
+    client.send_transient_result(result_socket, {
+        "schema": "hara.commander-device-event.v2",
+        "type": "CALL_RESULT",
+        "call_id": "HARA-TRANSIENT-1",
+        "state": "COMPLETED",
+        "result": {"state": "PASS"},
+        "error_code": None,
+        "learning_signal": {
+            "schema": "hara.commander-learning-signal.v1",
+            "tool_id": "hara.health",
+            "tool_family": "HEALTH",
+            "outcome": "PASS",
+            "latency_bucket": "LT_10_MS",
+            "result_bytes_bucket": "LT_1_KIB",
+            "platform": "LINUX",
+            "agent_version": "0.3.7",
+            "transport_mode": "EVENT_V2_TRANSIENT_RPC",
+            "privileged_attempt": False,
+            "customer_content_collected": False,
+        },
+    })
+    assert len(result_socket.sent) == 1
+    assert result_socket.sent[0][0] == 0x81
+    assert result_socket.sent[0][1] & 0x80
+
     # Durable-call drain is bounded and the event call_id is not used as
     # execution authority.
     fake_agent = FakeAgent([
@@ -258,6 +298,8 @@ def main() -> int:
     print("COMMANDER_EVENT_V2_PROTOCOL_KEEPALIVE_IDLE_SECONDS=60")
     print("COMMANDER_EVENT_V2_APPLICATION_HEARTBEAT_ON_IDLE=ABSENT")
     print("COMMANDER_EVENT_V2_WAKE_EVENT_FIELDS=BOUNDED")
+    print("COMMANDER_EVENT_V2_TRANSIENT_EVENT_FIELDS=BOUNDED")
+    print("COMMANDER_EVENT_V2_TRANSIENT_RESULT_CLIENT_FRAME=PASS")
     print("COMMANDER_EVENT_V2_DURABLE_DRAIN=BOUNDED_8")
     print("COMMANDER_EVENT_V2_IDLE_HTTP_POLLING=ABSENT")
     print("COMMANDER_EVENT_V2_PUBLIC_AUTHORITY=HARA_COMMANDER")

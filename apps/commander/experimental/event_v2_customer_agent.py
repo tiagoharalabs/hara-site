@@ -15,6 +15,7 @@ import importlib.util
 import json
 import os
 import sys
+import time
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -23,6 +24,8 @@ BASELINE_PATH = COMMANDER / "public" / "agent" / "linux.py"
 OPERATIONAL_AUTHORITY = "HARA_COMMANDER"
 EXECUTION_AUTHORITY = "HARA_COMMANDER_AGENT"
 TRANSPORT_MODE = "EVENT_V2"
+TRANSIENT_LEDGER_RETENTION_SECONDS = 24 * 60 * 60
+TRANSIENT_LEDGER_CLEANUP_BATCH = 32
 
 
 def _load_baseline():
@@ -233,6 +236,213 @@ def execute_tool(config, call):
     return _response(result, receipt_sha=receipt_sha)
 
 
+def _transient_ledger_dir():
+    return BASELINE.DATA_DIR / "transient-ledger"
+
+
+def _canonical_payload_sha256(call) -> str:
+    raw = json.dumps(
+        call.get("payload") or {},
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return hashlib.sha256(raw).hexdigest()
+
+
+def _transient_ledger_path(call):
+    request_id = str(call.get("request_id") or "")
+    if not request_id:
+        raise ValueError("REQUEST_ID_INVALID")
+    name = hashlib.sha256(request_id.encode("utf-8")).hexdigest() + ".json"
+    return _transient_ledger_dir() / name
+
+
+def cleanup_transient_ledger(*, now=None):
+    ledger = _transient_ledger_dir()
+    if not ledger.is_dir():
+        return 0
+    now = time.time() if now is None else float(now)
+    cutoff = now - TRANSIENT_LEDGER_RETENTION_SECONDS
+    removed = 0
+    for path in sorted(ledger.glob("*.json"), key=lambda item: item.stat().st_mtime):
+        if removed >= TRANSIENT_LEDGER_CLEANUP_BATCH:
+            break
+        try:
+            if path.stat().st_mtime <= cutoff:
+                path.unlink()
+                removed += 1
+        except FileNotFoundError:
+            pass
+    return removed
+
+
+def read_transient_ledger(call):
+    path = _transient_ledger_path(call)
+    if not path.is_file():
+        return None
+    try:
+        entry = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise ValueError("TRANSIENT_LEDGER_INVALID") from exc
+    expected = {
+        "schema",
+        "request_id",
+        "tool_id",
+        "payload_sha256",
+        "state",
+        "result",
+        "error_code",
+        "completed_at_utc",
+    }
+    if set(entry) != expected or entry.get("schema") != "hara.commander-transient-ledger.v1":
+        raise ValueError("TRANSIENT_LEDGER_INVALID")
+    if (
+        entry.get("request_id") != str(call.get("request_id") or "")
+        or entry.get("tool_id") != str(call.get("tool_id") or "")
+        or entry.get("payload_sha256") != _canonical_payload_sha256(call)
+    ):
+        raise ValueError("IDEMPOTENCY_CONFLICT")
+    return entry
+
+
+def write_transient_ledger(call, *, state, result, error_code):
+    ledger = _transient_ledger_dir()
+    ledger.mkdir(parents=True, exist_ok=True, mode=0o700)
+    os.chmod(ledger, 0o700)
+    path = _transient_ledger_path(call)
+    entry = {
+        "schema": "hara.commander-transient-ledger.v1",
+        "request_id": str(call.get("request_id") or ""),
+        "tool_id": str(call.get("tool_id") or ""),
+        "payload_sha256": _canonical_payload_sha256(call),
+        "state": str(state),
+        "result": result,
+        "error_code": error_code,
+        "completed_at_utc": utcnow(),
+    }
+    raw = json.dumps(entry, sort_keys=True, separators=(",", ":"))
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(raw, encoding="utf-8")
+    os.chmod(tmp, 0o600)
+    tmp.replace(path)
+    os.chmod(path, 0o600)
+    return entry
+
+
+def _tool_family(tool_id: str) -> str:
+    return {
+        "hara.health": "HEALTH",
+        "hara.functions.list": "DISCOVERY",
+        "hara.functions.describe": "DISCOVERY",
+        "hara.functions.invoke": "FUNCTION",
+        "hara.receipts.get": "RECEIPT",
+    }.get(str(tool_id or ""), "UNKNOWN")
+
+
+def _latency_bucket(elapsed_ms: float) -> str:
+    if elapsed_ms < 10:
+        return "LT_10_MS"
+    if elapsed_ms < 50:
+        return "10_50_MS"
+    if elapsed_ms < 100:
+        return "50_100_MS"
+    if elapsed_ms < 500:
+        return "100_500_MS"
+    if elapsed_ms < 2000:
+        return "500_2000_MS"
+    return "GE_2000_MS"
+
+
+def _bytes_bucket(size: int) -> str:
+    if size < 1024:
+        return "LT_1_KIB"
+    if size < 4 * 1024:
+        return "1_4_KIB"
+    if size < 16 * 1024:
+        return "4_16_KIB"
+    if size < 64 * 1024:
+        return "16_64_KIB"
+    if size < 256 * 1024:
+        return "64_256_KIB"
+    return "GE_256_KIB"
+
+
+def build_learning_signal(call, *, outcome: str, elapsed_ms: float, result) -> dict:
+    raw = json.dumps(
+        result if result is not None else {},
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return {
+        "schema": "hara.commander-learning-signal.v1",
+        "tool_id": str(call.get("tool_id") or ""),
+        "tool_family": _tool_family(call.get("tool_id")),
+        "outcome": str(outcome),
+        "latency_bucket": _latency_bucket(elapsed_ms),
+        "result_bytes_bucket": _bytes_bucket(len(raw)),
+        "platform": "LINUX",
+        "agent_version": str(BASELINE.AGENT_VERSION),
+        "transport_mode": "EVENT_V2_TRANSIENT_RPC",
+        "privileged_attempt": False,
+        "customer_content_collected": False,
+    }
+
+
+def execute_transient_call(config, call, *, monotonic=time.monotonic) -> dict:
+    cleanup_transient_ledger()
+    started = monotonic()
+
+    try:
+        existing = read_transient_ledger(call)
+    except Exception as exc:
+        state = "FAILED"
+        error_code = safe_error_code(exc)
+        result = _response({}, blocker={"code": error_code})
+        existing = None
+        should_persist = False
+    else:
+        should_persist = existing is None
+        if existing is not None:
+            state = str(existing["state"])
+            error_code = existing["error_code"]
+            result = existing["result"]
+
+    if existing is None and should_persist:
+        state = "COMPLETED"
+        error_code = None
+        try:
+            result = execute_tool(config, call)
+        except Exception as exc:
+            state = "FAILED"
+            error_code = safe_error_code(exc)
+            result = _response({}, blocker={"code": error_code})
+        write_transient_ledger(
+            call,
+            state=state,
+            result=result,
+            error_code=error_code,
+        )
+
+    elapsed_ms = max(0.0, (monotonic() - started) * 1000.0)
+    outcome = "REPLAYED" if existing is not None else (
+        "PASS" if state == "COMPLETED" else "FAILED"
+    )
+    return {
+        "schema": "hara.commander-device-event.v2",
+        "type": "CALL_RESULT",
+        "call_id": str(call.get("call_id") or ""),
+        "state": state,
+        "result": result,
+        "error_code": error_code,
+        "learning_signal": build_learning_signal(
+            call,
+            outcome=outcome,
+            elapsed_ms=elapsed_ms,
+            result=result,
+        ),
+    }
+
+
 def complete(config, call, state, result, error_code=None):
     body = {
         "call_id": call["call_id"],
@@ -309,6 +519,67 @@ def self_test():
             assert receipt["execution_authority"] == EXECUTION_AUTHORITY
             assert receipt["payload_values_persisted"] is False
 
+            ticks = iter([10.0, 10.042])
+            transient = execute_transient_call(
+                cfg,
+                {
+                    **base,
+                    "call_id": "transient-c1",
+                    "request_id": "transient-r1",
+                    "tool_id": "hara.health",
+                    "payload": {},
+                },
+                monotonic=lambda: next(ticks),
+            )
+            assert transient["type"] == "CALL_RESULT"
+            assert transient["state"] == "COMPLETED"
+            signal = transient["learning_signal"]
+            assert signal["schema"] == "hara.commander-learning-signal.v1"
+            assert signal["tool_family"] == "HEALTH"
+            assert signal["latency_bucket"] == "10_50_MS"
+            assert signal["privileged_attempt"] is False
+            assert signal["customer_content_collected"] is False
+            assert "payload" not in signal
+            assert "result" not in signal
+            assert "stdout" not in signal
+
+            ledger_call = {
+                **base,
+                "call_id": "ledger-c1",
+                "request_id": "ledger-r1",
+                "tool_id": "hara.health",
+                "payload": {},
+            }
+            first_ticks = iter([20.0, 20.020])
+            first = execute_transient_call(
+                cfg, ledger_call, monotonic=lambda: next(first_ticks)
+            )
+            second_ticks = iter([21.0, 21.001])
+            second = execute_transient_call(
+                cfg,
+                {**ledger_call, "call_id": "ledger-c2"},
+                monotonic=lambda: next(second_ticks),
+            )
+            assert first["state"] == "COMPLETED"
+            assert second["state"] == "COMPLETED"
+            assert first["result"] == second["result"]
+            assert second["learning_signal"]["outcome"] == "REPLAYED"
+            ledger_path = _transient_ledger_path(ledger_call)
+            assert ledger_path.is_file()
+            assert (ledger_path.stat().st_mode & 0o777) == 0o600
+            ledger_raw = ledger_path.read_text(encoding="utf-8")
+            assert '"payload":' not in ledger_raw
+            assert '"payload_sha256":' in ledger_raw
+
+            conflict_ticks = iter([22.0, 22.001])
+            conflict = execute_transient_call(
+                cfg,
+                {**ledger_call, "call_id": "ledger-c3", "payload": {"x": 1}},
+                monotonic=lambda: next(conflict_ticks),
+            )
+            assert conflict["state"] == "FAILED"
+            assert conflict["error_code"] == "IDEMPOTENCY_CONFLICT"
+
             connected = write_event_v2_status(
                 connected=True,
                 connected_at_utc="2026-09-26T00:00:00+00:00",
@@ -356,6 +627,11 @@ def self_test():
     print("COMMANDER_EVENT_V2_ARBITRARY_FUNCTION=DENIED")
     print("COMMANDER_EVENT_V2_RUNTIME_STATUS=PASS")
     print("COMMANDER_EVENT_V2_RUNTIME_STATUS_MODE=0600")
+    print("COMMANDER_EVENT_V2_TRANSIENT_EXECUTION=SOURCE_READY")
+    print("COMMANDER_EVENT_V2_LEARNING_SIGNAL=METADATA_ONLY")
+    print("COMMANDER_EVENT_V2_LEARNING_CUSTOMER_CONTENT=FALSE")
+    print("COMMANDER_EVENT_V2_LOCAL_IDEMPOTENCY_LEDGER=PASS")
+    print("COMMANDER_EVENT_V2_LOCAL_LEDGER_RETENTION_HOURS=24")
 
 
 if __name__ == "__main__":

@@ -30,7 +30,10 @@ from urllib.parse import urlsplit
 
 WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 MAX_HEADER_BYTES = 16 * 1024
-MAX_EVENT_BYTES = 4 * 1024
+MAX_WAKE_EVENT_BYTES = 4 * 1024
+MAX_TRANSIENT_REQUEST_BYTES = 160 * 1024
+MAX_TRANSIENT_RESULT_BYTES = 320 * 1024
+MAX_EVENT_BYTES = MAX_TRANSIENT_RESULT_BYTES
 KEEPALIVE_IDLE_SECONDS = 60.0
 RECONNECT_BASE_SECONDS = 10.0
 RECONNECT_MAX_SECONDS = 15.0
@@ -277,6 +280,17 @@ def send_liveness(sock: socket.socket) -> None:
     ))
 
 
+def _clean_identifier(value, max_length: int, code: str) -> str:
+    text = str(value or "")
+    if (
+        not text
+        or len(text) > max_length
+        or any(not (ch.isalnum() or ch in "_.:-") for ch in text)
+    ):
+        raise fail(code)
+    return text
+
+
 def parse_event_frame(frame: ServerFrame) -> dict:
     if frame.opcode != 0x1:
         raise fail("EVENT_V2_EVENT_FRAME_REQUIRED")
@@ -287,22 +301,55 @@ def parse_event_frame(frame: ServerFrame) -> dict:
         raise fail("EVENT_V2_EVENT_INVALID") from exc
     if not isinstance(payload, dict) or payload.get("schema") != EVENT_SCHEMA:
         raise fail("EVENT_V2_EVENT_INVALID")
-    if payload.get("type") != "CALL_AVAILABLE":
-        raise fail("EVENT_V2_EVENT_TYPE_DENIED")
-    if set(payload) != {"schema", "type", "call_id"}:
-        raise fail("EVENT_V2_EVENT_FIELDS_DENIED")
-    call_id = str(payload.get("call_id") or "")
-    if (
-        not call_id
-        or len(call_id) > 180
-        or any(not (ch.isalnum() or ch in "_.:-") for ch in call_id)
-    ):
-        raise fail("EVENT_V2_CALL_ID_INVALID")
-    return {
-        "schema": EVENT_SCHEMA,
-        "type": "CALL_AVAILABLE",
-        "call_id": call_id,
-    }
+
+    event_type = payload.get("type")
+    if event_type == "CALL_AVAILABLE":
+        if len(frame.payload) > MAX_WAKE_EVENT_BYTES:
+            raise fail("EVENT_V2_EVENT_TOO_LARGE")
+        if set(payload) != {"schema", "type", "call_id"}:
+            raise fail("EVENT_V2_EVENT_FIELDS_DENIED")
+        return {
+            "schema": EVENT_SCHEMA,
+            "type": "CALL_AVAILABLE",
+            "call_id": _clean_identifier(
+                payload.get("call_id"), 180, "EVENT_V2_CALL_ID_INVALID"
+            ),
+        }
+
+    if event_type == "CALL_TRANSIENT":
+        if len(frame.payload) > MAX_TRANSIENT_REQUEST_BYTES:
+            raise fail("EVENT_V2_TRANSIENT_REQUEST_TOO_LARGE")
+        if set(payload) != {
+            "schema", "type", "call_id", "request_id", "tool_id", "payload"
+        }:
+            raise fail("EVENT_V2_EVENT_FIELDS_DENIED")
+        if not isinstance(payload.get("payload"), dict):
+            raise fail("EVENT_V2_TRANSIENT_PAYLOAD_INVALID")
+        return {
+            "schema": EVENT_SCHEMA,
+            "type": "CALL_TRANSIENT",
+            "call_id": _clean_identifier(
+                payload.get("call_id"), 180, "EVENT_V2_CALL_ID_INVALID"
+            ),
+            "request_id": _clean_identifier(
+                payload.get("request_id"), 220, "EVENT_V2_REQUEST_ID_INVALID"
+            ),
+            "tool_id": _clean_identifier(
+                payload.get("tool_id"), 120, "EVENT_V2_TOOL_ID_INVALID"
+            ),
+            "payload": payload["payload"],
+        }
+
+    raise fail("EVENT_V2_EVENT_TYPE_DENIED")
+
+
+def send_transient_result(sock: socket.socket, payload: dict) -> None:
+    if not isinstance(payload, dict):
+        raise fail("EVENT_V2_TRANSIENT_RESULT_INVALID")
+    raw = json.dumps(payload, separators=(",", ":"), sort_keys=True)
+    if len(raw.encode("utf-8")) > MAX_TRANSIENT_RESULT_BYTES:
+        raise fail("EVENT_V2_TRANSIENT_RESULT_TOO_LARGE")
+    send_text(sock, raw)
 
 
 def send_ping(sock: socket.socket, payload: bytes = b"") -> None:
