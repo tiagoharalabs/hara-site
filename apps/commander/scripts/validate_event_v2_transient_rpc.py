@@ -172,6 +172,8 @@ def main() -> int:
 
     for required in (
         "MAX_DEVICES = 50",
+        "D1_FIXTURE_BATCH_SIZE = 10",
+        "D1_SELECTION_BATCH_SIZE = 25",
         "hara.commander-event-v2-multidevice-lab.v1",
         "MULTIDEVICE_DISTINCT_IDENTITIES=REQUIRED",
         "MULTIDEVICE_PROD_MUTATION=ABSENT",
