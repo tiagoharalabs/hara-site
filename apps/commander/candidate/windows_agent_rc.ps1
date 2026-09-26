@@ -8,9 +8,9 @@ if ([string]::IsNullOrWhiteSpace($Transport)) { $Transport = "POLL_V1" }
 $Transport = $Transport.ToUpperInvariant()
 
 $Here = Split-Path -Parent $MyInvocation.MyCommand.Path
-$CommanderRoot = Split-Path -Parent $Here
-$StableAgent = Join-Path $CommanderRoot "public\agent\windows.ps1"
-$EventV2Agent = Join-Path $CommanderRoot "experimental\event_v2_windows_agent.ps1"
+$StableRoot = Join-Path $env:LOCALAPPDATA "HARA Commander"
+$StableAgent = Join-Path $StableRoot "hara-commander-agent.ps1"
+$EventV2Agent = Join-Path $Here "event_v2_windows_agent.ps1"
 
 function Invoke-SelfTest {
   if (-not (Test-Path -LiteralPath $StableAgent -PathType Leaf)) { throw "COMMANDER_WINDOWS_RC_STABLE_AGENT_MISSING" }

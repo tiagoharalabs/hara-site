@@ -28,8 +28,8 @@ def main() -> int:
         "COMMANDER_WINDOWS_RC_DEFAULT_TRANSPORT=POLL_V1",
         "COMMANDER_WINDOWS_RC_EVENT_V2=SOURCE_READY_UNPROVEN",
         "COMMANDER_WINDOWS_RC_SERVICES_PROXY=FALSE",
-        "public\\agent\\windows.ps1",
-        "experimental\\event_v2_windows_agent.ps1",
+        '$StableAgent = Join-Path $StableRoot "hara-commander-agent.ps1"',
+        '$EventV2Agent = Join-Path $Here "event_v2_windows_agent.ps1"',
     )
     for marker in required_rc:
         assert marker in rc, marker
@@ -79,12 +79,12 @@ def main() -> int:
 
     required_adapter = (
         "Import-StableAgentFunctions",
-        "public\\agent\\windows.ps1",
-        "experimental\\event_v2_windows_transport.ps1",
+        '$StableAgent = Join-Path $StableRoot "hara-commander-agent.ps1"',
+        '$TransportPath = Join-Path $Here "event_v2_windows_transport.ps1"',
         "$OperationalAuthority = \"HARA_COMMANDER\"",
         "$TransportMode = \"EVENT_V2\"",
         "$MaxDrainCalls = 8",
-        "$ReconnectBaseSeconds = 1",
+        "$ReconnectBaseSeconds = 10",
         "$ReconnectMaxSeconds = 15",
         "$DurableLivenessSeconds = 21600",
         "Invoke-DurableDrain",
@@ -134,6 +134,8 @@ def main() -> int:
     print("COMMANDER_WINDOWS_SERVICES_PROXY=FALSE")
     print("COMMANDER_WINDOWS_EVENT_V2_TRANSPORT_SOURCE=READY_UNPROVEN")
     print("COMMANDER_WINDOWS_EVENT_V2_AGENT_ADAPTER=SOURCE_READY")
+    print("COMMANDER_WINDOWS_EVENT_V2_RECONNECT_BASE_SECONDS=10")
+    print("COMMANDER_WINDOWS_EVENT_V2_RECONNECT_MAX_SECONDS=15")
     return 0
 
 
