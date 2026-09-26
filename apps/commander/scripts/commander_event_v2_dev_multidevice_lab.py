@@ -10,7 +10,6 @@ not modified. No automatic deletion is implemented.
 from __future__ import annotations
 
 import argparse
-import concurrent.futures
 import ast
 import base64
 import hashlib
@@ -44,7 +43,7 @@ MAX_DEVICES = 100
 D1_FIXTURE_BATCH_SIZE = 10
 D1_SELECTION_BATCH_SIZE = 25
 ENROLL_MIN_INTERVAL_SECONDS = 1.10
-LIFECYCLE_MAX_WORKERS = 16
+LIFECYCLE_BATCH_MODE = "SINGLE_SSH"
 
 SOURCE_FILES = (
     "apps/commander/experimental/event_v2_websocket.py",
@@ -474,119 +473,168 @@ def provision(count: int, target: str, manifest_path: Path) -> dict:
     return manifest
 
 
-def parallel_device_rows(devices: list[dict], operation) -> list:
-    if not devices:
-        return []
-    workers = min(LIFECYCLE_MAX_WORKERS, len(devices))
-    with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
-        futures = [pool.submit(operation, row) for row in devices]
-        results = []
-        for future in futures:
-            results.append(future.result())
-        return results
+def lifecycle_indices(devices: list[dict]) -> str:
+    return " ".join(str(int(row["index"])) for row in devices)
 
 
 def start_manifest(path: Path) -> int:
     manifest = load_manifest(path)
     target, root = manifest["target_host"], manifest["remote_root"]
     source = root + "/source/apps/commander/experimental/event_v2_agent_loop.py"
-
-    def start_one(row: dict) -> bool:
-        device_root = f"{root}/device-{int(row['index']):02d}"
-        proc = ssh(target, f"""
+    indices = lifecycle_indices(manifest["devices"])
+    expected = len(manifest["devices"])
+    proc = ssh(target, f"""
 set -Eeuo pipefail
-root={quote_shell(device_root)}
-pidfile="$root/agent.pid"
-if [ -f "$pidfile" ]; then
-  oldpid="$(cat "$pidfile" 2>/dev/null || true)"
-  if [ -n "$oldpid" ] && kill -0 "$oldpid" 2>/dev/null; then exit 23; fi
-fi
-umask 077
-nohup env XDG_CONFIG_HOME="$root/xdg-config" XDG_DATA_HOME="$root/xdg-data" \
-  python3 {quote_shell(source)} > "$root/agent.log" 2>&1 < /dev/null &
-pid="$!"
-printf '%s\n' "$pid" > "$pidfile"
-chmod 600 "$pidfile"
-printf 'MULTIDEVICE_AGENT_STARTED=TRUE\n'
-""")
-        if "MULTIDEVICE_AGENT_STARTED=TRUE" not in proc.stdout:
-            raise fail("MULTIDEVICE_AGENT_START_FAILED")
-        return True
+root_base={quote_shell(root)}
+source={quote_shell(source)}
+indices={quote_shell(indices)}
 
-    return sum(1 for result in parallel_device_rows(manifest["devices"], start_one) if result)
+for idx in $indices; do
+  device_root="$(printf '%s/device-%02d' "$root_base" "$idx")"
+  pidfile="$device_root/agent.pid"
+  if [ -f "$pidfile" ]; then
+    oldpid="$(cat "$pidfile" 2>/dev/null || true)"
+    if [ -n "$oldpid" ] && kill -0 "$oldpid" 2>/dev/null; then exit 23; fi
+  fi
+done
+
+started=0
+for idx in $indices; do
+  device_root="$(printf '%s/device-%02d' "$root_base" "$idx")"
+  pidfile="$device_root/agent.pid"
+  umask 077
+  nohup env XDG_CONFIG_HOME="$device_root/xdg-config" XDG_DATA_HOME="$device_root/xdg-data" \
+    python3 "$source" > "$device_root/agent.log" 2>&1 < /dev/null &
+  pid="$!"
+  printf '%s\n' "$pid" > "$pidfile"
+  chmod 600 "$pidfile"
+  started=$((started + 1))
+done
+printf 'MULTIDEVICE_AGENTS_STARTED=%s\n' "$started"
+""", timeout=90)
+    marker = "MULTIDEVICE_AGENTS_STARTED=" + str(expected)
+    if marker not in proc.stdout:
+        raise fail("MULTIDEVICE_AGENT_START_FAILED")
+    return expected
 
 
 def status_manifest(path: Path) -> dict:
     manifest = load_manifest(path)
     target, root = manifest["target_host"], manifest["remote_root"]
-
-    def status_one(row: dict) -> dict:
-        device_root = f"{root}/device-{int(row['index']):02d}"
-        proc = ssh(target, f"""
+    count = len(manifest["devices"])
+    proc = ssh(target, f"""
 set -Eeuo pipefail
-root={quote_shell(device_root)}
-alive=false
-if [ -f "$root/agent.pid" ]; then
-  pid="$(cat "$root/agent.pid" 2>/dev/null || true)"
-  if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then alive=true; fi
-fi
-python3 - "$root/xdg-data/hara-commander/event-v2-status.json" "$alive" <<'PY'
-import json, pathlib, sys
-p=pathlib.Path(sys.argv[1])
-status={{}}
-if p.is_file():
-    try: status=json.loads(p.read_text(encoding="utf-8"))
-    except Exception: status={{}}
+python3 - {quote_shell(root)} {count} <<'PY'
+import json
+import os
+import pathlib
+import sys
+
+root = pathlib.Path(sys.argv[1])
+count = int(sys.argv[2])
+rows = []
+for index in range(count):
+    device_root = root / f"device-{{index:02d}}"
+    alive = False
+    try:
+        pid = int((device_root / "agent.pid").read_text(encoding="utf-8").strip())
+        os.kill(pid, 0)
+        alive = True
+    except (FileNotFoundError, ValueError, ProcessLookupError, PermissionError):
+        alive = False
+
+    status = {{}}
+    status_path = device_root / "xdg-data" / "hara-commander" / "event-v2-status.json"
+    if status_path.is_file():
+        try:
+            status = json.loads(status_path.read_text(encoding="utf-8"))
+        except Exception:
+            status = {{}}
+
+    rows.append({{
+        "alive": alive,
+        "connected": bool(status.get("connected")),
+        "last_error_code": status.get("last_error_code"),
+    }})
+
 print(json.dumps({{
-    "alive": sys.argv[2] == "true",
-    "connected": bool(status.get("connected")),
-    "last_error_code": status.get("last_error_code"),
+    "count": len(rows),
+    "alive": sum(1 for row in rows if row["alive"]),
+    "connected": sum(1 for row in rows if row["connected"]),
+    "error_codes": sorted({{
+        str(row["last_error_code"])
+        for row in rows
+        if row["last_error_code"]
+    }}),
 }}, sort_keys=True, separators=(",", ":")))
 PY
 """)
-        return json.loads(proc.stdout.strip().splitlines()[-1])
-
-    rows = parallel_device_rows(manifest["devices"], status_one)
-    return {
-        "count": len(rows),
-        "alive": sum(1 for x in rows if x["alive"]),
-        "connected": sum(1 for x in rows if x["connected"]),
-        "error_codes": sorted({str(x["last_error_code"]) for x in rows if x["last_error_code"]}),
-    }
+    try:
+        result = json.loads(proc.stdout.strip().splitlines()[-1])
+    except (IndexError, json.JSONDecodeError) as exc:
+        raise fail("MULTIDEVICE_STATUS_RESPONSE_INVALID") from exc
+    if int(result.get("count", -1)) != count:
+        raise fail("MULTIDEVICE_STATUS_COUNT_INVALID")
+    return result
 
 
 def stop_manifest(path: Path) -> int:
     manifest = load_manifest(path)
     target, root = manifest["target_host"], manifest["remote_root"]
     source = root + "/source/apps/commander/experimental/event_v2_agent_loop.py"
-
-    def stop_one(row: dict) -> bool:
-        device_root = f"{root}/device-{int(row['index']):02d}"
-        proc = ssh(target, f"""
+    indices = lifecycle_indices(manifest["devices"])
+    expected = len(manifest["devices"])
+    proc = ssh(target, f"""
 set -Eeuo pipefail
-root={quote_shell(device_root)}
-pidfile="$root/agent.pid"
-test -f "$pidfile"
-pid="$(cat "$pidfile")"
-case "$pid" in (*[!0-9]*|'') exit 31;; esac
-if kill -0 "$pid" 2>/dev/null; then
-  cmdline="$(tr '\\0' ' ' < "/proc/$pid/cmdline")"
-  expected={quote_shell(source)}
-  case "$cmdline" in *"$expected"*) ;; *) exit 32;; esac
-  kill -TERM "$pid"
-  for _ in $(seq 1 100); do
-    if ! kill -0 "$pid" 2>/dev/null; then break; fi
-    sleep 0.1
-  done
-  if kill -0 "$pid" 2>/dev/null; then exit 33; fi
-fi
-printf 'MULTIDEVICE_AGENT_STOPPED=TRUE\n'
-""", timeout=30)
-        if "MULTIDEVICE_AGENT_STOPPED=TRUE" not in proc.stdout:
-            raise fail("MULTIDEVICE_AGENT_STOP_FAILED")
-        return True
+root_base={quote_shell(root)}
+source={quote_shell(source)}
+indices={quote_shell(indices)}
 
-    return sum(1 for result in parallel_device_rows(manifest["devices"], stop_one) if result)
+for idx in $indices; do
+  device_root="$(printf '%s/device-%02d' "$root_base" "$idx")"
+  pidfile="$device_root/agent.pid"
+  test -f "$pidfile"
+  pid="$(cat "$pidfile")"
+  case "$pid" in (*[!0-9]*|'') exit 31;; esac
+  if kill -0 "$pid" 2>/dev/null; then
+    cmdline="$(tr '\\0' ' ' < "/proc/$pid/cmdline")"
+    case "$cmdline" in *"$source"*) ;; *) exit 32;; esac
+  fi
+done
+
+for idx in $indices; do
+  device_root="$(printf '%s/device-%02d' "$root_base" "$idx")"
+  pid="$(cat "$device_root/agent.pid")"
+  if kill -0 "$pid" 2>/dev/null; then
+    kill -TERM "$pid"
+  fi
+done
+
+for _ in $(seq 1 100); do
+  remaining=0
+  for idx in $indices; do
+    device_root="$(printf '%s/device-%02d' "$root_base" "$idx")"
+    pid="$(cat "$device_root/agent.pid")"
+    if kill -0 "$pid" 2>/dev/null; then
+      remaining=$((remaining + 1))
+    fi
+  done
+  if [ "$remaining" -eq 0 ]; then break; fi
+  sleep 0.1
+done
+
+for idx in $indices; do
+  device_root="$(printf '%s/device-%02d' "$root_base" "$idx")"
+  pid="$(cat "$device_root/agent.pid")"
+  if kill -0 "$pid" 2>/dev/null; then exit 33; fi
+done
+
+printf 'MULTIDEVICE_AGENTS_STOPPED=%s\n' {expected}
+""", timeout=30)
+    marker = "MULTIDEVICE_AGENTS_STOPPED=" + str(expected)
+    if marker not in proc.stdout:
+        raise fail("MULTIDEVICE_AGENT_STOP_FAILED")
+    return expected
 
 
 def self_check() -> None:
@@ -595,8 +643,8 @@ def self_check() -> None:
     assert D1_FIXTURE_BATCH_SIZE == 10
     assert D1_SELECTION_BATCH_SIZE == 25
     assert ENROLL_MIN_INTERVAL_SECONDS >= 1.0
-    assert LIFECYCLE_MAX_WORKERS == 16
-    assert parallel_device_rows([], lambda row: row) == []
+    assert LIFECYCLE_BATCH_MODE == "SINGLE_SSH"
+    assert lifecycle_indices([{"index": 0}, {"index": 1}]) == "0 1"
     assert remote_root("md-20260926123456-1234abcd").startswith("/tmp_hara/")
     assert worker_sha256("abc") == "ungWv48Bz-pBQUDeXa4iI7ADYaOWF3qctBD_YfIAFa0"
     for item in SOURCE_FILES:
@@ -626,7 +674,7 @@ def self_check() -> None:
     print("COMMANDER_EVENT_V2_MULTIDEVICE_D1_FIXTURE_BATCH_SIZE=10")
     print("COMMANDER_EVENT_V2_MULTIDEVICE_D1_SELECTION_BATCH_SIZE=25")
     print("COMMANDER_EVENT_V2_MULTIDEVICE_ENROLL_MIN_INTERVAL_SECONDS=1.10")
-    print("COMMANDER_EVENT_V2_MULTIDEVICE_LIFECYCLE_MAX_WORKERS=16")
+    print("COMMANDER_EVENT_V2_MULTIDEVICE_LIFECYCLE_BATCH_MODE=SINGLE_SSH")
     print("COMMANDER_EVENT_V2_MULTIDEVICE_DISTINCT_IDENTITIES=REQUIRED")
     print("COMMANDER_EVENT_V2_MULTIDEVICE_SECRET_OUTPUT=ABSENT")
     print("COMMANDER_EVENT_V2_MULTIDEVICE_AUTO_DELETE=ABSENT")
