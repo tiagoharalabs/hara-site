@@ -388,6 +388,7 @@ async function dispatchTransientDeviceCall(env, body) {
 
   let quota = null;
   let reservation = null;
+  let committedReplayReceipt = null;
   let executionMode = TRANSIENT_EXECUTE_OR_REPLAY;
   if (toolId === "hara.functions.invoke") {
     const functionId = cleanId(canonicalPayload.function_id, 180);
@@ -407,6 +408,12 @@ async function dispatchTransientDeviceCall(env, body) {
       throw new Error("REQUEST_USAGE_TERMINAL");
     }
     if (reservation.state === "COMMITTED") {
+      committedReplayReceipt = String(
+        reservation.receipt_sha256 || "",
+      ).trim().toLowerCase();
+      if (!/^[0-9a-f]{64}$/.test(committedReplayReceipt)) {
+        throw new Error("TRANSIENT_COMMITTED_RECEIPT_INVALID");
+      }
       executionMode = TRANSIENT_REPLAY_ONLY;
     } else if (reservation.state !== "RESERVED") {
       throw new Error("TRANSIENT_QUOTA_STATE_INVALID");
@@ -476,14 +483,25 @@ async function dispatchTransientDeviceCall(env, body) {
         // expires fail-closed unless a retry can recover the local receipt.
         throw new Error("DEVICE_CALL_RECEIPT_INVALID");
       }
-      usage = await quota.commit(
-        requestId,
-        context.subject_id,
-        receiptSha256,
-        context.unit_limit,
-      );
-      if (!usage.ok) {
-        throw new Error(String(usage.code || "TRANSIENT_QUOTA_COMMIT_FAILED"));
+      if (executionMode === TRANSIENT_REPLAY_ONLY) {
+        if (receiptSha256 !== committedReplayReceipt) {
+          throw new Error("TRANSIENT_REPLAY_RECEIPT_MISMATCH");
+        }
+        // reserve() already proved this request_id is COMMITTED for the same
+        // subject/period/function and returned the canonical committed receipt.
+        // A local Agent replay only needs to match that receipt; a second
+        // TenantQuota commit RPC would repeat the same state/receipt checks.
+        usage = reservation;
+      } else {
+        usage = await quota.commit(
+          requestId,
+          context.subject_id,
+          receiptSha256,
+          context.unit_limit,
+        );
+        if (!usage.ok) {
+          throw new Error(String(usage.code || "TRANSIENT_QUOTA_COMMIT_FAILED"));
+        }
       }
     } else {
       throw new Error("CHANNEL_TRANSIENT_RESULT_INVALID");
@@ -2345,6 +2363,8 @@ export default {
         DEVICE_TRANSIENT_RPC_FAILED: 502,
         TRANSIENT_QUOTA_STATE_INVALID: 409,
         TRANSIENT_QUOTA_COMMIT_FAILED: 502,
+        TRANSIENT_COMMITTED_RECEIPT_INVALID: 409,
+        TRANSIENT_REPLAY_RECEIPT_MISMATCH: 409,
         REQUEST_USAGE_TERMINAL: 409,
         QUOTA_DENIED: 429,
         QUOTA_EXCEEDED: 429,
