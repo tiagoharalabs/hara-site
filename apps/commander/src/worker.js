@@ -20,6 +20,7 @@ const DEMO_TENANT = "HARA-TENANT-DEMO-0001";
 const MCP_METER_ID = "HARA_COMMANDER_GOVERNED_INVOKE";
 const MCP_SECONDARY_PROVIDER = "CLOUDFLARE_ACCESS";
 const DEVICE_CALL_TTL_SECONDS = 50;
+const DEVICE_CALL_ACTIVE_QUEUE_LIMIT = 16;
 const EVENT_V2_TERMINAL_FAST_PATH_WAIT_MS = 500;
 const QUOTA_RESERVATION_TTL_SECONDS = 10 * 60;
 const PAIRING_RETENTION_SECONDS = 30 * 24 * 60 * 60;
@@ -1261,10 +1262,19 @@ async function enqueueDeviceCall(env, body) {
           OR
           (d.tunnel_mode NOT IN ('EVENT_V2','EVENT_V2_OFFLINE') AND d.last_seen_at_utc >= ?)
         )
-        AND s.subject_id = ?`
+        AND s.subject_id = ?
+        AND (
+          SELECT COUNT(*)
+            FROM commander_device_calls q
+           WHERE q.device_id = d.device_id
+             AND q.tenant_id = d.tenant_id
+             AND q.state IN ('PENDING','EXECUTING')
+             AND q.expires_at_utc > ?
+        ) < ?`
   ).bind(
     callId, requestId, context.tenant_id, context.subject_id, toolId, payloadJson,
-    createdAt, expiresAt, deviceId, context.tenant_id, eventV2Cutoff, onlineCutoff, context.subject_id
+    createdAt, expiresAt, deviceId, context.tenant_id, eventV2Cutoff, onlineCutoff,
+    context.subject_id, createdAt, DEVICE_CALL_ACTIVE_QUEUE_LIMIT
   ).run();
 
   if (!inserted.meta?.changes) {
@@ -1289,6 +1299,19 @@ async function enqueueDeviceCall(env, body) {
       throw new Error("DEVICE_NOT_FOUND");
     }
     if (!deviceOnline(currentDevice.last_seen_at_utc, currentDevice.tunnel_mode)) throw new Error("DEVICE_OFFLINE");
+
+    const activeQueue = await env.PRODUCT_DB.prepare(
+      `SELECT COUNT(*) AS active_count
+         FROM commander_device_calls
+        WHERE device_id = ?
+          AND tenant_id = ?
+          AND state IN ('PENDING','EXECUTING')
+          AND expires_at_utc > ?`
+    ).bind(deviceId, context.tenant_id, nowIso()).first();
+    if (Number(activeQueue?.active_count || 0) >= DEVICE_CALL_ACTIVE_QUEUE_LIMIT) {
+      throw new Error("DEVICE_BUSY");
+    }
+
     throw new Error("DEVICE_CALL_ENQUEUE_CONFLICT");
   }
 
@@ -1963,6 +1986,7 @@ export default {
         DEVICE_PLATFORM_INVALID: 400,
         DEVICE_METADATA_INVALID: 400,
         DEVICE_OFFLINE: 409,
+        DEVICE_BUSY: 429,
         DEVICE_CALL_TOOL_DENIED: 403,
         DEVICE_CALL_FUNCTION_DENIED: 403,
         DEVICE_CALL_PAYLOAD_INVALID: 400,
@@ -1981,7 +2005,9 @@ export default {
         return authCallbackFailureResponse(error);
       }
 
-      return json({ ok: false, code }, statusMap[code] || 500);
+      const errorPayload = { ok: false, code };
+      if (code === "DEVICE_BUSY") errorPayload.retry_after_ms = 1000;
+      return json(errorPayload, statusMap[code] || 500);
     }
   },
   async scheduled(_event, env, ctx) {
