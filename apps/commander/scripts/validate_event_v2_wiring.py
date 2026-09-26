@@ -56,6 +56,13 @@ def main() -> int:
     assert "deviceOnline(device.last_seen_at_utc, device.tunnel_mode)" in worker
     assert "deviceOnline(currentDevice.last_seen_at_utc, currentDevice.tunnel_mode)" in worker
 
+    mcp_auth_start = worker.index("function requireMcpProductToken")
+    mcp_auth_end = worker.index("function requirePortalMutationOrigin")
+    mcp_auth_block = worker[mcp_auth_start:mcp_auth_end]
+    assert 'env.ENVIRONMENT === "DEV"' in mcp_auth_block
+    assert "MCP_PRODUCT_CANARY_TOKEN" in mcp_auth_block
+    assert "secretMatches(env.MCP_PRODUCT_TOKEN, supplied)" in mcp_auth_block
+
     # The Worker must authenticate the original upgrade before constructing the
     # internal DO request. The bearer credential must not be copied into that request.
     open_at = worker.index("async function openDeviceEventChannel")
@@ -82,6 +89,7 @@ def main() -> int:
     assert "DEVICE_EVENT_V2_ENABLED" not in prod_raw
     assert '"DEVICE_CHANNEL"' not in prod_raw
     assert '"DeviceChannel"' not in prod_raw
+    assert "MCP_PRODUCT_CANARY_TOKEN" not in prod_raw
 
     print("COMMANDER_EVENT_V2_WORKER_WIRING=PASS")
     print("COMMANDER_EVENT_V2_DEV_BINDING_SQLITE=PASS")
@@ -92,6 +100,8 @@ def main() -> int:
     print("COMMANDER_EVENT_V2_V1_90S_WINDOW_PRESERVED=PASS")
     print("COMMANDER_EVENT_V2_LIVENESS_WINDOW_HOURS=7")
     print("COMMANDER_EVENT_V2_UNDELIVERED_CALL=CANCELLED_FAIL_CLOSED")
+    print("COMMANDER_EVENT_V2_DEV_CANARY_MCP_TOKEN=DEV_ONLY")
+    print("COMMANDER_EVENT_V2_PROD_CANARY_MCP_TOKEN=ABSENT")
     return 0
 
 
