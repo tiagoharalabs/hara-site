@@ -990,3 +990,59 @@ html[data-theme="dark"] .side-nav button.active::before{
 html[data-theme="dark"] .side-nav button.active .nav-icon{
   stroke:#f2f8fb;
 }
+
+
+/* H.A.R.A Commander active-nav surface lock v7.
+   The selected menu surface never changes with Neon; Neon only adds/removes halo. */
+
+/* Light theme base selected state, valid for Neon OFF and ON. */
+html[data-theme="light"] .side-nav button.active,
+html:not([data-theme="dark"]) .side-nav button.active{
+  background:linear-gradient(90deg,#0d3d5f,#0b304a);
+  color:#fff;
+}
+html[data-theme="light"] .side-nav button.active::before,
+html:not([data-theme="dark"]) .side-nav button.active::before{
+  background:#39a2df;
+}
+html[data-theme="light"] .side-nav button.active .nav-icon,
+html:not([data-theme="dark"]) .side-nav button.active .nav-icon{
+  stroke:#78c9f3;
+}
+
+/* Glow OFF: same surface, no luminous halo. */
+html[data-theme="light"][data-neon="off"] .side-nav button.active,
+html:not([data-theme="dark"])[data-neon="off"] .side-nav button.active{
+  background:linear-gradient(90deg,#0d3d5f,#0b304a);
+  color:#fff;
+  box-shadow:inset 0 0 0 1px rgba(120,201,243,.07);
+}
+html[data-theme="light"][data-neon="off"] .side-nav button.active::before,
+html:not([data-theme="dark"])[data-neon="off"] .side-nav button.active::before{
+  box-shadow:none;
+}
+html[data-theme="light"][data-neon="off"] .side-nav button.active .nav-icon,
+html:not([data-theme="dark"])[data-neon="off"] .side-nav button.active .nav-icon{
+  filter:none;
+}
+
+/* Glow ON: preserve the exact selected surface and add halo only. */
+html[data-theme="light"][data-neon="on"] .side-nav button.active,
+html:not([data-theme="dark"])[data-neon="on"] .side-nav button.active{
+  background:linear-gradient(90deg,#0d3d5f,#0b304a);
+  color:#fff;
+  box-shadow:
+    inset 0 0 0 1px rgba(120,201,243,.10),
+    0 0 10px rgba(57,162,223,.24),
+    0 0 22px rgba(57,162,223,.10);
+}
+html[data-theme="light"][data-neon="on"] .side-nav button.active::before,
+html:not([data-theme="dark"])[data-neon="on"] .side-nav button.active::before{
+  background:#39a2df;
+  box-shadow:0 0 8px rgba(57,162,223,.62),0 0 16px rgba(57,162,223,.24);
+}
+html[data-theme="light"][data-neon="on"] .side-nav button.active .nav-icon,
+html:not([data-theme="dark"])[data-neon="on"] .side-nav button.active .nav-icon{
+  stroke:#78c9f3;
+  filter:drop-shadow(0 0 6px rgba(57,162,223,.58)) drop-shadow(0 0 12px rgba(57,162,223,.22));
+}
