@@ -178,7 +178,8 @@ def self_check() -> None:
             raise AssertionError("WAKE_PROBE_SECRET_PRINT_SURFACE")
     forbidden_raw_result_field = "result_" + "json"
     assert forbidden_raw_result_field not in source
-    assert "commander.haralabs.com.br/api/internal" not in source
+    forbidden_prod_internal = "commander.haralabs.com.br" + "/api/internal"
+    assert forbidden_prod_internal not in source
     print("COMMANDER_EVENT_V2_DEV_WAKE_PROBE_SOURCE=PASS")
     print("COMMANDER_EVENT_V2_DEV_WAKE_PROBE_ORIGIN=DEV_ONLY")
     print("COMMANDER_EVENT_V2_DEV_WAKE_PROBE_TOKEN_OUTPUT=ABSENT")
