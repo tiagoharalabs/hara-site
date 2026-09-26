@@ -865,3 +865,42 @@ html[data-theme="dark"][data-neon="on"] a.obs-executive-card:hover,
 html[data-theme="dark"][data-neon="on"] a.obs-live-card:hover{
   box-shadow:0 8px 22px rgba(233,177,40,.11),0 0 12px rgba(255,200,61,.07);
 }
+
+
+/* V16.3.11 — Mobile orbit runner.
+   A symmetric dashed circle can rotate while looking stationary; add a visible moving segment. */
+@media(max-width:760px) and (prefers-reduced-motion:no-preference){
+  .orbit-ring{
+    overflow:visible;
+  }
+  .orbit-ring::after{
+    content:"";
+    position:absolute;
+    left:50%;
+    top:-3px;
+    width:22px;
+    height:4px;
+    border-radius:999px;
+    transform:translateX(-50%);
+    background:linear-gradient(90deg,rgba(57,162,223,0),rgba(57,162,223,.95),rgba(57,162,223,0));
+    box-shadow:0 0 7px rgba(57,162,223,.42);
+    pointer-events:none;
+  }
+  .orbit-ring.ring2::after{
+    width:16px;
+    height:3px;
+    top:-2px;
+    opacity:.78;
+    box-shadow:0 0 6px rgba(57,162,223,.30);
+  }
+  html[data-theme="dark"] .orbit-ring::after{
+    background:linear-gradient(90deg,rgba(255,200,61,0),rgba(255,200,61,.95),rgba(255,200,61,0));
+    box-shadow:0 0 7px rgba(255,200,61,.38);
+  }
+  html[data-theme="dark"] .orbit-ring.ring2::after{
+    box-shadow:0 0 6px rgba(255,200,61,.28);
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  .orbit-ring::after{display:none!important}
+}
