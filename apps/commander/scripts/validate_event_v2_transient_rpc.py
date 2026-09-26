@@ -17,6 +17,7 @@ PROD = COMMANDER / "wrangler.jsonc"
 MODEL = COMMANDER / "scripts" / "commander_event_v2_transient_1k_model.py"
 LIVE_PROBE = COMMANDER / "scripts" / "commander_event_v2_transient_live_probe.py"
 SERIES_PROBE = COMMANDER / "scripts" / "commander_event_v2_transient_series_probe.py"
+DO_ANALYTICS_PROBE = COMMANDER / "scripts" / "commander_do_analytics_probe.py"
 
 
 def block(text: str, start: str, end: str) -> str:
@@ -35,6 +36,7 @@ def main() -> int:
     prod = PROD.read_text(encoding="utf-8")
     live_probe = LIVE_PROBE.read_text(encoding="utf-8")
     series_probe = SERIES_PROBE.read_text(encoding="utf-8")
+    do_analytics_probe = DO_ANALYTICS_PROBE.read_text(encoding="utf-8")
 
     assert dev["vars"]["DEVICE_EVENT_V2_TRANSIENT_RPC_ENABLED"] == "true"
     assert "DEVICE_EVENT_V2_TRANSIENT_RPC_ENABLED" not in prod
@@ -143,10 +145,33 @@ def main() -> int:
         if "print(" in line and "TOKEN_EXPOSED" not in line
     )
 
+    for required in (
+        "https://api.cloudflare.com/client/v4/graphql",
+        "durableObjectsInvocationsAdaptiveGroups",
+        "durableObjectsPeriodicGroups",
+        "durableObjectsStorageGroups",
+        "durableObjectsSubrequestsAdaptiveGroups",
+        "O_NOFOLLOW",
+        "DO_ANALYTICS_NON_DEV_ACCOUNT_DENIED",
+        "filter_granularity",
+    ):
+        assert required in do_analytics_probe, required
+    for forbidden in (
+        "CLOUDFLARE_API_TOKEN",
+        ".wrangler",
+        "default.toml",
+        "dimensions {",
+    ):
+        assert forbidden not in do_analytics_probe, forbidden
+    assert "print(token" not in do_analytics_probe
+    assert '"authorization": "Bearer " + token' in do_analytics_probe
+
     model = runpy.run_path(str(MODEL))
     model["self_check"]()
     series = runpy.run_path(str(SERIES_PROBE))
     series["self_check"]()
+    do_analytics = runpy.run_path(str(DO_ANALYTICS_PROBE))
+    do_analytics["self_check"]()
 
     print("COMMANDER_EVENT_V2_TRANSIENT_RPC_SOURCE=PASS")
     print("COMMANDER_EVENT_V2_TRANSIENT_RPC_ENV=DEV_ONLY")
@@ -164,6 +189,8 @@ def main() -> int:
     print("COMMANDER_EVENT_V2_SERIES100_PROBE_SOURCE=PASS")
     print("COMMANDER_EVENT_V2_MEASURED_D1_ROWS_READ_PER_HTTP=13")
     print("COMMANDER_EVENT_V2_MEASURED_D1_ROWS_WRITTEN_PER_HTTP=0")
+    print("COMMANDER_EVENT_V2_DO_ANALYTICS_COLLECTOR=SOURCE_READY")
+    print("COMMANDER_EVENT_V2_DO_ANALYTICS_WRANGLER_OAUTH_REUSE=DENY")
     print("COMMANDER_EVENT_V2_PUBLIC_AGENT_MUTATION=FALSE")
     print("COMMANDER_EVENT_V2_PROD_CUTOVER=DENY")
     return 0
