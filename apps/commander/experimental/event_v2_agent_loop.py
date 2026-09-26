@@ -203,7 +203,13 @@ def main() -> int:
 
     install_shutdown_handlers()
     config = agent.load_config()
-    run_forever(transport, agent, config)
+    try:
+        run_forever(transport, agent, config)
+    except KeyboardInterrupt:
+        # SIGTERM/SIGINT are converted to KeyboardInterrupt so the connected
+        # session can unwind through its finally block first. Once the local
+        # status is published as disconnected, termination is a normal exit.
+        return 0
     return 0
 
 
