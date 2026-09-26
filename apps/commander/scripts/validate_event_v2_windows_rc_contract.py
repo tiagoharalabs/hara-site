@@ -45,6 +45,9 @@ def main() -> int:
         "CROSS_PLATFORM_EVENT_V2_PARITY=FALSE",
         "System.Net.WebSockets.ClientWebSocket",
         "CALL_AVAILABLE is a wake hint only",
+        "WINDOWS_EVENT_V2_DURABLE_LIVENESS_TARGET=6h",
+        "WINDOWS_EVENT_V2_LIVENESS_CONTENT=METADATA_ONLY",
+        "WINDOWS_EVENT_V2_LIVENESS_TIMER_PER_CONNECTION=1",
     )
     for marker in required_doc:
         assert marker in doc, marker
@@ -65,6 +68,11 @@ def main() -> int:
         "$ShutdownTask=$null",
         "[Threading.Tasks.Task]::WaitAny",
         "WINDOWS_EVENT_V2_LOCAL_SHUTDOWN_REQUESTED",
+        "Start-EventV2Receive",
+        "Complete-EventV2Receive",
+        "Send-EventV2Liveness",
+        '{"schema":"hara.commander-device-event.v2","type":"LIVENESS"}',
+        "COMMANDER_WINDOWS_EVENT_V2_DURABLE_LIVENESS_FRAME=READY",
     )
     for marker in required_transport:
         assert marker in transport, marker
@@ -93,6 +101,10 @@ def main() -> int:
         '$ShutdownPipeName = "hara-commander-event-v2-rc-stop"',
         "WINDOWS_EVENT_V2_LOCAL_SHUTDOWN_REQUESTED",
         "COMMANDER_WINDOWS_EVENT_V2_COOPERATIVE_SHUTDOWN=READY",
+        "$livenessDelayMs = [int]($DurableLivenessSeconds * 1000)",
+        "[Threading.Tasks.Task]::Delay($livenessDelayMs,$cts.Token)",
+        "Send-EventV2Liveness $client $cts.Token",
+        "COMMANDER_WINDOWS_EVENT_V2_DURABLE_LIVENESS_SECONDS=21600",
         "$cts.Cancel()",
         "Invoke-DurableDrain",
         "CALL_AVAILABLE",
@@ -105,6 +117,18 @@ def main() -> int:
     )
     for marker in required_adapter:
         assert marker in adapter, marker
+
+    connected = adapter.split("function Invoke-ConnectedSession", 1)[1].split(
+        "function Invoke-AgentSelfTest", 1
+    )[0]
+    assert connected.count("Start-EventV2Receive $client $cts.Token") == 2
+    assert connected.count("Send-EventV2Liveness $client $cts.Token") == 1
+    assert connected.count("[Threading.Tasks.Task]::Delay($livenessDelayMs,$cts.Token)") == 2
+    assert connected.index("[Threading.Tasks.Task]::Delay($livenessDelayMs,$cts.Token)") < connected.index(
+        "Send-EventV2Liveness $client $cts.Token"
+    )
+    assert "/api/device/heartbeat" not in connected
+    assert "Start-Sleep -Seconds 2" not in connected
 
     forbidden_adapter = (
         "HARA_SERVICES",

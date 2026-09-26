@@ -47,6 +47,8 @@ Requirements:
 - no credential logging;
 - no customer command/result/file telemetry;
 - WebSocket protocol keepalive, not HTTP heartbeat;
+- metadata-only durable LIVENESS checkpoint every 6h while connected;
+- exactly one liveness timer per connected session; normal call traffic does not accumulate timers;
 - no fixed 2-second polling in steady state;
 - CALL_AVAILABLE is a wake hint only;
 - D1 remains durable call truth;
@@ -121,6 +123,9 @@ fail-closed source contract:
 WINDOWS_EVENT_V2_WSS_ONLY=TRUE
 WINDOWS_EVENT_V2_BEARER_UPGRADE_ONLY=TRUE
 WINDOWS_EVENT_V2_KEEPALIVE_TARGET=60s
+WINDOWS_EVENT_V2_DURABLE_LIVENESS_TARGET=6h
+WINDOWS_EVENT_V2_LIVENESS_CONTENT=METADATA_ONLY
+WINDOWS_EVENT_V2_LIVENESS_TIMER_PER_CONNECTION=1
 WINDOWS_EVENT_V2_MAX_EVENT_BYTES=4096
 WINDOWS_EVENT_V2_FRAGMENTED_WAKE=DENY
 WINDOWS_EVENT_V2_NON_TEXT_WAKE=DENY
@@ -143,6 +148,8 @@ The adapter then overrides only the Event V2 customer-plane semantics:
 - bounded reconciliation drain = 8;
 - reconnect uses full jitter, 10s initial window / 15s ceiling;
 - local event connection status is content-free;
+- one metadata-only Event V2 LIVENESS message refreshes durable presence every 6h;
+- the liveness scheduler keeps one timer per connection rather than allocating one per wake/call;
 - idle 2s HTTP polling is absent;
 - 30s HTTP heartbeat is absent;
 - arbitrary tool expansion remains denied.

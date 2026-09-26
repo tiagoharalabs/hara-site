@@ -271,8 +271,30 @@ function Invoke-ConnectedSession($Cfg,[string]$Token) {
     Set-EventV2Status -Connected $true -ConnectedAtUtc $connectedAt.ToString("o")
     Invoke-DurableDrain $Cfg $Token | Out-Null
 
+    # Keep durable presence fresh without HTTP heartbeat or idle polling.
+    # Exactly one ReceiveAsync and one six-hour timer remain outstanding.
+    # CALL_AVAILABLE traffic reuses the same timer, avoiding timer buildup on
+    # active devices while preserving the low-cost durable checkpoint cadence.
+    $livenessDelayMs = [int]($DurableLivenessSeconds * 1000)
+    $livenessTask = [Threading.Tasks.Task]::Delay($livenessDelayMs,$cts.Token)
+    $receive = Start-EventV2Receive $client $cts.Token
     while ($true) {
-      $text = Receive-EventV2Text $client $cts.Token $shutdownTask
+      $waitTasks = [Threading.Tasks.Task[]]@(
+        [Threading.Tasks.Task]$receive.Task,
+        [Threading.Tasks.Task]$shutdownTask,
+        [Threading.Tasks.Task]$livenessTask
+      )
+      $completed = [Threading.Tasks.Task]::WaitAny($waitTasks)
+
+      if ($completed -eq 1) { throw "WINDOWS_EVENT_V2_LOCAL_SHUTDOWN_REQUESTED" }
+      if ($completed -eq 2) {
+        Send-EventV2Liveness $client $cts.Token
+        $livenessTask = [Threading.Tasks.Task]::Delay($livenessDelayMs,$cts.Token)
+        continue
+      }
+
+      $text = Complete-EventV2Receive $receive
+      $receive = Start-EventV2Receive $client $cts.Token
       $wake = Parse-EventV2Wake $text
       if ([string]$wake.type -eq "CALL_AVAILABLE") {
         # The event call_id is never execution authority. It only wakes one
@@ -329,6 +351,7 @@ function Invoke-AgentSelfTest {
   Write-Host "COMMANDER_WINDOWS_EVENT_V2_RECONCILIATION_DRAIN=BOUNDED_8"
   Write-Host "COMMANDER_WINDOWS_EVENT_V2_IDLE_HTTP_POLLING=ABSENT"
   Write-Host "COMMANDER_WINDOWS_EVENT_V2_HTTP_HEARTBEAT=ABSENT"
+  Write-Host "COMMANDER_WINDOWS_EVENT_V2_DURABLE_LIVENESS_SECONDS=21600"
   Write-Host "COMMANDER_WINDOWS_EVENT_V2_SERVICES_PROXY=FALSE"
   Write-Host "COMMANDER_WINDOWS_EVENT_V2_PUBLIC_AGENT_MUTATION=FALSE"
   Write-Host "COMMANDER_WINDOWS_EVENT_V2_COOPERATIVE_SHUTDOWN=READY"
