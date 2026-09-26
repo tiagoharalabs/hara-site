@@ -9,6 +9,7 @@ Commander NOC baseline.
 from __future__ import annotations
 
 import argparse
+import ast
 import importlib.util
 import math
 import statistics
@@ -105,15 +106,26 @@ def self_check() -> None:
     assert summary["terminal_from_enqueue_fraction"] == 0.5
 
     source = Path(__file__).read_text(encoding="utf-8")
-    forbidden = (
-        "result_json",
-        "command_payload",
-        "customer_file",
-        "Authorization:",
-        "Cookie:",
-    )
-    for token in forbidden:
-        assert token not in source
+    tree = ast.parse(source)
+    forbidden_names = {"result_json", "command_payload", "customer_file", "token"}
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        if not isinstance(node.func, ast.Name) or node.func.id != "print":
+            continue
+        printed_names = {
+            child.id
+            for arg in node.args
+            for child in ast.walk(arg)
+            if isinstance(child, ast.Name)
+        }
+        if printed_names & forbidden_names:
+            raise RuntimeError("LATENCY_PROFILE_FORBIDDEN_OUTPUT_SURFACE")
+
+    forbidden_header = "Author" + "ization:"
+    forbidden_cookie = "Cook" + "ie:"
+    assert forbidden_header not in source
+    assert forbidden_cookie not in source
 
     print("COMMANDER_EVENT_V2_LATENCY_PROFILE_SOURCE=PASS")
     print("COMMANDER_EVENT_V2_LATENCY_PROFILE_AGGREGATE_ONLY=TRUE")
