@@ -155,11 +155,14 @@ def require_transient_common(obj: dict) -> None:
 
 def run(token: str, subject: str, device_id: str, timeout: float) -> dict:
     del timeout
+    cycle_started = time.perf_counter()
     health_req = "TRANSIENT-HEALTH-" + uuid.uuid4().hex
+    health_started = time.perf_counter()
     try:
         health = transient_call(token, subject, health_req, "hara.health", {})
     except ProbeError as exc:
         raise ProbeError("STAGE_HEALTH__" + str(exc)) from exc
+    health_ms = (time.perf_counter() - health_started) * 1000.0
     require_transient_common(health)
     if health.get("state") != "COMPLETED":
         raise ProbeError("TRANSIENT_HEALTH_NOT_COMPLETED")
@@ -168,12 +171,14 @@ def run(token: str, subject: str, device_id: str, timeout: float) -> dict:
 
     invoke_req = "TRANSIENT-INVOKE-" + uuid.uuid4().hex
     invoke_payload = {"function_id": FUNCTION_ID, "arguments": {"argv": []}}
+    invoke_started = time.perf_counter()
     try:
         first = transient_call(
             token, subject, invoke_req, "hara.functions.invoke", invoke_payload
         )
     except ProbeError as exc:
         raise ProbeError("STAGE_INVOKE_FIRST__" + str(exc)) from exc
+    invoke_ms = (time.perf_counter() - invoke_started) * 1000.0
     require_transient_common(first)
     if first.get("state") != "COMPLETED":
         raise ProbeError("TRANSIENT_INVOKE_NOT_COMPLETED")
@@ -188,12 +193,14 @@ def run(token: str, subject: str, device_id: str, timeout: float) -> dict:
     if len(receipt_sha256) != 64 or any(c not in "0123456789abcdef" for c in receipt_sha256):
         raise ProbeError("TRANSIENT_RECEIPT_INVALID")
 
+    replay_started = time.perf_counter()
     try:
         replay = transient_call(
             token, subject, invoke_req, "hara.functions.invoke", invoke_payload
         )
     except ProbeError as exc:
         raise ProbeError("STAGE_INVOKE_REPLAY__" + str(exc)) from exc
+    replay_ms = (time.perf_counter() - replay_started) * 1000.0
     require_transient_common(replay)
     if replay.get("state") != "COMPLETED":
         raise ProbeError("TRANSIENT_REPLAY_NOT_COMPLETED")
@@ -218,6 +225,10 @@ def run(token: str, subject: str, device_id: str, timeout: float) -> dict:
         "payload_persisted": False,
         "result_persisted": False,
         "learning_content": False,
+        "health_ms": health_ms,
+        "invoke_ms": invoke_ms,
+        "replay_ms": replay_ms,
+        "cycle_ms": (time.perf_counter() - cycle_started) * 1000.0,
     }
 
 
@@ -278,6 +289,10 @@ def main() -> int:
     print("COMMANDER_EVENT_V2_TRANSIENT_RESULT_PERSISTED=FALSE")
     print("COMMANDER_EVENT_V2_TRANSIENT_LEARNING_CONTENT=FALSE")
     print("COMMANDER_EVENT_V2_TRANSIENT_REQUEST_ID=" + proof["request_id"])
+    print("COMMANDER_EVENT_V2_TRANSIENT_HEALTH_MS=" + f"{proof['health_ms']:.3f}")
+    print("COMMANDER_EVENT_V2_TRANSIENT_INVOKE_MS=" + f"{proof['invoke_ms']:.3f}")
+    print("COMMANDER_EVENT_V2_TRANSIENT_REPLAY_MS=" + f"{proof['replay_ms']:.3f}")
+    print("COMMANDER_EVENT_V2_TRANSIENT_CYCLE_MS=" + f"{proof['cycle_ms']:.3f}")
     print("COMMANDER_EVENT_V2_TRANSIENT_TOKEN_EXPOSED=FALSE")
     return 0
 
