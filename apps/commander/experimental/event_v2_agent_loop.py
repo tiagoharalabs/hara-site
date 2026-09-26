@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import importlib.util
 import random
+import signal
 import sys
 import time
 from pathlib import Path
@@ -28,6 +29,18 @@ TRANSPORT_PATH = HERE / "event_v2_websocket.py"
 AGENT_PATH = HERE / "event_v2_customer_agent.py"
 MAX_DRAIN_CALLS = 8
 STABLE_CONNECTION_SECONDS = 60.0
+
+
+def _shutdown_signal(_signum, _frame):
+    # Convert process termination into normal Python unwinding so the
+    # connected-session finally block closes the socket and publishes
+    # connected=false before exit.
+    raise KeyboardInterrupt()
+
+
+def install_shutdown_handlers() -> None:
+    signal.signal(signal.SIGTERM, _shutdown_signal)
+    signal.signal(signal.SIGINT, _shutdown_signal)
 
 
 def _load(path: Path, name: str):
@@ -174,13 +187,21 @@ def main() -> int:
         assert MAX_DRAIN_CALLS == 8
         assert STABLE_CONNECTION_SECONDS == 60.0
         assert transport.DURABLE_LIVENESS_SECONDS == 21600
+        try:
+            _shutdown_signal(signal.SIGTERM, None)
+        except KeyboardInterrupt:
+            pass
+        else:
+            raise AssertionError("EVENT_V2_SIGTERM_NOT_CONVERTED_TO_UNWIND")
         print("COMMANDER_EVENT_V2_AGENT_LOOP_SOURCE=PASS")
         print("COMMANDER_EVENT_V2_IDLE_POLLING=ABSENT")
         assert hasattr(agent, "try_write_event_v2_status")
         print("COMMANDER_EVENT_V2_RECONCILIATION_DRAIN=BOUNDED_8")
         print("COMMANDER_EVENT_V2_CONNECTION_STATUS=LOCAL_0600")
+        print("COMMANDER_EVENT_V2_SIGTERM_CLEAN_UNWIND=PASS")
         return 0
 
+    install_shutdown_handlers()
     config = agent.load_config()
     run_forever(transport, agent, config)
     return 0
