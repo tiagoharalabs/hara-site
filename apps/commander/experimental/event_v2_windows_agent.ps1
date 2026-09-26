@@ -347,6 +347,19 @@ function Invoke-TransientCall($Cfg,$Call) {
     $persist = $false
   }
 
+  $executionMode = ([string]$Call.execution_mode).Trim().ToUpperInvariant()
+  if ($executionMode -notin @("EXECUTE_OR_REPLAY","REPLAY_ONLY")) {
+    $state = "FAILED"
+    $errorCode = "TRANSIENT_EXECUTION_MODE_INVALID"
+    $result = New-ToolResponse @{} @{code=$errorCode}
+    $persist = $false
+  } elseif ($null -eq $existing -and $persist -and $executionMode -eq "REPLAY_ONLY") {
+    $state = "FAILED"
+    $errorCode = "TRANSIENT_REPLAY_MISS"
+    $result = New-ToolResponse @{} @{code=$errorCode}
+    $persist = $false
+  }
+
   if ($null -ne $existing) {
     $state = [string]$existing.state
     $errorCode = if ($existing.error_code) { [string]$existing.error_code } else { $null }

@@ -111,6 +111,39 @@ def main() -> int:
     assert "FROM commander_device_calls c INDEXED BY idx_device_calls_poll" in claim_fn_block
     assert worker.count("INDEXED BY idx_device_calls_poll") >= 3
 
+    # DEV-only transient RPC owns its invoke quota lifecycle so the optimized
+    # data plane cannot become a billing bypass. Customer payload/result remain
+    # out of commander_device_calls on this path.
+    transient_at = worker.index("async function dispatchTransientDeviceCall")
+    transient_end = worker.index("export class TenantQuota", transient_at)
+    transient_block = worker[transient_at:transient_end]
+    assert "commander_device_calls" not in transient_block
+    assert "payload_json" not in transient_block
+    assert "result_json" not in transient_block
+    assert "canonicalDeviceToolPayload" in transient_block
+    assert "mcpProductContext" in transient_block
+    assert "selectedDeviceForSubject" in transient_block
+    assert "quota.reserve(" in transient_block
+    assert "quota.commit(" in transient_block
+    assert "quota.release(" in transient_block
+    assert 'reservation.state === "COMMITTED"' in transient_block
+    assert "executionMode = TRANSIENT_REPLAY_ONLY" in transient_block
+    assert "execution_mode: executionMode" in transient_block
+    assert "TRANSIENT_SAFE_PREEXEC_RELEASE_CODES.has(code)" in transient_block
+    assert 'throw new Error("REQUEST_USAGE_TERMINAL")' in transient_block
+    assert 'throw new Error("DEVICE_CALL_RECEIPT_INVALID")' in transient_block
+    assert transient_block.index("quota.reserve(") < transient_block.index(
+        '"https://device-channel/dispatch"'
+    )
+    assert transient_block.index("payload.result?.bridge_receipt_sha256") < transient_block.index(
+        "quota.commit("
+    )
+    ambiguous_start = transient_block.index("} catch (error) {")
+    ambiguous_end = transient_block.index("const payload =", ambiguous_start)
+    ambiguous_block = transient_block[ambiguous_start:ambiguous_end]
+    assert "quota.release(" not in ambiguous_block
+    assert "Keep RESERVED" in ambiguous_block
+
     mcp_auth_start = worker.index("function requireMcpProductToken")
     mcp_auth_end = worker.index("function requirePortalMutationOrigin")
     mcp_auth_block = worker[mcp_auth_start:mcp_auth_end]
@@ -173,6 +206,10 @@ def main() -> int:
     print("COMMANDER_EVENT_V2_ACTIVE_CALL_SCAN_SCOPE=DEVICE_STATE")
     print("COMMANDER_EVENT_V2_ACTIVE_CALL_NEW_INDEX=FALSE")
     print("COMMANDER_EVENT_V2_PROD_CANARY_MCP_TOKEN=ABSENT")
+    print("COMMANDER_EVENT_V2_TRANSIENT_QUOTA_RESERVE_COMMIT_RELEASE=SOURCE_PASS")
+    print("COMMANDER_EVENT_V2_TRANSIENT_AMBIGUOUS_TIMEOUT=KEEP_RESERVED")
+    print("COMMANDER_EVENT_V2_TRANSIENT_COMMITTED_RETRY=REPLAY_ONLY")
+    print("COMMANDER_EVENT_V2_TRANSIENT_D1_CUSTOMER_CONTENT=ABSENT")
     return 0
 
 

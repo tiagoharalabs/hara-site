@@ -114,7 +114,7 @@ function Parse-EventV2Wake([string]$Text) {
   }
 
   if ($type -eq "CALL_TRANSIENT") {
-    if (($names -join ",") -ne "call_id,payload,request_id,schema,tool_id,type") {
+    if (($names -join ",") -ne "call_id,execution_mode,payload,request_id,schema,tool_id,type") {
       throw "WINDOWS_EVENT_V2_EVENT_INVALID"
     }
     if ($null -eq $obj.payload -or $obj.payload -is [string] -or $obj.payload -is [array]) {
@@ -123,12 +123,17 @@ function Parse-EventV2Wake([string]$Text) {
     $callId = Test-EventV2Identifier ([string]$obj.call_id) 180 "WINDOWS_EVENT_V2_CALL_ID_INVALID"
     $requestId = Test-EventV2Identifier ([string]$obj.request_id) 220 "WINDOWS_EVENT_V2_REQUEST_ID_INVALID"
     $toolId = Test-EventV2Identifier ([string]$obj.tool_id) 120 "WINDOWS_EVENT_V2_TOOL_ID_INVALID"
+    $executionMode = ([string]$obj.execution_mode).Trim().ToUpperInvariant()
+    if ($executionMode -notin @("EXECUTE_OR_REPLAY","REPLAY_ONLY")) {
+      throw "WINDOWS_EVENT_V2_TRANSIENT_EXECUTION_MODE_INVALID"
+    }
     return [pscustomobject]@{
       schema = "hara.commander-device-event.v2"
       type = "CALL_TRANSIENT"
       call_id = $callId
       request_id = $requestId
       tool_id = $toolId
+      execution_mode = $executionMode
       payload = $obj.payload
     }
   }
@@ -203,7 +208,7 @@ function Invoke-TransportSelfTest {
   }
   if (-not $contentDenied) { throw "WINDOWS_EVENT_V2_CONTENT_EVENT_NOT_DENIED" }
 
-  $transient = Parse-EventV2Wake '{"schema":"hara.commander-device-event.v2","type":"CALL_TRANSIENT","call_id":"HARA-TRANSIENT-test","request_id":"REQ-test","tool_id":"hara.health","payload":{}}'
+  $transient = Parse-EventV2Wake '{"schema":"hara.commander-device-event.v2","type":"CALL_TRANSIENT","call_id":"HARA-TRANSIENT-test","request_id":"REQ-test","tool_id":"hara.health","execution_mode":"EXECUTE_OR_REPLAY","payload":{}}'
   if ([string]$transient.type -ne "CALL_TRANSIENT") { throw "WINDOWS_EVENT_V2_TRANSIENT_PARSE_FAILED" }
   if ([string]$transient.request_id -ne "REQ-test") { throw "WINDOWS_EVENT_V2_TRANSIENT_PARSE_FAILED" }
   if ([string]$transient.tool_id -ne "hara.health") { throw "WINDOWS_EVENT_V2_TRANSIENT_PARSE_FAILED" }

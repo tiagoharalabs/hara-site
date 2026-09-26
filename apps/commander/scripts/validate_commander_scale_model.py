@@ -53,7 +53,8 @@ def main() -> int:
     assert ten.do_request_equivalents_per_day == 10_200
     transient_ten = transient["transient_budget"](1_000, 10, 0.5)
     assert transient_ten.worker_http_day == 10_000
-    assert transient_ten.do_request_equivalents_day == 10_700
+    assert transient_ten.quota_rpc_day == 20_000
+    assert transient_ten.do_request_equivalents_day == 30_700
     assert transient_ten.do_duration_gb_seconds_month == 18_750
 
     print("COMMANDER_SCALE_EVENT_V2_IDLE_CALL_POLL_RPS=0")
@@ -61,7 +62,8 @@ def main() -> int:
     print("COMMANDER_SCALE_EVENT_V2_1K_10_CALLS_DEVICE_DAY_HTTP=41333")
     print("COMMANDER_SCALE_EVENT_V2_1K_100_CALLS_DEVICE_DAY_HTTP=413333")
     print("COMMANDER_SCALE_EVENT_V2_TRANSIENT_1K_10_CALLS_DEVICE_DAY_HTTP=10000")
-    print("COMMANDER_SCALE_EVENT_V2_TRANSIENT_1K_10_CALLS_DEVICE_DAY_DO_REQ_EQ=10700")
+    print("COMMANDER_SCALE_EVENT_V2_TRANSIENT_1K_10_CALLS_DEVICE_DAY_QUOTA_RPC=20000")
+    print("COMMANDER_SCALE_EVENT_V2_TRANSIENT_1K_10_CALLS_DEVICE_DAY_DO_REQ_EQ=30700")
     return 0
 
 

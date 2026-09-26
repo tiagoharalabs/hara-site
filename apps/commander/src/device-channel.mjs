@@ -274,6 +274,10 @@ export class DeviceChannel extends DurableObject {
         const callId = cleanIdentifier(body.call_id, 180);
         const requestId = cleanIdentifier(body.request_id, 220);
         const toolId = cleanIdentifier(body.tool_id, 120);
+        const executionMode = String(body.execution_mode || "").trim().toUpperCase();
+        if (!["EXECUTE_OR_REPLAY", "REPLAY_ONLY"].includes(executionMode)) {
+          throw new Error("CHANNEL_TRANSIENT_EXECUTION_MODE_INVALID");
+        }
         if (!body.payload || typeof body.payload !== "object" || Array.isArray(body.payload)) {
           throw new Error("CHANNEL_TRANSIENT_PAYLOAD_INVALID");
         }
@@ -297,6 +301,7 @@ export class DeviceChannel extends DurableObject {
           call_id: callId,
           request_id: requestId,
           tool_id: toolId,
+          execution_mode: executionMode,
           payload: body.payload,
         });
         if (new TextEncoder().encode(event).byteLength > MAX_TRANSIENT_REQUEST_BYTES) {

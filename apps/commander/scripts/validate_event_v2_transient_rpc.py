@@ -36,9 +36,18 @@ def main() -> int:
     assert "DEVICE_EVENT_V2_TRANSIENT_RPC_ENABLED" not in prod
     assert 'url.pathname === "/api/internal/device/transient-call"' in worker
     assert '"https://device-channel/dispatch"' in worker
+    assert 'TRANSIENT_EXECUTE_OR_REPLAY = "EXECUTE_OR_REPLAY"' in worker
+    assert 'TRANSIENT_REPLAY_ONLY = "REPLAY_ONLY"' in worker
+    assert "quota.reserve(" in worker
+    assert "quota.commit(" in worker
+    assert "quota.release(" in worker
+    assert "TRANSIENT_SAFE_PREEXEC_RELEASE_CODES" in worker
+    assert "REQUEST_USAGE_TERMINAL" in worker
     assert 'type: "CALL_TRANSIENT"' in channel
     assert 'payload.type === "CALL_RESULT"' in channel
     assert "MAX_TRANSIENT_INFLIGHT = 1" in channel
+    assert "CHANNEL_TRANSIENT_EXECUTION_MODE_INVALID" in channel
+    assert "execution_mode: executionMode" in channel
     assert "TRANSIENT_RPC_TIMEOUT_MS = 45 * 1000" in channel
     assert "scheduler.wait(TRANSIENT_RPC_TIMEOUT_MS)" in channel
     assert "setTimeout(" not in channel
@@ -67,6 +76,8 @@ def main() -> int:
     assert '"type": "CALL_TRANSIENT"' in transport
     assert "MAX_TRANSIENT_REQUEST_BYTES = 160 * 1024" in transport
     assert "MAX_TRANSIENT_RESULT_BYTES = 320 * 1024" in transport
+    assert "EVENT_V2_TRANSIENT_EXECUTION_MODE_INVALID" in transport
+    assert '"execution_mode": execution_mode' in transport
 
     assert "hara.commander-learning-signal.v1" in agent
     assert '"customer_content_collected": False' in agent
@@ -76,6 +87,8 @@ def main() -> int:
     assert "TRANSIENT_LEDGER_CLEANUP_BATCH = 32" in agent
     assert "_canonical_payload_sha256" in agent
     assert "IDEMPOTENCY_CONFLICT" in agent
+    assert "TRANSIENT_REPLAY_MISS" in agent
+    assert '"REPLAY_ONLY"' in agent
     assert 'os.chmod(path, 0o600)' in agent
     signal = block(agent, "def build_learning_signal", "def execute_transient_call")
     for forbidden in ("payload_json", "result_json", "stdout", "arguments", "path"):
@@ -98,6 +111,8 @@ def main() -> int:
     print("COMMANDER_EVENT_V2_LEARNING_PLANE=DERIVED_METADATA_ONLY")
     print("COMMANDER_EVENT_V2_LOCAL_IDEMPOTENCY_LEDGER_LINUX=PASS")
     print("COMMANDER_EVENT_V2_LOCAL_LEDGER_RAW_PAYLOAD=ABSENT")
+    print("COMMANDER_EVENT_V2_TRANSIENT_QUOTA_ORCHESTRATION=SOURCE_READY")
+    print("COMMANDER_EVENT_V2_TRANSIENT_COMMITTED_RETRY=REPLAY_ONLY")
     print("COMMANDER_EVENT_V2_PUBLIC_AGENT_MUTATION=FALSE")
     print("COMMANDER_EVENT_V2_PROD_CUTOVER=DENY")
     return 0

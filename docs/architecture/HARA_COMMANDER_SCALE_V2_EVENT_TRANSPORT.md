@@ -580,3 +580,75 @@ apps/commander/scripts/commander_event_v2_transient_1k_model.py
 It does not claim measured production latency. It models 0.5s / 2s / 10s
 average active-call durations so Durable Object wall-time cost is visible before
 cutover.
+
+
+## 10.4 Transient quota/idempotency orchestration
+
+The DEV transient path must not become a quota bypass just because it removes
+durable call-content rows. `hara.functions.invoke` therefore owns its quota
+transition inside the transient dispatch orchestration.
+
+Source contract:
+
+```text
+NEW_OR_EXISTING_RESERVED
+  -> execution_mode=EXECUTE_OR_REPLAY
+  -> dispatch
+  -> COMPLETED + valid receipt -> COMMIT
+  -> FAILED -> RELEASE
+
+EXISTING_COMMITTED
+  -> execution_mode=REPLAY_ONLY
+  -> Agent may return only a customer-local ledger replay
+  -> missing local replay -> TRANSIENT_REPLAY_MISS
+  -> never re-execute a previously committed request_id
+
+EXISTING_RELEASED
+  -> REQUEST_USAGE_TERMINAL
+  -> no dispatch
+
+OFFLINE_OR_BUSY_BEFORE_SEND
+  -> RELEASE reservation
+  -> caller must use a new logical request_id
+
+TIMEOUT_OR_DISCONNECT_AFTER_DISPATCH
+  -> KEEP_RESERVED
+  -> execution outcome is ambiguous
+  -> retry with the same request_id reconciles against the local ledger
+```
+
+This deliberately prefers a temporarily held quota reservation over a
+double-execution or a free execution when the network outcome is ambiguous.
+The existing quota TTL releases stale reservations after the bounded recovery
+window.
+
+The transient protocol therefore carries a server-selected execution mode:
+
+```text
+EXECUTE_OR_REPLAY
+REPLAY_ONLY
+```
+
+The Agent never derives this mode from customer payload. Linux and Windows
+source both fail closed on any other value.
+
+The deterministic first-1k model assumes the conservative case where every
+logical call is `hara.functions.invoke`. At 1,000 devices and 10 calls per
+device per day:
+
+```text
+LOGICAL_CALLS_DAY=10000
+WORKER_HTTP_DAY=10000
+TENANT_QUOTA_RPC_DAY=20000
+DEVICE_CHANNEL_PLUS_WS_AND_QUOTA_DO_REQUEST_EQ_DAY=30700
+D1_CALL_TABLE_PAYLOAD_WRITES_PER_CALL=0
+D1_CALL_TABLE_RESULT_WRITES_PER_CALL=0
+```
+
+Cloudflare currently bills each Durable Object RPC method call as one request;
+incoming WebSocket messages use the 20:1 billing ratio. TenantQuota execution
+duration/SQLite row cost remains a live-measurement item rather than being
+invented in the deterministic transport model.
+
+Promotion remains blocked on live DEV quota reconciliation, lost-response
+replay, receipt parity, Windows runtime proof and the 1k synthetic campaign.

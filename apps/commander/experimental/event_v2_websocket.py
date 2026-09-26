@@ -320,11 +320,15 @@ def parse_event_frame(frame: ServerFrame) -> dict:
         if len(frame.payload) > MAX_TRANSIENT_REQUEST_BYTES:
             raise fail("EVENT_V2_TRANSIENT_REQUEST_TOO_LARGE")
         if set(payload) != {
-            "schema", "type", "call_id", "request_id", "tool_id", "payload"
+            "schema", "type", "call_id", "request_id", "tool_id",
+            "execution_mode", "payload"
         }:
             raise fail("EVENT_V2_EVENT_FIELDS_DENIED")
         if not isinstance(payload.get("payload"), dict):
             raise fail("EVENT_V2_TRANSIENT_PAYLOAD_INVALID")
+        execution_mode = str(payload.get("execution_mode") or "").strip().upper()
+        if execution_mode not in {"EXECUTE_OR_REPLAY", "REPLAY_ONLY"}:
+            raise fail("EVENT_V2_TRANSIENT_EXECUTION_MODE_INVALID")
         return {
             "schema": EVENT_SCHEMA,
             "type": "CALL_TRANSIENT",
@@ -337,6 +341,7 @@ def parse_event_frame(frame: ServerFrame) -> dict:
             "tool_id": _clean_identifier(
                 payload.get("tool_id"), 120, "EVENT_V2_TOOL_ID_INVALID"
             ),
+            "execution_mode": execution_mode,
             "payload": payload["payload"],
         }
 
