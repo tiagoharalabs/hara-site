@@ -116,16 +116,30 @@ def load_dev_config() -> dict:
     return obj
 
 
-def d1_execute(sql: str) -> list[dict]:
-    proc = run([
-        "npx", "--yes", "wrangler@" + WRANGLER_VERSION,
-        "d1", "execute", DEV_DATABASE_NAME, "--remote",
-        "--config", str(DEV_CONFIG), "--json", "--command", sql,
-    ])
-    payload = json.loads(proc.stdout)
-    if not isinstance(payload, list) or not payload:
-        raise fail("MULTIDEVICE_D1_RESPONSE_INVALID")
-    return payload
+def d1_execute(
+    sql: str,
+    *,
+    stage: str,
+    retry_read_only: bool = False,
+) -> list[dict]:
+    attempts = 2 if retry_read_only else 1
+    last_error = None
+    for attempt in range(attempts):
+        try:
+            proc = run([
+                "npx", "--yes", "wrangler@" + WRANGLER_VERSION,
+                "d1", "execute", DEV_DATABASE_NAME, "--remote",
+                "--config", str(DEV_CONFIG), "--json", "--command", sql,
+            ])
+            payload = json.loads(proc.stdout)
+            if not isinstance(payload, list) or not payload:
+                raise fail("MULTIDEVICE_D1_RESPONSE_INVALID")
+            return payload
+        except (LabError, json.JSONDecodeError) as exc:
+            last_error = exc
+            if not retry_read_only or attempt + 1 >= attempts:
+                break
+    raise fail("MULTIDEVICE_D1_" + stage + "_FAILED") from last_error
 
 
 def d1_rows(payload: list[dict]) -> list[dict]:
@@ -175,7 +189,7 @@ SELECT u.tenant_id, e.plan_code
  ORDER BY CASE WHEN e.subject_id = u.subject_id THEN 0 ELSE 1 END
  LIMIT 1;
 """
-    rows = d1_rows(d1_execute(sql))
+    rows = d1_rows(d1_execute(sql, stage="TEMPLATE_CONTEXT_QUERY", retry_read_only=True))
     if len(rows) != 1:
         raise fail("MULTIDEVICE_TEMPLATE_CONTEXT_INVALID")
     tenant_id = str(rows[0].get("tenant_id") or "")
@@ -277,7 +291,7 @@ VALUES
             "pairing_token": pairing_token,
         })
     for offset in range(0, len(statements), D1_FIXTURE_BATCH_SIZE):
-        d1_execute("\n".join(statements[offset:offset + D1_FIXTURE_BATCH_SIZE]))
+        d1_execute("\n".join(statements[offset:offset + D1_FIXTURE_BATCH_SIZE]), stage="FIXTURE_BATCH")
     return fixtures
 
 
@@ -330,7 +344,8 @@ def select_devices(tenant_id: str, devices: list[dict]) -> None:
             "(tenant_id, subject_id, device_id, selected_at_utc) VALUES "
             + ",".join(values)
             + " ON CONFLICT(tenant_id, subject_id) DO UPDATE SET "
-              "device_id=excluded.device_id, selected_at_utc=excluded.selected_at_utc;"
+              "device_id=excluded.device_id, selected_at_utc=excluded.selected_at_utc;",
+            stage="SELECTION_BATCH",
         )
 
 
@@ -561,6 +576,10 @@ def self_check() -> None:
     source = Path(__file__).read_text(encoding="utf-8")
     assert "create_subjects_and_pairings" in source
     assert "select_devices" in source
+    assert "TEMPLATE_CONTEXT_QUERY" in source
+    assert "FIXTURE_BATCH" in source
+    assert "SELECTION_BATCH" in source
+    assert "retry_read_only=True" in source
     tree = ast.parse(source)
     for node in ast.walk(tree):
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "print":
