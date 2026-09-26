@@ -180,7 +180,7 @@ def main() -> int:
         "D1_FIXTURE_BATCH_SIZE = 10",
         "D1_SELECTION_BATCH_SIZE = 25",
         "ENROLL_MIN_INTERVAL_SECONDS = 1.10",
-        "LIFECYCLE_MAX_WORKERS = 16",
+        'LIFECYCLE_BATCH_MODE = "SINGLE_SSH"',
         "TEMPLATE_CONTEXT_QUERY",
         "FIXTURE_BATCH",
         "SELECTION_BATCH",
