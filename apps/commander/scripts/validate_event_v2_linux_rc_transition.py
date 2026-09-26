@@ -18,12 +18,23 @@ def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def run(installer_env: dict[str, str], action: str, *, expect: int = 0, fail_rc=False):
+def run(
+    installer_env: dict[str, str],
+    action: str,
+    *,
+    expect: int = 0,
+    fail_rc=False,
+    no_event_status=False,
+):
     env = installer_env.copy()
     if fail_rc:
         env["HARA_TEST_FAIL_RC_START"] = "1"
     else:
         env.pop("HARA_TEST_FAIL_RC_START", None)
+    if no_event_status:
+        env["HARA_TEST_NO_EVENT_STATUS"] = "1"
+    else:
+        env.pop("HARA_TEST_NO_EVENT_STATUS", None)
     proc = subprocess.run(
         ["bash", str(INSTALLER), action],
         cwd=ROOT,
@@ -89,6 +100,7 @@ def main() -> int:
         systemctl = fakebin / "systemctl"
         systemctl.write_text(
             r'''#!/usr/bin/env python3
+import json
 import os
 import sys
 from pathlib import Path
@@ -123,6 +135,19 @@ if cmd == "start":
     pairs[service]="active"
     if service=="hara-commander-agent-rc.service":
         pairs["hara-commander-agent.service"]="inactive"
+        if os.environ.get("HARA_TEST_NO_EVENT_STATUS") != "1":
+            status=Path(os.environ["XDG_DATA_HOME"]) / "hara-commander" / "event-v2-status.json"
+            status.parent.mkdir(parents=True, exist_ok=True)
+            status.write_text(json.dumps({
+                "schema":"hara.commander-event-v2-runtime-status.v1",
+                "transport_mode":"EVENT_V2",
+                "connected":True,
+                "connected_at_utc":"2026-09-26T01:00:00+00:00",
+                "disconnected_at_utc":None,
+                "last_error_code":None,
+                "updated_at_utc":"2026-09-26T01:00:01+00:00",
+            }, sort_keys=True, separators=(",",":")))
+            status.chmod(0o600)
     elif service=="hara-commander-agent.service":
         pairs["hara-commander-agent-rc.service"]="inactive"
     save()
@@ -155,6 +180,7 @@ raise SystemExit(0)
 
         activated = run(env, "activate-event-v2")
         assert "COMMANDER_AGENT_RC_EVENT_V2_ACTIVATION=PASS" in activated.stdout
+        assert "COMMANDER_AGENT_RC_EVENT_V2_CONNECTION_ATTESTATION=PASS" in activated.stdout
         assert sha256(device_env) == before_hash
         rc_env = commander_config / "rc.env"
         assert rc_env.read_text(encoding="utf-8").strip() == "HARA_DEVICE_TRANSPORT_MODE=EVENT_V2"
@@ -170,6 +196,28 @@ raise SystemExit(0)
         s = state(state_file)
         assert s["hara-commander-agent.service"] == "active"
         assert s["hara-commander-agent-rc.service"] == "inactive"
+
+        # Reset and prove that a live process without fresh Event V2 status
+        # is rejected and rolled back.
+        state_file.write_text(
+            "hara-commander-agent.service=active\n"
+            "hara-commander-agent-rc.service=inactive\n",
+            encoding="utf-8",
+        )
+        event_status = data / "hara-commander" / "event-v2-status.json"
+        if event_status.exists():
+            event_status.unlink()
+        no_status = run(
+            env,
+            "activate-event-v2",
+            expect=2,
+            no_event_status=True,
+        )
+        assert "RC_EVENT_V2_CONNECTION_ATTESTATION_FAILED_ROLLED_BACK" in no_status.stderr
+        s = state(state_file)
+        assert s["hara-commander-agent.service"] == "active"
+        assert s["hara-commander-agent-rc.service"] == "inactive"
+        assert sha256(device_env) == before_hash
 
         # Reset and force RC start failure: stable must be restored.
         state_file.write_text(
@@ -191,6 +239,8 @@ raise SystemExit(0)
     print("COMMANDER_EVENT_V2_LINUX_RC_ACTIVATE=PASS")
     print("COMMANDER_EVENT_V2_LINUX_RC_ROLLBACK=PASS")
     print("COMMANDER_EVENT_V2_LINUX_RC_FAILED_START_ROLLBACK=PASS")
+    print("COMMANDER_EVENT_V2_LINUX_RC_CONNECTION_ATTESTATION=PASS")
+    print("COMMANDER_EVENT_V2_LINUX_RC_PROCESS_ONLY_ATTESTATION=DENY")
     print("COMMANDER_EVENT_V2_LINUX_RC_DUAL_AGENT=ABSENT")
     return 0
 
