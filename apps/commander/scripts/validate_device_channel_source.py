@@ -87,6 +87,17 @@ def main() -> int:
         str(Path(__file__).with_name("validate_multitenant_isolation.py")),
         run_name="__main__",
     )
+
+    import subprocess
+    import sys
+    subprocess.run(
+        [
+            sys.executable,
+            str(Path(__file__).with_name("commander_security_pairing_race_probe.py")),
+            "--check",
+        ],
+        check=True,
+    )
     return 0
 
 
