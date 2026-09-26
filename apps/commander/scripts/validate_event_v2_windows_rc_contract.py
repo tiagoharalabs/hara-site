@@ -93,6 +93,8 @@ def main() -> int:
         "/api/device/calls/next",
         "COMMANDER_WINDOWS_EVENT_V2_AGENT_ADAPTER=PASS",
         "COMMANDER_WINDOWS_EVENT_V2_SERVICES_PROXY=FALSE",
+        'tool_id="shell.run"',
+        'if ([string]$_.Exception.Message -eq "TOOL_ID_INVALID")',
     )
     for marker in required_adapter:
         assert marker in adapter, marker
@@ -102,7 +104,6 @@ def main() -> int:
         "/api/device/heartbeat",
         "Start-Sleep -Seconds 2",
         "CUSTOMER_CONTENT_COLLECTION=TRUE",
-        "shell.run",
         "Write-Host $token",
         "Write-Output $token",
     )
