@@ -57,7 +57,7 @@ def main() -> int:
     assert 'throw new Error("DEVICE_OFFLINE")' in notify_guard
     assert "state = 'CANCELLED'" in notify_guard
 
-    assert "const EVENT_V2_TERMINAL_FAST_PATH_WAIT_MS = 500;" in worker
+    assert "const EVENT_V2_TERMINAL_FAST_PATH_WAIT_MS = 300;" in worker
     assert "const DEVICE_CALL_ACTIVE_QUEUE_LIMIT = 16;" in worker
     assert 'function deviceCallRetryAfterMs(state, source = "status")' in worker
     assert 'return source === "enqueue" ? 350 : 750;' in worker
