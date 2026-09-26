@@ -28,6 +28,9 @@ const MCP_SECONDARY_PROVIDER = "CLOUDFLARE_ACCESS";
 const DEVICE_CALL_TTL_SECONDS = 50;
 const DEVICE_CALL_ACTIVE_QUEUE_LIMIT = 16;
 const DEVICE_CALL_EXPIRY_MAINTENANCE_BATCH = 5000;
+const DEVICE_CALL_CONTENT_REDACTION_BATCH = 64;
+const DEVICE_CALL_CONTENT_REDACTION_MAX_BATCHES = 8;
+const DEVICE_CALL_REDACTED_PREFIX = "HARA_REDACTED_SHA256:";
 const EVENT_V2_TERMINAL_FAST_PATH_WAIT_MS = 500;
 const TRANSIENT_EXECUTE_OR_REPLAY = "EXECUTE_OR_REPLAY";
 const TRANSIENT_REPLAY_ONLY = "REPLAY_ONLY";
@@ -1408,9 +1411,75 @@ async function revokePortalDevice(env, session, body) {
   };
 }
 
+function isRedactedDeviceCallContent(value) {
+  return typeof value === "string" && value.startsWith(DEVICE_CALL_REDACTED_PREFIX);
+}
+
+async function redactedDeviceCallContent(value) {
+  if (value == null || isRedactedDeviceCallContent(value)) return value;
+  return DEVICE_CALL_REDACTED_PREFIX + await sha256(String(value));
+}
+
+async function deviceCallStoredContentMatches(storedValue, candidateValue) {
+  if (storedValue === candidateValue) return true;
+  if (!isRedactedDeviceCallContent(storedValue)) return false;
+  return storedValue === await redactedDeviceCallContent(candidateValue);
+}
+
+async function redactExpiredDeviceCallContent(env, cutoff) {
+  let redacted = 0;
+  for (
+    let batch = 0;
+    batch < DEVICE_CALL_CONTENT_REDACTION_MAX_BATCHES;
+    batch += 1
+  ) {
+    const result = await env.PRODUCT_DB.prepare(
+      `SELECT call_id, payload_json, result_json
+         FROM commander_device_calls INDEXED BY idx_device_calls_expiry
+        WHERE state IN ('COMPLETED','FAILED','CANCELLED','EXPIRED')
+          AND expires_at_utc <= ?
+          AND (
+            payload_json NOT LIKE ?
+            OR (result_json IS NOT NULL AND result_json NOT LIKE ?)
+          )
+        ORDER BY expires_at_utc ASC
+        LIMIT ?`
+    ).bind(
+      cutoff,
+      DEVICE_CALL_REDACTED_PREFIX + "%",
+      DEVICE_CALL_REDACTED_PREFIX + "%",
+      DEVICE_CALL_CONTENT_REDACTION_BATCH,
+    ).all();
+
+    const rows = result.results || [];
+    if (rows.length < 1) break;
+
+    const updates = [];
+    for (const row of rows) {
+      const payloadMarker = await redactedDeviceCallContent(row.payload_json);
+      const resultMarker = row.result_json == null
+        ? null
+        : await redactedDeviceCallContent(row.result_json);
+      updates.push(
+        env.PRODUCT_DB.prepare(
+          `UPDATE commander_device_calls
+              SET payload_json = ?, result_json = ?
+            WHERE call_id = ?
+              AND state IN ('COMPLETED','FAILED','CANCELLED','EXPIRED')
+              AND expires_at_utc <= ?`
+        ).bind(payloadMarker, resultMarker, row.call_id, cutoff)
+      );
+    }
+    await env.PRODUCT_DB.batch(updates);
+    redacted += updates.length;
+    if (rows.length < DEVICE_CALL_CONTENT_REDACTION_BATCH) break;
+  }
+  return { redacted };
+}
+
 async function cleanupExpiredDeviceCalls(env) {
   const expiredAt = nowIso();
-  return env.PRODUCT_DB.prepare(
+  const expiry = await env.PRODUCT_DB.prepare(
     `UPDATE commander_device_calls
         SET state = 'EXPIRED', completed_at_utc = ?, error_code = 'DEVICE_CALL_EXPIRED'
       WHERE call_id IN (
@@ -1422,6 +1491,11 @@ async function cleanupExpiredDeviceCalls(env) {
          LIMIT ?
       )`
   ).bind(expiredAt, expiredAt, DEVICE_CALL_EXPIRY_MAINTENANCE_BATCH).run();
+  const redaction = await redactExpiredDeviceCallContent(env, expiredAt);
+  return {
+    expired: Number(expiry.meta?.changes || 0),
+    redacted: Number(redaction.redacted || 0),
+  };
 }
 
 async function enqueueDeviceCall(env, body) {
@@ -1448,12 +1522,16 @@ async function enqueueDeviceCall(env, body) {
     `SELECT call_id, tenant_id, subject_id, device_id, tool_id, payload_json, state, expires_at_utc
        FROM commander_device_calls WHERE request_id = ? LIMIT 1`
   ).bind(requestId).first();
-  const existingResponse = (existing) => {
+  const existingResponse = async (existing) => {
+    const payloadMatches = await deviceCallStoredContentMatches(
+      existing.payload_json,
+      payloadJson,
+    );
     if (
       existing.tenant_id !== context.tenant_id
       || existing.subject_id !== context.subject_id
       || existing.tool_id !== toolId
-      || existing.payload_json !== payloadJson
+      || !payloadMatches
       || (requestedDeviceId && existing.device_id !== requestedDeviceId)
     ) {
       throw new Error("IDEMPOTENCY_CONFLICT");
@@ -1472,7 +1550,7 @@ async function enqueueDeviceCall(env, body) {
   };
 
   const existing = await readExisting();
-  if (existing) return existingResponse(existing);
+  if (existing) return await existingResponse(existing);
 
   const selection = await selectedDeviceForSubject(
     env, context.tenant_id, context.subject_id
@@ -1532,7 +1610,7 @@ async function enqueueDeviceCall(env, body) {
 
   if (!inserted.meta?.changes) {
     const concurrent = await readExisting();
-    if (concurrent) return existingResponse(concurrent);
+    if (concurrent) return await existingResponse(concurrent);
 
     const currentSelection = await selectedDeviceForSubject(
       env, context.tenant_id, context.subject_id
@@ -1709,8 +1787,12 @@ async function completeDeviceCall(env, request, body) {
         WHERE call_id = ? AND tenant_id = ? AND device_id = ? LIMIT 1`
     ).bind(callId, device.tenant_id, device.device_id).first();
     if (existing && existing.state === state) {
+      const resultMatches = await deviceCallStoredContentMatches(
+        existing.result_json,
+        resultJson,
+      );
       if (
-        existing.result_json !== resultJson
+        !resultMatches
         || (state === "FAILED" && String(existing.error_code || "") !== String(errorCode || ""))
       ) {
         throw new Error("IDEMPOTENCY_CONFLICT");
@@ -1761,7 +1843,7 @@ async function deviceCallStatus(env, body) {
   const now = nowIso();
   const readCall = () => env.PRODUCT_DB.prepare(
     `SELECT call_id, request_id, device_id, tool_id, state, created_at_utc,
-            expires_at_utc, claimed_at_utc, completed_at_utc, result_json, error_code
+            expires_at_utc, claimed_at_utc, completed_at_utc, payload_json, result_json, error_code
        FROM commander_device_calls
       WHERE call_id = ? AND tenant_id = ? AND subject_id = ?
       LIMIT 1`
@@ -1783,7 +1865,7 @@ async function deviceCallStatus(env, body) {
           AND state IN ('PENDING','EXECUTING')
           AND expires_at_utc <= ?
         RETURNING call_id, request_id, device_id, tool_id, state, created_at_utc,
-                  expires_at_utc, claimed_at_utc, completed_at_utc, result_json, error_code`
+                  expires_at_utc, claimed_at_utc, completed_at_utc, payload_json, result_json, error_code`
     ).bind(now, callId, context.tenant_id, context.subject_id, now).all();
     const updated = (expired.results || [])[0];
     if (updated) {
@@ -1805,7 +1887,11 @@ async function deviceCallStatus(env, body) {
     expires_at_utc: row.expires_at_utc,
     claimed_at_utc: row.claimed_at_utc,
     completed_at_utc: row.completed_at_utc,
-    result: row.result_json ? JSON.parse(row.result_json) : null,
+    result: row.result_json && !isRedactedDeviceCallContent(row.result_json)
+      ? JSON.parse(row.result_json)
+      : null,
+    content_redacted: isRedactedDeviceCallContent(row.payload_json)
+      || isRedactedDeviceCallContent(row.result_json),
     error_code: row.error_code || null,
     retry_after_ms: deviceCallRetryAfterMs(row.state, "status"),
   };

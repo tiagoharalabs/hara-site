@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parent.parent
 EVENT = ROOT.parent.parent / "docs" / "architecture" / "HARA_COMMANDER_SCALE_V2_EVENT_TRANSPORT.md"
 TELEMETRY = ROOT.parent.parent / "docs" / "architecture" / "HARA_COMMANDER_PRIVACY_FIRST_TELEMETRY.md"
 CHANNEL = ROOT / "src" / "device-channel.mjs"
+WORKER = ROOT / "src" / "worker.js"
 LEARNING_SCHEMA = ROOT / "contracts" / "commander_learning_signal_v1.schema.json"
 
 
@@ -37,6 +38,7 @@ def main() -> int:
         "D1_CUSTOMER_RESULT_PERSISTENCE=FALSE",
         "LEARNING_SIGNAL_DERIVED_METADATA_ONLY=TRUE",
         "LEARNING_SIGNAL_CUSTOMER_CONTENT=FALSE",
+        "REDACTION_CAPACITY_PER_DAY=12288",
     )
     for marker in required_event:
         require(event, marker)
@@ -52,6 +54,11 @@ def main() -> int:
         "MANAGED_RELAY_CONTENT_DURABLE_COLLECTION=FALSE",
         "CUSTOMER_CONTENT_IN_LEARNING_PLANE=FALSE",
         "RAW_DIAGNOSTICS_EXPLICIT_OPT_IN_REQUIRED=TRUE",
+        "DURABLE_CALL_TTL_SECONDS=50",
+        "DURABLE_PAYLOAD_AFTER_REDACTION=SHA256_TOMBSTONE_ONLY",
+        "DURABLE_RESULT_AFTER_REDACTION=SHA256_TOMBSTONE_OR_NULL",
+        "DURABLE_STATUS_RETURNS_TOMBSTONE=FALSE",
+        "DURABLE_IDEMPOTENCY_AFTER_REDACTION=SHA256_STRICT",
     )
     for marker in required_telemetry:
         require(telemetry, marker)
@@ -91,6 +98,19 @@ def main() -> int:
     assert 'value.privileged_attempt !== false' in channel
     assert 'value.customer_content_collected !== false' in channel
 
+    worker = WORKER.read_text(encoding="utf-8")
+    assert 'const DEVICE_CALL_TTL_SECONDS = 50;' in worker
+    assert 'const DEVICE_CALL_CONTENT_REDACTION_BATCH = 64;' in worker
+    assert 'const DEVICE_CALL_CONTENT_REDACTION_MAX_BATCHES = 8;' in worker
+    assert 'const DEVICE_CALL_REDACTED_PREFIX = "HARA_REDACTED_SHA256:";' in worker
+    assert "async function redactExpiredDeviceCallContent" in worker
+    assert "state IN ('COMPLETED','FAILED','CANCELLED','EXPIRED')" in worker
+    assert "SET payload_json = ?, result_json = ?" in worker
+    assert "await sha256(String(value))" in worker
+    assert "deviceCallStoredContentMatches" in worker
+    assert "content_redacted:" in worker
+    assert "!isRedactedDeviceCallContent(row.result_json)" in worker
+
     raw_fields = {
         "prompt", "arguments", "argv", "path", "filename", "command",
         "stdout", "stderr", "raw_result", "raw_payload", "authorization",
@@ -109,6 +129,8 @@ def main() -> int:
     print("COMMANDER_LEARNING_SIGNAL_SCHEMA=PASS")
     print("COMMANDER_LEARNING_SIGNAL_SOURCE_ALLOWLIST=PASS")
     print("COMMANDER_LEARNING_SIGNAL_RAW_CONTENT=DENY")
+    print("COMMANDER_DURABLE_FALLBACK_RAW_CONTENT_AFTER_TTL=REDACTION_TARGET")
+    print("COMMANDER_DURABLE_FALLBACK_IDEMPOTENCY=SHA256_AFTER_REDACTION")
     return 0
 
 
