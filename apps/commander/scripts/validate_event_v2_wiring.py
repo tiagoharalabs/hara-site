@@ -52,10 +52,13 @@ def main() -> int:
     assert 'throw new Error("DEVICE_OFFLINE")' in notify_guard
     assert "state = 'CANCELLED'" in notify_guard
 
+    assert "const EVENT_V2_TERMINAL_FAST_PATH_WAIT_MS = 500;" in worker
     post_notify_read_at = worker.index("let postNotify = null;", notify_at)
+    settle_wait_at = worker.index("await scheduler.wait(EVENT_V2_TERMINAL_FAST_PATH_WAIT_MS);", post_notify_read_at)
     response_state_at = worker.index('const responseState = String(postNotify?.state || "PENDING")', post_notify_read_at)
     assert post_notify_read_at > notify_at
-    assert response_state_at > post_notify_read_at
+    assert settle_wait_at > post_notify_read_at
+    assert response_state_at > settle_wait_at
     post_notify_block = worker[post_notify_read_at:response_state_at + 500]
     assert "notification.delivered >= 1" in post_notify_block
     assert "result_json" in post_notify_block
@@ -111,6 +114,7 @@ def main() -> int:
     print("COMMANDER_EVENT_V2_UNDELIVERED_CALL=CANCELLED_FAIL_CLOSED")
     print("COMMANDER_EVENT_V2_DEV_CANARY_MCP_TOKEN=DEV_ONLY")
     print("COMMANDER_EVENT_V2_POST_NOTIFY_TERMINAL_READ=PASS")
+    print("COMMANDER_EVENT_V2_TERMINAL_SETTLE_WAIT_MS=500")
     print("COMMANDER_EVENT_V2_PROD_CANARY_MCP_TOKEN=ABSENT")
     return 0
 
