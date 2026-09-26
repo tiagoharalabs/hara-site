@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Bounded DEV-only Event V2 multi-device lab.
 
-Creates 2..50 distinct H.A.R.A.-owned DEV subjects/devices for concurrency
+Creates 2..100 distinct H.A.R.A.-owned DEV subjects/devices for concurrency
 testing. Secrets stay only in isolated mode-0600 device.env files on the target.
 The operator manifest contains identifiers only. PROD and public Agent 0.3.7 are
 not modified. No automatic deletion is implemented.
@@ -19,6 +19,7 @@ import re
 import secrets
 import stat
 import subprocess
+import time
 import urllib.error
 import urllib.request
 import uuid
@@ -38,9 +39,10 @@ WRANGLER_VERSION = "4.137.0"
 DEFAULT_TARGET_HOST = "nucleo-a"
 REMOTE_BASE = "/tmp_hara/commander-event-v2-multidevice"
 MIN_DEVICES = 2
-MAX_DEVICES = 50
+MAX_DEVICES = 100
 D1_FIXTURE_BATCH_SIZE = 10
 D1_SELECTION_BATCH_SIZE = 25
+ENROLL_MIN_INTERVAL_SECONDS = 1.10
 
 SOURCE_FILES = (
     "apps/commander/experimental/event_v2_websocket.py",
@@ -428,8 +430,14 @@ def provision(count: int, target: str, manifest_path: Path) -> dict:
     stage_sources(target, root)
     fixtures = create_subjects_and_pairings(tenant_id, plan_code, run_id, count)
     devices = []
+    previous_enroll_started = None
     for fixture in fixtures:
         index = int(fixture["index"])
+        if previous_enroll_started is not None:
+            elapsed = time.monotonic() - previous_enroll_started
+            if elapsed < ENROLL_MIN_INTERVAL_SECONDS:
+                time.sleep(ENROLL_MIN_INTERVAL_SECONDS - elapsed)
+        previous_enroll_started = time.monotonic()
         pairing_token = str(fixture["pairing_token"])
         try:
             device_id, device_token = enroll(
@@ -566,9 +574,10 @@ printf 'MULTIDEVICE_AGENT_STOPPED=TRUE\n'
 
 def self_check() -> None:
     load_dev_config()
-    assert MIN_DEVICES == 2 and MAX_DEVICES == 50
+    assert MIN_DEVICES == 2 and MAX_DEVICES == 100
     assert D1_FIXTURE_BATCH_SIZE == 10
     assert D1_SELECTION_BATCH_SIZE == 25
+    assert ENROLL_MIN_INTERVAL_SECONDS >= 1.0
     assert remote_root("md-20260926123456-1234abcd").startswith("/tmp_hara/")
     assert worker_sha256("abc") == "ungWv48Bz-pBQUDeXa4iI7ADYaOWF3qctBD_YfIAFa0"
     for item in SOURCE_FILES:
@@ -594,9 +603,10 @@ def self_check() -> None:
     forbidden_prod = "https://commander." + "haralabs.com.br"
     assert forbidden_prod not in source
     print("COMMANDER_EVENT_V2_MULTIDEVICE_LAB_SOURCE=PASS")
-    print("COMMANDER_EVENT_V2_MULTIDEVICE_MAX_DEVICES=50")
+    print("COMMANDER_EVENT_V2_MULTIDEVICE_MAX_DEVICES=100")
     print("COMMANDER_EVENT_V2_MULTIDEVICE_D1_FIXTURE_BATCH_SIZE=10")
     print("COMMANDER_EVENT_V2_MULTIDEVICE_D1_SELECTION_BATCH_SIZE=25")
+    print("COMMANDER_EVENT_V2_MULTIDEVICE_ENROLL_MIN_INTERVAL_SECONDS=1.10")
     print("COMMANDER_EVENT_V2_MULTIDEVICE_DISTINCT_IDENTITIES=REQUIRED")
     print("COMMANDER_EVENT_V2_MULTIDEVICE_SECRET_OUTPUT=ABSENT")
     print("COMMANDER_EVENT_V2_MULTIDEVICE_AUTO_DELETE=ABSENT")
@@ -611,7 +621,7 @@ def main() -> int:
     mode.add_argument("--start-manifest", action="store_true")
     mode.add_argument("--status-manifest", action="store_true")
     mode.add_argument("--stop-manifest", action="store_true")
-    parser.add_argument("--count", type=int, default=50)
+    parser.add_argument("--count", type=int, default=100)
     parser.add_argument("--target-host", default=DEFAULT_TARGET_HOST)
     parser.add_argument("--manifest")
     args = parser.parse_args()
