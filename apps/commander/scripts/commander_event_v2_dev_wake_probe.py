@@ -24,7 +24,9 @@ DEFAULT_TOOL = "hara.health"
 
 
 class ProbeError(RuntimeError):
-    pass
+    def __init__(self, code: str, retry_after_ms: int = 0):
+        super().__init__(code)
+        self.retry_after_ms = max(0, int(retry_after_ms or 0))
 
 
 def load_token(path: Path) -> str:
@@ -79,7 +81,10 @@ def post_json(path: str, token: str, body: dict) -> dict:
             obj = json.loads(raw or "{}")
         except json.JSONDecodeError:
             obj = {}
-        raise ProbeError(str(obj.get("code") or f"HTTP_{exc.code}")) from None
+        raise ProbeError(
+            str(obj.get("code") or f"HTTP_{exc.code}"),
+            int(obj.get("retry_after_ms") or 0),
+        ) from None
     except (URLError, TimeoutError) as exc:
         raise ProbeError("WAKE_PROBE_NETWORK_ERROR") from exc
 
