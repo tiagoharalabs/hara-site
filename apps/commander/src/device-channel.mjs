@@ -7,6 +7,10 @@ const CONNECT_REFRESH_MS = 5 * 60 * 60 * 1000;
 const OFFLINE_GRACE_BASE_MS = 30 * 1000;
 const OFFLINE_GRACE_JITTER_MS = 30 * 1000;
 const PENDING_OFFLINE_KEY = "pending_offline";
+const MAX_TRANSIENT_REQUEST_BYTES = 160 * 1024;
+const MAX_TRANSIENT_RESULT_BYTES = 320 * 1024;
+const TRANSIENT_RPC_TIMEOUT_MS = 45 * 1000;
+const MAX_TRANSIENT_INFLIGHT = 1;
 
 function nowIso() {
   return new Date().toISOString();
@@ -132,12 +136,54 @@ function json(payload, status = 200) {
   });
 }
 
-function boundedBody(value) {
+function boundedBody(value, maxBytes = MAX_NOTIFY_BYTES) {
   const raw = JSON.stringify(value == null ? {} : value);
-  if (new TextEncoder().encode(raw).byteLength > MAX_NOTIFY_BYTES) {
+  if (new TextEncoder().encode(raw).byteLength > maxBytes) {
     throw new Error("CHANNEL_MESSAGE_TOO_LARGE");
   }
   return value;
+}
+
+function cleanLearningSignal(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("CHANNEL_LEARNING_SIGNAL_INVALID");
+  }
+  const allowed = [
+    "schema",
+    "tool_id",
+    "tool_family",
+    "outcome",
+    "latency_bucket",
+    "result_bytes_bucket",
+    "platform",
+    "agent_version",
+    "transport_mode",
+    "privileged_attempt",
+    "customer_content_collected",
+  ];
+  const keys = Object.keys(value).sort();
+  if (keys.join(",") !== [...allowed].sort().join(",")) {
+    throw new Error("CHANNEL_LEARNING_SIGNAL_INVALID");
+  }
+  if (value.schema !== "hara.commander-learning-signal.v1") {
+    throw new Error("CHANNEL_LEARNING_SIGNAL_INVALID");
+  }
+  if (value.privileged_attempt !== false || value.customer_content_collected !== false) {
+    throw new Error("CHANNEL_LEARNING_SIGNAL_INVALID");
+  }
+  return {
+    schema: value.schema,
+    tool_id: cleanIdentifier(value.tool_id, 120),
+    tool_family: cleanIdentifier(value.tool_family, 80),
+    outcome: cleanIdentifier(value.outcome, 40),
+    latency_bucket: cleanIdentifier(value.latency_bucket, 40),
+    result_bytes_bucket: cleanIdentifier(value.result_bytes_bucket, 40),
+    platform: cleanIdentifier(value.platform, 40),
+    agent_version: cleanIdentifier(value.agent_version, 80),
+    transport_mode: cleanIdentifier(value.transport_mode, 40),
+    privileged_attempt: false,
+    customer_content_collected: false,
+  };
 }
 
 export function deviceChannelName(tenantId, deviceId) {
@@ -149,6 +195,7 @@ export class DeviceChannel extends DurableObject {
     super(ctx, env);
     this.ctx = ctx;
     this.env = env;
+    this.pendingTransient = new Map();
   }
 
   async fetch(request) {
@@ -222,6 +269,58 @@ export class DeviceChannel extends DurableObject {
         });
       }
 
+      if (url.pathname === "/dispatch" && request.method === "POST") {
+        const body = boundedBody(await request.json(), MAX_TRANSIENT_REQUEST_BYTES);
+        const callId = cleanIdentifier(body.call_id, 180);
+        const requestId = cleanIdentifier(body.request_id, 220);
+        const toolId = cleanIdentifier(body.tool_id, 120);
+        if (!body.payload || typeof body.payload !== "object" || Array.isArray(body.payload)) {
+          throw new Error("CHANNEL_TRANSIENT_PAYLOAD_INVALID");
+        }
+        if (this.pendingTransient.size >= MAX_TRANSIENT_INFLIGHT) {
+          throw new Error("CHANNEL_TRANSIENT_BUSY");
+        }
+
+        const sockets = this.ctx.getWebSockets().filter((socket) => {
+          if (socket.readyState !== WebSocket.OPEN) return false;
+          try {
+            return !(socket.deserializeAttachment() || {}).superseded;
+          } catch (_error) {
+            return false;
+          }
+        });
+        if (sockets.length < 1) throw new Error("CHANNEL_TRANSIENT_OFFLINE");
+
+        const event = JSON.stringify({
+          schema: EVENT_SCHEMA,
+          type: "CALL_TRANSIENT",
+          call_id: callId,
+          request_id: requestId,
+          tool_id: toolId,
+          payload: body.payload,
+        });
+        if (new TextEncoder().encode(event).byteLength > MAX_TRANSIENT_REQUEST_BYTES) {
+          throw new Error("CHANNEL_MESSAGE_TOO_LARGE");
+        }
+
+        const resultPromise = new Promise((resolve, reject) => {
+          this.pendingTransient.set(callId, { resolve, reject });
+        });
+
+        try {
+          sockets[0].send(event);
+          const result = await Promise.race([
+            resultPromise,
+            scheduler.wait(TRANSIENT_RPC_TIMEOUT_MS).then(() => {
+              throw new Error("CHANNEL_TRANSIENT_TIMEOUT");
+            }),
+          ]);
+          return json(result);
+        } finally {
+          this.pendingTransient.delete(callId);
+        }
+      }
+
       if (url.pathname === "/status" && request.method === "GET") {
         return json({
           schema: CHANNEL_SCHEMA,
@@ -237,7 +336,15 @@ export class DeviceChannel extends DurableObject {
       const code = /^[A-Z][A-Z0-9_]{0,119}$/.test(raw)
         ? raw
         : "CHANNEL_INTERNAL_ERROR";
-      const status = code === "CHANNEL_INTERNAL_AUTH_REQUIRED" ? 401 : 400;
+      const status = code === "CHANNEL_INTERNAL_AUTH_REQUIRED"
+        ? 401
+        : code === "CHANNEL_TRANSIENT_OFFLINE" || code === "CHANNEL_TRANSIENT_DISCONNECTED"
+          ? 409
+          : code === "CHANNEL_TRANSIENT_BUSY"
+            ? 429
+            : code === "CHANNEL_TRANSIENT_TIMEOUT"
+              ? 504
+              : 400;
       return json({ ok: false, code }, status);
     }
   }
@@ -248,7 +355,7 @@ export class DeviceChannel extends DurableObject {
       const raw = typeof message === "string"
         ? message
         : new TextDecoder().decode(message);
-      if (new TextEncoder().encode(raw).byteLength > MAX_NOTIFY_BYTES) {
+      if (new TextEncoder().encode(raw).byteLength > MAX_TRANSIENT_RESULT_BYTES) {
         throw new Error("CHANNEL_MESSAGE_TOO_LARGE");
       }
       payload = JSON.parse(raw);
@@ -280,6 +387,41 @@ export class DeviceChannel extends DurableObject {
       return;
     }
 
+    if (
+      payload
+      && payload.schema === EVENT_SCHEMA
+      && payload.type === "CALL_RESULT"
+    ) {
+      try {
+        const keys = Object.keys(payload).sort().join(",");
+        if (keys !== "call_id,error_code,learning_signal,result,schema,state,type") {
+          throw new Error("CHANNEL_TRANSIENT_RESULT_INVALID");
+        }
+        const callId = cleanIdentifier(payload.call_id, 180);
+        const state = String(payload.state || "").trim().toUpperCase();
+        if (!["COMPLETED", "FAILED"].includes(state)) {
+          throw new Error("CHANNEL_TRANSIENT_RESULT_INVALID");
+        }
+        const signal = cleanLearningSignal(payload.learning_signal);
+        const pending = this.pendingTransient.get(callId);
+        if (!pending) return;
+        pending.resolve({
+          schema: "hara.commander-transient-rpc.v1",
+          ok: state === "COMPLETED",
+          call_id: callId,
+          state,
+          result: payload.result == null ? {} : payload.result,
+          error_code: state === "FAILED"
+            ? cleanIdentifier(payload.error_code || "DEVICE_EXECUTION_FAILED", 120)
+            : null,
+          learning_signal: signal,
+        });
+      } catch (_error) {
+        socket.close(1008, "CHANNEL_TRANSIENT_RESULT_INVALID");
+      }
+      return;
+    }
+
     socket.close(1008, "CHANNEL_MESSAGE_DENIED");
   }
 
@@ -290,6 +432,15 @@ export class DeviceChannel extends DurableObject {
       await scheduleDisconnected(this.ctx, socket.deserializeAttachment());
     } catch (_error) {
       // Presence will fail stale after the bounded Event V2 liveness window.
+    }
+    const stillConnected = this.ctx.getWebSockets().some(
+      (candidate) => candidate.readyState === WebSocket.OPEN
+    );
+    if (!stillConnected) {
+      for (const pending of this.pendingTransient.values()) {
+        pending.reject(new Error("CHANNEL_TRANSIENT_DISCONNECTED"));
+      }
+      this.pendingTransient.clear();
     }
   }
 
@@ -311,6 +462,10 @@ export class DeviceChannel extends DurableObject {
   }
 
   webSocketError(socket, _error) {
+    for (const pending of this.pendingTransient.values()) {
+      pending.reject(new Error("CHANNEL_TRANSIENT_DISCONNECTED"));
+    }
+    this.pendingTransient.clear();
     try {
       socket.close(1011, "CHANNEL_SOCKET_ERROR");
     } catch (_closeError) {

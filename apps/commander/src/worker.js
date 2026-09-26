@@ -278,6 +278,12 @@ function eventV2Enabled(env) {
   return String(env.DEVICE_EVENT_V2_ENABLED || "").trim().toLowerCase() === "true";
 }
 
+function transientRpcEnabled(env) {
+  return env.ENVIRONMENT === "DEV"
+    && eventV2Enabled(env)
+    && String(env.DEVICE_EVENT_V2_TRANSIENT_RPC_ENABLED || "").trim().toLowerCase() === "true";
+}
+
 async function openDeviceEventChannel(env, request) {
   if (!eventV2Enabled(env)) throw new Error("DEVICE_EVENT_V2_DISABLED");
   if (!env.DEVICE_CHANNEL) throw new Error("DEVICE_EVENT_V2_BINDING_MISSING");
@@ -328,6 +334,85 @@ async function notifyDeviceEventChannel(env, tenantId, deviceId, callId) {
     // D1 call state remains authoritative. Event delivery is an accelerator only.
     return { attempted: true, delivered: 0 };
   }
+}
+
+
+async function dispatchTransientDeviceCall(env, body) {
+  if (!transientRpcEnabled(env)) throw new Error("DEVICE_TRANSIENT_RPC_DISABLED");
+  if (!env.DEVICE_CHANNEL) throw new Error("DEVICE_EVENT_V2_BINDING_MISSING");
+
+  const requestId = cleanId(body.request_id, 220);
+  const toolId = cleanId(body.tool_id, 120);
+  const requiredGrant = MCP_TOOL_GRANTS[toolId];
+  if (!requiredGrant) throw new Error("DEVICE_CALL_TOOL_DENIED");
+
+  const context = await mcpProductContext(env, body.issuer, body.subject, {
+    provider_code: body.provider_code,
+    email: body.email,
+  });
+  if (!context.ok) throw new Error(context.code);
+  if (!context.grants.includes(requiredGrant)) throw new Error("GRANT_MISSING");
+
+  const requestedDeviceId = body.device_id ? cleanId(body.device_id, 180) : null;
+  const canonicalPayload = canonicalDeviceToolPayload(toolId, body.payload);
+  boundedJson(canonicalPayload, 128 * 1024, "DEVICE_CALL_PAYLOAD_INVALID");
+
+  const selection = await selectedDeviceForSubject(
+    env,
+    context.tenant_id,
+    context.subject_id,
+  );
+  if (!selection) throw new Error("DEVICE_SELECTION_REQUIRED");
+  const deviceId = cleanId(selection.device_id, 180);
+  if (requestedDeviceId && requestedDeviceId !== deviceId) {
+    throw new Error("DEVICE_NOT_SELECTED");
+  }
+  if (selection.state !== "ACTIVE" || selection.revoked_at_utc) {
+    throw new Error("DEVICE_NOT_FOUND");
+  }
+  if (!deviceOnline(selection.last_seen_at_utc, selection.tunnel_mode)) {
+    throw new Error("DEVICE_OFFLINE");
+  }
+  if (String(selection.tunnel_mode || "") !== "EVENT_V2") {
+    throw new Error("DEVICE_TRANSIENT_REQUIRES_EVENT_V2");
+  }
+
+  const callId = "HARA-TRANSIENT-" + crypto.randomUUID();
+  const stub = env.DEVICE_CHANNEL.getByName(
+    deviceChannelName(context.tenant_id, deviceId),
+  );
+  const response = await stub.fetch(new Request("https://device-channel/dispatch", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-hara-channel-authenticated": "1",
+    },
+    body: JSON.stringify({
+      call_id: callId,
+      request_id: requestId,
+      tool_id: toolId,
+      payload: canonicalPayload,
+    }),
+  }));
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(String(payload.code || "DEVICE_TRANSIENT_RPC_FAILED"));
+  }
+
+  return {
+    schema: "hara.commander-device-transient-call.v1",
+    transport_mode: "EVENT_V2_TRANSIENT_RPC",
+    persisted_customer_payload: false,
+    persisted_customer_result: false,
+    request_id: requestId,
+    device_id: deviceId,
+    tool_id: toolId,
+    call_id: callId,
+    state: payload.state,
+    result: payload.result ?? {},
+    error_code: payload.error_code || null,
+    learning_signal: payload.learning_signal,
+  };
 }
 
 export class TenantQuota extends DurableObject {
@@ -1827,6 +1912,11 @@ export default {
         await requireMcpProductToken(request, env);
       }
 
+      if (url.pathname === "/api/internal/device/transient-call" && request.method === "POST") {
+        const body = await request.json();
+        return internalJson(await dispatchTransientDeviceCall(env, body));
+      }
+
       if (url.pathname === "/api/internal/device/calls" && request.method === "POST") {
         const body = await request.json();
         return internalJson(await enqueueDeviceCall(env, body), 201);
@@ -2057,6 +2147,16 @@ export default {
         DEVICE_AUTH_INVALID: 401,
         DEVICE_EVENT_V2_DISABLED: 404,
         DEVICE_EVENT_V2_BINDING_MISSING: 503,
+        DEVICE_TRANSIENT_RPC_DISABLED: 404,
+        DEVICE_TRANSIENT_REQUIRES_EVENT_V2: 409,
+        CHANNEL_TRANSIENT_OFFLINE: 409,
+        CHANNEL_TRANSIENT_DISCONNECTED: 409,
+        CHANNEL_TRANSIENT_BUSY: 429,
+        CHANNEL_TRANSIENT_TIMEOUT: 504,
+        CHANNEL_TRANSIENT_PAYLOAD_INVALID: 400,
+        CHANNEL_TRANSIENT_RESULT_INVALID: 502,
+        CHANNEL_LEARNING_SIGNAL_INVALID: 502,
+        DEVICE_TRANSIENT_RPC_FAILED: 502,
         DEVICE_ID_MISMATCH: 403,
         DEVICE_NOT_FOUND: 404,
         DEVICE_SELECTION_REQUIRED: 409,

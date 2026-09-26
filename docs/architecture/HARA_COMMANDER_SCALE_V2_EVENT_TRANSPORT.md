@@ -494,3 +494,89 @@ across the grace window. The deterministic source model currently yields:
 
 The 1k result is the practical product target. The 20k result remains architecture
 headroom and still carries a D1 pressure warning rather than a scale-ready claim.
+
+
+## 10.3 Managed relay transient data plane — first-1k successor
+
+The durable D1 call lane remains the proven fallback while this successor is
+source/DEV-only. The target managed-relay architecture separates three planes:
+
+```text
+CONTROL PLANE
+  identity | entitlement | quota | device | presence | billing metadata
+
+TRANSIENT DATA PLANE
+  validated tool request -> DeviceChannel -> Agent -> tool result
+  request/result are transported in memory and are not durable D1 content
+
+LEARNING PLANE
+  Agent-derived, whitelisted operational signal only
+  no arguments, paths, prompts, stdout, file content or raw result
+```
+
+Canonical privacy/cost contract:
+
+```text
+TRANSIENT_RPC_ENV=DEV_ONLY
+MANAGED_RELAY_CONTENT_IN_TRANSIT=TRUE
+D1_CUSTOMER_PAYLOAD_PERSISTENCE=FALSE
+D1_CUSTOMER_RESULT_PERSISTENCE=FALSE
+LEARNING_SIGNAL_DERIVED_METADATA_ONLY=TRUE
+LEARNING_SIGNAL_CUSTOMER_CONTENT=FALSE
+PUBLIC_AGENT_0_3_7_MUTATION=FALSE
+PROD_CUTOVER=DENY
+```
+
+MANAGED_RELAY_CONTENT_IN_TRANSIT=TRUE is intentional and explicit: a standard
+hosted MCP relay must process the request/result while forwarding it. The
+privacy guarantee at this stage is no durable customer-content collection by
+H.A.R.A., not a false claim that the managed relay is cryptographically unable
+to see plaintext in memory.
+
+The DEV source path is:
+
+```text
+internal MCP dispatch
+      -> Worker authorization / selected-device validation
+      -> DeviceChannel /dispatch
+      -> CALL_TRANSIENT over the existing hibernatable WebSocket
+      -> Agent local allowlisted executor
+      -> CALL_RESULT over the same WebSocket
+      -> Worker response
+
+commander_device_calls payload_json/result_json
+      -> NOT USED by this path
+```
+
+While a transient call is active, the per-device Durable Object request remains
+in flight and therefore is not hibernatable. Once the call completes, the
+existing Hibernation WebSocket design becomes eligible for idle hibernation
+again. The source path is bounded to one transient call in flight per device and
+45 seconds per dispatch until live evidence justifies another value.
+
+Promotion is denied until all of these are proven:
+
+```text
+LOCAL_IDEMPOTENCY_LEDGER_LINUX=PASS
+WINDOWS_LOCAL_IDEMPOTENCY_LEDGER=PASS
+RETRY_AFTER_LOST_RESPONSE=PASS
+WINDOWS_TRANSIENT_RPC_PARITY=PASS
+QUOTA_RESERVE_COMMIT_RELEASE_PARITY=PASS
+RECEIPT_PARITY=PASS
+CANCELLATION_AND_TIMEOUT_PARITY=PASS
+DEV_LIVE_ROW_COST=MEASURED
+DEV_LIVE_DO_DURATION=MEASURED
+1K_SYNTHETIC=PASS
+CUSTOMER_CONTENT_LOGGING=ABSENT
+ROLLBACK_TO_DURABLE_LANE=PASS
+```
+
+The deterministic economics envelope lives at:
+
+```text
+apps/commander/scripts/commander_event_v2_transient_1k_model.py
+```
+
+It does not claim measured production latency. It models 0.5s / 2s / 10s
+average active-call durations so Durable Object wall-time cost is visible before
+cutover.

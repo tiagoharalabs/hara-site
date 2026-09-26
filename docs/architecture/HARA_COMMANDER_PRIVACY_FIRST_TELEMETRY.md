@@ -220,3 +220,72 @@ HARA Services
 
 The NOC must be capable of answering "is the service healthy and where is it
 hot?" without needing to know "what did the customer ask or execute?".
+
+
+## Learning plane — derived behavior, not customer content
+
+Commander may improve from aggregate usage only when the signal is generated
+from a strict allowlist and cannot become a covert content channel.
+
+The first Event V2 transient source contract allows exactly:
+
+```text
+schema
+tool_id
+tool_family
+outcome
+latency_bucket
+result_bytes_bucket
+platform
+agent_version
+transport_mode
+privileged_attempt
+customer_content_collected
+```
+
+The Agent emits:
+
+```text
+privileged_attempt=false
+customer_content_collected=false
+```
+
+and the DeviceChannel validates the exact field set before accepting the signal.
+
+Explicitly forbidden in learning telemetry:
+
+```text
+prompt
+arguments
+argv
+path
+filename
+command
+stdout
+stderr
+raw result
+raw payload
+Authorization
+Cookie
+device token
+customer identifiers as metric labels
+```
+
+This creates a product-learning flywheel from safe facts such as tool-family
+adoption, success/error classes, latency buckets, result-size buckets, platform
+and Agent version without learning what the customer asked, read or produced.
+
+For the managed hosted MCP relay, request/result content still exists
+transiently in process memory while being forwarded. Therefore:
+
+```text
+MANAGED_RELAY_CONTENT_IN_TRANSIT=TRUE
+MANAGED_RELAY_CONTENT_DURABLE_COLLECTION=FALSE
+CUSTOMER_CONTENT_IN_LEARNING_PLANE=FALSE
+RAW_DIAGNOSTICS_DEFAULT=FALSE
+RAW_DIAGNOSTICS_EXPLICIT_OPT_IN_REQUIRED=TRUE
+```
+
+A future private transport may remove H.A.R.A. Cloud from the content data path,
+but that is a separate transport mode and must not be confused with the
+privacy properties of the standard managed MCP relay.

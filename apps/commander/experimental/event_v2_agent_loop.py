@@ -6,8 +6,10 @@ release manifest. It reuses the proven 0.3.7 five-tool execution functions while
 replacing idle polling with an event wake channel.
 
 Design:
-- D1 remains durable call truth;
-- CALL_AVAILABLE is only a wake hint;
+- the stable/durable lane keeps D1 as durable call truth;
+- CALL_AVAILABLE is only a wake hint for that lane;
+- DEV-only CALL_TRANSIENT executes directly over the connected socket and
+  returns CALL_RESULT without persisting customer payload/result in D1;
 - reconnect performs one bounded reconciliation drain;
 - no fixed idle polling;
 - protocol PING maintains transport without app-level heartbeat spam;
@@ -115,6 +117,7 @@ def run_connected_session(
     )
     steps = 0
     drained = 0
+    transient_calls = 0
 
     try:
         # Reconcile durable truth exactly once after connect/reconnect so a
@@ -135,12 +138,17 @@ def run_connected_session(
                     # call_id is deliberately not trusted as execution authority.
                     # It only wakes a bounded read from durable call truth.
                     drained += drain_durable_calls(agent, config)
+                elif event["type"] == "CALL_TRANSIENT":
+                    result = agent.execute_transient_call(config, event)
+                    transport.send_transient_result(sock, result)
+                    transient_calls += 1
 
             steps += 1
 
         return {
             "connected_seconds": max(0.0, monotonic() - connected_at),
             "drained_calls": drained,
+            "transient_calls": transient_calls,
             "steps": steps,
         }
     finally:
@@ -209,7 +217,10 @@ def main() -> int:
         print("COMMANDER_EVENT_V2_AGENT_LOOP_SOURCE=PASS")
         print("COMMANDER_EVENT_V2_IDLE_POLLING=ABSENT")
         assert hasattr(agent, "try_write_event_v2_status")
+        assert hasattr(agent, "execute_transient_call")
+        assert hasattr(transport, "send_transient_result")
         print("COMMANDER_EVENT_V2_RECONCILIATION_DRAIN=BOUNDED_8")
+        print("COMMANDER_EVENT_V2_TRANSIENT_RPC=SOURCE_READY_DEV_ONLY")
         print("COMMANDER_EVENT_V2_CONNECTION_STATUS=LOCAL_0600")
         print("COMMANDER_EVENT_V2_SIGTERM_CLEAN_UNWIND=PASS")
         return 0

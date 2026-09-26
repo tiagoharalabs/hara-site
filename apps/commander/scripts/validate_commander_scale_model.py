@@ -9,6 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 MODEL = ROOT / "commander_scale_capacity_model.py"
 ACTIVE_MODEL = ROOT / "commander_event_v2_active_1k_model.py"
+TRANSIENT_MODEL = ROOT / "commander_event_v2_transient_1k_model.py"
 
 
 def load_model():
@@ -24,6 +25,8 @@ def main() -> int:
     model["self_check"]()
     active = load_active_model()
     active["self_check"]()
+    transient = runpy.run_path(str(TRANSIENT_MODEL))
+    transient["self_check"]()
 
     expected = {
         100: 50.0,
@@ -48,11 +51,17 @@ def main() -> int:
     assert round(ten.worker_http_per_day_isolated) == 41_333
     assert round(hundred.worker_http_per_day_isolated) == 413_333
     assert ten.do_request_equivalents_per_day == 10_200
+    transient_ten = transient["transient_budget"](1_000, 10, 0.5)
+    assert transient_ten.worker_http_day == 10_000
+    assert transient_ten.do_request_equivalents_day == 10_700
+    assert transient_ten.do_duration_gb_seconds_month == 18_750
 
     print("COMMANDER_SCALE_EVENT_V2_IDLE_CALL_POLL_RPS=0")
     print("COMMANDER_SCALE_EVENT_V2_ACTIVE_1K_MODEL=PASS")
     print("COMMANDER_SCALE_EVENT_V2_1K_10_CALLS_DEVICE_DAY_HTTP=41333")
     print("COMMANDER_SCALE_EVENT_V2_1K_100_CALLS_DEVICE_DAY_HTTP=413333")
+    print("COMMANDER_SCALE_EVENT_V2_TRANSIENT_1K_10_CALLS_DEVICE_DAY_HTTP=10000")
+    print("COMMANDER_SCALE_EVENT_V2_TRANSIENT_1K_10_CALLS_DEVICE_DAY_DO_REQ_EQ=10700")
     return 0
 
 
