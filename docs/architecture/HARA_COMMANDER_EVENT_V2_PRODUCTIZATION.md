@@ -66,3 +66,60 @@ CUSTOMER_CONTENT_FOR_MODEL_TRAINING=FALSE
 FIVE_TOOL_SURFACE=UNCHANGED
 ARBITRARY_SHELL=DENY
 ```
+
+
+## Linux RC install and rollback
+
+The first release-candidate productization lane is Linux only.
+
+Source:
+
+`apps/commander/candidate/install_linux_rc.sh`
+
+The RC installer is deliberately separate from the public 0.3.7 installer and
+release manifest.
+
+```text
+LINUX_RC=SOURCE_READY
+WINDOWS_EVENT_V2_RC=HOLD
+PUBLIC_INSTALLER_EVENT_V2=ABSENT
+PUBLIC_MANIFEST_EVENT_V2=ABSENT
+RC_INSTALL_AUTO_START=FALSE
+RC_DEFAULT_TRANSPORT=POLL_V1
+RC_EVENT_V2_ACTIVATION=EXPLICIT_ONLY
+RC_REPAIRING=FALSE
+RC_DEVICE_ENV_REWRITE=FALSE
+RC_DUAL_AGENT=DENY
+RC_FAILED_START_ROLLBACK=STABLE_0_3_7
+```
+
+The candidate reuses the already-enrolled `device.env`. It does not call the
+pairing/enrollment endpoint and does not create a new device identity.
+
+Installation only materializes the candidate source and an inactive user-systemd
+unit. Event V2 activation is a separate explicit action.
+
+Activation order:
+
+1. validate existing device config;
+2. write only the candidate transport selector;
+3. stop the stable service;
+4. start and attest the RC service;
+5. deny any simultaneous stable+RC state;
+6. on start/attestation failure, stop RC and restore stable 0.3.7.
+
+A reboot during RC evaluation remains conservative because the candidate unit is
+not enabled by source installation; the proven stable service remains the
+persistent public baseline until a later release gate explicitly changes that
+law.
+
+### Windows boundary
+
+Windows remains on the proven public baseline until an equivalent Event V2
+transport, installer, rollback and live canary exist.
+
+```text
+WINDOWS_STABLE_BASELINE=PRESERVE
+WINDOWS_EVENT_V2_CUTOVER=DENY
+CROSS_PLATFORM_PARITY_CLAIM=FALSE
+```

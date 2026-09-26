@@ -79,6 +79,8 @@ jobs:
           python3 apps/commander/scripts/commander_event_v2_dev_burst_probe.py --check
           python3 apps/commander/candidate/linux_agent_rc.py --self-test
           python3 apps/commander/scripts/validate_event_v2_productization.py
+          python3 apps/commander/scripts/validate_event_v2_linux_rc_install.py
+          python3 apps/commander/scripts/validate_event_v2_linux_rc_transition.py
           python3 apps/commander/scripts/commander_event_v2_dev_quota_probe.py --check
           python3 apps/commander/scripts/provision_dev_canary_mcp_token.py --check
           python3 apps/commander/scripts/validate_customer_privacy_noc_contract.py
