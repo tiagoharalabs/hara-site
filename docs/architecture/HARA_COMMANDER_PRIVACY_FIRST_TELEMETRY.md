@@ -312,3 +312,91 @@ stdout or other raw tool output.
 
 This source contract does not claim immediate deletion at exactly 50 seconds:
 redaction occurs on the next successful scheduled maintenance cycle.
+
+
+## Privacy-safe learning analytics — DEV first
+
+Commander may aggregate the already validated `hara.commander-learning-signal.v1`
+into Cloudflare Workers Analytics Engine for product/operational learning.
+
+This is not request capture and is not customer-content telemetry.
+
+```text
+LEARNING_ANALYTICS_ENV=DEV_ONLY_INITIAL
+LEARNING_ANALYTICS_BINDING=LEARNING_ANALYTICS
+LEARNING_ANALYTICS_DATASET=hara_commander_learning_dev
+LEARNING_ANALYTICS_CUSTOMER_CONTENT=FALSE
+LEARNING_ANALYTICS_CUSTOMER_IDENTIFIERS=FALSE
+LEARNING_ANALYTICS_REQUEST_IDENTIFIERS=FALSE
+LEARNING_ANALYTICS_RECEIPT_IDENTIFIERS=FALSE
+LEARNING_ANALYTICS_FAILS_CUSTOMER_CALL=FALSE
+```
+
+One successful transient response can emit one analytics data point with only:
+
+```text
+index:
+  tool_family
+
+blobs:
+  tool_id
+  tool_family
+  outcome
+  latency_bucket
+  result_bytes_bucket
+  platform
+  agent_version
+  transport_mode
+
+double:
+  1
+```
+
+The analytics write path explicitly does not receive or record:
+
+```text
+tenant_id
+subject_id
+device_id
+request_id
+call_id
+receipt_sha256
+email
+issuer
+prompt
+arguments
+argv
+path
+filename
+command
+stdout
+stderr
+payload
+result
+file_content
+```
+
+The Worker revalidates the exact learning-signal allowlist before writing.
+`privileged_attempt` and `customer_content_collected` must both be false.
+Analytics failures are swallowed so observability cannot fail or delay the
+customer operation.
+
+The PROD Wrangler config intentionally has no `LEARNING_ANALYTICS` binding at
+this stage. Promotion requires explicit privacy/readback review.
+
+At the current first-1k planning envelopes:
+
+```text
+1000 devices x 10 calls/device/day  = 300,000 points/month
+1000 devices x 100 calls/device/day = 3,000,000 points/month
+published Workers Paid inclusion    = 10,000,000 points/month
+```
+
+Cloudflare currently states Analytics Engine billing is not yet enabled, while
+publishing the future inclusion/rates for planning. Analytics Engine data
+retention is currently three months.
+
+References:
+- https://developers.cloudflare.com/analytics/analytics-engine/
+- https://developers.cloudflare.com/analytics/analytics-engine/pricing/
+- https://developers.cloudflare.com/analytics/analytics-engine/limits/

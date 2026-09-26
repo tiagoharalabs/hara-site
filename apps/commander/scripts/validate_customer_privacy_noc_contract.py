@@ -11,6 +11,8 @@ TELEMETRY = ROOT.parent.parent / "docs" / "architecture" / "HARA_COMMANDER_PRIVA
 CHANNEL = ROOT / "src" / "device-channel.mjs"
 WORKER = ROOT / "src" / "worker.js"
 LEARNING_SCHEMA = ROOT / "contracts" / "commander_learning_signal_v1.schema.json"
+DEV_CONFIG = ROOT / "wrangler.dev.jsonc"
+PROD_CONFIG = ROOT / "wrangler.jsonc"
 
 
 def require(text: str, marker: str) -> None:
@@ -98,6 +100,15 @@ def main() -> int:
     assert 'value.privileged_attempt !== false' in channel
     assert 'value.customer_content_collected !== false' in channel
 
+    dev_config = json.loads(DEV_CONFIG.read_text(encoding="utf-8"))
+    prod_config = json.loads(PROD_CONFIG.read_text(encoding="utf-8"))
+    dev_analytics = dev_config.get("analytics_engine_datasets") or []
+    assert dev_analytics == [{
+        "binding": "LEARNING_ANALYTICS",
+        "dataset": "hara_commander_learning_dev",
+    }]
+    assert not (prod_config.get("analytics_engine_datasets") or [])
+
     worker = WORKER.read_text(encoding="utf-8")
     assert 'const DEVICE_CALL_TTL_SECONDS = 50;' in worker
     assert 'const DEVICE_CALL_CONTENT_REDACTION_BATCH = 64;' in worker
@@ -110,6 +121,33 @@ def main() -> int:
     assert "deviceCallStoredContentMatches" in worker
     assert "content_redacted:" in worker
     assert "!isRedactedDeviceCallContent(row.result_json)" in worker
+
+    analytics_at = worker.index("function recordLearningSignal")
+    analytics_end = worker.index("async function dispatchTransientDeviceCall", analytics_at)
+    analytics_block = worker[analytics_at:analytics_end]
+    assert "env.LEARNING_ANALYTICS.writeDataPoint" in analytics_block
+    assert "customer_content_collected !== false" in analytics_block
+    assert "privileged_attempt !== false" in analytics_block
+    assert "LEARNING_SIGNAL_KEYS" in worker
+    forbidden_analytics_patterns = (
+        "tenant_id",
+        "subject_id",
+        "device_id",
+        "request_id",
+        "call_id",
+        "receipt_sha256",
+        ".payload",
+        " payload:",
+        " result:",
+        ".email",
+        " email:",
+        ".issuer",
+        " issuer:",
+    )
+    for forbidden_identifier in forbidden_analytics_patterns:
+        assert forbidden_identifier not in analytics_block, forbidden_identifier
+    assert not re.search(r"signal\.result(?!_bytes_bucket)", analytics_block)
+    assert "recordLearningSignal(env, payload.learning_signal);" in worker
 
     raw_fields = {
         "prompt", "arguments", "argv", "path", "filename", "command",
@@ -129,6 +167,10 @@ def main() -> int:
     print("COMMANDER_LEARNING_SIGNAL_SCHEMA=PASS")
     print("COMMANDER_LEARNING_SIGNAL_SOURCE_ALLOWLIST=PASS")
     print("COMMANDER_LEARNING_SIGNAL_RAW_CONTENT=DENY")
+    print("COMMANDER_LEARNING_ANALYTICS_DEV_BINDING=PASS")
+    print("COMMANDER_LEARNING_ANALYTICS_PROD_BINDING=ABSENT")
+    print("COMMANDER_LEARNING_ANALYTICS_CUSTOMER_IDENTIFIERS=ABSENT")
+    print("COMMANDER_LEARNING_ANALYTICS_CUSTOMER_CONTENT=ABSENT")
     print("COMMANDER_DURABLE_FALLBACK_RAW_CONTENT_AFTER_TTL=REDACTION_TARGET")
     print("COMMANDER_DURABLE_FALLBACK_IDEMPOTENCY=SHA256_AFTER_REDACTION")
     return 0

@@ -346,6 +346,68 @@ async function notifyDeviceEventChannel(env, tenantId, deviceId, callId) {
 }
 
 
+const LEARNING_SIGNAL_KEYS = Object.freeze([
+  "schema",
+  "tool_id",
+  "tool_family",
+  "outcome",
+  "latency_bucket",
+  "result_bytes_bucket",
+  "platform",
+  "agent_version",
+  "transport_mode",
+  "privileged_attempt",
+  "customer_content_collected",
+]);
+
+function recordLearningSignal(env, signal) {
+  if (!env.LEARNING_ANALYTICS) return { attempted: false, recorded: false };
+  try {
+    if (!signal || typeof signal !== "object" || Array.isArray(signal)) {
+      return { attempted: true, recorded: false };
+    }
+    const keys = Object.keys(signal).sort();
+    if (keys.join(",") !== [...LEARNING_SIGNAL_KEYS].sort().join(",")) {
+      return { attempted: true, recorded: false };
+    }
+    if (
+      signal.schema !== "hara.commander-learning-signal.v1"
+      || signal.privileged_attempt !== false
+      || signal.customer_content_collected !== false
+    ) {
+      return { attempted: true, recorded: false };
+    }
+
+    const toolId = cleanId(signal.tool_id, 120);
+    const toolFamily = cleanId(signal.tool_family, 80);
+    const outcome = cleanId(signal.outcome, 40);
+    const latencyBucket = cleanId(signal.latency_bucket, 40);
+    const resultBytesBucket = cleanId(signal.result_bytes_bucket, 40);
+    const platform = cleanId(signal.platform, 40);
+    const agentVersion = cleanId(signal.agent_version, 80);
+    const transportMode = cleanId(signal.transport_mode, 40);
+
+    env.LEARNING_ANALYTICS.writeDataPoint({
+      indexes: [toolFamily],
+      blobs: [
+        toolId,
+        toolFamily,
+        outcome,
+        latencyBucket,
+        resultBytesBucket,
+        platform,
+        agentVersion,
+        transportMode,
+      ],
+      doubles: [1],
+    });
+    return { attempted: true, recorded: true };
+  } catch (_error) {
+    // Analytics must never delay or fail a customer call.
+    return { attempted: true, recorded: false };
+  }
+}
+
 async function dispatchTransientDeviceCall(env, body) {
   if (!transientRpcEnabled(env)) throw new Error("DEVICE_TRANSIENT_RPC_DISABLED");
   if (!env.DEVICE_CHANNEL) throw new Error("DEVICE_EVENT_V2_BINDING_MISSING");
@@ -505,6 +567,8 @@ async function dispatchTransientDeviceCall(env, body) {
       throw new Error("CHANNEL_TRANSIENT_RESULT_INVALID");
     }
   }
+
+  recordLearningSignal(env, payload.learning_signal);
 
   return {
     schema: "hara.commander-device-transient-call.v1",
