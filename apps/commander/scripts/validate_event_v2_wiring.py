@@ -43,8 +43,13 @@ def main() -> int:
         assert marker in worker, f"missing Worker Event V2 marker: {marker}"
 
     insert_at = worker.index("INSERT OR IGNORE INTO commander_device_calls")
-    notify_at = worker.index("const notification = await notifyDeviceEventChannel(")
-    assert notify_at > insert_at, "event notification must occur only after durable call insert"
+    use_event_at = worker.index('const useEventV2 = String(device.tunnel_mode || "") === "EVENT_V2";')
+    notify_at = worker.index("? await notifyDeviceEventChannel(", use_event_at)
+    assert use_event_at > insert_at, "transport selection must occur only after durable call insert"
+    assert notify_at > use_event_at, "event notification must be gated by Event V2 transport"
+    notify_prefix = worker[use_event_at:notify_at + 250]
+    assert 'String(device.tunnel_mode || "") === "EVENT_V2"' in notify_prefix
+    assert ": { attempted: false, delivered: 0 }" in notify_prefix
     undelivered_at = worker.index("DEVICE_EVENT_UNDELIVERED")
     assert undelivered_at > notify_at, "undelivered Event V2 call must cancel after notify attempt"
     notify_guard = worker[notify_at:undelivered_at + 800]
@@ -120,6 +125,8 @@ def main() -> int:
     print("COMMANDER_EVENT_V2_DEV_CANARY=ON")
     print("COMMANDER_EVENT_V2_PROD_BINDING=ABSENT")
     print("COMMANDER_EVENT_V2_NOTIFY_AFTER_DURABLE_INSERT=PASS")
+    print("COMMANDER_EVENT_V2_NOTIFY_ONLY_FOR_EVENT_V2_DEVICE=PASS")
+    print("COMMANDER_EVENT_V2_V1_NOTIFY_DO=ABSENT")
     print("COMMANDER_EVENT_V2_PRESENCE_USES_TRANSPORT_STATE=PASS")
     print("COMMANDER_EVENT_V2_V1_90S_WINDOW_PRESERVED=PASS")
     print("COMMANDER_EVENT_V2_V1_HEARTBEAT_RECLAIMS_RELAY=PASS")
