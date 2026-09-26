@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import importlib.util
 import random
+import hashlib
 import signal
 import sys
 import time
@@ -29,6 +30,7 @@ TRANSPORT_PATH = HERE / "event_v2_websocket.py"
 AGENT_PATH = HERE / "event_v2_customer_agent.py"
 MAX_DRAIN_CALLS = 8
 STABLE_CONNECTION_SECONDS = 60.0
+LIVENESS_JITTER_SECONDS = 15 * 60
 
 
 def _shutdown_signal(_signum, _frame):
@@ -58,6 +60,13 @@ def load_modules():
         _load(TRANSPORT_PATH, "hara_event_v2_transport"),
         _load(AGENT_PATH, "hara_event_v2_customer_agent"),
     )
+
+
+def durable_liveness_interval(device_id: str, target_seconds: float) -> float:
+    """Spread durable checkpoints across +/-15m without changing the 6h mean."""
+    digest = hashlib.sha256(str(device_id).encode("utf-8")).digest()
+    unit = int.from_bytes(digest[:8], "big") / float((1 << 64) - 1)
+    return target_seconds + ((unit * 2.0) - 1.0) * LIVENESS_JITTER_SECONDS
 
 
 def drain_durable_calls(agent, config, max_calls: int = MAX_DRAIN_CALLS) -> int:
@@ -100,6 +109,10 @@ def run_connected_session(
         transport.close_socket(sock)
         raise RuntimeError("EVENT_V2_STATUS_WRITE_FAILED")
     last_liveness = connected_at
+    liveness_interval = durable_liveness_interval(
+        config.get("HARA_DEVICE_ID", ""),
+        transport.DURABLE_LIVENESS_SECONDS,
+    )
     steps = 0
     drained = 0
 
@@ -112,7 +125,7 @@ def run_connected_session(
             frame = transport.recv_event_or_keepalive(sock)
             now = monotonic()
 
-            if now - last_liveness >= transport.DURABLE_LIVENESS_SECONDS:
+            if now - last_liveness >= liveness_interval:
                 transport.send_liveness(sock)
                 last_liveness = now
 

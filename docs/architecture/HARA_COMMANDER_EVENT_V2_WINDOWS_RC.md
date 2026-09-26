@@ -47,7 +47,7 @@ Requirements:
 - no credential logging;
 - no customer command/result/file telemetry;
 - WebSocket protocol keepalive, not HTTP heartbeat;
-- metadata-only durable LIVENESS checkpoint every 6h while connected;
+- metadata-only durable LIVENESS checkpoint centered on 6h with deterministic +/-15m per-device jitter while connected;
 - exactly one liveness timer per connected session; normal call traffic does not accumulate timers;
 - no fixed 2-second polling in steady state;
 - CALL_AVAILABLE is a wake hint only;
@@ -124,6 +124,7 @@ WINDOWS_EVENT_V2_WSS_ONLY=TRUE
 WINDOWS_EVENT_V2_BEARER_UPGRADE_ONLY=TRUE
 WINDOWS_EVENT_V2_KEEPALIVE_TARGET=60s
 WINDOWS_EVENT_V2_DURABLE_LIVENESS_TARGET=6h
+WINDOWS_EVENT_V2_DURABLE_LIVENESS_JITTER=deterministic_+/-15m_per_device
 WINDOWS_EVENT_V2_LIVENESS_CONTENT=METADATA_ONLY
 WINDOWS_EVENT_V2_LIVENESS_TIMER_PER_CONNECTION=1
 WINDOWS_EVENT_V2_MAX_EVENT_BYTES=4096

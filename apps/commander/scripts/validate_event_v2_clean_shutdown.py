@@ -95,6 +95,12 @@ def main() -> int:
     assert agent.status[1]["connected"] is False
     assert agent.status[1]["disconnected_at_utc"]
 
+    low = loop.durable_liveness_interval("device-a", 21600)
+    high = loop.durable_liveness_interval("device-b", 21600)
+    assert 20700 <= low <= 22500
+    assert 20700 <= high <= 22500
+    assert low != high
+
     source = LOOP.read_text(encoding="utf-8")
     assert "signal.signal(signal.SIGTERM, _shutdown_signal)" in source
     assert "install_shutdown_handlers()" in source
@@ -110,6 +116,7 @@ def main() -> int:
     print("COMMANDER_EVENT_V2_SOCKET_CLOSE_ON_SHUTDOWN=PASS")
     print("COMMANDER_EVENT_V2_TOPLEVEL_SHUTDOWN_TRACEBACK=ABSENT_BY_CONTRACT")
     print("COMMANDER_AGENT_RC_STALE_CONNECTED_STATUS=DENY")
+    print("COMMANDER_EVENT_V2_LINUX_LIVENESS_JITTER=DETERMINISTIC_+/-15M")
     return 0
 
 
