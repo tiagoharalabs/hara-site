@@ -754,3 +754,65 @@ PROD_MUTATION=FALSE
 The lower bound intentionally prefers deterministic SSH behavior over maximum
 lab orchestration throughput. This changes H.A.R.A.-owned test tooling only and
 does not change the Event V2 customer transport/runtime contract.
+
+
+## Post-#276 live lifecycle validation
+
+The hardening in #276 was validated live with the existing 100-device manifest.
+
+Initial post-merge start/status:
+
+```text
+SOURCE_MERGE=#276
+SOURCE_MERGE_SHA=ffce36e0963bfdacb70e641c951fea03e7dd5afd
+LIFECYCLE_MAX_WORKERS=4
+
+STARTED=100
+FIRST_STATUS_ALIVE=100
+FIRST_STATUS_CONNECTED=99
+FIRST_STATUS_ERROR_CODES=NONE
+SSH_PARTIAL_START_FAILURE=ABSENT
+```
+
+The first status snapshot occurred while one agent was still completing its
+Event V2 handshake. A follow-up readiness snapshot after a short bounded delay
+closed at:
+
+```text
+ALIVE=100
+CONNECTED=100
+ERROR_CODES=NONE
+STATUS_ORCHESTRATION_MS=5595
+```
+
+Bounded stop:
+
+```text
+STOPPED=100
+STOP_ORCHESTRATION_MS=8042
+FINAL_ALIVE=0
+FINAL_CONNECTED=0
+FINAL_ERROR_CODES=NONE
+MULTIDEVICE100_PROCESS_COUNT_FINAL=0
+```
+
+Existing canonical canary:
+
+```text
+ORIGINAL_CANARY_PROCESS_COUNT=1
+ORIGINAL_CANARY_CONNECTED=TRUE
+ORIGINAL_CANARY_ERROR=NONE
+```
+
+Result:
+
+```text
+LIFECYCLE_PARTIAL_START_DEFECT=FIXED
+SSH_FANOUT_FAILURE_REPRODUCED_AFTER_FIX=FALSE
+START_FAILURE_ROLLBACK_GUARD=ENABLED
+100_DEVICE_LIFECYCLE_RETEST=PASS
+PROD_MUTATION=FALSE
+```
+
+This validation concerns scale-lab orchestration only. It does not replace or
+change the terminal Event V2 customer transport proof at 100 devices.
