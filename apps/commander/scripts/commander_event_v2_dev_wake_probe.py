@@ -8,6 +8,7 @@ exact DEV origin and never prints the MCP product token or call result payload.
 from __future__ import annotations
 
 import argparse
+import ast
 import json
 import os
 import stat
@@ -161,8 +162,17 @@ def self_check() -> None:
     assert "/api/internal/device/calls" in source
     assert "/api/internal/device/calls/status" in source
     assert "x-hara-mcp-product-token" in source
-    assert "print(token" not in source
-    assert "repr(token" not in source
+    tree = ast.parse(source)
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        if not isinstance(node.func, ast.Name) or node.func.id != "print":
+            continue
+        rendered = " ".join(ast.dump(arg) for arg in node.args)
+        if "token" in rendered.lower() and "TOKEN_EXPOSED" not in rendered:
+            raise AssertionError("WAKE_PROBE_SECRET_PRINT_SURFACE")
+        if "result" in rendered.lower() and "COMMANDER_EVENT_V2_DEV_WAKE_" not in rendered:
+            raise AssertionError("WAKE_PROBE_RESULT_PRINT_SURFACE")
     assert "result_json" not in source
     assert "commander.haralabs.com.br/api/internal" not in source
     print("COMMANDER_EVENT_V2_DEV_WAKE_PROBE_SOURCE=PASS")
