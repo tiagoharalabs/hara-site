@@ -38,16 +38,17 @@ function Connect-EventV2Client($Client,[Uri]$Uri,[Threading.CancellationToken]$C
   }
 }
 
-function Receive-EventV2Text($Client,[Threading.CancellationToken]$CancellationToken,$ShutdownTask=$null) {
+function Start-EventV2Receive($Client,[Threading.CancellationToken]$CancellationToken) {
   $buffer = New-Object byte[] $MaxEventBytes
   $segment = [ArraySegment[byte]]::new($buffer)
-  $receiveTask = $Client.ReceiveAsync($segment,$CancellationToken)
-  if ($null -ne $ShutdownTask) {
-    $waitTasks = [Threading.Tasks.Task[]]@([Threading.Tasks.Task]$receiveTask,[Threading.Tasks.Task]$ShutdownTask)
-    $completed = [Threading.Tasks.Task]::WaitAny($waitTasks)
-    if ($completed -eq 1) { throw "WINDOWS_EVENT_V2_LOCAL_SHUTDOWN_REQUESTED" }
+  return [pscustomobject]@{
+    Buffer = $buffer
+    Task = $Client.ReceiveAsync($segment,$CancellationToken)
   }
-  $result = $receiveTask.GetAwaiter().GetResult()
+}
+
+function Complete-EventV2Receive($Receive) {
+  $result = $Receive.Task.GetAwaiter().GetResult()
   if ($result.MessageType -eq [System.Net.WebSockets.WebSocketMessageType]::Close) {
     throw "WINDOWS_EVENT_V2_SERVER_CLOSED"
   }
@@ -58,7 +59,33 @@ function Receive-EventV2Text($Client,[Threading.CancellationToken]$CancellationT
   if ($result.Count -lt 1 -or $result.Count -gt $MaxEventBytes) {
     throw "WINDOWS_EVENT_V2_MESSAGE_SIZE_INVALID"
   }
-  return [Text.Encoding]::UTF8.GetString($buffer,0,$result.Count)
+  return [Text.Encoding]::UTF8.GetString($Receive.Buffer,0,$result.Count)
+}
+
+function Receive-EventV2Text($Client,[Threading.CancellationToken]$CancellationToken,$ShutdownTask=$null) {
+  $receive = Start-EventV2Receive $Client $CancellationToken
+  if ($null -ne $ShutdownTask) {
+    $waitTasks = [Threading.Tasks.Task[]]@([Threading.Tasks.Task]$receive.Task,[Threading.Tasks.Task]$ShutdownTask)
+    $completed = [Threading.Tasks.Task]::WaitAny($waitTasks)
+    if ($completed -eq 1) { throw "WINDOWS_EVENT_V2_LOCAL_SHUTDOWN_REQUESTED" }
+  }
+  return Complete-EventV2Receive $receive
+}
+
+function Send-EventV2Liveness($Client,[Threading.CancellationToken]$CancellationToken) {
+  if ($Client.State -ne [System.Net.WebSockets.WebSocketState]::Open) {
+    throw "WINDOWS_EVENT_V2_LIVENESS_SOCKET_NOT_OPEN"
+  }
+  $payload = '{"schema":"hara.commander-device-event.v2","type":"LIVENESS"}'
+  $bytes = [Text.Encoding]::UTF8.GetBytes($payload)
+  if ($bytes.Length -gt $MaxEventBytes) { throw "WINDOWS_EVENT_V2_LIVENESS_SIZE_INVALID" }
+  $segment = [ArraySegment[byte]]::new($bytes)
+  $Client.SendAsync(
+    $segment,
+    [System.Net.WebSockets.WebSocketMessageType]::Text,
+    $true,
+    $CancellationToken
+  ).GetAwaiter().GetResult()
 }
 
 function Parse-EventV2Wake([string]$Text) {
@@ -122,6 +149,7 @@ function Invoke-TransportSelfTest {
   Write-Host "COMMANDER_WINDOWS_EVENT_V2_WSS_ONLY=TRUE"
   Write-Host "COMMANDER_WINDOWS_EVENT_V2_KEEPALIVE_SECONDS=60"
   Write-Host "COMMANDER_WINDOWS_EVENT_V2_MAX_EVENT_BYTES=4096"
+  Write-Host "COMMANDER_WINDOWS_EVENT_V2_DURABLE_LIVENESS_FRAME=READY"
   Write-Host "COMMANDER_WINDOWS_EVENT_V2_CONTENT_BEARING_WAKE=DENIED"
   Write-Host "COMMANDER_WINDOWS_EVENT_V2_TOKEN_OUTPUT=ABSENT"
 }
