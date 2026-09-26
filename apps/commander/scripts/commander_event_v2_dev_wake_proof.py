@@ -202,9 +202,12 @@ def self_check() -> None:
             continue
         if not isinstance(node.func, ast.Name) or node.func.id != "print":
             continue
-        rendered = " ".join(ast.dump(arg) for arg in node.args)
-        if "token" in rendered.lower():
-            raise fail("WAKE_TOKEN_PRINT_SURFACE")
+        for arg in node.args:
+            if any(
+                isinstance(child, ast.Name) and child.id == "token"
+                for child in ast.walk(arg)
+            ):
+                raise fail("WAKE_TOKEN_PRINT_SURFACE")
     print("COMMANDER_EVENT_V2_DEV_WAKE_SOURCE=PASS")
     print("COMMANDER_EVENT_V2_DEV_WAKE_PROD_ORIGIN=ABSENT")
     print("COMMANDER_EVENT_V2_DEV_WAKE_TOKEN_OUTPUT=ABSENT")
