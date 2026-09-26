@@ -327,6 +327,9 @@ print("TRUE" if obj.get("connected") is True else "FALSE")
 PY
 )"
   fi
+  if [ "$rc" != "ACTIVE" ] && [ "$event_connected" = "TRUE" ]; then
+    event_connected=STALE
+  fi
 
   printf 'COMMANDER_AGENT_RC_INSTALLED=%s\n' "$installed"
   printf 'COMMANDER_AGENT_RC_TRANSPORT=%s\n' "$mode"
