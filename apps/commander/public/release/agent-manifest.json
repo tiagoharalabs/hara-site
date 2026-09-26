@@ -18,9 +18,9 @@
       "sha256": "c9b64a1400ecbcc6748aad7bfec34812aa3e366d488e895da022979917085b99"
     },
     {
-      "bytes": 18307,
+      "bytes": 18279,
       "path": "install/windows.ps1",
-      "sha256": "b820499dadbcc0cece89f2be0df20d1a3bbd18b481aefeb3d7f49e139d0b6fc7"
+      "sha256": "74296f03b70f7b381fc87459ee77f0960cf9a11fc8ebc586ee4bd2a3efc3e166"
     }
   ],
   "product": "H.A.R.A. Commander",
