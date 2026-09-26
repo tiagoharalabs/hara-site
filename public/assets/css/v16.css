@@ -737,3 +737,36 @@ html[data-neon="on"] a.obs-live-card:hover{
     transition:none!important;
   }
 }
+
+
+/* V16.3.9 — Mobile orbit motion hardening.
+   Keep motion visible on phones when the user has not requested reduced motion. */
+.orbit-ring{
+  will-change:transform;
+  transform-origin:center center;
+}
+@media(max-width:760px) and (prefers-reduced-motion:no-preference){
+  .orbit-ring{
+    animation-name:spin;
+    animation-duration:18s;
+    animation-timing-function:linear;
+    animation-iteration-count:infinite;
+    border-color:rgba(45,145,201,.42);
+  }
+  .orbit-ring.ring2{
+    animation-direction:reverse;
+    animation-duration:25s;
+    border-color:rgba(45,145,201,.30);
+  }
+  html[data-theme="dark"] .orbit-ring{
+    border-color:rgba(49,189,244,.36);
+  }
+  html[data-theme="dark"] .orbit-ring.ring2{
+    border-color:rgba(49,189,244,.25);
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  .orbit-ring{
+    animation:none!important;
+  }
+}
