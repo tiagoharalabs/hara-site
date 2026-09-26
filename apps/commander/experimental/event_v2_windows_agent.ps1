@@ -22,6 +22,8 @@ $StableConnectionSeconds = 60
 $ReconnectBaseSeconds = 10
 $ReconnectMaxSeconds = 15
 $DurableLivenessSeconds = 21600
+$ShutdownPipeName = "hara-commander-event-v2-rc-stop"
+$script:ShutdownRequested = $false
 
 function Import-StableAgentFunctions {
   if (-not (Test-Path -LiteralPath $StableAgent -PathType Leaf)) {
@@ -241,6 +243,16 @@ function Invoke-DurableDrain($Cfg,[string]$Token) {
   return $drained
 }
 
+function New-LocalShutdownPipe {
+  return [System.IO.Pipes.NamedPipeServerStream]::new(
+    $ShutdownPipeName,
+    [System.IO.Pipes.PipeDirection]::In,
+    1,
+    [System.IO.Pipes.PipeTransmissionMode]::Byte,
+    [System.IO.Pipes.PipeOptions]::Asynchronous
+  )
+}
+
 function Get-ReconnectDelaySeconds([int]$Attempt) {
   if ($Attempt -lt 0) { throw "WINDOWS_EVENT_V2_RECONNECT_ATTEMPT_INVALID" }
   $cap = [Math]::Min($ReconnectMaxSeconds, $ReconnectBaseSeconds * [Math]::Pow(2,[Math]::Min($Attempt,20)))
@@ -251,6 +263,8 @@ function Invoke-ConnectedSession($Cfg,[string]$Token) {
   $uri = ConvertTo-EventV2Uri ([string]$Cfg.base_url)
   $client = New-EventV2Client $Token
   $cts = [Threading.CancellationTokenSource]::new()
+  $shutdownPipe = New-LocalShutdownPipe
+  $shutdownTask = $shutdownPipe.WaitForConnectionAsync()
   $connectedAt = [DateTime]::UtcNow
   try {
     Connect-EventV2Client $client $uri $cts.Token
@@ -258,7 +272,7 @@ function Invoke-ConnectedSession($Cfg,[string]$Token) {
     Invoke-DurableDrain $Cfg $Token | Out-Null
 
     while ($true) {
-      $text = Receive-EventV2Text $client $cts.Token
+      $text = Receive-EventV2Text $client $cts.Token $shutdownTask
       $wake = Parse-EventV2Wake $text
       if ([string]$wake.type -eq "CALL_AVAILABLE") {
         # The event call_id is never execution authority. It only wakes one
@@ -266,9 +280,16 @@ function Invoke-ConnectedSession($Cfg,[string]$Token) {
         Invoke-DurableDrain $Cfg $Token | Out-Null
       }
     }
+  } catch {
+    if ([string]$_.Exception.Message -eq "WINDOWS_EVENT_V2_LOCAL_SHUTDOWN_REQUESTED") {
+      $script:ShutdownRequested = $true
+    }
+    throw
   } finally {
+    try { $cts.Cancel() } catch {}
     Close-EventV2Client $client
     $cts.Dispose()
+    try { $shutdownPipe.Dispose() } catch {}
     Set-EventV2Status -Connected $false -DisconnectedAtUtc ([DateTime]::UtcNow.ToString("o")
     )
   }
@@ -279,6 +300,7 @@ function Invoke-AgentSelfTest {
   if ($ReconnectBaseSeconds -ne 10) { throw "WINDOWS_EVENT_V2_RECONNECT_BASE_INVALID" }
   if ($ReconnectMaxSeconds -ne 15) { throw "WINDOWS_EVENT_V2_RECONNECT_MAX_INVALID" }
   if ($DurableLivenessSeconds -ne 21600) { throw "WINDOWS_EVENT_V2_LIVENESS_INVALID" }
+  if ([string]::IsNullOrWhiteSpace($ShutdownPipeName)) { throw "WINDOWS_EVENT_V2_SHUTDOWN_PIPE_INVALID" }
 
   $cfg = [pscustomobject]@{device_id="windows-event-v2-selftest";architecture="test"}
   $info = Get-DeviceInfo $cfg
@@ -309,6 +331,7 @@ function Invoke-AgentSelfTest {
   Write-Host "COMMANDER_WINDOWS_EVENT_V2_HTTP_HEARTBEAT=ABSENT"
   Write-Host "COMMANDER_WINDOWS_EVENT_V2_SERVICES_PROXY=FALSE"
   Write-Host "COMMANDER_WINDOWS_EVENT_V2_PUBLIC_AGENT_MUTATION=FALSE"
+  Write-Host "COMMANDER_WINDOWS_EVENT_V2_COOPERATIVE_SHUTDOWN=READY"
 }
 
 if ($SelfTest -or ($args -contains "--self-test")) {
@@ -327,11 +350,17 @@ while ($true) {
   } catch {
     $connectedSeconds = ([DateTime]::UtcNow - $started).TotalSeconds
     $code = Get-SafeErrorCode $_
-    Try-SetRuntimeStatus -ErrorCode $code -ErrorAt ([DateTime]::UtcNow.ToString("o")) | Out-Null
-    try { Set-EventV2Status -Connected $false -DisconnectedAtUtc ([DateTime]::UtcNow.ToString("o")) -ErrorCode $code } catch {}
+    if ($code -eq "WINDOWS_EVENT_V2_LOCAL_SHUTDOWN_REQUESTED") {
+      $script:ShutdownRequested = $true
+    } else {
+      Try-SetRuntimeStatus -ErrorCode $code -ErrorAt ([DateTime]::UtcNow.ToString("o")) | Out-Null
+      try { Set-EventV2Status -Connected $false -DisconnectedAtUtc ([DateTime]::UtcNow.ToString("o")) -ErrorCode $code } catch {}
+    }
   } finally {
     $token = $null
   }
+
+  if ($script:ShutdownRequested) { break }
 
   if ($connectedSeconds -ge $StableConnectionSeconds) { $attempt = 0 }
   else { $attempt = [Math]::Min($attempt + 1,31) }

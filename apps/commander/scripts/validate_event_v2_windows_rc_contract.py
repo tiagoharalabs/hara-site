@@ -62,6 +62,9 @@ def main() -> int:
         "SOURCE_ONLY_USE_WINDOWS_EVENT_V2_AGENT",
         "param([switch]$SelfTest,[switch]$ImportOnly)",
         "if ($ImportOnly) { return }",
+        "$ShutdownTask=$null",
+        "[Threading.Tasks.Task]::WaitAny",
+        "WINDOWS_EVENT_V2_LOCAL_SHUTDOWN_REQUESTED",
     )
     for marker in required_transport:
         assert marker in transport, marker
@@ -87,6 +90,10 @@ def main() -> int:
         "$ReconnectBaseSeconds = 10",
         "$ReconnectMaxSeconds = 15",
         "$DurableLivenessSeconds = 21600",
+        '$ShutdownPipeName = "hara-commander-event-v2-rc-stop"',
+        "WINDOWS_EVENT_V2_LOCAL_SHUTDOWN_REQUESTED",
+        "COMMANDER_WINDOWS_EVENT_V2_COOPERATIVE_SHUTDOWN=READY",
+        "$cts.Cancel()",
         "Invoke-DurableDrain",
         "CALL_AVAILABLE",
         "Get-NextDurableCall",

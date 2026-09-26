@@ -47,6 +47,16 @@ def main() -> int:
         'Enable-TaskRequired $RcTaskName',
         'Enable-TaskRequired $StableTaskName',
         'WINDOWS_RC_INSTALL_NOT_INERT',
+        '$ShutdownPipeName = "hara-commander-event-v2-rc-stop"',
+        'Request-RcGracefulShutdown',
+        'Stop-RcTaskSafe',
+        'COMMANDER_WINDOWS_RC_COOPERATIVE_SHUTDOWN=PASS',
+        'COMMANDER_WINDOWS_RC_CLEAN_DISCONNECT=PASS',
+        'COMMANDER_WINDOWS_RC_SHUTDOWN_MODE=',
+        'return "GRACEFUL"',
+        'return "FALLBACK"',
+        'return "NOT_RUNNING"',
+        'Wait-EventDisconnection',
     )
     for marker in required:
         assert marker in installer, marker
@@ -83,6 +93,9 @@ def main() -> int:
     assert transition_try < activation.index("Stop-TaskSafe $StableTaskName")
     assert transition_try < activation.index("Disable-TaskSafe $StableTaskName")
     assert 'catch {\n    Rollback-ToStable' in activation
+    rollback = installer.split("function Rollback-ToStable {", 1)[1].split("function Install-Rc {", 1)[0]
+    assert "Stop-RcTaskSafe" in rollback
+    assert "Stop-TaskSafe $RcTaskName" not in rollback
 
     assert '$StableAgent = Join-Path $StableRoot "hara-commander-agent.ps1"' in adapter
     assert '$TransportPath = Join-Path $Here "event_v2_windows_transport.ps1"' in adapter
