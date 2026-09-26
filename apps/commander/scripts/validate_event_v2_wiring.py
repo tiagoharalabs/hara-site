@@ -85,6 +85,20 @@ def main() -> int:
     assert "deviceOnline(device.last_seen_at_utc, device.tunnel_mode)" in worker
     assert "deviceOnline(currentDevice.last_seen_at_utc, currentDevice.tunnel_mode)" in worker
 
+    selected_fn_at = worker.index("async function selectedDeviceForSubject")
+    selected_fn_end = worker.index("async function selectDevice", selected_fn_at)
+    selected_fn_block = worker[selected_fn_at:selected_fn_end]
+    assert "SELECT d.device_id, d.tenant_id, d.state, d.tunnel_mode" in selected_fn_block
+    assert "d.last_seen_at_utc, d.revoked_at_utc" in selected_fn_block
+
+    enqueue_fn_at = worker.index("async function enqueueDeviceCall")
+    enqueue_fn_end = worker.index("async function claimNextDeviceCall", enqueue_fn_at)
+    enqueue_fn_block = worker[enqueue_fn_at:enqueue_fn_end]
+    assert "const device = selection;" in enqueue_fn_block
+    assert "const currentDevice = currentSelection;" in enqueue_fn_block
+    assert "SELECT device_id, tenant_id, state, tunnel_mode, last_seen_at_utc, revoked_at_utc" not in enqueue_fn_block
+    assert "SELECT state, tunnel_mode, last_seen_at_utc, revoked_at_utc" not in enqueue_fn_block
+
     mcp_auth_start = worker.index("function requireMcpProductToken")
     mcp_auth_end = worker.index("function requirePortalMutationOrigin")
     mcp_auth_block = worker[mcp_auth_start:mcp_auth_end]
@@ -140,6 +154,7 @@ def main() -> int:
     print("COMMANDER_EVENT_V2_RETRY_HINT_EXECUTING_MS=250")
     print("COMMANDER_EVENT_V2_ACTIVE_QUEUE_LIMIT=16")
     print("COMMANDER_EVENT_V2_DEVICE_BUSY_HTTP=429")
+    print("COMMANDER_EVENT_V2_SELECTED_DEVICE_SINGLE_READ=PASS")
     print("COMMANDER_EVENT_V2_PROD_CANARY_MCP_TOKEN=ABSENT")
     return 0
 

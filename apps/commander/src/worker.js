@@ -792,7 +792,8 @@ function mcpDecisionPayload(context, toolId, requiredGrant, extra = {}) {
 
 async function selectedDeviceForSubject(env, tenantId, subjectId) {
   return env.PRODUCT_DB.prepare(
-    `SELECT s.device_id
+    `SELECT d.device_id, d.tenant_id, d.state, d.tunnel_mode,
+            d.last_seen_at_utc, d.revoked_at_utc
        FROM commander_device_selections s
        JOIN commander_devices d ON d.device_id = s.device_id
       WHERE s.tenant_id = ?
@@ -1221,12 +1222,7 @@ async function enqueueDeviceCall(env, body) {
     throw new Error("DEVICE_NOT_SELECTED");
   }
 
-  const device = await env.PRODUCT_DB.prepare(
-    `SELECT device_id, tenant_id, state, tunnel_mode, last_seen_at_utc, revoked_at_utc
-       FROM commander_devices
-      WHERE device_id = ? AND tenant_id = ?
-      LIMIT 1`
-  ).bind(deviceId, context.tenant_id).first();
+  const device = selection;
   if (!device || device.state !== "ACTIVE" || device.revoked_at_utc) {
     throw new Error("DEVICE_NOT_FOUND");
   }
@@ -1292,12 +1288,7 @@ async function enqueueDeviceCall(env, body) {
       throw new Error("DEVICE_NOT_SELECTED");
     }
 
-    const currentDevice = await env.PRODUCT_DB.prepare(
-      `SELECT state, tunnel_mode, last_seen_at_utc, revoked_at_utc
-         FROM commander_devices
-        WHERE device_id = ? AND tenant_id = ?
-        LIMIT 1`
-    ).bind(deviceId, context.tenant_id).first();
+    const currentDevice = currentSelection;
     if (!currentDevice || currentDevice.state !== "ACTIVE" || currentDevice.revoked_at_utc) {
       throw new Error("DEVICE_NOT_FOUND");
     }
