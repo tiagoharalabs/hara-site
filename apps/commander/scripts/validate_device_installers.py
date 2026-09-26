@@ -77,6 +77,12 @@ assert "ConvertTo-SecureString $DeviceTokenForRollback -AsPlainText -Force" in W
 assert "ConvertTo-SecureString $Enroll.device_token -AsPlainText -Force" not in WINDOWS, "WINDOWS_ENROLL_TOKEN_PLAINTEXT_DUPLICATE_PRESENT"
 assert "encrypted_device_token" in WINDOWS
 assert "DEVICE_TOKEN_EXPOSED=FALSE" in WINDOWS
+assert "$Identity:" not in WINDOWS, "WINDOWS_INSTALLER_POWERSHELL_IDENTITY_INTERPOLATION_INVALID"
+assert '"${Identity}:(OI)(CI)F"' in WINDOWS, "WINDOWS_INSTALLER_ROOT_ACL_BINDING_MISSING"
+assert WINDOWS.count('"${Identity}:F"') >= 2, "WINDOWS_INSTALLER_FILE_ACL_BINDING_MISSING"
+assert 'if (-not $task -or [string]$task.State -ne "Running" -or -not (Wait-AgentStartup $ExpectedVersion $PreviousStarted 10)) {' in WINDOWS, "WINDOWS_INSTALLER_UPDATE_CONDITION_PS51_UNSAFE"
+assert 'if (-not $Task -or -not (Wait-AgentStartup $ExpectedVersion "" 10)) {' in WINDOWS, "WINDOWS_INSTALLER_INSTALL_CONDITION_PS51_UNSAFE"
+print("WINDOWS_INSTALLER_IDENTITY_ACL_INTERPOLATION=PASS")
 print("WINDOWS_DEVICE_INSTALLER_STATIC=PASS")
 print("WINDOWS_INSTALLER_REDIRECT_FAIL_CLOSED=PASS")
 print("WINDOWS_INSTALLER_DEVICE_TOKEN_MEMORY_HYGIENE=PASS")

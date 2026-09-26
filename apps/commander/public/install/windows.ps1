@@ -218,11 +218,7 @@ if ($Action -eq "update") {
   Start-ScheduledTask -TaskName $TaskName
   Start-Sleep -Seconds 2
   $task = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
-  if (
-    -not $task
-    -or [string]$task.State -ne "Running"
-    -or -not (Wait-AgentStartup $ExpectedVersion $PreviousStarted 10)
-  ) {
+  if (-not $task -or [string]$task.State -ne "Running" -or -not (Wait-AgentStartup $ExpectedVersion $PreviousStarted 10)) {
     Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
     if (Test-Path -LiteralPath $backup -PathType Leaf) {
       Move-Item -Force $backup $Agent
@@ -283,8 +279,8 @@ try {
   $ConfigObject | ConvertTo-Json | Set-Content -Path $Config -Encoding UTF8
 
   $Identity = [Security.Principal.WindowsIdentity]::GetCurrent().Name
-  & icacls.exe $Root /inheritance:r /grant:r "$Identity:(OI)(CI)F" | Out-Null
-  & icacls.exe $Config /inheritance:r /grant:r "$Identity:F" | Out-Null
+  & icacls.exe $Root /inheritance:r /grant:r "${Identity}:(OI)(CI)F" | Out-Null
+  & icacls.exe $Config /inheritance:r /grant:r "${Identity}:F" | Out-Null
 
   $InstallTmp = $Agent + ".install"
   Remove-Item -Force $InstallTmp -ErrorAction SilentlyContinue
@@ -298,7 +294,7 @@ try {
   if (-not $VersionMatch -or -not $VersionMatch.Matches.Count) { throw "AGENT_VERSION_NOT_FOUND" }
   $ExpectedVersion=[string]$VersionMatch.Matches[0].Groups[1].Value
   Move-Item -Force $InstallTmp $Agent
-  & icacls.exe $Agent /inheritance:r /grant:r "$Identity:F" | Out-Null
+  & icacls.exe $Agent /inheritance:r /grant:r "${Identity}:F" | Out-Null
 
   $PowerShellExe = (Get-Command powershell.exe).Source
   $Argument = "-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$Agent`""
@@ -309,10 +305,7 @@ try {
   Start-ScheduledTask -TaskName $TaskName
   Start-Sleep -Seconds 2
   $Task = Get-ScheduledTask -TaskName $TaskName
-  if (
-    -not $Task
-    -or -not (Wait-AgentStartup $ExpectedVersion "" 10)
-  ) { throw "HARA Commander Agent failed startup attestation." }
+  if (-not $Task -or -not (Wait-AgentStartup $ExpectedVersion "" 10)) { throw "HARA Commander Agent failed startup attestation." }
   Write-Host "HARA_COMMANDER_AGENT_STARTUP_ATTESTATION=PASS"
 
   $InstallEnrolled = $false
