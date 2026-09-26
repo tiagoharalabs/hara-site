@@ -181,6 +181,13 @@ function cleanAgentValue(value, max = 80) {
   return text;
 }
 
+function deviceCallRetryAfterMs(state, source = "status") {
+  const normalized = String(state || "").trim().toUpperCase();
+  if (normalized === "PENDING") return source === "enqueue" ? 350 : 750;
+  if (normalized === "EXECUTING") return 250;
+  return 0;
+}
+
 function deviceOnline(lastSeenAtUtc, tunnelMode = "OUTBOUND_RELAY", now = Date.now()) {
   const mode = String(tunnelMode || "");
   if (mode === "EVENT_V2_OFFLINE") return false;
@@ -1194,6 +1201,7 @@ async function enqueueDeviceCall(env, body) {
       tool_id: toolId,
       state: existing.state,
       expires_at_utc: existing.expires_at_utc,
+      retry_after_ms: deviceCallRetryAfterMs(existing.state, "enqueue"),
     };
   };
 
@@ -1341,6 +1349,7 @@ async function enqueueDeviceCall(env, body) {
     tool_id: toolId,
     state: responseState,
     expires_at_utc: expiresAt,
+    retry_after_ms: deviceCallRetryAfterMs(responseState, "enqueue"),
   };
 
   if (postNotify) {
@@ -1523,6 +1532,7 @@ async function deviceCallStatus(env, body) {
     completed_at_utc: row.completed_at_utc,
     result: row.result_json ? JSON.parse(row.result_json) : null,
     error_code: row.error_code || null,
+    retry_after_ms: deviceCallRetryAfterMs(row.state, "status"),
   };
 }
 
