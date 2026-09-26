@@ -687,6 +687,17 @@ html[data-theme="dark"][data-neon="on"] .side-nav button.active .nav-icon{
 html[data-theme="dark"][data-neon="on"] .brand img{
   filter:drop-shadow(0 0 7px rgba(255,200,61,.20));
 }
+html[data-theme="dark"][data-neon="on"] .eyebrow{
+  color:#ffc83d;
+  text-shadow:0 0 6px rgba(255,200,61,.42),0 0 14px rgba(255,200,61,.18);
+}
+html[data-theme="dark"][data-neon="on"] .console-brand strong{
+  color:#ffc83d;
+  text-shadow:0 0 7px rgba(255,200,61,.46),0 0 16px rgba(255,200,61,.20);
+}
+html[data-theme="dark"][data-neon="on"] .console-brand img{
+  filter:drop-shadow(0 0 5px rgba(255,200,61,.72)) drop-shadow(0 0 12px rgba(255,200,61,.34));
+}
 html[data-theme="dark"][data-neon="on"] .device-row.selected,
 html[data-theme="dark"][data-neon="on"] .device-tabs button.active,
 html[data-theme="dark"][data-neon="on"] .os-picker button.active,
