@@ -275,6 +275,33 @@ Phase D — scale:
 Phase E — PROD:
 - only after measured acceptance and reversible migration.
 
+## 10.1 Active-call query locality for the first 1k target
+
+The Event V2 idle path is intentionally near-zero, so the next scale pressure is
+the D1 work performed by real calls. The active queue, stale-call cleanup and
+device claim paths must remain local to the selected device.
+
+The schema already owns:
+
+```text
+idx_device_calls_poll(device_id, state, created_at_utc)
+```
+
+The Worker explicitly uses that existing index for active-call hot paths instead
+of allowing SQLite to prefer the global state-plus-expiry index. This keeps
+PENDING/EXECUTING scans bounded to one device/state set and does not add a new
+index or new index-write amplification.
+
+```text
+ACTIVE_CALL_QUERY_SCOPE=DEVICE_STATE
+ACTIVE_CALL_INDEX=idx_device_calls_poll
+NEW_INDEX_FOR_1K_HOT_PATH=FALSE
+D1_MIGRATION_REQUIRED=FALSE
+```
+
+This is a source/query-plan optimization only. D1 remains durable truth and all
+queue, expiry, tenant, subject and revocation predicates remain unchanged.
+
 ## 11. Capacity acceptance
 
 A 20k claim requires measurements, not architecture prose.

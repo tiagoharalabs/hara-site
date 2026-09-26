@@ -1289,7 +1289,7 @@ async function enqueueDeviceCall(env, body) {
 
   const enqueueAt = nowIso();
   await env.PRODUCT_DB.prepare(
-    `UPDATE commander_device_calls
+    `UPDATE commander_device_calls INDEXED BY idx_device_calls_poll
         SET state = 'EXPIRED', completed_at_utc = ?, error_code = 'DEVICE_CALL_EXPIRED'
       WHERE tenant_id = ? AND subject_id = ? AND device_id = ?
         AND state IN ('PENDING','EXECUTING')
@@ -1323,7 +1323,7 @@ async function enqueueDeviceCall(env, body) {
         AND s.subject_id = ?
         AND (
           SELECT COUNT(*)
-            FROM commander_device_calls q
+            FROM commander_device_calls q INDEXED BY idx_device_calls_poll
            WHERE q.device_id = d.device_id
              AND q.tenant_id = d.tenant_id
              AND q.state IN ('PENDING','EXECUTING')
@@ -1355,7 +1355,7 @@ async function enqueueDeviceCall(env, body) {
 
     const activeQueue = await env.PRODUCT_DB.prepare(
       `SELECT COUNT(*) AS active_count
-         FROM commander_device_calls
+         FROM commander_device_calls INDEXED BY idx_device_calls_poll
         WHERE device_id = ?
           AND tenant_id = ?
           AND state IN ('PENDING','EXECUTING')
@@ -1451,7 +1451,7 @@ async function claimNextDeviceCall(env, request) {
         SET state = 'EXECUTING', claimed_at_utc = ?
       WHERE call_id = (
         SELECT c.call_id
-          FROM commander_device_calls c
+          FROM commander_device_calls c INDEXED BY idx_device_calls_poll
           JOIN commander_devices d
             ON d.device_id = c.device_id
            AND d.tenant_id = c.tenant_id
