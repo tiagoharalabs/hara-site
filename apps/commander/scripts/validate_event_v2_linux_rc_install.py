@@ -30,6 +30,10 @@ def main() -> int:
         "systemctl --user start \"$STABLE_SERVICE\"",
         "RC_EVENT_V2_ATTESTATION_FAILED_ROLLED_BACK",
         "RC_DUAL_AGENT_DENIED_ROLLED_BACK",
+        "RC_INSTALL_WHILE_ACTIVE_DENIED",
+        'Environment="XDG_CONFIG_HOME=$CONFIG_HOME"',
+        'Environment="XDG_DATA_HOME=$DATA_HOME"',
+        'attest_active "$RC_SERVICE"',
     )
     for marker in required:
         assert marker in source, f"missing marker: {marker}"
@@ -82,6 +86,8 @@ def main() -> int:
     print("COMMANDER_EVENT_V2_LINUX_RC_AUTO_START=FALSE")
     print("COMMANDER_EVENT_V2_LINUX_RC_DUAL_AGENT=DENY")
     print("COMMANDER_EVENT_V2_LINUX_RC_ROLLBACK=SOURCE_READY")
+    print("COMMANDER_EVENT_V2_LINUX_RC_XDG_ISOLATION=PASS")
+    print("COMMANDER_EVENT_V2_LINUX_RC_ACTIVE_REINSTALL=DENY")
     print("COMMANDER_STABLE_PUBLIC_INSTALLER_MUTATION=FALSE")
     return 0
 
