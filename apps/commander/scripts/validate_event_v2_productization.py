@@ -11,6 +11,7 @@ RC = ROOT / "apps/commander/candidate/linux_agent_rc.py"
 PUBLIC_AGENT = ROOT / "apps/commander/public/agent/linux.py"
 MANIFEST = ROOT / "apps/commander/public/release/agent-manifest.json"
 DOC = ROOT / "docs/architecture/HARA_COMMANDER_EVENT_V2_PRODUCTIZATION.md"
+ASSETSIGNORE = ROOT / "apps/commander/public/.assetsignore"
 POLL_LOOP = ROOT / "apps/commander/candidate/poll_v1_customer_loop.py"
 
 
@@ -29,6 +30,7 @@ def main() -> int:
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
     doc = DOC.read_text(encoding="utf-8")
     public = PUBLIC_AGENT.read_text(encoding="utf-8")
+    asset_ignore = ASSETSIGNORE.read_text(encoding="utf-8")
     poll_loop = POLL_LOOP.read_text(encoding="utf-8")
 
     assert rc.selected_transport({}) == "POLL_V1"
@@ -44,6 +46,8 @@ def main() -> int:
     assert all("candidate/" not in str(item.get("path") or "") for item in manifest.get("files", []))
     assert 'AGENT_VERSION = "0.3.7"' in public
     assert "HARA_DEVICE_TRANSPORT_MODE" not in public
+    assert "**/__pycache__/" in asset_ignore
+    assert "**/*.pyc" in asset_ignore
     assert 'module.TRANSPORT_MODE = "OUTBOUND_RELAY"' in poll_loop
     assert 'COMMANDER_AGENT_RC_POLL_V1_AUTHORITY=HARA_COMMANDER' in poll_loop
 
@@ -64,6 +68,7 @@ def main() -> int:
     print("COMMANDER_STABLE_RELEASE_MANIFEST_EVENT_V2=ABSENT")
     print("COMMANDER_AGENT_RC_POLL_V1_AUTHORITY=HARA_COMMANDER")
     print("COMMANDER_AGENT_RC_POLL_V1_TRANSPORT=OUTBOUND_RELAY")
+    print("COMMANDER_PUBLIC_ASSET_PYTHON_BYTECODE=DENY")
     print("COMMANDER_PROD_CUTOVER=DENY")
     return 0
 
