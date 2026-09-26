@@ -551,8 +551,8 @@ export class TenantQuota extends DurableObject {
     );
   }
 
-  status(periodKey, limit) {
-    this.expireStaleReservations();
+  status(periodKey, limit, expireReservations = true) {
+    if (expireReservations) this.expireStaleReservations();
     const row = this.ctx.storage.sql.exec(
       `SELECT COALESCE(SUM(units), 0) AS consumed
          FROM request_state
@@ -591,11 +591,11 @@ export class TenantQuota extends DurableObject {
         existing: true,
         state: existing.state,
         receipt_sha256: existing.receipt_sha256 || null,
-        ...this.status(periodKey, limit)
+        ...this.status(periodKey, limit, false)
       };
     }
 
-    const balance = this.status(periodKey, limit);
+    const balance = this.status(periodKey, limit, false);
     if (limit != null && balance.consumed_units >= limit) {
       this.ctx.storage.sql.exec(
         `INSERT INTO request_state
@@ -613,7 +613,15 @@ export class TenantQuota extends DurableObject {
       requestId, subjectId, periodKey, functionId, new Date().toISOString()
     );
 
-    return { ok: true, existing: false, state: "RESERVED", ...this.status(periodKey, limit) };
+    const consumedUnits = balance.consumed_units + 1;
+    return {
+      ok: true,
+      existing: false,
+      state: "RESERVED",
+      ...balance,
+      consumed_units: consumedUnits,
+      remaining_units: limit == null ? null : Math.max(limit - consumedUnits, 0),
+    };
   }
 
   commit(requestId, subjectId, receiptSha256, limit) {
@@ -628,7 +636,7 @@ export class TenantQuota extends DurableObject {
     if (row.subject_id !== subjectId) return { ok: false, code: "IDEMPOTENCY_CONFLICT" };
     if (row.state === "COMMITTED") {
       if (row.receipt_sha256 !== receiptSha256) return { ok: false, code: "IDEMPOTENCY_CONFLICT" };
-      return { ok: true, existing: true, state: "COMMITTED", ...this.status(row.period_key, limit) };
+      return { ok: true, existing: true, state: "COMMITTED", ...this.status(row.period_key, limit, false) };
     }
     if (row.state !== "RESERVED") return { ok: false, code: "RESERVATION_NOT_ACTIVE", state: row.state };
 
@@ -638,7 +646,7 @@ export class TenantQuota extends DurableObject {
         WHERE request_id = ?`,
       receiptSha256, new Date().toISOString(), requestId
     );
-    return { ok: true, existing: false, state: "COMMITTED", ...this.status(row.period_key, limit) };
+    return { ok: true, existing: false, state: "COMMITTED", ...this.status(row.period_key, limit, false) };
   }
 
   release(requestId, subjectId, limit) {
@@ -650,14 +658,14 @@ export class TenantQuota extends DurableObject {
 
     if (!row) return { ok: false, code: "RESERVATION_NOT_FOUND" };
     if (row.subject_id !== subjectId) return { ok: false, code: "IDEMPOTENCY_CONFLICT" };
-    if (row.state === "RELEASED") return { ok: true, existing: true, state: "RELEASED", ...this.status(row.period_key, limit) };
+    if (row.state === "RELEASED") return { ok: true, existing: true, state: "RELEASED", ...this.status(row.period_key, limit, false) };
     if (row.state !== "RESERVED") return { ok: false, code: "RESERVATION_NOT_ACTIVE", state: row.state };
 
     this.ctx.storage.sql.exec(
       `UPDATE request_state SET state = 'RELEASED', units = 0, updated_at_utc = ? WHERE request_id = ?`,
       new Date().toISOString(), requestId
     );
-    return { ok: true, existing: false, state: "RELEASED", ...this.status(row.period_key, limit) };
+    return { ok: true, existing: false, state: "RELEASED", ...this.status(row.period_key, limit, false) };
   }
 }
 
