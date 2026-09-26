@@ -461,15 +461,15 @@ fi
 python3 - "$root/xdg-data/hara-commander/event-v2-status.json" "$alive" <<'PY'
 import json, pathlib, sys
 p=pathlib.Path(sys.argv[1])
-status={}
+status={{}}
 if p.is_file():
     try: status=json.loads(p.read_text(encoding="utf-8"))
-    except Exception: status={}
-print(json.dumps({
+    except Exception: status={{}}
+print(json.dumps({{
     "alive": sys.argv[2] == "true",
     "connected": bool(status.get("connected")),
     "last_error_code": status.get("last_error_code"),
-}, sort_keys=True, separators=(",", ":")))
+}}, sort_keys=True, separators=(",", ":")))
 PY
 """)
         meta = json.loads(proc.stdout.strip().splitlines()[-1])
