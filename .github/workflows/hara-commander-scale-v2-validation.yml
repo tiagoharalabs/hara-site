@@ -75,6 +75,7 @@ jobs:
           python3 apps/commander/scripts/commander_event_v2_dev_canary_provision.py --check
           python3 apps/commander/scripts/commander_event_v2_dev_wake_proof.py --check
           python3 apps/commander/scripts/commander_event_v2_dev_wake_probe.py --check
+          python3 apps/commander/scripts/commander_event_v2_dev_latency_profile.py --check
           python3 apps/commander/scripts/commander_event_v2_dev_burst_probe.py --check
           python3 apps/commander/candidate/linux_agent_rc.py --self-test
           python3 apps/commander/scripts/validate_event_v2_productization.py
