@@ -127,8 +127,18 @@ def main() -> int:
     assert "payload_json" not in transient_block
     assert "result_json" not in transient_block
     assert "canonicalDeviceToolPayload" in transient_block
-    assert "mcpProductContext" in transient_block
-    assert "selectedDeviceForSubject" in transient_block
+    assert "mcpTransientProductContext" in transient_block
+    assert "selectedDeviceForSubject" not in transient_block
+    assert "context.selected_device" in transient_block
+    context_at = worker.index("async function mcpTransientProductContext")
+    context_end = worker.index("async function mcpIdentityBinding", context_at)
+    context_block = worker[context_at:context_end]
+    assert context_block.count("env.PRODUCT_DB.prepare(") == 1
+    assert "json_group_array(pg.grant_code)" in context_block
+    assert "json_object(" in context_block
+    assert "selected_device_json" in context_block
+    assert "finalizeMcpProductContext" in context_block
+    assert "ensureSecondaryMcpBinding" in context_block
     assert "quota.reserve(" in transient_block
     assert "quota.commit(" in transient_block
     assert "quota.release(" in transient_block
@@ -219,6 +229,8 @@ def main() -> int:
     print("COMMANDER_EVENT_V2_TRANSIENT_AMBIGUOUS_TIMEOUT=KEEP_RESERVED")
     print("COMMANDER_EVENT_V2_TRANSIENT_COMMITTED_RETRY=REPLAY_ONLY")
     print("COMMANDER_EVENT_V2_TRANSIENT_REPLAY_QUOTA_RPC=RESERVE_ONLY")
+    print("COMMANDER_EVENT_V2_TRANSIENT_CONTEXT_D1_AWAITS=ONE")
+    print("COMMANDER_EVENT_V2_TRANSIENT_CONTEXT_ROWS_READ_TARGET=13")
     print("COMMANDER_EVENT_V2_TRANSIENT_D1_CUSTOMER_CONTENT=ABSENT")
     return 0
 

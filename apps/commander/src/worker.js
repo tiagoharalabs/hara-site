@@ -355,7 +355,12 @@ async function dispatchTransientDeviceCall(env, body) {
   const requiredGrant = MCP_TOOL_GRANTS[toolId];
   if (!requiredGrant) throw new Error("DEVICE_CALL_TOOL_DENIED");
 
-  const context = await mcpProductContext(env, body.issuer, body.subject, mcpBootstrapHints(body));
+  const context = await mcpTransientProductContext(
+    env,
+    body.issuer,
+    body.subject,
+    mcpBootstrapHints(body),
+  );
   if (!context.ok) throw new Error(context.code);
   if (!context.grants.includes(requiredGrant)) throw new Error("GRANT_MISSING");
 
@@ -363,11 +368,7 @@ async function dispatchTransientDeviceCall(env, body) {
   const canonicalPayload = canonicalDeviceToolPayload(toolId, body.payload);
   boundedJson(canonicalPayload, 128 * 1024, "DEVICE_CALL_PAYLOAD_INVALID");
 
-  const selection = await selectedDeviceForSubject(
-    env,
-    context.tenant_id,
-    context.subject_id,
-  );
+  const selection = context.selected_device;
   if (!selection) throw new Error("DEVICE_SELECTION_REQUIRED");
   const deviceId = cleanId(selection.device_id, 180);
   if (requestedDeviceId && requestedDeviceId !== deviceId) {
@@ -907,6 +908,55 @@ function mcpBootstrapHints(body) {
   };
 }
 
+function finalizeMcpProductContext(row, normalizedIssuer, subject, grants) {
+  if (!row) return { ok: false, code: "IDENTITY_NOT_PROVISIONED" };
+  if (row.subject_state !== "ACTIVE") return { ok: false, code: "SUBJECT_INACTIVE" };
+  if (row.tenant_state !== "ACTIVE") return { ok: false, code: "TENANT_INACTIVE" };
+  if (row.entitlement_state !== "ACTIVE" || row.plan_state !== "ACTIVE") {
+    return { ok: false, code: "ENTITLEMENT_INACTIVE" };
+  }
+
+  const now = Date.now();
+  const validFrom = Date.parse(row.valid_from_utc);
+  const validUntil = row.valid_until_utc == null ? null : Date.parse(row.valid_until_utc);
+  if (!Number.isFinite(validFrom) || now < validFrom) {
+    return { ok: false, code: "ENTITLEMENT_INACTIVE" };
+  }
+  if (validUntil != null && (!Number.isFinite(validUntil) || now >= validUntil)) {
+    return { ok: false, code: "ENTITLEMENT_INACTIVE" };
+  }
+
+  if (row.meter_id !== MCP_METER_ID) return { ok: false, code: "METER_INVALID" };
+  if (!["CALENDAR_MONTH", "LIFETIME", "NONE"].includes(row.period_kind)) {
+    return { ok: false, code: "PERIOD_KIND_INVALID" };
+  }
+  if (!Array.isArray(grants) || grants.some((grant) => typeof grant !== "string" || !grant)) {
+    return { ok: false, code: "USAGE_POLICY_INVALID" };
+  }
+
+  const limit = row.period_kind === "NONE" ? null : Number(row.unit_limit);
+  if (limit != null && (!Number.isInteger(limit) || limit < 1)) {
+    return { ok: false, code: "USAGE_POLICY_INVALID" };
+  }
+
+  return {
+    ok: true,
+    issuer: normalizedIssuer,
+    oidc_subject: subject,
+    subject_id: row.subject_id,
+    tenant_id: row.tenant_id,
+    role: row.role,
+    tenant_name: row.tenant_name,
+    entitlement_id: row.entitlement_id,
+    plan_code: row.plan_code,
+    plan_name: row.plan_name,
+    meter_id: row.meter_id,
+    period_kind: row.period_kind,
+    unit_limit: limit,
+    grants,
+  };
+}
+
 async function mcpProductContext(env, issuer, oidcSubject, bootstrap = null) {
   const normalizedIssuer = normalizeIssuer(issuer);
   const subject = cleanOpaque(oidcSubject, 512);
@@ -955,46 +1005,108 @@ async function mcpProductContext(env, issuer, oidcSubject, bootstrap = null) {
     return mcpProductContext(env, normalizedIssuer, subject, null);
   }
   if (!row) return { ok: false, code: "IDENTITY_NOT_PROVISIONED" };
-  if (row.subject_state !== "ACTIVE") return { ok: false, code: "SUBJECT_INACTIVE" };
-  if (row.tenant_state !== "ACTIVE") return { ok: false, code: "TENANT_INACTIVE" };
-  if (row.entitlement_state !== "ACTIVE" || row.plan_state !== "ACTIVE") {
-    return { ok: false, code: "ENTITLEMENT_INACTIVE" };
-  }
-
-  const now = Date.now();
-  const validFrom = Date.parse(row.valid_from_utc);
-  const validUntil = row.valid_until_utc == null ? null : Date.parse(row.valid_until_utc);
-  if (!Number.isFinite(validFrom) || now < validFrom) return { ok: false, code: "ENTITLEMENT_INACTIVE" };
-  if (validUntil != null && (!Number.isFinite(validUntil) || now >= validUntil)) {
-    return { ok: false, code: "ENTITLEMENT_INACTIVE" };
-  }
-
-  if (row.meter_id !== MCP_METER_ID) return { ok: false, code: "METER_INVALID" };
-  if (!["CALENDAR_MONTH", "LIFETIME", "NONE"].includes(row.period_kind)) {
-    return { ok: false, code: "PERIOD_KIND_INVALID" };
-  }
-
   const grants = await grantsForPlan(env, row.plan_code);
-  const limit = row.period_kind === "NONE" ? null : Number(row.unit_limit);
-  if (limit != null && (!Number.isInteger(limit) || limit < 1)) {
-    return { ok: false, code: "USAGE_POLICY_INVALID" };
+  return finalizeMcpProductContext(row, normalizedIssuer, subject, grants);
+}
+
+async function mcpTransientProductContext(
+  env,
+  issuer,
+  oidcSubject,
+  bootstrap = null,
+) {
+  const normalizedIssuer = normalizeIssuer(issuer);
+  const subject = cleanOpaque(oidcSubject, 512);
+  let row = await env.PRODUCT_DB.prepare(
+    `SELECT
+       u.subject_id,
+       u.tenant_id,
+       u.state AS subject_state,
+       u.role,
+       b.provider_code,
+       t.display_name AS tenant_name,
+       t.state AS tenant_state,
+       e.entitlement_id,
+       e.subject_id AS entitlement_subject_id,
+       e.state AS entitlement_state,
+       e.valid_from_utc,
+       e.valid_until_utc,
+       p.plan_code,
+       p.display_name AS plan_name,
+       p.meter_id,
+       p.period_kind,
+       p.unit_limit,
+       p.state AS plan_state,
+       (
+         SELECT json_group_array(pg.grant_code)
+           FROM plan_grants pg
+          WHERE pg.plan_code = p.plan_code
+       ) AS grants_json,
+       (
+         SELECT json_object(
+           'device_id', d.device_id,
+           'tenant_id', d.tenant_id,
+           'state', d.state,
+           'tunnel_mode', d.tunnel_mode,
+           'last_seen_at_utc', d.last_seen_at_utc,
+           'revoked_at_utc', d.revoked_at_utc
+         )
+           FROM commander_device_selections s
+           JOIN commander_devices d ON d.device_id = s.device_id
+          WHERE s.tenant_id = u.tenant_id
+            AND s.subject_id = u.subject_id
+            AND d.tenant_id = s.tenant_id
+            AND d.state = 'ACTIVE'
+            AND d.revoked_at_utc IS NULL
+          LIMIT 1
+       ) AS selected_device_json
+     FROM identity_bindings b
+     JOIN users u ON u.subject_id = b.subject_id
+     JOIN tenants t ON t.tenant_id = u.tenant_id
+     JOIN entitlements e
+       ON e.tenant_id = u.tenant_id
+      AND (e.subject_id IS NULL OR e.subject_id = u.subject_id)
+     JOIN plans p ON p.plan_code = e.plan_code
+    WHERE b.issuer = ?
+      AND b.external_subject = ?
+      AND b.state = 'ACTIVE'
+    ORDER BY CASE WHEN e.subject_id = u.subject_id THEN 0 ELSE 1 END
+    LIMIT 1`
+  ).bind(normalizedIssuer, subject).first();
+
+  if (!row && bootstrap) {
+    const binding = await ensureSecondaryMcpBinding(env, {
+      issuer: normalizedIssuer,
+      oidcSubject: subject,
+      providerCode: bootstrap.provider_code,
+      email: bootstrap.email,
+    });
+    if (!binding.ok) return binding;
+    return mcpTransientProductContext(env, normalizedIssuer, subject, null);
+  }
+  if (!row) return { ok: false, code: "IDENTITY_NOT_PROVISIONED" };
+
+  let grants;
+  let selectedDevice = null;
+  try {
+    grants = JSON.parse(String(row.grants_json || "[]"));
+    if (row.selected_device_json) {
+      selectedDevice = JSON.parse(String(row.selected_device_json));
+    }
+  } catch (_error) {
+    return { ok: false, code: "PRODUCT_CONTEXT_INVALID" };
   }
 
-  return {
-    ok: true,
-    issuer: normalizedIssuer,
-    oidc_subject: subject,
-    subject_id: row.subject_id,
-    tenant_id: row.tenant_id,
-    role: row.role,
-    tenant_name: row.tenant_name,
-    entitlement_id: row.entitlement_id,
-    plan_code: row.plan_code,
-    plan_name: row.plan_name,
-    meter_id: row.meter_id,
-    period_kind: row.period_kind,
-    unit_limit: limit,
+  const context = finalizeMcpProductContext(
+    row,
+    normalizedIssuer,
+    subject,
     grants,
+  );
+  if (!context.ok) return context;
+  return {
+    ...context,
+    selected_device: selectedDevice,
   };
 }
 
@@ -2363,6 +2475,7 @@ export default {
         TRANSIENT_QUOTA_COMMIT_FAILED: 502,
         TRANSIENT_COMMITTED_RECEIPT_INVALID: 409,
         TRANSIENT_REPLAY_RECEIPT_MISMATCH: 409,
+        PRODUCT_CONTEXT_INVALID: 500,
         REQUEST_USAGE_TERMINAL: 409,
         QUOTA_DENIED: 429,
         QUOTA_EXCEEDED: 429,
