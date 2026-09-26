@@ -497,7 +497,7 @@ test -f "$pidfile"
 pid="$(cat "$pidfile")"
 case "$pid" in (*[!0-9]*|'') exit 31;; esac
 if kill -0 "$pid" 2>/dev/null; then
-  cmdline="$(tr '\0' ' ' < "/proc/$pid/cmdline")"
+  cmdline="$(tr '\\0' ' ' < "/proc/$pid/cmdline")"
   expected={quote_shell(source)}
   case "$cmdline" in *"$expected"*) ;; *) exit 32;; esac
   kill -TERM "$pid"
