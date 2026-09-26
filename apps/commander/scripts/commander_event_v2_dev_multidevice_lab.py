@@ -39,6 +39,8 @@ DEFAULT_TARGET_HOST = "nucleo-a"
 REMOTE_BASE = "/tmp_hara/commander-event-v2-multidevice"
 MIN_DEVICES = 2
 MAX_DEVICES = 50
+D1_FIXTURE_BATCH_SIZE = 10
+D1_SELECTION_BATCH_SIZE = 25
 
 SOURCE_FILES = (
     "apps/commander/experimental/event_v2_websocket.py",
@@ -114,16 +116,30 @@ def load_dev_config() -> dict:
     return obj
 
 
-def d1_execute(sql: str) -> list[dict]:
-    proc = run([
-        "npx", "--yes", "wrangler@" + WRANGLER_VERSION,
-        "d1", "execute", DEV_DATABASE_NAME, "--remote",
-        "--config", str(DEV_CONFIG), "--json", "--command", sql,
-    ])
-    payload = json.loads(proc.stdout)
-    if not isinstance(payload, list) or not payload:
-        raise fail("MULTIDEVICE_D1_RESPONSE_INVALID")
-    return payload
+def d1_execute(
+    sql: str,
+    *,
+    stage: str,
+    retry_read_only: bool = False,
+) -> list[dict]:
+    attempts = 2 if retry_read_only else 1
+    last_error = None
+    for attempt in range(attempts):
+        try:
+            proc = run([
+                "npx", "--yes", "wrangler@" + WRANGLER_VERSION,
+                "d1", "execute", DEV_DATABASE_NAME, "--remote",
+                "--config", str(DEV_CONFIG), "--json", "--command", sql,
+            ])
+            payload = json.loads(proc.stdout)
+            if not isinstance(payload, list) or not payload:
+                raise fail("MULTIDEVICE_D1_RESPONSE_INVALID")
+            return payload
+        except (LabError, json.JSONDecodeError) as exc:
+            last_error = exc
+            if not retry_read_only or attempt + 1 >= attempts:
+                break
+    raise fail("MULTIDEVICE_D1_" + stage + "_FAILED") from last_error
 
 
 def d1_rows(payload: list[dict]) -> list[dict]:
@@ -173,7 +189,7 @@ SELECT u.tenant_id, e.plan_code
  ORDER BY CASE WHEN e.subject_id = u.subject_id THEN 0 ELSE 1 END
  LIMIT 1;
 """
-    rows = d1_rows(d1_execute(sql))
+    rows = d1_rows(d1_execute(sql, stage="TEMPLATE_CONTEXT_QUERY", retry_read_only=True))
     if len(rows) != 1:
         raise fail("MULTIDEVICE_TEMPLATE_CONTEXT_INVALID")
     tenant_id = str(rows[0].get("tenant_id") or "")
@@ -274,7 +290,8 @@ VALUES
             "subject": external_subject,
             "pairing_token": pairing_token,
         })
-    d1_execute("\n".join(statements))
+    for offset in range(0, len(statements), D1_FIXTURE_BATCH_SIZE):
+        d1_execute("\n".join(statements[offset:offset + D1_FIXTURE_BATCH_SIZE]), stage="FIXTURE_BATCH")
     return fixtures
 
 
@@ -306,28 +323,30 @@ def enroll(pairing_token: str, name: str) -> tuple[str, str]:
 
 
 def select_devices(tenant_id: str, devices: list[dict]) -> None:
-    values = []
-    selected_at = utcnow()
-    for row in devices:
-        values.append(
-            "("
-            + ",".join((
-                quote_sql(tenant_id),
-                quote_sql(str(row["subject_id"])),
-                quote_sql(str(row["device_id"])),
-                quote_sql(selected_at),
-            ))
-            + ")"
-        )
-    if not values:
+    if not devices:
         raise fail("MULTIDEVICE_SELECTION_EMPTY")
-    d1_execute(
-        "INSERT INTO commander_device_selections "
-        "(tenant_id, subject_id, device_id, selected_at_utc) VALUES "
-        + ",".join(values)
-        + " ON CONFLICT(tenant_id, subject_id) DO UPDATE SET "
-          "device_id=excluded.device_id, selected_at_utc=excluded.selected_at_utc;"
-    )
+    selected_at = utcnow()
+    for offset in range(0, len(devices), D1_SELECTION_BATCH_SIZE):
+        values = []
+        for row in devices[offset:offset + D1_SELECTION_BATCH_SIZE]:
+            values.append(
+                "("
+                + ",".join((
+                    quote_sql(tenant_id),
+                    quote_sql(str(row["subject_id"])),
+                    quote_sql(str(row["device_id"])),
+                    quote_sql(selected_at),
+                ))
+                + ")"
+            )
+        d1_execute(
+            "INSERT INTO commander_device_selections "
+            "(tenant_id, subject_id, device_id, selected_at_utc) VALUES "
+            + ",".join(values)
+            + " ON CONFLICT(tenant_id, subject_id) DO UPDATE SET "
+              "device_id=excluded.device_id, selected_at_utc=excluded.selected_at_utc;",
+            stage="SELECTION_BATCH",
+        )
 
 
 def write_device_config(target: str, root: str, index: int, device_id: str, device_token: str) -> None:
@@ -548,6 +567,8 @@ printf 'MULTIDEVICE_AGENT_STOPPED=TRUE\n'
 def self_check() -> None:
     load_dev_config()
     assert MIN_DEVICES == 2 and MAX_DEVICES == 50
+    assert D1_FIXTURE_BATCH_SIZE == 10
+    assert D1_SELECTION_BATCH_SIZE == 25
     assert remote_root("md-20260926123456-1234abcd").startswith("/tmp_hara/")
     assert worker_sha256("abc") == "ungWv48Bz-pBQUDeXa4iI7ADYaOWF3qctBD_YfIAFa0"
     for item in SOURCE_FILES:
@@ -555,6 +576,10 @@ def self_check() -> None:
     source = Path(__file__).read_text(encoding="utf-8")
     assert "create_subjects_and_pairings" in source
     assert "select_devices" in source
+    assert "TEMPLATE_CONTEXT_QUERY" in source
+    assert "FIXTURE_BATCH" in source
+    assert "SELECTION_BATCH" in source
+    assert "retry_read_only=True" in source
     tree = ast.parse(source)
     for node in ast.walk(tree):
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "print":
@@ -570,6 +595,8 @@ def self_check() -> None:
     assert forbidden_prod not in source
     print("COMMANDER_EVENT_V2_MULTIDEVICE_LAB_SOURCE=PASS")
     print("COMMANDER_EVENT_V2_MULTIDEVICE_MAX_DEVICES=50")
+    print("COMMANDER_EVENT_V2_MULTIDEVICE_D1_FIXTURE_BATCH_SIZE=10")
+    print("COMMANDER_EVENT_V2_MULTIDEVICE_D1_SELECTION_BATCH_SIZE=25")
     print("COMMANDER_EVENT_V2_MULTIDEVICE_DISTINCT_IDENTITIES=REQUIRED")
     print("COMMANDER_EVENT_V2_MULTIDEVICE_SECRET_OUTPUT=ABSENT")
     print("COMMANDER_EVENT_V2_MULTIDEVICE_AUTO_DELETE=ABSENT")
