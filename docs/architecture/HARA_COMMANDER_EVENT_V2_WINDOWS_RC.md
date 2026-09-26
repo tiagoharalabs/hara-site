@@ -51,7 +51,7 @@ Requirements:
 - CALL_AVAILABLE is a wake hint only;
 - D1 remains durable call truth;
 - reconnect performs bounded durable reconciliation;
-- full-jitter reconnect remains bounded;
+- full-jitter reconnect remains bounded with a 10s initial window / 15s ceiling;
 - exactly five governed tools;
 - arbitrary shell/filesystem remains denied.
 
@@ -88,9 +88,11 @@ Before `EVENT_V2` may become runnable in the Windows RC:
 6. Durable reconnect reconciliation is bounded.
 7. Five-tool / receipt parity is proven.
 8. Update/install rollback preserves the existing encrypted device identity.
-9. Scheduled Task transition never permits two agents using the same credential.
-10. Live Windows canary passes.
-11. Public installer/manifest still remain V1 until an explicit later release gate.
+9. RC installation leaves its Scheduled Task disabled/inert until explicit activation.
+10. Event V2 activation is fail-closed to the canonical DEV origin.
+11. Scheduled Task transition never permits two agents using the same credential.
+12. Live Windows canary passes.
+13. Public installer/manifest still remain V1 until an explicit later release gate.
 
 ## Current non-claim
 
@@ -139,7 +141,7 @@ The adapter then overrides only the Event V2 customer-plane semantics:
 - D1 durable queue remains execution truth;
 - `CALL_AVAILABLE` remains wake-only;
 - bounded reconciliation drain = 8;
-- reconnect uses full jitter, 1s base / 15s ceiling;
+- reconnect uses full jitter, 10s initial window / 15s ceiling;
 - local event connection status is content-free;
 - idle 2s HTTP polling is absent;
 - 30s HTTP heartbeat is absent;

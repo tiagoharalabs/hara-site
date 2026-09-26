@@ -3,9 +3,9 @@ param([switch]$SelfTest)
 $ErrorActionPreference = "Stop"
 
 $Here = Split-Path -Parent $MyInvocation.MyCommand.Path
-$CommanderRoot = Split-Path -Parent $Here
-$StableAgent = Join-Path $CommanderRoot "public\agent\windows.ps1"
-$TransportPath = Join-Path $CommanderRoot "experimental\event_v2_windows_transport.ps1"
+$StableRoot = Join-Path $env:LOCALAPPDATA "HARA Commander"
+$StableAgent = Join-Path $StableRoot "hara-commander-agent.ps1"
+$TransportPath = Join-Path $Here "event_v2_windows_transport.ps1"
 
 $Root = Join-Path $env:LOCALAPPDATA "HARA Commander"
 $ConfigPath = Join-Path $Root "device.json"
@@ -19,7 +19,7 @@ $ExecutionAuthority = "HARA_COMMANDER_AGENT"
 $TransportMode = "EVENT_V2"
 $MaxDrainCalls = 8
 $StableConnectionSeconds = 60
-$ReconnectBaseSeconds = 1
+$ReconnectBaseSeconds = 10
 $ReconnectMaxSeconds = 15
 $DurableLivenessSeconds = 21600
 
@@ -276,6 +276,7 @@ function Invoke-ConnectedSession($Cfg,[string]$Token) {
 
 function Invoke-AgentSelfTest {
   if ($MaxDrainCalls -ne 8) { throw "WINDOWS_EVENT_V2_DRAIN_BOUND_INVALID" }
+  if ($ReconnectBaseSeconds -ne 10) { throw "WINDOWS_EVENT_V2_RECONNECT_BASE_INVALID" }
   if ($ReconnectMaxSeconds -ne 15) { throw "WINDOWS_EVENT_V2_RECONNECT_MAX_INVALID" }
   if ($DurableLivenessSeconds -ne 21600) { throw "WINDOWS_EVENT_V2_LIVENESS_INVALID" }
 

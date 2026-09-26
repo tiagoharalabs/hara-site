@@ -14,6 +14,7 @@ $RcAgent = Join-Path $RcRoot "windows_agent_rc.ps1"
 $RcEventAgent = Join-Path $RcRoot "event_v2_windows_agent.ps1"
 $RcTransport = Join-Path $RcRoot "event_v2_windows_transport.ps1"
 $EventStatus = Join-Path $StableRoot "event-v2-status.json"
+$ExpectedDevOrigin = "https://hara-commander-dev-v2.tiago-sartori.workers.dev"
 
 $Here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $CommanderRoot = Split-Path -Parent $Here
@@ -56,6 +57,20 @@ function Get-TaskState([string]$Name) {
 
 function Stop-TaskSafe([string]$Name) {
   Stop-ScheduledTask -TaskName $Name -ErrorAction SilentlyContinue
+  for ($i=0; $i -lt 10; $i++) {
+    $task = Get-ScheduledTask -TaskName $Name -ErrorAction SilentlyContinue
+    if (-not $task -or [string]$task.State -ne "Running") { return }
+    Start-Sleep -Seconds 1
+  }
+  throw "WINDOWS_RC_TASK_STOP_FAILED"
+}
+
+function Disable-TaskSafe([string]$Name) {
+  Disable-ScheduledTask -TaskName $Name -ErrorAction Stop | Out-Null
+}
+
+function Enable-TaskRequired([string]$Name) {
+  Enable-ScheduledTask -TaskName $Name -ErrorAction Stop | Out-Null
 }
 
 function Start-TaskRequired([string]$Name) {
@@ -97,9 +112,11 @@ function Wait-EventConnection([string]$PreviousUpdated,[int]$Seconds=20) {
 
 function Rollback-ToStable {
   Stop-TaskSafe $RcTaskName
+  Disable-TaskSafe $RcTaskName
   if (-not (Get-ScheduledTask -TaskName $StableTaskName -ErrorAction SilentlyContinue)) {
     throw "WINDOWS_RC_STABLE_TASK_MISSING"
   }
+  Enable-TaskRequired $StableTaskName
   Start-TaskRequired $StableTaskName
   Write-Host "COMMANDER_WINDOWS_RC_ROLLBACK=PASS"
   Write-Host "COMMANDER_WINDOWS_RC_STABLE_TASK=ACTIVE"
@@ -132,17 +149,25 @@ function Install-Rc {
 
   Register-ScheduledTask -TaskName $RcTaskName -Action $taskAction -Trigger $trigger -Settings $settings -Description "HARA Commander Event V2 RC - opt-in only" -Force | Out-Null
   Stop-TaskSafe $RcTaskName
+  Disable-TaskSafe $RcTaskName
+  if ((Get-TaskState $RcTaskName) -ne "Disabled") {
+    throw "WINDOWS_RC_INSTALL_NOT_INERT"
+  }
 
   Write-Host "COMMANDER_WINDOWS_RC_INSTALL=PASS"
   Write-Host "COMMANDER_WINDOWS_RC_DEFAULT_TRANSPORT=POLL_V1"
   Write-Host "COMMANDER_WINDOWS_RC_AUTO_START=FALSE"
   Write-Host "COMMANDER_WINDOWS_RC_REUSES_EXISTING_IDENTITY=TRUE"
+  Write-Host "COMMANDER_WINDOWS_RC_EVENT_V2_ORIGIN=DEV_ONLY"
   Write-Host "COMMANDER_WINDOWS_RC_DEVICE_REPAIRING=FALSE"
   Write-Host "COMMANDER_WINDOWS_RC_TOKEN_EXPOSED=FALSE"
 }
 
 function Activate-EventV2 {
-  Assert-ExistingIdentity | Out-Null
+  $cfg = Assert-ExistingIdentity
+  if ([string]$cfg.base_url -ne $ExpectedDevOrigin) {
+    throw "WINDOWS_RC_DEV_ORIGIN_REQUIRED"
+  }
   if (-not (Get-ScheduledTask -TaskName $RcTaskName -ErrorAction SilentlyContinue)) {
     throw "WINDOWS_RC_NOT_INSTALLED"
   }
@@ -151,14 +176,16 @@ function Activate-EventV2 {
   }
 
   $previous = Get-EventStatusUpdated
-  Stop-TaskSafe $StableTaskName
 
   try {
+    Stop-TaskSafe $StableTaskName
+    Disable-TaskSafe $StableTaskName
+    Enable-TaskRequired $RcTaskName
     Start-TaskRequired $RcTaskName
     if (-not (Wait-EventConnection $previous 20)) {
       throw "WINDOWS_RC_EVENT_V2_CONNECTION_ATTESTATION_FAILED"
     }
-    if ((Get-TaskState $StableTaskName) -eq "Running") {
+    if ((Get-TaskState $StableTaskName) -ne "Disabled") {
       throw "WINDOWS_RC_DUAL_AGENT_DENIED"
     }
   } catch {
@@ -167,6 +194,7 @@ function Activate-EventV2 {
   }
 
   Write-Host "COMMANDER_WINDOWS_RC_EVENT_V2_ACTIVATION=PASS"
+  Write-Host "COMMANDER_WINDOWS_RC_EVENT_V2_ORIGIN=DEV_ONLY"
   Write-Host "COMMANDER_WINDOWS_RC_EVENT_V2_CONNECTION_ATTESTATION=PASS"
   Write-Host "COMMANDER_WINDOWS_RC_TRANSPORT=EVENT_V2"
   Write-Host "COMMANDER_WINDOWS_RC_STABLE_TASK=INACTIVE"
