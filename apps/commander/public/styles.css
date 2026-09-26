@@ -742,3 +742,133 @@ html:not([data-theme="dark"])[data-neon="on"] .side-nav button.active .nav-icon{
   stroke:#239bd8;
   filter:drop-shadow(0 0 5px rgba(57,162,223,.52)) drop-shadow(0 0 10px rgba(57,162,223,.20));
 }
+
+
+/* H.A.R.A Commander Neon final glow contract v5.
+   Presentation only: no added animation. OFF zero; light blue; dark gold. */
+
+/* OFF: remove every luminous halo from the Neon-controlled surfaces. */
+html[data-neon="off"] .neon-toggle,
+html[data-neon="off"] .btn-primary,
+html[data-neon="off"] .theme-toggle,
+html[data-neon="off"] .top-session-user,
+html[data-neon="off"] .side-nav button,
+html[data-neon="off"] .side-nav-link,
+html[data-neon="off"] .side-nav button::before,
+html[data-neon="off"] .device-row.selected,
+html[data-neon="off"] .device-tabs button.active,
+html[data-neon="off"] .os-picker button.active,
+html[data-neon="off"] .device-state.online,
+html[data-neon="off"] .status-pill{
+  box-shadow:none;
+}
+html[data-neon="off"] .neon-icon,
+html[data-neon="off"] .brand img,
+html[data-neon="off"] .side-nav .nav-icon{
+  filter:none;
+}
+html[data-neon="off"] .brand-copy b,
+html[data-neon="off"] .brand-copy em{
+  text-shadow:none;
+}
+
+/* LIGHT + ON: blue/cyan. */
+html[data-theme="light"][data-neon="on"] .neon-toggle,
+html:not([data-theme="dark"])[data-neon="on"] .neon-toggle{
+  color:#39a2df;
+  border-color:rgba(57,162,223,.58);
+  background:#edf9ff;
+  box-shadow:0 0 10px rgba(57,162,223,.30),0 0 20px rgba(57,162,223,.13);
+}
+html[data-theme="light"][data-neon="on"] .neon-icon,
+html:not([data-theme="dark"])[data-neon="on"] .neon-icon{
+  filter:drop-shadow(0 0 5px rgba(57,162,223,.90)) drop-shadow(0 0 11px rgba(57,162,223,.40));
+}
+html[data-theme="light"][data-neon="on"] .brand img,
+html:not([data-theme="dark"])[data-neon="on"] .brand img{
+  filter:drop-shadow(0 0 6px rgba(57,162,223,.68)) drop-shadow(0 0 14px rgba(57,162,223,.38)) drop-shadow(0 0 26px rgba(57,162,223,.16));
+}
+html[data-theme="light"][data-neon="on"] .brand-copy b,
+html:not([data-theme="dark"])[data-neon="on"] .brand-copy b{
+  color:#143b53;
+  text-shadow:0 0 7px rgba(57,162,223,.25),0 0 15px rgba(57,162,223,.10);
+}
+html[data-theme="light"][data-neon="on"] .brand-copy em,
+html:not([data-theme="dark"])[data-neon="on"] .brand-copy em{
+  color:#239bd8;
+  text-shadow:0 0 8px rgba(57,162,223,.48),0 0 18px rgba(57,162,223,.20);
+}
+html[data-theme="light"][data-neon="on"] .btn-primary,
+html:not([data-theme="dark"])[data-neon="on"] .btn-primary{
+  box-shadow:0 6px 18px rgba(51,150,205,.22),0 0 16px rgba(57,162,223,.18);
+}
+html[data-theme="light"][data-neon="on"] .side-nav button.active,
+html:not([data-theme="dark"])[data-neon="on"] .side-nav button.active{
+  box-shadow:inset 0 0 0 1px rgba(57,162,223,.22),0 0 12px rgba(57,162,223,.25),0 0 24px rgba(57,162,223,.10);
+}
+html[data-theme="light"][data-neon="on"] .side-nav button.active::before,
+html:not([data-theme="dark"])[data-neon="on"] .side-nav button.active::before{
+  background:#39a2df;
+  box-shadow:0 0 7px rgba(57,162,223,.56),0 0 14px rgba(57,162,223,.22);
+}
+html[data-theme="light"][data-neon="on"] .side-nav button.active .nav-icon,
+html:not([data-theme="dark"])[data-neon="on"] .side-nav button.active .nav-icon{
+  stroke:#239bd8;
+  filter:drop-shadow(0 0 5px rgba(57,162,223,.56)) drop-shadow(0 0 10px rgba(57,162,223,.22));
+}
+html[data-theme="light"][data-neon="on"] .theme-toggle,
+html[data-theme="light"][data-neon="on"] .top-session-user,
+html[data-theme="light"][data-neon="on"] .device-row.selected,
+html[data-theme="light"][data-neon="on"] .device-tabs button.active,
+html[data-theme="light"][data-neon="on"] .os-picker button.active,
+html:not([data-theme="dark"])[data-neon="on"] .theme-toggle,
+html:not([data-theme="dark"])[data-neon="on"] .top-session-user,
+html:not([data-theme="dark"])[data-neon="on"] .device-row.selected,
+html:not([data-theme="dark"])[data-neon="on"] .device-tabs button.active,
+html:not([data-theme="dark"])[data-neon="on"] .os-picker button.active{
+  box-shadow:0 0 10px rgba(57,162,223,.12);
+}
+
+/* DARK + ON: gold halo, while Commander text remains light/white. */
+html[data-theme="dark"][data-neon="on"] .neon-toggle{
+  color:#ffc83d;
+  border-color:rgba(255,200,61,.52);
+  background:#102c3d;
+  box-shadow:0 0 10px rgba(255,200,61,.26),0 0 20px rgba(255,200,61,.11);
+}
+html[data-theme="dark"][data-neon="on"] .neon-icon{
+  filter:drop-shadow(0 0 5px rgba(255,200,61,.90)) drop-shadow(0 0 11px rgba(255,200,61,.40));
+}
+html[data-theme="dark"][data-neon="on"] .brand img{
+  filter:drop-shadow(0 0 6px rgba(255,200,61,.66)) drop-shadow(0 0 14px rgba(255,200,61,.36)) drop-shadow(0 0 26px rgba(255,200,61,.15));
+}
+html[data-theme="dark"][data-neon="on"] .brand-copy b{
+  color:#f2f8fb;
+  text-shadow:0 0 7px rgba(255,200,61,.20),0 0 15px rgba(255,200,61,.08);
+}
+html[data-theme="dark"][data-neon="on"] .brand-copy em{
+  color:#f2f8fb;
+  text-shadow:0 0 8px rgba(255,200,61,.34),0 0 18px rgba(255,200,61,.14);
+}
+html[data-theme="dark"][data-neon="on"] .btn-primary{
+  box-shadow:0 6px 18px rgba(233,177,40,.23),0 0 16px rgba(255,200,61,.18);
+}
+html[data-theme="dark"][data-neon="on"] .side-nav button.active{
+  color:#fff;
+  box-shadow:inset 0 0 0 1px rgba(255,200,61,.18),0 0 12px rgba(255,200,61,.20),0 0 24px rgba(255,200,61,.08);
+}
+html[data-theme="dark"][data-neon="on"] .side-nav button.active::before{
+  background:#ffc83d;
+  box-shadow:0 0 7px rgba(255,200,61,.50),0 0 14px rgba(255,200,61,.20);
+}
+html[data-theme="dark"][data-neon="on"] .side-nav button.active .nav-icon{
+  stroke:#f2f8fb;
+  filter:drop-shadow(0 0 5px rgba(255,200,61,.44)) drop-shadow(0 0 10px rgba(255,200,61,.18));
+}
+html[data-theme="dark"][data-neon="on"] .theme-toggle,
+html[data-theme="dark"][data-neon="on"] .top-session-user,
+html[data-theme="dark"][data-neon="on"] .device-row.selected,
+html[data-theme="dark"][data-neon="on"] .device-tabs button.active,
+html[data-theme="dark"][data-neon="on"] .os-picker button.active{
+  box-shadow:0 0 10px rgba(255,200,61,.10);
+}
