@@ -73,4 +73,5 @@ jobs:
           python3 apps/commander/scripts/validate_event_v2_websocket_client.py
           python3 apps/commander/scripts/commander_event_v2_dev_canary_provision.py --check
           python3 apps/commander/scripts/commander_event_v2_dev_wake_probe.py --check
+          python3 apps/commander/scripts/provision_dev_canary_mcp_token.py --check
           python3 apps/commander/scripts/validate_customer_privacy_noc_contract.py
