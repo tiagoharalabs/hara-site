@@ -12,6 +12,7 @@ import argparse
 import hashlib
 import importlib.util
 import json
+import sys
 from collections import Counter
 from pathlib import Path
 
@@ -24,6 +25,7 @@ def load_transport():
     if spec is None or spec.loader is None:
         raise RuntimeError("RECONNECT_MODEL_IMPORT_FAILED")
     module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     return module
 
