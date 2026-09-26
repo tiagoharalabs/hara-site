@@ -257,23 +257,33 @@ The existing `PASS_10_DEVICES` proof remains canonical until a separate
 50-device live run passes and is published.
 
 
-## 50-device provisioning batch fix
+## 50-device provisioning hardening
 
 The first 50-device provisioning attempt was intentionally blocked before any
-agent start because the one-shot D1 fixture batch failed through Wrangler.
+agent start with the old generic error `MULTIDEVICE_COMMAND_FAILED:npx`.
 
 Fresh D1 readback showed no partial new 50-device fixture rows; only the prior
-10-device proof rows existed. The failed remote run root is preserved under
-`/tmp_hara` and is not auto-deleted.
+10-device proof rows existed. A fresh filesystem census also found no new
+50-device run root, which means the failure happened before remote source staging
+and may have been the read-only template-context D1 lookup rather than the later
+fixture batch.
 
-The source now uses explicit bounded D1 chunks:
+The source is therefore hardened in two independent ways:
 
 ```text
 D1_FIXTURE_BATCH_SIZE=10
 D1_SELECTION_BATCH_SIZE=25
+TEMPLATE_CONTEXT_READ_RETRY=BOUNDED_2_ATTEMPTS
+WRITE_RETRY=DENY
+D1_FAILURE_STAGE_CODES=ENABLED
 FAILED_50_AGENT_STARTS=0
 FAILED_50_PARTIAL_D1_FIXTURE_ROWS=0
 AUTO_DELETE=ABSENT
 ```
 
-The 50-device live rung must be retried only after this fix passes CI.
+Only the read-only template lookup may retry once. Fixture/selection writes do
+not auto-retry because write failure is treated as potentially ambiguous. Future
+failures identify `TEMPLATE_CONTEXT_QUERY`, `FIXTURE_BATCH`, or
+`SELECTION_BATCH` without printing SQL or secrets.
+
+The 50-device live rung must be retried only after this hardening passes CI.
