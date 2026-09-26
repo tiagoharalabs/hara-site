@@ -302,6 +302,31 @@ D1_MIGRATION_REQUIRED=FALSE
 This is a source/query-plan optimization only. D1 remains durable truth and all
 queue, expiry, tenant, subject and revocation predicates remain unchanged.
 
+## 10.2 Active-workload budget for the first 1k target
+
+The canonical 30-call DEV run with the 500ms settle returned 26/30 terminal
+results directly from enqueue and required only 4 status polls total. The
+active-load budget preserves that measured status-poll ratio as a regression
+baseline, not as an SLA.
+
+The deterministic model lives at:
+
+```text
+apps/commander/scripts/commander_event_v2_active_1k_model.py
+```
+
+It reports 1, 10 and 100 calls/device/day for 1,000 devices and separates:
+
+- enqueue/status/claim/complete HTTP request shape;
+- isolated-call versus packed-8 drain behavior;
+- per-call DeviceChannel notify request equivalents;
+- six-hour liveness request equivalents;
+- comparison against the old V1 idle HTTP baseline.
+
+D1 rows read/written are intentionally not guessed from statement counts. That
+dimension remains MEASURE_LIVE using D1 query metadata before any higher-scale
+claim.
+
 ## 11. Capacity acceptance
 
 A 20k claim requires measurements, not architecture prose.

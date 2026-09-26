@@ -8,15 +8,22 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 MODEL = ROOT / "commander_scale_capacity_model.py"
+ACTIVE_MODEL = ROOT / "commander_event_v2_active_1k_model.py"
 
 
 def load_model():
     return runpy.run_path(str(MODEL))
 
 
+def load_active_model():
+    return runpy.run_path(str(ACTIVE_MODEL))
+
+
 def main() -> int:
     model = load_model()
     model["self_check"]()
+    active = load_active_model()
+    active["self_check"]()
 
     expected = {
         100: 50.0,
@@ -36,7 +43,16 @@ def main() -> int:
     print("COMMANDER_SCALE_MODEL_REGRESSION=PASS")
     print("COMMANDER_SCALE_20K_V1_IDLE_POLL_RPS=10000")
     print("COMMANDER_SCALE_20K_V1_BASELINE_REQUESTS_DAY=921600000")
+    ten = active["active_budget"](1_000, 10)
+    hundred = active["active_budget"](1_000, 100)
+    assert round(ten.worker_http_per_day_isolated) == 41_333
+    assert round(hundred.worker_http_per_day_isolated) == 413_333
+    assert ten.do_request_equivalents_per_day == 10_200
+
     print("COMMANDER_SCALE_EVENT_V2_IDLE_CALL_POLL_RPS=0")
+    print("COMMANDER_SCALE_EVENT_V2_ACTIVE_1K_MODEL=PASS")
+    print("COMMANDER_SCALE_EVENT_V2_1K_10_CALLS_DEVICE_DAY_HTTP=41333")
+    print("COMMANDER_SCALE_EVENT_V2_1K_100_CALLS_DEVICE_DAY_HTTP=413333")
     return 0
 
 
