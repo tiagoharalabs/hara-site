@@ -3,7 +3,7 @@
 **Timestamp:** 2026-09-26T03:16Z  
 **Repository:** `tiagoharalabs/hara-site`  
 **Primary owner:** #163 — **Event V2 implementation, transport optimization, Cloud cost and scale engineering**  
-**Product test/acceptance owner:** **Commander Product Hardening & Launch**  
+**Product test/acceptance owner:** **#240 — Commander Product Hardening Windows RC acceptance + launch regression**  
 **Successor entrypoint:** this document  
 **Related owners:** #167 human/session cost only; hara-platform#851 product acceptance; hara-platform#1000 stable Agent capability; hara-platform#1486 customer MCP auth/cost; hara-platform#1533 Commander NOC contract  
 **PROD cutover:** **DENY**
@@ -428,8 +428,8 @@ Customer prompts, commands/results, files and secrets must not become routine HA
 
 ```text
 #163=SOLE_EVENT_V2_IMPLEMENTATION_OPTIMIZATION_OWNER
-COMMANDER_PRODUCT_HARDENING_LAUNCH=SOLE_PRODUCT_TEST_ACCEPTANCE_LAUNCH_OWNER
-WINDOWS_LIVE_CANARY_EXECUTION_OWNER=COMMANDER_PRODUCT_HARDENING_LAUNCH
+#240=SOLE_WINDOWS_PRODUCT_TEST_ACCEPTANCE_LAUNCH_OWNER
+WINDOWS_LIVE_CANARY_EXECUTION_OWNER=#240
 EVENT_V2_DEFECT_REMEDIATION_OWNER=#163
 #167=HUMAN_SESSION_IDENTITY_COST_ONLY
 #172=DRAFT_FUTURE_10K_EVIDENCE_DO_NOT_MERGE_NOW
