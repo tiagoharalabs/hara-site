@@ -59,6 +59,7 @@ jobs:
         run: |
           set -Eeuo pipefail
           python3 apps/commander/scripts/commander_scale_capacity_model.py --check
+          python3 apps/commander/scripts/commander_event_v2_reconnect_storm_model.py --check
           python3 apps/commander/scripts/commander_human_scale_capacity_model.py --check
           python3 apps/commander/scripts/commander_telemetry_budget_model.py --check
           python3 apps/commander/scripts/validate_commander_scale_model.py
