@@ -42,7 +42,7 @@ auth_config_block = WORKER.split('if (url.pathname === "/api/portal/auth-config"
 need('return json({ configured: authStatus(env).configured });' in auth_config_block and 'provider:' not in auth_config_block and 'client_auth:' not in auth_config_block, "PUBLIC_AUTH_CONFIG_MINIMIZED")
 need('DEV_ENDPOINT_DISABLED: 404' in WORKER, "DEV_DISABLED_STATUS")
 need("auth-bootstrap-pending" in HTML, "AUTH_FIRST_PAINT")
-need("styles.css?v=20260925-neon2" in HTML, "STYLE_CACHE_KEY")
+need("styles.css?v=20260925-neon3" in HTML, "STYLE_CACHE_KEY")
 need("app.js?v=20260925-neon1" in HTML, "SCRIPT_CACHE_KEY")
 need(
     'class="neon-toggle"' in HTML
@@ -58,6 +58,12 @@ need(
     "0 6px 18px rgba(218,156,19,.20)" in CSS
     and "drop-shadow(0 0 5px rgba(240,184,46,.84))" in CSS,
     "NEON_ON_VISIBLE_GLOW",
+)
+need(
+    "H.A.R.A Neon theme color contract v3" in CSS
+    and "rgba(57,162,223,.86)" in CSS
+    and "rgba(255,200,61,.86)" in CSS,
+    "NEON_THEME_COLOR_CONTRACT",
 )
 need('const apiBase = localHost' in JS and ': location.origin;' in JS, "PROD_API_OVERRIDE_BLOCKED")
 need('const scenario = localHost' in JS, "PROD_SCENARIO_OVERRIDE_BLOCKED")
