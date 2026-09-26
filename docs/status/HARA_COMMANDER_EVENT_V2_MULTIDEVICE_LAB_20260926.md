@@ -682,3 +682,28 @@ This proof closes the bounded 10 -> 50 -> 100 progression requested by the
 successor handoff. It does not claim a higher-scale live proof or a cost-final
 heavy profile; live Durable Object duration remains gated on the dedicated
 Account Analytics Read token.
+
+
+## Lab lifecycle orchestration optimization
+
+After the terminal 100-device proof, the lab orchestration itself remains a
+tooling optimization target. The prior start/status/stop implementation issued
+SSH operations serially, which inflated observed orchestration time and must not
+be confused with Event V2 transport latency.
+
+The lab lifecycle is now bounded-parallel:
+
+```text
+LIFECYCLE_MAX_WORKERS=16
+START_PARALLEL=TRUE
+STATUS_PARALLEL=TRUE
+STOP_PARALLEL=TRUE
+ENROLLMENT_PARALLEL=FALSE
+ENROLL_MIN_INTERVAL_SECONDS=1.10
+RUNTIME_PRODUCT_CHANGE=FALSE
+PROD_MUTATION=FALSE
+```
+
+Enrollment remains paced and serial because it is governed by DEV rate-limit and
+pairing semantics. This change affects only H.A.R.A.-owned scale-lab
+orchestration; it does not change customer Event V2 transport/runtime behavior.
