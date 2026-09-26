@@ -220,7 +220,7 @@ Agent reconnect uses exponential backoff with full jitter and an upper bound.
 Source target:
 
 ```text
-RECONNECT_INITIAL_MAX=1s
+RECONNECT_INITIAL_MAX=10s
 RECONNECT_EXPONENTIAL=true
 RECONNECT_FULL_JITTER=true
 RECONNECT_MAX=15s
@@ -364,3 +364,36 @@ NOC_METADATA_ONLY=true
 
 This privacy boundary does not restrict deep monitoring of HARA-owned internal
 MCP/OpenAI engineering traffic.
+
+
+## 14. Reconnect-storm capacity guard
+
+The first Event V2 reconnect window is intentionally wider than the original
+1-second target.
+
+```text
+RECONNECT_BASE_SECONDS=10
+RECONNECT_MAX_SECONDS=15
+RECONNECT_FULL_JITTER=true
+```
+
+Reason: a fleet-wide network or edge interruption can disconnect every Agent at
+nearly the same instant. Full jitter over a 1-second first window still permits
+nearly the entire fleet to reconnect in one second. The 10-second first window
+reduces that synchronized pressure while keeping reconnect latency comfortably
+below the 50-second device-call TTL.
+
+The deterministic CI model
+`apps/commander/scripts/commander_event_v2_reconnect_storm_model.py`
+uses the real client policy and a stable entropy stream.
+
+Current modeled first-wave maxima:
+
+```text
+1,000 devices  -> <= 117 reconnect attempts in the busiest 1s bucket
+20,000 devices -> <= 2,052 reconnect attempts in the busiest 1s bucket
+```
+
+The 20k result is architecture headroom only. It does not by itself prove that
+a single D1 product database can absorb every reconnect presence write. D1 write
+pressure remains a separate guard because a single D1 database is serialized.
