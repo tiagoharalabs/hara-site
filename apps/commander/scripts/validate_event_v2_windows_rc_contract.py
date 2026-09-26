@@ -98,13 +98,17 @@ def main() -> int:
         "$ReconnectBaseSeconds = 10",
         "$ReconnectMaxSeconds = 15",
         "$DurableLivenessSeconds = 21600",
+        "$DurableLivenessJitterSeconds = 900",
+        "Get-DurableLivenessSeconds",
         '$ShutdownPipeName = "hara-commander-event-v2-rc-stop"',
         "WINDOWS_EVENT_V2_LOCAL_SHUTDOWN_REQUESTED",
         "COMMANDER_WINDOWS_EVENT_V2_COOPERATIVE_SHUTDOWN=READY",
-        "$livenessDelayMs = [int]($DurableLivenessSeconds * 1000)",
+        "$livenessIntervalSeconds = Get-DurableLivenessSeconds $Cfg",
+        "$livenessDelayMs = [int]($livenessIntervalSeconds * 1000)",
         "[Threading.Tasks.Task]::Delay($livenessDelayMs,$cts.Token)",
         "Send-EventV2Liveness $client $cts.Token",
         "COMMANDER_WINDOWS_EVENT_V2_DURABLE_LIVENESS_SECONDS=21600",
+        "COMMANDER_WINDOWS_EVENT_V2_DURABLE_LIVENESS_JITTER_SECONDS=900",
         "$cts.Cancel()",
         "Invoke-DurableDrain",
         "CALL_AVAILABLE",
@@ -124,6 +128,7 @@ def main() -> int:
     assert connected.count("Start-EventV2Receive $client $cts.Token") == 2
     assert connected.count("Send-EventV2Liveness $client $cts.Token") == 1
     assert connected.count("[Threading.Tasks.Task]::Delay($livenessDelayMs,$cts.Token)") == 2
+    assert connected.count("Get-DurableLivenessSeconds $Cfg") == 1
     assert connected.index("[Threading.Tasks.Task]::Delay($livenessDelayMs,$cts.Token)") < connected.index(
         "Send-EventV2Liveness $client $cts.Token"
     )

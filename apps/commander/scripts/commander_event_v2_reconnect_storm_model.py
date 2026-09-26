@@ -59,6 +59,23 @@ def offline_profile(devices: int) -> dict:
     }
 
 
+def liveness_profile(devices: int) -> dict:
+    # Same deterministic FNV distribution used by the Windows RC, across a
+    # 30-minute window centered on the six-hour durable-liveness target.
+    buckets = Counter(
+        fnv1a32(f"HARA-DEVICE-{index}") % 1801
+        for index in range(devices)
+    )
+    maximum = max(buckets.values())
+    return {
+        "devices": devices,
+        "spread_seconds": 1800,
+        "max_liveness_messages_in_1s_bucket": maximum,
+        "max_bucket_fraction": maximum / devices,
+        "nonempty_buckets": len(buckets),
+    }
+
+
 def attempt_profile(policy, devices: int, attempt: int) -> dict:
     delays = [policy.delay(attempt, entropy(i, attempt)) for i in range(devices)]
     buckets = Counter(int(delay) for delay in delays)
@@ -97,10 +114,14 @@ def self_check() -> None:
     twenty_k = attempt_profile(policy, 20_000, 0)
     offline_1k = offline_profile(1_000)
     offline_20k = offline_profile(20_000)
+    liveness_1k = liveness_profile(1_000)
+    liveness_20k = liveness_profile(20_000)
 
     assert offline_1k["max_offline_writes_in_1s_bucket"] == 39
     assert offline_20k["max_offline_writes_in_1s_bucket"] == 722
     assert offline_1k["max_offline_writes_in_1s_bucket"] <= 50
+    assert liveness_1k["max_liveness_messages_in_1s_bucket"] <= 3
+    assert liveness_20k["max_liveness_messages_in_1s_bucket"] <= 25
 
     # Practical 1k target: first reconnect wave stays near ~100/s rather than
     # concentrating all 1,000 devices into one second.
@@ -144,6 +165,9 @@ def main() -> int:
             "offline_disconnect_profiles": [
                 offline_profile(count) for count in args.devices
             ],
+            "durable_liveness_profiles": [
+                liveness_profile(count) for count in args.devices
+            ],
         }, indent=2, sort_keys=True))
     else:
         print("devices | attempt | cap_s | max_1s_bucket | max_bucket_fraction")
@@ -164,6 +188,8 @@ def main() -> int:
         print("COMMANDER_EVENT_V2_1K_OFFLINE_WRITE_MAX_PER_SECOND=39")
         print("COMMANDER_EVENT_V2_20K_OFFLINE_WRITE_MAX_PER_SECOND=722")
         print("COMMANDER_EVENT_V2_TRANSIENT_BLIP_UNDER_30S_OFFLINE_WRITE=ZERO_TARGET")
+        print("COMMANDER_EVENT_V2_1K_LIVENESS_MAX_PER_SECOND=3")
+        print("COMMANDER_EVENT_V2_20K_LIVENESS_MAX_PER_SECOND=21")
         print("COMMANDER_EVENT_V2_RECONNECT_D1_PRESSURE_20K=REQUIRES_SEPARATE_GUARD")
     return 0
 

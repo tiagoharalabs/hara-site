@@ -27,6 +27,7 @@ const MCP_METER_ID = "HARA_COMMANDER_GOVERNED_INVOKE";
 const MCP_SECONDARY_PROVIDER = "CLOUDFLARE_ACCESS";
 const DEVICE_CALL_TTL_SECONDS = 50;
 const DEVICE_CALL_ACTIVE_QUEUE_LIMIT = 16;
+const DEVICE_CALL_EXPIRY_MAINTENANCE_BATCH = 5000;
 const EVENT_V2_TERMINAL_FAST_PATH_WAIT_MS = 500;
 const QUOTA_RESERVATION_TTL_SECONDS = 10 * 60;
 const PAIRING_RETENTION_SECONDS = 30 * 24 * 60 * 60;
@@ -1222,6 +1223,22 @@ async function revokePortalDevice(env, session, body) {
   };
 }
 
+async function cleanupExpiredDeviceCalls(env) {
+  const expiredAt = nowIso();
+  return env.PRODUCT_DB.prepare(
+    `UPDATE commander_device_calls
+        SET state = 'EXPIRED', completed_at_utc = ?, error_code = 'DEVICE_CALL_EXPIRED'
+      WHERE call_id IN (
+        SELECT call_id
+          FROM commander_device_calls INDEXED BY idx_device_calls_expiry
+         WHERE state IN ('PENDING','EXECUTING')
+           AND expires_at_utc <= ?
+         ORDER BY expires_at_utc ASC
+         LIMIT ?
+      )`
+  ).bind(expiredAt, expiredAt, DEVICE_CALL_EXPIRY_MAINTENANCE_BATCH).run();
+}
+
 async function enqueueDeviceCall(env, body) {
   const requestId = cleanId(body.request_id, 220);
   const toolId = cleanId(body.tool_id, 120);
@@ -1288,13 +1305,6 @@ async function enqueueDeviceCall(env, body) {
   if (!deviceOnline(device.last_seen_at_utc, device.tunnel_mode)) throw new Error("DEVICE_OFFLINE");
 
   const enqueueAt = nowIso();
-  await env.PRODUCT_DB.prepare(
-    `UPDATE commander_device_calls INDEXED BY idx_device_calls_poll
-        SET state = 'EXPIRED', completed_at_utc = ?, error_code = 'DEVICE_CALL_EXPIRED'
-      WHERE tenant_id = ? AND subject_id = ? AND device_id = ?
-        AND state IN ('PENDING','EXECUTING')
-        AND expires_at_utc <= ?`
-  ).bind(enqueueAt, context.tenant_id, context.subject_id, deviceId, enqueueAt).run();
 
   const callId = "HARA-CALL-" + crypto.randomUUID();
   const createdAt = nowIso();
@@ -2085,5 +2095,6 @@ export default {
   async scheduled(_event, env, ctx) {
     requireRuntime(env);
     ctx.waitUntil(runAuthRetentionMaintenance(env));
+    ctx.waitUntil(cleanupExpiredDeviceCalls(env));
   }
 };

@@ -22,6 +22,7 @@ $StableConnectionSeconds = 60
 $ReconnectBaseSeconds = 10
 $ReconnectMaxSeconds = 15
 $DurableLivenessSeconds = 21600
+$DurableLivenessJitterSeconds = 900
 $ShutdownPipeName = "hara-commander-event-v2-rc-stop"
 $script:ShutdownRequested = $false
 
@@ -86,6 +87,16 @@ function Get-EventV2Config {
     -or -not $cfg.architecture
   ) { throw "DEVICE_CONFIG_INVALID" }
   return $cfg
+}
+
+function Get-DurableLivenessSeconds($Cfg) {
+  [uint32]$hash = 2166136261
+  foreach ($b in [Text.Encoding]::UTF8.GetBytes([string]$Cfg.device_id)) {
+    $hash = [uint32](([uint64]($hash -bxor [uint32]$b) * 16777619) -band 0xffffffff)
+  }
+  $spread = (2 * $DurableLivenessJitterSeconds) + 1
+  $offset = [int]($hash % [uint32]$spread) - $DurableLivenessJitterSeconds
+  return $DurableLivenessSeconds + $offset
 }
 
 function Get-DeviceToken($Cfg) {
@@ -275,7 +286,8 @@ function Invoke-ConnectedSession($Cfg,[string]$Token) {
     # Exactly one ReceiveAsync and one six-hour timer remain outstanding.
     # CALL_AVAILABLE traffic reuses the same timer, avoiding timer buildup on
     # active devices while preserving the low-cost durable checkpoint cadence.
-    $livenessDelayMs = [int]($DurableLivenessSeconds * 1000)
+    $livenessIntervalSeconds = Get-DurableLivenessSeconds $Cfg
+    $livenessDelayMs = [int]($livenessIntervalSeconds * 1000)
     $livenessTask = [Threading.Tasks.Task]::Delay($livenessDelayMs,$cts.Token)
     $receive = Start-EventV2Receive $client $cts.Token
     while ($true) {
@@ -322,9 +334,12 @@ function Invoke-AgentSelfTest {
   if ($ReconnectBaseSeconds -ne 10) { throw "WINDOWS_EVENT_V2_RECONNECT_BASE_INVALID" }
   if ($ReconnectMaxSeconds -ne 15) { throw "WINDOWS_EVENT_V2_RECONNECT_MAX_INVALID" }
   if ($DurableLivenessSeconds -ne 21600) { throw "WINDOWS_EVENT_V2_LIVENESS_INVALID" }
+  if ($DurableLivenessJitterSeconds -ne 900) { throw "WINDOWS_EVENT_V2_LIVENESS_JITTER_INVALID" }
   if ([string]::IsNullOrWhiteSpace($ShutdownPipeName)) { throw "WINDOWS_EVENT_V2_SHUTDOWN_PIPE_INVALID" }
 
   $cfg = [pscustomobject]@{device_id="windows-event-v2-selftest";architecture="test"}
+  $selfLiveness = Get-DurableLivenessSeconds $cfg
+  if ($selfLiveness -lt 20700 -or $selfLiveness -gt 22500) { throw "WINDOWS_EVENT_V2_LIVENESS_SPREAD_INVALID" }
   $info = Get-DeviceInfo $cfg
   if ([string]$info.tunnel_mode -ne "EVENT_V2") { throw "WINDOWS_EVENT_V2_DEVICE_INFO_FAILED" }
 
@@ -352,6 +367,7 @@ function Invoke-AgentSelfTest {
   Write-Host "COMMANDER_WINDOWS_EVENT_V2_IDLE_HTTP_POLLING=ABSENT"
   Write-Host "COMMANDER_WINDOWS_EVENT_V2_HTTP_HEARTBEAT=ABSENT"
   Write-Host "COMMANDER_WINDOWS_EVENT_V2_DURABLE_LIVENESS_SECONDS=21600"
+  Write-Host "COMMANDER_WINDOWS_EVENT_V2_DURABLE_LIVENESS_JITTER_SECONDS=900"
   Write-Host "COMMANDER_WINDOWS_EVENT_V2_SERVICES_PROXY=FALSE"
   Write-Host "COMMANDER_WINDOWS_EVENT_V2_PUBLIC_AGENT_MUTATION=FALSE"
   Write-Host "COMMANDER_WINDOWS_EVENT_V2_COOPERATIVE_SHUTDOWN=READY"

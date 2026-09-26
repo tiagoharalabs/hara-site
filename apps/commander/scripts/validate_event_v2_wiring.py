@@ -101,13 +101,15 @@ def main() -> int:
 
     # Keep active-call scans local to one device/state set. Otherwise SQLite
     # prefers the global expiry-range index for these predicates.
-    assert "UPDATE commander_device_calls INDEXED BY idx_device_calls_poll" in enqueue_fn_block
+    assert "UPDATE commander_device_calls INDEXED BY idx_device_calls_poll" not in enqueue_fn_block
+    assert "async function cleanupExpiredDeviceCalls" in worker
+    assert "FROM commander_device_calls INDEXED BY idx_device_calls_expiry" in worker
     assert "FROM commander_device_calls q INDEXED BY idx_device_calls_poll" in enqueue_fn_block
     assert "FROM commander_device_calls INDEXED BY idx_device_calls_poll" in enqueue_fn_block
     claim_fn_end = worker.index("async function completeDeviceCall", enqueue_fn_end)
     claim_fn_block = worker[enqueue_fn_end:claim_fn_end]
     assert "FROM commander_device_calls c INDEXED BY idx_device_calls_poll" in claim_fn_block
-    assert worker.count("INDEXED BY idx_device_calls_poll") >= 4
+    assert worker.count("INDEXED BY idx_device_calls_poll") >= 3
 
     mcp_auth_start = worker.index("function requireMcpProductToken")
     mcp_auth_end = worker.index("function requirePortalMutationOrigin")
@@ -166,6 +168,8 @@ def main() -> int:
     print("COMMANDER_EVENT_V2_DEVICE_BUSY_HTTP=429")
     print("COMMANDER_EVENT_V2_SELECTED_DEVICE_SINGLE_READ=PASS")
     print("COMMANDER_EVENT_V2_ACTIVE_CALL_INDEX=idx_device_calls_poll")
+    print("COMMANDER_EVENT_V2_ENQUEUE_EXPIRY_WRITE=ABSENT")
+    print("COMMANDER_EVENT_V2_EXPIRY_MAINTENANCE_INDEX=idx_device_calls_expiry")
     print("COMMANDER_EVENT_V2_ACTIVE_CALL_SCAN_SCOPE=DEVICE_STATE")
     print("COMMANDER_EVENT_V2_ACTIVE_CALL_NEW_INDEX=FALSE")
     print("COMMANDER_EVENT_V2_PROD_CANARY_MCP_TOKEN=ABSENT")

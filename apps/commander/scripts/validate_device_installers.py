@@ -258,7 +258,10 @@ assert "enrolled_by_subject_id = ?" in revoke, "NON_ADMIN_DEVICE_OWNERSHIP_GUARD
 assert "UPDATE commander_devices SET last_seen_at_utc" not in claim, "CALL_POLL_PRESENCE_WRITE_PRESENT"
 assert "SET state = 'EXPIRED'" not in claim, "CALL_POLL_EXPIRY_WRITE_PRESENT"
 assert "DEVICE_CALL_TTL_SECONDS = 50" in WORKER and "nowIso(DEVICE_CALL_TTL_SECONDS)" in enqueue, "DEVICE_CALL_TTL_NOT_BOUNDED"
-assert "SET state = 'EXPIRED'" in enqueue, "ENQUEUE_STALE_CALL_CLEANUP_MISSING"
+assert "SET state = 'EXPIRED'" not in enqueue, "ENQUEUE_EXPIRY_WRITE_STILL_IN_HOT_PATH"
+assert "async function cleanupExpiredDeviceCalls" in WORKER, "DEVICE_CALL_EXPIRY_MAINTENANCE_MISSING"
+assert "INDEXED BY idx_device_calls_expiry" in WORKER, "DEVICE_CALL_EXPIRY_INDEX_MISSING"
+assert "ctx.waitUntil(cleanupExpiredDeviceCalls(env));" in WORKER, "DEVICE_CALL_EXPIRY_MAINTENANCE_NOT_SCHEDULED"
 assert status.index("let row = await readCall()") < status.index("SET state = 'EXPIRED'"), "DEVICE_STATUS_UNCONDITIONAL_EXPIRY_WRITE"
 assert "RETURNING call_id, request_id, device_id, tool_id, state" in status, "DEVICE_STATUS_EXPIRY_RETURNING_MISSING"
 assert "UPDATE commander_devices" in heartbeat and "last_seen_at_utc" in heartbeat, "HEARTBEAT_PRESENCE_WRITE_MISSING"
@@ -268,6 +271,8 @@ print("COMMANDER_CALL_POLL_PRESENCE_WRITE=ABSENT")
 print("COMMANDER_CALL_POLL_EXPIRY_WRITE=ABSENT")
 print("COMMANDER_DEVICE_CALL_TTL_BOUNDED=PASS")
 print("COMMANDER_DEVICE_STATUS_CONDITIONAL_EXPIRY_WRITE=PASS")
+print("COMMANDER_DEVICE_ENQUEUE_EXPIRY_WRITE=ABSENT")
+print("COMMANDER_DEVICE_EXPIRY_MAINTENANCE=BOUNDED_5000_HOURLY")
 print("COMMANDER_REVIEWER_TENANT_WIDE_REVOKE=DENIED")
 print("COMMANDER_NON_ADMIN_DEVICE_OWNERSHIP_GUARD=PASS")
 print("COMMANDER_OIDC_FAILURE_COOKIE_CLEANUP=READY")
