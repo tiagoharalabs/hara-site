@@ -15,6 +15,8 @@ AGENT = COMMANDER / "experimental" / "event_v2_customer_agent.py"
 DEV = COMMANDER / "wrangler.dev.jsonc"
 PROD = COMMANDER / "wrangler.jsonc"
 MODEL = COMMANDER / "scripts" / "commander_event_v2_transient_1k_model.py"
+LIVE_PROBE = COMMANDER / "scripts" / "commander_event_v2_transient_live_probe.py"
+SERIES_PROBE = COMMANDER / "scripts" / "commander_event_v2_transient_series_probe.py"
 
 
 def block(text: str, start: str, end: str) -> str:
@@ -31,6 +33,8 @@ def main() -> int:
     agent = AGENT.read_text(encoding="utf-8")
     dev = json.loads(DEV.read_text(encoding="utf-8"))
     prod = PROD.read_text(encoding="utf-8")
+    live_probe = LIVE_PROBE.read_text(encoding="utf-8")
+    series_probe = SERIES_PROBE.read_text(encoding="utf-8")
 
     assert dev["vars"]["DEVICE_EVENT_V2_TRANSIENT_RPC_ENABLED"] == "true"
     assert "DEVICE_EVENT_V2_TRANSIENT_RPC_ENABLED" not in prod
@@ -102,8 +106,24 @@ def main() -> int:
         assert "CALL_TRANSIENT" not in source
         assert "EVENT_V2_TRANSIENT_RPC" not in source
 
+    assert "health_ms" in live_probe
+    assert "invoke_ms" in live_probe
+    assert "replay_ms" in live_probe
+    assert "cycle_ms" in live_probe
+    assert "COMMANDER_EVENT_V2_TRANSIENT_HEALTH_MS" in live_probe
+    assert "COMMANDER_TRANSIENT_SERIES_PROBE_SOURCE=PASS" in series_probe
+    assert "COMMANDER_TRANSIENT_SERIES_COUNT=" in series_probe
+    assert "p95_ms" in series_probe
+    assert "p99_ms" in series_probe
+    assert "token" not in "\n".join(
+        line for line in series_probe.splitlines()
+        if "print(" in line and "TOKEN_EXPOSED" not in line
+    )
+
     model = runpy.run_path(str(MODEL))
     model["self_check"]()
+    series = runpy.run_path(str(SERIES_PROBE))
+    series["self_check"]()
 
     print("COMMANDER_EVENT_V2_TRANSIENT_RPC_SOURCE=PASS")
     print("COMMANDER_EVENT_V2_TRANSIENT_RPC_ENV=DEV_ONLY")
@@ -113,6 +133,9 @@ def main() -> int:
     print("COMMANDER_EVENT_V2_LOCAL_LEDGER_RAW_PAYLOAD=ABSENT")
     print("COMMANDER_EVENT_V2_TRANSIENT_QUOTA_ORCHESTRATION=SOURCE_READY")
     print("COMMANDER_EVENT_V2_TRANSIENT_COMMITTED_RETRY=REPLAY_ONLY")
+    print("COMMANDER_EVENT_V2_SERIES100_PROBE_SOURCE=PASS")
+    print("COMMANDER_EVENT_V2_MEASURED_D1_ROWS_READ_PER_HTTP=13")
+    print("COMMANDER_EVENT_V2_MEASURED_D1_ROWS_WRITTEN_PER_HTTP=0")
     print("COMMANDER_EVENT_V2_PUBLIC_AGENT_MUTATION=FALSE")
     print("COMMANDER_EVENT_V2_PROD_CUTOVER=DENY")
     return 0
