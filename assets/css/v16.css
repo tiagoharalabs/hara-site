@@ -737,3 +737,170 @@ html[data-neon="on"] a.obs-live-card:hover{
     transition:none!important;
   }
 }
+
+
+/* V16.3.9 — Mobile orbit motion hardening.
+   Keep motion visible on phones when the user has not requested reduced motion. */
+.orbit-ring{
+  will-change:transform;
+  transform-origin:center center;
+}
+@media(max-width:760px) and (prefers-reduced-motion:no-preference){
+  .orbit-ring{
+    animation-name:spin;
+    animation-duration:18s;
+    animation-timing-function:linear;
+    animation-iteration-count:infinite;
+    border-color:rgba(45,145,201,.42);
+  }
+  .orbit-ring.ring2{
+    animation-direction:reverse;
+    animation-duration:25s;
+    border-color:rgba(45,145,201,.30);
+  }
+  html[data-theme="dark"] .orbit-ring{
+    border-color:rgba(49,189,244,.36);
+  }
+  html[data-theme="dark"] .orbit-ring.ring2{
+    border-color:rgba(49,189,244,.25);
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  .orbit-ring{
+    animation:none!important;
+  }
+}
+
+
+/* V16.3.10 — Theme-aware Neon color contract.
+   Light = H.A.R.A cyan/blue. Dark = H.A.R.A gold. OFF remains halo-free. */
+html[data-theme="light"][data-neon="on"] .neon-toggle,
+html:not([data-theme="dark"])[data-neon="on"] .neon-toggle{
+  color:#39a2df;
+  border-color:rgba(57,162,223,.58);
+  background:rgba(232,248,255,.96);
+  box-shadow:0 0 9px rgba(57,162,223,.27),0 0 18px rgba(57,162,223,.12);
+}
+html[data-theme="light"][data-neon="on"] .neon-icon,
+html:not([data-theme="dark"])[data-neon="on"] .neon-icon{
+  filter:drop-shadow(0 0 5px rgba(57,162,223,.84)) drop-shadow(0 0 10px rgba(57,162,223,.36));
+}
+html[data-theme="light"][data-neon="on"] .button.primary,
+html[data-theme="light"][data-neon="on"] .nav-cta,
+html[data-theme="light"][data-neon="on"] .gold-btn,
+html:not([data-theme="dark"])[data-neon="on"] .button.primary,
+html:not([data-theme="dark"])[data-neon="on"] .nav-cta,
+html:not([data-theme="dark"])[data-neon="on"] .gold-btn{
+  box-shadow:0 6px 18px rgba(51,150,205,.22),0 0 16px rgba(57,162,223,.18);
+}
+html[data-theme="light"][data-neon="on"] .theme-toggle,
+html[data-theme="light"][data-neon="on"] .obs-refresh,
+html[data-theme="light"][data-neon="on"] .menu-button,
+html:not([data-theme="dark"])[data-neon="on"] .theme-toggle,
+html:not([data-theme="dark"])[data-neon="on"] .obs-refresh,
+html:not([data-theme="dark"])[data-neon="on"] .menu-button{
+  box-shadow:0 0 10px rgba(57,162,223,.15);
+}
+html[data-theme="light"][data-neon="on"] .main-nav a[aria-current="page"],
+html:not([data-theme="dark"])[data-neon="on"] .main-nav a[aria-current="page"]{
+  box-shadow:inset 0 -1px 0 rgba(57,162,223,.50),0 0 11px rgba(57,162,223,.13);
+}
+html[data-theme="light"][data-neon="on"] .brand-logo,
+html:not([data-theme="dark"])[data-neon="on"] .brand-logo{
+  filter:drop-shadow(0 0 7px rgba(57,162,223,.23));
+}
+html[data-theme="light"][data-neon="on"] .section-link,
+html:not([data-theme="dark"])[data-neon="on"] .section-link{
+  text-shadow:0 0 8px rgba(57,162,223,.16);
+}
+html[data-theme="light"][data-neon="on"] a.fact-card:hover,
+html[data-theme="light"][data-neon="on"] a.pillar-card:hover,
+html[data-theme="light"][data-neon="on"] a.case-card:hover,
+html[data-theme="light"][data-neon="on"] a.link-card:hover,
+html[data-theme="light"][data-neon="on"] a.contact-card:hover,
+html[data-theme="light"][data-neon="on"] a.support-card:hover,
+html[data-theme="light"][data-neon="on"] a.legal-card:hover,
+html[data-theme="light"][data-neon="on"] a.obs-executive-card:hover,
+html[data-theme="light"][data-neon="on"] a.obs-live-card:hover{
+  box-shadow:0 8px 22px rgba(38,126,178,.13),0 0 12px rgba(57,162,223,.08);
+}
+
+/* Dark theme shifts all decorative Neon expression to gold. */
+html[data-theme="dark"][data-neon="on"] .neon-toggle{
+  color:#ffc83d;
+  border-color:rgba(255,200,61,.52);
+  background:#102c3c;
+  box-shadow:0 0 10px rgba(255,200,61,.25),0 0 20px rgba(255,200,61,.10);
+}
+html[data-theme="dark"][data-neon="on"] .neon-icon{
+  filter:drop-shadow(0 0 5px rgba(255,200,61,.86)) drop-shadow(0 0 10px rgba(255,200,61,.36));
+}
+html[data-theme="dark"][data-neon="on"] .button.primary,
+html[data-theme="dark"][data-neon="on"] .nav-cta,
+html[data-theme="dark"][data-neon="on"] .gold-btn{
+  box-shadow:0 6px 18px rgba(233,177,40,.22),0 0 16px rgba(255,200,61,.17);
+}
+html[data-theme="dark"][data-neon="on"] .theme-toggle,
+html[data-theme="dark"][data-neon="on"] .obs-refresh,
+html[data-theme="dark"][data-neon="on"] .menu-button{
+  box-shadow:0 0 10px rgba(255,200,61,.14);
+}
+html[data-theme="dark"][data-neon="on"] .main-nav a[aria-current="page"]{
+  box-shadow:inset 0 -1px 0 rgba(255,200,61,.44),0 0 11px rgba(255,200,61,.11);
+}
+html[data-theme="dark"][data-neon="on"] .brand-logo{
+  filter:drop-shadow(0 0 7px rgba(255,200,61,.20));
+}
+html[data-theme="dark"][data-neon="on"] .section-link{
+  text-shadow:0 0 8px rgba(255,200,61,.14);
+}
+html[data-theme="dark"][data-neon="on"] a.fact-card:hover,
+html[data-theme="dark"][data-neon="on"] a.pillar-card:hover,
+html[data-theme="dark"][data-neon="on"] a.case-card:hover,
+html[data-theme="dark"][data-neon="on"] a.link-card:hover,
+html[data-theme="dark"][data-neon="on"] a.contact-card:hover,
+html[data-theme="dark"][data-neon="on"] a.support-card:hover,
+html[data-theme="dark"][data-neon="on"] a.legal-card:hover,
+html[data-theme="dark"][data-neon="on"] a.obs-executive-card:hover,
+html[data-theme="dark"][data-neon="on"] a.obs-live-card:hover{
+  box-shadow:0 8px 22px rgba(233,177,40,.11),0 0 12px rgba(255,200,61,.07);
+}
+
+
+/* V16.3.11 — Mobile orbit runner.
+   A symmetric dashed circle can rotate while looking stationary; add a visible moving segment. */
+@media(max-width:760px) and (prefers-reduced-motion:no-preference){
+  .orbit-ring{
+    overflow:visible;
+  }
+  .orbit-ring::after{
+    content:"";
+    position:absolute;
+    left:50%;
+    top:-3px;
+    width:22px;
+    height:4px;
+    border-radius:999px;
+    transform:translateX(-50%);
+    background:linear-gradient(90deg,rgba(57,162,223,0),rgba(57,162,223,.95),rgba(57,162,223,0));
+    box-shadow:0 0 7px rgba(57,162,223,.42);
+    pointer-events:none;
+  }
+  .orbit-ring.ring2::after{
+    width:16px;
+    height:3px;
+    top:-2px;
+    opacity:.78;
+    box-shadow:0 0 6px rgba(57,162,223,.30);
+  }
+  html[data-theme="dark"] .orbit-ring::after{
+    background:linear-gradient(90deg,rgba(255,200,61,0),rgba(255,200,61,.95),rgba(255,200,61,0));
+    box-shadow:0 0 7px rgba(255,200,61,.38);
+  }
+  html[data-theme="dark"] .orbit-ring.ring2::after{
+    box-shadow:0 0 6px rgba(255,200,61,.28);
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  .orbit-ring::after{display:none!important}
+}
