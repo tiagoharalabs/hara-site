@@ -2,7 +2,8 @@
 
 **Timestamp:** 2026-09-26T03:16Z  
 **Repository:** `tiagoharalabs/hara-site`  
-**Primary owner:** #163 — Commander Scale V2 / Event-driven device transport  
+**Primary owner:** #163 — **Event V2 implementation, transport optimization, Cloud cost and scale engineering**  
+**Product test/acceptance owner:** **Commander Product Hardening & Launch**  
 **Successor entrypoint:** this document  
 **Related owners:** #167 human/session cost only; hara-platform#851 product acceptance; hara-platform#1000 stable Agent capability; hara-platform#1486 customer MCP auth/cost; hara-platform#1533 Commander NOC contract  
 **PROD cutover:** **DENY**
@@ -43,7 +44,7 @@ SYNTHETIC_20K_RECONNECT_MODEL=PASS_WITH_D1_PRESSURE_WARNING
 PROD_CUTOVER=DENY
 ```
 
-The next front should **not** reopen Linux architecture work first. The current source/runtime gap is a **real Windows Event V2 RC canary**.
+The next Event V2 engineering work should **not** absorb product homologation. Windows RC live execution, regression and release acceptance belong to **Commander Product Hardening & Launch**. #163 owns the Event V2 implementation, optimization and remediation required by findings from that test front.
 
 ---
 
@@ -426,7 +427,10 @@ Customer prompts, commands/results, files and secrets must not become routine HA
 ## 11. Anti-concurrency / ownership
 
 ```text
-#163=SOLE_EVENT_V2_IMPLEMENTATION_OWNER
+#163=SOLE_EVENT_V2_IMPLEMENTATION_OPTIMIZATION_OWNER
+COMMANDER_PRODUCT_HARDENING_LAUNCH=SOLE_PRODUCT_TEST_ACCEPTANCE_LAUNCH_OWNER
+WINDOWS_LIVE_CANARY_EXECUTION_OWNER=COMMANDER_PRODUCT_HARDENING_LAUNCH
+EVENT_V2_DEFECT_REMEDIATION_OWNER=#163
 #167=HUMAN_SESSION_IDENTITY_COST_ONLY
 #172=DRAFT_FUTURE_10K_EVIDENCE_DO_NOT_MERGE_NOW
 
@@ -438,46 +442,40 @@ hara-platform#1189=RETIREMENT_HOLD_UNTIL_PRODUCT_PATH_PROVEN
 
 Do not open a second Event V2 implementation owner while #163 remains active.
 
+Canonical responsibility split:
+- #163: Event V2 architecture/implementation, WebSocket + Durable Object path, reconnect/backoff, D1/write reduction, Cloudflare resource/cost optimization, scale work, Linux/Windows Event V2 source and defect correction.
+- Commander Product Hardening & Launch: Windows VM/physical test environment, stable V1 baseline, RC live canary, five-tool/receipt/quota parity, offline/online/reconnect, rollback, regression, security, homologation and launch acceptance.
+- Test failures found by Product Hardening are routed to #163 only for engineering remediation; after correction they return to Product Hardening for acceptance retest.
+- #163 does not self-declare product release acceptance.
+
 ---
 
 ## 12. Successor execution order
 
 The successor should start from **fresh main**, re-read #163 and this handoff, then:
 
-### P1 — Windows HARA-owned canary
+### P1 — Support Product Hardening Windows acceptance; do not duplicate it
 
-1. Select one **HARA-owned Windows canary target**. Do not use a customer machine.
-2. Freshly census stable Windows Agent state and DPAPI `device.json` without exposing secrets.
-3. Install the RC using the source from PR #233.
-4. Prove:
-   - install inert;
-   - stable 0.3.7 remains default;
-   - RC auto-start = false;
-   - same identity reused;
-   - no reenrollment;
-   - no dual-agent use.
-5. Activate Event V2 **against DEV only**.
-6. Require real connection attestation.
-7. Prove five-tool live parity:
-   - health
-   - list
-   - describe
-   - invoke
-   - receipts.get
-8. Prove receipt correlation and quota reserve/commit/release parity.
-9. Prove clean shutdown/disconnect.
-10. Prove manual rollback.
-11. Prove failed Event V2 activation automatically restores stable V1.
-12. Publish evidence to #163.
+The Windows live canary is executed by **Commander Product Hardening & Launch**.
 
-Only after these are fresh PASS may:
+#163 must:
+1. keep Windows Event V2 RC source installable, inert-by-default and DEV-only for acceptance;
+2. preserve public Agent 0.3.7 and the V1 rollback path;
+3. provide/fix Event V2 transport, adapter, reconnect and rollback implementation when the test front finds a defect;
+4. keep Event V2 credentials/secrets governed and avoid concurrent shared-DEV mutation;
+5. consume acceptance evidence from Product Hardening rather than rerunning an independent competing canary;
+6. optimize resource use, Cloudflare cost, D1 writes, reconnect behavior and scale without weakening product acceptance gates.
+
+The following claims remain FALSE until Product Hardening publishes fresh acceptance evidence:
 
 ```text
-WINDOWS_EVENT_V2_RUNTIME_PROVEN=TRUE
-WINDOWS_EVENT_V2_FIVE_TOOL_LIVE_PARITY=TRUE
-WINDOWS_ROLLBACK_LIVE_PROOF=TRUE
-CROSS_PLATFORM_EVENT_V2_PARITY=TRUE
+WINDOWS_EVENT_V2_RUNTIME_PROVEN=FALSE
+WINDOWS_EVENT_V2_FIVE_TOOL_LIVE_PARITY=FALSE
+WINDOWS_ROLLBACK_LIVE_PROOF=FALSE
+CROSS_PLATFORM_EVENT_V2_PARITY=FALSE
 ```
+
+When Product Hardening reports a failure attributable to Event V2, #163 fixes the implementation and hands it back for retest.
 
 ### P2 — Measure PR #226 exact live A/B
 
@@ -530,11 +528,14 @@ reintroduce 2s polling/30s HTTP heartbeat, and do not route customer traffic
 through HARA Services.
 
 Linux Event V2 DEV canary and Linux RC are already proven.
-The current next gap is Windows Event V2 RC live canary/parity.
+Ownership split is canonical:
+- #163 = Event V2 implementation/optimization/cost/scale/transport.
+- Commander Product Hardening & Launch = Windows/live product tests, security,
+  homologation, regression, release acceptance and launch.
 
-Start with a fresh census of the chosen HARA-owned Windows target, preserve
-stable 0.3.7, install RC inert, activate only against DEV, prove live connection,
-five tools, receipt/quota parity and rollback, then update #163 with evidence.
+Do not run a competing Windows acceptance campaign from #163. Keep the RC source
+ready, preserve stable 0.3.7 and DEV-only safety, consume failures from the Product
+Hardening test front, fix Event V2 defects here, and hand corrected builds back for retest.
 
 PROD_CUTOVER remains DENY.
 ```
