@@ -176,9 +176,10 @@ def main() -> int:
     assert '"authorization": "Bearer " + token' in do_analytics_probe
 
     for required in (
-        "MAX_DEVICES = 50",
+        "MAX_DEVICES = 100",
         "D1_FIXTURE_BATCH_SIZE = 10",
         "D1_SELECTION_BATCH_SIZE = 25",
+        "ENROLL_MIN_INTERVAL_SECONDS = 1.10",
         "TEMPLATE_CONTEXT_QUERY",
         "FIXTURE_BATCH",
         "SELECTION_BATCH",
@@ -192,7 +193,7 @@ def main() -> int:
         line for line in multidevice_lab.splitlines()
         if "print(" in line and "TOKEN_EXPOSED" not in line
     )
-    assert "MAX_DEVICES = 50" in multidevice_probe
+    assert "MAX_DEVICES = 100" in multidevice_probe
     assert "MULTIDEVICE_PROBE_AGGREGATE_OUTPUT=TRUE" in multidevice_probe
     assert "MULTIDEVICE_PROBE_CUSTOMER_CONTENT_OUTPUT=ABSENT" in multidevice_probe
 

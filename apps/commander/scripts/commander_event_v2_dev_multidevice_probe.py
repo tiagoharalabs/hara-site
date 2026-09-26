@@ -21,7 +21,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 LIVE_PROBE = HERE / "commander_event_v2_transient_live_probe.py"
-MAX_DEVICES = 50
+MAX_DEVICES = 100
 MAX_WAVES = 5
 
 
@@ -165,7 +165,7 @@ def summarize(waves: list[dict]) -> dict:
 
 def self_check() -> None:
     assert LIVE_PROBE.is_file()
-    assert MAX_DEVICES == 50
+    assert MAX_DEVICES == 100
     assert MAX_WAVES == 5
     assert percentile([1.0, 2.0, 3.0, 4.0], 0.95) == 4.0
     source = Path(__file__).read_text(encoding="utf-8")
@@ -179,7 +179,7 @@ def self_check() -> None:
     forbidden_prod = "https://commander." + "haralabs.com.br"
     assert forbidden_prod not in source
     print("COMMANDER_EVENT_V2_MULTIDEVICE_PROBE_SOURCE=PASS")
-    print("COMMANDER_EVENT_V2_MULTIDEVICE_PROBE_MAX_DEVICES=50")
+    print("COMMANDER_EVENT_V2_MULTIDEVICE_PROBE_MAX_DEVICES=100")
     print("COMMANDER_EVENT_V2_MULTIDEVICE_PROBE_AGGREGATE_OUTPUT=TRUE")
     print("COMMANDER_EVENT_V2_MULTIDEVICE_PROBE_CUSTOMER_CONTENT_OUTPUT=ABSENT")
     print("COMMANDER_EVENT_V2_MULTIDEVICE_PROBE_PROD_MUTATION=ABSENT")

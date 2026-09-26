@@ -21,7 +21,7 @@ apps/commander/scripts/commander_event_v2_dev_multidevice_lab.py
 apps/commander/scripts/commander_event_v2_dev_multidevice_probe.py
 ```
 
-The lab provisioner is bounded to 2..50 logical devices. Every device receives:
+The lab provisioner is bounded to 2..100 logical devices. Every device receives:
 
 ```text
 distinct DEV subject
@@ -510,3 +510,26 @@ PROD_CUTOVER=DENY
 
 This proof is terminal for the bounded 50-device rung. It does not claim a
 100-device live proof.
+
+
+## Next bounded scale rung — 100 devices
+
+The 50-device rung is terminal PASS. The next source bound is raised to 100
+while preserving the same privacy, idempotency, quota and PROD-deny contracts.
+
+Because DEV device enrollment is client-rate-limited, provisioning adds bounded
+pacing rather than attempting a burst enrollment:
+
+```text
+SOURCE_MAX_DEVICES=100
+NEXT_LIVE_RUNG=100
+D1_FIXTURE_BATCH_SIZE=10
+D1_SELECTION_BATCH_SIZE=25
+ENROLL_MIN_INTERVAL_SECONDS=1.10
+PAIRING_TOKEN_TTL=10_MINUTES
+AUTO_DELETE=ABSENT
+PROD_CUTOVER=DENY
+```
+
+The canonical live proof remains `PASS_50_DEVICES` until a separate
+100-device run passes and is published.
