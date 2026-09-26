@@ -35,6 +35,30 @@ def entropy(device_index: int, attempt: int) -> float:
     return int.from_bytes(digest[:8], "big") / float(1 << 64)
 
 
+def fnv1a32(value: str) -> int:
+    result = 2166136261
+    for byte in value.encode("utf-8"):
+        result ^= byte
+        result = (result * 16777619) & 0xFFFFFFFF
+    return result
+
+
+def offline_profile(devices: int) -> dict:
+    buckets = Counter(
+        30 + (fnv1a32(f"HARA-DEVICE-{index}") % 30)
+        for index in range(devices)
+    )
+    maximum = max(buckets.values())
+    return {
+        "devices": devices,
+        "offline_grace_min_seconds": 30,
+        "offline_grace_max_seconds": 60,
+        "max_offline_writes_in_1s_bucket": maximum,
+        "max_bucket_fraction": maximum / devices,
+        "nonempty_buckets": len(buckets),
+    }
+
+
 def attempt_profile(policy, devices: int, attempt: int) -> dict:
     delays = [policy.delay(attempt, entropy(i, attempt)) for i in range(devices)]
     buckets = Counter(int(delay) for delay in delays)
@@ -71,6 +95,12 @@ def self_check() -> None:
 
     thousand = attempt_profile(policy, 1_000, 0)
     twenty_k = attempt_profile(policy, 20_000, 0)
+    offline_1k = offline_profile(1_000)
+    offline_20k = offline_profile(20_000)
+
+    assert offline_1k["max_offline_writes_in_1s_bucket"] == 39
+    assert offline_20k["max_offline_writes_in_1s_bucket"] == 722
+    assert offline_1k["max_offline_writes_in_1s_bucket"] <= 50
 
     # Practical 1k target: first reconnect wave stays near ~100/s rather than
     # concentrating all 1,000 devices into one second.
@@ -111,6 +141,9 @@ def main() -> int:
                 "full_jitter": True,
             },
             "rows": rows,
+            "offline_disconnect_profiles": [
+                offline_profile(count) for count in args.devices
+            ],
         }, indent=2, sort_keys=True))
     else:
         print("devices | attempt | cap_s | max_1s_bucket | max_bucket_fraction")
@@ -128,6 +161,9 @@ def main() -> int:
         print("COMMANDER_EVENT_V2_RECONNECT_MAX_SECONDS=15")
         print("COMMANDER_EVENT_V2_1K_FIRST_WAVE_MAX_PER_SECOND=117")
         print("COMMANDER_EVENT_V2_20K_FIRST_WAVE_MAX_PER_SECOND=2052")
+        print("COMMANDER_EVENT_V2_1K_OFFLINE_WRITE_MAX_PER_SECOND=39")
+        print("COMMANDER_EVENT_V2_20K_OFFLINE_WRITE_MAX_PER_SECOND=722")
+        print("COMMANDER_EVENT_V2_TRANSIENT_BLIP_UNDER_30S_OFFLINE_WRITE=ZERO_TARGET")
         print("COMMANDER_EVENT_V2_RECONNECT_D1_PRESSURE_20K=REQUIRES_SEPARATE_GUARD")
     return 0
 
