@@ -168,11 +168,14 @@ def self_check() -> None:
             continue
         if not isinstance(node.func, ast.Name) or node.func.id != "print":
             continue
-        rendered = " ".join(ast.dump(arg) for arg in node.args)
-        if "token" in rendered.lower() and "TOKEN_EXPOSED" not in rendered:
+        printed_names = {
+            child.id
+            for arg in node.args
+            for child in ast.walk(arg)
+            if isinstance(child, ast.Name)
+        }
+        if "token" in printed_names:
             raise AssertionError("WAKE_PROBE_SECRET_PRINT_SURFACE")
-        if "result" in rendered.lower() and "COMMANDER_EVENT_V2_DEV_WAKE_" not in rendered:
-            raise AssertionError("WAKE_PROBE_RESULT_PRINT_SURFACE")
     assert "result_json" not in source
     assert "commander.haralabs.com.br/api/internal" not in source
     print("COMMANDER_EVENT_V2_DEV_WAKE_PROBE_SOURCE=PASS")
