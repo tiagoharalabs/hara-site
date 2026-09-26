@@ -255,3 +255,25 @@ PROD_CUTOVER=DENY
 
 The existing `PASS_10_DEVICES` proof remains canonical until a separate
 50-device live run passes and is published.
+
+
+## 50-device provisioning batch fix
+
+The first 50-device provisioning attempt was intentionally blocked before any
+agent start because the one-shot D1 fixture batch failed through Wrangler.
+
+Fresh D1 readback showed no partial new 50-device fixture rows; only the prior
+10-device proof rows existed. The failed remote run root is preserved under
+`/tmp_hara` and is not auto-deleted.
+
+The source now uses explicit bounded D1 chunks:
+
+```text
+D1_FIXTURE_BATCH_SIZE=10
+D1_SELECTION_BATCH_SIZE=25
+FAILED_50_AGENT_STARTS=0
+FAILED_50_PARTIAL_D1_FIXTURE_ROWS=0
+AUTO_DELETE=ABSENT
+```
+
+The 50-device live rung must be retried only after this fix passes CI.
