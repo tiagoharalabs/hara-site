@@ -43,8 +43,13 @@ def main() -> int:
         assert marker in worker, f"missing Worker Event V2 marker: {marker}"
 
     insert_at = worker.index("INSERT OR IGNORE INTO commander_device_calls")
-    notify_at = worker.index("const notification = await notifyDeviceEventChannel(")
-    assert notify_at > insert_at, "event notification must occur only after durable call insert"
+    use_event_at = worker.index('const useEventV2 = String(device.tunnel_mode || "") === "EVENT_V2";')
+    notify_at = worker.index("? await notifyDeviceEventChannel(", use_event_at)
+    assert use_event_at > insert_at, "transport selection must occur only after durable call insert"
+    assert notify_at > use_event_at, "event notification must be gated by Event V2 transport"
+    notify_prefix = worker[use_event_at:notify_at + 250]
+    assert 'String(device.tunnel_mode || "") === "EVENT_V2"' in notify_prefix
+    assert ": { attempted: false, delivered: 0 }" in notify_prefix
     undelivered_at = worker.index("DEVICE_EVENT_UNDELIVERED")
     assert undelivered_at > notify_at, "undelivered Event V2 call must cancel after notify attempt"
     notify_guard = worker[notify_at:undelivered_at + 800]
@@ -52,7 +57,31 @@ def main() -> int:
     assert 'throw new Error("DEVICE_OFFLINE")' in notify_guard
     assert "state = 'CANCELLED'" in notify_guard
 
+    assert "const EVENT_V2_TERMINAL_FAST_PATH_WAIT_MS = 500;" in worker
+    assert "const DEVICE_CALL_ACTIVE_QUEUE_LIMIT = 16;" in worker
+    assert 'function deviceCallRetryAfterMs(state, source = "status")' in worker
+    assert 'return source === "enqueue" ? 350 : 750;' in worker
+    assert 'if (normalized === "EXECUTING") return 250;' in worker
+    assert "DEVICE_BUSY: 429" in worker
+    assert 'errorPayload.retry_after_ms = 1000' in worker
+    assert "DEVICE_CALL_ACTIVE_QUEUE_LIMIT" in worker
+    assert "SELECT COUNT(*) AS active_count" in worker
+    post_notify_read_at = worker.index("let postNotify = null;", notify_at)
+    settle_wait_at = worker.index("await scheduler.wait(EVENT_V2_TERMINAL_FAST_PATH_WAIT_MS);", post_notify_read_at)
+    response_state_at = worker.index('const responseState = String(postNotify?.state || "PENDING")', post_notify_read_at)
+    assert post_notify_read_at > notify_at
+    assert settle_wait_at > post_notify_read_at
+    assert response_state_at > settle_wait_at
+    post_notify_block = worker[post_notify_read_at:response_state_at + 500]
+    assert "notification.delivered >= 1" in post_notify_block
+    assert "result_json" in post_notify_block
+    assert "error_code" in post_notify_block
+
     assert "deviceOnline(row.last_seen_at_utc, row.tunnel_mode, now)" in worker
+    heartbeat_at = worker.index("async function heartbeatDevice")
+    heartbeat_end = worker.index("async function revokeDeviceSelf", heartbeat_at)
+    heartbeat_block = worker[heartbeat_at:heartbeat_end]
+    assert "tunnel_mode = 'OUTBOUND_RELAY'" in heartbeat_block
     assert "deviceOnline(device.last_seen_at_utc, device.tunnel_mode)" in worker
     assert "deviceOnline(currentDevice.last_seen_at_utc, currentDevice.tunnel_mode)" in worker
 
@@ -96,11 +125,21 @@ def main() -> int:
     print("COMMANDER_EVENT_V2_DEV_CANARY=ON")
     print("COMMANDER_EVENT_V2_PROD_BINDING=ABSENT")
     print("COMMANDER_EVENT_V2_NOTIFY_AFTER_DURABLE_INSERT=PASS")
+    print("COMMANDER_EVENT_V2_NOTIFY_ONLY_FOR_EVENT_V2_DEVICE=PASS")
+    print("COMMANDER_EVENT_V2_V1_NOTIFY_DO=ABSENT")
     print("COMMANDER_EVENT_V2_PRESENCE_USES_TRANSPORT_STATE=PASS")
     print("COMMANDER_EVENT_V2_V1_90S_WINDOW_PRESERVED=PASS")
+    print("COMMANDER_EVENT_V2_V1_HEARTBEAT_RECLAIMS_RELAY=PASS")
     print("COMMANDER_EVENT_V2_LIVENESS_WINDOW_HOURS=7")
     print("COMMANDER_EVENT_V2_UNDELIVERED_CALL=CANCELLED_FAIL_CLOSED")
     print("COMMANDER_EVENT_V2_DEV_CANARY_MCP_TOKEN=DEV_ONLY")
+    print("COMMANDER_EVENT_V2_POST_NOTIFY_TERMINAL_READ=PASS")
+    print("COMMANDER_EVENT_V2_TERMINAL_SETTLE_WAIT_MS=500")
+    print("COMMANDER_EVENT_V2_RETRY_HINT_PENDING_ENQUEUE_MS=350")
+    print("COMMANDER_EVENT_V2_RETRY_HINT_PENDING_STATUS_MS=750")
+    print("COMMANDER_EVENT_V2_RETRY_HINT_EXECUTING_MS=250")
+    print("COMMANDER_EVENT_V2_ACTIVE_QUEUE_LIMIT=16")
+    print("COMMANDER_EVENT_V2_DEVICE_BUSY_HTTP=429")
     print("COMMANDER_EVENT_V2_PROD_CANARY_MCP_TOKEN=ABSENT")
     return 0
 

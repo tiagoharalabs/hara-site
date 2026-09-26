@@ -20,6 +20,8 @@ const DEMO_TENANT = "HARA-TENANT-DEMO-0001";
 const MCP_METER_ID = "HARA_COMMANDER_GOVERNED_INVOKE";
 const MCP_SECONDARY_PROVIDER = "CLOUDFLARE_ACCESS";
 const DEVICE_CALL_TTL_SECONDS = 50;
+const DEVICE_CALL_ACTIVE_QUEUE_LIMIT = 16;
+const EVENT_V2_TERMINAL_FAST_PATH_WAIT_MS = 500;
 const QUOTA_RESERVATION_TTL_SECONDS = 10 * 60;
 const PAIRING_RETENTION_SECONDS = 30 * 24 * 60 * 60;
 const PAIRING_RETENTION_BATCH = 100;
@@ -178,6 +180,13 @@ function cleanAgentValue(value, max = 80) {
     throw new Error("DEVICE_METADATA_INVALID");
   }
   return text;
+}
+
+function deviceCallRetryAfterMs(state, source = "status") {
+  const normalized = String(state || "").trim().toUpperCase();
+  if (normalized === "PENDING") return source === "enqueue" ? 350 : 750;
+  if (normalized === "EXECUTING") return 250;
+  return 0;
 }
 
 function deviceOnline(lastSeenAtUtc, tunnelMode = "OUTBOUND_RELAY", now = Date.now()) {
@@ -1048,7 +1057,10 @@ async function heartbeatDevice(env, request, body) {
 
   const heartbeat = await env.PRODUCT_DB.prepare(
     `UPDATE commander_devices
-        SET last_seen_at_utc = ?, agent_version = ?, architecture = ?
+        SET last_seen_at_utc = ?,
+            agent_version = ?,
+            architecture = ?,
+            tunnel_mode = 'OUTBOUND_RELAY'
       WHERE device_id = ? AND state = 'ACTIVE' AND revoked_at_utc IS NULL`
   ).bind(seenAt, agentVersion, architecture, device.device_id).run();
   if (!heartbeat.meta?.changes) throw new Error("DEVICE_AUTH_INVALID");
@@ -1193,6 +1205,7 @@ async function enqueueDeviceCall(env, body) {
       tool_id: toolId,
       state: existing.state,
       expires_at_utc: existing.expires_at_utc,
+      retry_after_ms: deviceCallRetryAfterMs(existing.state, "enqueue"),
     };
   };
 
@@ -1252,10 +1265,19 @@ async function enqueueDeviceCall(env, body) {
           OR
           (d.tunnel_mode NOT IN ('EVENT_V2','EVENT_V2_OFFLINE') AND d.last_seen_at_utc >= ?)
         )
-        AND s.subject_id = ?`
+        AND s.subject_id = ?
+        AND (
+          SELECT COUNT(*)
+            FROM commander_device_calls q
+           WHERE q.device_id = d.device_id
+             AND q.tenant_id = d.tenant_id
+             AND q.state IN ('PENDING','EXECUTING')
+             AND q.expires_at_utc > ?
+        ) < ?`
   ).bind(
     callId, requestId, context.tenant_id, context.subject_id, toolId, payloadJson,
-    createdAt, expiresAt, deviceId, context.tenant_id, eventV2Cutoff, onlineCutoff, context.subject_id
+    createdAt, expiresAt, deviceId, context.tenant_id, eventV2Cutoff, onlineCutoff,
+    context.subject_id, createdAt, DEVICE_CALL_ACTIVE_QUEUE_LIMIT
   ).run();
 
   if (!inserted.meta?.changes) {
@@ -1280,17 +1302,34 @@ async function enqueueDeviceCall(env, body) {
       throw new Error("DEVICE_NOT_FOUND");
     }
     if (!deviceOnline(currentDevice.last_seen_at_utc, currentDevice.tunnel_mode)) throw new Error("DEVICE_OFFLINE");
+
+    const activeQueue = await env.PRODUCT_DB.prepare(
+      `SELECT COUNT(*) AS active_count
+         FROM commander_device_calls
+        WHERE device_id = ?
+          AND tenant_id = ?
+          AND state IN ('PENDING','EXECUTING')
+          AND expires_at_utc > ?`
+    ).bind(deviceId, context.tenant_id, nowIso()).first();
+    if (Number(activeQueue?.active_count || 0) >= DEVICE_CALL_ACTIVE_QUEUE_LIMIT) {
+      throw new Error("DEVICE_BUSY");
+    }
+
     throw new Error("DEVICE_CALL_ENQUEUE_CONFLICT");
   }
 
-  const notification = await notifyDeviceEventChannel(
-    env,
-    context.tenant_id,
-    deviceId,
-    callId,
-  );
+  const useEventV2 = String(device.tunnel_mode || "") === "EVENT_V2";
+  const notification = useEventV2
+    ? await notifyDeviceEventChannel(
+        env,
+        context.tenant_id,
+        deviceId,
+        callId,
+      )
+    : { attempted: false, delivered: 0 };
   if (
-    eventV2Enabled(env)
+    useEventV2
+    && eventV2Enabled(env)
     && notification.attempted
     && notification.delivered < 1
   ) {
@@ -1313,16 +1352,44 @@ async function enqueueDeviceCall(env, body) {
     throw new Error("DEVICE_OFFLINE");
   }
 
-  return {
+  let postNotify = null;
+  if (
+    eventV2Enabled(env)
+    && notification.attempted
+    && notification.delivered >= 1
+  ) {
+    await scheduler.wait(EVENT_V2_TERMINAL_FAST_PATH_WAIT_MS);
+    postNotify = await env.PRODUCT_DB.prepare(
+      `SELECT state, claimed_at_utc, completed_at_utc, result_json, error_code
+         FROM commander_device_calls
+        WHERE call_id = ?
+          AND tenant_id = ?
+          AND subject_id = ?
+        LIMIT 1`
+    ).bind(callId, context.tenant_id, context.subject_id).first();
+  }
+
+  const responseState = String(postNotify?.state || "PENDING");
+  const response = {
     schema: "hara.commander-device-call.v1",
     existing: false,
     call_id: callId,
     request_id: requestId,
     device_id: deviceId,
     tool_id: toolId,
-    state: "PENDING",
+    state: responseState,
     expires_at_utc: expiresAt,
+    retry_after_ms: deviceCallRetryAfterMs(responseState, "enqueue"),
   };
+
+  if (postNotify) {
+    response.claimed_at_utc = postNotify.claimed_at_utc || null;
+    response.completed_at_utc = postNotify.completed_at_utc || null;
+    response.result = postNotify.result_json ? JSON.parse(postNotify.result_json) : null;
+    response.error_code = postNotify.error_code || null;
+  }
+
+  return response;
 }
 
 async function claimNextDeviceCall(env, request) {
@@ -1495,6 +1562,7 @@ async function deviceCallStatus(env, body) {
     completed_at_utc: row.completed_at_utc,
     result: row.result_json ? JSON.parse(row.result_json) : null,
     error_code: row.error_code || null,
+    retry_after_ms: deviceCallRetryAfterMs(row.state, "status"),
   };
 }
 
@@ -1925,6 +1993,7 @@ export default {
         DEVICE_PLATFORM_INVALID: 400,
         DEVICE_METADATA_INVALID: 400,
         DEVICE_OFFLINE: 409,
+        DEVICE_BUSY: 429,
         DEVICE_CALL_TOOL_DENIED: 403,
         DEVICE_CALL_FUNCTION_DENIED: 403,
         DEVICE_CALL_PAYLOAD_INVALID: 400,
@@ -1943,7 +2012,9 @@ export default {
         return authCallbackFailureResponse(error);
       }
 
-      return json({ ok: false, code }, statusMap[code] || 500);
+      const errorPayload = { ok: false, code };
+      if (code === "DEVICE_BUSY") errorPayload.retry_after_ms = 1000;
+      return json(errorPayload, statusMap[code] || 500);
     }
   },
   async scheduled(_event, env, ctx) {

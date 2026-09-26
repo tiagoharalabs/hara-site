@@ -24,7 +24,9 @@ DEFAULT_TOOL = "hara.health"
 
 
 class ProbeError(RuntimeError):
-    pass
+    def __init__(self, code: str, retry_after_ms: int = 0):
+        super().__init__(code)
+        self.retry_after_ms = max(0, int(retry_after_ms or 0))
 
 
 def load_token(path: Path) -> str:
@@ -79,7 +81,10 @@ def post_json(path: str, token: str, body: dict) -> dict:
             obj = json.loads(raw or "{}")
         except json.JSONDecodeError:
             obj = {}
-        raise ProbeError(str(obj.get("code") or f"HTTP_{exc.code}")) from None
+        raise ProbeError(
+            str(obj.get("code") or f"HTTP_{exc.code}"),
+            int(obj.get("retry_after_ms") or 0),
+        ) from None
     except (URLError, TimeoutError) as exc:
         raise ProbeError("WAKE_PROBE_NETWORK_ERROR") from exc
 
@@ -116,9 +121,14 @@ def run_probe(token: str, subject: str, device_id: str, timeout: float) -> dict:
         raise ProbeError("WAKE_PROBE_CALL_ID_MISSING")
 
     deadline = started + timeout
-    terminal = None
+    terminal_states = {"COMPLETED", "FAILED", "EXPIRED", "CANCELLED"}
+    terminal = call if str(call.get("state") or "") in terminal_states else None
+    terminal_from_enqueue = terminal is not None
     status_polls = 0
-    while time.monotonic() < deadline:
+    next_retry_ms = int(call.get("retry_after_ms") or 0)
+    while terminal is None and time.monotonic() < deadline:
+        if next_retry_ms > 0:
+            time.sleep(min(next_retry_ms / 1000.0, max(0.0, deadline - time.monotonic())))
         status = post_json(
             "/api/internal/device/calls/status",
             token,
@@ -132,10 +142,10 @@ def run_probe(token: str, subject: str, device_id: str, timeout: float) -> dict:
         if status.get("schema") != "hara.commander-device-call-status.v1":
             raise ProbeError("WAKE_PROBE_STATUS_INVALID")
         state = str(status.get("state") or "")
-        if state in {"COMPLETED", "FAILED", "EXPIRED", "CANCELLED"}:
+        if state in terminal_states:
             terminal = status
             break
-        time.sleep(0.20)
+        next_retry_ms = int(status.get("retry_after_ms") or 500)
 
     if terminal is None:
         raise ProbeError("WAKE_PROBE_TIMEOUT")
@@ -162,6 +172,8 @@ def run_probe(token: str, subject: str, device_id: str, timeout: float) -> dict:
         "enqueue_ms": enqueue_ms,
         "terminal_after_enqueue_ms": terminal_after_enqueue_ms,
         "status_polls": status_polls,
+        "terminal_from_enqueue": terminal_from_enqueue,
+        "initial_retry_after_ms": int(call.get("retry_after_ms") or 0),
         "state": "COMPLETED",
         "authority": "HARA_COMMANDER",
         "device_channel_state": "PASS",
@@ -176,6 +188,8 @@ def self_check() -> None:
     assert "enqueue_ms" in source
     assert "terminal_after_enqueue_ms" in source
     assert "status_polls" in source
+    assert "terminal_from_enqueue" in source
+    assert "retry_after_ms" in source
     assert "x-hara-mcp-product-token" in source
     tree = ast.parse(source)
     for node in ast.walk(tree):
@@ -238,6 +252,14 @@ def main() -> int:
         + str(result["terminal_after_enqueue_ms"])
     )
     print("COMMANDER_EVENT_V2_DEV_WAKE_STATUS_POLLS=" + str(result["status_polls"]))
+    print(
+        "COMMANDER_EVENT_V2_DEV_WAKE_TERMINAL_FROM_ENQUEUE="
+        + str(result["terminal_from_enqueue"]).upper()
+    )
+    print(
+        "COMMANDER_EVENT_V2_DEV_WAKE_INITIAL_RETRY_AFTER_MS="
+        + str(result["initial_retry_after_ms"])
+    )
     print("COMMANDER_EVENT_V2_DEV_WAKE_TOKEN_EXPOSED=FALSE")
     return 0
 
