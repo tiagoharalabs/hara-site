@@ -1066,3 +1066,170 @@ html[data-neon="off"] .console-nav img{
 @media(prefers-reduced-motion:reduce){
   .architecture .orbit-ring::after{display:none!important}
 }
+
+
+/* V16.3.15 — Restore the two rich system visuals on mobile.
+   Desktop remains unchanged; mobile gets purpose-built compact layouts. */
+@media(max-width:760px){
+  /* Hero hybrid-system visual: previously hidden entirely on phones. */
+  .hero-system{
+    display:block;
+    width:100%;
+    max-width:100%;
+    margin:30px auto 0;
+    padding:0;
+  }
+  .hero-system .system-frame{
+    height:430px;
+    border-radius:22px;
+    overflow:hidden;
+  }
+  .hero-system .system-card{
+    width:128px;
+    padding:11px;
+    border-radius:13px;
+  }
+  .hero-system .system-card svg{
+    width:24px;
+    height:24px;
+    padding:5px;
+  }
+  .hero-system .system-card small{
+    margin-top:8px;
+    font-size:.50rem;
+  }
+  .hero-system .system-card b{font-size:.68rem}
+  .hero-system .system-card span{
+    font-size:.55rem;
+    line-height:1.35;
+  }
+  .hero-system .sys-prem,
+  .hero-system .sys-site{left:10px}
+  .hero-system .sys-cloud,
+  .hero-system .sys-app{right:10px}
+  .hero-system .sys-prem,
+  .hero-system .sys-cloud{top:16px}
+  .hero-system .sys-site,
+  .hero-system .sys-app{bottom:16px}
+
+  .hero-system .system-core{
+    width:132px;
+    height:132px;
+    box-shadow:0 14px 36px rgba(40,113,160,.12),0 0 0 14px rgba(72,176,231,.03);
+  }
+  .hero-system .system-core img{
+    width:68px;
+    height:64px;
+  }
+  .hero-system .system-core strong{font-size:.76rem}
+  .hero-system .system-core small{font-size:.46rem}
+
+  .hero-system .hero-links{
+    display:block;
+    opacity:.95;
+  }
+  .hero-system .hero-links path{
+    stroke-width:2.2;
+    stroke-dasharray:7 7;
+    animation-duration:5.2s;
+  }
+  .hero-system .signal{
+    display:block;
+    width:7px;
+    height:7px;
+  }
+  .hero-system .s1{left:32%;top:31%}
+  .hero-system .s2{right:32%;top:31%}
+  .hero-system .s3{left:32%;bottom:31%}
+  .hero-system .s4{right:32%;bottom:31%}
+  .hero-system .hand-note{display:none}
+
+  /* Integration flow: horizontal desktop SVG cannot map to stacked mobile cards.
+     Replace it with a vertical live connection through Systems -> MCP -> Agents. */
+  .integration-board{
+    position:relative;
+    isolation:isolate;
+    overflow:hidden;
+  }
+  .integration-board .integration-lines{
+    display:none;
+  }
+  .integration-board::before{
+    content:"";
+    position:absolute;
+    z-index:1;
+    left:50%;
+    top:20%;
+    bottom:20%;
+    width:2px;
+    transform:translateX(-50%);
+    background:
+      repeating-linear-gradient(
+        to bottom,
+        rgba(57,162,223,.78) 0 7px,
+        rgba(57,162,223,0) 7px 14px
+      );
+    background-size:2px 28px;
+    animation:mobile-integration-flow 1.7s linear infinite;
+    pointer-events:none;
+  }
+  .integration-board::after{
+    content:"";
+    position:absolute;
+    z-index:2;
+    left:50%;
+    top:25%;
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    transform:translate(-50%,-50%);
+    background:#39a2df;
+    box-shadow:none;
+    animation:mobile-integration-pulse 3.1s ease-in-out infinite;
+    pointer-events:none;
+  }
+  .integration-board .stack,
+  .integration-board .mcp-core{
+    position:relative;
+    z-index:3;
+  }
+
+  html[data-theme="dark"] .integration-board::before{
+    background:
+      repeating-linear-gradient(
+        to bottom,
+        rgba(255,200,61,.76) 0 7px,
+        rgba(255,200,61,0) 7px 14px
+      );
+  }
+  html[data-theme="dark"] .integration-board::after{
+    background:#ffc83d;
+  }
+
+  html[data-theme="light"][data-neon="on"] .integration-board::after,
+  html:not([data-theme="dark"])[data-neon="on"] .integration-board::after{
+    box-shadow:0 0 8px rgba(57,162,223,.70),0 0 16px rgba(57,162,223,.28);
+  }
+  html[data-theme="dark"][data-neon="on"] .integration-board::after{
+    box-shadow:0 0 8px rgba(255,200,61,.66),0 0 16px rgba(255,200,61,.26);
+  }
+}
+
+@keyframes mobile-integration-flow{
+  to{background-position:0 28px}
+}
+@keyframes mobile-integration-pulse{
+  0%{top:24%;opacity:.25;transform:translate(-50%,-50%) scale(.72)}
+  18%{opacity:1}
+  50%{top:50%;opacity:1;transform:translate(-50%,-50%) scale(1)}
+  82%{opacity:1}
+  100%{top:76%;opacity:.25;transform:translate(-50%,-50%) scale(.72)}
+}
+
+@media(prefers-reduced-motion:reduce){
+  .integration-board::before,
+  .integration-board::after{
+    animation:none!important;
+  }
+  .integration-board::after{display:none!important}
+}
