@@ -44,7 +44,7 @@ MAX_DEVICES = 100
 D1_FIXTURE_BATCH_SIZE = 10
 D1_SELECTION_BATCH_SIZE = 25
 ENROLL_MIN_INTERVAL_SECONDS = 1.10
-LIFECYCLE_MAX_WORKERS = 16
+LIFECYCLE_MAX_WORKERS = 4
 
 SOURCE_FILES = (
     "apps/commander/experimental/event_v2_websocket.py",
@@ -474,10 +474,18 @@ def provision(count: int, target: str, manifest_path: Path) -> dict:
     return manifest
 
 
-def parallel_device_rows(devices: list[dict], operation) -> list:
+def parallel_device_rows(
+    devices: list[dict],
+    operation,
+    *,
+    max_workers: int | None = None,
+) -> list:
     if not devices:
         return []
-    workers = min(LIFECYCLE_MAX_WORKERS, len(devices))
+    requested_workers = LIFECYCLE_MAX_WORKERS if max_workers is None else max_workers
+    if requested_workers < 1 or requested_workers > LIFECYCLE_MAX_WORKERS:
+        raise fail("MULTIDEVICE_LIFECYCLE_WORKERS_INVALID")
+    workers = min(requested_workers, len(devices))
     with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
         futures = [pool.submit(operation, row) for row in devices]
         results = []
@@ -499,7 +507,10 @@ root={quote_shell(device_root)}
 pidfile="$root/agent.pid"
 if [ -f "$pidfile" ]; then
   oldpid="$(cat "$pidfile" 2>/dev/null || true)"
-  if [ -n "$oldpid" ] && kill -0 "$oldpid" 2>/dev/null; then exit 23; fi
+  if [ -n "$oldpid" ] && kill -0 "$oldpid" 2>/dev/null; then
+    printf 'MULTIDEVICE_AGENT_ALREADY_ACTIVE=TRUE\n'
+    exit 0
+  fi
 fi
 umask 077
 nohup env XDG_CONFIG_HOME="$root/xdg-config" XDG_DATA_HOME="$root/xdg-data" \
@@ -509,11 +520,22 @@ printf '%s\n' "$pid" > "$pidfile"
 chmod 600 "$pidfile"
 printf 'MULTIDEVICE_AGENT_STARTED=TRUE\n'
 """)
-        if "MULTIDEVICE_AGENT_STARTED=TRUE" not in proc.stdout:
+        if (
+            "MULTIDEVICE_AGENT_STARTED=TRUE" not in proc.stdout
+            and "MULTIDEVICE_AGENT_ALREADY_ACTIVE=TRUE" not in proc.stdout
+        ):
             raise fail("MULTIDEVICE_AGENT_START_FAILED")
         return True
 
-    return sum(1 for result in parallel_device_rows(manifest["devices"], start_one) if result)
+    try:
+        results = parallel_device_rows(manifest["devices"], start_one)
+    except Exception as exc:
+        try:
+            stop_manifest(path, max_workers=1)
+        except Exception as rollback_exc:
+            raise fail("MULTIDEVICE_START_FAILED_ROLLBACK_FAILED") from rollback_exc
+        raise fail("MULTIDEVICE_START_FAILED_ROLLED_BACK") from exc
+    return sum(1 for result in results if result)
 
 
 def status_manifest(path: Path) -> dict:
@@ -555,7 +577,7 @@ PY
     }
 
 
-def stop_manifest(path: Path) -> int:
+def stop_manifest(path: Path, *, max_workers: int | None = None) -> int:
     manifest = load_manifest(path)
     target, root = manifest["target_host"], manifest["remote_root"]
     source = root + "/source/apps/commander/experimental/event_v2_agent_loop.py"
@@ -566,9 +588,16 @@ def stop_manifest(path: Path) -> int:
 set -Eeuo pipefail
 root={quote_shell(device_root)}
 pidfile="$root/agent.pid"
-test -f "$pidfile"
+if [ ! -f "$pidfile" ]; then
+  printf 'MULTIDEVICE_AGENT_STOPPED=TRUE\n'
+  exit 0
+fi
 pid="$(cat "$pidfile")"
 case "$pid" in (*[!0-9]*|'') exit 31;; esac
+if ! kill -0 "$pid" 2>/dev/null; then
+  printf 'MULTIDEVICE_AGENT_STOPPED=TRUE\n'
+  exit 0
+fi
 if kill -0 "$pid" 2>/dev/null; then
   cmdline="$(tr '\\0' ' ' < "/proc/$pid/cmdline")"
   expected={quote_shell(source)}
@@ -586,7 +615,15 @@ printf 'MULTIDEVICE_AGENT_STOPPED=TRUE\n'
             raise fail("MULTIDEVICE_AGENT_STOP_FAILED")
         return True
 
-    return sum(1 for result in parallel_device_rows(manifest["devices"], stop_one) if result)
+    return sum(
+        1
+        for result in parallel_device_rows(
+            manifest["devices"],
+            stop_one,
+            max_workers=max_workers,
+        )
+        if result
+    )
 
 
 def self_check() -> None:
@@ -595,8 +632,14 @@ def self_check() -> None:
     assert D1_FIXTURE_BATCH_SIZE == 10
     assert D1_SELECTION_BATCH_SIZE == 25
     assert ENROLL_MIN_INTERVAL_SECONDS >= 1.0
-    assert LIFECYCLE_MAX_WORKERS == 16
+    assert LIFECYCLE_MAX_WORKERS == 4
     assert parallel_device_rows([], lambda row: row) == []
+    try:
+        parallel_device_rows([{"index": 0}], lambda row: row, max_workers=5)
+    except LabError as exc:
+        assert str(exc) == "MULTIDEVICE_LIFECYCLE_WORKERS_INVALID"
+    else:
+        raise AssertionError("MULTIDEVICE_LIFECYCLE_WORKER_BOUND_MISSING")
     assert remote_root("md-20260926123456-1234abcd").startswith("/tmp_hara/")
     assert worker_sha256("abc") == "ungWv48Bz-pBQUDeXa4iI7ADYaOWF3qctBD_YfIAFa0"
     for item in SOURCE_FILES:
@@ -626,7 +669,8 @@ def self_check() -> None:
     print("COMMANDER_EVENT_V2_MULTIDEVICE_D1_FIXTURE_BATCH_SIZE=10")
     print("COMMANDER_EVENT_V2_MULTIDEVICE_D1_SELECTION_BATCH_SIZE=25")
     print("COMMANDER_EVENT_V2_MULTIDEVICE_ENROLL_MIN_INTERVAL_SECONDS=1.10")
-    print("COMMANDER_EVENT_V2_MULTIDEVICE_LIFECYCLE_MAX_WORKERS=16")
+    print("COMMANDER_EVENT_V2_MULTIDEVICE_LIFECYCLE_MAX_WORKERS=4")
+    print("COMMANDER_EVENT_V2_MULTIDEVICE_START_FAILURE_ROLLBACK=ENABLED")
     print("COMMANDER_EVENT_V2_MULTIDEVICE_DISTINCT_IDENTITIES=REQUIRED")
     print("COMMANDER_EVENT_V2_MULTIDEVICE_SECRET_OUTPUT=ABSENT")
     print("COMMANDER_EVENT_V2_MULTIDEVICE_AUTO_DELETE=ABSENT")

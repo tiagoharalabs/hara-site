@@ -707,3 +707,50 @@ PROD_MUTATION=FALSE
 Enrollment remains paced and serial because it is governed by DEV rate-limit and
 pairing semantics. This change affects only H.A.R.A.-owned scale-lab
 orchestration; it does not change customer Event V2 transport/runtime behavior.
+
+
+## Lifecycle parallelism hardening after #274 live benchmark
+
+A live benchmark of the #274 bounded-parallel lifecycle exposed an orchestration
+defect before any customer-call probe was run.
+
+Observed with the existing 100-device manifest:
+
+```text
+#274_LIFECYCLE_MAX_WORKERS=16
+START_COMMAND_REPORTED=PASS
+STATUS_COMMAND=FAIL:MULTIDEVICE_COMMAND_FAILED:ssh
+LIVE_PROCESS_CENSUS_AFTER_FAILURE=82
+CONNECTED_STATUS_FILES=82
+STATUS_ERRORS=0
+SINGLE_SSH_AFTER_FAILURE=PASS
+EVENT_V2_RUNTIME_DEFECT=FALSE
+TOOLING_PARTIAL_START_DEFECT=TRUE
+```
+
+The 82 processes were then rolled back locally using only manifest-owned PID
+files plus exact Event V2 loop cmdline validation:
+
+```text
+ROLLBACK_MATCHED=82
+ROLLBACK_STILL_ALIVE=0
+ROLLBACK_CMDLINE_MISMATCH=0
+MULTIDEVICE_PROCESS_COUNT_FINAL=0
+EXISTING_CANARY_PROCESS_COUNT=1
+```
+
+Hardening changes:
+
+```text
+LIFECYCLE_MAX_WORKERS=4
+START_IDEMPOTENT_FOR_MANIFEST_OWNED_ACTIVE_PROCESS=TRUE
+STOP_IDEMPOTENT_FOR_MISSING_OR_DEAD_PROCESS=TRUE
+START_FAILURE_ROLLBACK=SERIAL_MAX_WORKERS_1
+START_FAILURE_RESIDUAL_PROCESS_POLICY=ZERO
+AUTO_DELETE=ABSENT
+PROD_MUTATION=FALSE
+```
+
+The lower bound intentionally prefers deterministic SSH behavior over maximum
+lab orchestration throughput. This changes H.A.R.A.-owned test tooling only and
+does not change the Event V2 customer transport/runtime contract.
