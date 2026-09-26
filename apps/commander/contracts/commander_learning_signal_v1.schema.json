@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "hara.commander-learning-signal.v1",
+  "title": "H.A.R.A. Commander learning signal",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "tool_id",
+    "tool_family",
+    "outcome",
+    "latency_bucket",
+    "result_bytes_bucket",
+    "platform",
+    "agent_version",
+    "transport_mode",
+    "privileged_attempt",
+    "customer_content_collected"
+  ],
+  "properties": {
+    "schema": {
+      "const": "hara.commander-learning-signal.v1"
+    },
+    "tool_id": {
+      "type": "string",
+      "maxLength": 120
+    },
+    "tool_family": {
+      "type": "string",
+      "maxLength": 80
+    },
+    "outcome": {
+      "type": "string",
+      "maxLength": 40
+    },
+    "latency_bucket": {
+      "type": "string",
+      "maxLength": 40
+    },
+    "result_bytes_bucket": {
+      "type": "string",
+      "maxLength": 40
+    },
+    "platform": {
+      "type": "string",
+      "maxLength": 40
+    },
+    "agent_version": {
+      "type": "string",
+      "maxLength": 80
+    },
+    "transport_mode": {
+      "type": "string",
+      "maxLength": 40
+    },
+    "privileged_attempt": {
+      "const": false
+    },
+    "customer_content_collected": {
+      "const": false
+    }
+  }
+}
