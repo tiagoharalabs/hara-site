@@ -1,7 +1,10 @@
 param([switch]$SelfTest,[switch]$ImportOnly)
 
 $ErrorActionPreference = "Stop"
-$MaxEventBytes = 4096
+$MaxWakeEventBytes = 4096
+$MaxTransientRequestBytes = 163840
+$MaxTransientResultBytes = 327680
+$MaxEventBytes = $MaxTransientRequestBytes
 $KeepAliveSeconds = 60
 
 function ConvertTo-EventV2Uri([string]$BaseUrl) {
@@ -78,7 +81,7 @@ function Send-EventV2Liveness($Client,[Threading.CancellationToken]$Cancellation
   }
   $payload = '{"schema":"hara.commander-device-event.v2","type":"LIVENESS"}'
   $bytes = [Text.Encoding]::UTF8.GetBytes($payload)
-  if ($bytes.Length -gt $MaxEventBytes) { throw "WINDOWS_EVENT_V2_LIVENESS_SIZE_INVALID" }
+  if ($bytes.Length -gt $MaxWakeEventBytes) { throw "WINDOWS_EVENT_V2_LIVENESS_SIZE_INVALID" }
   $segment = [ArraySegment[byte]]::new($bytes)
   $Client.SendAsync(
     $segment,
@@ -88,18 +91,73 @@ function Send-EventV2Liveness($Client,[Threading.CancellationToken]$Cancellation
   ).GetAwaiter().GetResult()
 }
 
-function Parse-EventV2Wake([string]$Text) {
-  try { $obj = $Text | ConvertFrom-Json } catch { throw "WINDOWS_EVENT_V2_EVENT_INVALID" }
-  $names = @($obj.PSObject.Properties.Name | Sort-Object)
-  if (($names -join ",") -ne "call_id,schema,type") { throw "WINDOWS_EVENT_V2_EVENT_INVALID" }
-  if ([string]$obj.schema -ne "hara.commander-device-event.v2") { throw "WINDOWS_EVENT_V2_SCHEMA_DENIED" }
-  if ([string]$obj.type -ne "CALL_AVAILABLE") { throw "WINDOWS_EVENT_V2_EVENT_TYPE_DENIED" }
-  $callId = [string]$obj.call_id
-  if ([string]::IsNullOrWhiteSpace($callId) -or $callId.Length -gt 180 -or $callId -notmatch "^[A-Za-z0-9_.:-]+$") {
-    throw "WINDOWS_EVENT_V2_CALL_ID_INVALID"
+function Test-EventV2Identifier([string]$Value,[int]$MaxLength,[string]$Code) {
+  if ([string]::IsNullOrWhiteSpace($Value) -or $Value.Length -gt $MaxLength -or $Value -notmatch "^[A-Za-z0-9_.:-]+$") {
+    throw $Code
   }
-  return [pscustomobject]@{ type="CALL_AVAILABLE"; call_id=$callId }
+  return $Value
 }
+
+function Parse-EventV2Wake([string]$Text) {
+  $bytes = [Text.Encoding]::UTF8.GetByteCount($Text)
+  if ($bytes -gt $MaxTransientRequestBytes) { throw "WINDOWS_EVENT_V2_MESSAGE_SIZE_INVALID" }
+  try { $obj = $Text | ConvertFrom-Json } catch { throw "WINDOWS_EVENT_V2_EVENT_INVALID" }
+  if ([string]$obj.schema -ne "hara.commander-device-event.v2") { throw "WINDOWS_EVENT_V2_SCHEMA_DENIED" }
+
+  $type = [string]$obj.type
+  $names = @($obj.PSObject.Properties.Name | Sort-Object)
+  if ($type -eq "CALL_AVAILABLE") {
+    if ($bytes -gt $MaxWakeEventBytes) { throw "WINDOWS_EVENT_V2_MESSAGE_SIZE_INVALID" }
+    if (($names -join ",") -ne "call_id,schema,type") { throw "WINDOWS_EVENT_V2_EVENT_INVALID" }
+    $callId = Test-EventV2Identifier ([string]$obj.call_id) 180 "WINDOWS_EVENT_V2_CALL_ID_INVALID"
+    return [pscustomobject]@{ type="CALL_AVAILABLE"; call_id=$callId }
+  }
+
+  if ($type -eq "CALL_TRANSIENT") {
+    if (($names -join ",") -ne "call_id,payload,request_id,schema,tool_id,type") {
+      throw "WINDOWS_EVENT_V2_EVENT_INVALID"
+    }
+    if ($null -eq $obj.payload -or $obj.payload -is [string] -or $obj.payload -is [array]) {
+      throw "WINDOWS_EVENT_V2_TRANSIENT_PAYLOAD_INVALID"
+    }
+    $callId = Test-EventV2Identifier ([string]$obj.call_id) 180 "WINDOWS_EVENT_V2_CALL_ID_INVALID"
+    $requestId = Test-EventV2Identifier ([string]$obj.request_id) 220 "WINDOWS_EVENT_V2_REQUEST_ID_INVALID"
+    $toolId = Test-EventV2Identifier ([string]$obj.tool_id) 120 "WINDOWS_EVENT_V2_TOOL_ID_INVALID"
+    return [pscustomobject]@{
+      schema = "hara.commander-device-event.v2"
+      type = "CALL_TRANSIENT"
+      call_id = $callId
+      request_id = $requestId
+      tool_id = $toolId
+      payload = $obj.payload
+    }
+  }
+
+  throw "WINDOWS_EVENT_V2_EVENT_TYPE_DENIED"
+}
+
+function Send-EventV2TransientResult(
+  $Client,
+  [Threading.CancellationToken]$CancellationToken,
+  $Payload
+) {
+  if ($Client.State -ne [System.Net.WebSockets.WebSocketState]::Open) {
+    throw "WINDOWS_EVENT_V2_TRANSIENT_SOCKET_NOT_OPEN"
+  }
+  $json = $Payload | ConvertTo-Json -Depth 16 -Compress
+  $bytes = [Text.Encoding]::UTF8.GetBytes($json)
+  if ($bytes.Length -gt $MaxTransientResultBytes) {
+    throw "WINDOWS_EVENT_V2_TRANSIENT_RESULT_TOO_LARGE"
+  }
+  $segment = [ArraySegment[byte]]::new($bytes)
+  $Client.SendAsync(
+    $segment,
+    [System.Net.WebSockets.WebSocketMessageType]::Text,
+    $true,
+    $CancellationToken
+  ).GetAwaiter().GetResult()
+}
+
 
 function Close-EventV2Client($Client) {
   if ($null -eq $Client) { return }
@@ -145,12 +203,20 @@ function Invoke-TransportSelfTest {
   }
   if (-not $contentDenied) { throw "WINDOWS_EVENT_V2_CONTENT_EVENT_NOT_DENIED" }
 
+  $transient = Parse-EventV2Wake '{"schema":"hara.commander-device-event.v2","type":"CALL_TRANSIENT","call_id":"HARA-TRANSIENT-test","request_id":"REQ-test","tool_id":"hara.health","payload":{}}'
+  if ([string]$transient.type -ne "CALL_TRANSIENT") { throw "WINDOWS_EVENT_V2_TRANSIENT_PARSE_FAILED" }
+  if ([string]$transient.request_id -ne "REQ-test") { throw "WINDOWS_EVENT_V2_TRANSIENT_PARSE_FAILED" }
+  if ([string]$transient.tool_id -ne "hara.health") { throw "WINDOWS_EVENT_V2_TRANSIENT_PARSE_FAILED" }
+
   Write-Host "COMMANDER_WINDOWS_EVENT_V2_TRANSPORT_SOURCE=PASS"
   Write-Host "COMMANDER_WINDOWS_EVENT_V2_WSS_ONLY=TRUE"
   Write-Host "COMMANDER_WINDOWS_EVENT_V2_KEEPALIVE_SECONDS=60"
-  Write-Host "COMMANDER_WINDOWS_EVENT_V2_MAX_EVENT_BYTES=4096"
+  Write-Host "COMMANDER_WINDOWS_EVENT_V2_MAX_WAKE_BYTES=4096"
+  Write-Host "COMMANDER_WINDOWS_EVENT_V2_MAX_TRANSIENT_REQUEST_BYTES=163840"
+  Write-Host "COMMANDER_WINDOWS_EVENT_V2_MAX_TRANSIENT_RESULT_BYTES=327680"
   Write-Host "COMMANDER_WINDOWS_EVENT_V2_DURABLE_LIVENESS_FRAME=READY"
   Write-Host "COMMANDER_WINDOWS_EVENT_V2_CONTENT_BEARING_WAKE=DENIED"
+  Write-Host "COMMANDER_WINDOWS_EVENT_V2_TRANSIENT_FRAME=SOURCE_READY"
   Write-Host "COMMANDER_WINDOWS_EVENT_V2_TOKEN_OUTPUT=ABSENT"
 }
 

@@ -2,6 +2,9 @@
 """Fail-closed source guard for Windows Event V2 RC contract."""
 
 from pathlib import Path
+import json
+import shutil
+import subprocess
 
 ROOT = Path(__file__).resolve().parents[3]
 RC = ROOT / "apps/commander/candidate/windows_agent_rc.ps1"
@@ -11,6 +14,36 @@ PUBLIC_AGENT = ROOT / "apps/commander/public/agent/windows.ps1"
 MANIFEST = ROOT / "apps/commander/public/release/agent-manifest.json"
 TRANSPORT = ROOT / "apps/commander/experimental/event_v2_windows_transport.ps1"
 ADAPTER = ROOT / "apps/commander/experimental/event_v2_windows_agent.ps1"
+LEARNING_SCHEMA = ROOT / "apps/commander/contracts/commander_learning_signal_v1.schema.json"
+
+
+def validate_powershell_when_available() -> bool:
+    pwsh = shutil.which("pwsh")
+    if not pwsh:
+        return False
+
+    for source in (TRANSPORT, ADAPTER):
+        command = (
+            "$tokens=$null;$errors=$null;"
+            f"[System.Management.Automation.Language.Parser]::ParseFile('{source}',"
+            "[ref]$tokens,[ref]$errors) | Out-Null;"
+            "if($errors.Count -gt 0){"
+            "$errors | ForEach-Object { "
+            "Write-Error (('{0}:{1}:{2}: {3}' -f "
+            "$_.Extent.File,$_.Extent.StartLineNumber,$_.Extent.StartColumnNumber,$_.Message)) "
+            "}; exit 1"
+            "}"
+        )
+        subprocess.run(
+            [pwsh, "-NoProfile", "-NonInteractive", "-Command", command],
+            check=True,
+        )
+
+    subprocess.run(
+        [pwsh, "-NoProfile", "-NonInteractive", "-File", str(TRANSPORT), "-SelfTest"],
+        check=True,
+    )
+    return True
 
 
 def main() -> int:
@@ -21,6 +54,7 @@ def main() -> int:
     manifest = MANIFEST.read_text(encoding="utf-8")
     transport = TRANSPORT.read_text(encoding="utf-8")
     adapter = ADAPTER.read_text(encoding="utf-8")
+    learning_schema = json.loads(LEARNING_SCHEMA.read_text(encoding="utf-8"))
 
     required_rc = (
         'ValidateSet("POLL_V1","EVENT_V2")',
@@ -48,6 +82,10 @@ def main() -> int:
         "WINDOWS_EVENT_V2_DURABLE_LIVENESS_TARGET=6h",
         "WINDOWS_EVENT_V2_LIVENESS_CONTENT=METADATA_ONLY",
         "WINDOWS_EVENT_V2_LIVENESS_TIMER_PER_CONNECTION=1",
+        "WINDOWS_TRANSIENT_RPC_SOURCE=READY_UNPROVEN",
+        "WINDOWS_LOCAL_IDEMPOTENCY_LEDGER=SOURCE_READY_UNPROVEN",
+        "WINDOWS_TRANSIENT_LEARNING_SIGNAL=METADATA_ONLY",
+        "WINDOWS_TRANSIENT_CUSTOMER_CONTENT_COLLECTION=FALSE",
     )
     for marker in required_doc:
         assert marker in doc, marker
@@ -73,6 +111,13 @@ def main() -> int:
         "Send-EventV2Liveness",
         '{"schema":"hara.commander-device-event.v2","type":"LIVENESS"}',
         "COMMANDER_WINDOWS_EVENT_V2_DURABLE_LIVENESS_FRAME=READY",
+        "$MaxTransientRequestBytes = 163840",
+        "$MaxTransientResultBytes = 327680",
+        'if ($type -eq "CALL_TRANSIENT")',
+        "WINDOWS_EVENT_V2_TRANSIENT_PAYLOAD_INVALID",
+        "Send-EventV2TransientResult",
+        "WINDOWS_EVENT_V2_TRANSIENT_RESULT_TOO_LARGE",
+        "COMMANDER_WINDOWS_EVENT_V2_TRANSIENT_FRAME=SOURCE_READY",
     )
     for marker in required_transport:
         assert marker in transport, marker
@@ -118,6 +163,24 @@ def main() -> int:
         "COMMANDER_WINDOWS_EVENT_V2_SERVICES_PROXY=FALSE",
         'tool_id="shell.run"',
         'if ([string]$_.Exception.Message -eq "TOOL_ID_INVALID")',
+        '$TransientLedgerDir = Join-Path $Root "transient-ledger"',
+        "$TransientLedgerRetentionHours = 24",
+        "$TransientLedgerCleanupBatch = 32",
+        "Get-TransientPayloadSha256",
+        "Get-TransientLedgerEntry",
+        "Set-TransientLedgerEntry",
+        "IDEMPOTENCY_CONFLICT",
+        "Invoke-TransientCall",
+        "New-TransientLearningSignal",
+        'transport_mode = "EVENT_V2_TRANSIENT_RPC"',
+        "customer_content_collected = $false",
+        "privileged_attempt = $false",
+        'elseif ([string]$wake.type -eq "CALL_TRANSIENT")',
+        "Send-EventV2TransientResult $client $cts.Token $transientResult",
+        "COMMANDER_WINDOWS_EVENT_V2_TRANSIENT_RPC=SOURCE_READY",
+        "COMMANDER_WINDOWS_EVENT_V2_LOCAL_IDEMPOTENCY_LEDGER=SOURCE_READY",
+        "COMMANDER_WINDOWS_EVENT_V2_LEARNING_SIGNAL=METADATA_ONLY",
+        "COMMANDER_WINDOWS_EVENT_V2_LEARNING_CUSTOMER_CONTENT=FALSE",
     )
     for marker in required_adapter:
         assert marker in adapter, marker
@@ -134,6 +197,50 @@ def main() -> int:
     )
     assert "/api/device/heartbeat" not in connected
     assert "Start-Sleep -Seconds 2" not in connected
+    assert connected.count('elseif ([string]$wake.type -eq "CALL_TRANSIENT")') == 1
+    assert connected.count("Invoke-TransientCall $Cfg $wake") == 1
+    assert connected.count("Send-EventV2TransientResult $client $cts.Token $transientResult") == 1
+
+    learning_at = adapter.index("function New-TransientLearningSignal")
+    learning_end = adapter.index("function Invoke-TransientCall", learning_at)
+    learning_block = adapter[learning_at:learning_end]
+    schema_fields = set(learning_schema["required"])
+    expected_learning_fields = {
+        "schema",
+        "tool_id",
+        "tool_family",
+        "outcome",
+        "latency_bucket",
+        "result_bytes_bucket",
+        "platform",
+        "agent_version",
+        "transport_mode",
+        "privileged_attempt",
+        "customer_content_collected",
+    }
+    assert learning_schema.get("additionalProperties") is False
+    assert schema_fields == expected_learning_fields
+    for field in expected_learning_fields:
+        assert f"{field} =" in learning_block, field
+    for forbidden_learning in (
+        " arguments =",
+        " argv =",
+        " path =",
+        " filename =",
+        " command =",
+        " stdout =",
+        " stderr =",
+        " raw_payload =",
+        " raw_result =",
+    ):
+        assert forbidden_learning not in learning_block, forbidden_learning
+
+    ledger_at = adapter.index("function Set-TransientLedgerEntry")
+    ledger_end = adapter.index("function Get-TransientToolFamily", ledger_at)
+    ledger_block = adapter[ledger_at:ledger_end]
+    assert "payload_sha256" in ledger_block
+    assert "payload =" not in ledger_block
+    assert "result = $Result" in ledger_block
 
     forbidden_adapter = (
         "HARA_SERVICES",
@@ -162,7 +269,13 @@ def main() -> int:
     for marker in forbidden:
         assert marker not in combined, marker
 
+    powershell_dynamic = validate_powershell_when_available()
+
     print("COMMANDER_WINDOWS_EVENT_V2_RC_CONTRACT=PASS")
+    print(
+        "COMMANDER_WINDOWS_EVENT_V2_POWERSHELL_DYNAMIC="
+        + ("PASS" if powershell_dynamic else "UNEXERCISED_NO_PWSH")
+    )
     print("COMMANDER_WINDOWS_RC_DEFAULT_TRANSPORT=POLL_V1")
     print("COMMANDER_WINDOWS_EVENT_V2_SOURCE_ADAPTER=READY_UNPROVEN")
     print("COMMANDER_WINDOWS_PUBLIC_V1_MUTATION=FALSE")
@@ -172,6 +285,11 @@ def main() -> int:
     print("COMMANDER_WINDOWS_EVENT_V2_AGENT_ADAPTER=SOURCE_READY")
     print("COMMANDER_WINDOWS_EVENT_V2_RECONNECT_BASE_SECONDS=10")
     print("COMMANDER_WINDOWS_EVENT_V2_RECONNECT_MAX_SECONDS=15")
+    print("COMMANDER_WINDOWS_EVENT_V2_TRANSIENT_RPC_SOURCE=READY_UNPROVEN")
+    print("COMMANDER_WINDOWS_EVENT_V2_LOCAL_IDEMPOTENCY_LEDGER=SOURCE_READY_UNPROVEN")
+    print("COMMANDER_WINDOWS_EVENT_V2_TRANSIENT_LEARNING=METADATA_ONLY")
+    print("COMMANDER_WINDOWS_EVENT_V2_LEARNING_SCHEMA_BINDING=PASS")
+    print("COMMANDER_WINDOWS_EVENT_V2_RUNTIME_PARITY_CLAIM=FALSE")
     return 0
 
 
