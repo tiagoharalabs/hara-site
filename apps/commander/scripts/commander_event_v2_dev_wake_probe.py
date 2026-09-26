@@ -105,6 +105,9 @@ def run_probe(token: str, subject: str, device_id: str, timeout: float) -> dict:
             "payload": {},
         },
     )
+    enqueue_done = time.monotonic()
+    enqueue_ms = int((enqueue_done - started) * 1000)
+
     if call.get("schema") != "hara.commander-device-call.v1":
         raise ProbeError("WAKE_PROBE_ENQUEUE_INVALID")
 
@@ -114,6 +117,7 @@ def run_probe(token: str, subject: str, device_id: str, timeout: float) -> dict:
 
     deadline = started + timeout
     terminal = None
+    status_polls = 0
     while time.monotonic() < deadline:
         status = post_json(
             "/api/internal/device/calls/status",
@@ -124,6 +128,7 @@ def run_probe(token: str, subject: str, device_id: str, timeout: float) -> dict:
                 "call_id": call_id,
             },
         )
+        status_polls += 1
         if status.get("schema") != "hara.commander-device-call-status.v1":
             raise ProbeError("WAKE_PROBE_STATUS_INVALID")
         state = str(status.get("state") or "")
@@ -148,8 +153,15 @@ def run_probe(token: str, subject: str, device_id: str, timeout: float) -> dict:
     if nested.get("device_channel_state") != "PASS":
         raise ProbeError("WAKE_PROBE_DEVICE_CHANNEL_NOT_PASS")
 
+    completed_at = time.monotonic()
+    total_ms = int((completed_at - started) * 1000)
+    terminal_after_enqueue_ms = max(0, total_ms - enqueue_ms)
+
     return {
-        "latency_ms": int((time.monotonic() - started) * 1000),
+        "latency_ms": total_ms,
+        "enqueue_ms": enqueue_ms,
+        "terminal_after_enqueue_ms": terminal_after_enqueue_ms,
+        "status_polls": status_polls,
         "state": "COMPLETED",
         "authority": "HARA_COMMANDER",
         "device_channel_state": "PASS",
@@ -161,6 +173,9 @@ def self_check() -> None:
     assert DEV_ORIGIN == "https://hara-commander-dev-v2.tiago-sartori.workers.dev"
     assert "/api/internal/device/calls" in source
     assert "/api/internal/device/calls/status" in source
+    assert "enqueue_ms" in source
+    assert "terminal_after_enqueue_ms" in source
+    assert "status_polls" in source
     assert "x-hara-mcp-product-token" in source
     tree = ast.parse(source)
     for node in ast.walk(tree):
@@ -217,6 +232,12 @@ def main() -> int:
     print("COMMANDER_EVENT_V2_DEV_WAKE_AUTHORITY=" + result["authority"])
     print("COMMANDER_EVENT_V2_DEV_WAKE_DEVICE_CHANNEL=" + result["device_channel_state"])
     print("COMMANDER_EVENT_V2_DEV_WAKE_LATENCY_MS=" + str(result["latency_ms"]))
+    print("COMMANDER_EVENT_V2_DEV_WAKE_ENQUEUE_MS=" + str(result["enqueue_ms"]))
+    print(
+        "COMMANDER_EVENT_V2_DEV_WAKE_TERMINAL_AFTER_ENQUEUE_MS="
+        + str(result["terminal_after_enqueue_ms"])
+    )
+    print("COMMANDER_EVENT_V2_DEV_WAKE_STATUS_POLLS=" + str(result["status_polls"]))
     print("COMMANDER_EVENT_V2_DEV_WAKE_TOKEN_EXPOSED=FALSE")
     return 0
 
