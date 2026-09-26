@@ -14,6 +14,12 @@ import {
   canonicalDeviceToolPayload,
 } from "./device-tool-contract.mjs";
 import { DeviceChannel, deviceChannelName } from "./device-channel.mjs";
+import {
+  enforceRateLimit,
+  rateLimitActorKey,
+  rateLimitClientKey,
+  rateLimitSecretKey,
+} from "./security-rate-limit.mjs";
 export { DeviceChannel };
 
 const DEMO_TENANT = "HARA-TENANT-DEMO-0001";
@@ -66,6 +72,12 @@ function internalJson(payload, status = 200) {
   });
 }
 
+function rateLimitedJson(code) {
+  const response = json({ ok: false, code }, 429);
+  response.headers.set("retry-after", "60");
+  return response;
+}
+
 function monthKey(now = new Date()) {
   return now.toISOString().slice(0, 7);
 }
@@ -106,7 +118,7 @@ function requireRemoteDevToken(request, env) {
   }
 }
 
-function requireMcpProductToken(request, env) {
+async function requireMcpProductToken(request, env) {
   const supplied = request.headers.get("x-hara-mcp-product-token");
   if (secretMatches(env.MCP_PRODUCT_TOKEN, supplied)) return;
   if (
@@ -115,7 +127,54 @@ function requireMcpProductToken(request, env) {
   ) {
     return;
   }
+
+  await enforceRateLimit(
+    env.RATE_LIMIT_MCP_AUTH_FAILURE,
+    await rateLimitClientKey(request, "mcp-auth-failure-client"),
+    "MCP_AUTH_RATE_LIMITED",
+  );
+  if (supplied) {
+    await enforceRateLimit(
+      env.RATE_LIMIT_MCP_AUTH_FAILURE,
+      await rateLimitSecretKey("mcp-auth-failure-token", supplied),
+      "MCP_AUTH_RATE_LIMITED",
+    );
+  }
   throw new Error("MCP_PRODUCT_ACCESS_DENIED");
+}
+
+async function enforceLoginInitiationRateLimit(request, env) {
+  await enforceRateLimit(
+    env.RATE_LIMIT_LOGIN,
+    await rateLimitClientKey(request, "auth-login"),
+    "AUTH_RATE_LIMITED",
+  );
+}
+
+async function enforceDeviceEnrollClientRateLimit(request, env) {
+  await enforceRateLimit(
+    env.RATE_LIMIT_DEVICE_ENROLL_CLIENT,
+    await rateLimitClientKey(request, "device-enroll-client"),
+    "DEVICE_ENROLL_RATE_LIMITED",
+  );
+}
+
+async function enforceDeviceEnrollTokenRateLimit(body, env) {
+  const supplied = String(body?.pairing_token || "");
+  if (!supplied) return;
+  await enforceRateLimit(
+    env.RATE_LIMIT_DEVICE_ENROLL_TOKEN,
+    await rateLimitSecretKey("device-enroll-token", supplied),
+    "DEVICE_ENROLL_RATE_LIMITED",
+  );
+}
+
+async function enforcePortalMutationRateLimit(env, session) {
+  await enforceRateLimit(
+    env.RATE_LIMIT_PORTAL_MUTATION,
+    await rateLimitActorKey("portal-mutation", session.tenant_id, session.subject_id),
+    "PORTAL_MUTATION_RATE_LIMITED",
+  );
 }
 
 function requirePortalMutationOrigin(request) {
@@ -1593,6 +1652,7 @@ export default {
       }
 
       if (url.pathname === "/auth/login" && request.method === "GET") {
+        await enforceLoginInitiationRateLimit(request, env);
         return await beginLogin(request, env);
       }
 
@@ -1692,6 +1752,7 @@ export default {
         requirePortalMutationOrigin(request);
         const session = await resolvePortalSession(request, env);
         if (!session) return json({ ok: false, code: "AUTH_REQUIRED" }, 401);
+        await enforcePortalMutationRateLimit(env, session);
         return json(await createDevicePairing(env, session), 201);
       }
 
@@ -1699,6 +1760,7 @@ export default {
         requirePortalMutationOrigin(request);
         const session = await resolvePortalSession(request, env);
         if (!session) return json({ ok: false, code: "AUTH_REQUIRED" }, 401);
+        await enforcePortalMutationRateLimit(env, session);
         const body = await request.json();
         return json(await revokePortalDevice(env, session, body));
       }
@@ -1707,6 +1769,7 @@ export default {
         requirePortalMutationOrigin(request);
         const session = await resolvePortalSession(request, env);
         if (!session) return json({ ok: false, code: "AUTH_REQUIRED" }, 401);
+        await enforcePortalMutationRateLimit(env, session);
         const body = await request.json();
         return json(await selectPortalDevice(env, session, body));
       }
@@ -1716,7 +1779,9 @@ export default {
       }
 
       if (url.pathname === "/api/device/enroll" && request.method === "POST") {
+        await enforceDeviceEnrollClientRateLimit(request, env);
         const body = await request.json();
+        await enforceDeviceEnrollTokenRateLimit(body, env);
         return json(await enrollDevice(env, body), 201);
       }
 
@@ -1749,7 +1814,7 @@ export default {
         url.pathname.startsWith("/api/internal/mcp/")
         || url.pathname.startsWith("/api/internal/device/")
       ) {
-        requireMcpProductToken(request, env);
+        await requireMcpProductToken(request, env);
       }
 
       if (url.pathname === "/api/internal/device/calls" && request.method === "POST") {
@@ -1959,6 +2024,12 @@ export default {
         DEV_ENDPOINT_DISABLED: 404,
         DEV_ACCESS_DENIED: 401,
         MCP_PRODUCT_ACCESS_DENIED: 401,
+        RATE_LIMIT_BINDING_MISSING: 503,
+        RATE_LIMIT_CHECK_FAILED: 503,
+        AUTH_RATE_LIMITED: 429,
+        DEVICE_ENROLL_RATE_LIMITED: 429,
+        PORTAL_MUTATION_RATE_LIMITED: 429,
+        MCP_AUTH_RATE_LIMITED: 429,
         PORTAL_ORIGIN_DENIED: 403,
         AUTH_REQUIRED: 401,
         OIDC_NOT_CONFIGURED: 503,
@@ -2003,6 +2074,9 @@ export default {
         return authCallbackFailureResponse(error);
       }
 
+      if (statusMap[code] === 429 && code !== "DEVICE_BUSY") {
+        return rateLimitedJson(code);
+      }
       const errorPayload = { ok: false, code };
       if (code === "DEVICE_BUSY") errorPayload.retry_after_ms = 1000;
       return json(errorPayload, statusMap[code] || 500);
