@@ -3,8 +3,10 @@
 **Timestamp:** 2026-09-26T03:31Z  
 **Repository:** `tiagoharalabs/hara-site`  
 **Front name:** **Commander Product Hardening & Launch**  
+**Front role:** **TEST LAB + SECURITY + HOMOLOGATION + RELEASE ACCEPTANCE + LAUNCH**  
 **Primary product-security owner:** #189 — Pre-public-launch adversarial hardening  
-**Parallel transport owner:** #163 — Commander Scale V2 / Event V2  
+**Event V2 engineering/optimization owner:** #163 — Commander Scale V2 / Event V2  
+**Windows/live product acceptance owner:** **Commander Product Hardening & Launch**  
 **Sibling product owners:** #168 re-enroll UX; #167 human/session cost; hara-platform#1533 Commander NOC  
 **Visual state:** **FROZEN / DO NOT REOPEN WITHOUT BUG, REGRESSION, ACCESSIBILITY OR STRATEGIC CHANGE**  
 **PROD Event V2 cutover:** **DENY**
@@ -29,11 +31,13 @@ SECURITY_MULTITENANT_LIVE_DEV=PASS
 SECURITY_PAIRING_CONCURRENCY=PASS
 NEXT_SECURITY_GATE=RATE_LIMIT_BRUTE_FORCE_RESILIENCE
 
-EVENT_V2_OWNER=#163
+EVENT_V2_IMPLEMENTATION_OPTIMIZATION_OWNER=#163
 LINUX_EVENT_V2_DEV_CANARY=PASS
 LINUX_EVENT_V2_RC=LIVE_PROVEN
 WINDOWS_EVENT_V2_RC_SOURCE=READY_UNPROVEN
-NEXT_EVENT_V2_GATE=WINDOWS_HARA_OWNED_RC_LIVE_CANARY
+WINDOWS_LIVE_ACCEPTANCE_OWNER=COMMANDER_PRODUCT_HARDENING_LAUNCH
+NEXT_PRODUCT_TEST_GATE=WINDOWS_HARA_OWNED_RC_LIVE_CANARY
+EVENT_V2_FAILURE_REMEDIATION_OWNER=#163
 CROSS_PLATFORM_EVENT_V2_PARITY=FALSE
 EVENT_V2_PROD_CUTOVER=DENY
 
@@ -46,7 +50,7 @@ The successor should **not** return to aesthetic iteration. The public surfaces 
 
 The next value-bearing work is:
 1. adversarial security hardening;
-2. Event V2 Windows RC proof / cross-platform parity;
+2. Windows RC live proof / cross-platform product acceptance (executed by this front; Event V2 defects routed to #163);
 3. device lifecycle usability;
 4. operational/NOC readiness;
 5. human/session scale and cost;
@@ -331,7 +335,7 @@ Do not interfere with #163-owned Event V2 DEV secrets or canary credentials.
 
 ---
 
-## 6. Event V2 state — #163
+## 6. Event V2 ownership boundary — #163 engineering, this front acceptance
 
 Event V2 already has a dedicated successor handoff:
 
@@ -346,7 +350,10 @@ LINUX_EVENT_V2_DEV_CANARY=PASS
 LINUX_RC_LIVE_PROVEN=TRUE
 PRACTICAL_1K_PATH=HARDENED
 WINDOWS_EVENT_V2_RC_SOURCE=READY_UNPROVEN
-NEXT_GATE=WINDOWS_HARA_OWNED_RC_LIVE_CANARY
+EVENT_V2_IMPLEMENTATION_OPTIMIZATION_OWNER=#163
+WINDOWS_LIVE_CANARY_EXECUTION_OWNER=COMMANDER_PRODUCT_HARDENING_LAUNCH
+PRODUCT_ACCEPTANCE_OWNER=COMMANDER_PRODUCT_HARDENING_LAUNCH
+EVENT_V2_DEFECT_REMEDIATION_OWNER=#163
 CROSS_PLATFORM_EVENT_V2_PARITY=FALSE
 PROD_CUTOVER=DENY
 ```
@@ -357,6 +364,12 @@ Latest Windows source work already on main:
 - #233 — reversible Windows RC installer.
 
 Do not open a second Event V2 implementation owner.
+
+Ownership law:
+- **#163 builds and optimizes Event V2**: transport, WebSocket/Durable Object behavior, reconnect/backoff, D1/write reduction, Cloudflare cost, scale, Linux/Windows Event V2 source and defects.
+- **Commander Product Hardening & Launch tests and accepts the product**: Windows VM or HARA-owned physical Windows target, clean install, V1 baseline, RC install/activation, five-tool parity, receipts/quota, offline/online/reconnect, shutdown, rollback, regression, security and release acceptance.
+- A failed acceptance test does **not** transfer test ownership to #163. The defect is routed to #163, corrected there, and returned to this front for retest.
+- PROD cutover/release acceptance remains a Product Hardening & Launch decision gate, not an Event V2 engineering self-acceptance.
 
 ---
 
@@ -446,18 +459,22 @@ RATE_LIMIT_BRUTE_FORCE_RESILIENCE
 
 Do not replay multi-tenant or pairing race campaigns unless a regression/change requires fresh proof.
 
-### P2 — #163 Event V2 sibling owner
+### P2 — Windows / cross-platform product acceptance — owned here
 
-Only if explicitly acting as #163 successor:
-- HARA-owned Windows target;
-- stable 0.3.7 preserved;
-- RC inert install;
-- DEV-only activation;
-- real connection attestation;
-- five-tool / receipt / quota proof;
-- clean shutdown;
-- manual rollback;
-- failed-activation automatic rollback.
+This front owns the live Windows proof, using either an isolated Windows VM or a HARA-owned physical Windows target as appropriate:
+- establish clean/reproducible Windows test baseline;
+- preserve stable Agent 0.3.7 as V1 baseline;
+- install RC inert;
+- activate Event V2 against DEV only;
+- prove real connection attestation;
+- prove five-tool / receipt / quota parity;
+- prove offline/online/reconnect behavior;
+- prove clean shutdown;
+- prove manual rollback;
+- prove failed-activation automatic rollback;
+- run regression and record PASS/FAIL.
+
+If a failure is caused by Event V2 implementation, open/update evidence for #163 and return the fixed build to this front for retest. Do not move acceptance ownership to #163.
 
 ### P3 — lifecycle / operation
 
@@ -520,8 +537,11 @@ Public H.A.R.A Labs desktop/mobile and Commander UX/Neon are accepted and frozen
 Primary next product gate:
 #189 RATE_LIMIT_BRUTE_FORCE_RESILIENCE
 
-Event V2 remains a sibling owner under #163:
-NEXT_GATE=WINDOWS_HARA_OWNED_RC_LIVE_CANARY
+Ownership split is canonical:
+COMMANDER_PRODUCT_HARDENING_LAUNCH=TEST_LAB|SECURITY|HOMOLOGATION|RELEASE_ACCEPTANCE|LAUNCH
+#163=EVENT_V2_IMPLEMENTATION|OPTIMIZATION|CLOUD_COST|SCALE|TRANSPORT
+WINDOWS_LIVE_CANARY_EXECUTION_OWNER=COMMANDER_PRODUCT_HARDENING_LAUNCH
+EVENT_V2_DEFECT_REMEDIATION_OWNER=#163
 CROSS_PLATFORM_EVENT_V2_PARITY=FALSE
 PROD_CUTOVER=DENY
 
