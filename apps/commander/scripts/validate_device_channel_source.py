@@ -80,6 +80,13 @@ def main() -> int:
     print("COMMANDER_EVENT_V2_TRANSIENT_DISCONNECT_COALESCE=30_60S")
     print("COMMANDER_EVENT_V2_RECONNECT_FRESH_PRESENCE_WRITE=SKIPPED")
     print("COMMANDER_EVENT_V2_APPLICATION_PING=DENIED")
+
+    # Security issue #189 Gate 1 is mandatory in the existing Commander CI chain.
+    import runpy
+    runpy.run_path(
+        str(Path(__file__).with_name("validate_multitenant_isolation.py")),
+        run_name="__main__",
+    )
     return 0
 
 
