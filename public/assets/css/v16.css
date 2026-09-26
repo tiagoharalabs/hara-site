@@ -955,3 +955,53 @@ html:not([data-theme="dark"])[data-neon="on"] .mobile-menu a[aria-current="page"
 }
 
 /* Dark-theme gold contract is intentionally unchanged. */
+
+
+/* V16.3.13 — Neon capybara full-coverage contract.
+   Any H.A.R.A capybara mark using the canonical web asset must light when Neon is ON. */
+html[data-theme="light"][data-neon="on"] img[src*="hara-logo-web"],
+html:not([data-theme="dark"])[data-neon="on"] img[src*="hara-logo-web"]{
+  filter:
+    drop-shadow(0 0 6px rgba(57,162,223,.62))
+    drop-shadow(0 0 14px rgba(57,162,223,.36))
+    drop-shadow(0 0 26px rgba(57,162,223,.16));
+}
+html[data-theme="dark"][data-neon="on"] img[src*="hara-logo-web"]{
+  filter:
+    drop-shadow(0 0 6px rgba(255,200,61,.62))
+    drop-shadow(0 0 14px rgba(255,200,61,.34))
+    drop-shadow(0 0 26px rgba(255,200,61,.14));
+}
+
+/* Small-screen marks need a stronger apparent halo because the artwork is physically smaller. */
+@media(max-width:760px){
+  html[data-theme="light"][data-neon="on"] img[src*="hara-logo-web"],
+  html:not([data-theme="dark"])[data-neon="on"] img[src*="hara-logo-web"]{
+    filter:
+      drop-shadow(0 0 7px rgba(57,162,223,.78))
+      drop-shadow(0 0 16px rgba(57,162,223,.48))
+      drop-shadow(0 0 30px rgba(57,162,223,.22));
+  }
+  html[data-theme="dark"][data-neon="on"] img[src*="hara-logo-web"]{
+    filter:
+      drop-shadow(0 0 7px rgba(255,200,61,.76))
+      drop-shadow(0 0 16px rgba(255,200,61,.44))
+      drop-shadow(0 0 30px rgba(255,200,61,.20));
+  }
+
+  /* Keep glow from being visually clipped by compact mobile components. */
+  .orbit-center,
+  .mcp-core,
+  .cta-card{
+    overflow:visible;
+  }
+}
+
+/* OFF stays halo-free even if a component previously carried a decorative filter. */
+html[data-neon="off"] .orbit-center img,
+html[data-neon="off"] .mcp-core img,
+html[data-neon="off"] .cta-card>img,
+html[data-neon="off"] .system-core img,
+html[data-neon="off"] .console-nav img{
+  filter:none;
+}
