@@ -39,12 +39,28 @@ def percentile(values: list[int], ratio: float) -> int:
     return int(ordered[index])
 
 
-def run_one(token: str, subject: str, device_id: str, timeout: float) -> dict:
+def run_one(
+    token: str,
+    subject: str,
+    device_id: str,
+    timeout: float,
+    busy_retries: int,
+) -> dict:
     started = time.monotonic()
-    result = probe.run_probe(token, subject, device_id, timeout)
-    result = dict(result)
-    result["wall_ms"] = int((time.monotonic() - started) * 1000)
-    return result
+    retries_used = 0
+    while True:
+        try:
+            result = probe.run_probe(token, subject, device_id, timeout)
+            result = dict(result)
+            result["wall_ms"] = int((time.monotonic() - started) * 1000)
+            result["busy_retries"] = retries_used
+            return result
+        except probe.ProbeError as exc:
+            if str(exc) != "DEVICE_BUSY" or retries_used >= busy_retries:
+                raise
+            retry_ms = int(getattr(exc, "retry_after_ms", 0) or 1000)
+            time.sleep(max(0.05, retry_ms / 1000.0))
+            retries_used += 1
 
 
 def run_burst(
@@ -53,6 +69,7 @@ def run_burst(
     device_id: str,
     concurrency: int,
     timeout: float,
+    busy_retries: int = 0,
 ) -> dict:
     if concurrency < 1 or concurrency > 20:
         raise RuntimeError("BURST_CONCURRENCY_INVALID")
@@ -62,7 +79,7 @@ def run_burst(
     errors = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=concurrency) as pool:
         futures = [
-            pool.submit(run_one, token, subject, device_id, timeout)
+            pool.submit(run_one, token, subject, device_id, timeout, busy_retries)
             for _ in range(concurrency)
         ]
         for future in concurrent.futures.as_completed(futures):
@@ -88,6 +105,9 @@ def run_burst(
         "terminal_from_enqueue": sum(
             1 for row in results if bool(row.get("terminal_from_enqueue"))
         ),
+        "busy_retries_total": sum(
+            int(row.get("busy_retries") or 0) for row in results
+        ),
         "error_classes": sorted(set(errors)),
     }
 
@@ -96,6 +116,7 @@ def self_check() -> None:
     assert WAKE_PROBE.is_file()
     assert percentile([1, 2, 3, 4], 0.95) == 4
     assert percentile([5], 0.95) == 5
+    assert probe.ProbeError("DEVICE_BUSY", 1000).retry_after_ms == 1000
     print("COMMANDER_EVENT_V2_DEV_BURST_SOURCE=PASS")
     print("COMMANDER_EVENT_V2_DEV_BURST_MAX_CONCURRENCY=20")
     print("COMMANDER_EVENT_V2_DEV_BURST_CUSTOMER_CONTENT_OUTPUT=ABSENT")
@@ -110,6 +131,7 @@ def main() -> int:
     parser.add_argument("--device-id")
     parser.add_argument("--concurrency", type=int, default=10)
     parser.add_argument("--timeout", type=float, default=20.0)
+    parser.add_argument("--busy-retries", type=int, default=0)
     args = parser.parse_args()
 
     if args.check:
@@ -128,6 +150,7 @@ def main() -> int:
             args.device_id.strip(),
             args.concurrency,
             args.timeout,
+            args.busy_retries,
         )
     finally:
         token = ""
@@ -142,6 +165,7 @@ def main() -> int:
     print("COMMANDER_EVENT_V2_DEV_BURST_LATENCY_MAX_MS=" + str(result["latency_max_ms"]))
     print("COMMANDER_EVENT_V2_DEV_BURST_STATUS_POLLS_TOTAL=" + str(result["status_polls_total"]))
     print("COMMANDER_EVENT_V2_DEV_BURST_TERMINAL_FROM_ENQUEUE=" + str(result["terminal_from_enqueue"]))
+    print("COMMANDER_EVENT_V2_DEV_BURST_BUSY_RETRIES_TOTAL=" + str(result["busy_retries_total"]))
     print("COMMANDER_EVENT_V2_DEV_BURST_TOKEN_EXPOSED=FALSE")
     if result["error_classes"]:
         print("COMMANDER_EVENT_V2_DEV_BURST_ERROR_CLASSES=" + ",".join(result["error_classes"]))
