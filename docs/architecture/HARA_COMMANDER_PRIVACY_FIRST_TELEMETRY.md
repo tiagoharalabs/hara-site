@@ -322,9 +322,12 @@ into Cloudflare Workers Analytics Engine for product/operational learning.
 This is not request capture and is not customer-content telemetry.
 
 ```text
-LEARNING_ANALYTICS_ENV=DEV_ONLY_INITIAL
-LEARNING_ANALYTICS_BINDING=LEARNING_ANALYTICS
-LEARNING_ANALYTICS_DATASET=hara_commander_learning_dev
+LEARNING_ANALYTICS_SOURCE=READY
+LEARNING_ANALYTICS_ACCOUNT_FEATURE=DISABLED
+LEARNING_ANALYTICS_DEV_BINDING=ABSENT_UNTIL_ACCOUNT_ENABLE
+LEARNING_ANALYTICS_PROD_BINDING=ABSENT
+PLANNED_BINDING=LEARNING_ANALYTICS
+PLANNED_DATASET=hara_commander_learning_dev
 LEARNING_ANALYTICS_CUSTOMER_CONTENT=FALSE
 LEARNING_ANALYTICS_CUSTOMER_IDENTIFIERS=FALSE
 LEARNING_ANALYTICS_REQUEST_IDENTIFIERS=FALSE
@@ -381,8 +384,9 @@ The Worker revalidates the exact learning-signal allowlist before writing.
 Analytics failures are swallowed so observability cannot fail or delay the
 customer operation.
 
-The PROD Wrangler config intentionally has no `LEARNING_ANALYTICS` binding at
-this stage. Promotion requires explicit privacy/readback review.
+The canonical DEV and PROD Wrangler configs intentionally have no `LEARNING_ANALYTICS` binding while the Cloudflare account feature is disabled. A DEV deploy attempt with the binding was rejected by Cloudflare with API code `10089` (`Analytics Engine` not enabled), and the active DEV deployment remained unchanged. Account-level feature activation is an explicit owner gate because it changes Cloudflare account capabilities and may carry future billing implications. Source code remains safe/no-op when the binding is absent.
+
+Once the account feature is explicitly enabled, DEV may add the planned `LEARNING_ANALYTICS` binding for dataset `hara_commander_learning_dev`. PROD promotion still requires a separate privacy/readback review.
 
 At the current first-1k planning envelopes:
 

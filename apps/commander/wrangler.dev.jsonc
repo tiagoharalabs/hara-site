@@ -92,11 +92,5 @@
         "DeviceChannel"
       ]
     }
-  ],
-  "analytics_engine_datasets": [
-    {
-      "binding": "LEARNING_ANALYTICS",
-      "dataset": "hara_commander_learning_dev"
-    }
   ]
 }

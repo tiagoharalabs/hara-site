@@ -103,11 +103,9 @@ def main() -> int:
     dev_config = json.loads(DEV_CONFIG.read_text(encoding="utf-8"))
     prod_config = json.loads(PROD_CONFIG.read_text(encoding="utf-8"))
     dev_analytics = dev_config.get("analytics_engine_datasets") or []
-    assert dev_analytics == [{
-        "binding": "LEARNING_ANALYTICS",
-        "dataset": "hara_commander_learning_dev",
-    }]
-    assert not (prod_config.get("analytics_engine_datasets") or [])
+    prod_analytics = prod_config.get("analytics_engine_datasets") or []
+    assert not dev_analytics
+    assert not prod_analytics
 
     worker = WORKER.read_text(encoding="utf-8")
     assert 'const DEVICE_CALL_TTL_SECONDS = 50;' in worker
@@ -167,7 +165,8 @@ def main() -> int:
     print("COMMANDER_LEARNING_SIGNAL_SCHEMA=PASS")
     print("COMMANDER_LEARNING_SIGNAL_SOURCE_ALLOWLIST=PASS")
     print("COMMANDER_LEARNING_SIGNAL_RAW_CONTENT=DENY")
-    print("COMMANDER_LEARNING_ANALYTICS_DEV_BINDING=PASS")
+    print("COMMANDER_LEARNING_ANALYTICS_SOURCE=READY")
+    print("COMMANDER_LEARNING_ANALYTICS_DEV_BINDING=ABSENT_ACCOUNT_GATE")
     print("COMMANDER_LEARNING_ANALYTICS_PROD_BINDING=ABSENT")
     print("COMMANDER_LEARNING_ANALYTICS_CUSTOMER_IDENTIFIERS=ABSENT")
     print("COMMANDER_LEARNING_ANALYTICS_CUSTOMER_CONTENT=ABSENT")
