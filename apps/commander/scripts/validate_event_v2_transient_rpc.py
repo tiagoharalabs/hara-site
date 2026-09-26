@@ -171,7 +171,7 @@ def main() -> int:
     assert '"authorization": "Bearer " + token' in do_analytics_probe
 
     for required in (
-        "MAX_DEVICES = 10",
+        "MAX_DEVICES = 50",
         "hara.commander-event-v2-multidevice-lab.v1",
         "MULTIDEVICE_DISTINCT_IDENTITIES=REQUIRED",
         "MULTIDEVICE_PROD_MUTATION=ABSENT",
