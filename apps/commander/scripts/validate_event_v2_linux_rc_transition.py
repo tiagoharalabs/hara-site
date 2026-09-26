@@ -93,7 +93,7 @@ import os
 import sys
 from pathlib import Path
 
-args=[a for a in sys.argv[1:] if a != "--user"]
+args=[a for a in sys.argv[1:] if a not in {"--user","--quiet"}]
 state_path=Path(os.environ["HARA_TEST_SYSTEMCTL_STATE"])
 pairs={}
 for raw in state_path.read_text().splitlines():
