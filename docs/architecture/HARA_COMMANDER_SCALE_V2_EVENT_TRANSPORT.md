@@ -397,3 +397,48 @@ Current modeled first-wave maxima:
 The 20k result is architecture headroom only. It does not by itself prove that
 a single D1 product database can absorb every reconnect presence write. D1 write
 pressure remains a separate guard because a single D1 database is serialized.
+
+
+## 15. Transient disconnect coalescing
+
+Event V2 disconnects are not written to D1 immediately.
+
+The DeviceChannel schedules a per-device Durable Object alarm with a deterministic
+30–60 second grace window:
+
+```text
+OFFLINE_GRACE_BASE=30s
+OFFLINE_GRACE_JITTER=0..30s
+SHORT_BLIP_OFFLINE_WRITE=0
+RECONNECT_WITHIN_GRACE_CANCELS_OFFLINE=true
+```
+
+On reconnect, the pending offline alarm is cancelled. If D1 already says
+`EVENT_V2` and its durable presence is still fresh, the reconnect does not
+rewrite `last_seen_at_utc`.
+
+This turns a short fleet-wide network blip from:
+
+```text
+disconnect -> D1 OFFLINE write
+reconnect  -> D1 ONLINE write
+```
+
+into:
+
+```text
+disconnect -> DO-local pending alarm
+reconnect  -> alarm cancelled
+D1 writes  -> zero
+```
+
+For a prolonged outage, offline writes are still required, but are distributed
+across the grace window. The deterministic source model currently yields:
+
+```text
+1,000 devices  -> <= 39 OFFLINE writes in the busiest 1s bucket
+20,000 devices -> <= 722 OFFLINE writes in the busiest 1s bucket
+```
+
+The 1k result is the practical product target. The 20k result remains architecture
+headroom and still carries a D1 pressure warning rather than a scale-ready claim.
