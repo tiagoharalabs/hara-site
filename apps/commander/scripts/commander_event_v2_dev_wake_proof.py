@@ -9,6 +9,7 @@ It never prints the token value and rejects PROD origin/config by construction.
 from __future__ import annotations
 
 import argparse
+import ast
 import json
 import os
 import secrets
@@ -190,10 +191,19 @@ def self_check() -> None:
     require_dev_config()
     source = Path(__file__).read_text(encoding="utf-8")
     assert DEFAULT_ORIGIN_NOT_PRESENT(source)
-    assert "print(token" not in source
     assert "commander.haralabs.com.br/api" not in source
     assert 'x-hara-mcp-product-token' in source
     assert 'MCP_PRODUCT_TOKEN' in source
+
+    tree = ast.parse(source)
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        if not isinstance(node.func, ast.Name) or node.func.id != "print":
+            continue
+        rendered = " ".join(ast.dump(arg) for arg in node.args)
+        if "token" in rendered.lower():
+            raise fail("WAKE_TOKEN_PRINT_SURFACE")
     print("COMMANDER_EVENT_V2_DEV_WAKE_SOURCE=PASS")
     print("COMMANDER_EVENT_V2_DEV_WAKE_PROD_ORIGIN=ABSENT")
     print("COMMANDER_EVENT_V2_DEV_WAKE_TOKEN_OUTPUT=ABSENT")
