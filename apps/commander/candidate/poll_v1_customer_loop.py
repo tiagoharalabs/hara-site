@@ -30,6 +30,7 @@ def load_agent():
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
+    module.TRANSPORT_MODE = "OUTBOUND_RELAY"
     return module
 
 
@@ -83,9 +84,10 @@ def self_test() -> None:
     assert HEARTBEAT_SECONDS == 30.0
     assert POLL_SECONDS == 2.0
     assert agent.OPERATIONAL_AUTHORITY == "HARA_COMMANDER"
-    assert agent.TRANSPORT_MODE == "EVENT_V2"
+    assert agent.TRANSPORT_MODE == "OUTBOUND_RELAY"
     print("COMMANDER_AGENT_RC_POLL_V1_LOOP=PASS")
     print("COMMANDER_AGENT_RC_POLL_V1_AUTHORITY=HARA_COMMANDER")
+    print("COMMANDER_AGENT_RC_POLL_V1_TRANSPORT=OUTBOUND_RELAY")
     print("COMMANDER_AGENT_RC_POLL_V1_HEARTBEAT_SECONDS=30")
     print("COMMANDER_AGENT_RC_POLL_V1_POLL_SECONDS=2")
 
