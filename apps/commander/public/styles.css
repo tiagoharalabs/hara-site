@@ -1057,3 +1057,62 @@ html:not([data-theme="dark"])[data-neon="on"] .side-nav button.active .nav-icon{
   stroke:#78c9f3;
   filter:drop-shadow(0 0 6px rgba(57,162,223,.58)) drop-shadow(0 0 12px rgba(57,162,223,.22));
 }
+
+
+/* Product readability uplift + dark Neon OFF identity.
+   Keeps Neon ON theme contracts unchanged while removing 7-9px microcopy. */
+html[data-theme="dark"][data-neon="off"] .console-brand strong,
+html[data-theme="dark"]:not([data-neon]) .console-brand strong{
+  color:#39a2df;
+  text-shadow:none;
+}
+.brand-copy small{font-size:10px}
+.eyebrow{font-size:11px}
+.trust-row small{font-size:10px}
+.console-brand strong{font-size:13px}
+.console-brand span{font-size:10px}
+.status-pill{font-size:10px}
+.metric-grid span,.metric-grid small{font-size:9px}
+.usage-title{font-size:10px}
+.console-events span{font-size:9px;line-height:1.35}
+.feature-no{font-size:11px}
+.auth-brand small{font-size:10px}
+.identity-gateway-label{font-size:9px}
+.auth-divider,.auth-note,.auth-legal,.product-legal-links{font-size:10px!important}
+.summary-card.accent.trial::after{font-size:9px}
+.summary-card span{font-size:10px}
+.summary-card small{font-size:10px}
+.panel-head span{font-size:10px}
+.chart-foot{font-size:9px}
+.quota-hero span,.quota-hero small{font-size:10px}
+.quota-meta b{font-size:11px}
+.tr{font-size:10px}
+.tr.head{font-size:9px}
+.tag{font-size:9px}
+.plan-label,.recommended{font-size:9px}
+.plan-card>strong small{font-size:10px}
+.plan-card li{font-size:10px}
+.status-line{font-size:10px}
+.security-card dl>div{font-size:10px}
+.session b{font-size:10px}
+.session small,.session>span{font-size:9px}
+.grant-grid b,.grant-grid small{font-size:9px}
+.system-banner span{font-size:10px}
+.top-session-avatar{font-size:10px}
+.top-session-copy small{font-size:9px}
+.setup-card small{font-size:9px}
+.onboarding-step-no{font-size:10px}
+.onboarding-step small,.onboarding-finish small{font-size:10px}
+.os-picker button{font-size:10px}
+.pairing-inline-head span{font-size:9px}
+.device-tabs button{font-size:10px}
+.device-tabs button span{font-size:9px}
+.device-platform{font-size:9px}
+.device-selected-badge{font-size:9px}
+.device-copy small{font-size:10px}
+.device-state{font-size:9px}
+.install-note{font-size:10px}
+.connection-readiness b{font-size:9px}
+.connection-readiness small{font-size:10px}
+.integration-badge{font-size:9px}
+.connection-features li{font-size:10px}
