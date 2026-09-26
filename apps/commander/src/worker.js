@@ -20,6 +20,7 @@ const DEMO_TENANT = "HARA-TENANT-DEMO-0001";
 const MCP_METER_ID = "HARA_COMMANDER_GOVERNED_INVOKE";
 const MCP_SECONDARY_PROVIDER = "CLOUDFLARE_ACCESS";
 const DEVICE_CALL_TTL_SECONDS = 50;
+const EVENT_V2_TERMINAL_FAST_PATH_WAIT_MS = 500;
 const QUOTA_RESERVATION_TTL_SECONDS = 10 * 60;
 const PAIRING_RETENTION_SECONDS = 30 * 24 * 60 * 60;
 const PAIRING_RETENTION_BATCH = 100;
@@ -1319,6 +1320,7 @@ async function enqueueDeviceCall(env, body) {
     && notification.attempted
     && notification.delivered >= 1
   ) {
+    await scheduler.wait(EVENT_V2_TERMINAL_FAST_PATH_WAIT_MS);
     postNotify = await env.PRODUCT_DB.prepare(
       `SELECT state, claimed_at_utc, completed_at_utc, result_json, error_code
          FROM commander_device_calls
