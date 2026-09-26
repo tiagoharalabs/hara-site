@@ -686,24 +686,30 @@ Account Analytics Read token.
 
 ## Lab lifecycle orchestration optimization
 
-After the terminal 100-device proof, the lab orchestration itself remains a
-tooling optimization target. The prior start/status/stop implementation issued
-SSH operations serially, which inflated observed orchestration time and must not
-be confused with Event V2 transport latency.
+After the terminal 100-device proof, the lab orchestration itself remained a
+tooling optimization target. The original start/status/stop implementation
+issued SSH operations serially, which inflated observed orchestration time and
+must not be confused with Event V2 transport latency.
 
-The lab lifecycle is now bounded-parallel:
+An intermediate 16-session parallel-SSH implementation was source-valid but
+live read-only calibration showed that concurrent SSH handshakes to the same
+host can hit the host SSH admission boundary. That implementation is therefore
+superseded.
+
+The lifecycle now uses one SSH session per whole operation and performs the
+device loop locally on the H.A.R.A.-owned target:
 
 ```text
-LIFECYCLE_MAX_WORKERS=16
-START_PARALLEL=TRUE
-STATUS_PARALLEL=TRUE
-STOP_PARALLEL=TRUE
-ENROLLMENT_PARALLEL=FALSE
+LIFECYCLE_BATCH_MODE=SINGLE_SSH
+START_SINGLE_SSH=TRUE
+STATUS_SINGLE_SSH=TRUE
+STOP_SINGLE_SSH=TRUE
+ENROLLMENT_BATCHED=FALSE
 ENROLL_MIN_INTERVAL_SECONDS=1.10
 RUNTIME_PRODUCT_CHANGE=FALSE
 PROD_MUTATION=FALSE
 ```
 
 Enrollment remains paced and serial because it is governed by DEV rate-limit and
-pairing semantics. This change affects only H.A.R.A.-owned scale-lab
-orchestration; it does not change customer Event V2 transport/runtime behavior.
+pairing semantics. This changes only scale-lab orchestration; customer Event V2
+runtime/transport behavior is unchanged.
