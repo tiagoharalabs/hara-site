@@ -123,3 +123,45 @@ WINDOWS_STABLE_BASELINE=PRESERVE
 WINDOWS_EVENT_V2_CUTOVER=DENY
 CROSS_PLATFORM_PARITY_CLAIM=FALSE
 ```
+
+
+## RC connection attestation
+
+A running process is not sufficient proof that Event V2 is usable.
+
+The Event V2 loop writes a local, secret-free runtime status file:
+
+```text
+schema=hara.commander-event-v2-runtime-status.v1
+transport_mode=EVENT_V2
+connected=true|false
+connected_at_utc=<timestamp>
+disconnected_at_utc=<timestamp|null>
+last_error_code=<bounded code|null>
+updated_at_utc=<timestamp>
+```
+
+The file is mode 0600 and contains no token, command payload, result payload or
+customer content.
+
+RC activation records the previous status timestamp before starting the
+candidate, then requires a **new** status instance with:
+
+```text
+transport_mode=EVENT_V2
+connected=true
+updated_at_utc != previous_updated_at_utc
+connected_at_utc != empty
+```
+
+within the bounded activation window.
+
+If the process is active but this connection proof is absent/stale/false, the
+candidate is stopped and stable 0.3.7 is restored.
+
+```text
+PROCESS_ACTIVE_ONLY=INSUFFICIENT
+FRESH_EVENT_V2_CONNECTION_ATTESTATION=REQUIRED
+FAILED_CONNECTION_ATTESTATION_ROLLBACK=STABLE_0_3_7
+EVENT_STATUS_SECRET_CONTENT=FALSE
+```
