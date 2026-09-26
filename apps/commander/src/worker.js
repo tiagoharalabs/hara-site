@@ -1057,7 +1057,10 @@ async function heartbeatDevice(env, request, body) {
 
   const heartbeat = await env.PRODUCT_DB.prepare(
     `UPDATE commander_devices
-        SET last_seen_at_utc = ?, agent_version = ?, architecture = ?
+        SET last_seen_at_utc = ?,
+            agent_version = ?,
+            architecture = ?,
+            tunnel_mode = 'OUTBOUND_RELAY'
       WHERE device_id = ? AND state = 'ACTIVE' AND revoked_at_utc IS NULL`
   ).bind(seenAt, agentVersion, architecture, device.device_id).run();
   if (!heartbeat.meta?.changes) throw new Error("DEVICE_AUTH_INVALID");
