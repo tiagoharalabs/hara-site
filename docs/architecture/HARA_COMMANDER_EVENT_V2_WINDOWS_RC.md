@@ -96,7 +96,8 @@ Before `EVENT_V2` may become runnable in the Windows RC:
 ## Current non-claim
 
 ```text
-WINDOWS_EVENT_V2_TRANSPORT_IMPLEMENTED=FALSE
+WINDOWS_EVENT_V2_TRANSPORT_SOURCE=READY_UNPROVEN
+WINDOWS_EVENT_V2_AGENT_ADAPTER_IMPLEMENTED=FALSE
 WINDOWS_EVENT_V2_RUNTIME_PROVEN=FALSE
 WINDOWS_EVENT_V2_FIVE_TOOL_PARITY=FALSE
 CROSS_PLATFORM_EVENT_V2_PARITY=FALSE
@@ -104,3 +105,28 @@ CROSS_PLATFORM_EVENT_V2_PARITY=FALSE
 
 This document intentionally prevents the Linux proof from being generalized to
 Windows before Windows-specific evidence exists.
+
+
+## Transport source checkpoint
+
+Source-only transport now exists at:
+
+`apps/commander/experimental/event_v2_windows_transport.ps1`
+
+It uses the .NET `ClientWebSocket` surface and establishes the following
+fail-closed source contract:
+
+```text
+WINDOWS_EVENT_V2_WSS_ONLY=TRUE
+WINDOWS_EVENT_V2_BEARER_UPGRADE_ONLY=TRUE
+WINDOWS_EVENT_V2_KEEPALIVE_TARGET=60s
+WINDOWS_EVENT_V2_MAX_EVENT_BYTES=4096
+WINDOWS_EVENT_V2_FRAGMENTED_WAKE=DENY
+WINDOWS_EVENT_V2_NON_TEXT_WAKE=DENY
+WINDOWS_EVENT_V2_CONTENT_BEARING_WAKE=DENY
+WINDOWS_EVENT_V2_THIRD_PARTY_WEBSOCKET_RUNTIME=FALSE
+```
+
+This does **not** make Windows Event V2 runnable yet. The missing layer is the
+Windows Event V2 agent adapter that binds wake/reconciliation to the existing
+five governed tools, receipts, runtime status and Scheduled Task rollback.
