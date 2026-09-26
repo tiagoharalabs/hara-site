@@ -105,9 +105,15 @@ function requireRemoteDevToken(request, env) {
 }
 
 function requireMcpProductToken(request, env) {
-  if (!secretMatches(env.MCP_PRODUCT_TOKEN, request.headers.get("x-hara-mcp-product-token"))) {
-    throw new Error("MCP_PRODUCT_ACCESS_DENIED");
+  const supplied = request.headers.get("x-hara-mcp-product-token");
+  if (secretMatches(env.MCP_PRODUCT_TOKEN, supplied)) return;
+  if (
+    env.ENVIRONMENT === "DEV"
+    && secretMatches(env.MCP_PRODUCT_CANARY_TOKEN, supplied)
+  ) {
+    return;
   }
+  throw new Error("MCP_PRODUCT_ACCESS_DENIED");
 }
 
 function requirePortalMutationOrigin(request) {
