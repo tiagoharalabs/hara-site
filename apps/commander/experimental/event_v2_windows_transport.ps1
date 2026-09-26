@@ -1,4 +1,4 @@
-param([switch]$SelfTest)
+param([switch]$SelfTest,[switch]$ImportOnly)
 
 $ErrorActionPreference = "Stop"
 $MaxEventBytes = 4096
@@ -119,6 +119,8 @@ function Invoke-TransportSelfTest {
   Write-Host "COMMANDER_WINDOWS_EVENT_V2_CONTENT_BEARING_WAKE=DENIED"
   Write-Host "COMMANDER_WINDOWS_EVENT_V2_TOKEN_OUTPUT=ABSENT"
 }
+
+if ($ImportOnly) { return }
 
 if ($SelfTest -or ($args -contains "--self-test")) {
   Invoke-TransportSelfTest
