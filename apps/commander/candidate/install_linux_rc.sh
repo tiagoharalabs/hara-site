@@ -15,6 +15,7 @@ RC_UNIT="$SYSTEMD_DIR/hara-commander-agent-rc.service"
 STABLE_SERVICE="hara-commander-agent.service"
 RC_SERVICE="hara-commander-agent-rc.service"
 RC_ROOT="$DATA_HOME/hara-commander-rc"
+EVENT_STATUS="$DATA_HOME/hara-commander/event-v2-status.json"
 SOURCE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 SOURCE_COMMANDER="$SOURCE_ROOT/apps/commander"
 
@@ -204,6 +205,56 @@ attest_active() {
   return 0
 }
 
+event_status_updated() {
+  [ -f "$EVENT_STATUS" ] || return 1
+  python3 - "$EVENT_STATUS" <<'PY'
+import json,sys
+from pathlib import Path
+try:
+    obj=json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+except Exception:
+    raise SystemExit(1)
+value=str(obj.get("updated_at_utc") or "")
+if not value:
+    raise SystemExit(1)
+print(value)
+PY
+}
+
+attest_event_v2_connection() {
+  local previous_updated="$1"
+  local attempt
+  for attempt in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
+    if python3 - "$EVENT_STATUS" "$previous_updated" <<'PY'
+import json,sys
+from pathlib import Path
+path=Path(sys.argv[1]); previous=sys.argv[2]
+if not path.is_file():
+    raise SystemExit(1)
+try:
+    obj=json.loads(path.read_text(encoding="utf-8"))
+except Exception:
+    raise SystemExit(1)
+if obj.get("schema") != "hara.commander-event-v2-runtime-status.v1":
+    raise SystemExit(1)
+if obj.get("transport_mode") != "EVENT_V2":
+    raise SystemExit(1)
+if obj.get("connected") is not True:
+    raise SystemExit(1)
+updated=str(obj.get("updated_at_utc") or "")
+connected_at=str(obj.get("connected_at_utc") or "")
+if not updated or not connected_at or updated == previous:
+    raise SystemExit(1)
+raise SystemExit(0)
+PY
+    then
+      return 0
+    fi
+    sleep 1
+  done
+  return 1
+}
+
 rollback_to_stable() {
   systemctl --user stop "$RC_SERVICE" >/dev/null 2>&1 || true
   write_mode POLL_V1
@@ -226,6 +277,9 @@ activate_event_v2() {
   write_mode EVENT_V2
   systemctl --user daemon-reload
 
+  local previous_event_status=""
+  previous_event_status="$(event_status_updated 2>/dev/null || true)"
+
   # Never permit the stable and RC agents to use the same device token at once.
   systemctl --user stop "$STABLE_SERVICE"
 
@@ -235,7 +289,11 @@ activate_event_v2() {
   fi
   if ! wait_active "$RC_SERVICE" || ! attest_active "$RC_SERVICE"; then
     rollback_to_stable
-    die "RC_EVENT_V2_ATTESTATION_FAILED_ROLLED_BACK"
+    die "RC_EVENT_V2_PROCESS_ATTESTATION_FAILED_ROLLED_BACK"
+  fi
+  if ! attest_event_v2_connection "$previous_event_status"; then
+    rollback_to_stable
+    die "RC_EVENT_V2_CONNECTION_ATTESTATION_FAILED_ROLLED_BACK"
   fi
   if systemctl --user is-active --quiet "$STABLE_SERVICE"; then
     rollback_to_stable
@@ -243,6 +301,7 @@ activate_event_v2() {
   fi
 
   printf 'COMMANDER_AGENT_RC_EVENT_V2_ACTIVATION=PASS\n'
+  printf 'COMMANDER_AGENT_RC_EVENT_V2_CONNECTION_ATTESTATION=PASS\n'
   printf 'COMMANDER_AGENT_RC_TRANSPORT=EVENT_V2\n'
   printf 'COMMANDER_AGENT_RC_SERVICE=ACTIVE\n'
   printf 'COMMANDER_AGENT_STABLE_SERVICE=INACTIVE\n'
@@ -251,16 +310,29 @@ activate_event_v2() {
 }
 
 status() {
-  local stable=INACTIVE rc=INACTIVE installed=FALSE mode=POLL_V1
+  local stable=INACTIVE rc=INACTIVE installed=FALSE mode=POLL_V1 event_connected=UNKNOWN
   [ -f "$RC_ROOT/apps/commander/candidate/linux_agent_rc.py" ] && installed=TRUE
   systemctl --user is-active --quiet "$STABLE_SERVICE" && stable=ACTIVE || true
   systemctl --user is-active --quiet "$RC_SERVICE" && rc=ACTIVE || true
   mode="$(read_mode 2>/dev/null || printf 'INVALID\n')"
+  if [ -f "$EVENT_STATUS" ]; then
+    event_connected="$(python3 - "$EVENT_STATUS" <<'PY'
+import json,sys
+from pathlib import Path
+try:
+    obj=json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+except Exception:
+    print("INVALID"); raise SystemExit(0)
+print("TRUE" if obj.get("connected") is True else "FALSE")
+PY
+)"
+  fi
 
   printf 'COMMANDER_AGENT_RC_INSTALLED=%s\n' "$installed"
   printf 'COMMANDER_AGENT_RC_TRANSPORT=%s\n' "$mode"
   printf 'COMMANDER_AGENT_STABLE_SERVICE=%s\n' "$stable"
   printf 'COMMANDER_AGENT_RC_SERVICE=%s\n' "$rc"
+  printf 'COMMANDER_AGENT_RC_EVENT_V2_CONNECTED=%s\n' "$event_connected"
   printf 'COMMANDER_AGENT_RC_DEVICE_TOKEN_EXPOSED=FALSE\n'
 }
 
