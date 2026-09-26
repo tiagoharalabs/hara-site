@@ -703,3 +703,77 @@ requests/duration and SQLite rows read/written. No new index is added because
 the first-1k consumer topology keeps each tenant-local table small; an expiry
 index remains a measured enterprise/high-volume optimization rather than
 premature write amplification.
+
+
+## 10.6 Durable fallback content redaction after call TTL
+
+The transient Event V2 path remains the target data plane, but the durable
+fallback must not become a long-lived repository of customer request/result
+content.
+
+The existing durable-call TTL is 50 seconds. After the TTL has elapsed and the
+call is terminal, hourly maintenance redacts content in-place:
+
+```text
+payload_json
+  raw JSON
+  -> HARA_REDACTED_SHA256:<base64url-sha256>
+
+result_json
+  raw JSON
+  -> HARA_REDACTED_SHA256:<base64url-sha256>
+  or remains NULL when no result existed
+```
+
+Metadata remains intact:
+
+```text
+call_id
+request_id
+tenant_id
+subject_id
+device_id
+tool_id
+state
+timestamps
+error_code
+```
+
+This preserves replay/idempotency without retaining raw content. A repeated
+request_id after redaction hashes the canonical incoming payload and compares it
+to the stored tombstone. A late duplicate completion performs the same
+hash-aware result comparison.
+
+Status behavior after redaction:
+
+```text
+result=null
+content_redacted=true
+```
+
+The tombstone itself is never returned as a tool result.
+
+Maintenance is outside the request hot path and reuses the existing hourly
+scheduled event and expiry index:
+
+```text
+CRON=17 * * * *
+REDACTION_BATCH=64
+REDACTION_MAX_BATCHES_PER_CRON=8
+REDACTION_CAPACITY_PER_HOUR=512
+REDACTION_CAPACITY_PER_DAY=12288
+NEW_D1_INDEX=FALSE
+D1_MIGRATION=FALSE
+```
+
+Therefore the 1,000-device / 10-calls-per-device-per-day planning case
+(10,000 durable fallback calls/day) fits the steady-state redaction envelope.
+
+This is a content-minimization contract, not yet a row-retention policy. Durable
+metadata rows remain until a separate idempotency-retention window is approved;
+the architecture deliberately does not invent that window here.
+
+Because maintenance is hourly, a call becomes eligible for redaction at the
+50-second TTL and is normally redacted by the next successful maintenance
+cycle. This is not represented as a hard SLA if a scheduled execution is
+delayed or fails.

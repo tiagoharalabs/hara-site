@@ -289,3 +289,26 @@ RAW_DIAGNOSTICS_EXPLICIT_OPT_IN_REQUIRED=TRUE
 A future private transport may remove H.A.R.A. Cloud from the content data path,
 but that is a separate transport mode and must not be confused with the
 privacy properties of the standard managed MCP relay.
+
+
+## Durable fallback content lifecycle
+
+Privacy-first transport also applies to the legacy/durable fallback.
+
+```text
+DURABLE_CALL_TTL_SECONDS=50
+DURABLE_TERMINAL_RAW_CONTENT_RETENTION=TTL_PLUS_MAINTENANCE_WINDOW
+DURABLE_PAYLOAD_AFTER_REDACTION=SHA256_TOMBSTONE_ONLY
+DURABLE_RESULT_AFTER_REDACTION=SHA256_TOMBSTONE_OR_NULL
+DURABLE_STATUS_RETURNS_TOMBSTONE=FALSE
+DURABLE_IDEMPOTENCY_AFTER_REDACTION=SHA256_STRICT
+DURABLE_METADATA_RETENTION=SEPARATE_POLICY_PENDING
+```
+
+The hourly maintenance job hashes raw request/result content only after the call
+is terminal and expired. It keeps identifiers, state and timestamps so replay
+and audit semantics remain available without keeping arguments, file content,
+stdout or other raw tool output.
+
+This source contract does not claim immediate deletion at exactly 50 seconds:
+redaction occurs on the next successful scheduled maintenance cycle.

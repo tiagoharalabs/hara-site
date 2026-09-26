@@ -246,6 +246,7 @@ assert db.execute(
 ).fetchone() == ("EXPIRED","DEVICE_CALL_EXPIRED"), "STATUS_EXPIRY_CAUSE_MISSING"
 
 select_block = WORKER.split("async function selectDevice",1)[1].split("async function selectPortalDevice",1)[0]
+redaction_block = WORKER.split("async function redactExpiredDeviceCallContent",1)[1].split("async function cleanupExpiredDeviceCalls",1)[0]
 maintenance_block = WORKER.split("async function cleanupExpiredDeviceCalls",1)[1].split("async function enqueueDeviceCall",1)[0]
 enqueue_block = WORKER.split("async function enqueueDeviceCall",1)[1].split("async function claimNextDeviceCall",1)[0]
 complete_block = WORKER.split("async function completeDeviceCall",1)[1].split("async function deviceCallStatus",1)[0]
@@ -258,16 +259,30 @@ assert "PRODUCT_DB.batch([" in revoke_block
 assert "SET state = 'CANCELLED'" in revoke_block
 assert "d.revoked_at_utc = ?" in revoke_block
 assert "INSERT OR IGNORE INTO commander_device_calls" in enqueue_block
-assert "existing.payload_json !== payloadJson" in enqueue_block
+assert "deviceCallStoredContentMatches" in enqueue_block
+assert "const payloadMatches = await deviceCallStoredContentMatches(" in enqueue_block
+assert "|| !payloadMatches" in enqueue_block
 assert "JOIN commander_device_selections" in enqueue_block
 assert "d.revoked_at_utc IS NULL" in enqueue_block
 assert "AND expires_at_utc > ?" in complete_block
 assert 'throw new Error("DEVICE_CALL_EXPIRED")' in complete_block
-assert "existing.result_json !== resultJson" in complete_block
+assert "const resultMatches = await deviceCallStoredContentMatches(" in complete_block
+assert "||" not in "DEVICE_CALL_REDACTION_SENTINEL"
+assert "!resultMatches" in complete_block
 assert "error_code = 'DEVICE_CALL_EXPIRED'" in maintenance_block
 assert "INDEXED BY idx_device_calls_expiry" in maintenance_block
+assert "INDEXED BY idx_device_calls_expiry" in redaction_block
+assert "state IN ('COMPLETED','FAILED','CANCELLED','EXPIRED')" in redaction_block
+assert "DEVICE_CALL_CONTENT_REDACTION_BATCH" in redaction_block
+assert "DEVICE_CALL_CONTENT_REDACTION_MAX_BATCHES" in redaction_block
+assert "DEVICE_CALL_REDACTED_PREFIX" in redaction_block
+assert "SET payload_json = ?, result_json = ?" in redaction_block
+assert "deviceCallStoredContentMatches" in WORKER
+assert "storedValue === await redactedDeviceCallContent(candidateValue)" in WORKER
 assert "error_code = 'DEVICE_CALL_EXPIRED'" not in enqueue_block
 assert "error_code = 'DEVICE_CALL_EXPIRED'" in status_block
+assert "content_redacted:" in status_block
+assert "!isRedactedDeviceCallContent(row.result_json)" in status_block
 assert "revoked_at_utc IS NULL" in heartbeat_block
 assert 'throw new Error("DEVICE_AUTH_INVALID")' in heartbeat_block
 
@@ -279,6 +294,11 @@ print("COMMANDER_DEVICE_LATE_COMPLETION=EXPIRED")
 print("COMMANDER_DEVICE_EXPIRY_ERROR_CODE=CANONICAL")
 print("COMMANDER_DEVICE_ENQUEUE_EXPIRY_WRITE=ABSENT")
 print("COMMANDER_DEVICE_COMPLETION_IDEMPOTENCY=STRICT")
+print("COMMANDER_DEVICE_REDACTED_PAYLOAD_IDEMPOTENCY=SHA256_STRICT")
+print("COMMANDER_DEVICE_TERMINAL_CONTENT_REDACTION=SOURCE_PASS")
+print("COMMANDER_DEVICE_REDACTION_BATCH=64")
+print("COMMANDER_DEVICE_REDACTION_MAX_BATCHES_PER_CRON=8")
+print("COMMANDER_DEVICE_REDACTION_CAPACITY_PER_HOUR=512")
 print("COMMANDER_DEVICE_HEARTBEAT_REVOKE_RACE=BLOCKED")
 print("COMMANDER_PORTAL_REVOKE_CALL_CANCELLATION=ATOMIC")
 print("COMMANDER_PORTAL_REVOKE_UNAUTHORIZED_SIDE_EFFECTS=ABSENT")
