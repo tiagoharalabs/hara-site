@@ -1313,16 +1313,42 @@ async function enqueueDeviceCall(env, body) {
     throw new Error("DEVICE_OFFLINE");
   }
 
-  return {
+  let postNotify = null;
+  if (
+    eventV2Enabled(env)
+    && notification.attempted
+    && notification.delivered >= 1
+  ) {
+    postNotify = await env.PRODUCT_DB.prepare(
+      `SELECT state, claimed_at_utc, completed_at_utc, result_json, error_code
+         FROM commander_device_calls
+        WHERE call_id = ?
+          AND tenant_id = ?
+          AND subject_id = ?
+        LIMIT 1`
+    ).bind(callId, context.tenant_id, context.subject_id).first();
+  }
+
+  const responseState = String(postNotify?.state || "PENDING");
+  const response = {
     schema: "hara.commander-device-call.v1",
     existing: false,
     call_id: callId,
     request_id: requestId,
     device_id: deviceId,
     tool_id: toolId,
-    state: "PENDING",
+    state: responseState,
     expires_at_utc: expiresAt,
   };
+
+  if (postNotify) {
+    response.claimed_at_utc = postNotify.claimed_at_utc || null;
+    response.completed_at_utc = postNotify.completed_at_utc || null;
+    response.result = postNotify.result_json ? JSON.parse(postNotify.result_json) : null;
+    response.error_code = postNotify.error_code || null;
+  }
+
+  return response;
 }
 
 async function claimNextDeviceCall(env, request) {
