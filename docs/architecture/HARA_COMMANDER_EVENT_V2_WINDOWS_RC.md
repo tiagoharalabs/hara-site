@@ -127,7 +127,9 @@ WINDOWS_EVENT_V2_DURABLE_LIVENESS_TARGET=6h
 WINDOWS_EVENT_V2_DURABLE_LIVENESS_JITTER=deterministic_+/-15m_per_device
 WINDOWS_EVENT_V2_LIVENESS_CONTENT=METADATA_ONLY
 WINDOWS_EVENT_V2_LIVENESS_TIMER_PER_CONNECTION=1
-WINDOWS_EVENT_V2_MAX_EVENT_BYTES=4096
+WINDOWS_EVENT_V2_MAX_WAKE_BYTES=4096
+WINDOWS_EVENT_V2_MAX_TRANSIENT_REQUEST_BYTES=163840
+WINDOWS_EVENT_V2_MAX_TRANSIENT_RESULT_BYTES=327680
 WINDOWS_EVENT_V2_FRAGMENTED_WAKE=DENY
 WINDOWS_EVENT_V2_NON_TEXT_WAKE=DENY
 WINDOWS_EVENT_V2_CONTENT_BEARING_WAKE=DENY
@@ -158,3 +160,39 @@ The adapter then overrides only the Event V2 customer-plane semantics:
 This is still **source readiness**, not Windows runtime proof. A real Windows
 canary remains mandatory before any cross-platform parity claim or public
 cutover.
+
+
+## Transient managed-relay parity — source only
+
+The Windows RC source now carries the same DEV-only transient protocol shape as
+Linux without changing the public 0.3.7 Agent or authorizing PROD cutover.
+
+```text
+WINDOWS_TRANSIENT_RPC_SOURCE=READY_UNPROVEN
+WINDOWS_LOCAL_IDEMPOTENCY_LEDGER=SOURCE_READY_UNPROVEN
+WINDOWS_TRANSIENT_LEARNING_SIGNAL=METADATA_ONLY
+WINDOWS_TRANSIENT_CUSTOMER_CONTENT_COLLECTION=FALSE
+WINDOWS_PUBLIC_AGENT_MUTATION=FALSE
+CROSS_PLATFORM_EVENT_V2_PARITY=FALSE
+PROD_CUTOVER=DENY
+```
+
+The source path accepts only the typed `CALL_TRANSIENT` envelope, executes
+through the existing allowlisted five-tool adapter, returns `CALL_RESULT` over
+the same WebSocket, and keeps retry idempotency in a bounded customer-local
+ledger.
+
+The local Windows ledger:
+- uses a SHA-256-derived filename from `request_id`;
+- binds exact `request_id + tool_id + payload_sha256`;
+- stores the replay result locally under the customer profile;
+- does not persist the raw request payload;
+- retains entries for 24 hours with cleanup bounded to 32 entries per pass.
+
+The learning signal is limited to tool/family, outcome, latency bucket,
+result-size bucket, platform, Agent version and transport mode. It explicitly
+sets `privileged_attempt=false` and `customer_content_collected=false`.
+
+Runtime parity is **not** claimed by source readiness. Windows live execution,
+lost-response replay, receipt/quota parity and rollback evidence remain owned by
+the Product Hardening acceptance campaign (#240).
