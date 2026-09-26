@@ -120,7 +120,10 @@ def run_probe(token: str, subject: str, device_id: str, timeout: float) -> dict:
     terminal = call if str(call.get("state") or "") in terminal_states else None
     terminal_from_enqueue = terminal is not None
     status_polls = 0
+    next_retry_ms = int(call.get("retry_after_ms") or 0)
     while terminal is None and time.monotonic() < deadline:
+        if next_retry_ms > 0:
+            time.sleep(min(next_retry_ms / 1000.0, max(0.0, deadline - time.monotonic())))
         status = post_json(
             "/api/internal/device/calls/status",
             token,
@@ -137,7 +140,7 @@ def run_probe(token: str, subject: str, device_id: str, timeout: float) -> dict:
         if state in terminal_states:
             terminal = status
             break
-        time.sleep(0.20)
+        next_retry_ms = int(status.get("retry_after_ms") or 500)
 
     if terminal is None:
         raise ProbeError("WAKE_PROBE_TIMEOUT")
@@ -165,6 +168,7 @@ def run_probe(token: str, subject: str, device_id: str, timeout: float) -> dict:
         "terminal_after_enqueue_ms": terminal_after_enqueue_ms,
         "status_polls": status_polls,
         "terminal_from_enqueue": terminal_from_enqueue,
+        "initial_retry_after_ms": int(call.get("retry_after_ms") or 0),
         "state": "COMPLETED",
         "authority": "HARA_COMMANDER",
         "device_channel_state": "PASS",
@@ -180,6 +184,7 @@ def self_check() -> None:
     assert "terminal_after_enqueue_ms" in source
     assert "status_polls" in source
     assert "terminal_from_enqueue" in source
+    assert "retry_after_ms" in source
     assert "x-hara-mcp-product-token" in source
     tree = ast.parse(source)
     for node in ast.walk(tree):
@@ -245,6 +250,10 @@ def main() -> int:
     print(
         "COMMANDER_EVENT_V2_DEV_WAKE_TERMINAL_FROM_ENQUEUE="
         + str(result["terminal_from_enqueue"]).upper()
+    )
+    print(
+        "COMMANDER_EVENT_V2_DEV_WAKE_INITIAL_RETRY_AFTER_MS="
+        + str(result["initial_retry_after_ms"])
     )
     print("COMMANDER_EVENT_V2_DEV_WAKE_TOKEN_EXPOSED=FALSE")
     return 0
