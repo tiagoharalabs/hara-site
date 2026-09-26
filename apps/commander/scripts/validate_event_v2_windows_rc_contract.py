@@ -10,6 +10,7 @@ PUBLIC_INSTALLER = ROOT / "apps/commander/public/install/windows.ps1"
 PUBLIC_AGENT = ROOT / "apps/commander/public/agent/windows.ps1"
 MANIFEST = ROOT / "apps/commander/public/release/agent-manifest.json"
 TRANSPORT = ROOT / "apps/commander/experimental/event_v2_windows_transport.ps1"
+ADAPTER = ROOT / "apps/commander/experimental/event_v2_windows_agent.ps1"
 
 
 def main() -> int:
@@ -19,12 +20,13 @@ def main() -> int:
     agent = PUBLIC_AGENT.read_text(encoding="utf-8")
     manifest = MANIFEST.read_text(encoding="utf-8")
     transport = TRANSPORT.read_text(encoding="utf-8")
+    adapter = ADAPTER.read_text(encoding="utf-8")
 
     required_rc = (
         'ValidateSet("POLL_V1","EVENT_V2")',
         'if ([string]::IsNullOrWhiteSpace($Transport)) { $Transport = "POLL_V1" }',
         "COMMANDER_WINDOWS_RC_DEFAULT_TRANSPORT=POLL_V1",
-        "COMMANDER_WINDOWS_EVENT_V2_TRANSPORT_NOT_READY",
+        "COMMANDER_WINDOWS_RC_EVENT_V2=SOURCE_READY_UNPROVEN",
         "COMMANDER_WINDOWS_RC_SERVICES_PROXY=FALSE",
         "public\\agent\\windows.ps1",
         "experimental\\event_v2_windows_agent.ps1",
@@ -34,12 +36,12 @@ def main() -> int:
 
     required_doc = (
         "WINDOWS_PUBLIC_TRANSPORT=POLL_V1",
-        "WINDOWS_EVENT_V2=SOURCE_CONTRACT_ONLY",
+        "WINDOWS_EVENT_V2=SOURCE_ADAPTER_READY_UNPROVEN",
         "WINDOWS_PUBLIC_CUTOVER=DENY",
         "CUSTOMER_TRAFFIC_THROUGH_HARA_SERVICES=FALSE",
         "WINDOWS_RC_REPAIRING=FALSE",
         "WINDOWS_EVENT_V2_TRANSPORT_SOURCE=READY_UNPROVEN",
-        "WINDOWS_EVENT_V2_AGENT_ADAPTER_IMPLEMENTED=FALSE",
+        "WINDOWS_EVENT_V2_AGENT_ADAPTER_IMPLEMENTED=TRUE",
         "CROSS_PLATFORM_EVENT_V2_PARITY=FALSE",
         "System.Net.WebSockets.ClientWebSocket",
         "CALL_AVAILABLE is a wake hint only",
@@ -58,6 +60,8 @@ def main() -> int:
         "WINDOWS_EVENT_V2_EVENT_INVALID",
         "CONTENT_BEARING_WAKE=DENIED",
         "SOURCE_ONLY_USE_WINDOWS_EVENT_V2_AGENT",
+        "param([switch]$SelfTest,[switch]$ImportOnly)",
+        "if ($ImportOnly) { return }",
     )
     for marker in required_transport:
         assert marker in transport, marker
@@ -72,6 +76,39 @@ def main() -> int:
     )
     for marker in forbidden_transport:
         assert marker not in transport, marker
+
+    required_adapter = (
+        "Import-StableAgentFunctions",
+        "public\\agent\\windows.ps1",
+        "experimental\\event_v2_windows_transport.ps1",
+        "$OperationalAuthority = \"HARA_COMMANDER\"",
+        "$TransportMode = \"EVENT_V2\"",
+        "$MaxDrainCalls = 8",
+        "$ReconnectBaseSeconds = 1",
+        "$ReconnectMaxSeconds = 15",
+        "$DurableLivenessSeconds = 21600",
+        "Invoke-DurableDrain",
+        "CALL_AVAILABLE",
+        "Get-NextDurableCall",
+        "/api/device/calls/next",
+        "COMMANDER_WINDOWS_EVENT_V2_AGENT_ADAPTER=PASS",
+        "COMMANDER_WINDOWS_EVENT_V2_SERVICES_PROXY=FALSE",
+        'tool_id="shell.run"',
+        'if ([string]$_.Exception.Message -eq "TOOL_ID_INVALID")',
+    )
+    for marker in required_adapter:
+        assert marker in adapter, marker
+
+    forbidden_adapter = (
+        "HARA_SERVICES",
+        "/api/device/heartbeat",
+        "Start-Sleep -Seconds 2",
+        "CUSTOMER_CONTENT_COLLECTION=TRUE",
+        "Write-Host $token",
+        "Write-Output $token",
+    )
+    for marker in forbidden_adapter:
+        assert marker not in adapter, marker
 
     # Public V1 surfaces remain unchanged by this source-only lane.
     assert "HARA_DEVICE_TRANSPORT_MODE" not in installer
@@ -91,12 +128,12 @@ def main() -> int:
 
     print("COMMANDER_WINDOWS_EVENT_V2_RC_CONTRACT=PASS")
     print("COMMANDER_WINDOWS_RC_DEFAULT_TRANSPORT=POLL_V1")
-    print("COMMANDER_WINDOWS_EVENT_V2_NOT_READY=FAIL_CLOSED")
+    print("COMMANDER_WINDOWS_EVENT_V2_SOURCE_ADAPTER=READY_UNPROVEN")
     print("COMMANDER_WINDOWS_PUBLIC_V1_MUTATION=FALSE")
     print("COMMANDER_WINDOWS_CROSS_PLATFORM_PARITY_CLAIM=FALSE")
     print("COMMANDER_WINDOWS_SERVICES_PROXY=FALSE")
     print("COMMANDER_WINDOWS_EVENT_V2_TRANSPORT_SOURCE=READY_UNPROVEN")
-    print("COMMANDER_WINDOWS_EVENT_V2_AGENT_ADAPTER=ABSENT")
+    print("COMMANDER_WINDOWS_EVENT_V2_AGENT_ADAPTER=SOURCE_READY")
     return 0
 
 

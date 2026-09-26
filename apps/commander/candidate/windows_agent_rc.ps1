@@ -18,7 +18,7 @@ function Invoke-SelfTest {
 
   Write-Host "COMMANDER_WINDOWS_RC_SOURCE=PASS"
   Write-Host "COMMANDER_WINDOWS_RC_DEFAULT_TRANSPORT=POLL_V1"
-  Write-Host "COMMANDER_WINDOWS_RC_EVENT_V2=FAIL_CLOSED_UNTIL_IMPLEMENTED"
+  Write-Host "COMMANDER_WINDOWS_RC_EVENT_V2=SOURCE_READY_UNPROVEN"
   Write-Host "COMMANDER_WINDOWS_RC_PUBLIC_RELEASE_MUTATION=FALSE"
   Write-Host "COMMANDER_WINDOWS_RC_REPAIRING=FALSE"
   Write-Host "COMMANDER_WINDOWS_RC_SERVICES_PROXY=FALSE"
@@ -33,7 +33,7 @@ if ($Transport -eq "POLL_V1") {
 
 if ($Transport -eq "EVENT_V2") {
   if (-not (Test-Path -LiteralPath $EventV2Agent -PathType Leaf)) {
-    throw "COMMANDER_WINDOWS_EVENT_V2_TRANSPORT_NOT_READY"
+    throw "COMMANDER_WINDOWS_EVENT_V2_AGENT_ADAPTER_MISSING"
   }
   & powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $EventV2Agent
   exit $LASTEXITCODE

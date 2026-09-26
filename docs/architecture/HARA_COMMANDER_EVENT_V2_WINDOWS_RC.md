@@ -12,7 +12,7 @@ canary are all complete.
 WINDOWS_STABLE_PUBLIC_AGENT=0.3.7
 WINDOWS_PUBLIC_TRANSPORT=POLL_V1
 WINDOWS_RC_DEFAULT_TRANSPORT=POLL_V1
-WINDOWS_EVENT_V2=SOURCE_CONTRACT_ONLY
+WINDOWS_EVENT_V2=SOURCE_ADAPTER_READY_UNPROVEN
 WINDOWS_EVENT_V2_LIVE_PARITY=FALSE
 WINDOWS_PUBLIC_CUTOVER=DENY
 CUSTOMER_TRAFFIC_THROUGH_HARA_SERVICES=FALSE
@@ -22,8 +22,7 @@ The source-only RC selector is:
 
 `apps/commander/candidate/windows_agent_rc.ps1`
 
-It fails closed if `EVENT_V2` is selected before a Windows Event V2 transport
-implementation exists.
+It defaults to `POLL_V1`. `EVENT_V2` now resolves to the source-only Windows adapter, but public cutover remains denied until Windows-specific runtime, five-tool and rollback evidence are terminal.
 
 ## Transport design
 
@@ -97,7 +96,7 @@ Before `EVENT_V2` may become runnable in the Windows RC:
 
 ```text
 WINDOWS_EVENT_V2_TRANSPORT_SOURCE=READY_UNPROVEN
-WINDOWS_EVENT_V2_AGENT_ADAPTER_IMPLEMENTED=FALSE
+WINDOWS_EVENT_V2_AGENT_ADAPTER_IMPLEMENTED=TRUE
 WINDOWS_EVENT_V2_RUNTIME_PROVEN=FALSE
 WINDOWS_EVENT_V2_FIVE_TOOL_PARITY=FALSE
 CROSS_PLATFORM_EVENT_V2_PARITY=FALSE
@@ -127,6 +126,25 @@ WINDOWS_EVENT_V2_CONTENT_BEARING_WAKE=DENY
 WINDOWS_EVENT_V2_THIRD_PARTY_WEBSOCKET_RUNTIME=FALSE
 ```
 
-This does **not** make Windows Event V2 runnable yet. The missing layer is the
-Windows Event V2 agent adapter that binds wake/reconciliation to the existing
-five governed tools, receipts, runtime status and Scheduled Task rollback.
+The source adapter now exists at:
+
+`apps/commander/experimental/event_v2_windows_agent.ps1`
+
+It deliberately parses the public 0.3.7 PowerShell source and imports only the
+required stable helper/tool functions without entering the V1 polling loop.
+The adapter then overrides only the Event V2 customer-plane semantics:
+
+- operational authority = `HARA_COMMANDER`;
+- transport = `EVENT_V2`;
+- D1 durable queue remains execution truth;
+- `CALL_AVAILABLE` remains wake-only;
+- bounded reconciliation drain = 8;
+- reconnect uses full jitter, 1s base / 15s ceiling;
+- local event connection status is content-free;
+- idle 2s HTTP polling is absent;
+- 30s HTTP heartbeat is absent;
+- arbitrary tool expansion remains denied.
+
+This is still **source readiness**, not Windows runtime proof. A real Windows
+canary remains mandatory before any cross-platform parity claim or public
+cutover.
