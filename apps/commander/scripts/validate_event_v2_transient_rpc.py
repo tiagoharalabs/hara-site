@@ -181,7 +181,7 @@ def main() -> int:
         line for line in multidevice_lab.splitlines()
         if "print(" in line and "TOKEN_EXPOSED" not in line
     )
-    assert "MAX_DEVICES = 10" in multidevice_probe
+    assert "MAX_DEVICES = 50" in multidevice_probe
     assert "MULTIDEVICE_PROBE_AGGREGATE_OUTPUT=TRUE" in multidevice_probe
     assert "MULTIDEVICE_PROBE_CUSTOMER_CONTENT_OUTPUT=ABSENT" in multidevice_probe
 
