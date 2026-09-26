@@ -693,3 +693,52 @@ html[data-theme="dark"][data-neon="on"] .os-picker button.active,
 html[data-theme="dark"][data-neon="on"] .top-session-user{
   box-shadow:0 0 10px rgba(255,200,61,.09);
 }
+
+
+/* H.A.R.A Neon identity emphasis v4.
+   Light mode: stronger blue identity/menu glow. Dark gold remains unchanged. */
+html[data-theme="light"][data-neon="on"] .brand img,
+html:not([data-theme="dark"])[data-neon="on"] .brand img{
+  filter:
+    drop-shadow(0 0 5px rgba(57,162,223,.58))
+    drop-shadow(0 0 12px rgba(57,162,223,.34))
+    drop-shadow(0 0 22px rgba(57,162,223,.14));
+}
+html[data-theme="light"][data-neon="on"] .brand-copy b,
+html:not([data-theme="dark"])[data-neon="on"] .brand-copy b{
+  color:#143b53;
+  text-shadow:0 0 6px rgba(57,162,223,.20),0 0 13px rgba(57,162,223,.08);
+}
+html[data-theme="light"][data-neon="on"] .brand-copy em,
+html:not([data-theme="dark"])[data-neon="on"] .brand-copy em{
+  color:#239bd8;
+  text-shadow:0 0 7px rgba(57,162,223,.42),0 0 16px rgba(57,162,223,.18);
+}
+html[data-theme="light"][data-neon="on"] .side-nav button:hover,
+html[data-theme="light"][data-neon="on"] .side-nav-link:hover,
+html:not([data-theme="dark"])[data-neon="on"] .side-nav button:hover,
+html:not([data-theme="dark"])[data-neon="on"] .side-nav-link:hover{
+  background:linear-gradient(90deg,rgba(222,245,255,.94),rgba(239,250,255,.80));
+  color:#0f638f;
+  box-shadow:0 0 10px rgba(57,162,223,.16),0 0 20px rgba(57,162,223,.06);
+}
+html[data-theme="light"][data-neon="on"] .side-nav button.active,
+html:not([data-theme="dark"])[data-neon="on"] .side-nav button.active{
+  background:linear-gradient(90deg,rgba(210,240,253,.98),rgba(235,248,255,.90));
+  color:#0c5278;
+  box-shadow:inset 0 0 0 1px rgba(57,162,223,.22),0 0 12px rgba(57,162,223,.24),0 0 24px rgba(57,162,223,.09);
+}
+html[data-theme="light"][data-neon="on"] .side-nav button.active::before,
+html:not([data-theme="dark"])[data-neon="on"] .side-nav button.active::before{
+  background:#39a2df;
+  box-shadow:0 0 7px rgba(57,162,223,.52),0 0 14px rgba(57,162,223,.20);
+}
+html[data-theme="light"][data-neon="on"] .side-nav button:hover .nav-icon,
+html[data-theme="light"][data-neon="on"] .side-nav-link:hover .nav-icon,
+html[data-theme="light"][data-neon="on"] .side-nav button.active .nav-icon,
+html:not([data-theme="dark"])[data-neon="on"] .side-nav button:hover .nav-icon,
+html:not([data-theme="dark"])[data-neon="on"] .side-nav-link:hover .nav-icon,
+html:not([data-theme="dark"])[data-neon="on"] .side-nav button.active .nav-icon{
+  stroke:#239bd8;
+  filter:drop-shadow(0 0 5px rgba(57,162,223,.52)) drop-shadow(0 0 10px rgba(57,162,223,.20));
+}
