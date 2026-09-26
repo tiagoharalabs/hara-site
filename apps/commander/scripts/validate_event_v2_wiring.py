@@ -73,6 +73,10 @@ def main() -> int:
     assert "error_code" in post_notify_block
 
     assert "deviceOnline(row.last_seen_at_utc, row.tunnel_mode, now)" in worker
+    heartbeat_at = worker.index("async function heartbeatDevice")
+    heartbeat_end = worker.index("async function revokeDeviceSelf", heartbeat_at)
+    heartbeat_block = worker[heartbeat_at:heartbeat_end]
+    assert "tunnel_mode = 'OUTBOUND_RELAY'" in heartbeat_block
     assert "deviceOnline(device.last_seen_at_utc, device.tunnel_mode)" in worker
     assert "deviceOnline(currentDevice.last_seen_at_utc, currentDevice.tunnel_mode)" in worker
 
@@ -118,6 +122,7 @@ def main() -> int:
     print("COMMANDER_EVENT_V2_NOTIFY_AFTER_DURABLE_INSERT=PASS")
     print("COMMANDER_EVENT_V2_PRESENCE_USES_TRANSPORT_STATE=PASS")
     print("COMMANDER_EVENT_V2_V1_90S_WINDOW_PRESERVED=PASS")
+    print("COMMANDER_EVENT_V2_V1_HEARTBEAT_RECLAIMS_RELAY=PASS")
     print("COMMANDER_EVENT_V2_LIVENESS_WINDOW_HOURS=7")
     print("COMMANDER_EVENT_V2_UNDELIVERED_CALL=CANCELLED_FAIL_CLOSED")
     print("COMMANDER_EVENT_V2_DEV_CANARY_MCP_TOKEN=DEV_ONLY")
