@@ -39,6 +39,8 @@ DEFAULT_TARGET_HOST = "nucleo-a"
 REMOTE_BASE = "/tmp_hara/commander-event-v2-multidevice"
 MIN_DEVICES = 2
 MAX_DEVICES = 50
+D1_FIXTURE_BATCH_SIZE = 10
+D1_SELECTION_BATCH_SIZE = 25
 
 SOURCE_FILES = (
     "apps/commander/experimental/event_v2_websocket.py",
@@ -274,7 +276,8 @@ VALUES
             "subject": external_subject,
             "pairing_token": pairing_token,
         })
-    d1_execute("\n".join(statements))
+    for offset in range(0, len(statements), D1_FIXTURE_BATCH_SIZE):
+        d1_execute("\n".join(statements[offset:offset + D1_FIXTURE_BATCH_SIZE]))
     return fixtures
 
 
@@ -306,28 +309,29 @@ def enroll(pairing_token: str, name: str) -> tuple[str, str]:
 
 
 def select_devices(tenant_id: str, devices: list[dict]) -> None:
-    values = []
-    selected_at = utcnow()
-    for row in devices:
-        values.append(
-            "("
-            + ",".join((
-                quote_sql(tenant_id),
-                quote_sql(str(row["subject_id"])),
-                quote_sql(str(row["device_id"])),
-                quote_sql(selected_at),
-            ))
-            + ")"
-        )
-    if not values:
+    if not devices:
         raise fail("MULTIDEVICE_SELECTION_EMPTY")
-    d1_execute(
-        "INSERT INTO commander_device_selections "
-        "(tenant_id, subject_id, device_id, selected_at_utc) VALUES "
-        + ",".join(values)
-        + " ON CONFLICT(tenant_id, subject_id) DO UPDATE SET "
-          "device_id=excluded.device_id, selected_at_utc=excluded.selected_at_utc;"
-    )
+    selected_at = utcnow()
+    for offset in range(0, len(devices), D1_SELECTION_BATCH_SIZE):
+        values = []
+        for row in devices[offset:offset + D1_SELECTION_BATCH_SIZE]:
+            values.append(
+                "("
+                + ",".join((
+                    quote_sql(tenant_id),
+                    quote_sql(str(row["subject_id"])),
+                    quote_sql(str(row["device_id"])),
+                    quote_sql(selected_at),
+                ))
+                + ")"
+            )
+        d1_execute(
+            "INSERT INTO commander_device_selections "
+            "(tenant_id, subject_id, device_id, selected_at_utc) VALUES "
+            + ",".join(values)
+            + " ON CONFLICT(tenant_id, subject_id) DO UPDATE SET "
+              "device_id=excluded.device_id, selected_at_utc=excluded.selected_at_utc;"
+        )
 
 
 def write_device_config(target: str, root: str, index: int, device_id: str, device_token: str) -> None:
@@ -548,6 +552,8 @@ printf 'MULTIDEVICE_AGENT_STOPPED=TRUE\n'
 def self_check() -> None:
     load_dev_config()
     assert MIN_DEVICES == 2 and MAX_DEVICES == 50
+    assert D1_FIXTURE_BATCH_SIZE == 10
+    assert D1_SELECTION_BATCH_SIZE == 25
     assert remote_root("md-20260926123456-1234abcd").startswith("/tmp_hara/")
     assert worker_sha256("abc") == "ungWv48Bz-pBQUDeXa4iI7ADYaOWF3qctBD_YfIAFa0"
     for item in SOURCE_FILES:
@@ -570,6 +576,8 @@ def self_check() -> None:
     assert forbidden_prod not in source
     print("COMMANDER_EVENT_V2_MULTIDEVICE_LAB_SOURCE=PASS")
     print("COMMANDER_EVENT_V2_MULTIDEVICE_MAX_DEVICES=50")
+    print("COMMANDER_EVENT_V2_MULTIDEVICE_D1_FIXTURE_BATCH_SIZE=10")
+    print("COMMANDER_EVENT_V2_MULTIDEVICE_D1_SELECTION_BATCH_SIZE=25")
     print("COMMANDER_EVENT_V2_MULTIDEVICE_DISTINCT_IDENTITIES=REQUIRED")
     print("COMMANDER_EVENT_V2_MULTIDEVICE_SECRET_OUTPUT=ABSENT")
     print("COMMANDER_EVENT_V2_MULTIDEVICE_AUTO_DELETE=ABSENT")
