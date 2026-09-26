@@ -616,3 +616,80 @@ html[data-neon="on"] .top-session-user{
 @media(prefers-reduced-motion:reduce){
   .neon-toggle,.neon-icon{transition:none!important}
 }
+
+
+/* H.A.R.A Neon theme color contract v3.
+   Light = cyan/blue. Dark = gold. OFF remains glow-free. */
+html[data-theme="light"][data-neon="on"] .neon-toggle,
+html:not([data-theme="dark"])[data-neon="on"] .neon-toggle{
+  color:#39a2df;
+  border-color:rgba(57,162,223,.56);
+  background:#edf9ff;
+  box-shadow:0 0 9px rgba(57,162,223,.26),0 0 18px rgba(57,162,223,.11);
+}
+html[data-theme="light"][data-neon="on"] .neon-icon,
+html:not([data-theme="dark"])[data-neon="on"] .neon-icon{
+  filter:drop-shadow(0 0 5px rgba(57,162,223,.86)) drop-shadow(0 0 10px rgba(57,162,223,.36));
+}
+html[data-theme="light"][data-neon="on"] .btn-primary,
+html:not([data-theme="dark"])[data-neon="on"] .btn-primary{
+  box-shadow:0 6px 18px rgba(51,150,205,.21),0 0 16px rgba(57,162,223,.17);
+}
+html[data-theme="light"][data-neon="on"] .theme-toggle,
+html:not([data-theme="dark"])[data-neon="on"] .theme-toggle{
+  box-shadow:0 0 10px rgba(57,162,223,.14);
+}
+html[data-theme="light"][data-neon="on"] .side-nav button.active,
+html:not([data-theme="dark"])[data-neon="on"] .side-nav button.active{
+  box-shadow:0 0 14px rgba(57,162,223,.11);
+}
+html[data-theme="light"][data-neon="on"] .side-nav button.active .nav-icon,
+html:not([data-theme="dark"])[data-neon="on"] .side-nav button.active .nav-icon{
+  filter:drop-shadow(0 0 5px rgba(57,162,223,.34));
+}
+html[data-theme="light"][data-neon="on"] .brand img,
+html:not([data-theme="dark"])[data-neon="on"] .brand img{
+  filter:drop-shadow(0 0 7px rgba(57,162,223,.23));
+}
+html[data-theme="light"][data-neon="on"] .device-row.selected,
+html[data-theme="light"][data-neon="on"] .device-tabs button.active,
+html[data-theme="light"][data-neon="on"] .os-picker button.active,
+html[data-theme="light"][data-neon="on"] .top-session-user,
+html:not([data-theme="dark"])[data-neon="on"] .device-row.selected,
+html:not([data-theme="dark"])[data-neon="on"] .device-tabs button.active,
+html:not([data-theme="dark"])[data-neon="on"] .os-picker button.active,
+html:not([data-theme="dark"])[data-neon="on"] .top-session-user{
+  box-shadow:0 0 10px rgba(57,162,223,.10);
+}
+
+/* Dark switches the decorative halo to H.A.R.A gold. */
+html[data-theme="dark"][data-neon="on"] .neon-toggle{
+  color:#ffc83d;
+  border-color:rgba(255,200,61,.50);
+  background:#102c3d;
+  box-shadow:0 0 10px rgba(255,200,61,.24),0 0 20px rgba(255,200,61,.10);
+}
+html[data-theme="dark"][data-neon="on"] .neon-icon{
+  filter:drop-shadow(0 0 5px rgba(255,200,61,.86)) drop-shadow(0 0 10px rgba(255,200,61,.36));
+}
+html[data-theme="dark"][data-neon="on"] .btn-primary{
+  box-shadow:0 6px 18px rgba(233,177,40,.22),0 0 16px rgba(255,200,61,.17);
+}
+html[data-theme="dark"][data-neon="on"] .theme-toggle{
+  box-shadow:0 0 10px rgba(255,200,61,.14);
+}
+html[data-theme="dark"][data-neon="on"] .side-nav button.active{
+  box-shadow:0 0 14px rgba(255,200,61,.10);
+}
+html[data-theme="dark"][data-neon="on"] .side-nav button.active .nav-icon{
+  filter:drop-shadow(0 0 5px rgba(255,200,61,.30));
+}
+html[data-theme="dark"][data-neon="on"] .brand img{
+  filter:drop-shadow(0 0 7px rgba(255,200,61,.20));
+}
+html[data-theme="dark"][data-neon="on"] .device-row.selected,
+html[data-theme="dark"][data-neon="on"] .device-tabs button.active,
+html[data-theme="dark"][data-neon="on"] .os-picker button.active,
+html[data-theme="dark"][data-neon="on"] .top-session-user{
+  box-shadow:0 0 10px rgba(255,200,61,.09);
+}
