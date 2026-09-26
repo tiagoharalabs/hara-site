@@ -128,6 +128,10 @@ install_source_tree() {
   validate_source
   validate_existing_identity
 
+  if systemctl --user is-active --quiet "$RC_SERVICE"; then
+    die "RC_INSTALL_WHILE_ACTIVE_DENIED"
+  fi
+
   mkdir -p     "$RC_ROOT/apps/commander/public/agent"     "$RC_ROOT/apps/commander/candidate"     "$RC_ROOT/apps/commander/experimental"     "$SYSTEMD_DIR"
 
   install -m 700 "$SOURCE_COMMANDER/public/agent/linux.py"     "$RC_ROOT/apps/commander/public/agent/linux.py"
@@ -153,8 +157,10 @@ Conflicts=hara-commander-agent.service
 
 [Service]
 Type=simple
+Environment="XDG_CONFIG_HOME=$CONFIG_HOME"
+Environment="XDG_DATA_HOME=$DATA_HOME"
 EnvironmentFile=-$RC_ENV
-ExecStart=/usr/bin/python3 $RC_ROOT/apps/commander/candidate/linux_agent_rc.py
+ExecStart=/usr/bin/python3 "$RC_ROOT/apps/commander/candidate/linux_agent_rc.py"
 Restart=always
 RestartSec=5
 NoNewPrivileges=yes
@@ -188,6 +194,16 @@ wait_active() {
   return 1
 }
 
+attest_active() {
+  local service="$1"
+  local check
+  for check in 1 2 3; do
+    systemctl --user is-active --quiet "$service" || return 1
+    sleep 1
+  done
+  return 0
+}
+
 rollback_to_stable() {
   systemctl --user stop "$RC_SERVICE" >/dev/null 2>&1 || true
   write_mode POLL_V1
@@ -217,7 +233,7 @@ activate_event_v2() {
     rollback_to_stable
     die "RC_EVENT_V2_START_FAILED_ROLLED_BACK"
   fi
-  if ! wait_active "$RC_SERVICE"; then
+  if ! wait_active "$RC_SERVICE" || ! attest_active "$RC_SERVICE"; then
     rollback_to_stable
     die "RC_EVENT_V2_ATTESTATION_FAILED_ROLLED_BACK"
   fi
