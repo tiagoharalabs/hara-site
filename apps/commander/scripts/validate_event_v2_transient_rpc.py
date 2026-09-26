@@ -70,9 +70,21 @@ def main() -> int:
     assert "payload_json" not in dispatcher
     assert "result_json" not in dispatcher
     assert "canonicalDeviceToolPayload" in dispatcher
-    assert "mcpProductContext" in dispatcher
+    assert "mcpTransientProductContext" in dispatcher
     assert "mcpBootstrapHints(body)" in dispatcher
-    assert "selectedDeviceForSubject" in dispatcher
+    assert "selectedDeviceForSubject" not in dispatcher
+    assert "context.selected_device" in dispatcher
+    context = block(
+        worker,
+        "async function mcpTransientProductContext",
+        "async function mcpIdentityBinding",
+    )
+    assert context.count("env.PRODUCT_DB.prepare(") == 1
+    assert "json_group_array(pg.grant_code)" in context
+    assert "json_object(" in context
+    assert "selected_device_json" in context
+    assert "finalizeMcpProductContext" in context
+    assert "ensureSecondaryMcpBinding" in context
     assert 'selection.tunnel_mode || "") !== "EVENT_V2"' in dispatcher
     assert "persisted_customer_payload: false" in dispatcher
     assert "persisted_customer_result: false" in dispatcher
@@ -147,6 +159,8 @@ def main() -> int:
     print("COMMANDER_EVENT_V2_TRANSIENT_COMMITTED_RETRY=REPLAY_ONLY")
     print("COMMANDER_EVENT_V2_TRANSIENT_REPLAY_SECOND_COMMIT_RPC=ABSENT")
     print("COMMANDER_EVENT_V2_TRANSIENT_REPLAY_RECEIPT_BINDING=LOCAL_COMPARE")
+    print("COMMANDER_EVENT_V2_TRANSIENT_CONTEXT_D1_AWAITS=ONE")
+    print("COMMANDER_EVENT_V2_TRANSIENT_CONTEXT_ROWS_READ_TARGET=13")
     print("COMMANDER_EVENT_V2_SERIES100_PROBE_SOURCE=PASS")
     print("COMMANDER_EVENT_V2_MEASURED_D1_ROWS_READ_PER_HTTP=13")
     print("COMMANDER_EVENT_V2_MEASURED_D1_ROWS_WRITTEN_PER_HTTP=0")
