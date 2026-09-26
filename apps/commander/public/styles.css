@@ -544,7 +544,7 @@ html[data-theme="dark"] .top-session-user{
 }
 
 
-/* H.A.R.A Neon bolt control. OFF is quiet; ON restores micro-accent only. */
+/* H.A.R.A Neon bolt control v2. OFF quiet; ON visibly lit. */
 .neon-toggle{
   flex:0 0 auto;
   display:grid;
@@ -569,22 +569,50 @@ html[data-theme="dark"] .neon-toggle{border-color:#244b61;background:#0d293b;col
 html[data-theme="dark"] .neon-toggle:hover{background:#12344a;border-color:#35637b}
 
 html[data-neon="on"] .neon-toggle{
-  color:#e9b128;
-  border-color:rgba(233,177,40,.30);
-  background:#fffaf0;
-  box-shadow:0 0 5px rgba(233,177,40,.05);
+  color:#f0b82e;
+  border-color:rgba(240,184,46,.55);
+  background:#fff9e8;
+  box-shadow:0 0 9px rgba(240,184,46,.24),0 0 18px rgba(240,184,46,.10);
 }
 html[data-theme="dark"][data-neon="on"] .neon-toggle{
-  color:#f1b82d;
-  border-color:rgba(241,184,45,.27);
+  color:#ffc83d;
+  border-color:rgba(255,200,61,.48);
   background:#102c3d;
-  box-shadow:0 0 5px rgba(241,184,45,.05);
+  box-shadow:0 0 10px rgba(255,200,61,.22),0 0 20px rgba(255,200,61,.08);
 }
-html[data-neon="on"] .neon-icon{opacity:1;filter:drop-shadow(0 0 3px rgba(233,177,40,.42))}
-html[data-neon="on"] .btn-primary{box-shadow:0 3px 9px rgba(218,156,19,.085),0 0 5px rgba(233,177,40,.035)}
-html[data-neon="on"] .side-nav button.active .nav-icon{filter:drop-shadow(0 0 3px rgba(49,189,244,.12))}
-html[data-neon="on"] .brand img{filter:drop-shadow(0 0 3px rgba(49,189,244,.08))}
-html[data-neon="on"] .device-state.online{box-shadow:0 0 4px rgba(48,169,108,.06)}
+html[data-neon="on"] .neon-icon{
+  opacity:1;
+  filter:drop-shadow(0 0 5px rgba(240,184,46,.84)) drop-shadow(0 0 10px rgba(240,184,46,.34));
+}
+html[data-neon="on"] .btn-primary{
+  box-shadow:0 6px 18px rgba(218,156,19,.20),0 0 16px rgba(233,177,40,.15);
+}
+html[data-neon="on"] .theme-toggle{
+  box-shadow:0 0 10px rgba(49,189,244,.12);
+}
+html[data-neon="on"] .side-nav button.active{
+  box-shadow:0 0 14px rgba(49,189,244,.08);
+}
+html[data-neon="on"] .side-nav button.active .nav-icon{
+  filter:drop-shadow(0 0 5px rgba(49,189,244,.28));
+}
+html[data-neon="on"] .brand img{
+  filter:drop-shadow(0 0 7px rgba(49,189,244,.18));
+}
+html[data-neon="on"] .device-state.online,
+html[data-neon="on"] .status-pill{
+  box-shadow:0 0 8px rgba(48,169,108,.14);
+}
+html[data-neon="on"] .device-row.selected{
+  box-shadow:0 0 14px rgba(49,189,244,.07);
+}
+html[data-neon="on"] .device-tabs button.active,
+html[data-neon="on"] .os-picker button.active{
+  box-shadow:0 0 9px rgba(49,189,244,.08);
+}
+html[data-neon="on"] .top-session-user{
+  box-shadow:0 0 9px rgba(49,189,244,.06);
+}
 @media(prefers-reduced-motion:reduce){
   .neon-toggle,.neon-icon{transition:none!important}
 }
