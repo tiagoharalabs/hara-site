@@ -23,6 +23,7 @@ HERE = Path(__file__).resolve().parent
 COMMANDER = HERE.parent
 BASELINE_PATH = COMMANDER / "public" / "agent" / "linux.py"
 EVENT_LOOP_PATH = COMMANDER / "experimental" / "event_v2_agent_loop.py"
+POLL_V1_LOOP_PATH = COMMANDER / "candidate" / "poll_v1_customer_loop.py"
 
 TRANSPORT_ENV = "HARA_DEVICE_TRANSPORT_MODE"
 POLL_V1 = "POLL_V1"
@@ -52,9 +53,8 @@ def selected_transport(env: dict[str, str] | None = None) -> str:
 def run(mode: str | None = None) -> None:
     selected = mode or selected_transport()
     if selected == POLL_V1:
-        baseline = load_module(BASELINE_PATH, "hara_commander_rc_baseline")
-        baseline.main()
-        return
+        poll_v1 = load_module(POLL_V1_LOOP_PATH, "hara_commander_rc_poll_v1")
+        raise SystemExit(poll_v1.main())
     if selected == EVENT_V2:
         event_loop = load_module(EVENT_LOOP_PATH, "hara_commander_rc_event_v2")
         raise SystemExit(event_loop.main())
@@ -76,6 +76,7 @@ def self_test() -> None:
 
     assert BASELINE_PATH.is_file()
     assert EVENT_LOOP_PATH.is_file()
+    assert POLL_V1_LOOP_PATH.is_file()
 
     print("COMMANDER_AGENT_RC_SOURCE=PASS")
     print("COMMANDER_AGENT_RC_DEFAULT_TRANSPORT=POLL_V1")
