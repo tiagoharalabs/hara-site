@@ -53,9 +53,14 @@ def main() -> int:
     assert "state = 'CANCELLED'" in notify_guard
 
     assert "const EVENT_V2_TERMINAL_FAST_PATH_WAIT_MS = 500;" in worker
+    assert "const DEVICE_CALL_ACTIVE_QUEUE_LIMIT = 16;" in worker
     assert 'function deviceCallRetryAfterMs(state, source = "status")' in worker
     assert 'return source === "enqueue" ? 350 : 750;' in worker
     assert 'if (normalized === "EXECUTING") return 250;' in worker
+    assert "DEVICE_BUSY: 429" in worker
+    assert 'errorPayload.retry_after_ms = 1000' in worker
+    assert "DEVICE_CALL_ACTIVE_QUEUE_LIMIT" in worker
+    assert "SELECT COUNT(*) AS active_count" in worker
     post_notify_read_at = worker.index("let postNotify = null;", notify_at)
     settle_wait_at = worker.index("await scheduler.wait(EVENT_V2_TERMINAL_FAST_PATH_WAIT_MS);", post_notify_read_at)
     response_state_at = worker.index('const responseState = String(postNotify?.state || "PENDING")', post_notify_read_at)
@@ -121,6 +126,8 @@ def main() -> int:
     print("COMMANDER_EVENT_V2_RETRY_HINT_PENDING_ENQUEUE_MS=350")
     print("COMMANDER_EVENT_V2_RETRY_HINT_PENDING_STATUS_MS=750")
     print("COMMANDER_EVENT_V2_RETRY_HINT_EXECUTING_MS=250")
+    print("COMMANDER_EVENT_V2_ACTIVE_QUEUE_LIMIT=16")
+    print("COMMANDER_EVENT_V2_DEVICE_BUSY_HTTP=429")
     print("COMMANDER_EVENT_V2_PROD_CANARY_MCP_TOKEN=ABSENT")
     return 0
 
