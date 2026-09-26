@@ -283,8 +283,8 @@ try {
   $ConfigObject | ConvertTo-Json | Set-Content -Path $Config -Encoding UTF8
 
   $Identity = [Security.Principal.WindowsIdentity]::GetCurrent().Name
-  & icacls.exe $Root /inheritance:r /grant:r "$Identity:(OI)(CI)F" | Out-Null
-  & icacls.exe $Config /inheritance:r /grant:r "$Identity:F" | Out-Null
+  & icacls.exe $Root /inheritance:r /grant:r "${Identity}:(OI)(CI)F" | Out-Null
+  & icacls.exe $Config /inheritance:r /grant:r "${Identity}:F" | Out-Null
 
   $InstallTmp = $Agent + ".install"
   Remove-Item -Force $InstallTmp -ErrorAction SilentlyContinue
@@ -298,7 +298,7 @@ try {
   if (-not $VersionMatch -or -not $VersionMatch.Matches.Count) { throw "AGENT_VERSION_NOT_FOUND" }
   $ExpectedVersion=[string]$VersionMatch.Matches[0].Groups[1].Value
   Move-Item -Force $InstallTmp $Agent
-  & icacls.exe $Agent /inheritance:r /grant:r "$Identity:F" | Out-Null
+  & icacls.exe $Agent /inheritance:r /grant:r "${Identity}:F" | Out-Null
 
   $PowerShellExe = (Get-Command powershell.exe).Source
   $Argument = "-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$Agent`""
