@@ -642,8 +642,8 @@ html[data-theme="dark"] a.obs-live-card:hover{
 }
 
 
-/* Neon preference v16.3.7
-   Bolt-only H.A.R.A control. OFF is quiet; ON adds micro-accents. */
+/* Neon preference v16.3.8
+   OFF stays corporate and halo-free. ON is intentionally visible. */
 .neon-toggle{
   width:42px;
   height:42px;
@@ -678,42 +678,55 @@ html[data-theme="dark"] .neon-toggle{
 .neon-toggle:active{transform:translateY(0) scale(.985);box-shadow:none}
 .neon-toggle:focus-visible{outline:2px solid #5aaed8;outline-offset:3px;box-shadow:none}
 
+/* Neon ON: expressive, still bounded to interactive/brand accents. */
 html[data-neon="on"] .neon-toggle{
-  color:#e9b128;
-  border-color:rgba(233,177,40,.30);
-  background:rgba(255,250,233,.80);
-  box-shadow:0 0 5px rgba(233,177,40,.045);
+  color:#f0b82e;
+  border-color:rgba(240,184,46,.58);
+  background:rgba(255,249,226,.94);
+  box-shadow:0 0 9px rgba(240,184,46,.25),0 0 18px rgba(240,184,46,.10);
 }
 html[data-neon="on"] .neon-icon{
   opacity:1;
-  filter:drop-shadow(0 0 3px rgba(233,177,40,.40));
+  filter:drop-shadow(0 0 5px rgba(240,184,46,.82)) drop-shadow(0 0 10px rgba(240,184,46,.34));
 }
 html[data-theme="dark"][data-neon="on"] .neon-toggle{
-  color:#f1b82d;
-  border-color:rgba(241,184,45,.27);
-  background:#0b2938;
-  box-shadow:0 0 5px rgba(241,184,45,.05);
+  color:#ffc83d;
+  border-color:rgba(255,200,61,.48);
+  background:#102c3c;
+  box-shadow:0 0 10px rgba(255,200,61,.22),0 0 20px rgba(255,200,61,.08);
 }
 
-/* Micro-accents only: Neon never overrides the corporate composition. */
 html[data-neon="on"] .button.primary,
 html[data-neon="on"] .nav-cta{
-  box-shadow:0 3px 9px rgba(51,150,205,.085),0 0 5px rgba(57,162,223,.035);
+  box-shadow:0 6px 18px rgba(51,150,205,.20),0 0 16px rgba(57,162,223,.15);
 }
 html[data-neon="on"] .gold-btn{
-  box-shadow:0 3px 9px rgba(233,177,40,.08),0 0 5px rgba(233,177,40,.035);
+  box-shadow:0 6px 18px rgba(233,177,40,.20),0 0 16px rgba(233,177,40,.14);
 }
-html[data-neon="on"] .theme-toggle{
-  box-shadow:0 0 4px rgba(57,162,223,.035);
+html[data-neon="on"] .theme-toggle,
+html[data-neon="on"] .obs-refresh,
+html[data-neon="on"] .menu-button{
+  box-shadow:0 0 10px rgba(57,162,223,.12);
 }
 html[data-neon="on"] .main-nav a[aria-current="page"]{
-  box-shadow:inset 0 -1px 0 rgba(57,162,223,.24);
+  box-shadow:inset 0 -1px 0 rgba(57,162,223,.46),0 0 11px rgba(57,162,223,.10);
 }
 html[data-neon="on"] .brand-logo{
-  filter:drop-shadow(0 0 3px rgba(57,162,223,.08));
+  filter:drop-shadow(0 0 7px rgba(57,162,223,.20));
 }
 html[data-neon="on"] .section-link{
-  text-shadow:0 0 4px rgba(57,162,223,.055);
+  text-shadow:0 0 8px rgba(57,162,223,.14);
+}
+html[data-neon="on"] a.fact-card:hover,
+html[data-neon="on"] a.pillar-card:hover,
+html[data-neon="on"] a.case-card:hover,
+html[data-neon="on"] a.link-card:hover,
+html[data-neon="on"] a.contact-card:hover,
+html[data-neon="on"] a.support-card:hover,
+html[data-neon="on"] a.legal-card:hover,
+html[data-neon="on"] a.obs-executive-card:hover,
+html[data-neon="on"] a.obs-live-card:hover{
+  box-shadow:0 8px 22px rgba(38,126,178,.11),0 0 12px rgba(57,162,223,.06);
 }
 @media(prefers-reduced-motion:reduce){
   html[data-neon="on"] .neon-toggle,
