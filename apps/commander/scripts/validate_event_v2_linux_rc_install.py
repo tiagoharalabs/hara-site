@@ -34,6 +34,9 @@ def main() -> int:
         'Environment="XDG_CONFIG_HOME=$CONFIG_HOME"',
         'Environment="XDG_DATA_HOME=$DATA_HOME"',
         'attest_active "$RC_SERVICE"',
+        'attest_event_v2_connection "$previous_event_status"',
+        "RC_EVENT_V2_CONNECTION_ATTESTATION_FAILED_ROLLED_BACK",
+        "COMMANDER_AGENT_RC_EVENT_V2_CONNECTION_ATTESTATION=PASS",
     )
     for marker in required:
         assert marker in source, f"missing marker: {marker}"
@@ -88,6 +91,7 @@ def main() -> int:
     print("COMMANDER_EVENT_V2_LINUX_RC_ROLLBACK=SOURCE_READY")
     print("COMMANDER_EVENT_V2_LINUX_RC_XDG_ISOLATION=PASS")
     print("COMMANDER_EVENT_V2_LINUX_RC_ACTIVE_REINSTALL=DENY")
+    print("COMMANDER_EVENT_V2_LINUX_RC_CONNECTION_ATTESTATION=SOURCE_READY")
     print("COMMANDER_STABLE_PUBLIC_INSTALLER_MUTATION=FALSE")
     return 0
 
