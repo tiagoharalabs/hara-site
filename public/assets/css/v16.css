@@ -1005,3 +1005,64 @@ html[data-neon="off"] .system-core img,
 html[data-neon="off"] .console-nav img{
   filter:none;
 }
+
+
+/* V16.3.14 — Architecture orbit runner on desktop + mobile.
+   The ring itself is symmetric; the runner makes motion visually legible. */
+@media(prefers-reduced-motion:no-preference){
+  .architecture .orbit-ring{
+    overflow:visible;
+    will-change:transform;
+  }
+  .architecture .orbit-ring::after{
+    content:"";
+    position:absolute;
+    left:50%;
+    top:-3px;
+    width:24px;
+    height:4px;
+    border-radius:999px;
+    transform:translateX(-50%);
+    background:linear-gradient(90deg,rgba(57,162,223,0),rgba(57,162,223,.96),rgba(57,162,223,0));
+    box-shadow:none;
+    pointer-events:none;
+  }
+  .architecture .orbit-ring.ring2::after{
+    width:18px;
+    height:3px;
+    top:-2px;
+    opacity:.82;
+  }
+  html[data-theme="dark"] .architecture .orbit-ring::after{
+    background:linear-gradient(90deg,rgba(255,200,61,0),rgba(255,200,61,.96),rgba(255,200,61,0));
+  }
+
+  /* Neon ON adds expression; OFF keeps only the moving structural segment. */
+  html[data-theme="light"][data-neon="on"] .architecture .orbit-ring::after,
+  html:not([data-theme="dark"])[data-neon="on"] .architecture .orbit-ring::after{
+    box-shadow:0 0 7px rgba(57,162,223,.52),0 0 14px rgba(57,162,223,.18);
+  }
+  html[data-theme="dark"][data-neon="on"] .architecture .orbit-ring::after{
+    box-shadow:0 0 7px rgba(255,200,61,.48),0 0 14px rgba(255,200,61,.16);
+  }
+
+  @media(max-width:760px){
+    .architecture .orbit-ring{
+      animation-duration:18s;
+    }
+    .architecture .orbit-ring.ring2{
+      animation-duration:25s;
+    }
+    .architecture .orbit-ring::after{
+      width:22px;
+      height:4px;
+    }
+    .architecture .orbit-ring.ring2::after{
+      width:16px;
+      height:3px;
+    }
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  .architecture .orbit-ring::after{display:none!important}
+}
