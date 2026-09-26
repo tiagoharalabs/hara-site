@@ -10,6 +10,7 @@ not modified. No automatic deletion is implemented.
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
 import ast
 import base64
 import hashlib
@@ -43,6 +44,7 @@ MAX_DEVICES = 100
 D1_FIXTURE_BATCH_SIZE = 10
 D1_SELECTION_BATCH_SIZE = 25
 ENROLL_MIN_INTERVAL_SECONDS = 1.10
+LIFECYCLE_MAX_WORKERS = 16
 
 SOURCE_FILES = (
     "apps/commander/experimental/event_v2_websocket.py",
@@ -472,12 +474,24 @@ def provision(count: int, target: str, manifest_path: Path) -> dict:
     return manifest
 
 
+def parallel_device_rows(devices: list[dict], operation) -> list:
+    if not devices:
+        return []
+    workers = min(LIFECYCLE_MAX_WORKERS, len(devices))
+    with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
+        futures = [pool.submit(operation, row) for row in devices]
+        results = []
+        for future in futures:
+            results.append(future.result())
+        return results
+
+
 def start_manifest(path: Path) -> int:
     manifest = load_manifest(path)
     target, root = manifest["target_host"], manifest["remote_root"]
     source = root + "/source/apps/commander/experimental/event_v2_agent_loop.py"
-    started = 0
-    for row in manifest["devices"]:
+
+    def start_one(row: dict) -> bool:
         device_root = f"{root}/device-{int(row['index']):02d}"
         proc = ssh(target, f"""
 set -Eeuo pipefail
@@ -497,15 +511,16 @@ printf 'MULTIDEVICE_AGENT_STARTED=TRUE\n'
 """)
         if "MULTIDEVICE_AGENT_STARTED=TRUE" not in proc.stdout:
             raise fail("MULTIDEVICE_AGENT_START_FAILED")
-        started += 1
-    return started
+        return True
+
+    return sum(1 for result in parallel_device_rows(manifest["devices"], start_one) if result)
 
 
 def status_manifest(path: Path) -> dict:
     manifest = load_manifest(path)
     target, root = manifest["target_host"], manifest["remote_root"]
-    rows = []
-    for row in manifest["devices"]:
+
+    def status_one(row: dict) -> dict:
         device_root = f"{root}/device-{int(row['index']):02d}"
         proc = ssh(target, f"""
 set -Eeuo pipefail
@@ -529,8 +544,9 @@ print(json.dumps({{
 }}, sort_keys=True, separators=(",", ":")))
 PY
 """)
-        meta = json.loads(proc.stdout.strip().splitlines()[-1])
-        rows.append(meta)
+        return json.loads(proc.stdout.strip().splitlines()[-1])
+
+    rows = parallel_device_rows(manifest["devices"], status_one)
     return {
         "count": len(rows),
         "alive": sum(1 for x in rows if x["alive"]),
@@ -543,8 +559,8 @@ def stop_manifest(path: Path) -> int:
     manifest = load_manifest(path)
     target, root = manifest["target_host"], manifest["remote_root"]
     source = root + "/source/apps/commander/experimental/event_v2_agent_loop.py"
-    stopped = 0
-    for row in manifest["devices"]:
+
+    def stop_one(row: dict) -> bool:
         device_root = f"{root}/device-{int(row['index']):02d}"
         proc = ssh(target, f"""
 set -Eeuo pipefail
@@ -568,8 +584,9 @@ printf 'MULTIDEVICE_AGENT_STOPPED=TRUE\n'
 """, timeout=30)
         if "MULTIDEVICE_AGENT_STOPPED=TRUE" not in proc.stdout:
             raise fail("MULTIDEVICE_AGENT_STOP_FAILED")
-        stopped += 1
-    return stopped
+        return True
+
+    return sum(1 for result in parallel_device_rows(manifest["devices"], stop_one) if result)
 
 
 def self_check() -> None:
@@ -578,6 +595,8 @@ def self_check() -> None:
     assert D1_FIXTURE_BATCH_SIZE == 10
     assert D1_SELECTION_BATCH_SIZE == 25
     assert ENROLL_MIN_INTERVAL_SECONDS >= 1.0
+    assert LIFECYCLE_MAX_WORKERS == 16
+    assert parallel_device_rows([], lambda row: row) == []
     assert remote_root("md-20260926123456-1234abcd").startswith("/tmp_hara/")
     assert worker_sha256("abc") == "ungWv48Bz-pBQUDeXa4iI7ADYaOWF3qctBD_YfIAFa0"
     for item in SOURCE_FILES:
@@ -607,6 +626,7 @@ def self_check() -> None:
     print("COMMANDER_EVENT_V2_MULTIDEVICE_D1_FIXTURE_BATCH_SIZE=10")
     print("COMMANDER_EVENT_V2_MULTIDEVICE_D1_SELECTION_BATCH_SIZE=25")
     print("COMMANDER_EVENT_V2_MULTIDEVICE_ENROLL_MIN_INTERVAL_SECONDS=1.10")
+    print("COMMANDER_EVENT_V2_MULTIDEVICE_LIFECYCLE_MAX_WORKERS=16")
     print("COMMANDER_EVENT_V2_MULTIDEVICE_DISTINCT_IDENTITIES=REQUIRED")
     print("COMMANDER_EVENT_V2_MULTIDEVICE_SECRET_OUTPUT=ABSENT")
     print("COMMANDER_EVENT_V2_MULTIDEVICE_AUTO_DELETE=ABSENT")
