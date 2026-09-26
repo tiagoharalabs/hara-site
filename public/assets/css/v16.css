@@ -904,3 +904,54 @@ html[data-theme="dark"][data-neon="on"] a.obs-live-card:hover{
 @media(prefers-reduced-motion:reduce){
   .orbit-ring::after{display:none!important}
 }
+
+
+/* V16.3.12 — Stronger light-theme identity glow.
+   Buttons were already right; brand/capybara and navigation now visibly light up. */
+html[data-theme="light"][data-neon="on"] .brand-logo,
+html:not([data-theme="dark"])[data-neon="on"] .brand-logo{
+  filter:
+    drop-shadow(0 0 5px rgba(57,162,223,.56))
+    drop-shadow(0 0 12px rgba(57,162,223,.32))
+    drop-shadow(0 0 22px rgba(57,162,223,.14));
+}
+html[data-theme="light"][data-neon="on"] .brand-word,
+html:not([data-theme="dark"])[data-neon="on"] .brand-word{
+  text-shadow:0 0 6px rgba(57,162,223,.24),0 0 14px rgba(57,162,223,.10);
+}
+html[data-theme="light"][data-neon="on"] .brand-word b,
+html:not([data-theme="dark"])[data-neon="on"] .brand-word b{
+  color:#39a2df;
+  text-shadow:0 0 7px rgba(57,162,223,.38),0 0 16px rgba(57,162,223,.16);
+}
+
+/* H.A.R.A capybara marks inside the visual system receive the same identity treatment. */
+html[data-theme="light"][data-neon="on"] .system-core img,
+html[data-theme="light"][data-neon="on"] .orbit-center img,
+html[data-theme="light"][data-neon="on"] .mcp-core img,
+html[data-theme="light"][data-neon="on"] .console-nav img,
+html:not([data-theme="dark"])[data-neon="on"] .system-core img,
+html:not([data-theme="dark"])[data-neon="on"] .orbit-center img,
+html:not([data-theme="dark"])[data-neon="on"] .mcp-core img,
+html:not([data-theme="dark"])[data-neon="on"] .console-nav img{
+  filter:
+    drop-shadow(0 0 5px rgba(57,162,223,.52))
+    drop-shadow(0 0 12px rgba(57,162,223,.28));
+}
+
+/* Light-mode navigation should visibly react when Neon is enabled. */
+html[data-theme="light"][data-neon="on"] .main-nav a:hover,
+html[data-theme="light"][data-neon="on"] .main-nav a[aria-current="page"],
+html:not([data-theme="dark"])[data-neon="on"] .main-nav a:hover,
+html:not([data-theme="dark"])[data-neon="on"] .main-nav a[aria-current="page"]{
+  color:#126f9f;
+  background:rgba(225,246,255,.86);
+  box-shadow:inset 0 0 0 1px rgba(57,162,223,.20),0 0 10px rgba(57,162,223,.20),0 0 20px rgba(57,162,223,.08);
+}
+html[data-theme="light"][data-neon="on"] .mobile-menu a[aria-current="page"],
+html:not([data-theme="dark"])[data-neon="on"] .mobile-menu a[aria-current="page"]{
+  color:#126f9f;
+  text-shadow:0 0 7px rgba(57,162,223,.25);
+}
+
+/* Dark-theme gold contract is intentionally unchanged. */
