@@ -98,6 +98,8 @@ def main() -> int:
     source = LOOP.read_text(encoding="utf-8")
     assert "signal.signal(signal.SIGTERM, _shutdown_signal)" in source
     assert "install_shutdown_handlers()" in source
+    assert "except KeyboardInterrupt:" in source
+    assert "termination is a normal exit" in source
 
     installer = INSTALLER.read_text(encoding="utf-8")
     assert 'event_connected=STALE' in installer
@@ -106,6 +108,7 @@ def main() -> int:
     print("COMMANDER_EVENT_V2_SIGTERM_SHUTDOWN=PASS")
     print("COMMANDER_EVENT_V2_SIGTERM_STATUS_FALSE=PASS")
     print("COMMANDER_EVENT_V2_SOCKET_CLOSE_ON_SHUTDOWN=PASS")
+    print("COMMANDER_EVENT_V2_TOPLEVEL_SHUTDOWN_TRACEBACK=ABSENT_BY_CONTRACT")
     print("COMMANDER_AGENT_RC_STALE_CONNECTED_STATUS=DENY")
     return 0
 
