@@ -2,10 +2,14 @@
 """Fail-closed architecture guard for Commander customer privacy/NOC separation."""
 
 from pathlib import Path
+import json
+import re
 
 ROOT = Path(__file__).resolve().parent.parent
 EVENT = ROOT.parent.parent / "docs" / "architecture" / "HARA_COMMANDER_SCALE_V2_EVENT_TRANSPORT.md"
 TELEMETRY = ROOT.parent.parent / "docs" / "architecture" / "HARA_COMMANDER_PRIVACY_FIRST_TELEMETRY.md"
+CHANNEL = ROOT / "src" / "device-channel.mjs"
+LEARNING_SCHEMA = ROOT / "contracts" / "commander_learning_signal_v1.schema.json"
 
 
 def require(text: str, marker: str) -> None:
@@ -28,6 +32,11 @@ def main() -> int:
         "CUSTOMER_CONTENT_PRIVATE_BY_DEFAULT=true",
         "CUSTOMER_CONTENT_FOR_MODEL_TRAINING=false",
         "NOC_METADATA_ONLY=true",
+        "TRANSIENT_RPC_ENV=DEV_ONLY",
+        "D1_CUSTOMER_PAYLOAD_PERSISTENCE=FALSE",
+        "D1_CUSTOMER_RESULT_PERSISTENCE=FALSE",
+        "LEARNING_SIGNAL_DERIVED_METADATA_ONLY=TRUE",
+        "LEARNING_SIGNAL_CUSTOMER_CONTENT=FALSE",
     )
     for marker in required_event:
         require(event, marker)
@@ -40,6 +49,9 @@ def main() -> int:
         "CUSTOMER_CONTENT_FOR_MODEL_TRAINING=FALSE",
         "CUSTOMER_OPERATIONAL_METADATA_ONLY=TRUE",
         "CUSTOMER_TRAFFIC_INSPECTION_DEFAULT=FALSE",
+        "MANAGED_RELAY_CONTENT_DURABLE_COLLECTION=FALSE",
+        "CUSTOMER_CONTENT_IN_LEARNING_PLANE=FALSE",
+        "RAW_DIAGNOSTICS_EXPLICIT_OPT_IN_REQUIRED=TRUE",
     )
     for marker in required_telemetry:
         require(telemetry, marker)
@@ -57,6 +69,35 @@ def main() -> int:
     for marker in forbidden:
         assert marker not in combined, f"forbidden architecture marker: {marker}"
 
+    schema = json.loads(LEARNING_SCHEMA.read_text(encoding="utf-8"))
+    assert schema.get("$id") == "hara.commander-learning-signal.v1"
+    assert schema.get("additionalProperties") is False
+    properties = schema.get("properties") or {}
+    required_fields = set(schema.get("required") or [])
+    assert required_fields == set(properties), "learning schema must require its exact allowlist"
+    assert properties["privileged_attempt"].get("const") is False
+    assert properties["customer_content_collected"].get("const") is False
+
+    channel = CHANNEL.read_text(encoding="utf-8")
+    match = re.search(
+        r"function cleanLearningSignal\(value\) \{.*?const allowed = \[(.*?)\];",
+        channel,
+        re.S,
+    )
+    assert match, "learning signal allowlist missing from DeviceChannel"
+    source_fields = set(re.findall(r'"([a-z_]+)"', match.group(1)))
+    assert source_fields == set(properties), (source_fields, set(properties))
+    assert 'value.schema !== "hara.commander-learning-signal.v1"' in channel
+    assert 'value.privileged_attempt !== false' in channel
+    assert 'value.customer_content_collected !== false' in channel
+
+    raw_fields = {
+        "prompt", "arguments", "argv", "path", "filename", "command",
+        "stdout", "stderr", "raw_result", "raw_payload", "authorization",
+        "cookie", "device_token", "file_content",
+    }
+    assert raw_fields.isdisjoint(properties), "raw customer field admitted by learning schema"
+
     print("COMMANDER_CUSTOMER_DATA_PLANE_PRIVACY=PASS")
     print("COMMANDER_CUSTOMER_SERVICES_PROXY=ABSENT")
     print("COMMANDER_CUSTOMER_CONTENT_COLLECTION=FALSE")
@@ -65,6 +106,9 @@ def main() -> int:
     print("COMMANDER_EVENT_V2_PROTOCOL_KEEPALIVE=60S_TARGET")
     print("COMMANDER_DURABLE_LIVENESS_CHECKPOINT=6H_TARGET")
     print("COMMANDER_NOC_METADATA_ONLY=PASS")
+    print("COMMANDER_LEARNING_SIGNAL_SCHEMA=PASS")
+    print("COMMANDER_LEARNING_SIGNAL_SOURCE_ALLOWLIST=PASS")
+    print("COMMANDER_LEARNING_SIGNAL_RAW_CONTENT=DENY")
     return 0
 
 
