@@ -22,6 +22,7 @@ from urllib.request import Request, urlopen
 DEV_ORIGIN = "https://hara-commander-dev-v2.tiago-sartori.workers.dev"
 DEV_ISSUER = "https://auth.haralabs.com.br/"
 FUNCTION_ID = "device.info"
+WORKER = Path(__file__).resolve().parent.parent / "src" / "worker.js"
 
 
 class ProbeError(RuntimeError):
@@ -239,6 +240,29 @@ def run(token: str, subject: str, device_id: str, timeout: float) -> dict:
 
 def self_check() -> None:
     source = Path(__file__).read_text(encoding="utf-8")
+    worker = WORKER.read_text(encoding="utf-8")
+    quota_at = worker.index("export class TenantQuota")
+    quota_end = worker.index("function cleanLearningSignal", quota_at) if "function cleanLearningSignal" in worker[quota_at:] else len(worker)
+    quota = worker[quota_at:quota_end]
+
+    status_at = quota.index("  status(periodKey")
+    reserve_at = quota.index("  reserve(requestId", status_at)
+    commit_at = quota.index("  commit(requestId", reserve_at)
+    release_at = quota.index("  release(requestId", commit_at)
+    status_block = quota[status_at:reserve_at]
+    reserve_block = quota[reserve_at:commit_at]
+    commit_block = quota[commit_at:release_at]
+    release_block = quota[release_at:]
+
+    assert "expireReservations = true" in status_block
+    assert "if (expireReservations) this.expireStaleReservations();" in status_block
+    assert reserve_block.count("this.expireStaleReservations()") == 1
+    assert reserve_block.count("this.status(periodKey, limit, false)") == 2
+    assert "const consumedUnits = balance.consumed_units + 1;" in reserve_block
+    assert commit_block.count("this.expireStaleReservations()") == 1
+    assert commit_block.count("this.status(row.period_key, limit, false)") == 2
+    assert release_block.count("this.expireStaleReservations()") == 1
+    assert release_block.count("this.status(row.period_key, limit, false)") == 2
     assert DEV_ORIGIN.endswith(".workers.dev")
     forbidden_prod = "https://commander." + "haralabs.com.br"
     assert forbidden_prod not in source
@@ -253,6 +277,9 @@ def self_check() -> None:
     print("COMMANDER_EVENT_V2_QUOTA_PROBE_SOURCE=PASS")
     print("COMMANDER_EVENT_V2_QUOTA_PROBE_ORIGIN=DEV_ONLY")
     print("COMMANDER_EVENT_V2_QUOTA_PROBE_TOKEN_OUTPUT=ABSENT")
+    print("COMMANDER_TENANT_QUOTA_EXPIRY_SWEEP_PER_RPC=ONE")
+    print("COMMANDER_TENANT_QUOTA_RESERVE_SUM_QUERIES=ONE")
+    print("COMMANDER_TENANT_QUOTA_NEW_RESERVE_SQL_EXEC_TARGET=4")
 
 
 def main() -> int:

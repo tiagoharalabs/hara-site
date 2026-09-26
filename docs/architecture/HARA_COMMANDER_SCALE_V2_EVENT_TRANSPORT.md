@@ -652,3 +652,54 @@ invented in the deterministic transport model.
 
 Promotion remains blocked on live DEV quota reconciliation, lost-response
 replay, receipt parity, Windows runtime proof and the 1k synthetic campaign.
+
+
+## 10.5 TenantQuota per-RPC SQLite hot-path reduction
+
+The first-1k transient path distributes quota state by tenant, so there is no
+single global quota Durable Object. The remaining avoidable cost inside each
+TenantQuota RPC was repeated expiry/status work.
+
+The source now applies this rule:
+
+```text
+EXPIRY_SWEEP_PER_QUOTA_RPC=1
+STATUS_INTERNAL_REEXPIRE=FALSE
+NEW_RESERVE_SUM_QUERIES=1
+NEW_RESERVE_POST_INSERT_SUM=ELIMINATED
+NEW_INDEX_FOR_1K_QUOTA_HOT_PATH=FALSE
+```
+
+For a new successful reservation the SQL-operation shape changes from:
+
+```text
+BEFORE
+expire
+request lookup
+expire
+SUM balance
+INSERT reservation
+expire
+SUM balance
+= 7 SQL executions
+
+AFTER
+expire
+request lookup
+SUM balance
+INSERT reservation
+derive +1 balance in memory
+= 4 SQL executions
+```
+
+A normal successful invoke quota lifecycle therefore moves from approximately
+12 internal SQL executions (`reserve=7 + commit=5`) to 8
+(`reserve=4 + commit=4`) while preserving the same request-state, unit,
+receipt and idempotency semantics.
+
+This is an execution/CPU/query-work reduction, not a claim that Cloudflare
+bills per SQL statement. Provider billing remains based on Durable Object
+requests/duration and SQLite rows read/written. No new index is added because
+the first-1k consumer topology keeps each tenant-local table small; an expiry
+index remains a measured enterprise/high-volume optimization rather than
+premature write amplification.
