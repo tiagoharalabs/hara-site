@@ -1,0 +1,87 @@
+{
+  "schema": "hara.commander-event-v2-current.v1",
+  "as_of_date": "2026-09-27",
+  "repository": {
+    "main_sha": "40791a6e5f808c33945d43b9711e7585a1ee3a86",
+    "state": "CURRENT",
+    "tracked_worktree_clean": true
+  },
+  "dev_worker": {
+    "health": "PASS",
+    "active_version": "fd192855-f986-477a-b207-1402d96a1241",
+    "previous_version": "52bb6dda-624b-4453-984b-f94a3e6ebb27",
+    "prod_mutation": false
+  },
+  "terminal_proofs": {
+    "linux_transient_live": true,
+    "series100": true,
+    "replay_fastpath_live": true,
+    "context_fastpath_live": true,
+    "multi_device_concurrency": "PASS_100_DEVICES",
+    "multi_device_reconnect": "PASS_100_DEVICES",
+    "multi_device_offline_fail_closed": "PASS_100_DEVICES",
+    "offline_public_contract": "DEVICE_OFFLINE_100_OF_100",
+    "durable_call_rows": 0,
+    "lifecycle_partial_start_defect": "FIXED",
+    "lifecycle_100_device_retest": "PASS",
+    "residual_processes": 0,
+    "do_not_replay": true
+  },
+  "live_runtime": {
+    "nucleo_a_reachable": true,
+    "original_canary": {
+      "process_count": 0,
+      "connected": false,
+      "last_error": null,
+      "last_status_utc": "2026-09-27T05:40:32.026696+00:00",
+      "state": "OFFLINE",
+      "proof_invalidated": false
+    },
+    "windows": {
+      "vm": "commander-win11",
+      "vm_state": "SHUT_OFF",
+      "qga_current": "UNAVAILABLE_VM_OFF",
+      "last_known_ip": "192.168.122.177",
+      "w1_proof_invalidated": false,
+      "pairing_prompt_current": false
+    }
+  },
+  "gates": {
+    "do_analytics": {
+      "collector_source_ready": true,
+      "secure_token_intake_merge": "#280",
+      "token_file_present": false,
+      "state": "HUMAN_CREDENTIAL_REQUIRED",
+      "required_permission": "Cloudflare Account Analytics Read",
+      "wrangler_oauth_reuse": "DENY",
+      "env_token_fallback": "DENY"
+    },
+    "windows_w1": {
+      "installer_parse": "PASS",
+      "automation_channel": "QGA_PROVEN",
+      "clock_alignment": "PASS",
+      "pairing_consumed": false,
+      "secure_pairing_entry": "HUMAN_INPUT_REQUIRED",
+      "terminal": false,
+      "vm_restart_required_before_pairing": true
+    }
+  },
+  "human_10k": {
+    "cost_envelope": "PASS",
+    "session_lookup_indexed": "PASS",
+    "session_full_scan": "ABSENT",
+    "workers_cpu_cost": "REQUIRES_MEASURED_CPU_MS",
+    "do_duration_cost": "PENDING_LIVE_DO_ANALYTICS",
+    "stale_pr_172": "CLOSED_SUPERSEDED_BY_281"
+  },
+  "boundary": {
+    "public_agent_0_3_7_mutation": false,
+    "event_v2_prod_mutation": false,
+    "prod_cutover": "DENY",
+    "next_non_human_work": "NONE_REQUIRED",
+    "next_human_gates": [
+      "WINDOWS_PAIRING",
+      "CLOUDFLARE_ANALYTICS_TOKEN"
+    ]
+  }
+}
