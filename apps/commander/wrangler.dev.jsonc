@@ -76,6 +76,10 @@
       {
         "name": "DEVICE_CHANNEL",
         "class_name": "DeviceChannel"
+      },
+      {
+        "name": "STRICT_RATE_LIMIT",
+        "class_name": "SecurityRateLimit"
       }
     ]
   },
@@ -90,6 +94,12 @@
       "tag": "v2",
       "new_sqlite_classes": [
         "DeviceChannel"
+      ]
+    },
+    {
+      "tag": "v3",
+      "new_sqlite_classes": [
+        "SecurityRateLimit"
       ]
     }
   ]

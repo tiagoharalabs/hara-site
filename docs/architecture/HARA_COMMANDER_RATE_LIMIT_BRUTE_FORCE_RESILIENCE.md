@@ -71,3 +71,25 @@ A bounded DEV campaign must still prove, without exposing credentials:
 - test fixtures/state are cleaned where applicable.
 
 The live campaign must not rotate or consume #163 Event V2 canary credentials.
+
+## Strict deterministic layer
+
+The native Cloudflare Rate Limiting binding remains the fast edge layer, but it is
+not the security authority for exact cutoffs. Every protected key is also checked
+against the `STRICT_RATE_LIMIT` Durable Object namespace.
+
+```text
+FAST_EDGE_LIMITER=CLOUDFLARE_NATIVE
+STRICT_SECURITY_LIMITER=DURABLE_OBJECT
+STRICT_WINDOW=FIXED_60_SECONDS
+STRICT_KEYSPACE=SHA256_SCOPED
+STRICT_FAILURE=FAIL_CLOSED_503
+STRICT_DENIAL=SAME_PUBLIC_429_CODE
+D1_SCHEMA_CHANGE=FALSE
+```
+
+Each hashed/scoped key maps to one Durable Object identity. The object serializes
+updates for that key and stores only the fixed-window start/count, never the raw
+IP, pairing token, tenant, subject, or MCP token. DEV and PROD use separate Worker
+Durable Object namespaces. The Durable Object class migration is a Worker/DO
+migration and does not alter the Commander D1 schema.
