@@ -21,7 +21,8 @@ import {
   rateLimitClientKey,
   rateLimitSecretKey,
 } from "./security-rate-limit.mjs";
-export { DeviceChannel, SecurityRateLimit };
+export { DeviceChannel };
+export { SecurityRateLimit };
 
 const DEMO_TENANT = "HARA-TENANT-DEMO-0001";
 const MCP_METER_ID = "HARA_COMMANDER_GOVERNED_INVOKE";

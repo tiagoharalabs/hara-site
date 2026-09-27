@@ -57,7 +57,8 @@ for env_name, cfg in (("PROD", prod), ("DEV", dev)):
 
 need('import { SecurityRateLimit } from "./security-rate-limit-do.mjs";' in WORKER,
      "STRICT_DO_IMPORT")
-need('export { DeviceChannel, SecurityRateLimit };' in WORKER, "STRICT_DO_EXPORT")
+need('export { DeviceChannel };' in WORKER, "DEVICE_CHANNEL_EXPORT_PRESERVED")
+need('export { SecurityRateLimit };' in WORKER, "STRICT_DO_EXPORT")
 need(WORKER.count("await enforceLayeredRateLimit(") == 6, "LAYERED_GUARD_COUNT")
 need("env.STRICT_RATE_LIMIT" in WORKER, "STRICT_DO_ROUTE_BINDING")
 need("enforceRateLimit(" not in WORKER, "NO_FAST_ONLY_WORKER_GUARD")
