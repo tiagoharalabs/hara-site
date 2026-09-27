@@ -182,6 +182,9 @@ PREMATURE_DB_SHARDING=FALSE
 ## Acceptance for the 10k target
 
 - deterministic 1k/10k capacity model passes;
+- 10k session lookup remains index-backed with no full portal-session scan;
+- human-portal request/D1/DO cost envelope is deterministic and dated;
+- Workers CPU and Durable Object duration cost remain measurement-gated rather than guessed;
 - 2k-active / 200-session-read/s stress envelope remains explicit and is now grounded by browser TTL caps;
 - session telemetry writes reduced >=80% from the old 5-minute cadence;
 - retention cleanup is absent from login hot path;
@@ -190,3 +193,82 @@ PREMATURE_DB_SHARDING=FALSE
 - device growth remains separated from human login growth;
 - #163 continues to own 20k-device transport scale;
 - no PROD deployment is implied by source hardening.
+
+## 10k cost envelope — pricing snapshot 2026-09-27
+
+This is a planning upper bound for the **human portal only**, not a prediction of normal customer behavior and not inclusive of the #163 device plane.
+
+Using the bounded UI refresh caps already enforced in source:
+
+```text
+registered humans = 10,000
+peak active humans = 2,000
+active window = 8h/day
+passive product reads = max 2/min/browser
+passive device reads = max 4/min/browser
+combined dynamic portal requests = max 200/s
+monthly dynamic portal requests at continuous stress = 172.8M
+```
+
+Current Cloudflare Workers Standard pricing at this snapshot keeps 10M requests/month included and charges US$0.30 per additional million, with a US$5 monthly subscription. Under this deliberately pessimistic request envelope, request overage is approximately **US$48.84/month**, or **US$53.84 including the subscription**, before CPU charges.
+
+Workers CPU cost is intentionally **not estimated** from a guessed per-request CPU duration. The model records the current included 30M CPU-ms/month and US$0.02 per additional million CPU-ms, but keeps:
+
+```text
+WORKERS_CPU_COST=REQUIRES_MEASURED_CPU_MS
+```
+
+For D1, the current Workers Paid allowance is 25B rows read/month and 50M rows written/month. The local model uses a conservative logical approximation:
+
+```text
+172.8M session resolutions/month
+x 3 logical authority rows
+= 518.4M logical rows/month
+= ~2.1% of included read allowance
+
+10x read-scan safety multiplier
+= 5.184B
+= ~20.7% of included read allowance
+
+session liveness writes + every registered user logging in daily
+with 6 writes/login headroom
+= ~2.76M modeled writes/month
+= ~5.5% of included write allowance
+```
+
+These are logical planning numbers only. Actual D1 rows read/written remain a live observability metric, not a source-model assertion.
+
+For the per-tenant quota Durable Object, the adversarial single-tenant envelope is:
+
+```text
+quota-status traffic ≈ 66.7 req/s
+reserve + terminal transition ≈ 66.7 req/s
+single hot tenant total ≈ 133.3 req/s
+```
+
+Cloudflare currently documents an individual Durable Object soft limit around 1,000 requests/s, with roughly 200–500 requests/s for more complex operations. The 133.3 req/s envelope therefore does not justify quota sharding by itself.
+
+Durable Object request overage can be modeled from the current 1M included requests/month + US$0.15/million. **Duration cost is intentionally unresolved** until the dedicated Account Analytics Read gate provides live GB-s:
+
+```text
+DO_DURATION_COST=PENDING_LIVE_DO_ANALYTICS
+```
+
+The repository model is `apps/commander/scripts/commander_human_10k_cost_model.py`.
+
+Pricing sources are embedded in the model and the snapshot date MUST be refreshed before any commercial pricing decision.
+
+## 10k indexed session proof
+
+Scale V2 CI now creates a **10,000-session** SQLite dataset using the canonical Commander schema and proves that the current session-resolution join starts from the indexed/primary-key `session_hash` lookup, then reaches indexed user and tenant primary keys.
+
+It explicitly fails if the query plan regresses into a full `portal_sessions` table scan.
+
+```text
+COMMANDER_HUMAN_10K_SESSION_LOOKUP_INDEXED=PASS
+COMMANDER_HUMAN_10K_SESSION_DATASET=10000
+COMMANDER_HUMAN_10K_SESSION_FULL_SCAN=ABSENT
+COMMANDER_HUMAN_SESSION_RETENTION_REVOKED_INDEX=PASS
+```
+
+This is a deterministic schema/query-plan guard. It does not substitute for real D1 production latency or live rows-read measurement.
