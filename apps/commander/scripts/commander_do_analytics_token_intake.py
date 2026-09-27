@@ -48,8 +48,13 @@ def self_check() -> None:
     assert "getpass.getpass" in source
     assert "os.O_EXCL" in source
     assert "0o600" in source
-    for forbidden in ("CLOUDFLARE_API_TOKEN", ".wrangler", "default.toml"):
-        assert forbidden not in source
+    forbidden = (
+        "CLOUDFLARE_" + "API_TOKEN",
+        "." + "wrangler",
+        "default" + ".toml",
+    )
+    for item in forbidden:
+        assert item not in source
     print("COMMANDER_DO_ANALYTICS_TOKEN_INTAKE_SOURCE=PASS")
     print("COMMANDER_DO_ANALYTICS_TOKEN_INTAKE_ECHO=DISABLED")
     print("COMMANDER_DO_ANALYTICS_TOKEN_INTAKE_MODE=0600")
