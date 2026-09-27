@@ -14,13 +14,15 @@ import {
   canonicalDeviceToolPayload,
 } from "./device-tool-contract.mjs";
 import { DeviceChannel, deviceChannelName } from "./device-channel.mjs";
+import { SecurityRateLimit } from "./security-rate-limit-do.mjs";
 import {
-  enforceRateLimit,
+  enforceLayeredRateLimit,
   rateLimitActorKey,
   rateLimitClientKey,
   rateLimitSecretKey,
 } from "./security-rate-limit.mjs";
 export { DeviceChannel };
+export { SecurityRateLimit };
 
 const DEMO_TENANT = "HARA-TENANT-DEMO-0001";
 const MCP_METER_ID = "HARA_COMMANDER_GOVERNED_INVOKE";
@@ -142,15 +144,21 @@ async function requireMcpProductToken(request, env) {
     return;
   }
 
-  await enforceRateLimit(
+  await enforceLayeredRateLimit(
     env.RATE_LIMIT_MCP_AUTH_FAILURE,
+    env.STRICT_RATE_LIMIT,
     await rateLimitClientKey(request, "mcp-auth-failure-client"),
+    20,
+    60,
     "MCP_AUTH_RATE_LIMITED",
   );
   if (supplied) {
-    await enforceRateLimit(
+    await enforceLayeredRateLimit(
       env.RATE_LIMIT_MCP_AUTH_FAILURE,
+      env.STRICT_RATE_LIMIT,
       await rateLimitSecretKey("mcp-auth-failure-token", supplied),
+      20,
+      60,
       "MCP_AUTH_RATE_LIMITED",
     );
   }
@@ -158,17 +166,23 @@ async function requireMcpProductToken(request, env) {
 }
 
 async function enforceLoginInitiationRateLimit(request, env) {
-  await enforceRateLimit(
+  await enforceLayeredRateLimit(
     env.RATE_LIMIT_LOGIN,
+    env.STRICT_RATE_LIMIT,
     await rateLimitClientKey(request, "auth-login"),
+    30,
+    60,
     "AUTH_RATE_LIMITED",
   );
 }
 
 async function enforceDeviceEnrollClientRateLimit(request, env) {
-  await enforceRateLimit(
+  await enforceLayeredRateLimit(
     env.RATE_LIMIT_DEVICE_ENROLL_CLIENT,
+    env.STRICT_RATE_LIMIT,
     await rateLimitClientKey(request, "device-enroll-client"),
+    60,
+    60,
     "DEVICE_ENROLL_RATE_LIMITED",
   );
 }
@@ -176,17 +190,23 @@ async function enforceDeviceEnrollClientRateLimit(request, env) {
 async function enforceDeviceEnrollTokenRateLimit(body, env) {
   const supplied = String(body?.pairing_token || "");
   if (!supplied) return;
-  await enforceRateLimit(
+  await enforceLayeredRateLimit(
     env.RATE_LIMIT_DEVICE_ENROLL_TOKEN,
+    env.STRICT_RATE_LIMIT,
     await rateLimitSecretKey("device-enroll-token", supplied),
+    10,
+    60,
     "DEVICE_ENROLL_RATE_LIMITED",
   );
 }
 
 async function enforcePortalMutationRateLimit(env, session) {
-  await enforceRateLimit(
+  await enforceLayeredRateLimit(
     env.RATE_LIMIT_PORTAL_MUTATION,
+    env.STRICT_RATE_LIMIT,
     await rateLimitActorKey("portal-mutation", session.tenant_id, session.subject_id),
+    60,
+    60,
     "PORTAL_MUTATION_RATE_LIMITED",
   );
 }
@@ -2508,6 +2528,8 @@ export default {
         MCP_PRODUCT_ACCESS_DENIED: 401,
         RATE_LIMIT_BINDING_MISSING: 503,
         RATE_LIMIT_CHECK_FAILED: 503,
+        STRICT_RATE_LIMIT_BINDING_MISSING: 503,
+        STRICT_RATE_LIMIT_CHECK_FAILED: 503,
         AUTH_RATE_LIMITED: 429,
         DEVICE_ENROLL_RATE_LIMITED: 429,
         PORTAL_MUTATION_RATE_LIMITED: 429,

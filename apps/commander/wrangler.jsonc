@@ -70,6 +70,10 @@
       {
         "name": "TENANT_QUOTA",
         "class_name": "TenantQuota"
+      },
+      {
+        "name": "STRICT_RATE_LIMIT",
+        "class_name": "SecurityRateLimit"
       }
     ]
   },
@@ -78,6 +82,12 @@
       "tag": "v1",
       "new_sqlite_classes": [
         "TenantQuota"
+      ]
+    },
+    {
+      "tag": "v2",
+      "new_sqlite_classes": [
+        "SecurityRateLimit"
       ]
     }
   ],
