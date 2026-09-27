@@ -18,6 +18,7 @@ MODEL = COMMANDER / "scripts" / "commander_event_v2_transient_1k_model.py"
 LIVE_PROBE = COMMANDER / "scripts" / "commander_event_v2_transient_live_probe.py"
 SERIES_PROBE = COMMANDER / "scripts" / "commander_event_v2_transient_series_probe.py"
 DO_ANALYTICS_PROBE = COMMANDER / "scripts" / "commander_do_analytics_probe.py"
+DO_ANALYTICS_TOKEN_INTAKE = COMMANDER / "scripts" / "commander_do_analytics_token_intake.py"
 MULTIDEVICE_LAB = COMMANDER / "scripts" / "commander_event_v2_dev_multidevice_lab.py"
 MULTIDEVICE_PROBE = COMMANDER / "scripts" / "commander_event_v2_dev_multidevice_probe.py"
 
