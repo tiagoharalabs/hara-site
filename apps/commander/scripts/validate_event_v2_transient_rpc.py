@@ -18,6 +18,7 @@ MODEL = COMMANDER / "scripts" / "commander_event_v2_transient_1k_model.py"
 LIVE_PROBE = COMMANDER / "scripts" / "commander_event_v2_transient_live_probe.py"
 SERIES_PROBE = COMMANDER / "scripts" / "commander_event_v2_transient_series_probe.py"
 DO_ANALYTICS_PROBE = COMMANDER / "scripts" / "commander_do_analytics_probe.py"
+DO_ANALYTICS_TOKEN_INTAKE = COMMANDER / "scripts" / "commander_do_analytics_token_intake.py"
 MULTIDEVICE_LAB = COMMANDER / "scripts" / "commander_event_v2_dev_multidevice_lab.py"
 MULTIDEVICE_PROBE = COMMANDER / "scripts" / "commander_event_v2_dev_multidevice_probe.py"
 
@@ -39,6 +40,7 @@ def main() -> int:
     live_probe = LIVE_PROBE.read_text(encoding="utf-8")
     series_probe = SERIES_PROBE.read_text(encoding="utf-8")
     do_analytics_probe = DO_ANALYTICS_PROBE.read_text(encoding="utf-8")
+    do_analytics_token_intake = DO_ANALYTICS_TOKEN_INTAKE.read_text(encoding="utf-8")
     multidevice_lab = MULTIDEVICE_LAB.read_text(encoding="utf-8")
     multidevice_probe = MULTIDEVICE_PROBE.read_text(encoding="utf-8")
 
@@ -175,6 +177,11 @@ def main() -> int:
     assert "print(token" not in do_analytics_probe
     assert '"authorization": "Bearer " + token' in do_analytics_probe
 
+    for required in ("getpass.getpass", "os.O_EXCL", "0o600"):
+        assert required in do_analytics_token_intake, required
+    for forbidden in ("CLOUDFLARE_API_TOKEN", ".wrangler", "default.toml"):
+        assert forbidden not in do_analytics_token_intake, forbidden
+
     for required in (
         "MAX_DEVICES = 100",
         "D1_FIXTURE_BATCH_SIZE = 10",
@@ -206,6 +213,8 @@ def main() -> int:
     series["self_check"]()
     do_analytics = runpy.run_path(str(DO_ANALYTICS_PROBE))
     do_analytics["self_check"]()
+    do_analytics_intake = runpy.run_path(str(DO_ANALYTICS_TOKEN_INTAKE))
+    do_analytics_intake["self_check"]()
 
     multidevice_lab_module = runpy.run_path(str(MULTIDEVICE_LAB))
     multidevice_lab_module["self_check"]()
