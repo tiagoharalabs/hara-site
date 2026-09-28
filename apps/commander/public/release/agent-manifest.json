@@ -13,9 +13,9 @@
       "sha256": "79f36ba30c579eec57f9eaf140b973a7a3d111661523f60389b565fcd6bca45e"
     },
     {
-      "bytes": 18420,
+      "bytes": 23835,
       "path": "install/linux.sh",
-      "sha256": "c9b64a1400ecbcc6748aad7bfec34812aa3e366d488e895da022979917085b99"
+      "sha256": "38755bfbdf42dfee8a4c66c83aada1f156fa9868abc95b1aea04216a58c22f62"
     },
     {
       "bytes": 18279,

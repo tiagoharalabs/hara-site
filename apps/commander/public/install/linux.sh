@@ -12,6 +12,10 @@ SERVICE="hara-commander-agent.service"
 STATUS_FILE="$BIN_DIR/runtime-status.json"
 ACTION="${1:-install}"
 ACTION="${ACTION#--}"
+REENROLL=FALSE
+REENROLL_BACKUP=""
+REENROLL_CONFIG_REPLACED=FALSE
+REENROLL_SERVICE_WAS_ACTIVE=FALSE
 
 # Reattach to the existing per-user systemd/DBus runtime when invoked from
 # non-graphical SSH/automation sessions that omit the usual desktop env.
@@ -232,6 +236,73 @@ cleanup_failed_install() {
   exit "$rc"
 }
 
+verify_existing_enrollment_rejected() {
+  python3 - "$CONFIG_FILE" <<'PYREENROLLCHECK'
+import json,sys,urllib.request,urllib.error
+from pathlib import Path
+class NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise urllib.error.HTTPError(req.full_url, code, "REDIRECT_DENIED", headers, fp)
+opener=urllib.request.build_opener(NoRedirectHandler)
+path=Path(sys.argv[1]); values={}
+for raw in path.read_text(encoding="utf-8").splitlines():
+    if "=" in raw:
+        key,value=raw.split("=",1); values[key]=value
+base=values.get("HARA_COMMANDER_URL","").rstrip("/")
+token=values.get("HARA_DEVICE_TOKEN","")
+device_id=values.get("HARA_DEVICE_ID","")
+arch=values.get("HARA_DEVICE_ARCH","")
+if not base or not token or not device_id:
+    print("REENROLL_LOCAL_ENROLLMENT_INVALID",file=sys.stderr); raise SystemExit(12)
+payload=json.dumps({"device_id":device_id,"architecture":arch,"agent_version":"0.3.7"},separators=(",",":")).encode()
+req=urllib.request.Request(
+    base+"/api/device/heartbeat", data=payload, method="POST",
+    headers={"content-type":"application/json","accept":"application/json",
+             "user-agent":"HARA-Commander-Reenroll-Check/0.3.7","authorization":"Bearer "+token},
+)
+try:
+    with opener.open(req,timeout=15) as response:
+        obj=json.loads(response.read().decode() or "{}")
+        if response.status==200 and obj.get("ok") is True:
+            print("REENROLL_REFUSED_CURRENT_DEVICE_STILL_ACTIVE",file=sys.stderr); raise SystemExit(13)
+        print("REENROLL_AUTH_CHECK_AMBIGUOUS",file=sys.stderr); raise SystemExit(14)
+except urllib.error.HTTPError as exc:
+    if exc.code != 401:
+        print("REENROLL_AUTH_CHECK_AMBIGUOUS",file=sys.stderr); raise SystemExit(14)
+    try: obj=json.loads(exc.read().decode() or "{}")
+    except Exception:
+        print("REENROLL_AUTH_CHECK_AMBIGUOUS",file=sys.stderr); raise SystemExit(14)
+    if obj.get("code") != "DEVICE_AUTH_INVALID":
+        print("REENROLL_AUTH_CHECK_AMBIGUOUS",file=sys.stderr); raise SystemExit(14)
+    print("HARA_COMMANDER_REENROLL_OLD_CREDENTIAL_REJECTED=PASS")
+except Exception:
+    print("REENROLL_AUTH_CHECK_AMBIGUOUS",file=sys.stderr); raise SystemExit(14)
+PYREENROLLCHECK
+}
+
+cleanup_failed_reenroll() {
+  local rc=$?
+  trap - EXIT
+  if [ "$rc" -ne 0 ] && [ "${INSTALL_ENROLLED:-FALSE}" = TRUE ]; then
+    local revoke_state=PENDING
+    rollback_enrolled_device >/dev/null 2>&1 && revoke_state=PASS || true
+    if [ "${REENROLL_CONFIG_REPLACED:-FALSE}" = TRUE ] && [ -n "${REENROLL_BACKUP:-}" ] && [ -f "$REENROLL_BACKUP" ]; then
+      mv -f "$REENROLL_BACKUP" "$CONFIG_FILE"
+      chmod 600 "$CONFIG_FILE"
+      if [ "${REENROLL_SERVICE_WAS_ACTIVE:-FALSE}" = TRUE ]; then
+        systemctl --user restart "$SERVICE" >/dev/null 2>&1 || true
+      else
+        systemctl --user stop "$SERVICE" >/dev/null 2>&1 || true
+      fi
+    fi
+    printf 'HARA_COMMANDER_FAILED_REENROLL_ROLLBACK=%s\n' "$revoke_state" >&2
+    [ "$revoke_state" = PASS ] || printf 'SERVER_DEVICE_REVOKE_PENDING=TRUE\n' >&2
+  fi
+  [ -z "${REENROLL_BACKUP:-}" ] || rm -f "$REENROLL_BACKUP"
+  unset DEVICE_TOKEN || true
+  exit "$rc"
+}
+
 preflight_agent() {
   local manifest health persistence_ready=FALSE arch
   manifest="$(mktemp)"
@@ -385,11 +456,32 @@ case "$ACTION" in
     [ "$revoke_state" = PASS ] || printf 'SERVER_DEVICE_REVOKE_PENDING=TRUE\n'
     printf 'DEVICE_TOKEN_EXPOSED=FALSE\n'
     exit 0 ;;
+  re-enroll|reenroll)
+    [ -f "$CONFIG_FILE" ] || { echo 'DEVICE_NOT_ENROLLED: use install.' >&2; exit 5; }
+    [ -f "$AGENT" ] || { echo 'AGENT_BINARY_MISSING' >&2; exit 6; }
+    [ -f "$UNIT" ] || { echo 'AGENT_SERVICE_NOT_INSTALLED' >&2; exit 6; }
+    configured_url="$(read_config_value HARA_COMMANDER_URL 2>/dev/null || true)"
+    [ -z "$configured_url" ] || BASE_URL="${configured_url%/}"
+    verify_existing_enrollment_rejected
+    REENROLL=TRUE
+    REENROLL_OLD_DEVICE_ID="$(read_config_value HARA_DEVICE_ID 2>/dev/null || true)"
+    systemctl --user is-active --quiet "$SERVICE" 2>/dev/null && REENROLL_SERVICE_WAS_ACTIVE=TRUE || true
+    ;;
   install) ;;
-  *) echo 'Usage: linux.sh [install|preflight|status|doctor|support|update|uninstall]' >&2; exit 64 ;;
+  *) echo 'Usage: linux.sh [install|re-enroll|preflight|status|doctor|support|update|uninstall]' >&2; exit 64 ;;
 esac
 
-[ ! -f "$CONFIG_FILE" ] || { echo 'DEVICE_ALREADY_ENROLLED: use status, update, or uninstall.' >&2; exit 8; }
+if [ "$REENROLL" != TRUE ] && [ -f "$CONFIG_FILE" ]; then
+  cat >&2 <<'EOF_ALREADY'
+DEVICE_ALREADY_ENROLLED
+This computer already has a Commander enrollment.
+If the device was revoked and you want to pair it again, run:
+  bash linux.sh re-enroll
+To inspect the current state, run:
+  bash linux.sh status
+EOF_ALREADY
+  exit 8
+fi
 
 printf 'HARA Commander — Linux device pairing\n'
 printf 'Pairing token: '
@@ -428,7 +520,14 @@ DEVICE_ID="${VALUES[0]}"
 DEVICE_TOKEN="${VALUES[1]}"
 unset PAIRING_TOKEN RESPONSE PAYLOAD VALUES
 INSTALL_ENROLLED=TRUE
-trap cleanup_failed_install EXIT
+if [ "$REENROLL" = TRUE ]; then
+  REENROLL_BACKUP="$(mktemp "$CONFIG_DIR/.device.env.reenroll.XXXXXX")"
+  cp -p "$CONFIG_FILE" "$REENROLL_BACKUP"
+  chmod 600 "$REENROLL_BACKUP"
+  trap cleanup_failed_reenroll EXIT
+else
+  trap cleanup_failed_install EXIT
+fi
 
 umask 077
 mkdir -p "$CONFIG_DIR" "$BIN_DIR" "$SYSTEMD_DIR"
@@ -439,6 +538,31 @@ HARA_DEVICE_TOKEN=$DEVICE_TOKEN
 HARA_DEVICE_ARCH=$ARCH
 EOF
 chmod 600 "$CONFIG_FILE"
+
+if [ "$REENROLL" = TRUE ]; then
+  REENROLL_CONFIG_REPLACED=TRUE
+  expected_version="$(python3 "$AGENT" --version 2>/dev/null || true)"
+  [ -n "$expected_version" ] || { echo 'AGENT_VERSION_INVALID' >&2; exit 6; }
+  previous_started="$(read_runtime_status_value started_at_utc 2>/dev/null || true)"
+  systemctl --user restart "$SERVICE"
+  sleep 1
+  if ! systemctl --user is-active --quiet "$SERVICE" || ! wait_for_agent_startup "$expected_version" "$previous_started"; then
+    echo 'HARA Commander Agent failed re-enroll startup attestation.' >&2
+    exit 4
+  fi
+  printf 'HARA_COMMANDER_AGENT_STARTUP_ATTESTATION=PASS\n'
+  INSTALL_ENROLLED=FALSE
+  trap - EXIT
+  rm -f "$REENROLL_BACKUP"
+  REENROLL_BACKUP=""
+  unset DEVICE_TOKEN
+  printf 'HARA_COMMANDER_DEVICE_REENROLL=PASS\n'
+  printf 'OLD_DEVICE_AUTHORITY_RESURRECTED=FALSE\n'
+  [ -z "${REENROLL_OLD_DEVICE_ID:-}" ] || printf 'OLD_DEVICE_ID=%s\n' "$REENROLL_OLD_DEVICE_ID"
+  printf 'DEVICE_ID=%s\n' "$DEVICE_ID"
+  printf 'DEVICE_TOKEN_EXPOSED=FALSE\n'
+  exit 0
+fi
 
 download_agent
 expected_version="$(python3 "$AGENT" --version)"
