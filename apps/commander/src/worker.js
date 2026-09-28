@@ -10,6 +10,12 @@ import {
 } from "./auth.js";
 import { normalizeIssuer, randomToken, sha256 } from "./oidc.js";
 import {
+  haraIdentityMcpDevEnabled,
+  haraIdentityMcpDevProtectedResourceMetadata,
+  haraIdentityMcpDevUnauthorized,
+  verifyHaraIdentityMcpDevBearer,
+} from "./mcp-hara-identity-dev.mjs";
+import {
   DEVICE_FUNCTION_ID,
   canonicalDeviceToolPayload,
 } from "./device-tool-contract.mjs";
@@ -2149,6 +2155,74 @@ export default {
 
       if (url.pathname === "/api/portal/auth-config" && request.method === "GET") {
         return json({ configured: authStatus(env).configured });
+      }
+
+      if (
+        url.pathname === "/.well-known/oauth-protected-resource/api/dev/mcp"
+        && request.method === "GET"
+      ) {
+        requireDev(env);
+        if (!haraIdentityMcpDevEnabled(env)) {
+          return json({ ok: false, code: "NOT_FOUND" }, 404);
+        }
+        return json(haraIdentityMcpDevProtectedResourceMetadata(request, env));
+      }
+
+      if (url.pathname === "/api/dev/mcp" && ["GET", "POST"].includes(request.method)) {
+        requireDev(env);
+        if (!haraIdentityMcpDevEnabled(env)) {
+          return json({ ok: false, code: "NOT_FOUND" }, 404);
+        }
+
+        let identity;
+        try {
+          identity = await verifyHaraIdentityMcpDevBearer(request, env);
+        } catch (_error) {
+          return haraIdentityMcpDevUnauthorized(request);
+        }
+
+        const context = await mcpProductContext(env, identity.issuer, identity.subject);
+        if (!context.ok) {
+          return json({ ok: false, code: context.code }, 403);
+        }
+        if (!context.grants.includes("COMMANDER_DISCOVERY")) {
+          return json({ ok: false, code: "GRANT_MISSING" }, 403);
+        }
+
+        const periodKey = mcpPeriodKey(context);
+        const usage = await env.TENANT_QUOTA
+          .getByName(context.tenant_id)
+          .status(periodKey, context.unit_limit);
+
+        return json({
+          schema: "hara.commander-mcp-hara-identity-dev-proof.v1",
+          ok: true,
+          environment: "DEV",
+          token_binding: {
+            issuer: identity.issuer,
+            client_id: identity.client_id,
+            binding_claim: identity.client_binding,
+            audience_count: identity.audience_count,
+            scopes: identity.scopes,
+          },
+          subject: {
+            subject_id: context.subject_id,
+            tenant_id: context.tenant_id,
+          },
+          entitlement: {
+            entitlement_id: context.entitlement_id,
+            plan_code: context.plan_code,
+            grants: context.grants,
+          },
+          quota: {
+            meter_id: context.meter_id,
+            period_kind: context.period_kind,
+            unit_limit: context.unit_limit,
+            status: usage,
+          },
+          customer_services_relay: false,
+          event_v2_mutation: false,
+        });
       }
 
       if (url.pathname === "/auth/login" && request.method === "GET") {

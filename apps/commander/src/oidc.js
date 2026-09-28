@@ -280,3 +280,108 @@ export async function verifyIdToken({ idToken, metadata, issuer, clientId, nonce
 
   return claims;
 }
+
+export function validateAccessTokenClaims({
+  claims,
+  issuer,
+  clientId,
+  requiredScopes = [],
+  nowSeconds = Math.floor(Date.now() / 1000),
+}) {
+  if (!claims || typeof claims !== "object") throw new Error("OIDC_ACCESS_TOKEN_INVALID");
+
+  const expectedIssuer = normalizeIssuer(issuer);
+  if (typeof claims.iss !== "string" || normalizeIssuer(claims.iss) !== expectedIssuer) {
+    throw new Error("OIDC_ACCESS_TOKEN_ISSUER_MISMATCH");
+  }
+
+  const audiences = Array.isArray(claims.aud) ? claims.aud : [claims.aud];
+  if (
+    audiences.length === 0
+    || audiences.some((audience) => typeof audience !== "string" || !audience)
+    || !audiences.includes(clientId)
+  ) {
+    throw new Error("OIDC_ACCESS_TOKEN_AUDIENCE_MISMATCH");
+  }
+
+  const clientClaim = claims.client_id;
+  const azpClaim = claims.azp;
+  if (clientClaim !== undefined && (typeof clientClaim !== "string" || !clientClaim)) {
+    throw new Error("OIDC_ACCESS_TOKEN_CLIENT_INVALID");
+  }
+  if (azpClaim !== undefined && (typeof azpClaim !== "string" || !azpClaim)) {
+    throw new Error("OIDC_ACCESS_TOKEN_AZP_INVALID");
+  }
+  if (clientClaim && clientClaim !== clientId) throw new Error("OIDC_ACCESS_TOKEN_CLIENT_MISMATCH");
+  if (azpClaim && azpClaim !== clientId) throw new Error("OIDC_ACCESS_TOKEN_AZP_MISMATCH");
+  if (!clientClaim && !azpClaim) throw new Error("OIDC_ACCESS_TOKEN_CLIENT_BINDING_MISSING");
+
+  if (!claims.sub || typeof claims.sub !== "string") throw new Error("OIDC_ACCESS_TOKEN_SUBJECT_MISSING");
+  if (claims.sub.length > 255 || !/^[ -~]+$/.test(claims.sub)) {
+    throw new Error("OIDC_ACCESS_TOKEN_SUBJECT_INVALID");
+  }
+
+  if (!Number.isFinite(claims.exp) || claims.exp < nowSeconds - 30) throw new Error("OIDC_ACCESS_TOKEN_EXPIRED");
+  if (claims.nbf !== undefined && !Number.isFinite(claims.nbf)) throw new Error("OIDC_ACCESS_TOKEN_NBF_INVALID");
+  if (Number.isFinite(claims.nbf) && claims.nbf > nowSeconds + 30) throw new Error("OIDC_ACCESS_TOKEN_NOT_YET_VALID");
+  if (!Number.isFinite(claims.iat) || claims.iat > nowSeconds + 60) throw new Error("OIDC_ACCESS_TOKEN_IAT_INVALID");
+
+  const scopes = Array.isArray(claims.scope)
+    ? claims.scope.map(String)
+    : String(claims.scope || "").split(/\s+/).filter(Boolean);
+  for (const required of requiredScopes) {
+    if (!scopes.includes(required)) throw new Error("OIDC_ACCESS_TOKEN_SCOPE_MISSING");
+  }
+
+  return {
+    claims,
+    audiences,
+    scopes,
+    client_binding: clientClaim ? "client_id" : "azp",
+  };
+}
+
+export async function verifyAccessToken({
+  accessToken,
+  metadata,
+  issuer,
+  clientId,
+  requiredScopes = [],
+}) {
+  const parts = String(accessToken || "").split(".");
+  if (parts.length !== 3) throw new Error("OIDC_ACCESS_TOKEN_NOT_JWT");
+
+  const header = JSON.parse(new TextDecoder().decode(decodeB64url(parts[0])));
+  const claims = JSON.parse(new TextDecoder().decode(decodeB64url(parts[1])));
+  if (header.alg !== "RS256" || !header.kid) throw new Error("OIDC_ACCESS_TOKEN_ALG_REJECTED");
+
+  let keys = await oidcJwks(metadata);
+  let jwk = selectSigningJwk(keys, header);
+  if (!jwk) {
+    keys = await oidcJwks(metadata, { forceRefresh: true });
+    jwk = selectSigningJwk(keys, header);
+  }
+  if (!jwk) throw new Error("OIDC_ACCESS_TOKEN_SIGNING_KEY_NOT_FOUND");
+
+  const key = await crypto.subtle.importKey(
+    "jwk",
+    jwk,
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+    false,
+    ["verify"],
+  );
+  const valid = await crypto.subtle.verify(
+    "RSASSA-PKCS1-v1_5",
+    key,
+    decodeB64url(parts[2]),
+    encoder.encode(parts[0] + "." + parts[1]),
+  );
+  if (!valid) throw new Error("OIDC_ACCESS_TOKEN_SIGNATURE_INVALID");
+
+  return validateAccessTokenClaims({
+    claims,
+    issuer,
+    clientId,
+    requiredScopes,
+  });
+}
