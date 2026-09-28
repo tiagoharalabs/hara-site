@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import sqlite3
+import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -110,4 +111,11 @@ print("COMMANDER_OIDC_TX_ACTIVE_UNCONSUMED_PRESERVED=PASS")
 print("COMMANDER_OIDC_TX_ACTIVE_CONSUMED_REPLAY_WINDOW_PRESERVED=PASS")
 print("COMMANDER_OIDC_TX_CLEANUP_BEST_EFFORT=PASS")
 print("COMMANDER_OIDC_TX_CLEANUP_OFF_LOGIN_HOT_PATH=PASS")
+subprocess.run(
+    ["node", str(ROOT / "apps/commander/scripts/test_mcp_hara_identity_dev.mjs")],
+    cwd=ROOT,
+    check=True,
+)
+
 print("COMMANDER_OIDC_TX_READBACK_SANITIZED=PASS")
+print("COMMANDER_ISSUE1486_DCR_DEV_CANARY_TEST=PASS")
