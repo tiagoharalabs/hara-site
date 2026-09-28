@@ -53,6 +53,7 @@ need(
     do_bindings == [
         {"name": "TENANT_QUOTA", "class_name": "TenantQuota"},
         {"name": "DEVICE_CHANNEL", "class_name": "DeviceChannel"},
+        {"name": "STRICT_RATE_LIMIT", "class_name": "SecurityRateLimit"},
     ],
     "DEV_DO_BINDINGS",
 )
@@ -60,12 +61,20 @@ need(vars_.get("DEVICE_EVENT_V2_ENABLED") == "true", "DEV_EVENT_V2_CANARY_ENABLE
 
 dev_migrations = dev["migrations"]
 prod_migrations = prod["migrations"]
-need(len(prod_migrations) == 1, "PROD_DO_BASELINE_MIGRATION_COUNT")
-need(len(dev_migrations) == 2, "DEV_DO_MIGRATION_COUNT")
+need(len(prod_migrations) == 2, "PROD_DO_MIGRATION_COUNT")
+need(len(dev_migrations) == 3, "DEV_DO_MIGRATION_COUNT")
 need(dev_migrations[0] == prod_migrations[0], "DEV_DO_V1_PROD_BASELINE")
 need(
     dev_migrations[1] == {"tag": "v2", "new_sqlite_classes": ["DeviceChannel"]},
     "DEV_DO_V2_DEVICE_CHANNEL_SQLITE",
+)
+need(
+    prod_migrations[1] == {"tag": "v2", "new_sqlite_classes": ["SecurityRateLimit"]},
+    "PROD_DO_V2_SECURITY_RATE_LIMIT_SQLITE",
+)
+need(
+    dev_migrations[2] == {"tag": "v3", "new_sqlite_classes": ["SecurityRateLimit"]},
+    "DEV_DO_V3_SECURITY_RATE_LIMIT_SQLITE",
 )
 
 raw = DEV_PATH.read_text(encoding="utf-8")
@@ -87,6 +96,7 @@ print("COMMANDER_DEV_CONFIG_STORAGE=REMOTE_DEV")
 print("COMMANDER_DEV_CONFIG_D1=DEV_ONLY")
 print("COMMANDER_DEV_CONFIG_DO_TENANT_QUOTA=PASS")
 print("COMMANDER_DEV_CONFIG_DO_DEVICE_CHANNEL_SQLITE=PASS")
+print("COMMANDER_DEV_CONFIG_DO_STRICT_RATE_LIMIT_SQLITE=PASS")
 print("COMMANDER_DEV_CONFIG_EVENT_V2_CANARY=ENABLED")
 print("COMMANDER_DEV_CONFIG_MIGRATION_BASELINE=PASS")
 print("COMMANDER_DEV_CONFIG_ROUTES=ABSENT")
