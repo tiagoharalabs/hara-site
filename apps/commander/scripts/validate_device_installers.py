@@ -26,7 +26,7 @@ def need(text: str, token: str, code: str) -> None:
     assert token in text, f"{code}:{token}"
 
 for token in ('platform": "LINUX"', "/api/device/enroll", "/agent/linux.py",
-              "systemctl --user enable --now", "chmod 600", '"agent_version": "0.3.7"',
+              "systemctl --user enable --now", "chmod 600", '"agent_version": "0.3.8"',
               "HARA_COMMANDER_AGENT_UPDATE=PASS", "HARA_COMMANDER_AGENT_UNINSTALL=PASS",
               "HARA_COMMANDER_AGENT_VERSION=", "HARA_COMMANDER_AGENT_DOCTOR=PASS",
               "/api/device/revoke-self", "SERVER_DEVICE_REVOKE=",
@@ -51,7 +51,7 @@ print("LINUX_INSTALLER_SECRET_ARGV_EXPOSURE=FALSE")
 
 for token in ('platform="WINDOWS"', "/api/device/enroll", "/agent/windows.ps1",
               "ConvertFrom-SecureString", "Register-ScheduledTask", "icacls.exe",
-              'agent_version="0.3.7"', "HARA_COMMANDER_AGENT_UPDATE=PASS",
+              'agent_version="0.3.8"', "HARA_COMMANDER_AGENT_UPDATE=PASS",
               "HARA_COMMANDER_AGENT_UNINSTALL=PASS", "HARA_COMMANDER_AGENT_VERSION=",
               "HARA_COMMANDER_AGENT_DOCTOR=PASS", "/api/device/revoke-self",
               "SERVER_DEVICE_REVOKE=", "HARA_COMMANDER_AGENT_UPDATE_ROLLBACK_READY=TRUE",
@@ -88,7 +88,7 @@ print("WINDOWS_INSTALLER_REDIRECT_FAIL_CLOSED=PASS")
 print("WINDOWS_INSTALLER_DEVICE_TOKEN_MEMORY_HYGIENE=PASS")
 
 assert MANIFEST.get("schema") == "hara.commander-agent-release.v1"
-assert MANIFEST.get("agent_version") == "0.3.7"
+assert MANIFEST.get("agent_version") == "0.3.8"
 entries = {item["path"]: item for item in MANIFEST.get("files", [])}
 for rel in ("agent/linux.py", "agent/windows.ps1", "install/linux.sh", "install/windows.ps1"):
     path = PUBLIC / rel
@@ -116,7 +116,8 @@ for token in ("STDOUT_SHA256_V1", "result_stdout_sha256"):
 assert 'hashlib.sha256(stdout.encode("utf-8"))' in LINUX_AGENT, "LINUX_AGENT_RECEIPT_STDOUT_SHA_MISSING"
 assert "Get-Utf8Sha256 ([string]$Result.stdout)" in WINDOWS_AGENT, "WINDOWS_AGENT_RECEIPT_STDOUT_SHA_MISSING"
 assert "urllib.request.urlopen(req, timeout=25)" not in LINUX_AGENT, "LINUX_AGENT_REDIRECT_FOLLOW_PRESENT"
-assert "NoRedirectHandler" in LINUX_AGENT and "NO_REDIRECT_OPENER.open(req, timeout=25)" in LINUX_AGENT, "LINUX_AGENT_REDIRECT_FAIL_CLOSED_MISSING"
+assert "NoRedirectHandler" in LINUX_AGENT and "NO_REDIRECT_OPENER.open(req, timeout=timeout)" in LINUX_AGENT, "LINUX_AGENT_REDIRECT_FAIL_CLOSED_MISSING"
+assert "/api/device/offline" in LINUX_AGENT and "/api/device/offline" in WINDOWS_AGENT, "AGENT_IMMEDIATE_OFFLINE_SYNC_MISSING"
 windows_agent_web_calls = [line for line in WINDOWS_AGENT.splitlines() if "Invoke-RestMethod" in line]
 assert windows_agent_web_calls and all("-MaximumRedirection 0" in line for line in windows_agent_web_calls), "WINDOWS_AGENT_REDIRECT_FOLLOW_PRESENT"
 assert "COMMANDER_WINDOWS_AGENT_SELF_TEST=PASS" in WINDOWS_AGENT, "WINDOWS_AGENT_SELF_TEST_MISSING"
@@ -132,6 +133,16 @@ assert LINUX.count("HARA_COMMANDER_AGENT_STARTUP_ATTESTATION=PASS") >= 2, "LINUX
 assert WINDOWS.count("HARA_COMMANDER_AGENT_STARTUP_ATTESTATION=PASS") >= 2, "WINDOWS_STARTUP_ATTESTATION_NOT_REQUIRED_FOR_INSTALL_AND_UPDATE"
 assert "last_runtime_error_code" in LINUX and "last_runtime_error_code" in WINDOWS, "SUPPORT_RUNTIME_DIAGNOSTIC_MISSING"
 assert "device.info" in LINUX_AGENT and "device.info" in WINDOWS_AGENT
+for token in ("operator-session.json", "LOCAL_OPERATOR_SESSION_REQUIRED", "AGENT_ONLINE", "payload_values_exposed", "secret_material_exposed"):
+    assert token in LINUX_AGENT, f"LINUX_OPERATOR_SESSION_GATE_MISSING:{token}"
+    assert token in WINDOWS_AGENT, f"WINDOWS_OPERATOR_SESSION_GATE_MISSING:{token}"
+assert "if not authorized:" in LINUX_AGENT, "LINUX_DAEMON_NOT_INERT_WITHOUT_SESSION"
+assert "if (-not (Test-OperatorSessionActive))" in WINDOWS_AGENT, "WINDOWS_DAEMON_NOT_INERT_WITHOUT_SESSION"
+assert "hara-commander start" in LINUX, "LINUX_MANUAL_START_GUIDANCE_MISSING"
+assert "REGISTERED_INERT_UNTIL_LOCAL_SESSION" in WINDOWS, "WINDOWS_MANUAL_START_GUIDANCE_MISSING"
+print("COMMANDER_LOCAL_OPERATOR_SESSION_GATE=PASS")
+print("COMMANDER_BACKGROUND_DAEMON_EXECUTION_AUTHORITY=INERT")
+print("COMMANDER_CONSOLE_SECRET_EXPOSURE=FALSE")
 
 linux_namespace = {
     "__name__": "hara_commander_linux_agent_redirect_test",
@@ -222,8 +233,13 @@ with tempfile.TemporaryDirectory(prefix="hara-agent-startup-") as tmp:
                     break
             time.sleep(0.1)
         assert startup, "LINUX_AGENT_STARTUP_STATUS_MISSING"
-        assert startup.get("agent_version") == "0.3.7", "LINUX_AGENT_STARTUP_VERSION_INVALID"
+        assert startup.get("agent_version") == "0.3.8", "LINUX_AGENT_STARTUP_VERSION_INVALID"
         assert startup.get("started_at_utc"), "LINUX_AGENT_STARTUP_ATTESTATION_MISSING"
+        time.sleep(1.2)
+        inert = json.loads(status_path.read_text(encoding="utf-8"))
+        assert inert.get("last_successful_heartbeat_at_utc") in (None, ""), "LINUX_AGENT_HEARTBEAT_WITHOUT_OPERATOR_SESSION"
+        assert inert.get("last_runtime_error_code") in (None, ""), "LINUX_AGENT_NETWORK_ATTEMPT_WITHOUT_OPERATOR_SESSION"
+        assert proc.poll() is None, "LINUX_AGENT_DAEMON_NOT_ALIVE_WHILE_INERT"
     finally:
         proc.terminate()
         try:
@@ -256,7 +272,8 @@ print("AGENT_DEVICE_PREFLIGHT_NON_MUTATING=READY")
 enqueue = WORKER.split("async function enqueueDeviceCall", 1)[1].split("async function claimNextDeviceCall", 1)[0]
 claim = WORKER.split("async function claimNextDeviceCall", 1)[1].split("async function completeDeviceCall", 1)[0]
 status = WORKER.split("async function deviceCallStatus", 1)[1].split("export default", 1)[0]
-heartbeat = WORKER.split("async function heartbeatDevice", 1)[1].split("async function revokeDeviceSelf", 1)[0]
+heartbeat = WORKER.split("async function heartbeatDevice", 1)[1].split("async function markDeviceOffline", 1)[0]
+offline = WORKER.split("async function markDeviceOffline", 1)[1].split("async function revokeDeviceSelf", 1)[0]
 revoke = WORKER.split("async function revokePortalDevice", 1)[1].split("async function enqueueDeviceCall", 1)[0]
 assert 'const privileged = ["OWNER", "ADMIN"].includes(String(session.role));' in revoke, "DEVICE_REVOKE_PRIVILEGE_MATRIX_INVALID"
 assert '["OWNER", "ADMIN", "REVIEWER"]' not in revoke, "REVIEWER_TENANT_WIDE_REVOKE_PRESENT"
@@ -271,6 +288,9 @@ assert "ctx.waitUntil(cleanupExpiredDeviceCalls(env));" in WORKER, "DEVICE_CALL_
 assert status.index("let row = await readCall()") < status.index("SET state = 'EXPIRED'"), "DEVICE_STATUS_UNCONDITIONAL_EXPIRY_WRITE"
 assert "RETURNING call_id, request_id, device_id, tool_id, state" in status, "DEVICE_STATUS_EXPIRY_RETURNING_MISSING"
 assert "UPDATE commander_devices" in heartbeat and "last_seen_at_utc" in heartbeat, "HEARTBEAT_PRESENCE_WRITE_MISSING"
+assert "OUTBOUND_RELAY_OFFLINE" in offline and "state: \"OFFLINE\"" in offline, "DEVICE_OFFLINE_TRANSITION_MISSING"
+assert '/api/device/offline' in WORKER, "DEVICE_OFFLINE_ROUTE_MISSING"
+assert "OUTBOUND_RELAY_OFFLINE" in enqueue, "DEVICE_OFFLINE_ENQUEUE_GUARD_MISSING"
 assert "authCallbackFailureResponse" in WORKER and "clearCookie(TX_COOKIE" in AUTH, "OIDC_CALLBACK_COOKIE_CLEANUP_MISSING"
 assert "SESSION_TOUCH_SECONDS" in AUTH and ".run().catch(() => null)" in AUTH, "PORTAL_SESSION_TOUCH_NOT_BEST_EFFORT"
 print("COMMANDER_CALL_POLL_PRESENCE_WRITE=ABSENT")

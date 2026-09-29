@@ -3,7 +3,10 @@ $Root = Join-Path $env:LOCALAPPDATA "HARA Commander"
 $ConfigPath = Join-Path $Root "device.json"
 $ReceiptDir = Join-Path $Root "receipts"
 $RuntimeStatus = Join-Path $Root "runtime-status.json"
-$AgentVersion = "0.3.7"
+$SessionPath = Join-Path $Root "operator-session.json"
+$ConsoleEvents = Join-Path $Root "console-events.jsonl"
+$SessionMaxHours = 12
+$AgentVersion = "0.3.8"
 $FunctionId = "device.info"
 
 function Get-PlainText([Security.SecureString]$SecureValue) {
@@ -54,6 +57,139 @@ function Try-SetRuntimeStatus([string]$HeartbeatAt=$null,[string]$ErrorCode=$nul
   } catch {
     return $false
   }
+}
+
+function Get-OperatorProcess([int]$OwnerPid) {
+  if ($OwnerPid -le 1) { return $null }
+  try { return Get-Process -Id $OwnerPid -ErrorAction Stop }
+  catch { return $null }
+}
+
+function Get-OperatorSession {
+  if (-not (Test-Path -LiteralPath $SessionPath -PathType Leaf)) { return $null }
+  try { $session=Get-Content -Raw -LiteralPath $SessionPath | ConvertFrom-Json } catch { return $null }
+  if ([string]$session.schema -ne "hara.commander-operator-session.v1") { return $null }
+  try { $started=[DateTime]::Parse([string]$session.started_at_utc).ToUniversalTime() } catch { return $null }
+  if (([DateTime]::UtcNow-$started).TotalHours -gt $SessionMaxHours) { return $null }
+  $proc=Get-OperatorProcess ([int]$session.owner_pid)
+  if (-not $proc) { return $null }
+  $marker=$proc.StartTime.ToUniversalTime().ToString("o")
+  if ($marker -ne [string]$session.owner_started_at_utc) { return $null }
+  return $session
+}
+
+function Test-OperatorSessionActive {
+  return $null -ne (Get-OperatorSession)
+}
+
+function Write-ConsoleEvent([string]$Event,$Call=$null,[string]$State="",[string]$ErrorCode="",[string]$ReceiptSha="") {
+  New-Item -ItemType Directory -Path $Root -Force | Out-Null
+  $tool=$null; $functionId=$null; $requestId=$null
+  if ($null -ne $Call) {
+    $tool=[string]$Call.tool_id
+    if ($Call.payload) { $functionId=[string]$Call.payload.function_id }
+    $requestId=[string]$Call.request_id
+  }
+  $entry=[ordered]@{
+    schema="hara.commander-console-event.v1"
+    at_utc=[DateTime]::UtcNow.ToString("o")
+    event=$Event
+    state=if ($State) {$State} else {$null}
+    tool_id=if ($tool) {$tool} else {$null}
+    function_id=if ($functionId) {$functionId} else {$null}
+    request_id=if ($requestId) {$requestId} else {$null}
+    error_code=if ($ErrorCode) {$ErrorCode} else {$null}
+    receipt_sha256=if ($ReceiptSha) {$ReceiptSha} else {$null}
+    payload_values_exposed=$false
+    secret_material_exposed=$false
+  }
+  Add-Content -LiteralPath $ConsoleEvents -Value ($entry | ConvertTo-Json -Compress) -Encoding UTF8
+}
+
+function Format-ConsoleEvent($Entry) {
+  $stamp=([DateTime]::Parse([string]$Entry.at_utc)).ToLocalTime().ToString("HH:mm:ss")
+  $tool=if ($Entry.tool_id) {[string]$Entry.tool_id} else {"-"}
+  $fn=if ($Entry.function_id) {[string]$Entry.function_id} else {"-"}
+  $suffix=""
+  if ($Entry.state) {$suffix+=" state="+[string]$Entry.state}
+  if ($Entry.error_code) {$suffix+=" error="+[string]$Entry.error_code}
+  if ($Entry.receipt_sha256) {$suffix+=" receipt="+([string]$Entry.receipt_sha256).Substring(0,12)+"..."}
+  return "[$stamp] $([string]$Entry.event) tool=$tool function=$fn$suffix"
+}
+
+function Start-OperatorConsole {
+  $cfg=Get-Content -Raw -LiteralPath $ConfigPath | ConvertFrom-Json
+  $existing=Get-OperatorSession
+  if ($existing -and [int]$existing.owner_pid -ne $PID) { throw "OPERATOR_SESSION_ALREADY_ACTIVE" }
+  New-Item -ItemType Directory -Path $Root -Force | Out-Null
+  $session=[ordered]@{
+    schema="hara.commander-operator-session.v1"
+    owner_pid=$PID
+    owner_started_at_utc=(Get-Process -Id $PID).StartTime.ToUniversalTime().ToString("o")
+    started_at_utc=[DateTime]::UtcNow.ToString("o")
+    device_id=[string]$cfg.device_id
+    authorization="LOCAL_OPERATOR_TERMINAL"
+  }
+  $session | ConvertTo-Json -Compress | Set-Content -LiteralPath $SessionPath -Encoding UTF8
+  Write-ConsoleEvent "SESSION_OPEN" $null "AUTHORIZED"
+  Write-Host ""
+  Write-Host "H.A.R.A. Labs - Commander"
+  Write-Host ("="*58)
+  Write-Host "Sessao local autorizada para clientes de IA"
+  Write-Host ("Computador: "+$env:COMPUTERNAME)
+  Write-Host ("Device ID : "+[string]$cfg.device_id)
+  Write-Host ("Agent     : "+$AgentVersion)
+  Write-Host ""
+  Write-Host "Comandos permitidos nesta sessao:"
+  Write-Host "  hara.health"
+  Write-Host "  hara.functions.list"
+  Write-Host "  hara.functions.describe"
+  Write-Host "  hara.functions.invoke (somente funcoes governadas)"
+  Write-Host "  hara.receipts.get"
+  Write-Host ""
+  Write-Host "Argumentos sensiveis e tokens nunca sao exibidos."
+  Write-Host "Pressione Ctrl+C para encerrar o acesso."
+  Write-Host ("-"*58)
+  try {
+    $seen=0
+    while ($true) {
+      $current=Get-OperatorSession
+      if (-not $current -or [int]$current.owner_pid -ne $PID) { break }
+      if (Test-Path -LiteralPath $ConsoleEvents -PathType Leaf) {
+        $rows=@(Get-Content -LiteralPath $ConsoleEvents)
+        while ($seen -lt $rows.Count) {
+          try { $entry=$rows[$seen] | ConvertFrom-Json; Write-Host (Format-ConsoleEvent $entry) } catch {}
+          $seen++
+        }
+      }
+      Start-Sleep -Milliseconds 250
+    }
+  } finally {
+    Set-DeviceOffline $cfg | Out-Null
+    try {
+      $current=Get-OperatorSession
+      if ($current -and [int]$current.owner_pid -eq $PID) { Remove-Item -Force -LiteralPath $SessionPath -ErrorAction SilentlyContinue }
+    } catch {}
+    Write-ConsoleEvent "SESSION_CLOSE" $null "REVOKED"
+    Write-Host "HARA_COMMANDER_SESSION=INACTIVE"
+  }
+}
+
+function Stop-OperatorSession {
+  $was=Test-Path -LiteralPath $SessionPath -PathType Leaf
+  Set-DeviceOffline | Out-Null
+  Remove-Item -Force -LiteralPath $SessionPath -ErrorAction SilentlyContinue
+  Write-ConsoleEvent "SESSION_CLOSE" $null "REVOKED"
+  Write-Host "HARA_COMMANDER_SESSION=INACTIVE"
+  Write-Host ("SESSION_WAS_ACTIVE="+($(if ($was) {"TRUE"} else {"FALSE"})))
+  Write-Host "SECRET_MATERIAL_EXPOSED=FALSE"
+}
+
+function Show-OperatorSession {
+  $session=Get-OperatorSession
+  Write-Host ("HARA_COMMANDER_SESSION="+($(if ($session) {"ACTIVE"} else {"INACTIVE"})))
+  if ($session) { Write-Host ("SESSION_STARTED_AT_UTC="+[string]$session.started_at_utc) }
+  Write-Host "SECRET_MATERIAL_EXPOSED=FALSE"
 }
 
 function Get-DeviceInfo($Cfg) {
@@ -188,6 +324,23 @@ function Send-Json([string]$Url,[string]$Token,$Body,[int]$Timeout=25) {
   return Invoke-RestMethod -Uri $Url -Method Post -ContentType "application/json" -Headers $headers -Body $json -TimeoutSec $Timeout -MaximumRedirection 0
 }
 
+function Set-DeviceOffline($Cfg=$null) {
+  try {
+    if (-not $Cfg) { $Cfg=Get-Content -Raw -LiteralPath $ConfigPath | ConvertFrom-Json }
+    $SecureToken=ConvertTo-SecureString ([string]$Cfg.encrypted_device_token)
+    $Token=Get-PlainText $SecureToken
+    $result=Send-Json "$($Cfg.base_url)/api/device/offline" $Token @{device_id=[string]$Cfg.device_id} 5
+    $ok=$result -and $result.ok -eq $true -and [string]$result.state -eq "OFFLINE"
+    Write-ConsoleEvent "AGENT_OFFLINE" $null $(if ($ok) {"OFFLINE"} else {"FAILED"})
+    return $ok
+  } catch {
+    Write-ConsoleEvent "OFFLINE_SYNC_ERROR" $null "FAILED" (Get-SafeErrorCode $_)
+    return $false
+  } finally {
+    $Token=$null
+  }
+}
+
 function Complete-Call($Cfg,[string]$Token,$Call,[string]$State,$Result,[string]$ErrorCode="") {
   $body=@{call_id=[string]$Call.call_id;state=$State;result=$Result}
   if ($ErrorCode) { $body.error_code=$ErrorCode }
@@ -234,6 +387,30 @@ function Invoke-AgentSelfTest {
     catch { if ([string]$_.Exception.Message -eq "UNKNOWN_FUNCTION_ID") { $blocked=$true } }
     if (-not $blocked) { throw "SELF_TEST_ARBITRARY_FUNCTION_ALLOWED" }
 
+    $previousSessionPath=$script:SessionPath
+    $previousConsoleEvents=$script:ConsoleEvents
+    try {
+      $script:SessionPath=Join-Path $testRoot "operator-session.json"
+      $script:ConsoleEvents=Join-Path $testRoot "console-events.jsonl"
+      if (Test-OperatorSessionActive) { throw "SELF_TEST_SESSION_SHOULD_START_INACTIVE" }
+      [ordered]@{
+        schema="hara.commander-operator-session.v1"
+        owner_pid=$PID
+        owner_started_at_utc=(Get-Process -Id $PID).StartTime.ToUniversalTime().ToString("o")
+        started_at_utc=[DateTime]::UtcNow.ToString("o")
+      } | ConvertTo-Json -Compress | Set-Content -LiteralPath $script:SessionPath -Encoding UTF8
+      if (-not (Test-OperatorSessionActive)) { throw "SELF_TEST_SESSION_GATE_FAILED" }
+      Write-ConsoleEvent "SELFTEST" ([pscustomobject]@{request_id="r";tool_id="hara.health";payload=[pscustomobject]@{secret="never"}})
+      $entry=(Get-Content -LiteralPath $script:ConsoleEvents | Select-Object -Last 1) | ConvertFrom-Json
+      if ($entry.payload_values_exposed -ne $false -or $entry.secret_material_exposed -ne $false) { throw "SELF_TEST_CONSOLE_SANITIZATION_FAILED" }
+      if (($entry | ConvertTo-Json -Compress) -match "never") { throw "SELF_TEST_CONSOLE_PAYLOAD_LEAK" }
+    } finally {
+      $script:SessionPath=$previousSessionPath
+      $script:ConsoleEvents=$previousConsoleEvents
+    }
+
+    Write-Host "COMMANDER_WINDOWS_OPERATOR_SESSION_GATE=PASS"
+    Write-Host "COMMANDER_WINDOWS_CONSOLE_SANITIZATION=PASS"
     Write-Host "COMMANDER_WINDOWS_FIVE_TOOL_BRIDGE=PASS"
     Write-Host "COMMANDER_WINDOWS_ARBITRARY_FUNCTION=DENIED"
     Write-Host "COMMANDER_WINDOWS_AGENT_SELF_TEST=PASS"
@@ -244,6 +421,9 @@ function Invoke-AgentSelfTest {
 }
 
 if ($args -contains "--self-test") { Invoke-AgentSelfTest; exit 0 }
+if ($args -contains "--session-start" -or ($args.Count -gt 0 -and [string]$args[0] -eq "start")) { Start-OperatorConsole; exit 0 }
+if ($args -contains "--session-status" -or ($args.Count -gt 0 -and [string]$args[0] -eq "status")) { Show-OperatorSession; exit 0 }
+if ($args -contains "--session-stop" -or ($args.Count -gt 0 -and [string]$args[0] -eq "stop")) { Stop-OperatorSession; exit 0 }
 
 try {
   $StartupCfg=Get-Content -Raw -Path $ConfigPath | ConvertFrom-Json
@@ -268,7 +448,18 @@ try {
 $LastHeartbeat=[datetime]::MinValue
 $LastErrorCode=$null
 $LastErrorWrite=[datetime]::MinValue
+$WasAuthorized=$false
 while ($true) {
+  if (-not (Test-OperatorSessionActive)) {
+    $WasAuthorized=$false
+    Start-Sleep -Seconds 1
+    continue
+  }
+  if (-not $WasAuthorized) {
+    $LastHeartbeat=[datetime]::MinValue
+    Write-ConsoleEvent "AGENT_ONLINE" $null "AUTHORIZED"
+    $WasAuthorized=$true
+  }
   try {
     $Cfg=Get-Content -Raw -Path $ConfigPath | ConvertFrom-Json
     $SecureToken=ConvertTo-SecureString ([string]$Cfg.encrypted_device_token)
@@ -289,17 +480,33 @@ while ($true) {
       if ($_.Exception.Response -and [int]$_.Exception.Response.StatusCode -eq 204) { $Call=$null } else { throw }
     }
     if ($null -ne $Call -and $Call.call_id) {
-      try {
-        $result=Invoke-Tool $Cfg $Call
-        Complete-Call $Cfg $DeviceToken $Call "COMPLETED" $result
-      } catch {
-        $code=Get-SafeErrorCode $_
+      if (-not (Test-OperatorSessionActive)) {
+        $code="LOCAL_OPERATOR_SESSION_REQUIRED"
+        Write-ConsoleEvent "DENIED" $Call "DENIED" $code
         $denied=@{
-          state="DENIED";operational_authority="HARA_SERVICES"
+          state="DENIED";operational_authority="LOCAL_OPERATOR_SESSION"
           runtime_authority_from_chatgpt=$false;mutation_performed=$false
           result=@{};blocker=@{code=$code}
         }
         Complete-Call $Cfg $DeviceToken $Call "FAILED" $denied $code
+      } else {
+        Write-ConsoleEvent "RECEIVED" $Call "PENDING"
+        try {
+          Write-ConsoleEvent "EXECUTING" $Call "EXECUTING"
+          $result=Invoke-Tool $Cfg $Call
+          Complete-Call $Cfg $DeviceToken $Call "COMPLETED" $result
+          $receipt=if ($result.bridge_receipt_sha256) {[string]$result.bridge_receipt_sha256} else {""}
+          Write-ConsoleEvent "PASS" $Call "COMPLETED" "" $receipt
+        } catch {
+          $code=Get-SafeErrorCode $_
+          Write-ConsoleEvent "DENIED" $Call "FAILED" $code
+          $denied=@{
+            state="DENIED";operational_authority="LOCAL_OPERATOR_SESSION"
+            runtime_authority_from_chatgpt=$false;mutation_performed=$false
+            result=@{};blocker=@{code=$code}
+          }
+          Complete-Call $Cfg $DeviceToken $Call "FAILED" $denied $code
+        }
       }
     }
   } catch {
