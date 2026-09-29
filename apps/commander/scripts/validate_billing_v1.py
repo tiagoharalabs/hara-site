@@ -12,6 +12,8 @@ BILLING = COMMANDER / "src" / "billing.mjs"
 WORKER = COMMANDER / "src" / "worker.js"
 WRANGLER = COMMANDER / "wrangler.jsonc"
 SELFTEST = COMMANDER / "scripts" / "billing_v1_selftest.mjs"
+PREFLIGHT = COMMANDER / "scripts" / "billing_prod_activation_preflight.py"
+RUNBOOK = ROOT / "docs" / "operations" / "HARA_COMMANDER_BILLING_PROD_ACTIVATION_RUNBOOK.md"
 
 BASE_SCHEMA = r"""
 PRAGMA foreign_keys = ON;
@@ -68,6 +70,8 @@ def main() -> int:
     source = BILLING.read_text(encoding="utf-8")
     worker = WORKER.read_text(encoding="utf-8")
     wrangler = WRANGLER.read_text(encoding="utf-8")
+    preflight = PREFLIGHT.read_text(encoding="utf-8")
+    runbook = RUNBOOK.read_text(encoding="utf-8")
 
     assert "ALTER TABLE billing_connections ADD COLUMN plan_code" in migration
     assert "billing_webhook_events" in migration
@@ -136,8 +140,22 @@ def main() -> int:
     assert "STRIPE_PRICE_SCALE" in source
     assert "INSERT INTO plans" not in migration
 
+    # Activation tooling is read-only by default and records the approved Trial direction.
+    assert "TRIAL_CURRENT_PROD_UNITS = 100" in preflight
+    assert "TRIAL_TARGET_MONTHLY_UNITS = 10_000" in preflight
+    assert "TRIAL_PROD_CHANGE_NOW=FALSE" in runbook
+    assert "STRIPE_SECRET_KEY=PENDING" in runbook
+    assert "COMMANDER_BILLING_FIRST_CHECKOUT_READY=FALSE" in runbook
+    for forbidden in ("wrangler secret put", "INSERT INTO plans", "UPDATE plans", "DELETE FROM plans"):
+        assert forbidden not in preflight, forbidden
+
     subprocess.run(
         ["node", str(SELFTEST)],
+        cwd=ROOT,
+        check=True,
+    )
+    subprocess.run(
+        ["python3", str(PREFLIGHT)],
         cwd=ROOT,
         check=True,
     )
@@ -149,6 +167,10 @@ def main() -> int:
     print("COMMANDER_BILLING_V1_CHECKOUT_PORTAL=PASS")
     print("COMMANDER_BILLING_V1_SECRETS_IN_GIT=FALSE")
     print("COMMANDER_BILLING_V1_COMMERCIAL_PRICE_INVENTED=FALSE")
+    print("COMMANDER_BILLING_PROD_ACTIVATION_PREFLIGHT=PASS")
+    print("TRIAL_CURRENT_PROD_UNITS=100")
+    print("TRIAL_TARGET_MONTHLY_UNITS=10000")
+    print("TRIAL_PROD_CHANGE_NOW=FALSE")
     return 0
 
 
