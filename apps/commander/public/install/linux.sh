@@ -630,5 +630,9 @@ printf 'HARA_COMMANDER_DEVICE_ENROLLMENT=PASS\n'
 printf 'HARA_COMMANDER_AGENT_SERVICE=ACTIVE_INERT_UNTIL_LOCAL_SESSION\n'
 printf 'DEVICE_ID=%s\n' "$DEVICE_ID"
 printf 'DEVICE_TOKEN_EXPOSED=FALSE\n'
-printf 'NEXT_COMMAND=hara-commander start\n'
+if [ -x "$USER_BIN/hara" ]; then
+  printf 'NEXT_COMMAND=hara commander start\n'
+else
+  printf 'NEXT_COMMAND=hara-commander start\n'
+fi
 printf 'SESSION_AUTHORITY=LOCAL_OPERATOR_TERMINAL\n'
