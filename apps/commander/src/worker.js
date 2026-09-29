@@ -2007,13 +2007,26 @@ function projectCustomerToolResult(toolId, response) {
 
   if (toolId === "hara.health") {
     for (const key of [
-      "services_bridge_state",
-      "hara_services_state",
       "registered_function_count",
       "executable_function_count",
-      "authority",
     ]) {
       if (key in result) projectedResult[key] = result[key];
+    }
+    if (result.device && typeof result.device === "object") {
+      const device = {};
+      for (const key of [
+        "device_id",
+        "hostname",
+        "platform",
+        "platform_release",
+        "architecture",
+        "python_version",
+        "agent_version",
+        "tunnel_mode",
+      ]) {
+        if (typeof result.device[key] === "string") device[key] = result.device[key];
+      }
+      if (Object.keys(device).length) projectedResult.device = device;
     }
   } else if (toolId === "hara.functions.list") {
     for (const key of [
@@ -2074,6 +2087,7 @@ function projectCustomerToolResult(toolId, response) {
       "function_id_if_any",
       "transport_mode",
       "operational_authority",
+      "execution_authority",
       "mutation_class",
       "state",
       "payload_values_persisted",
@@ -2085,6 +2099,7 @@ function projectCustomerToolResult(toolId, response) {
   const projected = {
     state: value.state || null,
     operational_authority: value.operational_authority || null,
+    execution_authority: "HARA_COMMANDER_AGENT",
     runtime_authority_from_chatgpt: value.runtime_authority_from_chatgpt === true,
     mutation_performed: value.mutation_performed === true,
     result: projectedResult,
