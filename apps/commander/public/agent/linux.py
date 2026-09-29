@@ -10,7 +10,7 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
-AGENT_VERSION = "0.3.9"
+AGENT_VERSION = "0.3.10"
 CONFIG_FILE = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home()/".config"))) / "hara-commander/device.env"
 DATA_DIR = Path(os.environ.get("XDG_DATA_HOME", str(Path.home()/".local/share"))) / "hara-commander"
 RECEIPT_DIR = DATA_DIR / "receipts"
@@ -145,17 +145,21 @@ def _format_console_event(payload):
     event = str(payload.get("event") or "EVENT")
     tool = str(payload.get("tool_id") or "-")
     function_id = str(payload.get("function_id") or "-")
+    request_id = str(payload.get("request_id") or "")
     state = str(payload.get("state") or "")
     error = str(payload.get("error_code") or "")
     receipt = str(payload.get("receipt_sha256") or "")
-    suffix = ""
+    command = function_id if function_id != "-" else tool
+    suffix = f" cliente=MCP comando={command} tool={tool}"
+    if request_id:
+        suffix += " request=" + request_id[:12] + ("..." if len(request_id) > 12 else "")
     if state:
         suffix += " state=" + state
     if error:
         suffix += " error=" + error
     if receipt:
         suffix += " receipt=" + receipt[:12] + "..."
-    return f"[{stamp}] {event:<10} tool={tool} function={function_id}{suffix}"
+    return f"[{stamp}] {event:<10}{suffix}"
 
 def mark_device_offline(config):
     try:
@@ -208,8 +212,11 @@ def start_operator_console():
     print("  hara.functions.invoke (somente funções governadas)")
     print("  hara.receipts.get")
     print("")
-    print("Argumentos sensíveis e tokens nunca são exibidos.")
-    print("Pressione Ctrl+C para encerrar o acesso.")
+    print("Origem     : OpenAI / cliente MCP autorizado")
+    print("Acesso     : ativo somente enquanto este terminal permanecer aberto")
+    print("Argumentos sensíveis, tokens e segredos nunca são exibidos.")
+    print("Cada ação será mostrada abaixo com tool, função, estado e receipt.")
+    print("Pressione Ctrl+C para revogar o acesso imediatamente.")
     print("-" * 58)
     position = CONSOLE_EVENTS_FILE.stat().st_size if CONSOLE_EVENTS_FILE.exists() else 0
     try:
@@ -518,6 +525,9 @@ def main():
     last_error_code=None
     last_error_write=0.0
     was_authorized=False
+    if not operator_session_active():
+        mark_device_offline(config)
+        append_console_event("AGENT_INERT", state="LOCAL_SESSION_REQUIRED")
     while True:
         now=time.monotonic()
         authorized=operator_session_active()
