@@ -6,7 +6,7 @@ $RuntimeStatus = Join-Path $Root "runtime-status.json"
 $SessionPath = Join-Path $Root "operator-session.json"
 $ConsoleEvents = Join-Path $Root "console-events.jsonl"
 $SessionMaxHours = 12
-$AgentVersion = "0.3.9"
+$AgentVersion = "0.3.10"
 $FunctionId = "device.info"
 
 function Get-PlainText([Security.SecureString]$SecureValue) {
@@ -110,11 +110,14 @@ function Format-ConsoleEvent($Entry) {
   $stamp=([DateTime]::Parse([string]$Entry.at_utc)).ToLocalTime().ToString("HH:mm:ss")
   $tool=if ($Entry.tool_id) {[string]$Entry.tool_id} else {"-"}
   $fn=if ($Entry.function_id) {[string]$Entry.function_id} else {"-"}
-  $suffix=""
+  $request=if ($Entry.request_id) {[string]$Entry.request_id} else {""}
+  $command=if ($fn -ne "-") {$fn} else {$tool}
+  $suffix=" cliente=MCP comando=$command tool=$tool"
+  if ($request) {$suffix+=" request="+$request.Substring(0,[Math]::Min(12,$request.Length))+$(if ($request.Length -gt 12) {"..."} else {""})}
   if ($Entry.state) {$suffix+=" state="+[string]$Entry.state}
   if ($Entry.error_code) {$suffix+=" error="+[string]$Entry.error_code}
   if ($Entry.receipt_sha256) {$suffix+=" receipt="+([string]$Entry.receipt_sha256).Substring(0,12)+"..."}
-  return "[$stamp] $([string]$Entry.event) tool=$tool function=$fn$suffix"
+  return "[$stamp] $([string]$Entry.event)$suffix"
 }
 
 function Start-OperatorConsole {
@@ -147,8 +150,11 @@ function Start-OperatorConsole {
   Write-Host "  hara.functions.invoke (somente funcoes governadas)"
   Write-Host "  hara.receipts.get"
   Write-Host ""
-  Write-Host "Argumentos sensiveis e tokens nunca sao exibidos."
-  Write-Host "Pressione Ctrl+C para encerrar o acesso."
+  Write-Host "Origem     : OpenAI / cliente MCP autorizado"
+  Write-Host "Acesso     : ativo somente enquanto este terminal permanecer aberto"
+  Write-Host "Argumentos sensiveis, tokens e segredos nunca sao exibidos."
+  Write-Host "Cada acao sera mostrada abaixo com tool, funcao, estado e receipt."
+  Write-Host "Pressione Ctrl+C para revogar o acesso imediatamente."
   Write-Host ("-"*58)
   try {
     $seen=0
@@ -451,6 +457,10 @@ $LastHeartbeat=[datetime]::MinValue
 $LastErrorCode=$null
 $LastErrorWrite=[datetime]::MinValue
 $WasAuthorized=$false
+if (-not (Test-OperatorSessionActive)) {
+  Set-DeviceOffline $StartupCfg | Out-Null
+  Write-ConsoleEvent "AGENT_INERT" $null "LOCAL_SESSION_REQUIRED"
+}
 while ($true) {
   if (-not (Test-OperatorSessionActive)) {
     $WasAuthorized=$false
