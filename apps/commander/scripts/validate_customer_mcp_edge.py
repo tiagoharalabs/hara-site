@@ -61,6 +61,26 @@ def main() -> int:
     assert "customer_services_relay: false" in worker
     assert "enqueueDeviceCall(env" in worker
     assert "deviceCallStatus(env" in worker
+    assert 'execution_authority: "HARA_COMMANDER_AGENT"' in worker
+    health_projection = worker.split('if (toolId === "hara.health") {', 1)[1].split(
+        '} else if (toolId === "hara.functions.list") {',
+        1,
+    )[0]
+    for forbidden in ("services_bridge_state", "hara_services_state", '"authority"'):
+        assert forbidden not in health_projection, forbidden
+    for required in (
+        '"device_id"',
+        '"hostname"',
+        '"platform"',
+        '"agent_version"',
+        '"tunnel_mode"',
+    ):
+        assert required in health_projection, required
+    receipt_projection = worker.split('} else if (toolId === "hara.receipts.get") {', 1)[1].split(
+        "\n  }\n\n  const projected =",
+        1,
+    )[0]
+    assert '"execution_authority"' in receipt_projection
     assert ".reserve(" in worker
     assert ".commit(" in worker
     assert ".release(" in worker
@@ -83,6 +103,8 @@ def main() -> int:
     print("COMMANDER_CUSTOMER_MCP_DURABLE_DEVICE_PATH=PASS")
     print("COMMANDER_CUSTOMER_MCP_QUOTA_LIFECYCLE=PASS")
     print("COMMANDER_CUSTOMER_MCP_CUSTOMER_SERVICES_RELAY=FALSE")
+    print("COMMANDER_CUSTOMER_MCP_EXECUTION_AUTHORITY=HARA_COMMANDER_AGENT")
+    print("COMMANDER_CUSTOMER_MCP_HEALTH_DEVICE_PROJECTION=PASS")
     print("COMMANDER_CUSTOMER_MCP_RUNTIME_VULNERABILITIES=0")
     print("COMMANDER_CUSTOMER_MCP_EDGE=PASS")
     return 0
