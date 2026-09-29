@@ -10,7 +10,7 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
-AGENT_VERSION = "0.3.8"
+AGENT_VERSION = "0.3.9"
 CONFIG_FILE = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home()/".config"))) / "hara-commander/device.env"
 DATA_DIR = Path(os.environ.get("XDG_DATA_HOME", str(Path.home()/".local/share"))) / "hara-commander"
 RECEIPT_DIR = DATA_DIR / "receipts"
@@ -162,7 +162,7 @@ def mark_device_offline(config):
         result = post_json(
             config["HARA_COMMANDER_URL"] + "/api/device/offline",
             config["HARA_DEVICE_TOKEN"],
-            {"device_id":config["HARA_DEVICE_ID"]},
+            {"device_id":config["HARA_DEVICE_ID"],"agent_version":AGENT_VERSION,"architecture":config["HARA_DEVICE_ARCH"]},
             timeout=5,
         )
         ok = isinstance(result, dict) and result.get("ok") is True and result.get("state") == "OFFLINE"
@@ -235,13 +235,14 @@ def start_operator_console():
     except KeyboardInterrupt:
         print("\nEncerrando acesso do H.A.R.A. Commander...")
     finally:
-        mark_device_offline(config)
         try:
             current = json.loads(SESSION_FILE.read_text(encoding="utf-8")) if SESSION_FILE.is_file() else {}
-            if int(current.get("owner_pid") or 0) == os.getpid():
+            if not current or int(current.get("owner_pid") or 0) == os.getpid():
                 SESSION_FILE.unlink(missing_ok=True)
         except Exception as exc:
+            SESSION_FILE.unlink(missing_ok=True)
             append_console_event("SESSION_CLEANUP_ERROR", state="FAILED", error_code=safe_error_code(exc))
+        mark_device_offline(config)
         append_console_event("SESSION_CLOSE", state="REVOKED")
         print("HARA_COMMANDER_SESSION=INACTIVE")
 
@@ -254,12 +255,12 @@ def session_status():
 
 def stop_operator_session():
     existed = SESSION_FILE.is_file()
+    SESSION_FILE.unlink(missing_ok=True)
     try:
         config = load_config()
         mark_device_offline(config)
     except Exception as exc:
         append_console_event("OFFLINE_SYNC_ERROR", state="FAILED", error_code=safe_error_code(exc))
-    SESSION_FILE.unlink(missing_ok=True)
     append_console_event("SESSION_CLOSE", state="REVOKED")
     print("HARA_COMMANDER_SESSION=INACTIVE")
     print("SESSION_WAS_ACTIVE=" + ("TRUE" if existed else "FALSE"))

@@ -26,7 +26,7 @@ def need(text: str, token: str, code: str) -> None:
     assert token in text, f"{code}:{token}"
 
 for token in ('platform": "LINUX"', "/api/device/enroll", "/agent/linux.py",
-              "systemctl --user enable --now", "chmod 600", '"agent_version": "0.3.8"',
+              "systemctl --user enable --now", "chmod 600", '"agent_version": "0.3.9"',
               "HARA_COMMANDER_AGENT_UPDATE=PASS", "HARA_COMMANDER_AGENT_UNINSTALL=PASS",
               "HARA_COMMANDER_AGENT_VERSION=", "HARA_COMMANDER_AGENT_DOCTOR=PASS",
               "/api/device/revoke-self", "SERVER_DEVICE_REVOKE=",
@@ -51,7 +51,7 @@ print("LINUX_INSTALLER_SECRET_ARGV_EXPOSURE=FALSE")
 
 for token in ('platform="WINDOWS"', "/api/device/enroll", "/agent/windows.ps1",
               "ConvertFrom-SecureString", "Register-ScheduledTask", "icacls.exe",
-              'agent_version="0.3.8"', "HARA_COMMANDER_AGENT_UPDATE=PASS",
+              'agent_version="0.3.9"', "HARA_COMMANDER_AGENT_UPDATE=PASS",
               "HARA_COMMANDER_AGENT_UNINSTALL=PASS", "HARA_COMMANDER_AGENT_VERSION=",
               "HARA_COMMANDER_AGENT_DOCTOR=PASS", "/api/device/revoke-self",
               "SERVER_DEVICE_REVOKE=", "HARA_COMMANDER_AGENT_UPDATE_ROLLBACK_READY=TRUE",
@@ -67,7 +67,7 @@ windows_web_calls = [
     line for line in WINDOWS.splitlines()
     if "Invoke-RestMethod" in line or "Invoke-WebRequest" in line
 ]
-assert len(windows_web_calls) == 9, f"WINDOWS_INSTALLER_WEB_CALL_COUNT:{len(windows_web_calls)}"
+assert len(windows_web_calls) == 10, f"WINDOWS_INSTALLER_WEB_CALL_COUNT:{len(windows_web_calls)}"
 assert all("-MaximumRedirection 0" in line for line in windows_web_calls), "WINDOWS_INSTALLER_REDIRECT_FOLLOW_PRESENT"
 assert "$PairingToken = $null" in WINDOWS and "$Payload = $null" in WINDOWS, "WINDOWS_PAIRING_SECRET_MEMORY_CLEAR_MISSING"
 assert "$EnrollDeviceId = [string]$Enroll.device_id" in WINDOWS, "WINDOWS_ENROLL_DEVICE_ID_CAPTURE_MISSING"
@@ -88,7 +88,7 @@ print("WINDOWS_INSTALLER_REDIRECT_FAIL_CLOSED=PASS")
 print("WINDOWS_INSTALLER_DEVICE_TOKEN_MEMORY_HYGIENE=PASS")
 
 assert MANIFEST.get("schema") == "hara.commander-agent-release.v1"
-assert MANIFEST.get("agent_version") == "0.3.8"
+assert MANIFEST.get("agent_version") == "0.3.9"
 entries = {item["path"]: item for item in MANIFEST.get("files", [])}
 for rel in ("agent/linux.py", "agent/windows.ps1", "install/linux.sh", "install/windows.ps1"):
     path = PUBLIC / rel
@@ -140,6 +140,22 @@ assert "if not authorized:" in LINUX_AGENT, "LINUX_DAEMON_NOT_INERT_WITHOUT_SESS
 assert "if (-not (Test-OperatorSessionActive))" in WINDOWS_AGENT, "WINDOWS_DAEMON_NOT_INERT_WITHOUT_SESSION"
 assert "hara-commander start" in LINUX, "LINUX_MANUAL_START_GUIDANCE_MISSING"
 assert "REGISTERED_INERT_UNTIL_LOCAL_SESSION" in WINDOWS, "WINDOWS_MANUAL_START_GUIDANCE_MISSING"
+linux_doctor = LINUX.split("doctor_agent() {",1)[1].split("case \"$ACTION\" in",1)[0]
+windows_doctor = WINDOWS.split("function Invoke-Doctor",1)[1].split("function Show-Status",1)[0]
+assert "remote_device_action heartbeat" not in linux_doctor, "LINUX_DOCTOR_HEARTBEAT_OUTSIDE_SESSION"
+assert 'Invoke-DeviceAction "heartbeat"' not in windows_doctor, "WINDOWS_DOCTOR_HEARTBEAT_OUTSIDE_SESSION"
+assert "COMMANDER_REMOTE_HEARTBEAT=SKIPPED_LOCAL_SESSION_REQUIRED" in linux_doctor
+assert "COMMANDER_REMOTE_HEARTBEAT=SKIPPED_LOCAL_SESSION_REQUIRED" in windows_doctor
+linux_console = LINUX_AGENT.split("def start_operator_console():",1)[1].split("def session_status():",1)[0]
+linux_stop = LINUX_AGENT.split("def stop_operator_session():",1)[1].split("def load_config():",1)[0]
+windows_console = WINDOWS_AGENT.split("function Start-OperatorConsole",1)[1].split("function Stop-OperatorSession",1)[0]
+windows_stop = WINDOWS_AGENT.split("function Stop-OperatorSession",1)[1].split("function Show-OperatorSession",1)[0]
+assert linux_console.index("SESSION_FILE.unlink") < linux_console.index("mark_device_offline(config)"), "LINUX_CONSOLE_CLOSE_OFFLINE_RACE"
+assert linux_stop.index("SESSION_FILE.unlink") < linux_stop.index("mark_device_offline(config)"), "LINUX_STOP_OFFLINE_RACE"
+assert windows_console.index("Remove-Item -Force -LiteralPath $SessionPath") < windows_console.index("Set-DeviceOffline $cfg"), "WINDOWS_CONSOLE_CLOSE_OFFLINE_RACE"
+assert windows_stop.index("Remove-Item -Force -LiteralPath $SessionPath") < windows_stop.index("Set-DeviceOffline"), "WINDOWS_STOP_OFFLINE_RACE"
+print("COMMANDER_SESSION_REVOKE_BEFORE_OFFLINE_SYNC=PASS")
+print("COMMANDER_DOCTOR_HEARTBEAT_OUTSIDE_SESSION=ABSENT")
 print("COMMANDER_LOCAL_OPERATOR_SESSION_GATE=PASS")
 print("COMMANDER_BACKGROUND_DAEMON_EXECUTION_AUTHORITY=INERT")
 print("COMMANDER_CONSOLE_SECRET_EXPOSURE=FALSE")
@@ -233,7 +249,7 @@ with tempfile.TemporaryDirectory(prefix="hara-agent-startup-") as tmp:
                     break
             time.sleep(0.1)
         assert startup, "LINUX_AGENT_STARTUP_STATUS_MISSING"
-        assert startup.get("agent_version") == "0.3.8", "LINUX_AGENT_STARTUP_VERSION_INVALID"
+        assert startup.get("agent_version") == "0.3.9", "LINUX_AGENT_STARTUP_VERSION_INVALID"
         assert startup.get("started_at_utc"), "LINUX_AGENT_STARTUP_ATTESTATION_MISSING"
         time.sleep(1.2)
         inert = json.loads(status_path.read_text(encoding="utf-8"))
@@ -262,7 +278,8 @@ print("PER_DEVICE_CLOUDFLARED_DEPENDENCY=FALSE")
 print("OUTBOUND_CALL_CHANNEL_FIVE_TOOL_READY=PASS")
 print("AGENT_REMOTE_SELF_REVOKE=PASS")
 print("COMMANDER_AGENT_REDIRECT_FAIL_CLOSED=PASS")
-print("AGENT_DOCTOR_REMOTE_HEARTBEAT=PASS")
+print("AGENT_DOCTOR_REMOTE_HEALTH=PASS")
+print("AGENT_DOCTOR_HEARTBEAT_OUTSIDE_SESSION=ABSENT")
 print("AGENT_UPDATE_ROLLBACK_SAFE=PASS")
 print("AGENT_DOWNLOAD_INTEGRITY_ENFORCED=PASS")
 print("AGENT_FAILED_INSTALL_ROLLBACK=READY")
@@ -289,6 +306,8 @@ assert status.index("let row = await readCall()") < status.index("SET state = 'E
 assert "RETURNING call_id, request_id, device_id, tool_id, state" in status, "DEVICE_STATUS_EXPIRY_RETURNING_MISSING"
 assert "UPDATE commander_devices" in heartbeat and "last_seen_at_utc" in heartbeat, "HEARTBEAT_PRESENCE_WRITE_MISSING"
 assert "OUTBOUND_RELAY_OFFLINE" in offline and "state: \"OFFLINE\"" in offline, "DEVICE_OFFLINE_TRANSITION_MISSING"
+assert "agent_version = ?" in offline and "architecture = ?" in offline, "DEVICE_OFFLINE_METADATA_REFRESH_MISSING"
+assert "\"agent_version\":AGENT_VERSION" in LINUX_AGENT and "agent_version=$AgentVersion" in WINDOWS_AGENT, "AGENT_OFFLINE_VERSION_REPORT_MISSING"
 assert '/api/device/offline' in WORKER, "DEVICE_OFFLINE_ROUTE_MISSING"
 assert "OUTBOUND_RELAY_OFFLINE" in enqueue, "DEVICE_OFFLINE_ENQUEUE_GUARD_MISSING"
 assert "authCallbackFailureResponse" in WORKER and "clearCookie(TX_COOKIE" in AUTH, "OIDC_CALLBACK_COOKIE_CLEANUP_MISSING"

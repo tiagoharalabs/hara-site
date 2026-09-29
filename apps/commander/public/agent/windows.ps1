@@ -6,7 +6,7 @@ $RuntimeStatus = Join-Path $Root "runtime-status.json"
 $SessionPath = Join-Path $Root "operator-session.json"
 $ConsoleEvents = Join-Path $Root "console-events.jsonl"
 $SessionMaxHours = 12
-$AgentVersion = "0.3.8"
+$AgentVersion = "0.3.9"
 $FunctionId = "device.info"
 
 function Get-PlainText([Security.SecureString]$SecureValue) {
@@ -165,11 +165,13 @@ function Start-OperatorConsole {
       Start-Sleep -Milliseconds 250
     }
   } finally {
-    Set-DeviceOffline $cfg | Out-Null
     try {
       $current=Get-OperatorSession
-      if ($current -and [int]$current.owner_pid -eq $PID) { Remove-Item -Force -LiteralPath $SessionPath -ErrorAction SilentlyContinue }
-    } catch {}
+      if (-not $current -or [int]$current.owner_pid -eq $PID) { Remove-Item -Force -LiteralPath $SessionPath -ErrorAction SilentlyContinue }
+    } catch {
+      Remove-Item -Force -LiteralPath $SessionPath -ErrorAction SilentlyContinue
+    }
+    Set-DeviceOffline $cfg | Out-Null
     Write-ConsoleEvent "SESSION_CLOSE" $null "REVOKED"
     Write-Host "HARA_COMMANDER_SESSION=INACTIVE"
   }
@@ -177,8 +179,8 @@ function Start-OperatorConsole {
 
 function Stop-OperatorSession {
   $was=Test-Path -LiteralPath $SessionPath -PathType Leaf
-  Set-DeviceOffline | Out-Null
   Remove-Item -Force -LiteralPath $SessionPath -ErrorAction SilentlyContinue
+  Set-DeviceOffline | Out-Null
   Write-ConsoleEvent "SESSION_CLOSE" $null "REVOKED"
   Write-Host "HARA_COMMANDER_SESSION=INACTIVE"
   Write-Host ("SESSION_WAS_ACTIVE="+($(if ($was) {"TRUE"} else {"FALSE"})))
@@ -329,7 +331,7 @@ function Set-DeviceOffline($Cfg=$null) {
     if (-not $Cfg) { $Cfg=Get-Content -Raw -LiteralPath $ConfigPath | ConvertFrom-Json }
     $SecureToken=ConvertTo-SecureString ([string]$Cfg.encrypted_device_token)
     $Token=Get-PlainText $SecureToken
-    $result=Send-Json "$($Cfg.base_url)/api/device/offline" $Token @{device_id=[string]$Cfg.device_id} 5
+    $result=Send-Json "$($Cfg.base_url)/api/device/offline" $Token @{device_id=[string]$Cfg.device_id;agent_version=$AgentVersion;architecture=[string]$Cfg.architecture} 5
     $ok=$result -and $result.ok -eq $true -and [string]$result.state -eq "OFFLINE"
     Write-ConsoleEvent "AGENT_OFFLINE" $null $(if ($ok) {"OFFLINE"} else {"FAILED"})
     return $ok

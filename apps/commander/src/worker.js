@@ -1560,12 +1560,16 @@ async function markDeviceOffline(env, request, body) {
   const requestedId = body.device_id ? cleanId(body.device_id, 180) : device.device_id;
   if (requestedId !== device.device_id) throw new Error("DEVICE_ID_MISMATCH");
   const seenAt = nowIso();
+  const agentVersion = cleanAgentValue(body.agent_version, 80) || device.agent_version;
+  const architecture = cleanAgentValue(body.architecture, 80) || device.architecture;
   const result = await env.PRODUCT_DB.prepare(
     `UPDATE commander_devices
         SET last_seen_at_utc = ?,
+            agent_version = ?,
+            architecture = ?,
             tunnel_mode = 'OUTBOUND_RELAY_OFFLINE'
       WHERE device_id = ? AND state = 'ACTIVE' AND revoked_at_utc IS NULL`
-  ).bind(seenAt, device.device_id).run();
+  ).bind(seenAt, agentVersion, architecture, device.device_id).run();
   if (!result.meta?.changes) throw new Error("DEVICE_AUTH_INVALID");
   return {
     schema: "hara.commander-device-offline.v1",
