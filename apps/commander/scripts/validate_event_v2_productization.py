@@ -4,6 +4,7 @@
 from pathlib import Path
 import json
 import importlib.util
+import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -77,7 +78,13 @@ def main() -> int:
     print("COMMANDER_PUBLIC_ASSET_PYTHON_BYTECODE=DENY")
     print("COMMANDER_PROD_CUTOVER=DENY")
     print("COMMANDER_LINUX_EVENT_V2_RC=SOURCE_READY")
+    subprocess.run(
+        [sys.executable, str(ROOT / "apps/commander/scripts/validate_billing_v1.py")],
+        cwd=ROOT,
+        check=True,
+    )
     print("COMMANDER_WINDOWS_EVENT_V2_RC=HOLD")
+    print("COMMANDER_BILLING_V1_RELEASE_GATE=PASS")
     return 0
 
 
