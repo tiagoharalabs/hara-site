@@ -83,6 +83,11 @@ def main() -> int:
         cwd=ROOT,
         check=True,
     )
+    subprocess.run(
+        ["node", str(ROOT / "apps/commander/scripts/customer_mcp_edge_selftest.mjs")],
+        cwd=ROOT,
+        check=True,
+    )
     print("COMMANDER_WINDOWS_EVENT_V2_RC=HOLD")
     print("COMMANDER_BILLING_V1_RELEASE_GATE=PASS")
     return 0

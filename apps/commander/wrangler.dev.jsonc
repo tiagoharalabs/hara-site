@@ -30,6 +30,8 @@
     "AUTH_PROVIDER_LABEL": "HARA Identity",
     "AUTH_CLIENT_AUTH": "BASIC",
     "CUSTOMER_MCP_HARA_IDENTITY_AUTH": "true",
+    "CUSTOMER_MCP_EDGE_ENABLED": "true",
+    "CUSTOMER_MCP_RESOURCE": "https://hara-commander-dev-v2.tiago-sartori.workers.dev/api/mcp",
     "DEVICE_EVENT_V2_ENABLED": "true",
     "DEVICE_EVENT_V2_TRANSIENT_RPC_ENABLED": "true"
   },

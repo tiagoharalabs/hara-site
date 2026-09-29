@@ -22,6 +22,18 @@ import {
   verifyHaraIdentityMcpDevBearer,
 } from "./mcp-hara-identity-dev.mjs";
 import {
+  customerMcpEnabled,
+  customerMcpProtectedResourceMetadata,
+  customerMcpUnauthorized,
+  verifyCustomerMcpBearer,
+} from "./mcp-hara-identity.mjs";
+import {
+  handleCustomerMcpProtocol,
+} from "./mcp-customer-edge.mjs";
+import {
+  projectCustomerToolResponse,
+} from "./mcp-customer-projection.mjs";
+import {
   DEVICE_FUNCTION_ID,
   canonicalDeviceToolPayload,
 } from "./device-tool-contract.mjs";
@@ -2153,6 +2165,113 @@ async function deviceCallStatus(env, body) {
   };
 }
 
+function validBridgeReceiptSha(value) {
+  return typeof value === "string" && /^[0-9a-f]{64}$/.test(value);
+}
+
+async function waitForCustomerDeviceCall(env, identity, initial) {
+  let current = initial;
+  for (let attempt = 0; attempt < 45; attempt += 1) {
+    if (["COMPLETED", "FAILED", "CANCELLED", "EXPIRED"].includes(String(current.state))) {
+      return current;
+    }
+    const waitMs = Math.max(100, Math.min(Number(current.retry_after_ms || 500), 1000));
+    await scheduler.wait(waitMs);
+    current = await deviceCallStatus(env, {
+      issuer: identity.issuer,
+      subject: identity.subject,
+      call_id: current.call_id,
+    });
+  }
+  throw new Error("DEVICE_CALL_WAIT_TIMEOUT");
+}
+
+async function executeCustomerMcpTool(env, identity, toolId, payload, rpcId) {
+  const requiredGrant = MCP_TOOL_GRANTS[toolId];
+  if (!requiredGrant) throw new Error("POLICY_DENIED");
+
+  const context = await mcpProductContext(env, identity.issuer, identity.subject);
+  if (!context.ok) throw new Error(context.code);
+  if (!context.grants.includes(requiredGrant)) throw new Error("GRANT_MISSING");
+
+  const requestFingerprint = await sha256(
+    identity.issuer + "\n"
+    + identity.subject + "\n"
+    + identity.client_id + "\n"
+    + String(rpcId ?? "") + "\n"
+    + toolId + "\n"
+    + JSON.stringify(payload),
+  );
+  const requestId = "OPENAI-MCP-" + requestFingerprint.slice(0, 48);
+
+  let reservation = null;
+  if (toolId === "hara.functions.invoke") {
+    const functionId = cleanId(payload.function_id, 180);
+    if (functionId !== DEVICE_FUNCTION_ID) throw new Error("POLICY_DENIED");
+    const periodKey = mcpPeriodKey(context);
+    reservation = await env.TENANT_QUOTA
+      .getByName(context.tenant_id)
+      .reserve(requestId, context.subject_id, periodKey, functionId, context.unit_limit);
+    if (!reservation.ok) throw new Error(String(reservation.code || "QUOTA_DENIED"));
+    if (reservation.existing && reservation.state === "RELEASED") {
+      throw new Error("REQUEST_USAGE_TERMINAL");
+    }
+  }
+
+  let call = null;
+  try {
+    call = await enqueueDeviceCall(env, {
+      issuer: identity.issuer,
+      subject: identity.subject,
+      request_id: requestId,
+      tool_id: toolId,
+      payload,
+    });
+  } catch (error) {
+    if (toolId === "hara.functions.invoke" && reservation?.state === "RESERVED") {
+      await env.TENANT_QUOTA
+        .getByName(context.tenant_id)
+        .release(requestId, context.subject_id, context.unit_limit);
+    }
+    throw error;
+  }
+
+  let terminal;
+  try {
+    terminal = await waitForCustomerDeviceCall(env, identity, call);
+  } catch (error) {
+    // Once the call has a durable call_id, timeout is execution-ambiguous.
+    // Keep the quota reservation fail-closed instead of enabling a free retry.
+    throw error;
+  }
+
+  if (terminal.state !== "COMPLETED" || !terminal.result) {
+    if (toolId === "hara.functions.invoke" && reservation?.state === "RESERVED") {
+      await env.TENANT_QUOTA
+        .getByName(context.tenant_id)
+        .release(requestId, context.subject_id, context.unit_limit);
+    }
+    throw new Error(String(terminal.error_code || "DEVICE_EXECUTION_FAILED"));
+  }
+
+  const raw = terminal.result;
+  if (toolId === "hara.functions.invoke") {
+    const receiptSha = String(raw.bridge_receipt_sha256 || "").trim().toLowerCase();
+    if (raw.state === "PASS" && validBridgeReceiptSha(receiptSha)) {
+      const usage = await env.TENANT_QUOTA
+        .getByName(context.tenant_id)
+        .commit(requestId, context.subject_id, receiptSha, context.unit_limit);
+      if (!usage.ok) throw new Error(String(usage.code || "PRODUCT_USAGE_COMMIT_DENIED"));
+    } else if (reservation?.state === "RESERVED") {
+      await env.TENANT_QUOTA
+        .getByName(context.tenant_id)
+        .release(requestId, context.subject_id, context.unit_limit);
+    }
+  }
+
+  return projectCustomerToolResponse(toolId, raw);
+}
+
 export default {
   async fetch(request, env) {
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: json({}).headers });
@@ -2190,6 +2309,40 @@ export default {
 
       if (url.pathname === "/api/billing/stripe/webhook" && request.method === "POST") {
         return json(await handleStripeWebhook(request, env));
+      }
+
+      if (
+        [
+          "/.well-known/oauth-protected-resource",
+          "/.well-known/oauth-protected-resource/api/mcp",
+        ].includes(url.pathname)
+        && request.method === "GET"
+      ) {
+        if (!customerMcpEnabled(env)) {
+          return json({ ok: false, code: "NOT_FOUND" }, 404);
+        }
+        return json(customerMcpProtectedResourceMetadata(request, env));
+      }
+
+      if (url.pathname === "/api/mcp" && ["GET", "POST"].includes(request.method)) {
+        if (!customerMcpEnabled(env)) {
+          return json({ ok: false, code: "NOT_FOUND" }, 404);
+        }
+        let identity;
+        try {
+          identity = await verifyCustomerMcpBearer(request, env);
+        } catch (_error) {
+          return customerMcpUnauthorized(request);
+        }
+        return handleCustomerMcpProtocol(request, {
+          callTool: (toolId, payload, rpc) => executeCustomerMcpTool(
+            env,
+            identity,
+            toolId,
+            payload,
+            rpc?.rpc_id,
+          ),
+        });
       }
 
       if (
