@@ -6,7 +6,7 @@ $RuntimeStatus = Join-Path $Root "runtime-status.json"
 $SessionPath = Join-Path $Root "operator-session.json"
 $ConsoleEvents = Join-Path $Root "console-events.jsonl"
 $SessionMaxHours = 12
-$AgentVersion = "0.3.10"
+$AgentVersion = "0.3.11"
 $FunctionId = "device.info"
 
 function Get-PlainText([Security.SecureString]$SecureValue) {
@@ -432,6 +432,15 @@ if ($args -contains "--self-test") { Invoke-AgentSelfTest; exit 0 }
 if ($args -contains "--session-start" -or ($args.Count -gt 0 -and [string]$args[0] -eq "start")) { Start-OperatorConsole; exit 0 }
 if ($args -contains "--session-status" -or ($args.Count -gt 0 -and [string]$args[0] -eq "status")) { Show-OperatorSession; exit 0 }
 if ($args -contains "--session-stop" -or ($args.Count -gt 0 -and [string]$args[0] -eq "stop")) { Stop-OperatorSession; exit 0 }
+if ($args.Count -gt 0 -and @("help","--help","-h") -contains [string]$args[0]) {
+  Write-Host "Usage: hara-commander [start|status|stop|help]"
+  exit 0
+}
+if ($args.Count -gt 0) {
+  Write-Host ("HARA_COMMANDER_UNKNOWN_COMMAND="+[string]$args[0])
+  Write-Host "Usage: hara-commander [start|status|stop|help]"
+  exit 64
+}
 
 try {
   $StartupCfg=Get-Content -Raw -Path $ConfigPath | ConvertFrom-Json

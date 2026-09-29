@@ -42,9 +42,9 @@ def main() -> int:
     else:
         raise AssertionError("UNKNOWN_TRANSPORT_ALLOWED")
 
-    assert manifest["agent_version"] == "0.3.10"
+    assert manifest["agent_version"] == "0.3.11"
     assert all("candidate/" not in str(item.get("path") or "") for item in manifest.get("files", []))
-    assert 'AGENT_VERSION = "0.3.10"' in public
+    assert 'AGENT_VERSION = "0.3.11"' in public
     assert "HARA_DEVICE_TRANSPORT_MODE" not in public
     assert "**/__pycache__/" in asset_ignore
     assert "**/*.pyc" in asset_ignore
@@ -70,7 +70,7 @@ def main() -> int:
     print("COMMANDER_EVENT_V2_PRODUCTIZATION=PASS")
     print("COMMANDER_AGENT_RC_DEFAULT_TRANSPORT=POLL_V1")
     print("COMMANDER_AGENT_RC_EVENT_V2=OPT_IN_ONLY")
-    print("COMMANDER_STABLE_AGENT_VERSION=0.3.10")
+    print("COMMANDER_STABLE_AGENT_VERSION=0.3.11")
     print("COMMANDER_STABLE_RELEASE_MANIFEST_EVENT_V2=ABSENT")
     print("COMMANDER_AGENT_RC_POLL_V1_AUTHORITY=HARA_COMMANDER")
     print("COMMANDER_AGENT_RC_POLL_V1_TRANSPORT=OUTBOUND_RELAY")
