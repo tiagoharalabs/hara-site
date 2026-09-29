@@ -37,7 +37,7 @@ def main() -> int:
         'mode === "EVENT_V2"',
         "eventV2Cutoff",
         "d.tunnel_mode = 'EVENT_V2'",
-        "d.tunnel_mode NOT IN ('EVENT_V2','EVENT_V2_OFFLINE')",
+        "d.tunnel_mode NOT IN ('EVENT_V2','EVENT_V2_OFFLINE','OUTBOUND_RELAY_OFFLINE')",
     ]
     for marker in required_worker:
         assert marker in worker, f"missing Worker Event V2 marker: {marker}"
