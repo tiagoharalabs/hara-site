@@ -10,11 +10,14 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
-AGENT_VERSION = "0.3.7"
+AGENT_VERSION = "0.3.8"
 CONFIG_FILE = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home()/".config"))) / "hara-commander/device.env"
 DATA_DIR = Path(os.environ.get("XDG_DATA_HOME", str(Path.home()/".local/share"))) / "hara-commander"
 RECEIPT_DIR = DATA_DIR / "receipts"
 STATUS_FILE = DATA_DIR / "runtime-status.json"
+SESSION_FILE = DATA_DIR / "operator-session.json"
+CONSOLE_EVENTS_FILE = DATA_DIR / "console-events.jsonl"
+SESSION_MAX_SECONDS = 12 * 60 * 60
 FUNCTION_ID = "device.info"
 
 class NoRedirectHandler(urllib.request.HTTPRedirectHandler):
@@ -69,6 +72,199 @@ def try_write_runtime_status(**kwargs):
     except Exception:
         return False
 
+def _pid_alive(pid):
+    try:
+        pid = int(pid)
+        if pid <= 1:
+            return False
+        os.kill(pid, 0)
+        return True
+    except Exception:
+        return False
+
+def _pid_start_marker(pid):
+    try:
+        raw = Path(f"/proc/{int(pid)}/stat").read_text(encoding="utf-8")
+        tail = raw[raw.rfind(")") + 2:].split()
+        return tail[19] if len(tail) > 19 else None
+    except Exception:
+        return None
+
+def read_operator_session():
+    if not SESSION_FILE.is_file():
+        return None
+    try:
+        session = json.loads(SESSION_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    if session.get("schema") != "hara.commander-operator-session.v1":
+        return None
+    started = session.get("started_at_epoch")
+    if not isinstance(started, (int, float)):
+        return None
+    if time.time() - float(started) > SESSION_MAX_SECONDS:
+        return None
+    pid = session.get("owner_pid")
+    if not _pid_alive(pid):
+        return None
+    marker = _pid_start_marker(pid)
+    if not marker or marker != str(session.get("owner_start_marker") or ""):
+        return None
+    return session
+
+def operator_session_active():
+    return read_operator_session() is not None
+
+def append_console_event(event, call=None, *, state=None, error_code=None, receipt_sha256=None):
+    DATA_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
+    payload = {
+        "schema":"hara.commander-console-event.v1",
+        "at_utc":utcnow(),
+        "event":str(event),
+        "state":state,
+        "tool_id":None,
+        "function_id":None,
+        "request_id":None,
+        "error_code":error_code,
+        "receipt_sha256":receipt_sha256,
+        "payload_values_exposed":False,
+        "secret_material_exposed":False,
+    }
+    if isinstance(call, dict):
+        payload["tool_id"] = str(call.get("tool_id") or "") or None
+        inner = call.get("payload") or {}
+        payload["function_id"] = str(inner.get("function_id") or "") or None
+        payload["request_id"] = str(call.get("request_id") or "") or None
+    with CONSOLE_EVENTS_FILE.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n")
+    os.chmod(CONSOLE_EVENTS_FILE, 0o600)
+
+def _format_console_event(payload):
+    at = str(payload.get("at_utc") or "")
+    stamp = at[11:19] if len(at) >= 19 else "--:--:--"
+    event = str(payload.get("event") or "EVENT")
+    tool = str(payload.get("tool_id") or "-")
+    function_id = str(payload.get("function_id") or "-")
+    state = str(payload.get("state") or "")
+    error = str(payload.get("error_code") or "")
+    receipt = str(payload.get("receipt_sha256") or "")
+    suffix = ""
+    if state:
+        suffix += " state=" + state
+    if error:
+        suffix += " error=" + error
+    if receipt:
+        suffix += " receipt=" + receipt[:12] + "..."
+    return f"[{stamp}] {event:<10} tool={tool} function={function_id}{suffix}"
+
+def mark_device_offline(config):
+    try:
+        result = post_json(
+            config["HARA_COMMANDER_URL"] + "/api/device/offline",
+            config["HARA_DEVICE_TOKEN"],
+            {"device_id":config["HARA_DEVICE_ID"]},
+            timeout=5,
+        )
+        ok = isinstance(result, dict) and result.get("ok") is True and result.get("state") == "OFFLINE"
+        append_console_event("AGENT_OFFLINE", state="OFFLINE" if ok else "FAILED")
+        return ok
+    except Exception as exc:
+        append_console_event("OFFLINE_SYNC_ERROR", state="FAILED", error_code=safe_error_code(exc))
+        return False
+
+def start_operator_console():
+    config = load_config()
+    DATA_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
+    existing = read_operator_session()
+    if existing and int(existing.get("owner_pid") or 0) != os.getpid():
+        raise RuntimeError("OPERATOR_SESSION_ALREADY_ACTIVE")
+    session = {
+        "schema":"hara.commander-operator-session.v1",
+        "owner_pid":os.getpid(),
+        "owner_start_marker":_pid_start_marker(os.getpid()),
+        "started_at_epoch":int(time.time()),
+        "started_at_utc":utcnow(),
+        "device_id":config["HARA_DEVICE_ID"],
+        "authorization":"LOCAL_OPERATOR_TERMINAL",
+    }
+    tmp = SESSION_FILE.with_suffix(".tmp")
+    tmp.write_text(json.dumps(session, sort_keys=True, separators=(",", ":")), encoding="utf-8")
+    os.chmod(tmp, 0o600)
+    tmp.replace(SESSION_FILE)
+    os.chmod(SESSION_FILE, 0o600)
+    append_console_event("SESSION_OPEN", state="AUTHORIZED")
+    print("")
+    print("H.A.R.A. Labs — Commander")
+    print("=" * 58)
+    print("Sessão local autorizada para clientes de IA")
+    print("Computador:", platform.node())
+    print("Device ID :", config["HARA_DEVICE_ID"])
+    print("Agent     :", AGENT_VERSION)
+    print("")
+    print("Comandos permitidos nesta sessão:")
+    print("  hara.health")
+    print("  hara.functions.list")
+    print("  hara.functions.describe")
+    print("  hara.functions.invoke (somente funções governadas)")
+    print("  hara.receipts.get")
+    print("")
+    print("Argumentos sensíveis e tokens nunca são exibidos.")
+    print("Pressione Ctrl+C para encerrar o acesso.")
+    print("-" * 58)
+    position = CONSOLE_EVENTS_FILE.stat().st_size if CONSOLE_EVENTS_FILE.exists() else 0
+    try:
+        while True:
+            current = read_operator_session()
+            if not current or int(current.get("owner_pid") or 0) != os.getpid():
+                print("\nSessão encerrada externamente.")
+                break
+            if CONSOLE_EVENTS_FILE.is_file():
+                with CONSOLE_EVENTS_FILE.open("r", encoding="utf-8") as handle:
+                    handle.seek(position)
+                    while True:
+                        raw = handle.readline()
+                        if not raw:
+                            break
+                        position = handle.tell()
+                        try:
+                            payload = json.loads(raw)
+                        except Exception:
+                            continue
+                        print(_format_console_event(payload), flush=True)
+            time.sleep(0.25)
+    except KeyboardInterrupt:
+        print("\nEncerrando acesso do H.A.R.A. Commander...")
+    finally:
+        mark_device_offline(config)
+        try:
+            current = json.loads(SESSION_FILE.read_text(encoding="utf-8")) if SESSION_FILE.is_file() else {}
+            if int(current.get("owner_pid") or 0) == os.getpid():
+                SESSION_FILE.unlink(missing_ok=True)
+        except Exception as exc:
+            append_console_event("SESSION_CLEANUP_ERROR", state="FAILED", error_code=safe_error_code(exc))
+        append_console_event("SESSION_CLOSE", state="REVOKED")
+        print("HARA_COMMANDER_SESSION=INACTIVE")
+
+def session_status():
+    session = read_operator_session()
+    print("HARA_COMMANDER_SESSION=" + ("ACTIVE" if session else "INACTIVE"))
+    if session:
+        print("SESSION_STARTED_AT_UTC=" + str(session.get("started_at_utc") or ""))
+    print("SECRET_MATERIAL_EXPOSED=FALSE")
+
+def stop_operator_session():
+    existed = SESSION_FILE.is_file()
+    try:
+        config = load_config()
+        mark_device_offline(config)
+    except Exception as exc:
+        append_console_event("OFFLINE_SYNC_ERROR", state="FAILED", error_code=safe_error_code(exc))
+    SESSION_FILE.unlink(missing_ok=True)
+    append_console_event("SESSION_CLOSE", state="REVOKED")
+    print("HARA_COMMANDER_SESSION=INACTIVE")
+    print("SESSION_WAS_ACTIVE=" + ("TRUE" if existed else "FALSE"))
+    print("SECRET_MATERIAL_EXPOSED=FALSE")
+
 def load_config():
     data = {}
     for raw in CONFIG_FILE.read_text(encoding="utf-8").splitlines():
@@ -79,7 +275,7 @@ def load_config():
     if not all(data.get(k) for k in required):
         raise RuntimeError("DEVICE_CONFIG_INVALID")
     return data
-def post_json(url, token, payload):
+def post_json(url, token, payload, timeout=25):
     req = urllib.request.Request(
         url,
         data=json.dumps(payload,separators=(",",":")).encode(),
@@ -92,7 +288,7 @@ def post_json(url, token, payload):
         },
     )
     try:
-        with NO_REDIRECT_OPENER.open(req, timeout=25) as response:
+        with NO_REDIRECT_OPENER.open(req, timeout=timeout) as response:
             if response.status == 204:
                 return None
             return json.loads(response.read().decode() or "{}")
@@ -228,12 +424,29 @@ def complete(config, call, state, result, error_code=None):
     post_json(config["HARA_COMMANDER_URL"]+"/api/device/calls/complete",config["HARA_DEVICE_TOKEN"],body)
 
 def execute_call(config,call):
+    if not operator_session_active():
+        code="LOCAL_OPERATOR_SESSION_REQUIRED"
+        append_console_event("DENIED",call,state="DENIED",error_code=code)
+        complete(config,call,"FAILED",{
+            "state":"DENIED","operational_authority":"LOCAL_OPERATOR_SESSION",
+            "runtime_authority_from_chatgpt":False,"mutation_performed":False,
+            "result":{},"blocker":{"code":code},
+        },code)
+        return
+    append_console_event("RECEIVED",call,state="PENDING")
     try:
-        complete(config,call,"COMPLETED",execute_tool(config,call))
+        append_console_event("EXECUTING",call,state="EXECUTING")
+        result=execute_tool(config,call)
+        complete(config,call,"COMPLETED",result)
+        append_console_event(
+            "PASS",call,state="COMPLETED",
+            receipt_sha256=result.get("bridge_receipt_sha256") if isinstance(result,dict) else None,
+        )
     except Exception as exc:
         code=safe_error_code(exc)
+        append_console_event("DENIED",call,state="FAILED",error_code=code)
         complete(config,call,"FAILED",{
-            "state":"DENIED","operational_authority":"HARA_SERVICES",
+            "state":"DENIED","operational_authority":"LOCAL_OPERATOR_SESSION",
             "runtime_authority_from_chatgpt":False,"mutation_performed":False,
             "result":{},"blocker":{"code":code},
         },code)
@@ -262,6 +475,26 @@ def self_test():
             raise AssertionError("ARBITRARY_FUNCTION_NOT_DENIED")
         except ValueError as exc:
             assert str(exc)=="UNKNOWN_FUNCTION_ID"
+    global SESSION_FILE, CONSOLE_EVENTS_FILE
+    with tempfile.TemporaryDirectory() as session_dir:
+        SESSION_FILE=Path(session_dir)/"operator-session.json"
+        CONSOLE_EVENTS_FILE=Path(session_dir)/"console-events.jsonl"
+        assert operator_session_active() is False
+        SESSION_FILE.write_text(json.dumps({
+            "schema":"hara.commander-operator-session.v1",
+            "owner_pid":os.getpid(),
+            "owner_start_marker":_pid_start_marker(os.getpid()),
+            "started_at_epoch":int(time.time()),
+            "started_at_utc":utcnow(),
+        }),encoding="utf-8")
+        assert operator_session_active() is True
+        append_console_event("SELFTEST",{"request_id":"r","tool_id":"hara.health","payload":{"secret":"never"}})
+        event=json.loads(CONSOLE_EVENTS_FILE.read_text(encoding="utf-8").splitlines()[-1])
+        assert event["payload_values_exposed"] is False
+        assert event["secret_material_exposed"] is False
+        assert "secret" not in event
+    print("COMMANDER_LINUX_OPERATOR_SESSION_GATE=PASS")
+    print("COMMANDER_LINUX_CONSOLE_SANITIZATION=PASS")
     print("COMMANDER_LINUX_FIVE_TOOL_BRIDGE=PASS")
     print("COMMANDER_ARBITRARY_FUNCTION=DENIED")
 
@@ -270,6 +503,12 @@ def main():
         print(AGENT_VERSION); return
     if "--self-test" in sys.argv:
         self_test(); return
+    if "--session-start" in sys.argv or (len(sys.argv)>1 and sys.argv[1]=="start"):
+        start_operator_console(); return
+    if "--session-status" in sys.argv or (len(sys.argv)>1 and sys.argv[1]=="status"):
+        session_status(); return
+    if "--session-stop" in sys.argv or (len(sys.argv)>1 and sys.argv[1]=="stop"):
+        stop_operator_session(); return
     config=load_config()
     RECEIPT_DIR.mkdir(parents=True,exist_ok=True,mode=0o700)
     if not try_write_runtime_status(started_at=utcnow(), error_code=None, error_at=None):
@@ -277,8 +516,18 @@ def main():
     last_heartbeat=0.0
     last_error_code=None
     last_error_write=0.0
+    was_authorized=False
     while True:
         now=time.monotonic()
+        authorized=operator_session_active()
+        if not authorized:
+            was_authorized=False
+            time.sleep(1)
+            continue
+        if not was_authorized:
+            last_heartbeat=0.0
+            append_console_event("AGENT_ONLINE",state="AUTHORIZED")
+            was_authorized=True
         try:
             if now-last_heartbeat>=30:
                 post_json(config["HARA_COMMANDER_URL"]+"/api/device/heartbeat",config["HARA_DEVICE_TOKEN"],{

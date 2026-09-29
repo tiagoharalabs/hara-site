@@ -290,7 +290,7 @@ function deviceCallRetryAfterMs(state, source = "status") {
 
 function deviceOnline(lastSeenAtUtc, tunnelMode = "OUTBOUND_RELAY", now = Date.now()) {
   const mode = String(tunnelMode || "");
-  if (mode === "EVENT_V2_OFFLINE") return false;
+  if (mode === "EVENT_V2_OFFLINE" || mode === "OUTBOUND_RELAY_OFFLINE") return false;
   if (!lastSeenAtUtc) return false;
   const seen = Date.parse(String(lastSeenAtUtc));
   if (!Number.isFinite(seen)) return false;
@@ -1555,6 +1555,27 @@ async function heartbeatDevice(env, request, body) {
   };
 }
 
+async function markDeviceOffline(env, request, body) {
+  const device = await resolveDeviceCredential(env, request);
+  const requestedId = body.device_id ? cleanId(body.device_id, 180) : device.device_id;
+  if (requestedId !== device.device_id) throw new Error("DEVICE_ID_MISMATCH");
+  const seenAt = nowIso();
+  const result = await env.PRODUCT_DB.prepare(
+    `UPDATE commander_devices
+        SET last_seen_at_utc = ?,
+            tunnel_mode = 'OUTBOUND_RELAY_OFFLINE'
+      WHERE device_id = ? AND state = 'ACTIVE' AND revoked_at_utc IS NULL`
+  ).bind(seenAt, device.device_id).run();
+  if (!result.meta?.changes) throw new Error("DEVICE_AUTH_INVALID");
+  return {
+    schema: "hara.commander-device-offline.v1",
+    ok: true,
+    device_id: device.device_id,
+    state: "OFFLINE",
+    server_time_utc: seenAt,
+  };
+}
+
 async function revokeDeviceSelf(env, request) {
   const device = await resolveDeviceCredential(env, request);
   const revokedAt = nowIso();
@@ -1819,7 +1840,7 @@ async function enqueueDeviceCall(env, body) {
         AND (
           (d.tunnel_mode = 'EVENT_V2' AND d.last_seen_at_utc >= ?)
           OR
-          (d.tunnel_mode NOT IN ('EVENT_V2','EVENT_V2_OFFLINE') AND d.last_seen_at_utc >= ?)
+          (d.tunnel_mode NOT IN ('EVENT_V2','EVENT_V2_OFFLINE','OUTBOUND_RELAY_OFFLINE') AND d.last_seen_at_utc >= ?)
         )
         AND s.subject_id = ?
         AND (
@@ -2362,6 +2383,11 @@ export default {
       if (url.pathname === "/api/device/heartbeat" && request.method === "POST") {
         const body = await request.json().catch(() => ({}));
         return json(await heartbeatDevice(env, request, body));
+      }
+
+      if (url.pathname === "/api/device/offline" && request.method === "POST") {
+        const body = await request.json().catch(() => ({}));
+        return json(await markDeviceOffline(env, request, body));
       }
 
       if (url.pathname === "/api/device/revoke-self" && request.method === "POST") {

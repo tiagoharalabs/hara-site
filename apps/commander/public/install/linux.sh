@@ -4,9 +4,11 @@ set -euo pipefail
 BASE_URL="${HARA_COMMANDER_URL:-https://commander.haralabs.com.br}"
 CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/hara-commander"
 BIN_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/hara-commander"
+USER_BIN="${HOME}/.local/bin"
 SYSTEMD_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
 CONFIG_FILE="$CONFIG_DIR/device.env"
 AGENT="$BIN_DIR/hara-commander-agent"
+CLI="$USER_BIN/hara-commander"
 UNIT="$SYSTEMD_DIR/hara-commander-agent.service"
 SERVICE="hara-commander-agent.service"
 STATUS_FILE="$BIN_DIR/runtime-status.json"
@@ -135,6 +137,25 @@ PYHASH
   printf 'HARA_COMMANDER_AGENT_INTEGRITY=PASS\n'
 }
 
+install_cli() {
+  mkdir -p "$USER_BIN"
+  ln -sfn "$AGENT" "$CLI"
+  if [ ! -e "$USER_BIN/hara" ] && ! command -v hara >/dev/null 2>&1; then
+    cat >"$USER_BIN/hara" <<'EOHARA'
+#!/bin/sh
+set -eu
+if [ "${1:-}" != "commander" ]; then
+  echo "Usage: hara commander [start|status|stop]" >&2
+  exit 64
+fi
+shift
+exec "$HOME/.local/bin/hara-commander" "${1:-status}"
+EOHARA
+    chmod 700 "$USER_BIN/hara"
+  fi
+  printf 'HARA_COMMANDER_CLI=%s\n' "$CLI"
+}
+
 status_agent() {
   local device_id="" enrolled=FALSE active=FALSE enabled=FALSE version="unknown"
   device_id="$(read_config_value HARA_DEVICE_ID 2>/dev/null || true)"
@@ -147,6 +168,7 @@ status_agent() {
   printf 'HARA_COMMANDER_AGENT_ENABLED=%s\n' "$enabled"
   printf 'HARA_COMMANDER_AGENT_VERSION=%s\n' "$version"
   [ -z "$device_id" ] || printf 'DEVICE_ID=%s\n' "$device_id"
+  if [ -f "$AGENT" ]; then python3 "$AGENT" --session-status 2>/dev/null || true; fi
   printf 'DEVICE_TOKEN_EXPOSED=FALSE\n'
 }
 
@@ -172,7 +194,7 @@ if not base or not token or not device_id:
     raise SystemExit(2)
 if action=="heartbeat":
     endpoint="/api/device/heartbeat"
-    payload={"device_id":device_id,"architecture":arch,"agent_version":"0.3.7"}
+    payload={"device_id":device_id,"architecture":arch,"agent_version":"0.3.8"}
 elif action=="revoke":
     endpoint="/api/device/revoke-self"
     payload={}
@@ -180,7 +202,7 @@ else:
     raise SystemExit(2)
 req=urllib.request.Request(
     base+endpoint, data=json.dumps(payload,separators=(",",":")).encode(), method="POST",
-    headers={"content-type":"application/json","accept":"application/json","user-agent":"HARA-Commander-Installer/0.3.7","authorization":"Bearer "+token},
+    headers={"content-type":"application/json","accept":"application/json","user-agent":"HARA-Commander-Installer/0.3.8","authorization":"Bearer "+token},
 )
 try:
     with opener.open(req,timeout=15) as response:
@@ -210,7 +232,7 @@ token=sys.stdin.readline().rstrip("\n")
 if not device_id or not token: raise SystemExit(2)
 req=urllib.request.Request(
     base+"/api/device/revoke-self", data=b"{}", method="POST",
-    headers={"content-type":"application/json","accept":"application/json","authorization":"Bearer "+token,"user-agent":"HARA-Commander-Installer-Rollback/0.3.7"},
+    headers={"content-type":"application/json","accept":"application/json","authorization":"Bearer "+token,"user-agent":"HARA-Commander-Installer-Rollback/0.3.8"},
 )
 with opener.open(req,timeout=15) as response:
     obj=json.loads(response.read().decode() or "{}")
@@ -254,11 +276,11 @@ device_id=values.get("HARA_DEVICE_ID","")
 arch=values.get("HARA_DEVICE_ARCH","")
 if not base or not token or not device_id:
     print("REENROLL_LOCAL_ENROLLMENT_INVALID",file=sys.stderr); raise SystemExit(12)
-payload=json.dumps({"device_id":device_id,"architecture":arch,"agent_version":"0.3.7"},separators=(",",":")).encode()
+payload=json.dumps({"device_id":device_id,"architecture":arch,"agent_version":"0.3.8"},separators=(",",":")).encode()
 req=urllib.request.Request(
     base+"/api/device/heartbeat", data=payload, method="POST",
     headers={"content-type":"application/json","accept":"application/json",
-             "user-agent":"HARA-Commander-Reenroll-Check/0.3.7","authorization":"Bearer "+token},
+             "user-agent":"HARA-Commander-Reenroll-Check/0.3.8","authorization":"Bearer "+token},
 )
 try:
     with opener.open(req,timeout=15) as response:
@@ -422,6 +444,7 @@ case "$ACTION" in
     rm -f "$backup"
     [ ! -f "$AGENT" ] || cp -p "$AGENT" "$backup"
     download_agent
+    install_cli
     expected_version="$(python3 "$AGENT" --version)"
     systemctl --user daemon-reload
     systemctl --user restart "$SERVICE"
@@ -449,6 +472,7 @@ case "$ACTION" in
     systemctl --user disable --now "$SERVICE" >/dev/null 2>&1 || true
     rm -f "$UNIT"
     systemctl --user daemon-reload >/dev/null 2>&1 || true
+    rm -f "$CLI"
     rm -rf "$BIN_DIR" "$CONFIG_DIR"
     printf 'HARA_COMMANDER_AGENT_UNINSTALL=PASS\n'
     [ -z "$device_id" ] || printf 'DEVICE_ID=%s\n' "$device_id"
@@ -500,7 +524,7 @@ print(json.dumps({
   "device_name": sys.argv[1],
   "platform": "LINUX",
   "architecture": sys.argv[2],
-  "agent_version": "0.3.7",
+  "agent_version": "0.3.8",
 }, separators=(",",":")))
 ' "$DEVICE_NAME" "$ARCH")"
 
@@ -550,6 +574,7 @@ if [ "$REENROLL" = TRUE ]; then
     echo 'HARA Commander Agent failed re-enroll startup attestation.' >&2
     exit 4
   fi
+  install_cli
   printf 'HARA_COMMANDER_AGENT_STARTUP_ATTESTATION=PASS\n'
   INSTALL_ENROLLED=FALSE
   trap - EXIT
@@ -565,6 +590,7 @@ if [ "$REENROLL" = TRUE ]; then
 fi
 
 download_agent
+install_cli
 expected_version="$(python3 "$AGENT" --version)"
 
 cat >"$UNIT" <<EOF
@@ -600,6 +626,8 @@ INSTALL_ENROLLED=FALSE
 trap - EXIT
 unset DEVICE_TOKEN
 printf 'HARA_COMMANDER_DEVICE_ENROLLMENT=PASS\n'
-printf 'HARA_COMMANDER_AGENT_SERVICE=ACTIVE\n'
+printf 'HARA_COMMANDER_AGENT_SERVICE=ACTIVE_INERT_UNTIL_LOCAL_SESSION\n'
 printf 'DEVICE_ID=%s\n' "$DEVICE_ID"
 printf 'DEVICE_TOKEN_EXPOSED=FALSE\n'
+printf 'NEXT_COMMAND=hara-commander start\n'
+printf 'SESSION_AUTHORITY=LOCAL_OPERATOR_TERMINAL\n'

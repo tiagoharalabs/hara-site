@@ -152,7 +152,9 @@ need(
     and 'data-os-choice="windows"' in HTML
     and 'data-os-panel="linux"' in HTML
     and 'data-os-panel="windows"' in HTML
-    and "Aguarde o dispositivo aparecer em Dispositivos" in HTML
+    and "Abra a sessão local" in HTML
+    and "Mantenha o console aberto enquanto usar a IA" in HTML
+    and "hara-commander start" in HTML
     and 'tabindex="-1" aria-live="polite"' in HTML
     and 'function setInstallOs(os)' in JS,
     "PAIRING_ONBOARDING_ORDER",
