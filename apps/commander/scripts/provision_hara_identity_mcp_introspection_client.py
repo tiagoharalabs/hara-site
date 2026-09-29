@@ -13,10 +13,11 @@ ISSUER = "https://auth.haralabs.com.br"
 GET_SECURITY = ISSUER + "/v2/settings/security"
 SET_SECURITY = ISSUER + "/v2/policies/security"
 REGISTER = ISSUER + "/oauth/v2/register"
+USER_AGENT = "HARA-Identity-DCR-Provisioner/1"
 
 
 def request_json(url: str, *, method: str = "GET", token: str | None = None, payload=None):
-    headers = {"accept": "application/json"}
+    headers = {"accept": "application/json", "user-agent": USER_AGENT}
     body = None
     if token:
         headers["authorization"] = "Bearer " + token
@@ -82,10 +83,12 @@ def self_test() -> int:
     reg = registration_payload()
     assert reg["token_endpoint_auth_method"] == "client_secret_basic"
     assert reg["application_type"] == "web"
+    assert USER_AGENT == "HARA-Identity-DCR-Provisioner/1"
     assert "client_secret" not in sanitize_registration({"client_secret": "secret"})
     print("HARA_IDENTITY_INTROSPECTION_PROVISIONER_SELFTEST=PASS")
     print("DCR_EXACT_PREIMAGE_RESTORE=BOUND")
     print("CLIENT_SECRET_OUTPUT=FILE_ONLY")
+    print("ADMIN_EDGE_USER_AGENT=BOUND")
     return 0
 
 
