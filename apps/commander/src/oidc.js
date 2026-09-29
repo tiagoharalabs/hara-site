@@ -102,6 +102,9 @@ export async function oidcDiscovery(issuer) {
   if (metadata.userinfo_endpoint) {
     requireHttpsMetadataEndpoint(metadata.userinfo_endpoint, "OIDC_DISCOVERY_ENDPOINT_INVALID");
   }
+  if (metadata.introspection_endpoint) {
+    requireHttpsMetadataEndpoint(metadata.introspection_endpoint, "OIDC_DISCOVERY_ENDPOINT_INVALID");
+  }
   return cachePut(discoveryCache, normalized, metadata);
 }
 
@@ -153,6 +156,46 @@ export async function oidcUserInfo({ metadata, accessToken }) {
   }
   const payload = await response.json().catch(() => ({}));
   if (!response.ok || !payload.sub) throw new Error("OIDC_USERINFO_FAILED");
+  return payload;
+}
+
+export async function introspectAccessToken({
+  metadata,
+  accessToken,
+  clientId,
+  clientSecret,
+}) {
+  const endpoint = requireHttpsMetadataEndpoint(
+    metadata?.introspection_endpoint,
+    "OIDC_INTROSPECTION_ENDPOINT_INVALID",
+  );
+  if (!accessToken || !clientId || !clientSecret) {
+    throw new Error("OIDC_INTROSPECTION_NOT_CONFIGURED");
+  }
+  const basic = btoa(
+    formUrlEncodeComponent(clientId) + ":" + formUrlEncodeComponent(clientSecret),
+  );
+  const form = new URLSearchParams({
+    token: String(accessToken),
+    token_type_hint: "access_token",
+  });
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      accept: "application/json",
+      authorization: "Basic " + basic,
+      "content-type": "application/x-www-form-urlencoded",
+    },
+    body: form.toString(),
+    redirect: "manual",
+  });
+  if (response.status >= 300 && response.status < 400) {
+    throw new Error("OIDC_INTROSPECTION_REDIRECT_DENIED");
+  }
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || typeof payload.active !== "boolean") {
+    throw new Error("OIDC_INTROSPECTION_FAILED");
+  }
   return payload;
 }
 

@@ -4,6 +4,7 @@ import {
   haraIdentityCustomerMcpEnabled,
   haraIdentityCustomerMcpProtectedResourceMetadata,
   haraIdentityCustomerMcpUnauthorized,
+  validateOpaqueIntrospection,
   verifyHaraIdentityCustomerMcpBearer,
 } from "../src/mcp-hara-identity-customer.mjs";
 
@@ -56,3 +57,95 @@ console.log("COMMANDER_HARA_IDENTITY_PROD_MCP_METADATA=PASS");
 console.log("COMMANDER_HARA_IDENTITY_PROD_MCP_CHALLENGE=PASS");
 console.log("COMMANDER_HARA_IDENTITY_PROD_MCP_PROJECT_AUD=FAIL_CLOSED");
 console.log("COMMANDER_HARA_IDENTITY_PROD_MCP_DEV_ENABLE=DENY");
+
+
+const introspectionBase = {
+  active: true,
+  iss: "https://auth.haralabs.com.br",
+  client_id: "392794504995799043",
+  aud: [
+    "392794504995799043",
+    "391782241182810115",
+    "HARA-INTROSPECTION-CLIENT",
+  ],
+  scope: "openid email",
+  exp: 2000000000,
+  iat: 1700000000,
+  sub: "HARA-USER-SUBJECT",
+};
+const opaque = validateOpaqueIntrospection({
+  payload: introspectionBase,
+  issuer: "https://auth.haralabs.com.br/",
+  projectAudience: "391782241182810115",
+  introspectionClientId: "HARA-INTROSPECTION-CLIENT",
+  userInfo: { sub: "HARA-USER-SUBJECT" },
+  nowSeconds: 1950000000,
+});
+assert.equal(opaque.token_format, "OPAQUE");
+assert.equal(opaque.client_id, "392794504995799043");
+assert.equal(opaque.subject, "HARA-USER-SUBJECT");
+assert.deepEqual(opaque.scopes, ["openid", "email"]);
+
+assert.throws(
+  () => validateOpaqueIntrospection({
+    payload: { ...introspectionBase, active: false },
+    issuer: "https://auth.haralabs.com.br/",
+    projectAudience: "391782241182810115",
+    introspectionClientId: "HARA-INTROSPECTION-CLIENT",
+    userInfo: { sub: "HARA-USER-SUBJECT" },
+  }),
+  /HARA_IDENTITY_MCP_INTROSPECTION_INACTIVE/,
+);
+assert.throws(
+  () => validateOpaqueIntrospection({
+    payload: { ...introspectionBase, iss: "https://evil.example" },
+    issuer: "https://auth.haralabs.com.br/",
+    projectAudience: "391782241182810115",
+    introspectionClientId: "HARA-INTROSPECTION-CLIENT",
+    userInfo: { sub: "HARA-USER-SUBJECT" },
+  }),
+  /HARA_IDENTITY_MCP_INTROSPECTION_ISSUER_MISMATCH/,
+);
+assert.throws(
+  () => validateOpaqueIntrospection({
+    payload: { ...introspectionBase, aud: ["392794504995799043", "HARA-INTROSPECTION-CLIENT"] },
+    issuer: "https://auth.haralabs.com.br/",
+    projectAudience: "391782241182810115",
+    introspectionClientId: "HARA-INTROSPECTION-CLIENT",
+    userInfo: { sub: "HARA-USER-SUBJECT" },
+  }),
+  /HARA_IDENTITY_MCP_DCR_PROJECT_AUD_MISMATCH/,
+);
+assert.throws(
+  () => validateOpaqueIntrospection({
+    payload: { ...introspectionBase, aud: ["392794504995799043", "391782241182810115"] },
+    issuer: "https://auth.haralabs.com.br/",
+    projectAudience: "391782241182810115",
+    introspectionClientId: "HARA-INTROSPECTION-CLIENT",
+    userInfo: { sub: "HARA-USER-SUBJECT" },
+  }),
+  /HARA_IDENTITY_MCP_INTROSPECTION_AUD_MISMATCH/,
+);
+assert.throws(
+  () => validateOpaqueIntrospection({
+    payload: { ...introspectionBase, scope: "email" },
+    issuer: "https://auth.haralabs.com.br/",
+    projectAudience: "391782241182810115",
+    introspectionClientId: "HARA-INTROSPECTION-CLIENT",
+    userInfo: { sub: "HARA-USER-SUBJECT" },
+  }),
+  /HARA_IDENTITY_MCP_SCOPE_MISSING/,
+);
+assert.throws(
+  () => validateOpaqueIntrospection({
+    payload: introspectionBase,
+    issuer: "https://auth.haralabs.com.br/",
+    projectAudience: "391782241182810115",
+    introspectionClientId: "HARA-INTROSPECTION-CLIENT",
+    userInfo: { sub: "DIFFERENT-SUBJECT" },
+  }),
+  /HARA_IDENTITY_MCP_SUBJECT_MISMATCH/,
+);
+
+console.log("COMMANDER_HARA_IDENTITY_OPAQUE_INTROSPECTION=PASS");
+console.log("COMMANDER_HARA_IDENTITY_INTROSPECTION_NEGATIVE_MATRIX=PASS");

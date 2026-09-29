@@ -163,6 +163,11 @@ def main() -> int:
         "verifyHaraIdentityCustomerMcpBearer",
         "HARA_IDENTITY_MCP_DCR_PROJECT_AUD_MISSING",
         "HARA_IDENTITY_MCP_DCR_PROJECT_AUD_MISMATCH",
+        "HARA_IDENTITY_MCP_INTROSPECTION_AUD_MISMATCH",
+        "HARA_IDENTITY_MCP_INTROSPECTION_INACTIVE",
+        "HARA_IDENTITY_MCP_INTROSPECTION_SECRET_MISSING",
+        "validateOpaqueIntrospection",
+        "introspectAccessToken",
         'requiredScopes: ["openid"]',
         "metadata.userinfo_endpoint",
         'includes("S256")',
@@ -170,7 +175,10 @@ def main() -> int:
         assert marker in customer_mcp_identity, marker
     assert '"CUSTOMER_MCP_EDGE_ENABLED": "true"' in PROD_CONFIG.read_text(encoding="utf-8")
     assert '"CUSTOMER_MCP_RESOURCE": "https://commander.haralabs.com.br/api/mcp"' in PROD_CONFIG.read_text(encoding="utf-8")
-    assert "HARA_IDENTITY_MCP_DCR_PROJECT_AUD" not in PROD_CONFIG.read_text(encoding="utf-8")
+    prod_config_text = PROD_CONFIG.read_text(encoding="utf-8")
+    assert "HARA_IDENTITY_MCP_DCR_PROJECT_AUD" not in prod_config_text
+    assert "HARA_IDENTITY_MCP_INTROSPECTION_CLIENT_ID" not in prod_config_text
+    assert "HARA_IDENTITY_MCP_INTROSPECTION_CLIENT_SECRET" not in prod_config_text
     assert 'url.pathname === "/api/mcp"' in worker
     assert 'allowedHosts: ["commander.haralabs.com.br"]' in worker
     subprocess.run(
