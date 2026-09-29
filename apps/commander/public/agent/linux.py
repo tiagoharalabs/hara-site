@@ -10,7 +10,7 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
-AGENT_VERSION = "0.3.10"
+AGENT_VERSION = "0.3.11"
 CONFIG_FILE = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home()/".config"))) / "hara-commander/device.env"
 DATA_DIR = Path(os.environ.get("XDG_DATA_HOME", str(Path.home()/".local/share"))) / "hara-commander"
 RECEIPT_DIR = DATA_DIR / "receipts"
@@ -517,6 +517,13 @@ def main():
         session_status(); return
     if "--session-stop" in sys.argv or (len(sys.argv)>1 and sys.argv[1]=="stop"):
         stop_operator_session(); return
+    if len(sys.argv) > 1 and sys.argv[1] in {"help", "--help", "-h"}:
+        print("Usage: hara-commander [start|status|stop|help]")
+        return
+    if len(sys.argv) > 1:
+        print("HARA_COMMANDER_UNKNOWN_COMMAND=" + str(sys.argv[1]), file=sys.stderr)
+        print("Usage: hara-commander [start|status|stop|help]", file=sys.stderr)
+        raise SystemExit(64)
     config=load_config()
     RECEIPT_DIR.mkdir(parents=True,exist_ok=True,mode=0o700)
     if not try_write_runtime_status(started_at=utcnow(), error_code=None, error_at=None):
