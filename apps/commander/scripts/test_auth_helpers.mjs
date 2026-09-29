@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { authStatus, cookieValue, logout, resolvePortalSession, safeReturnTo } from "../src/auth.js";
+import { createHash } from "node:crypto";
+import { authStatus, cookieValue, logout, productionProvisioningPlan, resolvePortalSession, safeReturnTo } from "../src/auth.js";
 
 const fallback = "/#dashboard";
 
@@ -13,6 +14,17 @@ assert.equal(authStatus({ ...baseAuthEnv, AUTH_CLIENT_AUTH: "NONE" }).configured
 assert.equal(authStatus({ ...baseAuthEnv, AUTH_CLIENT_AUTH: "NONE", AUTH_CLIENT_SECRET: "stale-secret" }).configured, true);
 assert.equal(authStatus({ ...baseAuthEnv, AUTH_CLIENT_AUTH: "INVALID", AUTH_CLIENT_SECRET: "secret" }).configured, false);
 assert.equal(authStatus({ ...baseAuthEnv, AUTH_CLIENT_AUTH: "INVALID", AUTH_CLIENT_SECRET: "secret" }).client_auth, "INVALID");
+
+const founderIssuer = "https://auth.haralabs.com.br/";
+const founderSubject = "founder-subject-test";
+const founderFingerprint = createHash("sha256")
+  .update("https://auth.haralabs.com.br/\n" + founderSubject)
+  .digest("base64url");
+assert.equal(await productionProvisioningPlan({ ENVIRONMENT: "DEV", FOUNDER_INTERNAL_IDENTITY_FINGERPRINT: founderFingerprint }, founderIssuer, founderSubject), "TRIAL");
+assert.equal(await productionProvisioningPlan({ ENVIRONMENT: "PROD" }, founderIssuer, founderSubject), "TRIAL");
+assert.equal(await productionProvisioningPlan({ ENVIRONMENT: "PROD", FOUNDER_INTERNAL_IDENTITY_FINGERPRINT: "invalid" }, founderIssuer, founderSubject), "TRIAL");
+assert.equal(await productionProvisioningPlan({ ENVIRONMENT: "PROD", FOUNDER_INTERNAL_IDENTITY_FINGERPRINT: founderFingerprint }, founderIssuer, founderSubject), "FOUNDER_INTERNAL");
+assert.equal(await productionProvisioningPlan({ ENVIRONMENT: "PROD", FOUNDER_INTERNAL_IDENTITY_FINGERPRINT: founderFingerprint }, founderIssuer, founderSubject + "-other"), "TRIAL");
 
 assert.equal(safeReturnTo(), fallback);
 assert.equal(safeReturnTo("/#devices"), "/#devices");
@@ -43,6 +55,7 @@ assert.equal(
 console.log("COMMANDER_AUTH_CLIENT_AUTH_CONFIG=ENFORCED");
 console.log("COMMANDER_AUTH_RETURN_TO_SAME_ORIGIN=PASS");
 console.log("COMMANDER_AUTH_RETURN_TO_BACKSLASH_OPEN_REDIRECT=BLOCKED");
+console.log("COMMANDER_FOUNDER_INTERNAL_ENTITLEMENT_BINDING=PASS");
 
 const malformedCookieRequest = new Request("https://commander.haralabs.com.br/api/portal/session", {
   headers: { cookie: "hara_commander_session=%E0%A4%A" },
