@@ -13,6 +13,8 @@ WORKER = ROOT / "src" / "worker.js"
 LEARNING_SCHEMA = ROOT / "contracts" / "commander_learning_signal_v1.schema.json"
 DEV_CONFIG = ROOT / "wrangler.dev.jsonc"
 PROD_CONFIG = ROOT / "wrangler.jsonc"
+CUSTOMER_MCP = ROOT / "src" / "customer-mcp.mjs"
+PACKAGE = ROOT.parent.parent / "package.json"
 
 
 def require(text: str, marker: str) -> None:
@@ -108,6 +110,8 @@ def main() -> int:
     assert not prod_analytics
 
     worker = WORKER.read_text(encoding="utf-8")
+    customer_mcp = CUSTOMER_MCP.read_text(encoding="utf-8")
+    package = json.loads(PACKAGE.read_text(encoding="utf-8"))
     assert 'const DEVICE_CALL_TTL_SECONDS = 50;' in worker
     assert 'const DEVICE_CALL_CONTENT_REDACTION_BATCH = 64;' in worker
     assert 'const DEVICE_CALL_CONTENT_REDACTION_MAX_BATCHES = 8;' in worker
@@ -119,6 +123,34 @@ def main() -> int:
     assert "deviceCallStoredContentMatches" in worker
     assert "content_redacted:" in worker
     assert "!isRedactedDeviceCallContent(row.result_json)" in worker
+
+    # Native customer MCP edge is Cloudflare/Commander-owned and must never
+    # regress into the HARA Services founder/operator path.
+    assert package.get("dependencies", {}).get("@modelcontextprotocol/server") == "2.2.0"
+    assert package.get("dependencies", {}).get("zod") == "4.6.5"
+    for tool_id in (
+        "hara.health",
+        "hara.functions.list",
+        "hara.functions.describe",
+        "hara.functions.invoke",
+        "hara.receipts.get",
+    ):
+        assert customer_mcp.count(f'"{tool_id}"') >= 2, tool_id
+    assert "createMcpHandler" in customer_mcp
+    assert "readOnlyHint: true" in customer_mcp
+    assert "destructiveHint: false" in customer_mcp
+    assert 'securitySchemes: SECURITY_SCHEMES' in customer_mcp
+    assert 'customer_services_relay: false' in worker
+    assert "executeCustomerMcpTool(" in worker
+    assert "enqueueDeviceCall(env" in worker
+    for forbidden_mcp in (
+        "/srv/hara",
+        "services.haralabs",
+        "child_process",
+        "/bin/bash",
+        "/bin/sh",
+    ):
+        assert forbidden_mcp not in customer_mcp, forbidden_mcp
 
     analytics_at = worker.index("function recordLearningSignal")
     analytics_end = worker.index("async function dispatchTransientDeviceCall", analytics_at)
@@ -172,6 +204,8 @@ def main() -> int:
     print("COMMANDER_LEARNING_ANALYTICS_CUSTOMER_CONTENT=ABSENT")
     print("COMMANDER_DURABLE_FALLBACK_RAW_CONTENT_AFTER_TTL=REDACTION_TARGET")
     print("COMMANDER_DURABLE_FALLBACK_IDEMPOTENCY=SHA256_AFTER_REDACTION")
+    print("COMMANDER_CUSTOMER_MCP_NATIVE_EDGE=PASS")
+    print("COMMANDER_CUSTOMER_MCP_CUSTOMER_SERVICES_RELAY=FALSE")
     return 0
 
 

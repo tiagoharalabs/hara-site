@@ -21,6 +21,7 @@ import {
   haraIdentityMcpDevUnauthorized,
   verifyHaraIdentityMcpDevBearer,
 } from "./mcp-hara-identity-dev.mjs";
+import { handleCustomerMcpRequest } from "./customer-mcp.mjs";
 import {
   DEVICE_FUNCTION_ID,
   canonicalDeviceToolPayload,
@@ -1974,6 +1975,288 @@ async function enqueueDeviceCall(env, body) {
   return response;
 }
 
+async function customerMcpRequestId(identity, toolId, args, mcpRequestId) {
+  const digest = await sha256(JSON.stringify({
+    issuer: identity.issuer,
+    subject: identity.subject,
+    client_id: identity.client_id,
+    tool_id: toolId,
+    mcp_request_id: mcpRequestId,
+    arguments: args || {},
+  }));
+  return "HARA-CUSTOMER-MCP-" + digest;
+}
+
+function trimPublicText(value, limit = 65536) {
+  if (typeof value !== "string") return null;
+  return value.length <= limit
+    ? value
+    : value.slice(0, limit) + "\n[HARA_COMMANDER_OUTPUT_TRUNCATED]";
+}
+
+function projectCustomerToolResult(toolId, response) {
+  const value = response && typeof response === "object" ? response : {};
+  const result = value.result && typeof value.result === "object" ? value.result : {};
+  const projectedResult = {};
+
+  if (toolId === "hara.health") {
+    for (const key of [
+      "services_bridge_state",
+      "hara_services_state",
+      "registered_function_count",
+      "executable_function_count",
+      "authority",
+    ]) {
+      if (key in result) projectedResult[key] = result[key];
+    }
+  } else if (toolId === "hara.functions.list") {
+    for (const key of [
+      "registered_function_count",
+      "executable_function_count",
+      "active_function_count",
+    ]) {
+      if (Number.isInteger(result[key])) projectedResult[key] = result[key];
+    }
+    if (Array.isArray(result.domains)) {
+      projectedResult.domains = result.domains.filter((entry) => typeof entry === "string");
+    }
+    if (Array.isArray(result.functions)) {
+      projectedResult.functions = result.functions
+        .filter((entry) => entry && typeof entry.function_id === "string")
+        .map((entry) => ({
+          function_id: entry.function_id,
+          ...(typeof entry.state === "string" ? { state: entry.state } : {}),
+        }));
+    }
+  } else if (toolId === "hara.functions.describe") {
+    for (const key of ["function_id", "state", "pending_domain_binding"]) {
+      if (key in result) projectedResult[key] = result[key];
+    }
+    if (typeof result.IDENTITY?.domain === "string") {
+      projectedResult.domain = result.IDENTITY.domain;
+    }
+    if (typeof result.PURPOSE?.description_pt_br === "string") {
+      projectedResult.description = result.PURPOSE.description_pt_br;
+    }
+    const execution = result.EXECUTION_SEMANTICS;
+    const authority = result.AUTHORITY;
+    const risk = execution?.risk_class ?? authority?.risk_class;
+    const changeIntent = execution?.change_intent_required
+      ?? authority?.change_intent_required;
+    const failClosed = authority?.fail_closed ?? result.FAILURE_ROLLBACK?.fail_closed;
+    if (typeof risk === "string") projectedResult.risk_class = risk;
+    if (typeof changeIntent === "boolean") {
+      projectedResult.change_intent_required = changeIntent;
+    }
+    if (typeof failClosed === "boolean") projectedResult.fail_closed = failClosed;
+  } else if (toolId === "hara.functions.invoke") {
+    for (const key of [
+      "function_id",
+      "risk_class",
+      "process_exit_code",
+      "domain_success_inferred",
+    ]) {
+      if (key in result) projectedResult[key] = result[key];
+    }
+    const stdout = trimPublicText(result.stdout);
+    const stderr = trimPublicText(result.stderr);
+    if (stdout !== null) projectedResult.stdout = stdout;
+    if (stderr) projectedResult.stderr = stderr;
+  } else if (toolId === "hara.receipts.get") {
+    for (const key of [
+      "tool_id",
+      "function_id_if_any",
+      "transport_mode",
+      "operational_authority",
+      "mutation_class",
+      "state",
+      "payload_values_persisted",
+    ]) {
+      if (key in result) projectedResult[key] = result[key];
+    }
+  }
+
+  const projected = {
+    state: value.state || null,
+    operational_authority: value.operational_authority || null,
+    runtime_authority_from_chatgpt: value.runtime_authority_from_chatgpt === true,
+    mutation_performed: value.mutation_performed === true,
+    result: projectedResult,
+    customer_services_relay: false,
+  };
+
+  const receiptSha = String(value.bridge_receipt_sha256 || "").trim().toLowerCase();
+  if (/^[0-9a-f]{64}$/.test(receiptSha)) {
+    projected.bridge_receipt_sha256 = receiptSha;
+  }
+  if (value.blocker && typeof value.blocker === "object") {
+    const blocker = {};
+    if (typeof value.blocker.code === "string") blocker.code = value.blocker.code;
+    if (typeof value.blocker.details?.risk_class === "string") {
+      blocker.details = { risk_class: value.blocker.details.risk_class };
+    }
+    if (Object.keys(blocker).length) projected.blocker = blocker;
+  }
+  return projected;
+}
+
+function customerMcpDevicePayload(toolId, args) {
+  if (toolId === "hara.health" || toolId === "hara.functions.list") return {};
+  if (toolId === "hara.functions.describe") {
+    return { function_id: cleanId(args.function_id, 180) };
+  }
+  if (toolId === "hara.functions.invoke") {
+    return {
+      function_id: cleanId(args.function_id, 180),
+      arguments: {
+        argv: Array.isArray(args.argv) ? args.argv.map((value) => String(value)) : [],
+      },
+    };
+  }
+  if (toolId === "hara.receipts.get") {
+    return { receipt_id_or_sha256: cleanId(args.receipt_id_or_sha256, 256) };
+  }
+  throw new Error("DEVICE_CALL_TOOL_DENIED");
+}
+
+async function customerMcpWaitForCall(env, identity, call) {
+  let status = call;
+  const deadline = Date.now() + 45_000;
+  while (!["COMPLETED", "FAILED", "EXPIRED", "CANCELLED"].includes(String(status.state))) {
+    if (Date.now() >= deadline) {
+      throw new Error("DEVICE_CALL_TIMEOUT");
+    }
+    const retryMs = Math.max(
+      100,
+      Math.min(500, Number(status.retry_after_ms || 250)),
+    );
+    if (globalThis.scheduler?.wait) {
+      await globalThis.scheduler.wait(retryMs);
+    } else {
+      await new Promise((resolve) => setTimeout(resolve, retryMs));
+    }
+    status = await deviceCallStatus(env, {
+      issuer: identity.issuer,
+      subject: identity.subject,
+      call_id: call.call_id,
+    });
+  }
+  return status;
+}
+
+async function executeCustomerMcpTool(
+  env,
+  identity,
+  toolId,
+  args,
+  mcpRequestId,
+) {
+  const requiredGrant = MCP_TOOL_GRANTS[toolId];
+  if (!requiredGrant) throw new Error("POLICY_DENIED");
+
+  const context = await mcpProductContext(env, identity.issuer, identity.subject);
+  if (!context.ok) throw new Error(context.code);
+  if (!context.grants.includes(requiredGrant)) throw new Error("GRANT_MISSING");
+
+  const payload = customerMcpDevicePayload(toolId, args);
+  const requestId = await customerMcpRequestId(
+    identity,
+    toolId,
+    payload,
+    mcpRequestId,
+  );
+
+  let quota = null;
+  let reservation = null;
+  if (toolId === "hara.functions.invoke") {
+    const functionId = cleanId(payload.function_id, 180);
+    if (functionId !== DEVICE_FUNCTION_ID) throw new Error("POLICY_DENIED");
+    quota = env.TENANT_QUOTA.getByName(context.tenant_id);
+    reservation = await quota.reserve(
+      requestId,
+      context.subject_id,
+      mcpPeriodKey(context),
+      functionId,
+      context.unit_limit,
+    );
+    if (!reservation.ok) {
+      throw new Error(String(reservation.code || "QUOTA_DENIED"));
+    }
+    if (reservation.existing && reservation.state === "RELEASED") {
+      throw new Error("REQUEST_USAGE_TERMINAL");
+    }
+  }
+
+  let call;
+  try {
+    call = await enqueueDeviceCall(env, {
+      issuer: identity.issuer,
+      subject: identity.subject,
+      request_id: requestId,
+      tool_id: toolId,
+      payload,
+    });
+  } catch (error) {
+    if (quota && reservation?.state === "RESERVED") {
+      await quota.release(requestId, context.subject_id, context.unit_limit)
+        .catch(() => undefined);
+    }
+    throw error;
+  }
+
+  const status = await customerMcpWaitForCall(env, identity, call);
+  if (status.state === "FAILED") {
+    if (quota && reservation?.state === "RESERVED") {
+      await quota.release(requestId, context.subject_id, context.unit_limit);
+    }
+    if (status.result && typeof status.result === "object") {
+      return projectCustomerToolResult(toolId, status.result);
+    }
+    throw new Error(String(status.error_code || "DEVICE_EXECUTION_FAILED"));
+  }
+  if (status.state !== "COMPLETED") {
+    if (quota && reservation?.state === "RESERVED") {
+      await quota.release(requestId, context.subject_id, context.unit_limit);
+    }
+    throw new Error("DEVICE_CALL_" + String(status.state || "FAILED"));
+  }
+
+  const projected = projectCustomerToolResult(toolId, status.result || {});
+  let usage = null;
+  if (toolId === "hara.functions.invoke") {
+    const receiptSha = String(projected.bridge_receipt_sha256 || "");
+    if (
+      projected.state === "PASS"
+      && /^[0-9a-f]{64}$/.test(receiptSha)
+    ) {
+      usage = await quota.commit(
+        requestId,
+        context.subject_id,
+        receiptSha,
+        context.unit_limit,
+      );
+      if (!usage.ok) {
+        throw new Error(String(usage.code || "PRODUCT_USAGE_COMMIT_DENIED"));
+      }
+    } else {
+      usage = await quota.release(
+        requestId,
+        context.subject_id,
+        context.unit_limit,
+      );
+    }
+  }
+
+  return {
+    ...projected,
+    product: {
+      plan_code: context.plan_code,
+      entitlement_id: context.entitlement_id,
+      quota: usage,
+    },
+  };
+}
+
 async function claimNextDeviceCall(env, request) {
   const device = await resolveDeviceCredential(env, request);
   const now = nowIso();
@@ -2203,7 +2486,10 @@ export default {
         return json(haraIdentityMcpDevProtectedResourceMetadata(request, env));
       }
 
-      if (url.pathname === "/api/dev/mcp" && ["GET", "POST"].includes(request.method)) {
+      if (
+        ["/api/dev/mcp", "/api/dev/mcp/proof"].includes(url.pathname)
+        && ["GET", "POST"].includes(request.method)
+      ) {
         requireDev(env);
         if (!haraIdentityMcpDevEnabled(env)) {
           return json({ ok: false, code: "NOT_FOUND" }, 404);
@@ -2224,39 +2510,61 @@ export default {
           return json({ ok: false, code: "GRANT_MISSING" }, 403);
         }
 
-        const periodKey = mcpPeriodKey(context);
-        const usage = await env.TENANT_QUOTA
-          .getByName(context.tenant_id)
-          .status(periodKey, context.unit_limit);
+        if (url.pathname === "/api/dev/mcp/proof") {
+          const periodKey = mcpPeriodKey(context);
+          const usage = await env.TENANT_QUOTA
+            .getByName(context.tenant_id)
+            .status(periodKey, context.unit_limit);
 
-        return json({
-          schema: "hara.commander-mcp-hara-identity-dev-proof.v1",
-          ok: true,
-          environment: "DEV",
-          token_binding: {
-            issuer: identity.issuer,
-            client_id: identity.client_id,
-            binding_claim: identity.client_binding,
-            audience_count: identity.audience_count,
+          return json({
+            schema: "hara.commander-mcp-hara-identity-dev-proof.v2",
+            ok: true,
+            environment: "DEV",
+            token_binding: {
+              issuer: identity.issuer,
+              client_id: identity.client_id,
+              binding_claim: identity.client_binding,
+              audience_count: identity.audience_count,
+              scopes: identity.scopes,
+            },
+            subject: {
+              subject_id: context.subject_id,
+              tenant_id: context.tenant_id,
+            },
+            entitlement: {
+              entitlement_id: context.entitlement_id,
+              plan_code: context.plan_code,
+              grants: context.grants,
+            },
+            quota: {
+              meter_id: context.meter_id,
+              period_kind: context.period_kind,
+              unit_limit: context.unit_limit,
+              status: usage,
+            },
+            customer_services_relay: false,
+            event_v2_mutation: false,
+          });
+        }
+
+        return handleCustomerMcpRequest(request, {
+          authInfo: {
+            token: "HARA_IDENTITY_VALIDATED",
+            clientId: identity.client_id,
             scopes: identity.scopes,
           },
-          subject: {
-            subject_id: context.subject_id,
-            tenant_id: context.tenant_id,
-          },
-          entitlement: {
-            entitlement_id: context.entitlement_id,
-            plan_code: context.plan_code,
-            grants: context.grants,
-          },
-          quota: {
-            meter_id: context.meter_id,
-            period_kind: context.period_kind,
-            unit_limit: context.unit_limit,
-            status: usage,
-          },
-          customer_services_relay: false,
-          event_v2_mutation: false,
+          allowedHosts: ["hara-commander-dev-v2.tiago-sartori.workers.dev"],
+          executeTool: async ({
+            tool_id,
+            arguments: toolArguments,
+            mcp_request_id,
+          }) => executeCustomerMcpTool(
+            env,
+            identity,
+            tool_id,
+            toolArguments,
+            mcp_request_id,
+          ),
         });
       }
 
