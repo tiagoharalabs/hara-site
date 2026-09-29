@@ -2206,6 +2206,33 @@ async function executeCustomerMcpTool(
     if (reservation.existing && reservation.state === "RELEASED") {
       throw new Error("REQUEST_USAGE_TERMINAL");
     }
+    if (reservation.state === "COMMITTED") {
+      const committedReceiptSha = String(
+        reservation.receipt_sha256 || "",
+      ).trim().toLowerCase();
+      if (!/^[0-9a-f]{64}$/.test(committedReceiptSha)) {
+        throw new Error("CUSTOMER_MCP_COMMITTED_RECEIPT_INVALID");
+      }
+      return {
+        state: "PASS",
+        operational_authority: null,
+        execution_authority: "HARA_COMMANDER_AGENT",
+        runtime_authority_from_chatgpt: false,
+        mutation_performed: false,
+        replayed: true,
+        result: { replayed: true },
+        bridge_receipt_sha256: committedReceiptSha,
+        customer_services_relay: false,
+        product: {
+          plan_code: context.plan_code,
+          entitlement_id: context.entitlement_id,
+          quota: reservation,
+        },
+      };
+    }
+    if (reservation.state !== "RESERVED") {
+      throw new Error("CUSTOMER_MCP_QUOTA_STATE_INVALID");
+    }
   }
 
   let call;

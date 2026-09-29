@@ -84,6 +84,29 @@ def main() -> int:
     assert ".reserve(" in worker
     assert ".commit(" in worker
     assert ".release(" in worker
+
+    customer_executor = worker.split(
+        "async function executeCustomerMcpTool(", 1
+    )[1].split(
+        "async function claimNextDeviceCall(", 1
+    )[0]
+    assert 'reservation.state === "COMMITTED"' in customer_executor
+    assert "CUSTOMER_MCP_COMMITTED_RECEIPT_INVALID" in customer_executor
+    assert "CUSTOMER_MCP_QUOTA_STATE_INVALID" in customer_executor
+    assert "replayed: true" in customer_executor
+    assert "bridge_receipt_sha256: committedReceiptSha" in customer_executor
+    assert customer_executor.index(
+        'reservation.state === "COMMITTED"'
+    ) < customer_executor.index("enqueueDeviceCall(env")
+    committed_replay = customer_executor.split(
+        'if (reservation.state === "COMMITTED") {', 1
+    )[1].split(
+        'if (reservation.state !== "RESERVED") {', 1
+    )[0]
+    assert "enqueueDeviceCall" not in committed_replay
+    assert ".commit(" not in committed_replay
+    assert ".release(" not in committed_replay
+
     assert 'allowedHosts: ["hara-commander-dev-v2.tiago-sartori.workers.dev"]' in worker
 
     subprocess.run(
@@ -102,6 +125,7 @@ def main() -> int:
     print("COMMANDER_CUSTOMER_MCP_OAUTH_SCHEME=PASS")
     print("COMMANDER_CUSTOMER_MCP_DURABLE_DEVICE_PATH=PASS")
     print("COMMANDER_CUSTOMER_MCP_QUOTA_LIFECYCLE=PASS")
+    print("COMMANDER_CUSTOMER_MCP_COMMITTED_REPLAY=PASS")
     print("COMMANDER_CUSTOMER_MCP_CUSTOMER_SERVICES_RELAY=FALSE")
     print("COMMANDER_CUSTOMER_MCP_EXECUTION_AUTHORITY=HARA_COMMANDER_AGENT")
     print("COMMANDER_CUSTOMER_MCP_HEALTH_DEVICE_PROJECTION=PASS")
