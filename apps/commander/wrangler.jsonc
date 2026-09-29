@@ -28,7 +28,9 @@
     "AUTH_ISSUER": "https://auth.haralabs.com.br/",
     "AUTH_CLIENT_ID": "391790882505949187",
     "AUTH_PROVIDER_LABEL": "HARA Identity",
-    "AUTH_CLIENT_AUTH": "BASIC"
+    "AUTH_CLIENT_AUTH": "BASIC",
+    "CUSTOMER_MCP_EDGE_ENABLED": "true",
+    "CUSTOMER_MCP_RESOURCE": "https://commander.haralabs.com.br/api/mcp"
   },
   "ratelimits": [
     {

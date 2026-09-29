@@ -21,6 +21,12 @@ import {
   haraIdentityMcpDevUnauthorized,
   verifyHaraIdentityMcpDevBearer,
 } from "./mcp-hara-identity-dev.mjs";
+import {
+  haraIdentityCustomerMcpEnabled,
+  haraIdentityCustomerMcpProtectedResourceMetadata,
+  haraIdentityCustomerMcpUnauthorized,
+  verifyHaraIdentityCustomerMcpBearer,
+} from "./mcp-hara-identity-customer.mjs";
 import { handleCustomerMcpRequest } from "./customer-mcp.mjs";
 import {
   DEVICE_FUNCTION_ID,
@@ -2473,6 +2479,51 @@ export default {
 
       if (url.pathname === "/api/billing/stripe/webhook" && request.method === "POST") {
         return json(await handleStripeWebhook(request, env));
+      }
+
+      if (
+        [
+          "/.well-known/oauth-protected-resource",
+          "/.well-known/oauth-protected-resource/api/mcp",
+        ].includes(url.pathname)
+        && request.method === "GET"
+      ) {
+        if (!haraIdentityCustomerMcpEnabled(env)) {
+          return json({ ok: false, code: "NOT_FOUND" }, 404);
+        }
+        return json(haraIdentityCustomerMcpProtectedResourceMetadata(request, env));
+      }
+
+      if (url.pathname === "/api/mcp" && ["GET", "POST"].includes(request.method)) {
+        if (!haraIdentityCustomerMcpEnabled(env)) {
+          return json({ ok: false, code: "NOT_FOUND" }, 404);
+        }
+        let identity;
+        try {
+          identity = await verifyHaraIdentityCustomerMcpBearer(request, env);
+        } catch (_error) {
+          return haraIdentityCustomerMcpUnauthorized(request);
+        }
+
+        return handleCustomerMcpRequest(request, {
+          authInfo: {
+            token: "HARA_IDENTITY_VALIDATED",
+            clientId: identity.client_id,
+            scopes: identity.scopes,
+          },
+          allowedHosts: ["commander.haralabs.com.br"],
+          executeTool: async ({
+            tool_id,
+            arguments: toolArguments,
+            mcp_request_id,
+          }) => executeCustomerMcpTool(
+            env,
+            identity,
+            tool_id,
+            toolArguments,
+            mcp_request_id,
+          ),
+        });
       }
 
       if (
