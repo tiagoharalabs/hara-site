@@ -194,7 +194,7 @@ if not base or not token or not device_id:
     raise SystemExit(2)
 if action=="heartbeat":
     endpoint="/api/device/heartbeat"
-    payload={"device_id":device_id,"architecture":arch,"agent_version":"0.3.8"}
+    payload={"device_id":device_id,"architecture":arch,"agent_version":"0.3.9"}
 elif action=="revoke":
     endpoint="/api/device/revoke-self"
     payload={}
@@ -202,7 +202,7 @@ else:
     raise SystemExit(2)
 req=urllib.request.Request(
     base+endpoint, data=json.dumps(payload,separators=(",",":")).encode(), method="POST",
-    headers={"content-type":"application/json","accept":"application/json","user-agent":"HARA-Commander-Installer/0.3.8","authorization":"Bearer "+token},
+    headers={"content-type":"application/json","accept":"application/json","user-agent":"HARA-Commander-Installer/0.3.9","authorization":"Bearer "+token},
 )
 try:
     with opener.open(req,timeout=15) as response:
@@ -232,7 +232,7 @@ token=sys.stdin.readline().rstrip("\n")
 if not device_id or not token: raise SystemExit(2)
 req=urllib.request.Request(
     base+"/api/device/revoke-self", data=b"{}", method="POST",
-    headers={"content-type":"application/json","accept":"application/json","authorization":"Bearer "+token,"user-agent":"HARA-Commander-Installer-Rollback/0.3.8"},
+    headers={"content-type":"application/json","accept":"application/json","authorization":"Bearer "+token,"user-agent":"HARA-Commander-Installer-Rollback/0.3.9"},
 )
 with opener.open(req,timeout=15) as response:
     obj=json.loads(response.read().decode() or "{}")
@@ -276,11 +276,11 @@ device_id=values.get("HARA_DEVICE_ID","")
 arch=values.get("HARA_DEVICE_ARCH","")
 if not base or not token or not device_id:
     print("REENROLL_LOCAL_ENROLLMENT_INVALID",file=sys.stderr); raise SystemExit(12)
-payload=json.dumps({"device_id":device_id,"architecture":arch,"agent_version":"0.3.8"},separators=(",",":")).encode()
+payload=json.dumps({"device_id":device_id,"architecture":arch,"agent_version":"0.3.9"},separators=(",",":")).encode()
 req=urllib.request.Request(
     base+"/api/device/heartbeat", data=payload, method="POST",
     headers={"content-type":"application/json","accept":"application/json",
-             "user-agent":"HARA-Commander-Reenroll-Check/0.3.8","authorization":"Bearer "+token},
+             "user-agent":"HARA-Commander-Reenroll-Check/0.3.9","authorization":"Bearer "+token},
 )
 try:
     with opener.open(req,timeout=15) as response:
@@ -419,9 +419,10 @@ doctor_agent() {
   systemctl --user is-enabled --quiet "$SERVICE" || { echo 'AGENT_SERVICE_NOT_ENABLED' >&2; return 7; }
   systemctl --user is-active --quiet "$SERVICE" || { echo 'AGENT_SERVICE_NOT_ACTIVE' >&2; return 7; }
   python3 "$AGENT" --self-test >/dev/null || { echo 'AGENT_SELF_TEST_FAILED' >&2; return 8; }
-  remote_device_action heartbeat || { echo 'COMMANDER_REMOTE_HEARTBEAT=FAIL' >&2; return 9; }
+  preflight_agent >/dev/null || { echo 'COMMANDER_REMOTE_HEALTH=FAIL' >&2; return 9; }
   printf 'HARA_COMMANDER_AGENT_DOCTOR=PASS\n'
-  printf 'COMMANDER_REMOTE_HEARTBEAT=PASS\n'
+  printf 'COMMANDER_REMOTE_HEALTH=PASS\n'
+  printf 'COMMANDER_REMOTE_HEARTBEAT=SKIPPED_LOCAL_SESSION_REQUIRED\n'
   status_agent
 }
 
@@ -524,7 +525,7 @@ print(json.dumps({
   "device_name": sys.argv[1],
   "platform": "LINUX",
   "architecture": sys.argv[2],
-  "agent_version": "0.3.8",
+  "agent_version": "0.3.9",
 }, separators=(",",":")))
 ' "$DEVICE_NAME" "$ARCH")"
 
