@@ -4,6 +4,7 @@
 from pathlib import Path
 import json
 import re
+import subprocess
 
 ROOT = Path(__file__).resolve().parent.parent
 EVENT = ROOT.parent.parent / "docs" / "architecture" / "HARA_COMMANDER_SCALE_V2_EVENT_TRANSPORT.md"
@@ -14,6 +15,8 @@ LEARNING_SCHEMA = ROOT / "contracts" / "commander_learning_signal_v1.schema.json
 DEV_CONFIG = ROOT / "wrangler.dev.jsonc"
 PROD_CONFIG = ROOT / "wrangler.jsonc"
 CUSTOMER_MCP = ROOT / "src" / "customer-mcp.mjs"
+CUSTOMER_MCP_IDENTITY = ROOT / "src" / "mcp-hara-identity-customer.mjs"
+CUSTOMER_MCP_IDENTITY_TEST = ROOT / "scripts" / "test_hara_identity_customer_mcp.mjs"
 PACKAGE = ROOT.parent.parent / "package.json"
 
 
@@ -111,6 +114,7 @@ def main() -> int:
 
     worker = WORKER.read_text(encoding="utf-8")
     customer_mcp = CUSTOMER_MCP.read_text(encoding="utf-8")
+    customer_mcp_identity = CUSTOMER_MCP_IDENTITY.read_text(encoding="utf-8")
     package = json.loads(PACKAGE.read_text(encoding="utf-8"))
     assert 'const DEVICE_CALL_TTL_SECONDS = 50;' in worker
     assert 'const DEVICE_CALL_CONTENT_REDACTION_BATCH = 64;' in worker
@@ -151,6 +155,29 @@ def main() -> int:
         "/bin/sh",
     ):
         assert forbidden_mcp not in customer_mcp, forbidden_mcp
+        assert forbidden_mcp not in customer_mcp_identity, forbidden_mcp
+
+    # PROD customer MCP auth must remain HARA Identity/DCR-bound and fail closed
+    # until the dedicated DCR project audience is explicitly configured.
+    for marker in (
+        "verifyHaraIdentityCustomerMcpBearer",
+        "HARA_IDENTITY_MCP_DCR_PROJECT_AUD_MISSING",
+        "HARA_IDENTITY_MCP_DCR_PROJECT_AUD_MISMATCH",
+        'requiredScopes: ["openid"]',
+        "metadata.userinfo_endpoint",
+        'includes("S256")',
+    ):
+        assert marker in customer_mcp_identity, marker
+    assert '"CUSTOMER_MCP_EDGE_ENABLED": "true"' in PROD_CONFIG.read_text(encoding="utf-8")
+    assert '"CUSTOMER_MCP_RESOURCE": "https://commander.haralabs.com.br/api/mcp"' in PROD_CONFIG.read_text(encoding="utf-8")
+    assert "HARA_IDENTITY_MCP_DCR_PROJECT_AUD" not in PROD_CONFIG.read_text(encoding="utf-8")
+    assert 'url.pathname === "/api/mcp"' in worker
+    assert 'allowedHosts: ["commander.haralabs.com.br"]' in worker
+    subprocess.run(
+        ["node", str(CUSTOMER_MCP_IDENTITY_TEST)],
+        cwd=ROOT.parent.parent,
+        check=True,
+    )
 
     analytics_at = worker.index("function recordLearningSignal")
     analytics_end = worker.index("async function dispatchTransientDeviceCall", analytics_at)
@@ -206,6 +233,8 @@ def main() -> int:
     print("COMMANDER_DURABLE_FALLBACK_IDEMPOTENCY=SHA256_AFTER_REDACTION")
     print("COMMANDER_CUSTOMER_MCP_NATIVE_EDGE=PASS")
     print("COMMANDER_CUSTOMER_MCP_CUSTOMER_SERVICES_RELAY=FALSE")
+    print("COMMANDER_CUSTOMER_MCP_HARA_IDENTITY_PROD_CANARY=READY_LOCKED")
+    print("COMMANDER_CUSTOMER_MCP_DCR_PROJECT_AUD=RUNTIME_REQUIRED")
     return 0
 
 
