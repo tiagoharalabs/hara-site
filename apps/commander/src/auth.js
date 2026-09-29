@@ -100,6 +100,14 @@ function normalizeEmail(value) {
   return email;
 }
 
+export async function productionProvisioningPlan(env, issuer, subject) {
+  if (String(env.ENVIRONMENT || "") !== "PROD") return "TRIAL";
+  const expected = String(env.FOUNDER_INTERNAL_IDENTITY_FINGERPRINT || "").trim();
+  if (!/^[A-Za-z0-9_-]{43}$/.test(expected)) return "TRIAL";
+  const fingerprint = await sha256(normalizeIssuer(issuer) + "\n" + String(subject));
+  return fingerprint === expected ? "FOUNDER_INTERNAL" : "TRIAL";
+}
+
 export function authStatus(env) {
   const clientAuth = String(env.AUTH_CLIENT_AUTH || "BASIC").trim().toUpperCase();
   const clientAuthSupported = clientAuth === "BASIC" || clientAuth === "NONE";
@@ -246,6 +254,7 @@ async function ensurePrimaryIdentityBinding(env, subjectId, issuer, externalSubj
 async function provisionProductionIdentity(env, claims, issuer, subject, email) {
   if (String(env.ENVIRONMENT || "") !== "PROD") return null;
   const fingerprint = await sha256(issuer + "\n" + subject);
+  const planCode = await productionProvisioningPlan(env, issuer, subject);
   const tenantId = "HARA-TENANT-" + fingerprint.slice(0, 24).toUpperCase();
   const subjectId = "HARA-SUBJECT-" + fingerprint.slice(24, 48).toUpperCase();
   const entitlementId = "HARA-ENTITLEMENT-" + fingerprint.slice(40, 64).toUpperCase();
@@ -273,8 +282,8 @@ async function provisionProductionIdentity(env, claims, issuer, subject, email) 
     env.PRODUCT_DB.prepare(
       `INSERT OR IGNORE INTO entitlements
         (entitlement_id, tenant_id, subject_id, plan_code, state, valid_from_utc, valid_until_utc)
-       VALUES (?, ?, ?, 'TRIAL', 'ACTIVE', ?, NULL)`
-    ).bind(entitlementId, tenantId, subjectId, createdAt),
+       VALUES (?, ?, ?, ?, 'ACTIVE', ?, NULL)`
+    ).bind(entitlementId, tenantId, subjectId, planCode, createdAt),
   ]);
 
   return env.PRODUCT_DB.prepare(
