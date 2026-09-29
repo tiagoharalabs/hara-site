@@ -400,18 +400,21 @@
             </article>
             <article class="plan-card">
               <span class="plan-label">STANDARD</span><h2>Operação</h2><p>Capacidade comercial para uso recorrente, ainda não publicada no catálogo de produção.</p>
-              <strong>Em definição <small>capacidade</small></strong>
+              <strong data-billing-price-label="STANDARD">Em definição <small>capacidade</small></strong>
               <ul><li>Workspace corporativo</li><li>Limite de uso governado</li><li>OAuth / OIDC</li><li>Auditoria e comprovantes</li></ul>
-              <button class="btn btn-secondary btn-block" type="button" disabled aria-disabled="true">Em preparação</button>
+              <button class="btn btn-secondary btn-block" type="button" data-billing-plan="STANDARD" disabled aria-disabled="true">Em preparação</button>
             </article>
             <article class="plan-card">
               <span class="plan-label">SCALE</span><h2>Sob medida</h2><p>Opção futura para ambientes com necessidades ampliadas de capacidade e governança.</p>
-              <strong>Em definição <small>capacidade</small></strong>
+              <strong data-billing-price-label="SCALE">Em definição <small>capacidade</small></strong>
               <ul><li>Capacidade sob medida</li><li>Governança expandida</li><li>Auditoria e comprovantes</li><li>Suporte dedicado</li></ul>
-              <button class="btn btn-secondary btn-block" type="button" disabled aria-disabled="true">Roadmap</button>
+              <button class="btn btn-secondary btn-block" type="button" data-billing-plan="SCALE" disabled aria-disabled="true">Roadmap</button>
             </article>
           </div>
-          <p class="plan-disclaimer">Somente o Trial está publicado no catálogo de produção neste momento. Standard e Scale permanecem em preparação.</p>
+          <p class="plan-disclaimer" id="billingPlanStatus">Somente o Trial está publicado no catálogo de produção neste momento. Standard e Scale permanecem em preparação.</p>
+          <div style="display:flex;justify-content:center;margin-top:12px">
+            <button class="btn btn-secondary" type="button" data-billing-portal hidden>Gerenciar cobrança</button>
+          </div>
         </div>
       </div>
     </section>

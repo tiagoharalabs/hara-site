@@ -10,6 +10,12 @@ import {
 } from "./auth.js";
 import { normalizeIssuer, randomToken, sha256 } from "./oidc.js";
 import {
+  billingStatus,
+  createBillingCheckout,
+  createBillingPortal,
+  handleStripeWebhook,
+} from "./billing.mjs";
+import {
   haraIdentityMcpDevEnabled,
   haraIdentityMcpDevProtectedResourceMetadata,
   haraIdentityMcpDevUnauthorized,
@@ -2182,6 +2188,10 @@ export default {
         return json({ configured: authStatus(env).configured });
       }
 
+      if (url.pathname === "/api/billing/stripe/webhook" && request.method === "POST") {
+        return json(await handleStripeWebhook(request, env));
+      }
+
       if (
         url.pathname === "/.well-known/oauth-protected-resource/api/dev/mcp"
         && request.method === "GET"
@@ -2333,6 +2343,29 @@ export default {
           role: session.role
         };
         return json(payload);
+      }
+
+      if (url.pathname === "/api/portal/billing" && request.method === "GET") {
+        const session = await resolvePortalSession(request, env);
+        if (!session) return json({ ok: false, code: "AUTH_REQUIRED" }, 401);
+        return json(await billingStatus(env, session));
+      }
+
+      if (url.pathname === "/api/portal/billing/checkout" && request.method === "POST") {
+        requirePortalMutationOrigin(request);
+        const session = await resolvePortalSession(request, env);
+        if (!session) return json({ ok: false, code: "AUTH_REQUIRED" }, 401);
+        await enforcePortalMutationRateLimit(env, session);
+        const body = await request.json();
+        return json(await createBillingCheckout(request, env, session, body?.plan_code), 201);
+      }
+
+      if (url.pathname === "/api/portal/billing/portal" && request.method === "POST") {
+        requirePortalMutationOrigin(request);
+        const session = await resolvePortalSession(request, env);
+        if (!session) return json({ ok: false, code: "AUTH_REQUIRED" }, 401);
+        await enforcePortalMutationRateLimit(env, session);
+        return json(await createBillingPortal(request, env, session), 201);
       }
 
       if (url.pathname === "/api/portal/devices" && request.method === "GET") {
@@ -2649,6 +2682,31 @@ export default {
         OIDC_STATE_REPLAYED: 400,
         OIDC_STATE_EXPIRED: 400,
         OIDC_PROVIDER_ERROR: 400,
+        BILLING_NOT_CONFIGURED: 503,
+        BILLING_ADMIN_REQUIRED: 403,
+        BILLING_PLAN_INVALID: 400,
+        BILLING_PLAN_UNAVAILABLE: 409,
+        BILLING_PRICE_NOT_CONFIGURED: 503,
+        BILLING_SUBSCRIPTION_ALREADY_EXISTS: 409,
+        BILLING_CUSTOMER_NOT_READY: 409,
+        BILLING_CHECKOUT_RESPONSE_INVALID: 502,
+        BILLING_CHECKOUT_URL_INVALID: 502,
+        BILLING_PORTAL_RESPONSE_INVALID: 502,
+        BILLING_PORTAL_URL_INVALID: 502,
+        BILLING_PROVIDER_UNREACHABLE: 502,
+        BILLING_PROVIDER_RESPONSE_INVALID: 502,
+        BILLING_PROVIDER_ERROR: 502,
+        BILLING_WEBHOOK_SIGNATURE_INVALID: 400,
+        BILLING_WEBHOOK_TIMESTAMP_INVALID: 400,
+        BILLING_WEBHOOK_JSON_INVALID: 400,
+        BILLING_WEBHOOK_EVENT_INVALID: 400,
+        BILLING_WEBHOOK_PAYLOAD_TOO_LARGE: 413,
+        BILLING_EVENT_OBJECT_INVALID: 400,
+        BILLING_TENANT_INVALID: 400,
+        BILLING_TENANT_NOT_FOUND: 409,
+        BILLING_SUBSCRIPTION_INVALID: 400,
+        BILLING_PRICE_UNKNOWN: 409,
+        BILLING_PRICE_MISMATCH: 409,
         DEVICE_PAIRING_INVALID: 401,
         DEVICE_PAIRING_CREATE_FAILED: 503,
         DEVICE_AUTH_REQUIRED: 401,

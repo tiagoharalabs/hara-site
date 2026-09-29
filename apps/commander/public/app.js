@@ -878,6 +878,134 @@
     }
   }
 
+  async function loadBillingState() {
+    if (!remotePortal || !sessionAuthenticated) return;
+
+    const statusNode = document.getElementById("billingPlanStatus");
+    const portalButton = document.querySelector("[data-billing-portal]");
+    const planButtons = document.querySelectorAll("[data-billing-plan]");
+
+    try {
+      const response = await fetch("/api/portal/billing", {
+        cache: "no-store",
+        credentials: "same-origin",
+      });
+      if (!response.ok) return;
+      const payload = await response.json();
+      const canManage = payload?.can_manage === true;
+
+      planButtons.forEach((button) => {
+        const planCode = String(button.dataset.billingPlan || "").toUpperCase();
+        const plan = payload?.plans?.[planCode];
+        const current = payload?.connection?.plan_code === planCode
+          && ["active", "trialing"].includes(String(payload?.connection?.subscription_status || "").toLowerCase());
+
+        if (current) {
+          button.disabled = true;
+          button.setAttribute("aria-disabled", "true");
+          button.textContent = "Assinatura ativa";
+          return;
+        }
+
+        const ready = Boolean(plan?.checkout_ready && canManage);
+        button.disabled = !ready;
+        button.setAttribute("aria-disabled", String(!ready));
+        button.textContent = ready
+          ? (planCode === "SCALE" ? "Assinar Scale" : "Assinar Standard")
+          : (planCode === "SCALE" ? "Roadmap" : "Em preparação");
+
+        const priceLabel = document.querySelector('[data-billing-price-label="' + planCode + '"]');
+        if (priceLabel && ready) {
+          priceLabel.innerHTML = 'Preço no checkout <small>assinatura recorrente</small>';
+        }
+      });
+
+      if (portalButton) {
+        const ready = Boolean(payload?.connection?.customer_portal_ready && canManage);
+        portalButton.hidden = !ready;
+        portalButton.disabled = !ready;
+        portalButton.setAttribute("aria-disabled", String(!ready));
+      }
+
+      if (statusNode) {
+        if (payload?.connection?.subscription_present) {
+          const state = String(payload?.connection?.subscription_status || "conectada").replaceAll("_", " ");
+          statusNode.textContent = "Cobrança conectada. Status da assinatura: " + state + ".";
+        } else if (payload?.configured) {
+          statusNode.textContent = "Billing conectado. O checkout será liberado quando o catálogo comercial estiver ativo.";
+        } else {
+          statusNode.textContent = "Somente o Trial está publicado no catálogo de produção neste momento. Standard e Scale permanecem em preparação.";
+        }
+      }
+    } catch (_error) {
+      // Billing is additive. A billing read failure must not degrade the portal.
+    }
+  }
+
+  async function beginBillingCheckout(planCode, button) {
+    if (!remotePortal || !sessionAuthenticated || !planCode) return;
+    const original = button?.textContent || "Assinar";
+    if (button) {
+      button.disabled = true;
+      button.textContent = "Abrindo checkout...";
+    }
+
+    try {
+      const response = await fetch("/api/portal/billing/checkout", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ plan_code: planCode }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.url) {
+        throw new Error(String(payload?.code || "BILLING_CHECKOUT_FAILED"));
+      }
+      window.location.assign(payload.url);
+    } catch (error) {
+      const code = String(error?.message || "BILLING_CHECKOUT_FAILED");
+      const messages = {
+        BILLING_NOT_CONFIGURED: "A cobrança ainda não está configurada.",
+        BILLING_PLAN_UNAVAILABLE: "Este plano ainda não está disponível para assinatura.",
+        BILLING_PRICE_NOT_CONFIGURED: "O preço comercial deste plano ainda não foi publicado.",
+        BILLING_SUBSCRIPTION_ALREADY_EXISTS: "Já existe uma assinatura vinculada a este workspace.",
+        BILLING_ADMIN_REQUIRED: "Somente OWNER ou ADMIN pode alterar a assinatura.",
+      };
+      showBanner("warning", "Checkout não disponível", messages[code] || "Não foi possível abrir o checkout agora.");
+      if (button) {
+        button.disabled = false;
+        button.textContent = original;
+      }
+    }
+  }
+
+  async function openBillingPortal(button) {
+    if (!remotePortal || !sessionAuthenticated) return;
+    const original = button?.textContent || "Gerenciar cobrança";
+    if (button) {
+      button.disabled = true;
+      button.textContent = "Abrindo...";
+    }
+
+    try {
+      const response = await fetch("/api/portal/billing/portal", {
+        method: "POST",
+        credentials: "same-origin",
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.url) {
+        throw new Error(String(payload?.code || "BILLING_PORTAL_FAILED"));
+      }
+      window.location.assign(payload.url);
+    } catch (_error) {
+      showBanner("warning", "Cobrança indisponível", "Não foi possível abrir o portal de cobrança agora.");
+      if (button) {
+        button.disabled = false;
+        button.textContent = original;
+      }
+    }
+  }
+
   function copySidebars() {
     document.querySelectorAll("[data-sidebar]").forEach((node) => {
       node.innerHTML = sidebarTemplate.innerHTML;
@@ -948,6 +1076,7 @@
     }
     if (skipNextWorkspaceLoad && appViews.has(next)) {
       skipNextWorkspaceLoad = false;
+      if (next === "plans") loadBillingState();
       return;
     }
     if (next === "devices") {
@@ -956,6 +1085,7 @@
     } else if (appViews.has(next) || (next === "landing" && localHost)) {
       loadProductDashboard();
       if (next === "dashboard") loadDevices();
+      if (next === "plans") loadBillingState();
     }
   }
 
@@ -1083,6 +1213,22 @@
     if (revokeDeviceButton) {
       event.preventDefault();
       revokeDevice(revokeDeviceButton.dataset.revokeDevice, revokeDeviceButton);
+      return;
+    }
+
+    const billingPlan = event.target.closest("[data-billing-plan]");
+    if (billingPlan) {
+      event.preventDefault();
+      if (!billingPlan.disabled) {
+        beginBillingCheckout(billingPlan.dataset.billingPlan, billingPlan);
+      }
+      return;
+    }
+
+    const billingPortal = event.target.closest("[data-billing-portal]");
+    if (billingPortal) {
+      event.preventDefault();
+      if (!billingPortal.disabled) openBillingPortal(billingPortal);
       return;
     }
 
