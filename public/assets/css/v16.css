@@ -1308,3 +1308,16 @@ html[data-neon="off"] .console-nav img{
     animation:none!important;
   }
 }
+
+/* V16.3.13 — Theme-owned H.A.R.A Labs brand accent.
+   Light keeps Labs blue. Dark keeps Labs gold even with Neon OFF;
+   Neon only adds the theme-matched glow. */
+html[data-theme="dark"] .brand-word b{
+  color:#ffc83d;
+  text-shadow:none;
+}
+html[data-theme="dark"][data-neon="on"] .brand-word b{
+  color:#ffc83d;
+  text-shadow:0 0 7px rgba(255,200,61,.48),0 0 16px rgba(255,200,61,.20);
+}
+
