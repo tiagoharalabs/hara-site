@@ -26,7 +26,7 @@ def need(text: str, token: str, code: str) -> None:
     assert token in text, f"{code}:{token}"
 
 for token in ('platform": "LINUX"', "/api/device/enroll", "/agent/linux.py",
-              "systemctl --user enable --now", "chmod 600", '"agent_version": "0.3.13"',
+              "systemctl --user enable --now", "chmod 600", '"agent_version": "0.3.14"',
               "HARA_COMMANDER_AGENT_UPDATE=PASS", "HARA_COMMANDER_AGENT_UNINSTALL=PASS",
               "HARA_COMMANDER_AGENT_VERSION=", "HARA_COMMANDER_AGENT_DOCTOR=PASS",
               "/api/device/revoke-self", "SERVER_DEVICE_REVOKE=",
@@ -51,7 +51,7 @@ print("LINUX_INSTALLER_SECRET_ARGV_EXPOSURE=FALSE")
 
 for token in ('platform="WINDOWS"', "/api/device/enroll", "/agent/windows.ps1",
               "ConvertFrom-SecureString", "Register-ScheduledTask", "icacls.exe",
-              'agent_version="0.3.13"', "HARA_COMMANDER_AGENT_UPDATE=PASS",
+              'agent_version="0.3.14"', "HARA_COMMANDER_AGENT_UPDATE=PASS",
               "HARA_COMMANDER_AGENT_UNINSTALL=PASS", "HARA_COMMANDER_AGENT_VERSION=",
               "HARA_COMMANDER_AGENT_DOCTOR=PASS", "/api/device/revoke-self",
               "SERVER_DEVICE_REVOKE=", "HARA_COMMANDER_AGENT_UPDATE_ROLLBACK_READY=TRUE",
@@ -88,7 +88,7 @@ print("WINDOWS_INSTALLER_REDIRECT_FAIL_CLOSED=PASS")
 print("WINDOWS_INSTALLER_DEVICE_TOKEN_MEMORY_HYGIENE=PASS")
 
 assert MANIFEST.get("schema") == "hara.commander-agent-release.v1"
-assert MANIFEST.get("agent_version") == "0.3.13"
+assert MANIFEST.get("agent_version") == "0.3.14"
 entries = {item["path"]: item for item in MANIFEST.get("files", [])}
 for rel in ("agent/linux.py", "agent/windows.ps1", "install/linux.sh", "install/windows.ps1"):
     path = PUBLIC / rel
@@ -122,6 +122,9 @@ windows_agent_web_calls = [line for line in WINDOWS_AGENT.splitlines() if "Invok
 assert windows_agent_web_calls and all("-MaximumRedirection 0" in line for line in windows_agent_web_calls), "WINDOWS_AGENT_REDIRECT_FOLLOW_PRESENT"
 assert "COMMANDER_WINDOWS_AGENT_SELF_TEST=PASS" in WINDOWS_AGENT, "WINDOWS_AGENT_SELF_TEST_MISSING"
 assert '$InstallTmp = $Agent + ".install.ps1"' in WINDOWS, "WINDOWS_INSTALL_TEMP_PS1_SUFFIX_MISSING"
+assert '$TaskAction = New-ScheduledTaskAction' in WINDOWS, "WINDOWS_SCHEDULED_TASK_ACTION_OBJECT_MISSING"
+assert 'Register-ScheduledTask -TaskName $TaskName -Action $TaskAction' in WINDOWS, "WINDOWS_SCHEDULED_TASK_ACTION_BINDING_MISSING"
+assert '$Action = New-ScheduledTaskAction' not in WINDOWS, "WINDOWS_ACTION_PARAMETER_TYPE_COLLISION_PRESENT"
 assert '$InstallTmp = $Agent + ".install"' not in WINDOWS, "WINDOWS_INSTALL_TEMP_INVALID_EXTENSION_PRESENT"
 assert 'if (-not (Try-SetRuntimeStatus -StartedAt ([DateTime]::UtcNow.ToString("o")))) {' in WINDOWS_AGENT, "WINDOWS_AGENT_STARTUP_STATUS_CONDITION_PS51_INVALID"
 assert 'if (-not $StartupCfg.base_url -or -not $StartupCfg.device_id -or -not $StartupCfg.encrypted_device_token -or -not $StartupCfg.architecture) { throw "DEVICE_CONFIG_INVALID" }' in WINDOWS_AGENT, "WINDOWS_AGENT_STARTUP_CONFIG_CONDITION_PS51_INVALID"
@@ -255,7 +258,7 @@ with tempfile.TemporaryDirectory(prefix="hara-agent-startup-") as tmp:
                     break
             time.sleep(0.1)
         assert startup, "LINUX_AGENT_STARTUP_STATUS_MISSING"
-        assert startup.get("agent_version") == "0.3.13", "LINUX_AGENT_STARTUP_VERSION_INVALID"
+        assert startup.get("agent_version") == "0.3.14", "LINUX_AGENT_STARTUP_VERSION_INVALID"
         assert startup.get("started_at_utc"), "LINUX_AGENT_STARTUP_ATTESTATION_MISSING"
         time.sleep(1.2)
         inert = json.loads(status_path.read_text(encoding="utf-8"))
