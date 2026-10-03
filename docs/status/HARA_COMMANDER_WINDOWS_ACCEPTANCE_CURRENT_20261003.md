@@ -281,3 +281,88 @@ PASS.
 Next gate: one fresh production pairing on the canonical Windows VM, followed by
 task/config custody, heartbeat, online/offline, reboot/reconnect and OpenAI
 selected-device E2E.
+
+
+## Successful Windows 0.3.14 production enrollment — 2026-10-03
+
+The canonical Windows acceptance VM completed a fresh production enrollment with
+the public 0.3.14 release.
+
+Installer output:
+
+```text
+HARA_COMMANDER_AGENT_INTEGRITY=PASS
+HARA_COMMANDER_AGENT_SELF_TEST=PASS
+HARA_COMMANDER_AGENT_STARTUP_ATTESTATION=PASS
+HARA_COMMANDER_DEVICE_ENROLLMENT=PASS
+HARA_COMMANDER_AGENT_TASK=REGISTERED_INERT_UNTIL_LOCAL_SESSION
+DEVICE_ID=HARA-DEVICE-64adbd7a-02b1-4890-acdb-9543e8b48d00
+DEVICE_TOKEN_EXPOSED=FALSE
+SESSION_AUTHORITY=LOCAL_OPERATOR_TERMINAL
+```
+
+D1 readback immediately after enrollment:
+
+```text
+DEVICE_STATE=ACTIVE
+AGENT_VERSION=0.3.14
+PLATFORM=WINDOWS
+ARCHITECTURE=x64
+TUNNEL_MODE=OUTBOUND_RELAY_OFFLINE
+REVOKED_AT=NULL
+```
+
+The offline relay state is expected until the human operator opens the local
+authorization session.
+
+Post-install custody/persistence checks:
+
+```text
+SCHEDULED_TASK=HARA Commander Agent
+TASK_PRINCIPAL_USER=sarti
+TASK_PRINCIPAL_LOGON=Interactive
+TASK_PRINCIPAL_RUNLEVEL=Limited
+TASK_ACTION=powershell.exe ... hara-commander-agent.ps1
+TASK_TRIGGER_USER=HARA_WIN11\sarti
+SYSTEM_READ_COMMANDER_ROOT=DENIED
+```
+
+The first task execution was observed as interrupted with `0xC000013A`. Restarting
+the already-installed Scheduled Task (without reinstall or re-pair) established
+stable persistence:
+
+```text
+TASK_START_REQUEST=PASS
+T+1..T+12=Running
+PID=9284
+FINAL_STATE=Running
+LAST_RESULT=0x00041301
+```
+
+A later independent readback still showed:
+
+```text
+PROCESS_PID=9284
+PROCESS_NAME=powershell.exe
+TASK_STATE=Running
+TASK_PRINCIPAL=sarti
+TASK_LOGON=Interactive
+TASK_RUNLEVEL=Limited
+LAST_RESULT=0x00041301
+```
+
+Current gate:
+
+```text
+WINDOWS_0314_ENROLLMENT=PASS
+WINDOWS_0314_AGENT_INTEGRITY=PASS
+WINDOWS_0314_SELFTEST=PASS
+WINDOWS_0314_STARTUP_ATTESTATION=PASS
+WINDOWS_0314_TASK_PERSISTENCE=PASS
+WINDOWS_0314_SYSTEM_CUSTODY_BOUNDARY=PASS
+LOCAL_OPERATOR_SESSION=PENDING_HUMAN_OPEN
+ONLINE_HEARTBEAT_AFTER_LOCAL_SESSION=PENDING
+FIVE_TOOL_LIVE_E2E=PENDING
+REBOOT_RECONNECT=PENDING
+OPENAI_SELECTED_DEVICE_E2E=PENDING
+```
