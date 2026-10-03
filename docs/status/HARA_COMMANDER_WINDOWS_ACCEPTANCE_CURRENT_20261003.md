@@ -131,3 +131,42 @@ OPENAI_SELECTED_DEVICE_E2E=PENDING
 
 The one-time pairing secret must remain human-entered inside the Windows session;
 it must not be copied into Git, chat, logs, or automation evidence.
+
+
+## Windows portal bootstrap hotfix — 2026-10-03
+
+A post-0.3.12 acceptance retest proved that the Agent/installer payloads were fixed,
+but the portal's copied Windows bootstrap still executed the installer through
+`Invoke-RestMethod` + `Invoke-Expression`. In the logged-in Windows PowerShell
+session this failed immediately after secure pairing input with
+`InvokeMethodOnNull`; the fresh D1 pairing remained unconsumed and no new device
+row was created, proving the failure happened before `/api/device/enroll`.
+
+The portal bootstrap was changed to fail-closed file execution:
+
+```text
+FETCH=Invoke-WebRequest -> unique TEMP .ps1
+REDIRECTS=DENIED
+EXECUTION=powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File
+CHILD_EXIT=PROPAGATED
+TEMP_FILE=REMOVED_IN_FINALLY
+IEX=ABSENT
+CANONICAL_ORIGIN_PIN=PASS
+```
+
+Regression coverage now requires the file-execution flow and explicitly denies the
+old `iex ([string]$haraBootstrap)` / `$haraBootstrap=irm` path.
+
+```text
+SOURCE_COMMIT=9d1f9c1c59a5169ec606b9000049aef79a60e172
+CLOUDFLARE_VERSION_ID=69ee4b70-839c-4c9c-a4ff-1e648f105083
+COMMANDER_SUPPLY_CHAIN_WINDOWS_BOOTSTRAP_IEX_ABSENT=PASS
+COMMANDER_SUPPLY_CHAIN_WINDOWS_BOOTSTRAP_FETCH_FAILURE_PROPAGATES=PASS
+LIVE_IEX_COUNT=0
+LIVE_FILE_EXEC_MARKERS_INDEX_AND_APP_JS=PASS
+LIVE_HEALTH=PASS
+```
+
+The next operator action is to hard-refresh the Commander portal, generate a new
+one-time pairing code and copy the newly served Windows command. Older copied
+commands containing `iex` must not be reused.
