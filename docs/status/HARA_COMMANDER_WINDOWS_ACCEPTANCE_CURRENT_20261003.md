@@ -366,3 +366,98 @@ FIVE_TOOL_LIVE_E2E=PENDING
 REBOOT_RECONNECT=PENDING
 OPENAI_SELECTED_DEVICE_E2E=PENDING
 ```
+
+
+## Windows live selected-device five-tool proof — 2026-10-03
+
+After the operator opened the local authorization console, the canonical Windows
+device transitioned from `OUTBOUND_RELAY_OFFLINE` to `OUTBOUND_RELAY` and the
+Founder subject selection was moved to the Windows device.
+
+```text
+DEVICE_ID=HARA-DEVICE-64adbd7a-02b1-4890-acdb-9543e8b48d00
+DEVICE_NAME=HARA_WIN11
+AGENT_VERSION=0.3.14
+DEVICE_STATE=ACTIVE
+TUNNEL_MODE=OUTBOUND_RELAY
+LOCAL_SESSION=AUTHORIZED
+SELECTED_DEVICE=HARA_WIN11
+```
+
+A real device-level five-tool run through the production D1 queue and Agent
+completed all five governed operations:
+
+```text
+hara.health=COMPLETED/PASS
+hara.functions.list=COMPLETED/PASS
+hara.functions.describe(device.info)=COMPLETED/PASS
+hara.functions.invoke(device.info)=COMPLETED/PASS
+hara.receipts.get(invoke receipt)=COMPLETED/PASS
+```
+
+Health result identified the exact Windows target:
+
+```text
+hostname=HARA_WIN11
+platform=WINDOWS
+architecture=x64
+agent_version=0.3.14
+powershell_version=5.1.26100.9444
+tunnel_mode=OUTBOUND_RELAY
+hara_services_state=PASS
+services_bridge_state=PASS
+```
+
+The live invoke completed with process exit code 0 and generated receipt SHA:
+
+```text
+INVOKE_RECEIPT_SHA256=2fc0a2d1eb09741568b001f9c2a15244dcedaeb1d6ae9a6992996c5854f92355
+INVOKE_FUNCTION=device.info
+INVOKE_RISK_CLASS=READ_ONLY
+INVOKE_MUTATION_PERFORMED=FALSE
+```
+
+The fifth tool retrieved the same invoke receipt and proved:
+
+```text
+schema=hara.commander-device-receipt.v1
+device_id=HARA-DEVICE-64adbd7a-02b1-4890-acdb-9543e8b48d00
+tool_id=hara.functions.invoke
+function_id_if_any=device.info
+transport_mode=OUTBOUND_RELAY
+state=PASS
+payload_values_persisted=false
+result_binding=STDOUT_SHA256_V1
+result_stdout_sha256=9b26cad74ad82c8914620b2d2d20e5638a13447a5b88619cd96c50318f66e666
+```
+
+OpenAI negative N3 was also executed against the live selected Windows device:
+
+```text
+REQUEST=hara.functions.invoke(function_id=shell.run, argv=[whoami])
+FINAL_STATE=FAILED
+ERROR_CODE=UNKNOWN_FUNCTION_ID
+RESULT_STATE=DENIED
+MUTATION_PERFORMED=FALSE
+OPERATIONAL_AUTHORITY=LOCAL_OPERATOR_SESSION
+```
+
+This proves exact-function fail-closed behavior with no shell fallback.
+
+The canonical customer-MCP harness remains pending because the local 0600
+`mcp-product-prod-token` custody file is not materialized on Storage, Services
+or nucleo-a. Existing handoff explicitly says not to repeat product-token
+provisioning, so the PROD secret was not rotated.
+
+Next gates:
+
+```text
+WINDOWS_SELECTED_DEVICE_FIVE_TOOL=PASS
+WINDOWS_NEGATIVE_UNKNOWN_FUNCTION=PASS
+WINDOWS_REBOOT_RECONNECT=PENDING
+CUSTOMER_MCP_FIVE_TOOL_HARNESS=PENDING_TOKEN_CUSTODY_RECOVERY
+OPENAI_EXTERNAL_CLIENT_E2E=PENDING
+OPENAI_NEGATIVE_N1_ARBITRARY_SHELL=PREPARED
+OPENAI_NEGATIVE_N2_CROSS_TENANT=PREPARED
+OPENAI_NEGATIVE_N3_UNKNOWN_FUNCTION=LIVE_PASS
+```
