@@ -461,3 +461,42 @@ OPENAI_NEGATIVE_N1_ARBITRARY_SHELL=PREPARED
 OPENAI_NEGATIVE_N2_CROSS_TENANT=PREPARED
 OPENAI_NEGATIVE_N3_UNKNOWN_FUNCTION=LIVE_PASS
 ```
+
+
+## Windows reboot/reconnect proof — 2026-10-03
+
+The canonical VM was powered off and started again from nucleo-a. After Windows
+login as the enrolled user, the QEMU Guest Agent and the Commander Scheduled Task
+were both revalidated.
+
+```text
+VM_STATE=running
+QGA=PASS
+IPV4=192.168.122.177
+INTERACTIVE_USER=HARA_WIN11\sarti
+TASK_PRESENT=True
+TASK_STATE=Running
+TASK_LAST_RESULT=0x00041301
+TASK_LAST_RUN_UTC=2026-10-03T23:02:08Z
+AGENT_PROCESS_PID=3952
+```
+
+The PROD device record remained:
+
+```text
+DEVICE_STATE=ACTIVE
+AGENT_VERSION=0.3.14
+REVOKED_AT=NULL
+TUNNEL_MODE=OUTBOUND_RELAY_OFFLINE
+LAST_SEEN_AT=2026-10-03T23:02:28.763Z
+```
+
+`OUTBOUND_RELAY_OFFLINE` after reboot is expected until the operator explicitly
+opens the local authorization session again. The Agent daemon itself restored
+automatically from the Scheduled Task after user login.
+
+```text
+WINDOWS_REBOOT_RECONNECT=PASS
+WINDOWS_AGENT_AUTOSTART_AFTER_LOGIN=PASS
+WINDOWS_LOCAL_AUTH_SESSION_AUTO_REOPEN=DENIED_BY_DESIGN
+```
