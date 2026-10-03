@@ -6,7 +6,7 @@ $RuntimeStatus = Join-Path $Root "runtime-status.json"
 $SessionPath = Join-Path $Root "operator-session.json"
 $ConsoleEvents = Join-Path $Root "console-events.jsonl"
 $SessionMaxHours = 12
-$AgentVersion = "0.3.12"
+$AgentVersion = "0.3.13"
 $FunctionId = "device.info"
 
 function Get-PlainText([Security.SecureString]$SecureValue) {
