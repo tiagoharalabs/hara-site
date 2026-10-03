@@ -170,3 +170,69 @@ LIVE_HEALTH=PASS
 The next operator action is to hard-refresh the Commander portal, generate a new
 one-time pairing code and copy the newly served Windows command. Older copied
 commands containing `iex` must not be reused.
+
+
+## Windows installer temp-extension hotfix 0.3.13 — 2026-10-03
+
+The 0.3.12 Agent and portal bootstrap were both healthy, but the real Windows
+installer still failed its internal Agent self-test after successful pairing and
+integrity verification.
+
+A controlled Windows PowerShell 5.1 probe proved the exact cause:
+
+```text
+GOOD_PS1_EXIT=0
+BAD_FILE=C:\Windows\Temp\hara-ext-bad.ps1.install
+BAD_RESULT=PowerShell rejected -File because the filename did not end in .ps1
+BAD_INSTALL_EXIT=1
+```
+
+The installer used:
+
+```text
+$InstallTmp = $Agent + ".install"
+```
+
+and then executed that file with `powershell.exe -File`. Windows PowerShell
+5.1 refuses `-File` inputs whose final extension is not `.ps1`.
+
+The 0.3.13 hotfix changes the temporary path to:
+
+```text
+$InstallTmp = $Agent + ".install.ps1"
+```
+
+and adds a regression guard that requires the `.ps1` suffix and denies the old
+invalid extension.
+
+Validation on the actual Windows acceptance VM:
+
+```text
+WINDOWS_POWERSHELL_VERSION=5.1.26100.9444
+AGENT_PARSE_ERRORS=0
+INSTALLER_PARSE_ERRORS=0
+INSTALL_TMP_SELFTEST_EXIT=0
+WINDOWS_INSTALL_TMP_PS1_SELFTEST=PASS
+```
+
+The live production release was then downloaded again by the VM and retested:
+
+```text
+LIVE_AGENT_SHA256=a9d9a9e6dbe57bf31e37aa8b053470da7f336545057cc09167d91173c43cdb5e
+LIVE_INSTALL_TMP_SELFTEST_EXIT=0
+LIVE_WINDOWS_INSTALL_TMP_PS1_SELFTEST=PASS
+```
+
+Release identity:
+
+```text
+SOURCE_COMMIT=46fbd05d3665911bdd3ccbb0cdb27a06793ebdc9
+AGENT_VERSION=0.3.13
+CLOUDFLARE_VERSION_ID=863cbd12-c187-4aa3-b3b4-c8e9ab28eb45
+PUBLIC_AGENT_WINDOWS_SHA256=a9d9a9e6dbe57bf31e37aa8b053470da7f336545057cc09167d91173c43cdb5e
+PUBLIC_INSTALL_WINDOWS_SHA256=9793c5523f93901ef6af44639ce71a85ffef7947a94f3c0e9a4e9149de68971c
+```
+
+The next gate is a fresh operator-generated production pairing using the final
+0.3.13 installer. After success, continue with task/ACL/DPAPI/heartbeat,
+reboot/reconnect and OpenAI selected-device E2E.
