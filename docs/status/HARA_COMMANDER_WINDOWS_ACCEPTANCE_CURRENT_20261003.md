@@ -236,3 +236,48 @@ PUBLIC_INSTALL_WINDOWS_SHA256=9793c5523f93901ef6af44639ce71a85ffef7947a94f3c0e9a
 The next gate is a fresh operator-generated production pairing using the final
 0.3.13 installer. After success, continue with task/ACL/DPAPI/heartbeat,
 reboot/reconnect and OpenAI selected-device E2E.
+
+
+## Windows Scheduled Task hotfix 0.3.14 — 2026-10-03
+
+The 0.3.13 install path reached Scheduled Task registration after successful
+pairing, Agent integrity verification and Agent self-test. The real user-session
+install then failed because the installer reused the typed top-level parameter
+`[string]$Action` for the object returned by `New-ScheduledTaskAction`.
+PowerShell converted/lost the expected CIM task-action object before
+`Register-ScheduledTask`.
+
+The installer now uses a dedicated `$TaskAction` variable and regression guards
+deny reuse of `$Action` for Scheduled Task objects.
+
+A real user-session probe on `HARA_WIN11\sarti` proved:
+
+```text
+USER=HARA_WIN11\sarti
+PARAM_ACTION_TYPE=System.String
+TASK_ACTION_TYPE=Microsoft.Management.Infrastructure.CimInstance
+TRIGGER_USER=sarti
+TASK_REGISTERED=True
+TASK_STATE=Ready
+USER_TASK_PROBE=PASS
+TASK_CLEANUP=True
+```
+
+Release identity:
+
+```text
+SOURCE_COMMIT=189d5a6a90de1f1ad31166651e773e37d1f4b6e0
+AGENT_VERSION=0.3.14
+CLOUDFLARE_VERSION_ID=77c5a8ff-b53a-4174-9650-bc51fd29cf2f
+PUBLIC_AGENT_WINDOWS_SHA256=acbe9f4e6c6ce782b02e581b7aa44a5ce007c680dd358d2ffc0bfb381ce709f4
+PUBLIC_INSTALL_WINDOWS_SHA256=4b28491f9840ef27005a138e3050c08dd2bab3c8cce2b592c1637cb958f8996e
+```
+
+The production installer was read back from the public domain and confirmed to
+contain `$TaskAction = New-ScheduledTaskAction` and
+`Register-ScheduledTask ... -Action $TaskAction`; production health remained
+PASS.
+
+Next gate: one fresh production pairing on the canonical Windows VM, followed by
+task/config custody, heartbeat, online/offline, reboot/reconnect and OpenAI
+selected-device E2E.
