@@ -1,7 +1,7 @@
 # H.A.R.A. Commander — OpenAI / Desktop-Parity Successor Handoff
 
 Date: 2026-10-04
-Status: LIVE_PROVEN_0_3_18 + SUCCESSOR_CANDIDATE_0_3_25_STATIC_PASS_PENDING_LIVE_GATE
+Status: LIVE_PROVEN_0_3_25_READ_ONLY_CONTEXT + PROCESS_RUN_SCHEMA_REFRESH_PENDING
 Scope: ChatGPT/OpenAI customer MCP → H.A.R.A. Identity → Commander edge → outbound Agent → governed Linux execution
 
 ## Executive state
@@ -388,6 +388,42 @@ This closes an important retirement gap: the model can trust hara.capabilities a
 The full branch regression suite passed with exit code 0 after the 0.3.25 cut, including the Agent self-test, customer MCP surface, device contract, installer/release integrity, Event V2 productization, E2E harness, prod static, privacy/NOC and multi-device routing.
 
 This remains **SUCCESSOR_CANDIDATE** only. Promotion still requires a fresh live canary. The authoritative live-proven version remains **0.3.18**.
+
+## 0.3.25 production rollout and live canary
+
+Production Worker/assets were promoted from the 0.3.25 handoff branch after dry-run and regression gates.
+
+Deployment receipt:
+
+- Worker version: 297a40ca-5391-43a2-9a61-2343455cd5e4
+- deployment ID: 4ff2f77b-4833-4c93-aa8c-f9cbe09ecce0
+- rollback Worker: a4317351-8962-4500-b714-72cb173b4361
+- public runtime assets: CURRENT
+- public fail-closed smoke: PASS
+- PROD D1 readback: PASS
+- Agent public release: 0.3.25
+
+The nucleo-a canary was updated using the published Linux updater. Update gates closed:
+
+- HARA_COMMANDER_AGENT_INTEGRITY=PASS
+- HARA_COMMANDER_AGENT_STARTUP_ATTESTATION=PASS
+- HARA_COMMANDER_AGENT_UPDATE=PASS
+- rollback-ready=TRUE
+- local operator session remained ACTIVE
+- secret material exposed=FALSE
+
+Live proof through the customer H.A.R.A. Commander MCP, not Desktop Commander:
+
+- hara.health -> PASS, Agent 0.3.25, 13/13 functions
+- hara.capabilities -> PASS and advertises process.run, system.resources, workspace.inspect plus the corrected hash/diff/copy/delete surface
+- capability tool_details -> risk class, local approval requirement, required grant and preferred-interface metadata live
+- system.resources -> PASS through governed function path, receipt a20ec92faa4361218353c91abe7191e97a02d8599fd563ac2ad3129e6e0a14c4
+- workspace.inspect -> PASS through governed function path, receipt 5c7c90b509749a1047e8b46b1c30c2774458c5394b1a21065ca766c8565c55b2
+- nucleo-a workspace Git metadata resolved without shell/external command
+
+The current ChatGPT conversation loaded the MCP tool schema before the 0.3.25 deployment, so the newly named hara.process.run tool is not yet present in this conversation's callable-tool snapshot even though the live hara.capabilities response advertises it. A ChatGPT tool refresh or fresh conversation is required for a named live call of process.run. Existing process.start/output remains live and usable meanwhile.
+
+The prior 0.3.18 designation is superseded for the read-only/context live path by this 0.3.25 canary. Process-run named-tool acceptance remains pending only on client schema refresh, not Agent/Worker source readiness.
 
 ## Current known limitations
 
