@@ -100,6 +100,7 @@ const MCP_TOOL_GRANTS = Object.freeze({
   "hara.files.preimages.list": "COMMANDER_READ_ONLY_INVOKE",
   "hara.files.rollback": "COMMANDER_MUTATION_INVOKE",
   "hara.process.sessions": "COMMANDER_READ_ONLY_INVOKE",
+  "hara.process.run": "COMMANDER_PROCESS_EXECUTION",
   "hara.process.start": "COMMANDER_PROCESS_EXECUTION",
   "hara.process.output": "COMMANDER_READ_ONLY_INVOKE",
   "hara.process.interact": "COMMANDER_PROCESS_EXECUTION",
@@ -2200,6 +2201,7 @@ function customerMcpDevicePayload(toolId, args) {
   if (toolId === "hara.files.preimages.list") return {limit:args.limit === undefined ? 50 : Number(args.limit),...(args.path === undefined ? {} : {path:String(args.path)})};
   if (toolId === "hara.files.rollback") return {preimage_id:String(args.preimage_id || "")};
   if (toolId === "hara.process.sessions") return {};
+  if (toolId === "hara.process.run") return {command:String(args.command ?? ""),...(args.cwd === undefined ? {} : {cwd:String(args.cwd)}),timeout_ms:args.timeout_ms === undefined ? 3000 : Number(args.timeout_ms),max_lines:args.max_lines === undefined ? 200 : Number(args.max_lines)};
   if (toolId === "hara.process.start") return {command:String(args.command ?? ""),...(args.cwd === undefined ? {} : {cwd:String(args.cwd)}),timeout_ms:args.timeout_ms === undefined ? 1000 : Number(args.timeout_ms)};
   if (toolId === "hara.process.output") return {session_id:String(args.session_id || ""),...(args.offset === undefined ? {} : {offset:Number(args.offset)}),length:args.length === undefined ? 200 : Number(args.length),timeout_ms:args.timeout_ms === undefined ? 500 : Number(args.timeout_ms)};
   if (toolId === "hara.process.interact") return {session_id:String(args.session_id || ""),input:String(args.input ?? ""),timeout_ms:args.timeout_ms === undefined ? 1000 : Number(args.timeout_ms)};
@@ -2263,7 +2265,16 @@ function agentPurposeToolReady(device, toolId) {
   if (String(device?.platform || "").toUpperCase() !== "LINUX") return false;
   const parts=String(device?.agent_version || "0.0.0").split(".").map((v)=>Number(v));
   const [a=0,b=0,c=0]=parts;
-  const minPatch = ["hara.system.resources","hara.workspace.inspect"].includes(toolId) ? 24 : (["hara.files.preimages.list","hara.files.rollback"].includes(toolId) ? 21 : (isDeviceProcessTool(toolId) ? 20 : (isDeviceMutationTool(toolId) ? 19 : (toolId === "hara.files.read_many" ? 18 : (toolId === "hara.files.search" ? 17 : 16)))));
+  const minPatch =
+    toolId === "hara.process.run" ? 25
+    : ["hara.system.resources","hara.workspace.inspect"].includes(toolId) ? 24
+    : ["hara.files.hash","hara.files.diff","hara.files.copy","hara.files.delete"].includes(toolId) ? 23
+    : ["hara.files.preimages.list","hara.files.rollback"].includes(toolId) ? 21
+    : isDeviceProcessTool(toolId) ? 20
+    : isDeviceMutationTool(toolId) ? 19
+    : toolId === "hara.files.read_many" ? 18
+    : toolId === "hara.files.search" ? 17
+    : 16;
   return a > 0 || b > 3 || (b === 3 && c >= minPatch);
 }
 
@@ -2333,8 +2344,15 @@ function capabilitiesForDevice(device, grants) {
     tools.push("hara.files.preimages.list");
     if (grants.includes("COMMANDER_MUTATION_INVOKE")) tools.push("hara.files.rollback");
   }
+  if (linux && semverAtLeast(device.agent_version,23)) {
+    tools.push("hara.files.hash","hara.files.diff");
+    if (grants.includes("COMMANDER_MUTATION_INVOKE")) tools.push("hara.files.copy","hara.files.delete");
+  }
   if (linux && semverAtLeast(device.agent_version,24)) {
     tools.push("hara.system.resources","hara.workspace.inspect");
+  }
+  if (linux && semverAtLeast(device.agent_version,25) && grants.includes("COMMANDER_PROCESS_EXECUTION")) {
+    tools.push("hara.process.run");
   }
   const availableTools=[...new Set(tools)].sort();
   return {

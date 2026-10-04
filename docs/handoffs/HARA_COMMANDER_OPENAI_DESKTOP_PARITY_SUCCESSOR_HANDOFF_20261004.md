@@ -1,7 +1,7 @@
 # H.A.R.A. Commander — OpenAI / Desktop-Parity Successor Handoff
 
 Date: 2026-10-04
-Status: LIVE_PROVEN_0_3_18 + SUCCESSOR_CANDIDATE_0_3_24_STATIC_PASS_PENDING_LIVE_GATE
+Status: LIVE_PROVEN_0_3_18 + SUCCESSOR_CANDIDATE_0_3_25_STATIC_PASS_PENDING_LIVE_GATE
 Scope: ChatGPT/OpenAI customer MCP → H.A.R.A. Identity → Commander edge → outbound Agent → governed Linux execution
 
 ## Executive state
@@ -356,6 +356,36 @@ The server-side capability projection was also enriched without changing the Age
 - preferred_interface
 
 This lets GPT plan around local approval and risk before attempting a call, while still steering it away from the generic hara.functions.invoke compatibility surface when a purpose-specific tool exists.
+
+## Desktop Commander retirement P0 — candidate 0.3.25
+
+The successor advanced again to **Agent 0.3.25** with a retirement-focused usability cut.
+
+New purpose-specific tool: hara.process.run.
+
+hara.process.run provides one-shot governed command execution for short tasks that previously required a multi-call start -> output lifecycle. It:
+
+- uses the existing COMMANDER_PROCESS_EXECUTION grant
+- requires local human approval before execution
+- caps command payload, timeout and returned lines
+- supports an optional governed working directory
+- force-terminates the child if the one-shot deadline is exceeded
+- does not retain a process session after completion or timeout
+- keeps command payload hot-path redaction and receipt binding
+- remains PROCESS_EXECUTION_V1; this is not unrestricted background shell authority
+
+The public MCP candidate surface is now **36 tools**.
+
+Capability negotiation was also corrected. The 0.3.23+ Agent already contains hara.files.hash, hara.files.diff, hara.files.copy and hara.files.delete, but the previous hara.capabilities projection omitted them. The corrected projection now:
+
+- advertises hash/diff only from the conservatively proven 0.3.23 gate
+- advertises copy/delete from 0.3.23 only when the mutation grant exists
+- refuses to claim those tools for earlier Agent versions
+- advertises hara.process.run only from 0.3.25 with the process-execution grant
+
+This closes an important retirement gap: the model can trust hara.capabilities as the source of truth instead of discovering supported operations by failed calls.
+
+The full branch regression suite passed with exit code 0 after the 0.3.25 cut, including the Agent self-test, customer MCP surface, device contract, installer/release integrity, Event V2 productization, E2E harness, prod static, privacy/NOC and multi-device routing.
 
 This remains **SUCCESSOR_CANDIDATE** only. Promotion still requires a fresh live canary. The authoritative live-proven version remains **0.3.18**.
 

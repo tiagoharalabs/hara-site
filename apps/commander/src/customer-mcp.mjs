@@ -31,6 +31,7 @@ export const CUSTOMER_MCP_TOOLS = Object.freeze([
   "hara.files.preimages.list",
   "hara.files.rollback",
   "hara.process.sessions",
+  "hara.process.run",
   "hara.process.start",
   "hara.process.output",
   "hara.process.interact",
@@ -490,6 +491,26 @@ export function createCustomerMcpServer({ executeTool }) {
       inputSchema: z.object({ computer: z.string().min(1).max(120).optional() }).strict(),
     }),
     call("hara.process.sessions"),
+  );
+
+  server.registerTool(
+    "hara.process.run",
+    toolConfig({
+      title: "Run Governed Command",
+      description: "Run one bounded shell command to completion on a governed computer. Requires local human approval, kills the process if the timeout is exceeded, returns bounded output, and does not leave a managed session behind.",
+      inputSchema: z.object({
+        computer: z.string().min(1).max(120).optional(),
+        command: z.string().min(1).max(4096),
+        cwd: z.string().min(1).max(4096).optional(),
+        timeout_ms: z.number().int().min(100).max(10000).optional(),
+        max_lines: z.number().int().min(1).max(500).optional(),
+      }).strict(),
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: true,
+    }),
+    call("hara.process.run"),
   );
 
   server.registerTool(

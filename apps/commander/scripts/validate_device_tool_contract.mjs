@@ -30,8 +30,12 @@ need(preimagesPayload.limit===20 && preimagesPayload.path==="/tmp/x","PREIMAGES_
 const rollbackPayload=canonicalDeviceToolPayload("hara.files.rollback",{preimage_id:"HARA-PREIMAGE-0123456789abcdef0123456789abcdef"});
 need(rollbackPayload.preimage_id.startsWith("HARA-PREIMAGE-"),"ROLLBACK_CANONICAL");
 need(isDeviceProcessTool("hara.process.output"),"PROCESS_TOOL_OUTPUT");
+need(isDeviceProcessTool("hara.process.run"),"PROCESS_TOOL_RUN");
+need(isDeviceProcessMutationTool("hara.process.run"),"PROCESS_TOOL_RUN_MUTATION");
 need(isDeviceProcessMutationTool("hara.process.start"),"PROCESS_TOOL_START_MUTATION");
 need(isDeviceProcessMutationTool("hara.process.interact"),"PROCESS_TOOL_INTERACT_MUTATION");
+const prun=canonicalDeviceToolPayload("hara.process.run",{command:"printf hi",cwd:"/tmp",timeout_ms:500,max_lines:20});
+need(prun.command==="printf hi" && prun.timeout_ms===500 && prun.max_lines===20,"PROCESS_RUN_CANONICAL");
 const pstart=canonicalDeviceToolPayload("hara.process.start",{command:"printf hi",cwd:"/tmp",timeout_ms:500});
 need(pstart.command==="printf hi" && pstart.timeout_ms===500,"PROCESS_START_CANONICAL");
 const pout=canonicalDeviceToolPayload("hara.process.output",{session_id:"HARA-PROC-test",length:20,timeout_ms:100});
@@ -73,6 +77,7 @@ expectError("FILESYSTEM_LIST_DEPTH_DENIED","DEVICE_CALL_PAYLOAD_INVALID",()=>can
 expectError("FILESYSTEM_READ_MANY_COUNT_DENIED","DEVICE_CALL_PAYLOAD_INVALID",()=>canonicalDeviceToolPayload("hara.files.read_many",{paths:[]}));
 expectError("MUTATION_WRITE_SIZE_DENIED","DEVICE_CALL_PAYLOAD_INVALID",()=>canonicalDeviceToolPayload("hara.files.write",{path:"/tmp/x",content:"x".repeat(70000)}));
 expectError("MUTATION_EDIT_EMPTY_MATCH_DENIED","DEVICE_CALL_PAYLOAD_INVALID",()=>canonicalDeviceToolPayload("hara.files.edit",{path:"/tmp/x",old_text:"",new_text:"x"}));
+expectError("PROCESS_RUN_TIMEOUT_DENIED","DEVICE_CALL_PAYLOAD_INVALID",()=>canonicalDeviceToolPayload("hara.process.run",{command:"true",timeout_ms:20000}));
 expectError("PROCESS_COMMAND_SIZE_DENIED","DEVICE_CALL_PAYLOAD_INVALID",()=>canonicalDeviceToolPayload("hara.process.start",{command:"x".repeat(5000)}));
 expectError("PROCESS_SESSION_ID_DENIED","DEVICE_CALL_PAYLOAD_INVALID",()=>canonicalDeviceToolPayload("hara.process.output",{session_id:"bad id"}));
 need(canonicalDeviceToolPayload("hara.files.copy",{source:"/tmp/a",destination:"/tmp/b"}).source==="/tmp/a","MUTATION_COPY_CANONICAL");
@@ -86,6 +91,8 @@ need(worker.includes("transport_request_id") && worker.includes("transportReques
 need(worker.includes("customerCapabilities") && worker.includes("capabilitiesForDevice"),"WORKER_CAPABILITY_NEGOTIATION");
 need(worker.includes("customerUsage") && worker.includes("quota.status"),"WORKER_USAGE_SURFACE");
 need(worker.includes("semverAtLeast(device.agent_version,24)") && worker.includes('tools.push("hara.system.resources","hara.workspace.inspect")'),"WORKER_CONTEXT_TOOLS_0_3_24");
+need(worker.includes('toolId === "hara.process.run" ? 25') && worker.includes('tools.push("hara.process.run")'),"WORKER_PROCESS_RUN_0_3_25");
+need(worker.includes('tools.push("hara.files.hash","hara.files.diff")') && worker.includes('tools.push("hara.files.copy","hara.files.delete")'),"WORKER_CAPABILITIES_0_3_23_COMPLETE");
 need(worker.includes("capabilityToolDetail") && worker.includes('risk_class:processExecution ? "PROCESS_EXECUTION"') && worker.includes("local_approval_required:processExecution || filesystemMutation"),"WORKER_CAPABILITY_RISK_METADATA");
 need(worker.includes('capability_detail_schema:"hara.commander-capability-tool.v1"'),"WORKER_CAPABILITY_DETAIL_SCHEMA");
 need(worker.includes('"tool:"+toolId'),"WORKER_MUTATION_PROCESS_METERING");

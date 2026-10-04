@@ -18,7 +18,7 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
-AGENT_VERSION = "0.3.24"
+AGENT_VERSION = "0.3.25"
 CONFIG_FILE = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home()/".config"))) / "hara-commander/device.env"
 DATA_DIR = Path(os.environ.get("XDG_DATA_HOME", str(Path.home()/".local/share"))) / "hara-commander"
 RECEIPT_DIR = DATA_DIR / "receipts"
@@ -60,12 +60,14 @@ FILESYSTEM_MUTATION_TOOLS = {
 }
 PROCESS_TOOLS = {
     "hara.process.sessions",
+    "hara.process.run",
     "hara.process.start",
     "hara.process.output",
     "hara.process.interact",
     "hara.process.kill",
 }
 PROCESS_MUTATION_TOOLS = {
+    "hara.process.run",
     "hara.process.start",
     "hara.process.interact",
     "hara.process.kill",
@@ -254,6 +256,7 @@ def _safe_action_summary(call):
     if tool=="hara.files.copy": return f"copy {p.get('source')} -> {p.get('destination')}"
     if tool=="hara.files.delete": return f"delete file path={p.get('path')} (preimage required)"
     if tool=="hara.files.rollback": return f"rollback preimage={p.get('preimage_id')}"
+    if tool=="hara.process.run": return f"process.run cwd={p.get('cwd') or '~'} timeout_ms={p.get('timeout_ms',3000)} command={_redact_command_preview(p.get('command'))}"
     if tool=="hara.process.start": return f"process.start cwd={p.get('cwd') or '~'} command={_redact_command_preview(p.get('command'))}"
     if tool=="hara.process.interact": return f"process.interact session={p.get('session_id')} input={_redact_command_preview(p.get('input'))}"
     if tool=="hara.process.kill": return f"process.kill session={p.get('session_id')} force={bool(p.get('force'))}"
@@ -466,6 +469,44 @@ def process_start(command,cwd=None,timeout_ms=1000):
     output=_process_output_payload(session,offset=None,length=200,wait_ms=timeout_ms)
     return {**output,"cwd":str(work),"command_sha256":session["command_sha256"],"command_preview":_redact_command_preview(command)}
 
+def process_run(command,cwd=None,timeout_ms=3000,max_lines=200):
+    timeout_ms=max(100,min(10000,int(timeout_ms)))
+    max_lines=max(1,min(500,int(max_lines)))
+    started=process_start(command,cwd,0)
+    sid=started["session_id"]
+    session=_process_get(sid)
+    deadline=time.monotonic()+timeout_ms/1000.0
+    while session.get("exit_code") is None and time.monotonic()<deadline:
+        remaining=max(1,int((deadline-time.monotonic())*1000))
+        _drain_process(session,min(100,remaining))
+    timed_out=session.get("exit_code") is None
+    if timed_out:
+        process_kill(sid,True)
+        settle=time.monotonic()+0.5
+        while session.get("exit_code") is None and time.monotonic()<settle:
+            _drain_process(session,50)
+    base=int(session.get("base_line",0))
+    output=_process_output_payload(session,offset=base,length=max_lines,wait_ms=0)
+    total=int(output.get("total_lines") or 0)
+    next_offset=int(output.get("next_offset") or base)
+    result={
+        "run_id":sid,
+        "pid":session["pid"],
+        "state":"TIMED_OUT" if timed_out else "EXITED",
+        "exit_code":session.get("exit_code"),
+        "timed_out":timed_out,
+        "cwd":session["cwd"],
+        "command_sha256":session["command_sha256"],
+        "command_preview":_redact_command_preview(command),
+        "text":output.get("text",""),
+        "partial":output.get("partial",""),
+        "total_lines":total,
+        "output_truncated":bool(output.get("buffer_truncated")) or next_offset<total,
+        "session_retained":False,
+    }
+    PROCESS_SESSIONS.pop(sid,None)
+    return result
+
 def process_sessions():
     items=[]
     for sid,session in list(PROCESS_SESSIONS.items()):
@@ -630,7 +671,7 @@ def start_operator_console():
     print("  hara.files.delete  [preimage + aprovação local]")
     print("  hara.files.preimages.list / rollback  [rollback requer aprovação]")
     print("  hara.process.sessions / output")
-    print("  hara.process.start / interact / kill  [aprovação local]")
+    print("  hara.process.run / start / interact / kill  [aprovação local]")
     print("  hara.functions.list / hara.functions.describe")
     print("  hara.functions.invoke (compatibilidade; somente funções governadas)")
     print("  hara.receipts.get")
@@ -1222,6 +1263,10 @@ def execute_tool(config, call):
         if payload: raise ValueError("TOOL_PAYLOAD_MUST_BE_EMPTY")
         data=process_sessions()
         result={"function_id":"process.sessions","risk_class":"READ_ONLY","process_exit_code":0,"stdout":json.dumps(data,sort_keys=True,separators=(",",":"),ensure_ascii=False),"domain_success_inferred":False}
+    elif tool=="hara.process.run":
+        if "command" not in payload or any(k not in ("command","cwd","timeout_ms","max_lines") for k in payload): raise ValueError("FUNCTION_ARGUMENTS_DENIED")
+        data=process_run(str(payload["command"]),payload.get("cwd"),int(payload.get("timeout_ms",3000)),int(payload.get("max_lines",200)))
+        result={"function_id":"process.run","risk_class":"PROCESS_EXECUTION","process_exit_code":data.get("exit_code") if isinstance(data.get("exit_code"),int) else 0,"stdout":json.dumps(data,sort_keys=True,separators=(",",":"),ensure_ascii=False),"domain_success_inferred":False}
     elif tool=="hara.process.start":
         if "command" not in payload or any(k not in ("command","cwd","timeout_ms") for k in payload): raise ValueError("FUNCTION_ARGUMENTS_DENIED")
         data=process_start(str(payload["command"]),payload.get("cwd"),int(payload.get("timeout_ms",1000)))
@@ -1364,6 +1409,12 @@ def self_test():
         rb=execute_tool(cfg,{**base,"call_id":"selftest-rollback","request_id":"selftest-rollback","tool_id":"hara.files.rollback","payload":{"preimage_id":pid},"_local_approval":{"state":"APPROVED"}})
         rb_data=json.loads(rb["result"]["stdout"]); assert target.read_text()=="before" and rb_data["rollback_preimage_id"].startswith("HARA-PREIMAGE-")
         rb_receipt=read_receipt(rb["bridge_receipt_sha256"]); assert rb_receipt["mutation_class"]=="FILESYSTEM_ROLLBACK_V1"
+        run_call={**base,"call_id":"selftest-run","request_id":"selftest-run","tool_id":"hara.process.run","payload":{"command":"printf 'oneshot\\n'","timeout_ms":500,"max_lines":20},"_local_approval":{"state":"APPROVED"}}
+        run=execute_tool(cfg,run_call); run_data=json.loads(run["result"]["stdout"])
+        assert run["mutation_performed"] is True and run_data["state"]=="EXITED" and "oneshot" in run_data["text"] and run_data["session_retained"] is False
+        assert run_data["run_id"] not in PROCESS_SESSIONS
+        timeout_run=execute_tool(cfg,{**base,"call_id":"selftest-run-timeout","request_id":"selftest-run-timeout","tool_id":"hara.process.run","payload":{"command":"sleep 2","timeout_ms":100,"max_lines":20},"_local_approval":{"state":"APPROVED"}})
+        timeout_data=json.loads(timeout_run["result"]["stdout"]); assert timeout_data["timed_out"] is True and timeout_data["session_retained"] is False
         proc_call={**base,"call_id":"selftest-proc","request_id":"selftest-004g","tool_id":"hara.process.start","payload":{"command":"printf 'hello\n'","timeout_ms":300},"_local_approval":{"state":"APPROVED"}}
         proc=execute_tool(cfg,proc_call); proc_data=json.loads(proc["result"]["stdout"]); sid=proc_data["session_id"]
         assert proc["mutation_performed"] is True and sid.startswith("HARA-PROC-")

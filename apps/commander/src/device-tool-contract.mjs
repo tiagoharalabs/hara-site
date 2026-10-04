@@ -42,12 +42,14 @@ const DEVICE_MUTATION_TOOL_SET = new Set(DEVICE_MUTATION_TOOLS);
 export function isDeviceMutationTool(value) { return DEVICE_MUTATION_TOOL_SET.has(String(value || "")); }
 export const DEVICE_PROCESS_TOOLS = Object.freeze([
   "hara.process.sessions",
+  "hara.process.run",
   "hara.process.start",
   "hara.process.output",
   "hara.process.interact",
   "hara.process.kill",
 ]);
 export const DEVICE_PROCESS_MUTATION_TOOLS = Object.freeze([
+  "hara.process.run",
   "hara.process.start",
   "hara.process.interact",
   "hara.process.kill",
@@ -257,6 +259,15 @@ export function canonicalDeviceToolPayload(toolId, payload) {
   if (toolId === "hara.process.sessions") {
     if (!exactKeys(body,[])) fail("DEVICE_CALL_PAYLOAD_INVALID");
     return {};
+  }
+  if (toolId === "hara.process.run") {
+    if (!onlyKeys(body,["command","cwd","timeout_ms","max_lines"],["command"])) fail("DEVICE_CALL_PAYLOAD_INVALID");
+    return {
+      command:textArg(body.command,4096),
+      ...(body.cwd === undefined ? {} : {cwd:pathArg(body.cwd)}),
+      timeout_ms:body.timeout_ms === undefined ? 3000 : intNumber(body.timeout_ms,100,10000),
+      max_lines:body.max_lines === undefined ? 200 : intNumber(body.max_lines,1,500),
+    };
   }
   if (toolId === "hara.process.start") {
     if (!onlyKeys(body,["command","cwd","timeout_ms"],["command"])) fail("DEVICE_CALL_PAYLOAD_INVALID");
