@@ -348,6 +348,15 @@ The full branch regression suite passed again after the 0.3.24 cut, including:
 - test_customer_mcp_device_routing
 - build_release_manifest --check
 
+The server-side capability projection was also enriched without changing the Agent protocol version. hara.capabilities now keeps the existing tools array for compatibility and adds per-tool metadata with:
+
+- risk_class
+- local_approval_required
+- required_grant
+- preferred_interface
+
+This lets GPT plan around local approval and risk before attempting a call, while still steering it away from the generic hara.functions.invoke compatibility surface when a purpose-specific tool exists.
+
 This remains **SUCCESSOR_CANDIDATE** only. Promotion still requires a fresh live canary. The authoritative live-proven version remains **0.3.18**.
 
 ## Current known limitations

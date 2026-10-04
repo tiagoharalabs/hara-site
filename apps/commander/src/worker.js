@@ -2298,6 +2298,19 @@ function semverAtLeast(version, wantedPatch) {
   return major > 0 || minor > 3 || (minor === 3 && patch >= wantedPatch);
 }
 
+function capabilityToolDetail(toolId) {
+  const id=String(toolId || "");
+  const processExecution=isDeviceProcessMutationTool(id);
+  const filesystemMutation=isDeviceMutationTool(id);
+  return {
+    tool_id:id,
+    risk_class:processExecution ? "PROCESS_EXECUTION" : (filesystemMutation ? "FILESYSTEM_MUTATION" : "READ_ONLY"),
+    local_approval_required:processExecution || filesystemMutation,
+    required_grant:MCP_TOOL_GRANTS[id] || null,
+    preferred_interface:id !== "hara.functions.invoke",
+  };
+}
+
 function capabilitiesForDevice(device, grants) {
   const platform=String(device.platform || "").toUpperCase();
   const linux=platform === "LINUX";
@@ -2323,6 +2336,7 @@ function capabilitiesForDevice(device, grants) {
   if (linux && semverAtLeast(device.agent_version,24)) {
     tools.push("hara.system.resources","hara.workspace.inspect");
   }
+  const availableTools=[...new Set(tools)].sort();
   return {
     computer:device.device_name,
     device_id:device.device_id,
@@ -2330,7 +2344,9 @@ function capabilitiesForDevice(device, grants) {
     architecture:device.architecture,
     agent_version:device.agent_version,
     state:device.revoked_at_utc ? "REVOKED" : (device.online ? "ONLINE" : "OFFLINE"),
-    tools:[...new Set(tools)].sort(),
+    tools:availableTools,
+    tool_details:availableTools.map(capabilityToolDetail),
+    capability_detail_schema:"hara.commander-capability-tool.v1",
     operator_session_required:true,
     mutation_requires_local_approval:true,
     process_execution_requires_local_approval:true,

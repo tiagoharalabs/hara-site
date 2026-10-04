@@ -86,6 +86,8 @@ need(worker.includes("transport_request_id") && worker.includes("transportReques
 need(worker.includes("customerCapabilities") && worker.includes("capabilitiesForDevice"),"WORKER_CAPABILITY_NEGOTIATION");
 need(worker.includes("customerUsage") && worker.includes("quota.status"),"WORKER_USAGE_SURFACE");
 need(worker.includes("semverAtLeast(device.agent_version,24)") && worker.includes('tools.push("hara.system.resources","hara.workspace.inspect")'),"WORKER_CONTEXT_TOOLS_0_3_24");
+need(worker.includes("capabilityToolDetail") && worker.includes('risk_class:processExecution ? "PROCESS_EXECUTION"') && worker.includes("local_approval_required:processExecution || filesystemMutation"),"WORKER_CAPABILITY_RISK_METADATA");
+need(worker.includes('capability_detail_schema:"hara.commander-capability-tool.v1"'),"WORKER_CAPABILITY_DETAIL_SCHEMA");
 need(worker.includes('"tool:"+toolId'),"WORKER_MUTATION_PROCESS_METERING");
 need(worker.includes('isDeviceMutationTool(toolId) || isDeviceProcessTool(toolId) || toolId === \"hara.files.preimages.list\"'),"WORKER_MUTATION_AGENT_VERSION_GUARD");
 console.log("COMMANDER_DEVICE_TOOL_CONTRACT=PASS");
