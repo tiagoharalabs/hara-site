@@ -382,11 +382,19 @@
             </div>
           </div>
 
+          <div class="summary-grid usage-ops-grid" aria-label="Saúde operacional">
+            <article class="summary-card"><span>Transações</span><strong id="activityTotal">—</strong><small id="activityScope">Carregando atividade</small></article>
+            <article class="summary-card"><span>Taxa de sucesso</span><strong id="activitySuccessRate">—</strong><small id="activityTerminalSummary">Chamadas terminais</small></article>
+            <article class="summary-card"><span>Latência média</span><strong id="activityAvgLatency">—</strong><small id="activityLatencyStages">Fila + execução</small></article>
+            <article class="summary-card"><span>Transporte</span><strong id="activityTransport">—</strong><small id="activityDeviceCount">Computadores envolvidos</small></article>
+          </div>
+          <p class="activity-privacy-note" id="activityPrivacyNote">Telemetria operacional somente. Payloads e resultados do cliente não são exibidos nesta tela.</p>
+
           <article class="panel table-panel">
-            <div class="panel-head"><div><span>HISTÓRICO</span><h2>Detalhamento das execuções</h2></div><button class="btn btn-secondary small" type="button" disabled aria-disabled="true" title="Exportação será habilitada junto do histórico detalhado.">Exportar CSV · em breve</button></div>
-            <div class="data-table" id="usageLedger">
-              <div class="tr head"><span>Horário</span><span>Função</span><span>Evento</span><span>Unidades</span><span>Comprovante</span></div>
-              <div class="empty-state"><strong>Detalhamento em homologação</strong>O uso acima já reflete os dados reais da conta. O histórico por execução ainda não é exibido no portal.</div>
+            <div class="panel-head"><div><span>ATIVIDADE</span><h2>Transações recentes</h2></div><button class="btn btn-secondary small" type="button" data-refresh-activity>Atualizar</button></div>
+            <div class="data-table usage-ledger" id="usageLedger" aria-live="polite">
+              <div class="tr head"><span>Horário</span><span>Tool</span><span>Computador</span><span>Estado</span><span>Duração</span><span>Rastro</span></div>
+              <div class="empty-state"><strong>Carregando atividade</strong>Consultando metadados operacionais das últimas execuções.</div>
             </div>
           </article>
         </div>

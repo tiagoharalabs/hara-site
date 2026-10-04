@@ -41,6 +41,9 @@
   let devicesCache = null;
   let devicesCacheAt = 0;
   let pairingExpiryTimer = null;
+  let activityCache = null;
+  let activityCacheAt = 0;
+  const ACTIVITY_CACHE_MS = 15000;
   const revokeConfirmTimers = new Map();
   let currentView = null;
   let deviceSectionTab = "devices";
@@ -310,8 +313,139 @@
     setText("usagePeriod", payload.usage.period_key || "—");
     const bar = document.getElementById("usageProgress");
     if (bar) bar.style.width = (limit == null ? 0 : percent) + "%";
-    // Device state is hydrated independently by /api/portal/devices.
-    // Usage activity is not part of the current dashboard API contract.
+    // Device state and operational activity are hydrated independently.
+  }
+
+  function activityDuration(ms) {
+    const value=Number(ms);
+    if (!Number.isFinite(value) || value < 0) return "—";
+    if (value < 1000) return Math.round(value) + " ms";
+    return (value/1000).toFixed(value < 10 * 1000 ? 2 : 1).replace(".",",") + " s";
+  }
+
+  function activityWhen(value) {
+    const date=new Date(String(value || ""));
+    if (!Number.isFinite(date.getTime())) return "—";
+    return new Intl.DateTimeFormat("pt-BR",{
+      day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit"
+    }).format(date);
+  }
+
+  function activityTag(state) {
+    const value=String(state || "").toUpperCase();
+    if (value === "COMPLETED") return ["PASS","committed"];
+    if (value === "FAILED") return ["FALHA","denied"];
+    if (value === "PENDING") return ["PENDENTE","released"];
+    if (value === "EXECUTING") return ["EXECUTANDO","released"];
+    if (value === "EXPIRED") return ["EXPIRADA","denied"];
+    if (value === "CANCELLED") return ["CANCELADA","released"];
+    return [value || "—","released"];
+  }
+
+  function renderActivity(payload) {
+    const summary=payload?.summary || {};
+    setText("activityTotal",number(summary.total_calls || 0));
+    setText("activityScope",payload?.scope === "TENANT" ? "Workspace inteiro" : "Suas execuções");
+    setText("activitySuccessRate",summary.success_rate_percent == null ? "—" : String(summary.success_rate_percent).replace(".",",") + "%");
+    setText("activityTerminalSummary",number(summary.completed || 0) + " PASS · " + number(summary.failed || 0) + " falhas");
+    setText("activityAvgLatency",activityDuration(summary.avg_total_ms));
+    setText("activityLatencyStages","Fila " + activityDuration(summary.avg_queue_ms) + " · Agent " + activityDuration(summary.avg_execution_ms));
+    const transports=Array.isArray(summary.transport_modes) ? summary.transport_modes : [];
+    setText("activityTransport",transports[0] || "—");
+    setText("activityDeviceCount",number(summary.device_count || 0) + " computador(es) · " + (summary.under_3s_percent == null ? "—" : String(summary.under_3s_percent).replace(".",",") + "% < 3 s"));
+
+    const ledger=document.getElementById("usageLedger");
+    if (!ledger) return;
+    const header=ledger.querySelector(".tr.head");
+    ledger.replaceChildren();
+    if (header) ledger.append(header);
+
+    const rows=Array.isArray(payload?.transactions) ? payload.transactions : [];
+    if (!rows.length) {
+      const empty=document.createElement("div");
+      empty.className="empty-state";
+      const strong=document.createElement("strong");
+      strong.textContent="Nenhuma transação ainda";
+      empty.append(strong,document.createTextNode("As execuções governadas aparecerão aqui sem expor payloads ou resultados."));
+      ledger.append(empty);
+      return;
+    }
+
+    rows.forEach((item)=>{
+      const row=document.createElement("div");
+      row.className="tr activity-row";
+
+      const when=document.createElement("span");
+      when.textContent=activityWhen(item.created_at_utc);
+
+      const tool=document.createElement("span");
+      tool.className="activity-tool";
+      tool.textContent=String(item.tool_id || "—");
+      tool.title=String(item.source || "");
+
+      const computer=document.createElement("span");
+      computer.textContent=String(item.computer || "—");
+      computer.title=(String(item.transport_mode || "") + (item.agent_version ? " · Agent " + item.agent_version : "")).trim();
+
+      const state=document.createElement("span");
+      const [label,klass]=activityTag(item.state);
+      state.className="tag " + klass;
+      state.textContent=label;
+      if (item.error_code) state.title=String(item.error_code);
+
+      const duration=document.createElement("span");
+      duration.textContent=activityDuration(item.total_ms);
+      duration.title="Fila " + activityDuration(item.queue_ms) + " · execução " + activityDuration(item.execution_ms);
+
+      const trace=document.createElement("span");
+      trace.className="trace-code";
+      const traceId=String(item.trace_id || "");
+      trace.textContent=traceId ? traceId.slice(-8) : "—";
+      trace.title=traceId || (item.error_code || "");
+
+      row.append(when,tool,computer,state,duration,trace);
+      ledger.append(row);
+    });
+  }
+
+  async function loadUsageActivity(trigger=null, force=false) {
+    if (!remotePortal) return;
+    if (!force && activityCache && Date.now()-activityCacheAt < ACTIVITY_CACHE_MS) {
+      renderActivity(activityCache);
+      return;
+    }
+    const original=trigger?.textContent || "Atualizar";
+    if (trigger) {
+      trigger.disabled=true;
+      trigger.textContent="Atualizando…";
+    }
+    try {
+      const response=await fetch("/api/portal/activity?limit=50",{cache:"no-store",credentials:"same-origin"});
+      if (handlePortalAuthFailure(response,"Entre novamente para consultar a atividade.")) return;
+      const payload=await response.json().catch(()=>({}));
+      if (!response.ok) throw new Error(String(payload?.code || "ACTIVITY_LOAD_FAILED"));
+      activityCache=payload;
+      activityCacheAt=Date.now();
+      renderActivity(payload);
+    } catch (_error) {
+      const ledger=document.getElementById("usageLedger");
+      if (ledger) {
+        const header=ledger.querySelector(".tr.head");
+        ledger.replaceChildren();
+        if (header) ledger.append(header);
+        const empty=document.createElement("div");
+        empty.className="empty-state";
+        const strong=document.createElement("strong");
+        strong.textContent="Atividade indisponível";
+        empty.append(strong,document.createTextNode("Não foi possível consultar a telemetria agora. Tente novamente."));
+        ledger.append(empty);
+      }
+    } finally {
+      if (trigger?.isConnected) {
+        trigger.disabled=false;
+        trigger.textContent=original;
+      }
+    }
   }
 
   async function hydrateSessionHeader() {
@@ -1104,6 +1238,7 @@
     if (skipNextWorkspaceLoad && appViews.has(next)) {
       skipNextWorkspaceLoad = false;
       if (next === "plans") loadBillingState();
+      if (next === "usage") loadUsageActivity();
       return;
     }
     if (next === "devices") {
@@ -1112,6 +1247,7 @@
     } else if (appViews.has(next) || (next === "landing" && localHost)) {
       loadProductDashboard();
       if (next === "dashboard") loadDevices();
+      if (next === "usage") loadUsageActivity();
       if (next === "plans") loadBillingState();
     }
   }
@@ -1172,6 +1308,13 @@
     if (pairing) {
       event.preventDefault();
       createPairing();
+      return;
+    }
+
+    const refreshActivity = event.target.closest("[data-refresh-activity]");
+    if (refreshActivity) {
+      event.preventDefault();
+      loadUsageActivity(refreshActivity,true);
       return;
     }
 

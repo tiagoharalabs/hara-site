@@ -2462,6 +2462,126 @@ async function recentCustomerCalls(env, context, args) {
   }));
 }
 
+function portalActivitySource(requestId) {
+  const value=String(requestId || "");
+  if (value.startsWith("HARA-CUSTOMER-MCP-")) return "CUSTOMER_MCP";
+  if (value.startsWith("HARA-QA-")) return "QA";
+  if (value.startsWith("HARA-E2E-")) return "E2E";
+  if (value.startsWith("manual-")) return "MANUAL";
+  return "OTHER";
+}
+
+function elapsedMs(start,end) {
+  const a=Date.parse(String(start || ""));
+  const b=Date.parse(String(end || ""));
+  if (!Number.isFinite(a) || !Number.isFinite(b) || b < a) return null;
+  return Math.round(b-a);
+}
+
+async function portalActivity(env, session, limitValue=50) {
+  const limit=Math.max(1,Math.min(100,Number(limitValue || 50)));
+  const privileged=["OWNER","ADMIN"].includes(String(session.role || "").toUpperCase());
+  const clauses=["c.tenant_id = ?"];
+  const binds=[session.tenant_id];
+  if (!privileged) {
+    clauses.push("c.subject_id = ?");
+    binds.push(session.subject_id);
+  }
+  const where=clauses.join(" AND ");
+
+  const summarySql=`
+    SELECT
+      COUNT(*) AS total_calls,
+      SUM(CASE WHEN c.state='COMPLETED' THEN 1 ELSE 0 END) AS completed,
+      SUM(CASE WHEN c.state='FAILED' THEN 1 ELSE 0 END) AS failed,
+      SUM(CASE WHEN c.state='PENDING' THEN 1 ELSE 0 END) AS pending,
+      SUM(CASE WHEN c.state='EXECUTING' THEN 1 ELSE 0 END) AS executing,
+      SUM(CASE WHEN c.state='EXPIRED' THEN 1 ELSE 0 END) AS expired,
+      SUM(CASE WHEN c.state='CANCELLED' THEN 1 ELSE 0 END) AS cancelled,
+      COUNT(DISTINCT c.device_id) AS device_count,
+      GROUP_CONCAT(DISTINCT d.tunnel_mode) AS transport_modes,
+      ROUND(AVG(CASE WHEN c.state='COMPLETED' AND c.claimed_at_utc IS NOT NULL
+        THEN (julianday(c.claimed_at_utc)-julianday(c.created_at_utc))*86400000 END),1) AS avg_queue_ms,
+      ROUND(AVG(CASE WHEN c.state='COMPLETED' AND c.claimed_at_utc IS NOT NULL AND c.completed_at_utc IS NOT NULL
+        THEN (julianday(c.completed_at_utc)-julianday(c.claimed_at_utc))*86400000 END),1) AS avg_exec_ms,
+      ROUND(AVG(CASE WHEN c.state='COMPLETED' AND c.completed_at_utc IS NOT NULL
+        THEN (julianday(c.completed_at_utc)-julianday(c.created_at_utc))*86400000 END),1) AS avg_total_ms,
+      SUM(CASE WHEN c.state='COMPLETED' AND c.completed_at_utc IS NOT NULL
+        AND (julianday(c.completed_at_utc)-julianday(c.created_at_utc))*86400000 < 3000 THEN 1 ELSE 0 END) AS under_3s
+    FROM commander_device_calls c
+    JOIN commander_devices d ON d.device_id=c.device_id
+    WHERE ${where}`;
+
+  const recentSql=`
+    SELECT c.call_id,c.request_id,c.tool_id,c.state,c.created_at_utc,c.claimed_at_utc,
+           c.completed_at_utc,c.error_code,d.device_name,d.tunnel_mode,d.agent_version
+      FROM commander_device_calls c
+      JOIN commander_devices d ON d.device_id=c.device_id
+     WHERE ${where}
+     ORDER BY c.created_at_utc DESC
+     LIMIT ?`;
+
+  const [summaryRow,recentResult]=await Promise.all([
+    env.PRODUCT_DB.prepare(summarySql).bind(...binds).first(),
+    env.PRODUCT_DB.prepare(recentSql).bind(...binds,limit).all(),
+  ]);
+
+  const summary=summaryRow || {};
+  const total=Number(summary.total_calls || 0);
+  const completed=Number(summary.completed || 0);
+  const failed=Number(summary.failed || 0);
+  const expired=Number(summary.expired || 0);
+  const cancelled=Number(summary.cancelled || 0);
+  const terminal=completed+failed+expired+cancelled;
+  const transportModes=String(summary.transport_modes || "")
+    .split(",").map((value)=>value.trim()).filter(Boolean);
+
+  const transactions=(recentResult.results || []).map((row)=>({
+    trace_id:String(row.call_id || ""),
+    source:portalActivitySource(row.request_id),
+    tool_id:String(row.tool_id || ""),
+    computer:String(row.device_name || ""),
+    transport_mode:String(row.tunnel_mode || ""),
+    agent_version:String(row.agent_version || ""),
+    state:String(row.state || ""),
+    created_at_utc:row.created_at_utc,
+    claimed_at_utc:row.claimed_at_utc,
+    completed_at_utc:row.completed_at_utc,
+    queue_ms:elapsedMs(row.created_at_utc,row.claimed_at_utc),
+    execution_ms:elapsedMs(row.claimed_at_utc,row.completed_at_utc),
+    total_ms:elapsedMs(row.created_at_utc,row.completed_at_utc),
+    error_code:row.error_code || null,
+  }));
+
+  return {
+    schema:"hara.commander-portal-activity.v1",
+    scope:privileged ? "TENANT" : "SUBJECT",
+    privacy:{
+      payload_values_exposed:false,
+      result_values_exposed:false,
+      request_id_exposed:false,
+      metadata_only:true,
+    },
+    summary:{
+      total_calls:total,
+      completed,
+      failed,
+      pending:Number(summary.pending || 0),
+      executing:Number(summary.executing || 0),
+      expired,
+      cancelled,
+      success_rate_percent:terminal ? Number(((completed/terminal)*100).toFixed(1)) : null,
+      under_3s_percent:completed ? Number(((Number(summary.under_3s || 0)/completed)*100).toFixed(1)) : null,
+      avg_queue_ms:summary.avg_queue_ms == null ? null : Number(summary.avg_queue_ms),
+      avg_execution_ms:summary.avg_exec_ms == null ? null : Number(summary.avg_exec_ms),
+      avg_total_ms:summary.avg_total_ms == null ? null : Number(summary.avg_total_ms),
+      device_count:Number(summary.device_count || 0),
+      transport_modes:transportModes,
+    },
+    transactions,
+  };
+}
+
 async function executeCustomerMcpTool(
   env,
   identity,
@@ -3128,6 +3248,13 @@ export default {
           role: session.role
         };
         return json(payload);
+      }
+
+      if (url.pathname === "/api/portal/activity" && request.method === "GET") {
+        const session = await resolvePortalSession(request, env);
+        if (!session) return json({ ok: false, code: "AUTH_REQUIRED" }, 401);
+        const limit=Number(url.searchParams.get("limit") || 50);
+        return json(await portalActivity(env,session,limit));
       }
 
       if (url.pathname === "/api/portal/billing" && request.method === "GET") {

@@ -192,7 +192,28 @@ need(
     and 'dashboardProgress.setAttribute("aria-valuenow"' in JS,
     "DASHBOARD_STATUS_SUMMARY",
 )
-need("Detalhamento em homologação" in HTML and "renderActivity(" not in JS and "activityList" not in JS, "USAGE_DETAIL_HONEST_STATE")
+activity_block = WORKER.split("async function portalActivity", 1)[1].split("async function executeCustomerMcpTool", 1)[0]
+need(
+    'url.pathname === "/api/portal/activity"' in WORKER
+    and 'id="activityTotal"' in HTML
+    and 'id="activitySuccessRate"' in HTML
+    and 'id="activityAvgLatency"' in HTML
+    and 'id="activityTransport"' in HTML
+    and 'function renderActivity(payload)' in JS
+    and 'function loadUsageActivity(' in JS
+    and 'data-refresh-activity' in HTML,
+    "USAGE_ACTIVITY_SURFACE",
+)
+need(
+    "c.tenant_id = ?" in activity_block
+    and "c.subject_id = ?" in activity_block
+    and "payload_json" not in activity_block
+    and "result_json" not in activity_block
+    and "payload_values_exposed:false" in activity_block
+    and "result_values_exposed:false" in activity_block
+    and "request_id_exposed:false" in activity_block,
+    "USAGE_ACTIVITY_PRIVACY_SCOPE",
+)
 need(
     'class="skip-link" href="#mainContent"' in HTML
     and '<main id="mainContent" tabindex="-1">' in HTML
