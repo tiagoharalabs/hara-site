@@ -423,7 +423,18 @@ Live proof through the customer H.A.R.A. Commander MCP, not Desktop Commander:
 
 The current ChatGPT conversation loaded the MCP tool schema before the 0.3.25 deployment, so the newly named hara.process.run tool is not yet present in this conversation's callable-tool snapshot even though the live hara.capabilities response advertises it. A ChatGPT tool refresh or fresh conversation is required for a named live call of process.run. Existing process.start/output remains live and usable meanwhile.
 
-The prior 0.3.18 designation is superseded for the read-only/context live path by this 0.3.25 canary. Process-run named-tool acceptance remains pending only on client schema refresh, not Agent/Worker source readiness.
+A live process.start canary immediately after the Agent update was denied with LOCAL_OPERATOR_SESSION_UPGRADE_REQUIRED. This is expected fail-closed behavior: the local operator session was opened under Agent 0.3.23, while 0.3.25 requires the authorizing session's recorded agent_version to match the currently executing Agent. Read-only authority remains available, but mutation/process approval cannot inherit authority across an Agent upgrade.
+
+Required operator action before mutating/process live acceptance:
+
+1. close the old local console session with Ctrl+C
+2. run ~/.local/bin/hara-commander start again
+3. confirm the banner reports Agent 0.3.25
+4. retry the harmless process canary and approve it locally
+
+Do not bypass this gate by rewriting the session file; the version-bound local-human approval boundary is intentional.
+
+The prior 0.3.18 designation is superseded for the read-only/context live path by this 0.3.25 canary. Mutating/process live acceptance remains pending a fresh 0.3.25 local operator session, and process.run named-tool acceptance additionally requires ChatGPT MCP schema refresh.
 
 ## Current known limitations
 
