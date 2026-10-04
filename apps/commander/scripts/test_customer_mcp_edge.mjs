@@ -69,7 +69,7 @@ assert.deepEqual(
   tools.map((tool) => tool.name),
   CUSTOMER_MCP_TOOLS,
 );
-assert.equal(tools.length, 33);
+assert.equal(tools.length, 35);
 const mutationTools = new Set([
   "hara.files.create_directory",
   "hara.files.write",
@@ -125,12 +125,27 @@ assert.equal(calls[1].tool_id, "hara.processes.list");
 assert.equal(calls[1].arguments.computer, "nucleo-a");
 assert.equal(calls[1].arguments.limit, 7);
 
+const resourceCall = await rpc(41, "tools/call", {
+  name: "hara.system.resources",
+  arguments: { computer: "nucleo-a" },
+});
+assert.equal(resourceCall.result?.isError, undefined);
+assert.equal(calls.at(-1).tool_id, "hara.system.resources");
+
+const workspaceCall = await rpc(42, "tools/call", {
+  name: "hara.workspace.inspect",
+  arguments: { computer: "nucleo-a", path: "/srv/project", max_entries: 40 },
+});
+assert.equal(workspaceCall.result?.isError, undefined);
+assert.equal(calls.at(-1).tool_id, "hara.workspace.inspect");
+assert.equal(calls.at(-1).arguments.max_entries, 40);
+
 const deniedUnknown = await rpc(5, "tools/call", {
   name: "shell.run",
   arguments: {},
 });
 assert.ok(deniedUnknown.error);
-assert.equal(calls.length, 2);
+assert.equal(calls.length, 4);
 
 const badHost = await handleCustomerMcpRequest(
   new Request("https://evil.example/mcp", {

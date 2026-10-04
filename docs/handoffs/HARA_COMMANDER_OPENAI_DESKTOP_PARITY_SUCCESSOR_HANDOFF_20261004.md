@@ -1,7 +1,7 @@
 # H.A.R.A. Commander — OpenAI / Desktop-Parity Successor Handoff
 
 Date: 2026-10-04
-Status: LIVE_PROVEN_0_3_18 + SUCCESSOR_CANDIDATE_0_3_23_STATIC_PASS_PENDING_LIVE_GATE
+Status: LIVE_PROVEN_0_3_18 + SUCCESSOR_CANDIDATE_0_3_24_STATIC_PASS_PENDING_LIVE_GATE
 Scope: ChatGPT/OpenAI customer MCP → H.A.R.A. Identity → Commander edge → outbound Agent → governed Linux execution
 
 ## Executive state
@@ -299,7 +299,56 @@ The 0.3.23 candidate must receive a fresh live canary before production promotio
 
 ### Candidate 0.3.23 validation snapshot
 
-The reconciled successor candidate currently advertises **33 MCP tools** and passed the full branch-local regression suite with exit code 0 on 2026-10-04. This is source/test readiness only; it is not a substitute for the pending live canary gate.
+The reconciled 0.3.23 predecessor candidate advertises **33 MCP tools** and passed the full branch-local regression suite with exit code 0 on 2026-10-04. This is source/test readiness only; it is not a substitute for a live canary gate.
+
+## Successor continuation — candidate 0.3.24 GPT-native context surface
+
+The successor branch advanced one additional source/test checkpoint to **Agent 0.3.24** while preserving 0.3.18 as the last live-proven state.
+
+0.3.24 adds two purpose-specific read-only tools and raises the public MCP surface from 33 to **35 tools**:
+
+- hara.system.resources
+- hara.workspace.inspect
+
+hara.system.resources returns bounded local CPU, load average, memory, swap and root-filesystem capacity without invoking a shell or external process.
+
+hara.workspace.inspect reduces multi-call project discovery by returning bounded workspace metadata:
+
+- resolved requested path and detected workspace/project root
+- project markers/manifests such as package.json, pyproject.toml, Cargo.toml, go.mod, CMakeLists.txt and Makefile
+- bounded top-level entry metadata
+- Git presence, branch and HEAD OID by reading Git metadata directly
+- support for normal clones and Git worktrees through .git indirection plus commondir
+- explicit dirty_state = UNKNOWN_NOT_EVALUATED; it does not invent a working-tree cleanliness claim
+
+Security properties retained by design:
+
+- no shell.run
+- no subprocess dependency in the Linux Agent
+- no external Git command invocation
+- workspace scan bounded to 2000 discovered entries and at most 200 returned entries
+- public purpose-tool identity remains receipt-bound
+- Agent capability exposure is version-gated at 0.3.24
+
+The real branch worktree itself was used as an additional smoke proof for worktree Git metadata:
+
+- branch resolved: local/commander-openai-desktop-parity-20261004
+- HEAD OID resolved through worktree commondir
+- external_command_invoked = false
+
+The full branch regression suite passed again after the 0.3.24 cut, including:
+
+- test_customer_mcp_edge
+- validate_device_tool_contract
+- validate_device_installers
+- validate_event_v2_productization
+- validate_e2e_harness
+- validate_prod_static
+- validate_customer_privacy_noc_contract
+- test_customer_mcp_device_routing
+- build_release_manifest --check
+
+This remains **SUCCESSOR_CANDIDATE** only. Promotion still requires a fresh live canary. The authoritative live-proven version remains **0.3.18**.
 
 ## Current known limitations
 

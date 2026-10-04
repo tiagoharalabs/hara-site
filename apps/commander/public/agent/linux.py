@@ -18,7 +18,7 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
-AGENT_VERSION = "0.3.23"
+AGENT_VERSION = "0.3.24"
 CONFIG_FILE = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home()/".config"))) / "hara-commander/device.env"
 DATA_DIR = Path(os.environ.get("XDG_DATA_HOME", str(Path.home()/".local/share"))) / "hara-commander"
 RECEIPT_DIR = DATA_DIR / "receipts"
@@ -30,13 +30,15 @@ PREIMAGE_DIR = DATA_DIR / "preimages"
 SESSION_MAX_SECONDS = 12 * 60 * 60
 FUNCTION_ID = "device.info"
 FUNCTION_IDS = (
-    "device.info", "device.ping", "system.uptime", "process.list",
+    "device.info", "device.ping", "system.uptime", "system.resources", "workspace.inspect", "process.list",
     "filesystem.info", "filesystem.hash", "filesystem.diff", "filesystem.search", "filesystem.list", "filesystem.read", "filesystem.read_many",
 )
 DIRECT_TOOL_FUNCTIONS = {
     "hara.device.info":"device.info",
     "hara.ping":"device.ping",
     "hara.system.uptime":"system.uptime",
+    "hara.system.resources":"system.resources",
+    "hara.workspace.inspect":"workspace.inspect",
     "hara.processes.list":"process.list",
     "hara.files.info":"filesystem.info",
     "hara.files.hash":"filesystem.hash",
@@ -620,7 +622,8 @@ def start_operator_console():
     print("")
     print("Comandos permitidos nesta sessão:")
     print("  hara.health / hara.ping / hara.device.info")
-    print("  hara.system.uptime / hara.processes.list")
+    print("  hara.system.uptime / hara.system.resources / hara.workspace.inspect")
+    print("  hara.processes.list")
     print("  hara.files.info / hash / diff / search / list")
     print("  hara.files.read / hara.files.read_many")
     print("  hara.files.create_directory / write / edit / move / copy  [aprovação local]")
@@ -744,6 +747,8 @@ def _function_spec(function_id):
         "device.info":("DEVICE","Consulta informações básicas e não sensíveis deste computador."),
         "device.ping":("DEVICE","Valida conectividade ponta a ponta com este Agent."),
         "system.uptime":("SYSTEM","Consulta uptime e load average do sistema."),
+        "system.resources":("SYSTEM","Consulta CPU, memória, swap, load average e capacidade do disco raiz sem shell."),
+        "workspace.inspect":("WORKSPACE","Inspeciona metadados limitados de projeto e Git HEAD sem executar comandos externos."),
         "process.list":("PROCESS","Lista processos com metadados sanitizados, sem linha de comando ou ambiente."),
         "filesystem.info":("FILESYSTEM","Consulta metadados de um caminho sem ler conteúdo."),
         "filesystem.hash":("FILESYSTEM","Calcula SHA-256 e tamanho de um arquivo regular."),
@@ -768,7 +773,7 @@ def catalog():
         "registered_function_count":len(FUNCTION_IDS),
         "executable_function_count":len(FUNCTION_IDS),
         "active_function_count":len(FUNCTION_IDS),
-        "domains":["DEVICE","SYSTEM","PROCESS","FILESYSTEM"],
+        "domains":["DEVICE","SYSTEM","WORKSPACE","PROCESS","FILESYSTEM"],
         "functions":[{"function_id":fid,"state":"ACTIVE"} for fid in FUNCTION_IDS],
     }
 
@@ -790,6 +795,104 @@ def system_uptime():
     uptime=float(Path("/proc/uptime").read_text(encoding="utf-8").split()[0])
     load=os.getloadavg()
     return {"uptime_seconds":round(uptime,2),"load_average_1m":load[0],"load_average_5m":load[1],"load_average_15m":load[2]}
+
+def system_resources():
+    mem={}
+    try:
+        for line in Path("/proc/meminfo").read_text(encoding="utf-8",errors="replace").splitlines():
+            if ":" not in line: continue
+            key,raw=line.split(":",1)
+            m=re.search(r"([0-9]+)",raw)
+            if m: mem[key]=int(m.group(1))*1024
+    except (FileNotFoundError,PermissionError,OSError):
+        mem={}
+    disk=shutil.disk_usage("/")
+    load=os.getloadavg()
+    return {
+        "cpu_logical":int(os.cpu_count() or 0),
+        "load_average_1m":load[0],"load_average_5m":load[1],"load_average_15m":load[2],
+        "memory_total_bytes":mem.get("MemTotal"),"memory_available_bytes":mem.get("MemAvailable"),
+        "swap_total_bytes":mem.get("SwapTotal"),"swap_free_bytes":mem.get("SwapFree"),
+        "root_disk_total_bytes":int(disk.total),"root_disk_used_bytes":int(disk.used),"root_disk_free_bytes":int(disk.free),
+    }
+
+def _workspace_git_metadata(root):
+    marker=root/".git"
+    if not marker.exists(): return {"present":False}
+    try:
+        gitdir=marker
+        if marker.is_file():
+            raw=marker.read_text(encoding="utf-8",errors="replace")[:4096].strip()
+            if not raw.lower().startswith("gitdir:"): return {"present":True,"branch":None,"head_oid":None,"head_state":"UNRESOLVED"}
+            value=raw.split(":",1)[1].strip()
+            gitdir=(root/value).resolve(strict=True) if not Path(value).is_absolute() else Path(value).resolve(strict=True)
+        common=gitdir
+        common_file=gitdir/"commondir"
+        if common_file.is_file():
+            common_raw=common_file.read_text(encoding="utf-8",errors="replace")[:4096].strip()
+            if common_raw:
+                common=(gitdir/common_raw).resolve(strict=True) if not Path(common_raw).is_absolute() else Path(common_raw).resolve(strict=True)
+        head=(gitdir/"HEAD").read_text(encoding="utf-8",errors="replace")[:4096].strip()
+        branch=None; oid=None; state="DETACHED"
+        if head.startswith("ref: "):
+            ref=head[5:].strip()
+            branch=ref[len("refs/heads/"):] if ref.startswith("refs/heads/") else ref
+            state="BRANCH"
+            for base in (gitdir,common):
+                refpath=base/ref
+                if refpath.is_file():
+                    candidate=refpath.read_text(encoding="utf-8",errors="replace")[:128].strip()
+                    if re.fullmatch(r"[0-9a-fA-F]{40,64}",candidate):
+                        oid=candidate.lower(); break
+            packed=common/"packed-refs"
+            if oid is None and packed.is_file() and packed.stat().st_size <= 4*1024*1024:
+                for line in packed.read_text(encoding="utf-8",errors="replace").splitlines():
+                    if line.startswith("#") or line.startswith("^") or " " not in line: continue
+                    candidate,name=line.split(" ",1)
+                    if name.strip()==ref and re.fullmatch(r"[0-9a-fA-F]{40,64}",candidate):
+                        oid=candidate.lower(); break
+        elif re.fullmatch(r"[0-9a-fA-F]{40,64}",head):
+            oid=head.lower()
+        return {"present":True,"branch":branch,"head_oid":oid,"head_state":state,"dirty_state":"UNKNOWN_NOT_EVALUATED"}
+    except (FileNotFoundError,PermissionError,OSError,ValueError):
+        return {"present":True,"branch":None,"head_oid":None,"head_state":"UNRESOLVED","dirty_state":"UNKNOWN_NOT_EVALUATED"}
+
+def workspace_inspect(path_value,max_entries=80):
+    target=Path(path_value).expanduser().resolve(strict=True)
+    start=target if target.is_dir() else target.parent
+    markers=(".git","pyproject.toml","package.json","Cargo.toml","go.mod","pom.xml","build.gradle","build.gradle.kts","requirements.txt","CMakeLists.txt","Makefile")
+    root=start; root_marker=None
+    current=start
+    for _ in range(13):
+        found=next((name for name in markers if (current/name).exists()),None)
+        if found:
+            root=current; root_marker=found; break
+        if current.parent==current: break
+        current=current.parent
+    max_entries=max(1,min(200,int(max_entries)))
+    children=[]; discovered=[]; scan_truncated=False
+    try:
+        with os.scandir(root) as it:
+            for item in it:
+                if len(discovered)>=2000:
+                    scan_truncated=True; break
+                try:
+                    kind="symlink" if item.is_symlink() else "directory" if item.is_dir(follow_symlinks=False) else "file" if item.is_file(follow_symlinks=False) else "other"
+                    discovered.append({"name":item.name,"type":kind})
+                except (FileNotFoundError,PermissionError,OSError):
+                    continue
+        discovered.sort(key=lambda item:item["name"].lower())
+        children=discovered[:max_entries]
+    except PermissionError:
+        children=[]; discovered=[]
+    manifests=[name for name in markers if name!=".git" and (root/name).is_file()]
+    return {
+        "requested_path":str(target),"root":str(root),"root_marker":root_marker,
+        "manifests":manifests,"entries":children,"entry_count":len(children),
+        "entries_truncated":scan_truncated or len(discovered)>max_entries,
+        "git":_workspace_git_metadata(root),
+        "shell_invoked":False,"external_command_invoked":False,
+    }
 
 def process_list(limit=50):
     out=[]
@@ -953,6 +1056,14 @@ def invoke(config, function_id, arguments):
     elif function_id=="system.uptime":
         if argv!=[]: raise ValueError("FUNCTION_ARGUMENTS_DENIED")
         result=system_uptime()
+    elif function_id=="system.resources":
+        if argv!=[]: raise ValueError("FUNCTION_ARGUMENTS_DENIED")
+        result=system_resources()
+    elif function_id=="workspace.inspect":
+        if len(argv)<1 or len(argv)>2: raise ValueError("FUNCTION_ARGUMENTS_DENIED")
+        max_entries=int(argv[1]) if len(argv)>=2 else 80
+        if not 1<=max_entries<=200: raise ValueError("FUNCTION_ARGUMENTS_DENIED")
+        result=workspace_inspect(str(argv[0]),max_entries)
     elif function_id=="process.list":
         if len(argv)>1: raise ValueError("FUNCTION_ARGUMENTS_DENIED")
         limit=int(argv[0]) if argv else 50
@@ -1058,9 +1169,13 @@ def execute_tool(config, call):
         result=invoke(config,str(payload.get("function_id") or ""),payload.get("arguments") or {})
     elif tool in DIRECT_TOOL_FUNCTIONS:
         fid=DIRECT_TOOL_FUNCTIONS[tool]
-        if tool in ("hara.device.info","hara.ping","hara.system.uptime"):
+        if tool in ("hara.device.info","hara.ping","hara.system.uptime","hara.system.resources"):
             if payload: raise ValueError("TOOL_PAYLOAD_MUST_BE_EMPTY")
             argv=[]
+        elif tool=="hara.workspace.inspect":
+            if "path" not in payload or any(k not in ("path","max_entries") for k in payload): raise ValueError("FUNCTION_ARGUMENTS_DENIED")
+            argv=[str(payload["path"])]
+            if "max_entries" in payload: argv.append(str(payload["max_entries"]))
         elif tool=="hara.processes.list":
             if any(k not in ("limit",) for k in payload): raise ValueError("FUNCTION_ARGUMENTS_DENIED")
             argv=[] if "limit" not in payload else [str(payload["limit"])]
@@ -1211,11 +1326,17 @@ def self_test():
         listing=execute_tool(cfg,{**base,"request_id":"selftest-002","tool_id":"hara.functions.list"})
         assert any(x["function_id"]==FUNCTION_ID for x in listing["result"]["functions"])
         assert any(x["function_id"]=="system.uptime" for x in listing["result"]["functions"])
+        assert any(x["function_id"]=="system.resources" for x in listing["result"]["functions"])
+        assert any(x["function_id"]=="workspace.inspect" for x in listing["result"]["functions"])
         desc=execute_tool(cfg,{**base,"request_id":"selftest-003","tool_id":"hara.functions.describe","payload":{"function_id":FUNCTION_ID}})
         assert desc["result"]["EXECUTION_SEMANTICS"]["risk_class"]=="READ_ONLY"
         inv=execute_tool(cfg,{**base,"request_id":"selftest-004","tool_id":"hara.functions.invoke","payload":{"function_id":FUNCTION_ID,"arguments":{"argv":[]}}})
         uptime=execute_tool(cfg,{**base,"request_id":"selftest-004b","tool_id":"hara.functions.invoke","payload":{"function_id":"system.uptime","arguments":{"argv":[]}}})
         assert "uptime_seconds" in json.loads(uptime["result"]["stdout"])
+        resources=execute_tool(cfg,{**base,"request_id":"selftest-resources","tool_id":"hara.system.resources","payload":{}})
+        assert json.loads(resources["result"]["stdout"])["cpu_logical"]>=1
+        workspace=execute_tool(cfg,{**base,"request_id":"selftest-workspace","tool_id":"hara.workspace.inspect","payload":{"path":d,"max_entries":20}})
+        workspace_data=json.loads(workspace["result"]["stdout"]); assert workspace_data["root"]==str(Path(d).resolve()) and workspace_data["external_command_invoked"] is False
         procs=execute_tool(cfg,{**base,"request_id":"selftest-004c","tool_id":"hara.functions.invoke","payload":{"function_id":"process.list","arguments":{"argv":["3"]}}})
         assert len(json.loads(procs["result"]["stdout"])["processes"])<=3
         direct_ping=execute_tool(cfg,{**base,"request_id":"selftest-004d","tool_id":"hara.ping","payload":{}})

@@ -14,9 +14,14 @@ import {
 function need(ok, code) { if (!ok) throw new Error("COMMANDER_DEVICE_TOOL_CONTRACT_"+code+"=FAIL"); console.log("COMMANDER_DEVICE_TOOL_CONTRACT_"+code+"=PASS"); }
 function expectError(label, expectedCode, fn) { try { fn(); } catch (e) { need(e instanceof Error && e.message===expectedCode,label); return; } throw new Error("COMMANDER_DEVICE_TOOL_CONTRACT_"+label+"=FAIL_ALLOWED"); }
 need(DEVICE_FUNCTION_ID === "device.info", "PRIMARY_FUNCTION_ID");
-for (const id of ["device.info","device.ping","system.uptime","process.list","filesystem.info","filesystem.search","filesystem.list","filesystem.read","filesystem.read_many"]) need(DEVICE_FUNCTION_IDS.includes(id) && isDeviceFunctionAllowed(id), "ALLOW_"+id.replaceAll(".","_").toUpperCase());
+for (const id of ["device.info","device.ping","system.uptime","system.resources","workspace.inspect","process.list","filesystem.info","filesystem.search","filesystem.list","filesystem.read","filesystem.read_many"]) need(DEVICE_FUNCTION_IDS.includes(id) && isDeviceFunctionAllowed(id), "ALLOW_"+id.replaceAll(".","_").toUpperCase());
 need(JSON.stringify(canonicalDeviceToolPayload("hara.health",{}))==="{}","HEALTH_EMPTY_PAYLOAD");
 need(JSON.stringify(canonicalDeviceToolPayload("hara.ping",{}))==="{}","PING_EMPTY_PAYLOAD");
+need(JSON.stringify(canonicalDeviceToolPayload("hara.system.resources",{}))==="{}","SYSTEM_RESOURCES_EMPTY_PAYLOAD");
+const workspacePayload=canonicalDeviceToolPayload("hara.workspace.inspect",{path:"/tmp/project",max_entries:40});
+need(workspacePayload.path==="/tmp/project" && workspacePayload.max_entries===40,"WORKSPACE_INSPECT_CANONICAL");
+need(deviceFunctionForTool("hara.system.resources")==="system.resources","SYSTEM_RESOURCES_MAPPING");
+need(deviceFunctionForTool("hara.workspace.inspect")==="workspace.inspect","WORKSPACE_INSPECT_MAPPING");
 need(isDeviceMutationTool("hara.files.write"),"MUTATION_TOOL_WRITE");
 need(isDeviceMutationTool("hara.files.edit"),"MUTATION_TOOL_EDIT");
 need(isDeviceMutationTool("hara.files.rollback"),"MUTATION_TOOL_ROLLBACK");
@@ -54,6 +59,8 @@ need(readMany.paths.length===2 && readMany.length===20,"DIRECT_FILES_READ_MANY_C
 need(canonicalDeviceToolPayload("hara.files.read",{path:"/tmp/a",offset:0,length:10}).length===10,"DIRECT_FILES_READ_CANONICAL");
 need(JSON.stringify(canonicalDeviceToolPayload("hara.functions.list",{}))==="{}","LIST_EMPTY_PAYLOAD");
 need(canonicalDeviceToolPayload("hara.functions.describe",{function_id:"system.uptime"}).function_id==="system.uptime","DESCRIBE_CANONICAL");
+need(canonicalDeviceToolPayload("hara.functions.invoke",{function_id:"system.resources",arguments:{argv:[]}}).function_id==="system.resources","SYSTEM_RESOURCES_FUNCTION_CANONICAL");
+need(canonicalDeviceToolPayload("hara.functions.invoke",{function_id:"workspace.inspect",arguments:{argv:["/tmp/project","25"]}}).arguments.argv[1]==="25","WORKSPACE_INSPECT_FUNCTION_CANONICAL");
 need(canonicalDeviceToolPayload("hara.functions.invoke",{function_id:"process.list",arguments:{argv:["7"]}}).arguments.argv[0]==="7","PROCESS_LIST_CANONICAL");
 need(canonicalDeviceToolPayload("hara.functions.invoke",{function_id:"filesystem.list",arguments:{argv:["/tmp","20"]}}).arguments.argv[1]==="20","FILESYSTEM_LIST_CANONICAL");
 need(canonicalDeviceToolPayload("hara.functions.invoke",{function_id:"filesystem.read",arguments:{argv:["/tmp/a","0","10"]}}).arguments.argv[2]==="10","FILESYSTEM_READ_CANONICAL");
@@ -78,6 +85,7 @@ need(worker.includes('"COMMANDER_PROCESS_EXECUTION"'),"WORKER_PROCESS_EXECUTION_
 need(worker.includes("transport_request_id") && worker.includes("transportRequestId"),"WORKER_TRANSPORT_REQUEST_ID_BINDING");
 need(worker.includes("customerCapabilities") && worker.includes("capabilitiesForDevice"),"WORKER_CAPABILITY_NEGOTIATION");
 need(worker.includes("customerUsage") && worker.includes("quota.status"),"WORKER_USAGE_SURFACE");
+need(worker.includes("semverAtLeast(device.agent_version,24)") && worker.includes('tools.push("hara.system.resources","hara.workspace.inspect")'),"WORKER_CONTEXT_TOOLS_0_3_24");
 need(worker.includes('"tool:"+toolId'),"WORKER_MUTATION_PROCESS_METERING");
 need(worker.includes('isDeviceMutationTool(toolId) || isDeviceProcessTool(toolId) || toolId === \"hara.files.preimages.list\"'),"WORKER_MUTATION_AGENT_VERSION_GUARD");
 console.log("COMMANDER_DEVICE_TOOL_CONTRACT=PASS");

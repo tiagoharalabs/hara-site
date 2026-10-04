@@ -3,6 +3,8 @@ export const DEVICE_FUNCTION_IDS = Object.freeze([
   "device.info",
   "device.ping",
   "system.uptime",
+  "system.resources",
+  "workspace.inspect",
   "process.list",
   "filesystem.info",
   "filesystem.hash",
@@ -16,6 +18,8 @@ export const DEVICE_TOOL_FUNCTION_MAP = Object.freeze({
   "hara.device.info": "device.info",
   "hara.ping": "device.ping",
   "hara.system.uptime": "system.uptime",
+  "hara.system.resources": "system.resources",
+  "hara.workspace.inspect": "workspace.inspect",
   "hara.processes.list": "process.list",
   "hara.files.info": "filesystem.info",
   "hara.files.hash": "filesystem.hash",
@@ -105,9 +109,15 @@ function pathArg(value) {
 }
 function canonicalArgv(functionId, argv) {
   if (!Array.isArray(argv)) fail("DEVICE_CALL_PAYLOAD_INVALID");
-  if (["device.info","device.ping","system.uptime"].includes(functionId)) {
+  if (["device.info","device.ping","system.uptime","system.resources"].includes(functionId)) {
     if (argv.length !== 0) fail("DEVICE_CALL_PAYLOAD_INVALID");
     return [];
+  }
+  if (functionId === "workspace.inspect") {
+    if (argv.length < 1 || argv.length > 2) fail("DEVICE_CALL_PAYLOAD_INVALID");
+    const out=[pathArg(argv[0])];
+    if (argv.length === 2) out.push(intArg(argv[1],1,200));
+    return out;
   }
   if (functionId === "process.list") {
     if (argv.length > 1) fail("DEVICE_CALL_PAYLOAD_INVALID");
@@ -169,9 +179,13 @@ export function canonicalDeviceToolPayload(toolId, payload) {
   const body = payload ?? {};
   if (!isObject(body)) fail("DEVICE_CALL_PAYLOAD_INVALID");
 
-  if (["hara.health","hara.ping","hara.device.info","hara.system.uptime","hara.functions.list"].includes(toolId)) {
+  if (["hara.health","hara.ping","hara.device.info","hara.system.uptime","hara.system.resources","hara.functions.list"].includes(toolId)) {
     if (!exactKeys(body, [])) fail("DEVICE_CALL_PAYLOAD_INVALID");
     return {};
+  }
+  if (toolId === "hara.workspace.inspect") {
+    if (!onlyKeys(body,["path","max_entries"],["path"])) fail("DEVICE_CALL_PAYLOAD_INVALID");
+    return {path:pathArg(body.path),...(body.max_entries===undefined ? {} : {max_entries:intNumber(body.max_entries,1,200)})};
   }
   if (toolId === "hara.processes.list") {
     if (!onlyKeys(body,["limit"])) fail("DEVICE_CALL_PAYLOAD_INVALID");

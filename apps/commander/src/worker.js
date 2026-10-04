@@ -81,6 +81,8 @@ const MCP_TOOL_GRANTS = Object.freeze({
   "hara.ping": "COMMANDER_DISCOVERY",
   "hara.device.info": "COMMANDER_READ_ONLY_INVOKE",
   "hara.system.uptime": "COMMANDER_READ_ONLY_INVOKE",
+  "hara.system.resources": "COMMANDER_READ_ONLY_INVOKE",
+  "hara.workspace.inspect": "COMMANDER_READ_ONLY_INVOKE",
   "hara.processes.list": "COMMANDER_READ_ONLY_INVOKE",
   "hara.files.info": "COMMANDER_READ_ONLY_INVOKE",
   "hara.files.hash": "COMMANDER_READ_ONLY_INVOKE",
@@ -2156,7 +2158,10 @@ function projectCustomerToolResult(toolId, response) {
 }
 
 function customerMcpDevicePayload(toolId, args) {
-  if (["hara.health","hara.ping","hara.device.info","hara.system.uptime","hara.functions.list"].includes(toolId)) return {};
+  if (["hara.health","hara.ping","hara.device.info","hara.system.uptime","hara.system.resources","hara.functions.list"].includes(toolId)) return {};
+  if (toolId === "hara.workspace.inspect") {
+    return {path:String(args.path || ""),...(args.max_entries === undefined ? {} : {max_entries:Number(args.max_entries)})};
+  }
   if (toolId === "hara.processes.list") {
     return args.limit === undefined ? {} : { limit: Number(args.limit) };
   }
@@ -2228,7 +2233,8 @@ function quotaFunctionIdForTool(toolId, payload) {
 function legacyInvokePayload(toolId, payload) {
   const functionId = deviceFunctionForTool(toolId);
   if (!functionId) return null;
-  if (["device.info","device.ping","system.uptime"].includes(functionId)) return {function_id:functionId,arguments:{argv:[]}};
+  if (["device.info","device.ping","system.uptime","system.resources"].includes(functionId)) return {function_id:functionId,arguments:{argv:[]}};
+  if (functionId === "workspace.inspect") return {function_id:functionId,arguments:{argv:[payload.path,...(payload.max_entries === undefined ? [] : [String(payload.max_entries)])]}};
   if (functionId === "process.list") return {function_id:functionId,arguments:{argv:payload.limit === undefined ? [] : [String(payload.limit)]}};
   if (functionId === "filesystem.info") return {function_id:functionId,arguments:{argv:[payload.path]}};
   if (functionId === "filesystem.hash") return {function_id:functionId,arguments:{argv:[payload.path]}};
@@ -2257,7 +2263,7 @@ function agentPurposeToolReady(device, toolId) {
   if (String(device?.platform || "").toUpperCase() !== "LINUX") return false;
   const parts=String(device?.agent_version || "0.0.0").split(".").map((v)=>Number(v));
   const [a=0,b=0,c=0]=parts;
-  const minPatch = ["hara.files.preimages.list","hara.files.rollback"].includes(toolId) ? 21 : (isDeviceProcessTool(toolId) ? 20 : (isDeviceMutationTool(toolId) ? 19 : (toolId === "hara.files.read_many" ? 18 : (toolId === "hara.files.search" ? 17 : 16))));
+  const minPatch = ["hara.system.resources","hara.workspace.inspect"].includes(toolId) ? 24 : (["hara.files.preimages.list","hara.files.rollback"].includes(toolId) ? 21 : (isDeviceProcessTool(toolId) ? 20 : (isDeviceMutationTool(toolId) ? 19 : (toolId === "hara.files.read_many" ? 18 : (toolId === "hara.files.search" ? 17 : 16)))));
   return a > 0 || b > 3 || (b === 3 && c >= minPatch);
 }
 
@@ -2313,6 +2319,9 @@ function capabilitiesForDevice(device, grants) {
   if (linux && semverAtLeast(device.agent_version,21)) {
     tools.push("hara.files.preimages.list");
     if (grants.includes("COMMANDER_MUTATION_INVOKE")) tools.push("hara.files.rollback");
+  }
+  if (linux && semverAtLeast(device.agent_version,24)) {
+    tools.push("hara.system.resources","hara.workspace.inspect");
   }
   return {
     computer:device.device_name,

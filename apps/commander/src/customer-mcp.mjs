@@ -12,6 +12,8 @@ export const CUSTOMER_MCP_TOOLS = Object.freeze([
   "hara.ping",
   "hara.device.info",
   "hara.system.uptime",
+  "hara.system.resources",
+  "hara.workspace.inspect",
   "hara.processes.list",
   "hara.files.info",
   "hara.files.hash",
@@ -206,6 +208,30 @@ export function createCustomerMcpServer({ executeTool }) {
       inputSchema: z.object({ computer: z.string().min(1).max(120).optional() }).strict(),
     }),
     call("hara.system.uptime"),
+  );
+
+  server.registerTool(
+    "hara.system.resources",
+    toolConfig({
+      title: "Get System Resources",
+      description: "Read bounded CPU, memory, swap, load and root-disk capacity from a governed Linux computer without invoking a shell.",
+      inputSchema: z.object({ computer: z.string().min(1).max(120).optional() }).strict(),
+    }),
+    call("hara.system.resources"),
+  );
+
+  server.registerTool(
+    "hara.workspace.inspect",
+    toolConfig({
+      title: "Inspect Workspace",
+      description: "Inspect one local project/workspace using bounded filesystem metadata and Git HEAD metadata only. No shell or external command is invoked.",
+      inputSchema: z.object({
+        computer: z.string().min(1).max(120).optional(),
+        path: z.string().min(1).max(4096),
+        max_entries: z.number().int().min(1).max(200).optional(),
+      }).strict(),
+    }),
+    call("hara.workspace.inspect"),
   );
 
   server.registerTool(
