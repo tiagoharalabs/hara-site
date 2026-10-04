@@ -6,6 +6,8 @@ ROOT = Path(__file__).resolve().parents[3]
 APP = ROOT / "apps" / "commander"
 CFG = json.loads((APP / "wrangler.jsonc").read_text())
 WORKER = (APP / "src/worker.js").read_text()
+CUSTOMER_MCP = (APP / "src/customer-mcp.mjs").read_text()
+DEVICE_TARGETING = (APP / "src/device-targeting.mjs").read_text()
 AUTH = (APP / "src/auth.js").read_text()
 HTML = (APP / "public/index.html").read_text()
 JS = (APP / "public/app.js").read_text()
@@ -106,12 +108,20 @@ need("'TRIAL', 'Trial', 'HARA_COMMANDER_GOVERNED_INVOKE', 'CALENDAR_MONTH', 100,
 need('100 <small>execuções / mês</small>' in HTML and '1.000 <small>invokes / período</small>' not in HTML and '10.000 <small>invokes / período</small>' not in HTML, "TRIAL_PLAN_UI_ALIGNMENT")
 need("10000" not in HTML and "10000" not in JS and "10.000" not in HTML and "1.000" not in HTML, "FALSE_QUOTA_CLAIMS_ABSENT")
 need(
-    'activeDevices.find((device) => Boolean(device.selected))' in JS
-    and 'setState("Offline"' in JS
-    and 'setState("Pronto"' in JS
-    and "device-selected-badge" in JS
-    and 'row.classList.add("selected")' in JS,
-    "DEVICE_SELECTION_STATE_UX",
+    'activeDevices.find((device) => Boolean(device.selected))' not in JS
+    and 'device-selected-badge' not in JS
+    and 'data-select-device' not in JS
+    and 'select.textContent = device.selected' not in JS
+    and 'setState("Offline", "Nenhum computador online")' in JS
+    and '" computadores online"' in JS,
+    "DEVICE_FLEET_STATE_UX",
+)
+need(
+    'COMPUTER_REQUIRED' in DEVICE_TARGETING
+    and 'resolveCustomerTargetDevice' in WORKER
+    and 'computer: z.string().min(1).max(120).optional()' in CUSTOMER_MCP
+    and 'JOIN commander_device_selections s' not in WORKER[WORKER.index('async function enqueueDeviceCall'):WORKER.index('async function deviceCallStatus')],
+    "DEVICE_EXPLICIT_TARGET_ROUTING",
 )
 need(
     'data-device-section-tab="devices"' in HTML
@@ -280,7 +290,8 @@ print("COMMANDER_PROD_PORTAL_MUTATION_ORIGIN_GUARD=PASS")
 print("COMMANDER_PROD_EXTERNAL_FONT_DEPENDENCY=ABSENT")
 print("COMMANDER_PROD_TRIAL_PLAN_UI_ALIGNMENT=PASS")
 print("COMMANDER_PROD_FALSE_QUOTA_CLAIMS=ABSENT")
-print("COMMANDER_PROD_DEVICE_SELECTION_STATE_UX=PASS")
+print("COMMANDER_PROD_DEVICE_FLEET_STATE_UX=PASS")
+print("COMMANDER_PROD_DEVICE_EXPLICIT_TARGET_ROUTING=PASS")
 print("COMMANDER_PROD_PAIRING_ONBOARDING_ORDER=PASS")
 print("COMMANDER_PROD_DASHBOARD_STATUS_SUMMARY=PASS")
 print("COMMANDER_PROD_USAGE_DETAIL_HONEST_STATE=PASS")

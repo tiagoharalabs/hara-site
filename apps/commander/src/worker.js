@@ -30,8 +30,15 @@ import {
 import { handleCustomerMcpRequest } from "./customer-mcp.mjs";
 import {
   DEVICE_FUNCTION_ID,
+  DEVICE_TOOL_FUNCTION_MAP,
+  deviceFunctionForTool,
+  isDeviceFunctionAllowed,
+  isDeviceMutationTool,
+  isDeviceProcessTool,
+  isDeviceProcessMutationTool,
   canonicalDeviceToolPayload,
 } from "./device-tool-contract.mjs";
+import { chooseCustomerTargetDevice } from "./device-targeting.mjs";
 import { DeviceChannel, deviceChannelName } from "./device-channel.mjs";
 import { SecurityRateLimit } from "./security-rate-limit-do.mjs";
 import {
@@ -67,11 +74,39 @@ const QUOTA_RESERVATION_TTL_SECONDS = 10 * 60;
 const PAIRING_RETENTION_SECONDS = 30 * 24 * 60 * 60;
 const PAIRING_RETENTION_BATCH = 100;
 const MCP_TOOL_GRANTS = Object.freeze({
+  "hara.devices.list": "COMMANDER_DISCOVERY",
+  "hara.capabilities": "COMMANDER_DISCOVERY",
+  "hara.usage": "COMMANDER_RECEIPT_READ",
   "hara.health": "COMMANDER_DISCOVERY",
+  "hara.ping": "COMMANDER_DISCOVERY",
+  "hara.device.info": "COMMANDER_READ_ONLY_INVOKE",
+  "hara.system.uptime": "COMMANDER_READ_ONLY_INVOKE",
+  "hara.processes.list": "COMMANDER_READ_ONLY_INVOKE",
+  "hara.files.info": "COMMANDER_READ_ONLY_INVOKE",
+  "hara.files.hash": "COMMANDER_READ_ONLY_INVOKE",
+  "hara.files.diff": "COMMANDER_READ_ONLY_INVOKE",
+  "hara.files.search": "COMMANDER_READ_ONLY_INVOKE",
+  "hara.files.list": "COMMANDER_READ_ONLY_INVOKE",
+  "hara.files.read": "COMMANDER_READ_ONLY_INVOKE",
+  "hara.files.read_many": "COMMANDER_READ_ONLY_INVOKE",
+  "hara.files.create_directory": "COMMANDER_MUTATION_INVOKE",
+  "hara.files.write": "COMMANDER_MUTATION_INVOKE",
+  "hara.files.edit": "COMMANDER_MUTATION_INVOKE",
+  "hara.files.move": "COMMANDER_MUTATION_INVOKE",
+  "hara.files.copy": "COMMANDER_MUTATION_INVOKE",
+  "hara.files.delete": "COMMANDER_MUTATION_INVOKE",
+  "hara.files.preimages.list": "COMMANDER_READ_ONLY_INVOKE",
+  "hara.files.rollback": "COMMANDER_MUTATION_INVOKE",
+  "hara.process.sessions": "COMMANDER_READ_ONLY_INVOKE",
+  "hara.process.start": "COMMANDER_PROCESS_EXECUTION",
+  "hara.process.output": "COMMANDER_READ_ONLY_INVOKE",
+  "hara.process.interact": "COMMANDER_PROCESS_EXECUTION",
+  "hara.process.kill": "COMMANDER_PROCESS_EXECUTION",
   "hara.functions.list": "COMMANDER_DISCOVERY",
   "hara.functions.describe": "COMMANDER_DISCOVERY",
   "hara.functions.invoke": "COMMANDER_READ_ONLY_INVOKE",
   "hara.receipts.get": "COMMANDER_RECEIPT_READ",
+  "hara.calls.recent": "COMMANDER_RECEIPT_READ",
 });
 
 const SECURITY_HEADERS = Object.freeze({
@@ -473,19 +508,14 @@ async function dispatchTransientDeviceCall(env, body) {
   const canonicalPayload = canonicalDeviceToolPayload(toolId, body.payload);
   boundedJson(canonicalPayload, 128 * 1024, "DEVICE_CALL_PAYLOAD_INVALID");
 
-  const selection = context.selected_device;
-  if (!selection) throw new Error("DEVICE_SELECTION_REQUIRED");
-  const deviceId = cleanId(selection.device_id, 180);
-  if (requestedDeviceId && requestedDeviceId !== deviceId) {
-    throw new Error("DEVICE_NOT_SELECTED");
-  }
-  if (selection.state !== "ACTIVE" || selection.revoked_at_utc) {
-    throw new Error("DEVICE_NOT_FOUND");
-  }
-  if (!deviceOnline(selection.last_seen_at_utc, selection.tunnel_mode)) {
+  const device = await resolveCustomerTargetDevice(
+    env, context, body.computer || null, requestedDeviceId
+  );
+  const deviceId = cleanId(device.device_id, 180);
+  if (!deviceOnline(device.last_seen_at_utc, device.tunnel_mode)) {
     throw new Error("DEVICE_OFFLINE");
   }
-  if (String(selection.tunnel_mode || "") !== "EVENT_V2") {
+  if (String(device.tunnel_mode || "") !== "EVENT_V2") {
     throw new Error("DEVICE_TRANSIENT_REQUIRES_EVENT_V2");
   }
 
@@ -495,7 +525,7 @@ async function dispatchTransientDeviceCall(env, body) {
   let executionMode = TRANSIENT_EXECUTE_OR_REPLAY;
   if (toolId === "hara.functions.invoke") {
     const functionId = cleanId(canonicalPayload.function_id, 180);
-    if (functionId !== DEVICE_FUNCTION_ID) throw new Error("POLICY_DENIED");
+    if (!isDeviceFunctionAllowed(functionId)) throw new Error("POLICY_DENIED");
     quota = env.TENANT_QUOTA.getByName(context.tenant_id);
     reservation = await quota.reserve(
       requestId,
@@ -1297,6 +1327,26 @@ async function selectedDeviceForSubject(env, tenantId, subjectId) {
   ).bind(tenantId, subjectId).first();
 }
 
+export async function resolveCustomerTargetDevice(env, context, requestedComputer = null, requestedDeviceId = null) {
+  const explicitDeviceId = requestedDeviceId ? cleanId(requestedDeviceId, 180) : null;
+  const explicitComputer = requestedComputer ? cleanDeviceName(requestedComputer) : null;
+  const result = await env.PRODUCT_DB.prepare(
+    `SELECT device_id, tenant_id, enrolled_by_subject_id, device_name, platform, architecture,
+            agent_version, tunnel_mode, state, last_seen_at_utc, revoked_at_utc
+       FROM commander_devices
+      WHERE tenant_id = ?
+        AND state = 'ACTIVE'
+        AND revoked_at_utc IS NULL
+      ORDER BY created_at_utc DESC`
+  ).bind(context.tenant_id).all();
+  return chooseCustomerTargetDevice(result.results || [], {
+    tenantId: context.tenant_id,
+    requestedComputer: explicitComputer,
+    requestedDeviceId: explicitDeviceId,
+    isOnline: (device) => deviceOnline(device.last_seen_at_utc, device.tunnel_mode),
+  });
+}
+
 async function selectDevice(env, tenantId, subjectId, deviceId) {
   const selectedAt = nowIso();
   const result = await env.PRODUCT_DB.prepare(
@@ -1403,15 +1453,11 @@ async function listDevices(env, session) {
   const result = await env.PRODUCT_DB.prepare(
     `SELECT d.device_id, d.enrolled_by_subject_id, d.device_name, d.platform, d.architecture,
             d.agent_version, d.tunnel_mode, d.state, d.created_at_utc, d.last_seen_at_utc,
-            d.revoked_at_utc,
-            CASE WHEN s.device_id = d.device_id THEN 1 ELSE 0 END AS selected
+            d.revoked_at_utc
        FROM commander_devices d
-       LEFT JOIN commander_device_selections s
-         ON s.tenant_id = d.tenant_id
-        AND s.subject_id = ?
       WHERE d.tenant_id = ?
       ORDER BY d.created_at_utc DESC`
-  ).bind(session.subject_id, session.tenant_id).all();
+  ).bind(session.tenant_id).all();
 
   const now = Date.now();
   return (result.results || []).map((row) => ({
@@ -1424,7 +1470,6 @@ async function listDevices(env, session) {
     tunnel_mode: row.tunnel_mode,
     state: row.state,
     online: row.state === "ACTIVE" && deviceOnline(row.last_seen_at_utc, row.tunnel_mode, now),
-    selected: Boolean(row.selected) && row.state === "ACTIVE" && !row.revoked_at_utc,
     created_at_utc: row.created_at_utc,
     last_seen_at_utc: row.last_seen_at_utc,
     revoked_at_utc: row.revoked_at_utc,
@@ -1818,19 +1863,10 @@ async function enqueueDeviceCall(env, body) {
   const existing = await readExisting();
   if (existing) return await existingResponse(existing);
 
-  const selection = await selectedDeviceForSubject(
-    env, context.tenant_id, context.subject_id
+  const device = await resolveCustomerTargetDevice(
+    env, context, body.computer || null, requestedDeviceId
   );
-  if (!selection) throw new Error("DEVICE_SELECTION_REQUIRED");
-  const deviceId = cleanId(selection.device_id, 180);
-  if (requestedDeviceId && requestedDeviceId !== deviceId) {
-    throw new Error("DEVICE_NOT_SELECTED");
-  }
-
-  const device = selection;
-  if (!device || device.state !== "ACTIVE" || device.revoked_at_utc) {
-    throw new Error("DEVICE_NOT_FOUND");
-  }
+  const deviceId = cleanId(device.device_id, 180);
   if (!deviceOnline(device.last_seen_at_utc, device.tunnel_mode)) throw new Error("DEVICE_OFFLINE");
 
   const enqueueAt = nowIso();
@@ -1847,9 +1883,6 @@ async function enqueueDeviceCall(env, body) {
        result_json, error_code)
      SELECT ?, ?, ?, ?, d.device_id, ?, ?, 'PENDING', ?, ?, NULL, NULL, NULL, NULL
        FROM commander_devices d
-       JOIN commander_device_selections s
-         ON s.tenant_id = d.tenant_id
-        AND s.device_id = d.device_id
       WHERE d.device_id = ?
         AND d.tenant_id = ?
         AND d.state = 'ACTIVE'
@@ -1859,7 +1892,6 @@ async function enqueueDeviceCall(env, body) {
           OR
           (d.tunnel_mode NOT IN ('EVENT_V2','EVENT_V2_OFFLINE','OUTBOUND_RELAY_OFFLINE') AND d.last_seen_at_utc >= ?)
         )
-        AND s.subject_id = ?
         AND (
           SELECT COUNT(*)
             FROM commander_device_calls q INDEXED BY idx_device_calls_poll
@@ -1871,26 +1903,19 @@ async function enqueueDeviceCall(env, body) {
   ).bind(
     callId, requestId, context.tenant_id, context.subject_id, toolId, payloadJson,
     createdAt, expiresAt, deviceId, context.tenant_id, eventV2Cutoff, onlineCutoff,
-    context.subject_id, createdAt, DEVICE_CALL_ACTIVE_QUEUE_LIMIT
+    createdAt, DEVICE_CALL_ACTIVE_QUEUE_LIMIT
   ).run();
 
   if (!inserted.meta?.changes) {
     const concurrent = await readExisting();
     if (concurrent) return await existingResponse(concurrent);
 
-    const currentSelection = await selectedDeviceForSubject(
-      env, context.tenant_id, context.subject_id
+    const currentDevice = await resolveCustomerTargetDevice(
+      env, context, null, deviceId
     );
-    if (!currentSelection) throw new Error("DEVICE_SELECTION_REQUIRED");
-    if (cleanId(currentSelection.device_id, 180) !== deviceId) {
-      throw new Error("DEVICE_NOT_SELECTED");
+    if (!deviceOnline(currentDevice.last_seen_at_utc, currentDevice.tunnel_mode)) {
+      throw new Error("DEVICE_OFFLINE");
     }
-
-    const currentDevice = currentSelection;
-    if (!currentDevice || currentDevice.state !== "ACTIVE" || currentDevice.revoked_at_utc) {
-      throw new Error("DEVICE_NOT_FOUND");
-    }
-    if (!deviceOnline(currentDevice.last_seen_at_utc, currentDevice.tunnel_mode)) throw new Error("DEVICE_OFFLINE");
 
     const activeQueue = await env.PRODUCT_DB.prepare(
       `SELECT COUNT(*) AS active_count
@@ -1981,13 +2006,14 @@ async function enqueueDeviceCall(env, body) {
   return response;
 }
 
-async function customerMcpRequestId(identity, toolId, args, mcpRequestId) {
+async function customerMcpRequestId(identity, toolId, args, mcpRequestId, transportRequestId) {
   const digest = await sha256(JSON.stringify({
     issuer: identity.issuer,
     subject: identity.subject,
     client_id: identity.client_id,
     tool_id: toolId,
     mcp_request_id: mcpRequestId,
+    transport_request_id: String(transportRequestId || ""),
     arguments: args || {},
   }));
   return "HARA-CUSTOMER-MCP-" + digest;
@@ -2068,7 +2094,7 @@ function projectCustomerToolResult(toolId, response) {
       projectedResult.change_intent_required = changeIntent;
     }
     if (typeof failClosed === "boolean") projectedResult.fail_closed = failClosed;
-  } else if (toolId === "hara.functions.invoke") {
+  } else if (toolId === "hara.functions.invoke" || deviceFunctionForTool(toolId) || isDeviceMutationTool(toolId) || isDeviceProcessTool(toolId) || toolId === "hara.files.preimages.list") {
     for (const key of [
       "function_id",
       "risk_class",
@@ -2081,6 +2107,9 @@ function projectCustomerToolResult(toolId, response) {
     const stderr = trimPublicText(result.stderr);
     if (stdout !== null) projectedResult.stdout = stdout;
     if (stderr) projectedResult.stderr = stderr;
+    for (const key of ["human_approval_state","preimage_sha256","preimage_id","rollback_preimage_id"]) {
+      if (typeof result[key] === "string") projectedResult[key] = result[key];
+    }
   } else if (toolId === "hara.receipts.get") {
     for (const key of [
       "tool_id",
@@ -2091,6 +2120,11 @@ function projectCustomerToolResult(toolId, response) {
       "mutation_class",
       "state",
       "payload_values_persisted",
+      "human_approval_required",
+      "human_approval_state",
+      "preimage_sha256",
+      "preimage_id",
+      "rollback_preimage_id",
     ]) {
       if (key in result) projectedResult[key] = result[key];
     }
@@ -2122,22 +2156,109 @@ function projectCustomerToolResult(toolId, response) {
 }
 
 function customerMcpDevicePayload(toolId, args) {
-  if (toolId === "hara.health" || toolId === "hara.functions.list") return {};
-  if (toolId === "hara.functions.describe") {
-    return { function_id: cleanId(args.function_id, 180) };
+  if (["hara.health","hara.ping","hara.device.info","hara.system.uptime","hara.functions.list"].includes(toolId)) return {};
+  if (toolId === "hara.processes.list") {
+    return args.limit === undefined ? {} : { limit: Number(args.limit) };
   }
+  if (toolId === "hara.files.info") return { path: String(args.path || "") };
+  if (toolId === "hara.files.hash") return {path:String(args.path || "")};
+  if (toolId === "hara.files.diff") return {left:String(args.left || ""),right:String(args.right || ""),max_lines:args.max_lines===undefined ? 200 : Number(args.max_lines)};
+  if (toolId === "hara.files.search") {
+    return {
+      path:String(args.path || ""), search_type:String(args.search_type || ""), pattern:String(args.pattern || ""),
+      max_results:args.max_results === undefined ? 50 : Number(args.max_results),
+      include_hidden:args.include_hidden === true, ignore_case:args.ignore_case !== false,
+      ...(args.file_glob === undefined ? {} : {file_glob:String(args.file_glob)}),
+    };
+  }
+  if (toolId === "hara.files.list") {
+    return {
+      path:String(args.path || ""),
+      ...(args.limit === undefined ? {} : {limit:Number(args.limit)}),
+      ...(args.depth === undefined ? {} : {depth:Number(args.depth)}),
+    };
+  }
+  if (toolId === "hara.files.read") {
+    return {
+      path: String(args.path || ""),
+      ...(args.offset === undefined ? {} : {offset:Number(args.offset)}),
+      ...(args.length === undefined ? {} : {length:Number(args.length)}),
+    };
+  }
+  if (toolId === "hara.files.read_many") {
+    return {
+      paths:Array.isArray(args.paths) ? args.paths.map((v)=>String(v)) : [],
+      offset:args.offset === undefined ? 0 : Number(args.offset),
+      length:args.length === undefined ? 100 : Number(args.length),
+    };
+  }
+  if (toolId === "hara.files.preimages.list") return {limit:args.limit === undefined ? 50 : Number(args.limit),...(args.path === undefined ? {} : {path:String(args.path)})};
+  if (toolId === "hara.files.rollback") return {preimage_id:String(args.preimage_id || "")};
+  if (toolId === "hara.process.sessions") return {};
+  if (toolId === "hara.process.start") return {command:String(args.command ?? ""),...(args.cwd === undefined ? {} : {cwd:String(args.cwd)}),timeout_ms:args.timeout_ms === undefined ? 1000 : Number(args.timeout_ms)};
+  if (toolId === "hara.process.output") return {session_id:String(args.session_id || ""),...(args.offset === undefined ? {} : {offset:Number(args.offset)}),length:args.length === undefined ? 200 : Number(args.length),timeout_ms:args.timeout_ms === undefined ? 500 : Number(args.timeout_ms)};
+  if (toolId === "hara.process.interact") return {session_id:String(args.session_id || ""),input:String(args.input ?? ""),timeout_ms:args.timeout_ms === undefined ? 1000 : Number(args.timeout_ms)};
+  if (toolId === "hara.process.kill") return {session_id:String(args.session_id || ""),force:args.force === true};
+  if (toolId === "hara.files.create_directory") return {path:String(args.path || ""),parents:args.parents !== false};
+  if (toolId === "hara.files.write") return {path:String(args.path || ""),content:String(args.content ?? ""),mode:String(args.mode || "rewrite")};
+  if (toolId === "hara.files.edit") return {path:String(args.path || ""),old_text:String(args.old_text ?? ""),new_text:String(args.new_text ?? ""),replace_all:args.replace_all === true};
+  if (toolId === "hara.files.move") return {source:String(args.source || ""),destination:String(args.destination || "")};
+  if (toolId === "hara.files.copy") return {source:String(args.source || ""),destination:String(args.destination || "")};
+  if (toolId === "hara.files.delete") return {path:String(args.path || "")};
+  if (toolId === "hara.functions.describe") return { function_id: cleanId(args.function_id, 180) };
   if (toolId === "hara.functions.invoke") {
     return {
       function_id: cleanId(args.function_id, 180),
-      arguments: {
-        argv: Array.isArray(args.argv) ? args.argv.map((value) => String(value)) : [],
-      },
+      arguments: { argv: Array.isArray(args.argv) ? args.argv.map((value) => String(value)) : [] },
     };
   }
-  if (toolId === "hara.receipts.get") {
-    return { receipt_id_or_sha256: cleanId(args.receipt_id_or_sha256, 256) };
-  }
+  if (toolId === "hara.receipts.get") return { receipt_id_or_sha256: cleanId(args.receipt_id_or_sha256, 256) };
   throw new Error("DEVICE_CALL_TOOL_DENIED");
+}
+
+function quotaFunctionIdForTool(toolId, payload) {
+  if (toolId === "hara.functions.invoke") return cleanId(payload.function_id, 180);
+  if (["hara.ping","hara.health","hara.functions.list","hara.functions.describe","hara.receipts.get"].includes(toolId)) return null;
+  const functionId=deviceFunctionForTool(toolId);
+  if (functionId) return functionId;
+  if (isDeviceMutationTool(toolId) || isDeviceProcessTool(toolId) || toolId === "hara.files.preimages.list") return "tool:"+toolId;
+  return null;
+}
+
+function legacyInvokePayload(toolId, payload) {
+  const functionId = deviceFunctionForTool(toolId);
+  if (!functionId) return null;
+  if (["device.info","device.ping","system.uptime"].includes(functionId)) return {function_id:functionId,arguments:{argv:[]}};
+  if (functionId === "process.list") return {function_id:functionId,arguments:{argv:payload.limit === undefined ? [] : [String(payload.limit)]}};
+  if (functionId === "filesystem.info") return {function_id:functionId,arguments:{argv:[payload.path]}};
+  if (functionId === "filesystem.hash") return {function_id:functionId,arguments:{argv:[payload.path]}};
+  if (functionId === "filesystem.diff") return {function_id:functionId,arguments:{argv:[payload.left,payload.right,String(payload.max_lines ?? 200)]}};
+  if (functionId === "filesystem.search") return {function_id:functionId,arguments:{argv:[
+    payload.path, payload.search_type, payload.pattern, String(payload.max_results ?? 50),
+    payload.include_hidden ? "1" : "0", payload.ignore_case === false ? "0" : "1", payload.file_glob ?? "",
+  ]}};
+  if (functionId === "filesystem.list") {
+    const argv=[payload.path];
+    if (payload.limit !== undefined || payload.depth !== undefined) argv.push(String(payload.limit ?? 100));
+    if (payload.depth !== undefined) argv.push(String(payload.depth));
+    return {function_id:functionId,arguments:{argv}};
+  }
+  if (functionId === "filesystem.read_many") return {function_id:functionId,arguments:{argv:[String(payload.offset ?? 0),String(payload.length ?? 100),...(payload.paths||[])]}};
+  if (functionId === "filesystem.read") {
+    const argv=[payload.path];
+    if (payload.offset !== undefined || payload.length !== undefined) argv.push(String(payload.offset ?? 0));
+    if (payload.length !== undefined) argv.push(String(payload.length));
+    return {function_id:functionId,arguments:{argv}};
+  }
+  return null;
+}
+
+function agentPurposeToolReady(device, toolId) {
+  if (String(device?.platform || "").toUpperCase() !== "LINUX") return false;
+  const parts=String(device?.agent_version || "0.0.0").split(".").map((v)=>Number(v));
+  const [a=0,b=0,c=0]=parts;
+  const minPatch = ["hara.files.preimages.list","hara.files.rollback"].includes(toolId) ? 21 : (isDeviceProcessTool(toolId) ? 20 : (isDeviceMutationTool(toolId) ? 19 : (toolId === "hara.files.read_many" ? 18 : (toolId === "hara.files.search" ? 17 : 16))));
+  return a > 0 || b > 3 || (b === 3 && c >= minPatch);
 }
 
 async function customerMcpWaitForCall(env, identity, call) {
@@ -2165,12 +2286,114 @@ async function customerMcpWaitForCall(env, identity, call) {
   return status;
 }
 
+function semverAtLeast(version, wantedPatch) {
+  const parts=String(version || "0.0.0").split(".").map((v)=>Number(v));
+  const [major=0,minor=0,patch=0]=parts;
+  return major > 0 || minor > 3 || (minor === 3 && patch >= wantedPatch);
+}
+
+function capabilitiesForDevice(device, grants) {
+  const platform=String(device.platform || "").toUpperCase();
+  const linux=platform === "LINUX";
+  const tools=["hara.health","hara.functions.list","hara.functions.describe","hara.receipts.get"];
+  if (platform === "WINDOWS") {
+    tools.push("hara.device.info","hara.functions.invoke");
+  }
+  if (linux && semverAtLeast(device.agent_version,16)) {
+    tools.push("hara.ping","hara.device.info","hara.system.uptime","hara.processes.list","hara.files.info","hara.files.list","hara.files.read");
+  }
+  if (linux && semverAtLeast(device.agent_version,17)) tools.push("hara.files.search");
+  if (linux && semverAtLeast(device.agent_version,18)) tools.push("hara.files.read_many");
+  if (linux && semverAtLeast(device.agent_version,19) && grants.includes("COMMANDER_MUTATION_INVOKE")) {
+    tools.push("hara.files.create_directory","hara.files.write","hara.files.edit","hara.files.move");
+  }
+  if (linux && semverAtLeast(device.agent_version,20) && grants.includes("COMMANDER_PROCESS_EXECUTION")) {
+    tools.push("hara.process.sessions","hara.process.start","hara.process.output","hara.process.interact","hara.process.kill");
+  }
+  if (linux && semverAtLeast(device.agent_version,21)) {
+    tools.push("hara.files.preimages.list");
+    if (grants.includes("COMMANDER_MUTATION_INVOKE")) tools.push("hara.files.rollback");
+  }
+  return {
+    computer:device.device_name,
+    device_id:device.device_id,
+    platform:device.platform,
+    architecture:device.architecture,
+    agent_version:device.agent_version,
+    state:device.revoked_at_utc ? "REVOKED" : (device.online ? "ONLINE" : "OFFLINE"),
+    tools:[...new Set(tools)].sort(),
+    operator_session_required:true,
+    mutation_requires_local_approval:true,
+    process_execution_requires_local_approval:true,
+    process_sessions_revoked_with_operator_session:true,
+    payload_hot_path_redaction:true,
+    receipt_binding:true,
+  };
+}
+
+async function customerCapabilities(env, context, args) {
+  let devices=await listDevices(env,{tenant_id:context.tenant_id});
+  if (args?.computer) {
+    const wanted=String(args.computer).trim().toLowerCase();
+    devices=devices.filter((d)=>String(d.device_name||"").toLowerCase()===wanted);
+    if (!devices.length) throw new Error("DEVICE_NOT_FOUND");
+    if (devices.length>1) throw new Error("COMPUTER_NAME_AMBIGUOUS");
+  }
+  return devices.map((d)=>capabilitiesForDevice(d,context.grants));
+}
+
+async function customerUsage(env, context) {
+  const quota=env.TENANT_QUOTA.getByName(context.tenant_id);
+  const usage=await quota.status(mcpPeriodKey(context),context.unit_limit);
+  return {
+    plan_code:context.plan_code,
+    plan_name:context.plan_name,
+    entitlement_id:context.entitlement_id,
+    period_kind:context.period_kind,
+    grants:[...context.grants].sort(),
+    usage,
+  };
+}
+
+async function recentCustomerCalls(env, context, args) {
+  const limit=Math.max(1,Math.min(100,Number(args?.limit || 50)));
+  const tool=String(args?.tool || "").trim();
+  let deviceId=null;
+  if (args?.computer) {
+    const wanted=String(args.computer).trim().toLowerCase();
+    const devices=await listDevices(env,{tenant_id:context.tenant_id});
+    const matches=devices.filter((d)=>String(d.device_name||"").toLowerCase()===wanted);
+    if (matches.length===0) throw new Error("DEVICE_NOT_FOUND");
+    if (matches.length>1) throw new Error("COMPUTER_NAME_AMBIGUOUS");
+    deviceId=matches[0].device_id;
+  }
+  const clauses=["c.tenant_id = ?","c.subject_id = ?"];
+  const binds=[context.tenant_id,context.subject_id];
+  if (deviceId) { clauses.push("c.device_id = ?"); binds.push(deviceId); }
+  if (tool) { clauses.push("c.tool_id = ?"); binds.push(cleanId(tool,120)); }
+  binds.push(limit);
+  const result=await env.PRODUCT_DB.prepare(`
+    SELECT c.call_id,c.request_id,c.device_id,c.tool_id,c.state,c.created_at_utc,c.claimed_at_utc,
+           c.completed_at_utc,c.error_code,d.device_name
+      FROM commander_device_calls c
+      JOIN commander_devices d ON d.device_id = c.device_id
+     WHERE ${clauses.join(" AND ")}
+     ORDER BY c.created_at_utc DESC
+     LIMIT ?`).bind(...binds).all();
+  return (result.results||[]).map((row)=>( {
+    call_id:row.call_id, request_id:row.request_id, computer:row.device_name, tool_id:row.tool_id,
+    state:row.state, created_at_utc:row.created_at_utc, claimed_at_utc:row.claimed_at_utc,
+    completed_at_utc:row.completed_at_utc, error_code:row.error_code || null,
+  }));
+}
+
 async function executeCustomerMcpTool(
   env,
   identity,
   toolId,
   args,
   mcpRequestId,
+  transportRequestId,
 ) {
   const requiredGrant = MCP_TOOL_GRANTS[toolId];
   if (!requiredGrant) throw new Error("POLICY_DENIED");
@@ -2179,19 +2402,70 @@ async function executeCustomerMcpTool(
   if (!context.ok) throw new Error(context.code);
   if (!context.grants.includes(requiredGrant)) throw new Error("GRANT_MISSING");
 
+  if (toolId === "hara.devices.list") {
+    const devices = await listDevices(env, { tenant_id: context.tenant_id });
+    return {
+      state: "PASS", operational_authority: "HARA_SERVICES", execution_authority: "HARA_SERVICES",
+      runtime_authority_from_chatgpt: false, mutation_performed: false, customer_services_relay: false,
+      result: {
+        count: devices.length,
+        computers: devices.map((d) => ({
+          device_id: d.device_id, computer: d.device_name, platform: d.platform, architecture: d.architecture,
+          agent_version: d.agent_version, state: d.revoked_at_utc ? "REVOKED" : (d.online ? "ONLINE" : "OFFLINE"),
+          last_seen_at_utc: d.last_seen_at_utc,
+        })),
+      },
+      product: { plan_code: context.plan_code, entitlement_id: context.entitlement_id, quota: null },
+    };
+  }
+
+  if (toolId === "hara.capabilities") {
+    const capabilities=await customerCapabilities(env,context,args);
+    return {state:"PASS",operational_authority:"HARA_SERVICES",execution_authority:"HARA_SERVICES",runtime_authority_from_chatgpt:false,mutation_performed:false,customer_services_relay:false,result:{count:capabilities.length,computers:capabilities},product:{plan_code:context.plan_code,entitlement_id:context.entitlement_id,quota:null}};
+  }
+
+  if (toolId === "hara.usage") {
+    const usage=await customerUsage(env,context);
+    return {state:"PASS",operational_authority:"HARA_SERVICES",execution_authority:"HARA_SERVICES",runtime_authority_from_chatgpt:false,mutation_performed:false,customer_services_relay:false,result:usage,product:{plan_code:context.plan_code,entitlement_id:context.entitlement_id,quota:usage.usage}};
+  }
+
+  if (toolId === "hara.calls.recent") {
+    const calls = await recentCustomerCalls(env, context, args);
+    return {
+      state:"PASS", operational_authority:"HARA_SERVICES", execution_authority:"HARA_SERVICES",
+      runtime_authority_from_chatgpt:false, mutation_performed:false, customer_services_relay:false,
+      result:{count:calls.length,calls},
+      product:{plan_code:context.plan_code,entitlement_id:context.entitlement_id,quota:null},
+    };
+  }
+
+  const targetDevice = await resolveCustomerTargetDevice(
+    env, context, args?.computer || null, null
+  );
+  const targetDeviceId = cleanId(targetDevice.device_id, 180);
+  const targetComputer = String(targetDevice.device_name || "");
   const payload = customerMcpDevicePayload(toolId, args);
   const requestId = await customerMcpRequestId(
     identity,
     toolId,
-    payload,
+    { device_id: targetDeviceId, payload },
     mcpRequestId,
+    transportRequestId,
   );
+  if ((isDeviceMutationTool(toolId) || isDeviceProcessTool(toolId) || toolId === "hara.files.preimages.list") && !agentPurposeToolReady(targetDevice, toolId)) {
+    throw new Error("AGENT_UPGRADE_REQUIRED");
+  }
+  const purposeFunctionId = quotaFunctionIdForTool(toolId, payload);
+  const legacyPayload = legacyInvokePayload(toolId, payload);
+  const dispatchAsLegacyInvoke = Boolean(legacyPayload) && !agentPurposeToolReady(targetDevice, toolId);
+  const dispatchToolId = dispatchAsLegacyInvoke ? "hara.functions.invoke" : toolId;
+  const dispatchPayload = dispatchAsLegacyInvoke ? legacyPayload : payload;
 
   let quota = null;
   let reservation = null;
-  if (toolId === "hara.functions.invoke") {
-    const functionId = cleanId(payload.function_id, 180);
-    if (functionId !== DEVICE_FUNCTION_ID) throw new Error("POLICY_DENIED");
+  if (purposeFunctionId) {
+    const functionId = cleanId(purposeFunctionId, 180);
+    if (!functionId.startsWith("tool:") && !isDeviceFunctionAllowed(functionId)) throw new Error("POLICY_DENIED");
     quota = env.TENANT_QUOTA.getByName(context.tenant_id);
     reservation = await quota.reserve(
       requestId,
@@ -2223,6 +2497,7 @@ async function executeCustomerMcpTool(
         result: { replayed: true },
         bridge_receipt_sha256: committedReceiptSha,
         customer_services_relay: false,
+        computer: targetComputer,
         product: {
           plan_code: context.plan_code,
           entitlement_id: context.entitlement_id,
@@ -2241,8 +2516,9 @@ async function executeCustomerMcpTool(
       issuer: identity.issuer,
       subject: identity.subject,
       request_id: requestId,
-      tool_id: toolId,
-      payload,
+      tool_id: dispatchToolId,
+      device_id: targetDeviceId,
+      payload: dispatchPayload,
     });
   } catch (error) {
     if (quota && reservation?.state === "RESERVED") {
@@ -2258,7 +2534,7 @@ async function executeCustomerMcpTool(
       await quota.release(requestId, context.subject_id, context.unit_limit);
     }
     if (status.result && typeof status.result === "object") {
-      return projectCustomerToolResult(toolId, status.result);
+      return { ...projectCustomerToolResult(toolId, status.result), computer: targetComputer };
     }
     throw new Error(String(status.error_code || "DEVICE_EXECUTION_FAILED"));
   }
@@ -2269,9 +2545,12 @@ async function executeCustomerMcpTool(
     throw new Error("DEVICE_CALL_" + String(status.state || "FAILED"));
   }
 
-  const projected = projectCustomerToolResult(toolId, status.result || {});
+  const projected = {
+    ...projectCustomerToolResult(toolId, status.result || {}),
+    computer: targetComputer,
+  };
   let usage = null;
-  if (toolId === "hara.functions.invoke") {
+  if (purposeFunctionId) {
     const receiptSha = String(projected.bridge_receipt_sha256 || "");
     if (
       projected.state === "PASS"
@@ -2332,12 +2611,24 @@ async function claimNextDeviceCall(env, request) {
   const row = (result.results || [])[0];
   if (!row) return null;
 
+  const rawPayloadJson = String(row.payload_json || "{}");
+  const rawPayload = JSON.parse(rawPayloadJson);
+  const payloadMarker = await redactedDeviceCallContent(rawPayloadJson);
+  await env.PRODUCT_DB.prepare(
+    `UPDATE commander_device_calls
+        SET payload_json = ?
+      WHERE call_id = ?
+        AND tenant_id = ?
+        AND device_id = ?
+        AND state = 'EXECUTING'`
+  ).bind(payloadMarker, row.call_id, device.tenant_id, device.device_id).run();
+
   return {
     schema: "hara.commander-device-call-claim.v1",
     call_id: row.call_id,
     request_id: row.request_id,
     tool_id: row.tool_id,
-    payload: JSON.parse(row.payload_json || "{}"),
+    payload: rawPayload,
     expires_at_utc: row.expires_at_utc,
   };
 }
@@ -2463,6 +2754,25 @@ async function deviceCallStatus(env, body) {
     }
   }
 
+  const rawResultJson = row.result_json && !isRedactedDeviceCallContent(row.result_json)
+    ? String(row.result_json)
+    : null;
+  const publicResult = rawResultJson ? JSON.parse(rawResultJson) : null;
+  let contentRedacted = isRedactedDeviceCallContent(row.payload_json)
+    || isRedactedDeviceCallContent(row.result_json);
+  if (["COMPLETED","FAILED","CANCELLED","EXPIRED"].includes(String(row.state)) && rawResultJson) {
+    const resultMarker = await redactedDeviceCallContent(rawResultJson);
+    await env.PRODUCT_DB.prepare(
+      `UPDATE commander_device_calls
+          SET result_json = ?
+        WHERE call_id = ?
+          AND tenant_id = ?
+          AND subject_id = ?
+          AND result_json = ?`
+    ).bind(resultMarker, row.call_id, context.tenant_id, context.subject_id, rawResultJson).run();
+    contentRedacted = true;
+  }
+
   return {
     schema: "hara.commander-device-call-status.v1",
     call_id: row.call_id,
@@ -2474,11 +2784,8 @@ async function deviceCallStatus(env, body) {
     expires_at_utc: row.expires_at_utc,
     claimed_at_utc: row.claimed_at_utc,
     completed_at_utc: row.completed_at_utc,
-    result: row.result_json && !isRedactedDeviceCallContent(row.result_json)
-      ? JSON.parse(row.result_json)
-      : null,
-    content_redacted: isRedactedDeviceCallContent(row.payload_json)
-      || isRedactedDeviceCallContent(row.result_json),
+    result: publicResult,
+    content_redacted: contentRedacted,
     error_code: row.error_code || null,
     retry_after_ms: deviceCallRetryAfterMs(row.state, "status"),
   };
@@ -2558,12 +2865,14 @@ export default {
             tool_id,
             arguments: toolArguments,
             mcp_request_id,
+            transport_request_id,
           }) => executeCustomerMcpTool(
             env,
             identity,
             tool_id,
             toolArguments,
             mcp_request_id,
+            transport_request_id,
           ),
         });
       }
@@ -2914,7 +3223,7 @@ export default {
         }
 
         const functionId = cleanId(body.function_id, 180);
-        if (functionId !== DEVICE_FUNCTION_ID) {
+        if (!isDeviceFunctionAllowed(functionId)) {
           return internalJson({
             schema: "hara.commander-mcp-product-decision.v1",
             allowed: false,

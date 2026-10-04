@@ -141,8 +141,11 @@ def main() -> int:
     ):
         assert customer_mcp.count(f'"{tool_id}"') >= 2, tool_id
     assert "createMcpHandler" in customer_mcp
-    assert "readOnlyHint: true" in customer_mcp
-    assert "destructiveHint: false" in customer_mcp
+    assert "readOnlyHint = true" in customer_mcp
+    assert "destructiveHint = false" in customer_mcp
+    assert '"hara.files.write"' in customer_mcp and "readOnlyHint: false" in customer_mcp
+    assert '"hara.process.start"' in customer_mcp and '"hara.process.interact"' in customer_mcp and '"hara.process.kill"' in customer_mcp
+    assert "Requires local human approval" in customer_mcp or "Requires local terminal approval" in customer_mcp
     assert 'securitySchemes: SECURITY_SCHEMES' in customer_mcp
     assert 'customer_services_relay: false' in worker
     assert "executeCustomerMcpTool(" in worker

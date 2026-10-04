@@ -7,6 +7,7 @@ import json
 ROOT = Path(__file__).resolve().parents[3]
 HARNESS = ROOT / "apps/commander/scripts/commander_e2e_harness.py"
 SOURCE = HARNESS.read_text(encoding="utf-8")
+WORKER_SOURCE = (ROOT / "apps/commander/src/worker.js").read_text(encoding="utf-8")
 
 ast.parse(SOURCE)
 
@@ -541,5 +542,9 @@ finally:
     helper_globals["time"].sleep = original_helper_sleep
 
 print("COMMANDER_E2E_HARNESS_CANONICAL_ORIGIN=PASS")
+assert "const payloadMarker = await redactedDeviceCallContent(rawPayloadJson)" in WORKER_SOURCE
+assert "const resultMarker = await redactedDeviceCallContent(rawResultJson)" in WORKER_SOURCE
+print("COMMANDER_E2E_HOT_PATH_PAYLOAD_REDACTION=PASS")
+print("COMMANDER_E2E_HOT_PATH_RESULT_REDACTION=PASS")
 print("COMMANDER_E2E_HARNESS_REDIRECT_FAIL_CLOSED=PASS")
 print("COMMANDER_E2E_HARNESS=PASS")

@@ -265,7 +265,7 @@
           <header class="workspace-head devices-workspace-head">
             <div>
               <h1 id="devices-title">Computadores</h1>
-              <p>Veja seus dispositivos, escolha o computador em uso ou conecte outro.</p>
+              <p>Veja seus dispositivos, acompanhe o estado e conecte outro.</p>
             </div>
           </header>
 
@@ -337,11 +337,11 @@
 
                 <div class="onboarding-step">
                   <span class="onboarding-step-no">04</span>
-                  <div><b>Abra a sessão local</b><small>No Linux, execute <code>hara-commander start</code>. O console mostra RECEIVED, EXECUTING, PASS ou DENIED sem revelar tokens ou argumentos sensíveis.</small></div>
+                  <div><b>Abra a sessão local</b><small>No Linux, execute <code>hara-commander start</code>. Consulte com <code>hara-commander status</code> e encerre com <code>hara-commander stop</code> ou Ctrl+C. O console mostra RECEIVED, EXECUTING, PASS, DENIED e pedidos de aprovação sem revelar tokens.</small></div>
                 </div>
                 <div class="onboarding-finish">
                   <span class="onboarding-step-no">05</span>
-                  <div><b>Mantenha o console aberto enquanto usar a IA</b><small>Somente com essa sessão ativa o computador envia heartbeat, aparece Online e aceita funções governadas. Ctrl+C encerra o acesso.</small></div>
+                  <div><b>Mantenha o console aberto enquanto usar a IA</b><small>Read-only executa dentro da sessão governada. Escrita, rollback e controle de processos exigem aprovação local por ação. Ctrl+C revoga o acesso e encerra processos gerenciados pelo Commander.</small></div>
                 </div>
               </article>
             </div>

@@ -408,7 +408,6 @@
     const revokedDevices = devices.filter((device) => device.state === "REVOKED");
     const visibleDevices = deviceTab === "history" ? revokedDevices : activeDevices;
     const onlineCount = Number(payload?.online_count || 0);
-    const selectedDevice = activeDevices.find((device) => Boolean(device.selected)) || null;
 
     setText("deviceActiveCount", number(activeDevices.length));
     setText("deviceHistoryCount", number(revokedDevices.length));
@@ -421,12 +420,16 @@
     }
     setText("landingConnections", number(onlineCount));
     setText("landingConnectionsDetail", onlineCount ? "Commander Agent online" : "Nenhum computador online");
-    if (!selectedDevice) {
-      setState("Aguardando", activeDevices.length ? "Selecione um computador" : "Conecte seu computador");
-    } else if (selectedDevice.online) {
-      setState("Pronto", String(selectedDevice.device_name || "Computador") + " está online", true);
+    if (onlineCount > 0) {
+      setState(
+        "Pronto",
+        onlineCount + (onlineCount === 1 ? " computador online" : " computadores online"),
+        true,
+      );
+    } else if (activeDevices.length) {
+      setState("Offline", "Nenhum computador online");
     } else {
-      setState("Offline", String(selectedDevice.device_name || "Computador") + " está sem conexão");
+      setState("Aguardando", "Conecte seu computador");
     }
 
     if (!list) return;
@@ -464,13 +467,6 @@
       const name = document.createElement("b");
       name.textContent = String(device.device_name || "Computador");
       titleLine.append(name);
-      if (device.selected && device.state === "ACTIVE") {
-        const selectedBadge = document.createElement("span");
-        selectedBadge.className = "device-selected-badge";
-        selectedBadge.textContent = "Em uso";
-        titleLine.append(selectedBadge);
-        row.classList.add("selected");
-      }
       const meta = document.createElement("small");
       const arch = device.architecture ? " · " + String(device.architecture) : "";
       const agentVersion = device.agent_version ? " · Agent " + String(device.agent_version) : "";
@@ -486,14 +482,6 @@
       if (device.state === "ACTIVE") {
         const actions = document.createElement("div");
         actions.className = "device-actions";
-
-        const select = document.createElement("button");
-        select.className = "link-button device-select";
-        select.type = "button";
-        select.disabled = Boolean(device.selected);
-        select.dataset.selectDevice = String(device.device_id);
-        select.textContent = device.selected ? "Em uso" : "Usar";
-        actions.append(select);
 
         const revoke = document.createElement("button");
         revoke.className = "link-button";
@@ -1199,13 +1187,6 @@
     if (copyPairing) {
       event.preventDefault();
       copyText(document.getElementById("pairingToken")?.textContent || "", "Código de pareamento copiado.");
-      return;
-    }
-
-    const selectDeviceButton = event.target.closest("[data-select-device]");
-    if (selectDeviceButton) {
-      event.preventDefault();
-      selectDevice(selectDeviceButton.dataset.selectDevice, selectDeviceButton);
       return;
     }
 

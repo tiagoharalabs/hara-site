@@ -28,6 +28,7 @@ async function rpc(id, method, params = undefined) {
     headers: {
       "content-type": "application/json",
       accept: "application/json, text/event-stream",
+      "x-request-id": `test-http-${id}`,
     },
     body: JSON.stringify(body),
   });
@@ -68,28 +69,39 @@ assert.deepEqual(
   tools.map((tool) => tool.name),
   CUSTOMER_MCP_TOOLS,
 );
-assert.equal(tools.length, 5);
+assert.equal(tools.length, 33);
+const mutationTools = new Set([
+  "hara.files.create_directory",
+  "hara.files.write",
+  "hara.files.edit",
+  "hara.files.move",
+  "hara.files.copy",
+  "hara.files.delete",
+  "hara.files.rollback",
+  "hara.process.start",
+  "hara.process.interact",
+  "hara.process.kill",
+]);
 for (const tool of tools) {
-  assert.equal(tool.annotations?.readOnlyHint, true);
-  assert.equal(tool.annotations?.destructiveHint, false);
-  assert.equal(tool.annotations?.idempotentHint, true);
+  assert.equal(tool.annotations?.readOnlyHint, !mutationTools.has(tool.name));
+  assert.equal(tool.annotations?.destructiveHint, ["hara.files.write","hara.files.delete","hara.files.rollback","hara.process.interact","hara.process.kill"].includes(tool.name));
   assert.deepEqual(tool._meta?.securitySchemes, [
     { type: "oauth2", scopes: ["openid"] },
   ]);
 }
-assert.equal(
-  tools.find((tool) => tool.name === "hara.functions.invoke")
-    ?.annotations?.openWorldHint,
-  true,
-);
-for (const name of CUSTOMER_MCP_TOOLS.filter(
-  (value) => value !== "hara.functions.invoke",
-)) {
+
+const openWorldTools = new Set([
+  "hara.functions.invoke",
+  "hara.process.start",
+  "hara.process.interact",
+]);
+for (const name of CUSTOMER_MCP_TOOLS) {
   assert.equal(
     tools.find((tool) => tool.name === name)?.annotations?.openWorldHint,
-    false,
+    openWorldTools.has(name),
   );
 }
+
 
 const called = await rpc(3, "tools/call", {
   name: "hara.functions.describe",
@@ -100,14 +112,25 @@ assert.equal(called.result?.structuredContent?.state, "PASS");
 assert.equal(calls.length, 1);
 assert.equal(calls[0].tool_id, "hara.functions.describe");
 assert.equal(calls[0].mcp_request_id, 3);
+assert.equal(calls[0].transport_request_id, "test-http-3");
 assert.equal(calls[0].arguments.function_id, "device.info");
 
-const deniedUnknown = await rpc(4, "tools/call", {
+const purposeCall = await rpc(4, "tools/call", {
+  name: "hara.processes.list",
+  arguments: { computer: "nucleo-a", limit: 7 },
+});
+assert.equal(purposeCall.result?.isError, undefined);
+assert.equal(calls.length, 2);
+assert.equal(calls[1].tool_id, "hara.processes.list");
+assert.equal(calls[1].arguments.computer, "nucleo-a");
+assert.equal(calls[1].arguments.limit, 7);
+
+const deniedUnknown = await rpc(5, "tools/call", {
   name: "shell.run",
   arguments: {},
 });
 assert.ok(deniedUnknown.error);
-assert.equal(calls.length, 1);
+assert.equal(calls.length, 2);
 
 const badHost = await handleCustomerMcpRequest(
   new Request("https://evil.example/mcp", {
@@ -115,7 +138,7 @@ const badHost = await handleCustomerMcpRequest(
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
       jsonrpc: "2.0",
-      id: 5,
+      id: 6,
       method: "tools/list",
       params: {},
     }),
@@ -128,7 +151,7 @@ const badHost = await handleCustomerMcpRequest(
 assert.equal(badHost.status, 421);
 
 console.log("COMMANDER_CUSTOMER_MCP_PROTOCOL=PASS");
-console.log("COMMANDER_CUSTOMER_MCP_EXACT_FIVE_TOOLS=PASS");
+console.log("COMMANDER_CUSTOMER_MCP_PURPOSE_SPECIFIC_TOOLS=PASS");
 console.log("COMMANDER_CUSTOMER_MCP_TOOL_ANNOTATIONS=PASS");
 console.log("COMMANDER_CUSTOMER_MCP_SECURITY_SCHEMES=PASS");
 console.log("COMMANDER_CUSTOMER_MCP_REQUEST_ID_BINDING=PASS");
