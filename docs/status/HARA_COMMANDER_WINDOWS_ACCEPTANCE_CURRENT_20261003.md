@@ -500,3 +500,47 @@ WINDOWS_REBOOT_RECONNECT=PASS
 WINDOWS_AGENT_AUTOSTART_AFTER_LOGIN=PASS
 WINDOWS_LOCAL_AUTH_SESSION_AUTO_REOPEN=DENIED_BY_DESIGN
 ```
+
+
+## Overnight continuation checkpoint — 2026-10-03
+
+Safe stop state before the next OpenAI/OAuth session:
+
+```text
+VM=commander-win11
+VM_STATE=running
+INTERACTIVE_USER=HARA_WIN11\sarti
+COMMANDER_AGENT_TASK=Running
+COMMANDER_AGENT_PID=3952
+COMMANDER_AGENT_VERSION=0.3.14
+PKCE_LISTENER_ACTIVE=false
+WINDOWS_SELECTED_DEVICE_FIVE_TOOL=PASS
+WINDOWS_REBOOT_RECONNECT=PASS
+```
+
+No local-operator authorization session was auto-opened after reboot; this remains
+intentional and must be opened explicitly by the human operator before the
+post-reboot `hara.health` proof.
+
+The previously persisted PROD OAuth access token now receives HTTP 401 at MCP
+`initialize`. No refresh token is stored in the safe OAuth session state, so a
+fresh human PKCE authorization is required. The PROD MCP product secret was not
+rotated or reprovisioned.
+
+Wrangler/D1 operator access on Services also showed an intermittent Cloudflare
+OAuth authentication error (code 10000) during the final readback; this is
+operational tooling auth and is separate from the Commander customer OAuth path.
+
+Exact continuation order:
+
+```text
+1. HUMAN_OPEN_LOCAL_OPERATOR_SESSION
+2. POST_REBOOT_HARA_HEALTH
+3. FRESH_HARA_IDENTITY_PKCE
+4. OPENAI_SCAN_TOOLS_LOCAL_LIVE_PREFLIGHT
+5. RECOVER_EXISTING_MCP_PRODUCT_TOKEN_CUSTODY_WITHOUT_ROTATION
+6. CUSTOMER_MCP_FIVE_TOOL_HARNESS
+7. OPENAI_EXTERNAL_CLIENT_E2E
+8. OPENAI_NEGATIVE_N1_N2
+9. OPENAI_PORTAL_SCAN_REVIEW_DEMO_SUBMIT
+```
