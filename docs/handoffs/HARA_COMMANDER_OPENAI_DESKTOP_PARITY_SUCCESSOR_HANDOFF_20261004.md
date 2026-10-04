@@ -1,7 +1,7 @@
 # H.A.R.A. Commander — OpenAI / Desktop-Parity Successor Handoff
 
 Date: 2026-10-04
-Status: LIVE_PROVEN_0_3_25_READ_ONLY_CONTEXT + PROCESS_RUN_SCHEMA_REFRESH_PENDING
+Status: LIVE_PROVEN_0_3_25_PROCESS_EXECUTION_PASS + PROCESS_RUN_SCHEMA_REFRESH_PENDING
 Scope: ChatGPT/OpenAI customer MCP → H.A.R.A. Identity → Commander edge → outbound Agent → governed Linux execution
 
 ## Executive state
@@ -434,7 +434,25 @@ Required operator action before mutating/process live acceptance:
 
 Do not bypass this gate by rewriting the session file; the version-bound local-human approval boundary is intentional.
 
-The prior 0.3.18 designation is superseded for the read-only/context live path by this 0.3.25 canary. Mutating/process live acceptance remains pending a fresh 0.3.25 local operator session, and process.run named-tool acceptance additionally requires ChatGPT MCP schema refresh.
+The fresh 0.3.25 local operator session subsequently closed the governed process-execution live gate through H.A.R.A. Commander itself.
+
+Live accepted call:
+
+- tool: hara.process.start
+- command summary: printf HARA_G10_PTY_READY
+- approval: APPROVAL_GRANTED
+- execution: PASS
+- receipt: e120cb137aa0eb3d57fca81755dc3e0a61b24e46c65925be0abefb26b3d2d787
+- receipt mutation_class: PROCESS_EXECUTION_V1
+- human_approval_required: true
+- human_approval_state: APPROVED
+- transport: OUTBOUND_RELAY
+- execution authority: HARA_COMMANDER_AGENT
+- payload_values_persisted: false
+
+Therefore the 0.3.25 process start/output authority is LIVE_PROVEN on nucleo-a. The earlier approval timeouts were operator-response timeouts, not a broken approval channel; a concurrent accepted canary proved the same approval path end to end.
+
+The prior 0.3.18 designation is superseded for the Linux nucleo-a live path by this 0.3.25 canary. The newly named hara.process.run tool still needs a ChatGPT MCP schema refresh for a named client-side acceptance call, but its Agent/Worker contract and full branch regression are already PASS.
 
 ## Current known limitations
 
