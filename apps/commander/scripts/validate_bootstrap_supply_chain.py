@@ -22,13 +22,15 @@ LINUX_BOOTSTRAP = (
     "HARA_COMMANDER_URL=https://commander.haralabs.com.br bash $tmp)"
 )
 WINDOWS_BOOTSTRAP = (
-    "$haraPrevUrl=$env:HARA_COMMANDER_URL; try { "
-    "$env:HARA_COMMANDER_URL='https://commander.haralabs.com.br'; "
-    "$haraBootstrap=irm https://commander.haralabs.com.br/install/windows.ps1 "
-    "-MaximumRedirection 0 -ErrorAction Stop; "
-    "if (-not $haraBootstrap) { throw 'HARA_COMMANDER_BOOTSTRAP_EMPTY' }; "
-    "iex ([string]$haraBootstrap) } finally { "
-    "$haraBootstrap=$null; $env:HARA_COMMANDER_URL=$haraPrevUrl }"
+    "$haraPrevUrl=$env:HARA_COMMANDER_URL; "
+    "$haraInstaller=Join-Path $env:TEMP ('hara-commander-install-'+[guid]::NewGuid().ToString('N')+'.ps1'); "
+    "try { $env:HARA_COMMANDER_URL='https://commander.haralabs.com.br'; "
+    "Invoke-WebRequest -Uri https://commander.haralabs.com.br/install/windows.ps1 "
+    "-OutFile $haraInstaller -UseBasicParsing -MaximumRedirection 0 -ErrorAction Stop; "
+    "& powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $haraInstaller; "
+    "if ($LASTEXITCODE -ne 0) { throw ('HARA_COMMANDER_INSTALL_EXIT_'+$LASTEXITCODE) } "
+    "} finally { Remove-Item -LiteralPath $haraInstaller -Force -ErrorAction SilentlyContinue; "
+    "$env:HARA_COMMANDER_URL=$haraPrevUrl }"
 )
 SUMS_PATH = PUBLIC / "release/SHA256SUMS"
 DRIFT = (APP / "scripts/validate_prod_runtime_drift.py").read_text(encoding="utf-8")
@@ -103,16 +105,24 @@ def main() -> int:
     )
     need(
         "$env:HARA_COMMANDER_URL='https://commander.haralabs.com.br';" in WINDOWS_BOOTSTRAP
-        and "finally { $haraBootstrap=$null; $env:HARA_COMMANDER_URL=$haraPrevUrl }" in WINDOWS_BOOTSTRAP,
+        and "$env:HARA_COMMANDER_URL=$haraPrevUrl" in WINDOWS_BOOTSTRAP,
         "WINDOWS_BOOTSTRAP_CANONICAL_ORIGIN_PIN",
     )
     need(
-        "$haraBootstrap=irm " in WINDOWS_BOOTSTRAP
+        "$haraInstaller=Join-Path $env:TEMP" in WINDOWS_BOOTSTRAP
+        and "Invoke-WebRequest -Uri https://commander.haralabs.com.br/install/windows.ps1" in WINDOWS_BOOTSTRAP
+        and "-OutFile $haraInstaller" in WINDOWS_BOOTSTRAP
         and "-ErrorAction Stop" in WINDOWS_BOOTSTRAP
-        and "| iex" not in WINDOWS_BOOTSTRAP
-        and "HARA_COMMANDER_BOOTSTRAP_EMPTY" in WINDOWS_BOOTSTRAP
-        and "iex ([string]$haraBootstrap)" in WINDOWS_BOOTSTRAP,
+        and "& powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $haraInstaller" in WINDOWS_BOOTSTRAP
+        and "HARA_COMMANDER_INSTALL_EXIT_" in WINDOWS_BOOTSTRAP
+        and "Remove-Item -LiteralPath $haraInstaller -Force -ErrorAction SilentlyContinue" in WINDOWS_BOOTSTRAP
+        and "iex" not in WINDOWS_BOOTSTRAP.lower(),
         "WINDOWS_BOOTSTRAP_FETCH_FAILURE_PROPAGATES",
+    )
+    need(
+        "iex ([string]$haraBootstrap)" not in INDEX + APP_JS
+        and "$haraBootstrap=irm " not in INDEX + APP_JS,
+        "WINDOWS_BOOTSTRAP_IEX_ABSENT",
     )
 
     fail_chain = subprocess.run(

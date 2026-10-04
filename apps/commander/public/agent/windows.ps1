@@ -6,7 +6,7 @@ $RuntimeStatus = Join-Path $Root "runtime-status.json"
 $SessionPath = Join-Path $Root "operator-session.json"
 $ConsoleEvents = Join-Path $Root "console-events.jsonl"
 $SessionMaxHours = 12
-$AgentVersion = "0.3.11"
+$AgentVersion = "0.3.14"
 $FunctionId = "device.info"
 
 function Get-PlainText([Security.SecureString]$SecureValue) {
@@ -444,17 +444,12 @@ if ($args.Count -gt 0) {
 
 try {
   $StartupCfg=Get-Content -Raw -Path $ConfigPath | ConvertFrom-Json
-  if (
-    -not $StartupCfg.base_url
-    -or -not $StartupCfg.device_id
-    -or -not $StartupCfg.encrypted_device_token
-    -or -not $StartupCfg.architecture
-  ) { throw "DEVICE_CONFIG_INVALID" }
+  if (-not $StartupCfg.base_url -or -not $StartupCfg.device_id -or -not $StartupCfg.encrypted_device_token -or -not $StartupCfg.architecture) { throw "DEVICE_CONFIG_INVALID" }
   $StartupSecureToken=ConvertTo-SecureString ([string]$StartupCfg.encrypted_device_token)
   $StartupToken=Get-PlainText $StartupSecureToken
   if ([string]::IsNullOrWhiteSpace($StartupToken)) { throw "DEVICE_CONFIG_INVALID" }
   $StartupToken=$null
-  if (-not (Try-SetRuntimeStatus -StartedAt ([DateTime]::UtcNow.ToString("o"))) {
+  if (-not (Try-SetRuntimeStatus -StartedAt ([DateTime]::UtcNow.ToString("o")))) {
     throw "RUNTIME_STATUS_STARTUP_WRITE_FAILED"
   }
 } catch {
