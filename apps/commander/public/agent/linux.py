@@ -18,7 +18,7 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
-AGENT_VERSION = "0.3.25"
+AGENT_VERSION = "0.3.26"
 CONFIG_FILE = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home()/".config"))) / "hara-commander/device.env"
 DATA_DIR = Path(os.environ.get("XDG_DATA_HOME", str(Path.home()/".local/share"))) / "hara-commander"
 RECEIPT_DIR = DATA_DIR / "receipts"
@@ -28,6 +28,7 @@ CONSOLE_EVENTS_FILE = DATA_DIR / "console-events.jsonl"
 APPROVAL_DIR = DATA_DIR / "approvals"
 PREIMAGE_DIR = DATA_DIR / "preimages"
 SESSION_MAX_SECONDS = 12 * 60 * 60
+APPROVAL_MODES = {"ASK_EVERY_ACTION","SESSION_TRUSTED"}
 FUNCTION_ID = "device.info"
 FUNCTION_IDS = (
     "device.info", "device.ping", "system.uptime", "system.resources", "workspace.inspect", "process.list",
@@ -271,12 +272,17 @@ def request_local_approval(call, timeout_seconds=30):
     if not session: raise ValueError("LOCAL_OPERATOR_SESSION_REQUIRED")
     if str(session.get("agent_version") or "") != AGENT_VERSION:
         raise ValueError("LOCAL_OPERATOR_SESSION_UPGRADE_REQUIRED")
-    APPROVAL_DIR.mkdir(parents=True,exist_ok=True,mode=0o700)
+    mode=str(session.get("approval_mode") or "ASK_EVERY_ACTION").upper()
+    if mode not in APPROVAL_MODES: raise ValueError("LOCAL_OPERATOR_APPROVAL_MODE_INVALID")
     approval_id=str(call.get("call_id") or call.get("request_id") or "")
     if not approval_id: raise ValueError("APPROVAL_ID_MISSING")
+    summary=_safe_action_summary(call)
+    if mode=="SESSION_TRUSTED":
+        append_console_event("APPROVAL_GRANTED",call,state="APPROVED",approval_id=approval_id,action_summary=summary)
+        return {"state":"APPROVED","approval_id":approval_id,"decided_at_utc":utcnow(),"mode":"SESSION_TRUSTED","source":"LOCAL_OPERATOR_SESSION"}
+    APPROVAL_DIR.mkdir(parents=True,exist_ok=True,mode=0o700)
     req_path,res_path=_approval_paths(approval_id)
     res_path.unlink(missing_ok=True)
-    summary=_safe_action_summary(call)
     request={"schema":"hara.commander-local-approval.v1","approval_id":approval_id,"tool_id":str(call.get("tool_id") or ""),"action_summary":summary,"requested_at_utc":utcnow(),"expires_at_epoch":int(time.time()+timeout_seconds)}
     tmp=req_path.with_suffix(".tmp"); tmp.write_text(json.dumps(request,sort_keys=True,separators=(",",":")),encoding="utf-8"); os.chmod(tmp,0o600); tmp.replace(req_path); os.chmod(req_path,0o600)
     append_console_event("APPROVAL_REQUIRED",call,state="WAITING",approval_id=approval_id,action_summary=summary)
@@ -292,7 +298,7 @@ def request_local_approval(call, timeout_seconds=30):
                 append_console_event("APPROVAL_DENIED",call,state="DENIED",approval_id=approval_id,action_summary=summary)
                 raise ValueError("LOCAL_OPERATOR_APPROVAL_DENIED")
             append_console_event("APPROVAL_GRANTED",call,state="APPROVED",approval_id=approval_id,action_summary=summary)
-            return {"state":"APPROVED","approval_id":approval_id,"decided_at_utc":str(response.get("decided_at_utc") or utcnow())}
+            return {"state":"APPROVED","approval_id":approval_id,"decided_at_utc":str(response.get("decided_at_utc") or utcnow()),"mode":"ASK_EVERY_ACTION","source":"PER_ACTION_PROMPT"}
         time.sleep(0.1)
     req_path.unlink(missing_ok=True); res_path.unlink(missing_ok=True)
     append_console_event("APPROVAL_TIMEOUT",call,state="DENIED",approval_id=approval_id,action_summary=summary)
@@ -621,7 +627,7 @@ def mark_device_offline(config):
         result = post_json(
             config["HARA_COMMANDER_URL"] + "/api/device/offline",
             config["HARA_DEVICE_TOKEN"],
-            {"device_id":config["HARA_DEVICE_ID"],"agent_version":AGENT_VERSION,"architecture":config["HARA_DEVICE_ARCH"]},
+            {"device_id":config["HARA_DEVICE_ID"],"agent_version":AGENT_VERSION,"architecture":config["HARA_DEVICE_ARCH"],"approval_mode":config.get("HARA_COMMANDER_APPROVAL_MODE","ASK_EVERY_ACTION")},
             timeout=5,
         )
         ok = isinstance(result, dict) and result.get("ok") is True and result.get("state") == "OFFLINE"
@@ -633,6 +639,8 @@ def mark_device_offline(config):
 
 def start_operator_console():
     config = load_config()
+    approval_mode=str(config.get("HARA_COMMANDER_APPROVAL_MODE") or "ASK_EVERY_ACTION").upper()
+    if approval_mode not in APPROVAL_MODES: raise RuntimeError("DEVICE_APPROVAL_MODE_INVALID")
     DATA_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
     existing = read_operator_session()
     if existing and int(existing.get("owner_pid") or 0) != os.getpid():
@@ -645,6 +653,7 @@ def start_operator_console():
         "started_at_utc":utcnow(),
         "device_id":config["HARA_DEVICE_ID"],
         "authorization":"LOCAL_OPERATOR_TERMINAL",
+        "approval_mode":approval_mode,
         "agent_version":AGENT_VERSION,
     }
     tmp = SESSION_FILE.with_suffix(".tmp")
@@ -660,6 +669,7 @@ def start_operator_console():
     print("Computador:", platform.node())
     print("Device ID :", config["HARA_DEVICE_ID"])
     print("Agent     :", AGENT_VERSION)
+    print("Aprovação :", "automática nesta sessão" if approval_mode=="SESSION_TRUSTED" else "confirmar cada ação")
     print("")
     print("Comandos permitidos nesta sessão:")
     print("  hara.health / hara.ping / hara.device.info")
@@ -667,11 +677,12 @@ def start_operator_console():
     print("  hara.processes.list")
     print("  hara.files.info / hash / diff / search / list")
     print("  hara.files.read / hara.files.read_many")
-    print("  hara.files.create_directory / write / edit / move / copy  [aprovação local]")
-    print("  hara.files.delete  [preimage + aprovação local]")
-    print("  hara.files.preimages.list / rollback  [rollback requer aprovação]")
+    approval_label="sessão autorizada" if approval_mode=="SESSION_TRUSTED" else "aprovação por ação"
+    print(f"  hara.files.create_directory / write / edit / move / copy  [{approval_label}]")
+    print(f"  hara.files.delete  [preimage + {approval_label}]")
+    print(f"  hara.files.preimages.list / rollback  [rollback: {approval_label}]")
     print("  hara.process.sessions / output")
-    print("  hara.process.run / start / interact / kill  [aprovação local]")
+    print(f"  hara.process.run / start / interact / kill  [{approval_label}]")
     print("  hara.functions.list / hara.functions.describe")
     print("  hara.functions.invoke (compatibilidade; somente funções governadas)")
     print("  hara.receipts.get")
@@ -736,6 +747,7 @@ def session_status():
     print("HARA_COMMANDER_SESSION=" + ("ACTIVE" if session else "INACTIVE"))
     if session:
         print("SESSION_STARTED_AT_UTC=" + str(session.get("started_at_utc") or ""))
+        print("HARA_COMMANDER_APPROVAL_MODE=" + str(session.get("approval_mode") or "ASK_EVERY_ACTION"))
     print("SECRET_MATERIAL_EXPOSED=FALSE")
 
 def stop_operator_session():
@@ -760,7 +772,24 @@ def load_config():
     required = ("HARA_COMMANDER_URL","HARA_DEVICE_ID","HARA_DEVICE_TOKEN","HARA_DEVICE_ARCH")
     if not all(data.get(k) for k in required):
         raise RuntimeError("DEVICE_CONFIG_INVALID")
+    mode=str(data.get("HARA_COMMANDER_APPROVAL_MODE") or "ASK_EVERY_ACTION").upper()
+    if mode not in APPROVAL_MODES: raise RuntimeError("DEVICE_APPROVAL_MODE_INVALID")
+    data["HARA_COMMANDER_APPROVAL_MODE"]=mode
     return data
+def set_approval_mode(value):
+    raw=str(value or "").strip().lower()
+    aliases={"ask":"ASK_EVERY_ACTION","per-action":"ASK_EVERY_ACTION","session":"SESSION_TRUSTED","auto":"SESSION_TRUSTED","trusted":"SESSION_TRUSTED"}
+    mode=aliases.get(raw,str(value or "").strip().upper())
+    if mode not in APPROVAL_MODES: raise RuntimeError("DEVICE_APPROVAL_MODE_INVALID")
+    lines=CONFIG_FILE.read_text(encoding="utf-8").splitlines()
+    lines=[line for line in lines if not line.startswith("HARA_COMMANDER_APPROVAL_MODE=")]
+    lines.append("HARA_COMMANDER_APPROVAL_MODE="+mode)
+    tmp=CONFIG_FILE.with_suffix(".tmp")
+    tmp.write_text("\n".join(lines)+"\n",encoding="utf-8")
+    os.chmod(tmp,0o600); tmp.replace(CONFIG_FILE); os.chmod(CONFIG_FILE,0o600)
+    print("HARA_COMMANDER_APPROVAL_MODE="+mode)
+    if operator_session_active(): print("SESSION_RESTART_REQUIRED=TRUE")
+
 def post_json(url, token, payload, timeout=25):
     req = urllib.request.Request(
         url,
@@ -826,7 +855,7 @@ def device_info(config):
         "device_id":config["HARA_DEVICE_ID"],"hostname":platform.node(),
         "platform":platform.system().upper(),"platform_release":platform.release(),
         "architecture":config["HARA_DEVICE_ARCH"],"python_version":platform.python_version(),
-        "agent_version":AGENT_VERSION,"tunnel_mode":"OUTBOUND_RELAY",
+        "agent_version":AGENT_VERSION,"approval_mode":config.get("HARA_COMMANDER_APPROVAL_MODE","ASK_EVERY_ACTION"),"tunnel_mode":"OUTBOUND_RELAY",
     }
 
 def device_ping(config):
@@ -1150,6 +1179,7 @@ def write_receipt(config, call, state, result=None):
         result_stdout_sha256 = hashlib.sha256(stdout.encode("utf-8")).hexdigest()
     approval=call.get("_local_approval") or {}
     mutation=_is_mutation_tool(tool_id)
+    approval_mode=str(approval.get("mode") or "ASK_EVERY_ACTION") if mutation else None
     preimage=(result or {}).get("preimage_sha256") if isinstance(result,dict) else None
     preimage_id=(result or {}).get("preimage_id") if isinstance(result,dict) else None
     rollback_preimage_id=(result or {}).get("rollback_preimage_id") if isinstance(result,dict) else None
@@ -1163,8 +1193,10 @@ def write_receipt(config, call, state, result=None):
         "operational_authority":"HARA_SERVICES",
         "execution_authority":"HARA_COMMANDER_AGENT",
         "mutation_class":_mutation_class(tool_id),
-        "human_approval_required":mutation,
+        "human_approval_required":bool(mutation and approval_mode=="ASK_EVERY_ACTION"),
         "human_approval_state":approval.get("state") if mutation else None,
+        "local_authorization_mode":approval_mode,
+        "authorization_source":approval.get("source") if mutation else None,
         "preimage_sha256":preimage,
         "preimage_id":preimage_id,
         "rollback_preimage_id":rollback_preimage_id,
@@ -1319,7 +1351,10 @@ def execute_tool(config, call):
     sha=write_receipt(config,call,"PASS",result)
     mutation=_is_mutation_tool(tool)
     if mutation and isinstance(result,dict):
-        result["human_approval_state"]=(call.get("_local_approval") or {}).get("state")
+        approval=(call.get("_local_approval") or {})
+        result["human_approval_state"]=approval.get("state")
+        result["local_authorization_mode"]=approval.get("mode")
+        result["authorization_source"]=approval.get("source")
     return {
         "state":"PASS","operational_authority":"HARA_SERVICES",
         "runtime_authority_from_chatgpt":False,"mutation_performed":mutation,
@@ -1464,7 +1499,7 @@ def self_test():
             raise AssertionError("OLD_SESSION_MUTATION_NOT_DENIED")
         except ValueError as exc:
             assert str(exc)=="LOCAL_OPERATOR_SESSION_UPGRADE_REQUIRED"
-        session=json.loads(SESSION_FILE.read_text(encoding="utf-8")); session["agent_version"]=AGENT_VERSION
+        session=json.loads(SESSION_FILE.read_text(encoding="utf-8")); session["agent_version"]=AGENT_VERSION; session["approval_mode"]="ASK_EVERY_ACTION"
         SESSION_FILE.write_text(json.dumps(session,sort_keys=True,separators=(",",":")),encoding="utf-8")
         import threading
         def approve_selftest():
@@ -1476,7 +1511,11 @@ def self_test():
             res_path.parent.mkdir(parents=True,exist_ok=True); res_path.write_text(json.dumps(response),encoding="utf-8")
         thread=threading.Thread(target=approve_selftest,daemon=True); thread.start()
         approval=request_local_approval(approval_call,timeout_seconds=2); thread.join(timeout=1)
-        assert approval["state"]=="APPROVED"
+        assert approval["state"]=="APPROVED" and approval["mode"]=="ASK_EVERY_ACTION"
+        session["approval_mode"]="SESSION_TRUSTED"
+        SESSION_FILE.write_text(json.dumps(session,sort_keys=True,separators=(",",":")),encoding="utf-8")
+        trusted=request_local_approval(approval_call,timeout_seconds=1)
+        assert trusted["state"]=="APPROVED" and trusted["mode"]=="SESSION_TRUSTED" and trusted["source"]=="LOCAL_OPERATOR_SESSION"
     print("COMMANDER_LINUX_OPERATOR_SESSION_GATE=PASS")
     print("COMMANDER_LOCAL_MUTATION_APPROVAL=PASS")
     print("COMMANDER_LINUX_CONSOLE_SANITIZATION=PASS")
@@ -1490,16 +1529,22 @@ def main():
         self_test(); return
     if "--session-start" in sys.argv or (len(sys.argv)>1 and sys.argv[1]=="start"):
         start_operator_console(); return
+    if len(sys.argv)>1 and sys.argv[1]=="approval-mode":
+        if len(sys.argv)==2:
+            print("HARA_COMMANDER_APPROVAL_MODE="+load_config().get("HARA_COMMANDER_APPROVAL_MODE","ASK_EVERY_ACTION")); return
+        if len(sys.argv)==3:
+            set_approval_mode(sys.argv[2]); return
+        raise SystemExit(64)
     if "--session-status" in sys.argv or (len(sys.argv)>1 and sys.argv[1]=="status"):
         session_status(); return
     if "--session-stop" in sys.argv or (len(sys.argv)>1 and sys.argv[1]=="stop"):
         stop_operator_session(); return
     if len(sys.argv) > 1 and sys.argv[1] in {"help", "--help", "-h"}:
-        print("Usage: hara-commander [start|status|stop|help]")
+        print("Usage: hara-commander [start|status|stop|approval-mode [ask|session]|help]")
         return
     if len(sys.argv) > 1:
         print("HARA_COMMANDER_UNKNOWN_COMMAND=" + str(sys.argv[1]), file=sys.stderr)
-        print("Usage: hara-commander [start|status|stop|help]", file=sys.stderr)
+        print("Usage: hara-commander [start|status|stop|approval-mode [ask|session]|help]", file=sys.stderr)
         raise SystemExit(64)
     config=load_config()
     RECEIPT_DIR.mkdir(parents=True,exist_ok=True,mode=0o700)
@@ -1530,6 +1575,7 @@ def main():
             if now-last_heartbeat>=30:
                 post_json(config["HARA_COMMANDER_URL"]+"/api/device/heartbeat",config["HARA_DEVICE_TOKEN"],{
                     "device_id":config["HARA_DEVICE_ID"],"architecture":config["HARA_DEVICE_ARCH"],"agent_version":AGENT_VERSION,
+                    "approval_mode":config.get("HARA_COMMANDER_APPROVAL_MODE","ASK_EVERY_ACTION"),
                 })
                 last_heartbeat=now
                 last_error_code=None

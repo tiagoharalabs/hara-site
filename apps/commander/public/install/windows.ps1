@@ -3,6 +3,15 @@ $ErrorActionPreference = "Stop"
 $Action = $Action.TrimStart("-").ToLowerInvariant()
 
 $BaseUrl = if ($env:HARA_COMMANDER_URL) { $env:HARA_COMMANDER_URL.TrimEnd("/") } else { "https://commander.haralabs.com.br" }
+$ApprovalModeRaw = if ($env:HARA_COMMANDER_APPROVAL_MODE) { ([string]$env:HARA_COMMANDER_APPROVAL_MODE).Trim().ToUpperInvariant() } else { "SESSION_TRUSTED" }
+$ApprovalMode = switch ($ApprovalModeRaw) {
+  "ASK" { "ASK_EVERY_ACTION" }
+  "ASK_EVERY_ACTION" { "ASK_EVERY_ACTION" }
+  "SESSION" { "SESSION_TRUSTED" }
+  "AUTO" { "SESSION_TRUSTED" }
+  "SESSION_TRUSTED" { "SESSION_TRUSTED" }
+  default { throw "DEVICE_APPROVAL_MODE_INVALID" }
+}
 $Root = Join-Path $env:LOCALAPPDATA "HARA Commander"
 $Agent = Join-Path $Root "hara-commander-agent.ps1"
 $Config = Join-Path $Root "device.json"
@@ -87,7 +96,7 @@ function Invoke-DeviceAction {
   try {
     $headers = @{ Accept="application/json"; Authorization=("Bearer " + $token) }
     if ($Kind -eq "heartbeat") {
-      $payload = @{ device_id=[string]$cfg.device_id; architecture=[string]$cfg.architecture; agent_version="0.3.25" } | ConvertTo-Json -Compress
+      $payload = @{ device_id=[string]$cfg.device_id; architecture=[string]$cfg.architecture; agent_version="0.3.26"; approval_mode=$(if ($cfg.approval_mode) {[string]$cfg.approval_mode} else {"ASK_EVERY_ACTION"}) } | ConvertTo-Json -Compress
       $result = Invoke-RestMethod -Uri "$base/api/device/heartbeat" -Method Post -ContentType "application/json" -Headers $headers -Body $payload -TimeoutSec 15 -MaximumRedirection 0
       if (-not $result.ok -or [string]$result.device_id -ne [string]$cfg.device_id) { throw "REMOTE_HEARTBEAT_INVALID" }
       return $result
@@ -189,6 +198,7 @@ function Show-Status {
   Write-Host ("HARA_COMMANDER_AGENT_REGISTERED=" + $(if ($task) {"TRUE"} else {"FALSE"}))
   Write-Host ("HARA_COMMANDER_AGENT_VERSION=" + $version)
   if ($cfg -and $cfg.device_id) { Write-Host ("DEVICE_ID=" + [string]$cfg.device_id) }
+  if ($cfg -and $cfg.approval_mode) { Write-Host ("HARA_COMMANDER_APPROVAL_MODE=" + [string]$cfg.approval_mode) }
   if (Test-Path -LiteralPath $Agent -PathType Leaf) {
     $PowerShellExe = (Get-Command powershell.exe -ErrorAction SilentlyContinue).Source
     if ($PowerShellExe) { & $PowerShellExe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $Agent --session-status }
@@ -266,7 +276,7 @@ if ([string]::IsNullOrWhiteSpace($PairingToken)) { throw "Pairing token cannot b
 
 $DeviceName = $env:COMPUTERNAME
 $Architecture = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant()
-$Payload = @{ pairing_token=$PairingToken; device_name=$DeviceName; platform="WINDOWS"; architecture=$Architecture; agent_version="0.3.25" } | ConvertTo-Json -Compress
+$Payload = @{ pairing_token=$PairingToken; device_name=$DeviceName; platform="WINDOWS"; architecture=$Architecture; agent_version="0.3.26"; approval_mode=$ApprovalMode } | ConvertTo-Json -Compress
 $Enroll = Invoke-RestMethod -Uri "$BaseUrl/api/device/enroll" -Method Post -ContentType "application/json" -Headers @{ Accept="application/json" } -Body $Payload -TimeoutSec 30 -MaximumRedirection 0
 $PairingToken = $null
 $Payload = $null
@@ -281,7 +291,7 @@ $Enroll = $null
 try {
   New-Item -ItemType Directory -Path $Root -Force | Out-Null
   $EncryptedToken = ConvertTo-SecureString $DeviceTokenForRollback -AsPlainText -Force | ConvertFrom-SecureString
-  $ConfigObject = @{ base_url=$BaseUrl; device_id=$EnrollDeviceId; encrypted_device_token=$EncryptedToken; architecture=$Architecture; agent_version="0.3.25" }
+  $ConfigObject = @{ base_url=$BaseUrl; device_id=$EnrollDeviceId; encrypted_device_token=$EncryptedToken; architecture=$Architecture; agent_version="0.3.26"; approval_mode=$ApprovalMode }
   $ConfigObject | ConvertTo-Json | Set-Content -Path $Config -Encoding UTF8
 
   $Identity = [Security.Principal.WindowsIdentity]::GetCurrent().Name

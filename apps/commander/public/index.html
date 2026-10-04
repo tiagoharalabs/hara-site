@@ -324,24 +324,34 @@
 
                 <div class="onboarding-step onboarding-step-stack">
                   <span class="onboarding-step-no">03</span>
+                  <div><b>Escolha como autorizar ações</b><small>Você pode autorizar a sessão inteira ou confirmar cada alteração e comando individualmente.</small></div>
+                  <div class="os-picker approval-picker" role="radiogroup" aria-label="Modo de autorização">
+                    <button class="active" type="button" role="radio" aria-checked="true" data-approval-choice="session">Automático nesta sessão</button>
+                    <button type="button" role="radio" aria-checked="false" data-approval-choice="ask">Pedir confirmação</button>
+                  </div>
+                  <small class="install-note" id="approvalModeNote">Recomendado: abrir <code>hara-commander start</code> autoriza as operações governadas até Ctrl+C, sem prompts por ação.</small>
+                </div>
+
+                <div class="onboarding-step onboarding-step-stack">
+                  <span class="onboarding-step-no">04</span>
                   <div><b>Copie e execute o instalador</b><small>Depois cole o código quando o instalador solicitar “Pairing token”.</small></div>
                   <div class="install-pane" data-os-panel="linux">
-                    <div class="install-command"><code>(tmp=$(mktemp) && trap 'rm -f $tmp' EXIT && curl -fsS --proto '=https' --tlsv1.2 --location --max-redirs 0 https://commander.haralabs.com.br/install/linux.sh -o $tmp && HARA_COMMANDER_URL=https://commander.haralabs.com.br bash $tmp)</code><button class="btn btn-secondary small" type="button" data-copy-linux>Copiar comando Linux</button></div>
+                    <div class="install-command"><code data-install-linux-code>(tmp=$(mktemp) && trap 'rm -f $tmp' EXIT && curl -fsS --proto '=https' --tlsv1.2 --location --max-redirs 0 https://commander.haralabs.com.br/install/linux.sh -o $tmp && HARA_COMMANDER_APPROVAL_MODE=SESSION_TRUSTED HARA_COMMANDER_URL=https://commander.haralabs.com.br bash $tmp)</code><button class="btn btn-secondary small" type="button" data-copy-linux>Copiar comando Linux</button></div>
                     <small class="install-note">Instale uma vez. Para liberar o acesso da IA, execute <code>hara-commander start</code> e mantenha esse console aberto.</small>
                   </div>
                   <div class="install-pane" data-os-panel="windows" hidden>
-                    <div class="install-command"><code>$haraPrevUrl=$env:HARA_COMMANDER_URL; $haraInstaller=Join-Path $env:TEMP ('hara-commander-install-'+[guid]::NewGuid().ToString('N')+'.ps1'); try { $env:HARA_COMMANDER_URL='https://commander.haralabs.com.br'; Invoke-WebRequest -Uri https://commander.haralabs.com.br/install/windows.ps1 -OutFile $haraInstaller -UseBasicParsing -MaximumRedirection 0 -ErrorAction Stop; & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $haraInstaller; if ($LASTEXITCODE -ne 0) { throw ('HARA_COMMANDER_INSTALL_EXIT_'+$LASTEXITCODE) } } finally { Remove-Item -LiteralPath $haraInstaller -Force -ErrorAction SilentlyContinue; $env:HARA_COMMANDER_URL=$haraPrevUrl }</code><button class="btn btn-secondary small" type="button" data-copy-windows>Copiar comando Windows</button></div>
+                    <div class="install-command"><code data-install-windows-code>$haraPrevUrl=$env:HARA_COMMANDER_URL; $haraPrevApproval=$env:HARA_COMMANDER_APPROVAL_MODE; $haraInstaller=Join-Path $env:TEMP ('hara-commander-install-'+[guid]::NewGuid().ToString('N')+'.ps1'); try { $env:HARA_COMMANDER_URL='https://commander.haralabs.com.br'; $env:HARA_COMMANDER_APPROVAL_MODE='SESSION_TRUSTED'; Invoke-WebRequest -Uri https://commander.haralabs.com.br/install/windows.ps1 -OutFile $haraInstaller -UseBasicParsing -MaximumRedirection 0 -ErrorAction Stop; & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $haraInstaller; if ($LASTEXITCODE -ne 0) { throw ('HARA_COMMANDER_INSTALL_EXIT_'+$LASTEXITCODE) } } finally { Remove-Item -LiteralPath $haraInstaller -Force -ErrorAction SilentlyContinue; $env:HARA_COMMANDER_URL=$haraPrevUrl; $env:HARA_COMMANDER_APPROVAL_MODE=$haraPrevApproval }</code><button class="btn btn-secondary small" type="button" data-copy-windows>Copiar comando Windows</button></div>
                     <small class="install-note">O daemon permanece instalado no logon, mas fica inerte. A sessão de IA precisa ser aberta manualmente no PowerShell e o console mostra cada execução.</small>
                   </div>
                 </div>
 
                 <div class="onboarding-step">
-                  <span class="onboarding-step-no">04</span>
+                  <span class="onboarding-step-no">05</span>
                   <div><b>Abra a sessão local</b><small>No Linux, execute <code>hara-commander start</code>. Consulte com <code>hara-commander status</code> e encerre com <code>hara-commander stop</code> ou Ctrl+C. O console mostra RECEIVED, EXECUTING, PASS, DENIED e pedidos de aprovação sem revelar tokens.</small></div>
                 </div>
                 <div class="onboarding-finish">
-                  <span class="onboarding-step-no">05</span>
-                  <div><b>Mantenha o console aberto enquanto usar a IA</b><small>Read-only executa dentro da sessão governada. Escrita, rollback e controle de processos exigem aprovação local por ação. Ctrl+C revoga o acesso e encerra processos gerenciados pelo Commander.</small></div>
+                  <span class="onboarding-step-no">06</span>
+                  <div><b>Mantenha o console aberto enquanto usar a IA</b><small>No modo automático, a sessão aberta já autoriza escrita, rollback e processos governados sem prompts adicionais. No modo de confirmação, cada ação mutável pede aprovação. Ctrl+C revoga o acesso e encerra processos gerenciados.</small></div>
                 </div>
               </article>
             </div>

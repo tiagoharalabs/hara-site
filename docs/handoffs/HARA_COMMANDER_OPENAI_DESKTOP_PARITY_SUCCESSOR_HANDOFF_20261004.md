@@ -1,7 +1,7 @@
 # H.A.R.A. Commander — OpenAI / Desktop-Parity Successor Handoff
 
 Date: 2026-10-04
-Status: LIVE_PROVEN_0_3_25_PROCESS_EXECUTION_PASS + PROCESS_RUN_SCHEMA_REFRESH_PENDING
+Status: LIVE_PROVEN_0_3_25 + SUCCESSOR_CANDIDATE_0_3_26_CONFIGURABLE_APPROVAL
 Scope: ChatGPT/OpenAI customer MCP → H.A.R.A. Identity → Commander edge → outbound Agent → governed Linux execution
 
 ## Executive state
@@ -454,12 +454,38 @@ Therefore the 0.3.25 process start/output authority is LIVE_PROVEN on nucleo-a. 
 
 The prior 0.3.18 designation is superseded for the Linux nucleo-a live path by this 0.3.25 canary. The newly named hara.process.run tool still needs a ChatGPT MCP schema refresh for a named client-side acceptance call, but its Agent/Worker contract and full branch regression are already PASS.
 
+## Successor 0.3.26 — configurable local authorization
+
+The successor candidate 0.3.26 changes the approval UX from a hard-coded per-action prompt to an explicit device policy selected at onboarding.
+
+Supported modes:
+
+- SESSION_TRUSTED — recommended/default for new installs. Opening hara-commander start is the human authorization boundary for the governed toolset. Filesystem mutations and process execution run without additional y/N prompts while that exact local session remains active. Ctrl+C/stop revokes authority and managed processes are cleaned up.
+- ASK_EVERY_ACTION — conservative mode. Each filesystem mutation/process action continues to require an explicit local terminal decision.
+
+The policy does not expose unrestricted shell.run, does not bypass grants/tool allowlists, does not bypass preimages/rollback, and does not make the background daemon authoritative without a local session.
+
+Product integration:
+
+- portal onboarding exposes both modes before the installer command is copied
+- portal defaults new installs to SESSION_TRUSTED
+- Linux and Windows installer commands carry HARA_COMMANDER_APPROVAL_MODE
+- enrollment stores approval_mode on the device
+- migration 0017_device_approval_mode.sql adds the device field with legacy-safe default ASK_EVERY_ACTION
+- Agent heartbeat keeps server state synchronized when the local mode changes
+- hara.capabilities v2 projects device approval_mode, per-tool local_approval_required, and local_session_authorization_sufficient
+- Linux CLI supports hara-commander approval-mode ask|session; changing an active device requires a session restart before the new policy becomes authoritative
+- receipts distinguish per-action prompts from session authorization using local_authorization_mode and authorization_source
+- legacy devices that do not yet have a persisted mode fail toward ASK_EVERY_ACTION
+
+0.3.26 remains source/regression ready until migration + Worker/assets + Agent canary are promoted. The current live-proven Linux state remains 0.3.25.
+
 ## Current known limitations
 
 1. Windows purpose-specific parity is not yet proven. Windows version metadata was kept release-coherent, but the new Linux-first purpose-specific filesystem/search behavior must not be declared accepted on Windows without a separate canary.
 2. No generic `shell.run` / arbitrary command execution is exposed.
-3. Mutable filesystem tools exist in successor candidate 0.3.23 but were not part of the 0.3.18 live proof; live promotion requires a separate gate.
-4. Process lifecycle tools exist in successor candidate 0.3.23 but were not part of the 0.3.18 live proof; live promotion requires a separate gate.
+3. Mutable filesystem write/edit/rollback and governed process execution are LIVE_PROVEN on nucleo-a under 0.3.25; the new 0.3.26 approval-mode policy still requires its own migration/deploy/canary gate.
+4. The newly named hara.process.run surface is source/regression ready but still depends on client MCP schema refresh for named-tool acceptance.
 5. `hara commander start|status|stop` is not yet integrated into the canonical H.A.R.A. admin CLI; public product command remains `hara-commander ...`.
 6. Search is intentionally bounded and synchronous; there is no progressive search session API yet.
 7. Legacy selected-device route/table still exists for compatibility but is not MCP routing authority.

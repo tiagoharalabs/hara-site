@@ -332,6 +332,22 @@ function cleanAgentValue(value, max = 80) {
   return text;
 }
 
+function normalizeApprovalMode(value, fallback = "ASK_EVERY_ACTION") {
+  const raw = String(value || "").trim().toUpperCase();
+  const aliases = {
+    "ASK": "ASK_EVERY_ACTION",
+    "ASK_EVERY_ACTION": "ASK_EVERY_ACTION",
+    "SESSION": "SESSION_TRUSTED",
+    "AUTO": "SESSION_TRUSTED",
+    "SESSION_TRUSTED": "SESSION_TRUSTED",
+  };
+  const mode = raw ? aliases[raw] : fallback;
+  if (!["ASK_EVERY_ACTION","SESSION_TRUSTED"].includes(mode)) {
+    throw new Error("DEVICE_APPROVAL_MODE_INVALID");
+  }
+  return mode;
+}
+
 function deviceCallRetryAfterMs(state, source = "status") {
   const normalized = String(state || "").trim().toUpperCase();
   if (normalized === "PENDING") return source === "enqueue" ? 350 : 750;
@@ -1456,7 +1472,7 @@ async function listDevices(env, session) {
   const result = await env.PRODUCT_DB.prepare(
     `SELECT d.device_id, d.enrolled_by_subject_id, d.device_name, d.platform, d.architecture,
             d.agent_version, d.tunnel_mode, d.state, d.created_at_utc, d.last_seen_at_utc,
-            d.revoked_at_utc
+            d.revoked_at_utc, d.approval_mode
        FROM commander_devices d
       WHERE d.tenant_id = ?
       ORDER BY d.created_at_utc DESC`
@@ -1476,6 +1492,7 @@ async function listDevices(env, session) {
     created_at_utc: row.created_at_utc,
     last_seen_at_utc: row.last_seen_at_utc,
     revoked_at_utc: row.revoked_at_utc,
+    approval_mode: normalizeApprovalMode(row.approval_mode, "ASK_EVERY_ACTION"),
   }));
 }
 
@@ -1486,6 +1503,7 @@ async function enrollDevice(env, body) {
   const platform = normalizeDevicePlatform(body.platform);
   const architecture = cleanAgentValue(body.architecture, 80);
   const agentVersion = cleanAgentValue(body.agent_version, 80) || "0.1.0";
+  const approvalMode = normalizeApprovalMode(body.approval_mode, "ASK_EVERY_ACTION");
   const deviceId = "HARA-DEVICE-" + crypto.randomUUID();
   const deviceSecret = randomToken(48);
   const credentialHash = await sha256(deviceSecret);
@@ -1495,9 +1513,9 @@ async function enrollDevice(env, body) {
     `INSERT INTO commander_devices
       (device_id, pairing_id, tenant_id, enrolled_by_subject_id, device_name, platform,
        architecture, agent_version, tunnel_mode, credential_hash, state,
-       created_at_utc, last_seen_at_utc, revoked_at_utc)
+       created_at_utc, last_seen_at_utc, revoked_at_utc, approval_mode)
      SELECT ?, pairing_id, tenant_id, subject_id, ?, ?, ?, ?, 'OUTBOUND_RELAY', ?,
-            'ACTIVE', ?, ?, NULL
+            'ACTIVE', ?, ?, NULL, ?
        FROM device_pairing_tokens
       WHERE token_hash = ?
         AND consumed_at_utc IS NULL
@@ -1512,6 +1530,7 @@ async function enrollDevice(env, body) {
     credentialHash,
     createdAt,
     createdAt,
+    approvalMode,
     tokenHash,
     createdAt,
   );
@@ -1562,6 +1581,7 @@ async function enrollDevice(env, body) {
     platform,
     architecture,
     agent_version: agentVersion,
+    approval_mode: approvalMode,
     tunnel_mode: "OUTBOUND_RELAY",
     state: "ACTIVE",
     enrolled_at_utc: createdAt,
@@ -1575,7 +1595,7 @@ async function resolveDeviceCredential(env, request) {
   const device = await env.PRODUCT_DB.prepare(
     `SELECT device_id, tenant_id, enrolled_by_subject_id, device_name, platform,
             architecture, agent_version, tunnel_mode, state, created_at_utc,
-            last_seen_at_utc, revoked_at_utc
+            last_seen_at_utc, revoked_at_utc, approval_mode
        FROM commander_devices
       WHERE credential_hash = ?
       LIMIT 1`
@@ -1594,6 +1614,7 @@ async function heartbeatDevice(env, request, body) {
 
   const agentVersion = cleanAgentValue(body.agent_version, 80) || device.agent_version;
   const architecture = cleanAgentValue(body.architecture, 80) || device.architecture;
+  const approvalMode = normalizeApprovalMode(body.approval_mode, normalizeApprovalMode(device.approval_mode, "ASK_EVERY_ACTION"));
   const seenAt = nowIso();
 
   const heartbeat = await env.PRODUCT_DB.prepare(
@@ -1601,9 +1622,10 @@ async function heartbeatDevice(env, request, body) {
         SET last_seen_at_utc = ?,
             agent_version = ?,
             architecture = ?,
+            approval_mode = ?,
             tunnel_mode = 'OUTBOUND_RELAY'
       WHERE device_id = ? AND state = 'ACTIVE' AND revoked_at_utc IS NULL`
-  ).bind(seenAt, agentVersion, architecture, device.device_id).run();
+  ).bind(seenAt, agentVersion, architecture, approvalMode, device.device_id).run();
   if (!heartbeat.meta?.changes) throw new Error("DEVICE_AUTH_INVALID");
 
   return {
@@ -1623,14 +1645,16 @@ async function markDeviceOffline(env, request, body) {
   const seenAt = nowIso();
   const agentVersion = cleanAgentValue(body.agent_version, 80) || device.agent_version;
   const architecture = cleanAgentValue(body.architecture, 80) || device.architecture;
+  const approvalMode = normalizeApprovalMode(body.approval_mode, normalizeApprovalMode(device.approval_mode, "ASK_EVERY_ACTION"));
   const result = await env.PRODUCT_DB.prepare(
     `UPDATE commander_devices
         SET last_seen_at_utc = ?,
             agent_version = ?,
             architecture = ?,
+            approval_mode = ?,
             tunnel_mode = 'OUTBOUND_RELAY_OFFLINE'
       WHERE device_id = ? AND state = 'ACTIVE' AND revoked_at_utc IS NULL`
-  ).bind(seenAt, agentVersion, architecture, device.device_id).run();
+  ).bind(seenAt, agentVersion, architecture, approvalMode, device.device_id).run();
   if (!result.meta?.changes) throw new Error("DEVICE_AUTH_INVALID");
   return {
     schema: "hara.commander-device-offline.v1",
@@ -2309,14 +2333,17 @@ function semverAtLeast(version, wantedPatch) {
   return major > 0 || minor > 3 || (minor === 3 && patch >= wantedPatch);
 }
 
-function capabilityToolDetail(toolId) {
+function capabilityToolDetail(toolId, approvalMode = "ASK_EVERY_ACTION") {
   const id=String(toolId || "");
   const processExecution=isDeviceProcessMutationTool(id);
   const filesystemMutation=isDeviceMutationTool(id);
+  const mutable=processExecution || filesystemMutation;
+  const mode=normalizeApprovalMode(approvalMode, "ASK_EVERY_ACTION");
   return {
     tool_id:id,
     risk_class:processExecution ? "PROCESS_EXECUTION" : (filesystemMutation ? "FILESYSTEM_MUTATION" : "READ_ONLY"),
-    local_approval_required:processExecution || filesystemMutation,
+    local_approval_required:mutable && mode === "ASK_EVERY_ACTION",
+    local_session_authorization_sufficient:mutable && mode === "SESSION_TRUSTED",
     required_grant:MCP_TOOL_GRANTS[id] || null,
     preferred_interface:id !== "hara.functions.invoke",
   };
@@ -2355,6 +2382,7 @@ function capabilitiesForDevice(device, grants) {
     tools.push("hara.process.run");
   }
   const availableTools=[...new Set(tools)].sort();
+  const approvalMode=normalizeApprovalMode(device.approval_mode, "ASK_EVERY_ACTION");
   return {
     computer:device.device_name,
     device_id:device.device_id,
@@ -2363,11 +2391,13 @@ function capabilitiesForDevice(device, grants) {
     agent_version:device.agent_version,
     state:device.revoked_at_utc ? "REVOKED" : (device.online ? "ONLINE" : "OFFLINE"),
     tools:availableTools,
-    tool_details:availableTools.map(capabilityToolDetail),
-    capability_detail_schema:"hara.commander-capability-tool.v1",
+    tool_details:availableTools.map((toolId)=>capabilityToolDetail(toolId,approvalMode)),
+    capability_detail_schema:"hara.commander-capability-tool.v2",
+    approval_mode:approvalMode,
     operator_session_required:true,
-    mutation_requires_local_approval:true,
-    process_execution_requires_local_approval:true,
+    mutation_requires_local_approval:approvalMode === "ASK_EVERY_ACTION",
+    process_execution_requires_local_approval:approvalMode === "ASK_EVERY_ACTION",
+    local_session_authorizes_governed_mutations:approvalMode === "SESSION_TRUSTED",
     process_sessions_revoked_with_operator_session:true,
     payload_hot_path_redaction:true,
     receipt_binding:true,

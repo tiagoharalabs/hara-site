@@ -93,8 +93,10 @@ need(worker.includes("customerUsage") && worker.includes("quota.status"),"WORKER
 need(worker.includes("semverAtLeast(device.agent_version,24)") && worker.includes('tools.push("hara.system.resources","hara.workspace.inspect")'),"WORKER_CONTEXT_TOOLS_0_3_24");
 need(worker.includes('toolId === "hara.process.run" ? 25') && worker.includes('tools.push("hara.process.run")'),"WORKER_PROCESS_RUN_0_3_25");
 need(worker.includes('tools.push("hara.files.hash","hara.files.diff")') && worker.includes('tools.push("hara.files.copy","hara.files.delete")'),"WORKER_CAPABILITIES_0_3_23_COMPLETE");
-need(worker.includes("capabilityToolDetail") && worker.includes('risk_class:processExecution ? "PROCESS_EXECUTION"') && worker.includes("local_approval_required:processExecution || filesystemMutation"),"WORKER_CAPABILITY_RISK_METADATA");
-need(worker.includes('capability_detail_schema:"hara.commander-capability-tool.v1"'),"WORKER_CAPABILITY_DETAIL_SCHEMA");
+need(worker.includes("capabilityToolDetail") && worker.includes('risk_class:processExecution ? "PROCESS_EXECUTION"') && worker.includes('local_session_authorization_sufficient:mutable && mode === "SESSION_TRUSTED"'),"WORKER_CAPABILITY_RISK_METADATA");
+need(worker.includes('capability_detail_schema:"hara.commander-capability-tool.v2"'),"WORKER_CAPABILITY_DETAIL_SCHEMA");
+need(worker.includes("normalizeApprovalMode") && worker.includes("SESSION_TRUSTED") && worker.includes("ASK_EVERY_ACTION"),"WORKER_APPROVAL_MODE_ENUM");
+need(worker.includes("approval_mode:approvalMode") && worker.includes("local_session_authorizes_governed_mutations"),"WORKER_APPROVAL_MODE_CAPABILITY_PROJECTION");
 need(worker.includes('"tool:"+toolId'),"WORKER_MUTATION_PROCESS_METERING");
 need(worker.includes('isDeviceMutationTool(toolId) || isDeviceProcessTool(toolId) || toolId === \"hara.files.preimages.list\"'),"WORKER_MUTATION_AGENT_VERSION_GUARD");
 console.log("COMMANDER_DEVICE_TOOL_CONTRACT=PASS");

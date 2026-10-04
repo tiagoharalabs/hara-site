@@ -17,6 +17,7 @@ WINDOWS = (APP / "public/install/windows.ps1").read_text()
 HEADERS = (APP / "public/_headers").read_text()
 READBACK = (APP / "scripts/commander_prod_readback.py").read_text()
 TRIAL_MIGRATION = (APP / "migrations/0008_trial_onboarding.sql").read_text()
+APPROVAL_MODE_MIGRATION = (APP / "migrations/0017_device_approval_mode.sql").read_text()
 
 def need(ok, code):
     if not ok:
@@ -44,6 +45,21 @@ auth_config_block = WORKER.split('if (url.pathname === "/api/portal/auth-config"
 need('return json({ configured: authStatus(env).configured });' in auth_config_block and 'provider:' not in auth_config_block and 'client_auth:' not in auth_config_block, "PUBLIC_AUTH_CONFIG_MINIMIZED")
 need('DEV_ENDPOINT_DISABLED: 404' in WORKER, "DEV_DISABLED_STATUS")
 need("auth-bootstrap-pending" in HTML, "AUTH_FIRST_PAINT")
+need(
+    'data-approval-choice="session"' in HTML
+    and 'data-approval-choice="ask"' in HTML
+    and 'HARA_COMMANDER_APPROVAL_MODE=SESSION_TRUSTED' in HTML
+    and 'let installApprovalMode = "SESSION_TRUSTED"' in JS
+    and 'setInstallApprovalMode' in JS
+    and 'installCommandLinux' in JS
+    and 'installCommandWindows' in JS,
+    "APPROVAL_MODE_ONBOARDING",
+)
+need(
+    "ADD COLUMN approval_mode TEXT NOT NULL DEFAULT 'ASK_EVERY_ACTION'" in APPROVAL_MODE_MIGRATION
+    and 'idx_commander_devices_approval_mode' in APPROVAL_MODE_MIGRATION,
+    "APPROVAL_MODE_MIGRATION",
+)
 need("styles.css?v=20260925-neon7" in HTML, "STYLE_CACHE_KEY")
 need("app.js?v=20260925-neon1" in HTML, "SCRIPT_CACHE_KEY")
 need(

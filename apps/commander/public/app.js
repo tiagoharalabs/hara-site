@@ -45,6 +45,7 @@
   let currentView = null;
   let deviceSectionTab = "devices";
   let deviceTab = "active";
+  let installApprovalMode = "SESSION_TRUSTED";
 
   function currentTheme() {
     return root.dataset.theme === "dark" ? "dark" : "light";
@@ -723,6 +724,44 @@
     });
   }
 
+  function installCommandLinux() {
+    return "(tmp=$(mktemp) && trap 'rm -f $tmp' EXIT && curl -fsS --proto '=https' --tlsv1.2 --location --max-redirs 0 https://commander.haralabs.com.br/install/linux.sh -o $tmp && HARA_COMMANDER_APPROVAL_MODE="
+      + installApprovalMode
+      + " HARA_COMMANDER_URL=https://commander.haralabs.com.br bash $tmp)";
+  }
+
+  function installCommandWindows() {
+    return "$haraPrevUrl=$env:HARA_COMMANDER_URL; $haraPrevApproval=$env:HARA_COMMANDER_APPROVAL_MODE; $haraInstaller=Join-Path $env:TEMP ('hara-commander-install-'+[guid]::NewGuid().ToString('N')+'.ps1'); try { $env:HARA_COMMANDER_URL='https://commander.haralabs.com.br'; $env:HARA_COMMANDER_APPROVAL_MODE='"
+      + installApprovalMode
+      + "'; Invoke-WebRequest -Uri https://commander.haralabs.com.br/install/windows.ps1 -OutFile $haraInstaller -UseBasicParsing -MaximumRedirection 0 -ErrorAction Stop; & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $haraInstaller; if ($LASTEXITCODE -ne 0) { throw ('HARA_COMMANDER_INSTALL_EXIT_'+$LASTEXITCODE) } } finally { Remove-Item -LiteralPath $haraInstaller -Force -ErrorAction SilentlyContinue; $env:HARA_COMMANDER_URL=$haraPrevUrl; $env:HARA_COMMANDER_APPROVAL_MODE=$haraPrevApproval }";
+  }
+
+  function syncInstallApprovalMode() {
+    const linux = document.querySelector("[data-install-linux-code]");
+    const windows = document.querySelector("[data-install-windows-code]");
+    if (linux) linux.textContent = installCommandLinux();
+    if (windows) windows.textContent = installCommandWindows();
+    const note = document.getElementById("approvalModeNote");
+    if (note) {
+      note.textContent = installApprovalMode === "SESSION_TRUSTED"
+        ? "Recomendado: a sessão local aberta autoriza operações governadas até Ctrl+C, sem prompts por ação."
+        : "Modo restritivo: escrita, rollback e comandos pedem confirmação local individual.";
+    }
+  }
+
+  function setInstallApprovalMode(mode) {
+    installApprovalMode = mode === "ask" || mode === "ASK_EVERY_ACTION"
+      ? "ASK_EVERY_ACTION"
+      : "SESSION_TRUSTED";
+    document.querySelectorAll("[data-approval-choice]").forEach((button) => {
+      const active = (button.dataset.approvalChoice === "ask") === (installApprovalMode === "ASK_EVERY_ACTION");
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-checked", String(active));
+      button.tabIndex = active ? 0 : -1;
+    });
+    syncInstallApprovalMode();
+  }
+
   async function copyText(value, successMessage) {
     const text = String(value || "");
     try {
@@ -1079,6 +1118,7 @@
 
   copySidebars();
   setInstallOs("linux");
+  setInstallApprovalMode("session");
 
   if (bannerAction) {
     bannerAction.addEventListener("click", () => {
@@ -1163,23 +1203,24 @@
       return;
     }
 
+    const approvalChoice = event.target.closest("[data-approval-choice]");
+    if (approvalChoice) {
+      event.preventDefault();
+      setInstallApprovalMode(approvalChoice.dataset.approvalChoice);
+      return;
+    }
+
     const copyLinux = event.target.closest("[data-copy-linux]");
     if (copyLinux) {
       event.preventDefault();
-      copyText(
-        "(tmp=$(mktemp) && trap 'rm -f $tmp' EXIT && curl -fsS --proto '=https' --tlsv1.2 --location --max-redirs 0 https://commander.haralabs.com.br/install/linux.sh -o $tmp && HARA_COMMANDER_URL=https://commander.haralabs.com.br bash $tmp)",
-        "Comando Linux copiado."
-      );
+      copyText(installCommandLinux(), "Comando Linux copiado.");
       return;
     }
 
     const copyWindows = event.target.closest("[data-copy-windows]");
     if (copyWindows) {
       event.preventDefault();
-      copyText(
-        "$haraPrevUrl=$env:HARA_COMMANDER_URL; $haraInstaller=Join-Path $env:TEMP ('hara-commander-install-'+[guid]::NewGuid().ToString('N')+'.ps1'); try { $env:HARA_COMMANDER_URL='https://commander.haralabs.com.br'; Invoke-WebRequest -Uri https://commander.haralabs.com.br/install/windows.ps1 -OutFile $haraInstaller -UseBasicParsing -MaximumRedirection 0 -ErrorAction Stop; & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $haraInstaller; if ($LASTEXITCODE -ne 0) { throw ('HARA_COMMANDER_INSTALL_EXIT_'+$LASTEXITCODE) } } finally { Remove-Item -LiteralPath $haraInstaller -Force -ErrorAction SilentlyContinue; $env:HARA_COMMANDER_URL=$haraPrevUrl }",
-        "Comando Windows copiado."
-      );
+      copyText(installCommandWindows(), "Comando Windows copiado.");
       return;
     }
 
@@ -1222,6 +1263,15 @@
       const nextOs = osChoice.dataset.osChoice === "linux" ? "windows" : "linux";
       setInstallOs(nextOs);
       document.querySelector('[data-os-choice="' + nextOs + '"]')?.focus();
+      return;
+    }
+
+    const approvalChoice = event.target.closest?.("[data-approval-choice]");
+    if (approvalChoice && ["ArrowLeft", "ArrowRight"].includes(event.key)) {
+      event.preventDefault();
+      const nextMode = approvalChoice.dataset.approvalChoice === "session" ? "ask" : "session";
+      setInstallApprovalMode(nextMode);
+      document.querySelector('[data-approval-choice="' + nextMode + '"]')?.focus();
       return;
     }
     const deviceSectionTabButton = event.target.closest?.("[data-device-section-tab]");
