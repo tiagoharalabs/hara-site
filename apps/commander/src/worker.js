@@ -2134,7 +2134,7 @@ function projectCustomerToolResult(toolId, response) {
     const stderr = trimPublicText(result.stderr);
     if (stdout !== null) projectedResult.stdout = stdout;
     if (stderr) projectedResult.stderr = stderr;
-    for (const key of ["human_approval_state","preimage_sha256","preimage_id","rollback_preimage_id"]) {
+    for (const key of ["human_approval_state","local_authorization_mode","authorization_source","preimage_sha256","preimage_id","rollback_preimage_id"]) {
       if (typeof result[key] === "string") projectedResult[key] = result[key];
     }
   } else if (toolId === "hara.receipts.get") {
@@ -2149,6 +2149,8 @@ function projectCustomerToolResult(toolId, response) {
       "payload_values_persisted",
       "human_approval_required",
       "human_approval_state",
+      "local_authorization_mode",
+      "authorization_source",
       "preimage_sha256",
       "preimage_id",
       "rollback_preimage_id",

@@ -97,6 +97,7 @@ need(worker.includes("capabilityToolDetail") && worker.includes('risk_class:proc
 need(worker.includes('capability_detail_schema:"hara.commander-capability-tool.v2"'),"WORKER_CAPABILITY_DETAIL_SCHEMA");
 need(worker.includes("normalizeApprovalMode") && worker.includes("SESSION_TRUSTED") && worker.includes("ASK_EVERY_ACTION"),"WORKER_APPROVAL_MODE_ENUM");
 need(worker.includes("approval_mode:approvalMode") && worker.includes("local_session_authorizes_governed_mutations"),"WORKER_APPROVAL_MODE_CAPABILITY_PROJECTION");
+need(worker.includes('"local_authorization_mode"') && worker.includes('"authorization_source"'),"WORKER_AUTHORIZATION_SOURCE_PROJECTION");
 need(worker.includes('"tool:"+toolId'),"WORKER_MUTATION_PROCESS_METERING");
 need(worker.includes('isDeviceMutationTool(toolId) || isDeviceProcessTool(toolId) || toolId === \"hara.files.preimages.list\"'),"WORKER_MUTATION_AGENT_VERSION_GUARD");
 console.log("COMMANDER_DEVICE_TOOL_CONTRACT=PASS");

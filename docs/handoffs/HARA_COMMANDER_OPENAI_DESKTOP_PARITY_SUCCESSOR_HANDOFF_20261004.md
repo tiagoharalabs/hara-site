@@ -1,7 +1,7 @@
 # H.A.R.A. Commander — OpenAI / Desktop-Parity Successor Handoff
 
 Date: 2026-10-04
-Status: LIVE_PROVEN_0_3_25 + SUCCESSOR_CANDIDATE_0_3_26_CONFIGURABLE_APPROVAL
+Status: LIVE_PROVEN_0_3_26_SESSION_TRUSTED + SUCCESSOR_CANDIDATE_0_3_27_APPROVAL_SYNC
 Scope: ChatGPT/OpenAI customer MCP → H.A.R.A. Identity → Commander edge → outbound Agent → governed Linux execution
 
 ## Executive state
@@ -479,6 +479,64 @@ Product integration:
 - legacy devices that do not yet have a persisted mode fail toward ASK_EVERY_ACTION
 
 0.3.26 remains source/regression ready until migration + Worker/assets + Agent canary are promoted. The current live-proven Linux state remains 0.3.25.
+
+## 0.3.26 configurable authorization — production/live closeout
+
+The configurable-authorization cut was promoted to PROD and closed LIVE_PROVEN on nucleo-a.
+
+Production rollout:
+- migration ledger: 0015, 0016 and 0017 applied; no pending migrations after rollout
+- pre-migration D1 export SHA-256: e165ff69ca819fa85d801c60e183cd219403132db558df4e159b6f22b625213d
+- Worker version: f9826390-ab41-419e-8f24-efe51d314266
+- deployment ID: 6563b9b2-2328-4f5f-bf91-976ef16402ee
+- rollback Worker: 297a40ca-5391-43a2-9a61-2343455cd5e4
+- runtime assets: CURRENT
+- public fail-closed smoke: PASS
+- PROD D1 readback/integrity: PASS
+
+nucleo-a was upgraded to Agent 0.3.26 and configured explicitly with SESSION_TRUSTED. The old 0.3.25 session was revoked and a fresh 0.3.26 operator session opened with the banner:
+
+- Approval: automatic for this session
+- governed filesystem mutations: session-authorized
+- governed process execution: session-authorized
+
+Live hara.capabilities after device synchronization reports:
+- approval_mode = SESSION_TRUSTED
+- mutation_requires_local_approval = false
+- process_execution_requires_local_approval = false
+- local_session_authorizes_governed_mutations = true
+- per mutable/process tool: local_approval_required=false and local_session_authorization_sufficient=true
+
+No-prompt live mutation proof:
+- hara.files.write PASS
+- receipt: 2ba7c667592a98e29e1a162f332bf02bd704562f152098587fd8771113fe8fc7
+- human_approval_required=false
+- human_approval_state=APPROVED
+- console sequence: RECEIVED -> APPROVAL_GRANTED -> EXECUTING -> PASS
+- no APPROVAL_REQUIRED event and no y/N prompt
+
+No-prompt live process proof:
+- hara.process.start PASS
+- receipt: ca94c3b45bb697b0d6625bbadef5fe1a759870ac0b9e57966bdf45c8a9eedae8
+- mutation_class=PROCESS_EXECUTION_V1
+- human_approval_required=false
+- human_approval_state=APPROVED
+- console sequence: RECEIVED -> APPROVAL_GRANTED -> EXECUTING -> PASS
+- no APPROVAL_REQUIRED event and no y/N prompt
+
+This is the intended end-user model: the human authorizes the governed capability set by opening the local session in SESSION_TRUSTED mode; individual operations remain constrained by grants, schemas, bounded payloads, receipts, preimages/rollback and session revocation, but do not interrupt the user for repeated confirmations.
+
+## Successor 0.3.27 — effective approval-mode synchronization
+
+A follow-up source candidate 0.3.27 hardens mode changes after installation:
+- Agent heartbeat reports the effective approval mode of the currently active operator session, not a stale daemon-startup copy
+- offline metadata reloads the latest persisted device config
+- device.info reports the effective mode
+- public result/receipt projection exposes local_authorization_mode and authorization_source
+- switching ask/session can therefore converge in hara.capabilities after the required local-session restart without requiring an additional daemon restart
+- release-coherent Linux/Windows metadata was bumped to 0.3.27
+
+The complete branch regression suite passed for this patch. 0.3.27 is source/regression ready but was not promoted in this continuation; 0.3.26 remains the LIVE_PROVEN version.
 
 ## Current known limitations
 

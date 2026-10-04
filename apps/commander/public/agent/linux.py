@@ -18,7 +18,7 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
-AGENT_VERSION = "0.3.26"
+AGENT_VERSION = "0.3.27"
 CONFIG_FILE = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home()/".config"))) / "hara-commander/device.env"
 DATA_DIR = Path(os.environ.get("XDG_DATA_HOME", str(Path.home()/".local/share"))) / "hara-commander"
 RECEIPT_DIR = DATA_DIR / "receipts"
@@ -624,10 +624,12 @@ def filesystem_delete(call,path_value):
 
 def mark_device_offline(config):
     try:
+        try: config=load_config()
+        except Exception: pass
         result = post_json(
             config["HARA_COMMANDER_URL"] + "/api/device/offline",
             config["HARA_DEVICE_TOKEN"],
-            {"device_id":config["HARA_DEVICE_ID"],"agent_version":AGENT_VERSION,"architecture":config["HARA_DEVICE_ARCH"],"approval_mode":config.get("HARA_COMMANDER_APPROVAL_MODE","ASK_EVERY_ACTION")},
+            {"device_id":config["HARA_DEVICE_ID"],"agent_version":AGENT_VERSION,"architecture":config["HARA_DEVICE_ARCH"],"approval_mode":effective_approval_mode(config)},
             timeout=5,
         )
         ok = isinstance(result, dict) and result.get("ok") is True and result.get("state") == "OFFLINE"
@@ -790,6 +792,18 @@ def set_approval_mode(value):
     print("HARA_COMMANDER_APPROVAL_MODE="+mode)
     if operator_session_active(): print("SESSION_RESTART_REQUIRED=TRUE")
 
+def effective_approval_mode(config=None):
+    session=read_operator_session()
+    if session:
+        mode=str(session.get("approval_mode") or "").upper()
+        if mode in APPROVAL_MODES:
+            return mode
+    if config is None:
+        try: config=load_config()
+        except Exception: config={}
+    mode=str((config or {}).get("HARA_COMMANDER_APPROVAL_MODE") or "ASK_EVERY_ACTION").upper()
+    return mode if mode in APPROVAL_MODES else "ASK_EVERY_ACTION"
+
 def post_json(url, token, payload, timeout=25):
     req = urllib.request.Request(
         url,
@@ -855,7 +869,7 @@ def device_info(config):
         "device_id":config["HARA_DEVICE_ID"],"hostname":platform.node(),
         "platform":platform.system().upper(),"platform_release":platform.release(),
         "architecture":config["HARA_DEVICE_ARCH"],"python_version":platform.python_version(),
-        "agent_version":AGENT_VERSION,"approval_mode":config.get("HARA_COMMANDER_APPROVAL_MODE","ASK_EVERY_ACTION"),"tunnel_mode":"OUTBOUND_RELAY",
+        "agent_version":AGENT_VERSION,"approval_mode":effective_approval_mode(config),"tunnel_mode":"OUTBOUND_RELAY",
     }
 
 def device_ping(config):
@@ -1575,7 +1589,7 @@ def main():
             if now-last_heartbeat>=30:
                 post_json(config["HARA_COMMANDER_URL"]+"/api/device/heartbeat",config["HARA_DEVICE_TOKEN"],{
                     "device_id":config["HARA_DEVICE_ID"],"architecture":config["HARA_DEVICE_ARCH"],"agent_version":AGENT_VERSION,
-                    "approval_mode":config.get("HARA_COMMANDER_APPROVAL_MODE","ASK_EVERY_ACTION"),
+                    "approval_mode":effective_approval_mode(config),
                 })
                 last_heartbeat=now
                 last_error_code=None

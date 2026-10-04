@@ -26,7 +26,7 @@ def need(text: str, token: str, code: str) -> None:
     assert token in text, f"{code}:{token}"
 
 for token in ('platform": "LINUX"', "/api/device/enroll", "/agent/linux.py",
-              "systemctl --user enable --now", "chmod 600", '"agent_version": "0.3.26"',
+              "systemctl --user enable --now", "chmod 600", '"agent_version": "0.3.27"',
               "HARA_COMMANDER_AGENT_UPDATE=PASS", "HARA_COMMANDER_AGENT_UNINSTALL=PASS",
               "HARA_COMMANDER_AGENT_VERSION=", "HARA_COMMANDER_AGENT_DOCTOR=PASS",
               "/api/device/revoke-self", "SERVER_DEVICE_REVOKE=",
@@ -55,7 +55,7 @@ print("LINUX_INSTALLER_SECRET_ARGV_EXPOSURE=FALSE")
 
 for token in ('platform="WINDOWS"', "/api/device/enroll", "/agent/windows.ps1",
               "ConvertFrom-SecureString", "Register-ScheduledTask", "icacls.exe",
-              'agent_version="0.3.26"', "HARA_COMMANDER_AGENT_UPDATE=PASS",
+              'agent_version="0.3.27"', "HARA_COMMANDER_AGENT_UPDATE=PASS",
               "HARA_COMMANDER_AGENT_UNINSTALL=PASS", "HARA_COMMANDER_AGENT_VERSION=",
               "HARA_COMMANDER_AGENT_DOCTOR=PASS", "/api/device/revoke-self",
               "SERVER_DEVICE_REVOKE=", "HARA_COMMANDER_AGENT_UPDATE_ROLLBACK_READY=TRUE",
@@ -92,7 +92,7 @@ print("WINDOWS_INSTALLER_REDIRECT_FAIL_CLOSED=PASS")
 print("WINDOWS_INSTALLER_DEVICE_TOKEN_MEMORY_HYGIENE=PASS")
 
 assert MANIFEST.get("schema") == "hara.commander-agent-release.v1"
-assert MANIFEST.get("agent_version") == "0.3.26"
+assert MANIFEST.get("agent_version") == "0.3.27"
 entries = {item["path"]: item for item in MANIFEST.get("files", [])}
 for rel in ("agent/linux.py", "agent/windows.ps1", "install/linux.sh", "install/windows.ps1"):
     path = PUBLIC / rel
@@ -172,6 +172,7 @@ print("COMMANDER_DOCTOR_HEARTBEAT_OUTSIDE_SESSION=ABSENT")
 assert "LOCAL_OPERATOR_SESSION_UPGRADE_REQUIRED" in LINUX_AGENT, "LINUX_MUTATION_SESSION_UPGRADE_GUARD_MISSING"
 assert "APPROVAL_REQUIRED" in LINUX_AGENT and "request_local_approval" in LINUX_AGENT, "LINUX_MUTATION_APPROVAL_GATE_MISSING"
 assert "SESSION_TRUSTED" in LINUX_AGENT and "ASK_EVERY_ACTION" in LINUX_AGENT, "LINUX_CONFIGURABLE_APPROVAL_MODE_MISSING"
+assert "effective_approval_mode" in LINUX_AGENT and '"approval_mode":effective_approval_mode(config)' in LINUX_AGENT, "LINUX_EFFECTIVE_APPROVAL_SYNC_MISSING"
 assert 'HARA_COMMANDER_APPROVAL_MODE' in LINUX and 'HARA_COMMANDER_APPROVAL_MODE' in WINDOWS, "INSTALLER_APPROVAL_MODE_PROPAGATION_MISSING"
 assert 'SESSION_TRUSTED' in LINUX and 'SESSION_TRUSTED' in WINDOWS, "INSTALLER_SESSION_TRUSTED_DEFAULT_MISSING"
 assert 'local_authorization_mode' in LINUX_AGENT and 'authorization_source' in LINUX_AGENT, "LINUX_RECEIPT_AUTHORIZATION_MODE_MISSING"
@@ -281,7 +282,7 @@ with tempfile.TemporaryDirectory(prefix="hara-agent-startup-") as tmp:
                     break
             time.sleep(0.1)
         assert startup, "LINUX_AGENT_STARTUP_STATUS_MISSING"
-        assert startup.get("agent_version") == "0.3.26", "LINUX_AGENT_STARTUP_VERSION_INVALID"
+        assert startup.get("agent_version") == "0.3.27", "LINUX_AGENT_STARTUP_VERSION_INVALID"
         assert startup.get("started_at_utc"), "LINUX_AGENT_STARTUP_ATTESTATION_MISSING"
         time.sleep(1.2)
         inert = json.loads(status_path.read_text(encoding="utf-8"))
