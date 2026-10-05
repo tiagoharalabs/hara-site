@@ -1180,3 +1180,5 @@ html[data-neon="off"] .brand-copy em{
 .status-pill.service-health.degraded{background:#fff0e7;color:#bd641d;border-color:#f2d6c3}
 .status-pill.service-health.healthy i{background:#20b985}
 .status-pill.service-health.degraded i{background:#d77c30}
+
+.beta-access-cta{margin-top:8px;text-align:center;text-decoration:none}.beta-access-cta[hidden]{display:none!important}

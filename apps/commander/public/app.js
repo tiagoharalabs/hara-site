@@ -1205,6 +1205,7 @@
 
     const statusNode = document.getElementById("billingPlanStatus");
     const portalButton = document.querySelector("[data-billing-portal]");
+    const betaAccess = document.querySelector("[data-beta-access]");
     const planButtons = document.querySelectorAll("[data-billing-plan]");
 
     try {
@@ -1256,6 +1257,12 @@
         }
       });
 
+      if (betaAccess) {
+        const standardCurrent = payload?.connection?.plan_code === "STANDARD"
+          && ["active","trialing"].includes(String(payload?.connection?.subscription_status || "").toLowerCase());
+        betaAccess.hidden = Boolean(activation.first_checkout_ready || standardCurrent);
+      }
+
       if (portalButton) {
         const ready = Boolean(payload?.connection?.customer_portal_ready && canManage);
         portalButton.hidden = !ready;
@@ -1270,7 +1277,7 @@
         } else if (activation.first_checkout_ready) {
           statusNode.textContent = "Standard disponível para assinatura. O pagamento é concluído no checkout seguro do Stripe.";
         } else if (!activation.provider_configured) {
-          statusNode.textContent = "Checkout comercial ainda não ativado. O produto permanece disponível no plano atual.";
+          statusNode.textContent = "Checkout automático ainda não ativado. O Standard está disponível em beta por convite.";
         } else if (!activation.standard_catalog_active) {
           statusNode.textContent = "Stripe conectado. Aguardando publicação do catálogo Standard.";
         } else if (!activation.standard_price_configured) {

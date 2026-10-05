@@ -372,6 +372,14 @@ need(
     "CUSTOMER_SERVICE_HEALTH_SURFACE",
 )
 need(
+    'data-beta-access' in HTML
+    and 'Solicitar acesso beta' in HTML
+    and 'activation.first_checkout_ready || standardCurrent' in JS
+    and 'Standard está disponível em beta por convite.' in JS
+    and 'betaAccess.hidden' in JS,
+    "BETA_INVITE_FALLBACK",
+)
+need(
     "function renderDeviceLoading()" in JS
     and 'list.setAttribute("aria-busy", "true")' in JS
     and "device-skeleton" in CSS
