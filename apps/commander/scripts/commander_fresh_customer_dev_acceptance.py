@@ -280,8 +280,21 @@ DELETE FROM tenants WHERE tenant_id={q(tenant)};
                 "timeout_ms":3000,
                 "max_lines":50,
             })
-            rendered=json.dumps(proc)
-            if "FRESH_CUSTOMER_PROCESS_PASS" not in rendered or proc.get("state") not in {"EXITED","COMPLETED"}:
+            process_result=proc
+            bridge_result=proc.get("result") if isinstance(proc.get("result"),dict) else proc
+            if bridge_result.get("function_id")=="process.run":
+                if bridge_result.get("process_exit_code")!=0:
+                    fail("LOCAL_MCP_PROCESS_EXIT_INVALID")
+                try:
+                    process_result=json.loads(str(bridge_result.get("stdout") or "{}"))
+                except json.JSONDecodeError:
+                    fail("LOCAL_MCP_PROCESS_SHAPE_INVALID")
+            rendered=json.dumps(process_result)
+            if (
+                "FRESH_CUSTOMER_PROCESS_PASS" not in rendered
+                or process_result.get("state") not in {"EXITED","COMPLETED"}
+                or process_result.get("exit_code") not in {0,None}
+            ):
                 fail("LOCAL_MCP_PROCESS_INVALID")
             print("FRESH_CUSTOMER_LOCAL_MCP_PROCESS=PASS")
 
