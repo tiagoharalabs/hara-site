@@ -2300,7 +2300,7 @@ function agentPurposeToolReady(device, toolId) {
       "hara.files.info","hara.files.list","hara.files.read",
       "hara.files.create_directory","hara.files.write","hara.process.run",
     ];
-    return starter.includes(toolId) && semverAtLeast(device.agent_version,31);
+    return starter.includes(toolId) && semverAtLeast(device.agent_version,32);
   }
   if (platform !== "LINUX") return false;
   const parts=String(device?.agent_version || "0.0.0").split(".").map((v)=>Number(v));
@@ -2372,7 +2372,7 @@ function capabilitiesForDevice(device, grants) {
   const tools=["hara.health","hara.functions.list","hara.functions.describe","hara.receipts.get"];
   if (platform === "WINDOWS") {
     tools.push("hara.device.info","hara.functions.invoke");
-    if (semverAtLeast(device.agent_version,31)) {
+    if (semverAtLeast(device.agent_version,32)) {
       tools.push("hara.ping","hara.processes.list","hara.files.info","hara.files.list","hara.files.read");
       if (grants.includes("COMMANDER_MUTATION_INVOKE")) {
         tools.push("hara.files.create_directory","hara.files.write");

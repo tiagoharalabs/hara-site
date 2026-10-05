@@ -6,7 +6,7 @@ $RuntimeStatus = Join-Path $Root "runtime-status.json"
 $SessionPath = Join-Path $Root "operator-session.json"
 $ConsoleEvents = Join-Path $Root "console-events.jsonl"
 $SessionMaxHours = 12
-$AgentVersion = "0.3.31"
+$AgentVersion = "0.3.32"
 $FunctionId = "device.info"
 
 function Get-PlainText([Security.SecureString]$SecureValue) {
@@ -216,6 +216,13 @@ function Get-DeviceInfo($Cfg) {
   }
 }
 
+function Get-ApprovalMode($Cfg) {
+  $mode=if ($Cfg.approval_mode) {[string]$Cfg.approval_mode} else {"ASK_EVERY_ACTION"}
+  $mode=$mode.Trim().ToUpperInvariant()
+  if (@("ASK_EVERY_ACTION","SESSION_TRUSTED","PERSISTENT_TRUSTED") -notcontains $mode) { return "ASK_EVERY_ACTION" }
+  return $mode
+}
+
 function Assert-StarterMutationAuthorized($Cfg) {
   $mode=Get-ApprovalMode $Cfg
   if ($mode -eq "ASK_EVERY_ACTION") { throw "WINDOWS_PER_ACTION_APPROVAL_UNSUPPORTED" }
@@ -347,7 +354,8 @@ function Invoke-WindowsOneShotProcess($Cfg,[string]$Command,[string]$Cwd=$null,[
   $stdout=$stdoutTask.GetAwaiter().GetResult()
   $stderr=$stderrTask.GetAwaiter().GetResult()
   $combined=($stdout + $(if ($stderr) {[Environment]::NewLine+$stderr} else {""}))
-  $lines=@($combined -split "?
+  $lines=@($combined -split "
+?
 ")
   $truncated=$lines.Count -gt $MaxLines
   if ($truncated) { $lines=@($lines[0..($MaxLines-1)]) }
@@ -661,12 +669,6 @@ $LastHeartbeat=[datetime]::MinValue
 $LastErrorCode=$null
 $LastErrorWrite=[datetime]::MinValue
 $WasAuthorized=$false
-function Get-ApprovalMode($Cfg) {
-  $mode=if ($Cfg.approval_mode) {[string]$Cfg.approval_mode} else {"ASK_EVERY_ACTION"}
-  $mode=$mode.Trim().ToUpperInvariant()
-  if (@("ASK_EVERY_ACTION","SESSION_TRUSTED","PERSISTENT_TRUSTED") -notcontains $mode) { return "ASK_EVERY_ACTION" }
-  return $mode
-}
 if (-not (Test-OperatorSessionActive) -and (Get-ApprovalMode $StartupCfg) -ne "PERSISTENT_TRUSTED") {
   Set-DeviceOffline $StartupCfg | Out-Null
   Write-ConsoleEvent "AGENT_INERT" $null "LOCAL_SESSION_REQUIRED"
