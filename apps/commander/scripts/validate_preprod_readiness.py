@@ -78,6 +78,7 @@ def main():
         ("COMMANDER_PREPROD_QUOTA_RESERVATION_TTL", "validate_quota_reservation_ttl.py"),
         ("COMMANDER_PREPROD_UNLIMITED_PLAN_FASTPATH", "validate_unlimited_plan_fastpath.py"),
         ("COMMANDER_PREPROD_LOCAL_ACTIVITY_STORE", "validate_local_activity_store.py"),
+        ("COMMANDER_PREPROD_WINDOWS_LOCAL_ACTIVITY_STORE", "validate_windows_local_activity_store.py"),
         ("COMMANDER_PREPROD_LOCALHOST_ACTIVITY_REFRESH", "validate_localhost_activity_refresh.py"),
         ("COMMANDER_PREPROD_LOCAL_BUDGET_BLOCKS", "validate_local_budget_blocks.py"),
         ("COMMANDER_PREPROD_SIGNED_PRODUCT_LEASE", "validate_signed_product_lease.py"),

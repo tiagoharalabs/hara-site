@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import re
 import runpy
 import sqlite3
 import tempfile
@@ -57,7 +58,12 @@ need("units_issued + NEW.usage_units <= b.units_allocated" in MIG, "LOCAL_TAMPER
 need('budget_id: row.usage_budget_id || null' in WORKER, "CLAIM_BINDS_BUDGET_ID")
 
 agent_src=AGENT.read_text(encoding="utf-8")
-need('AGENT_VERSION = "0.3.36"' in agent_src, "AGENT_VERSION")
+agent_version_match=re.search(r'^AGENT_VERSION = "([0-9]+)\.([0-9]+)\.([0-9]+)"$',agent_src,re.M)
+need(
+    bool(agent_version_match)
+    and tuple(map(int,agent_version_match.groups())) >= (0,3,36),
+    "AGENT_VERSION",
+)
 need("CREATE TABLE IF NOT EXISTS product_lease" in agent_src, "LOCAL_LEASE_TABLE")
 need("CREATE TABLE IF NOT EXISTS local_budget_blocks" in agent_src, "LOCAL_BLOCK_TABLE")
 need("CREATE TABLE IF NOT EXISTS local_budget_debits" in agent_src, "LOCAL_DEBIT_TABLE")
