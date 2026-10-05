@@ -269,12 +269,15 @@ need(
 )
 need(
     'class="connection-readiness"' in HTML
-    and HTML.count('class="integration-badge"') >= 2
-    and HTML.count('data-copy-simple-mcp') >= 3
+    and HTML.count('integration-badge') >= 2
+    and 'data-copy-local-mcp' in HTML
+    and 'data-copy-simple-mcp' in HTML
+    and "MCP Local" in HTML
+    and "MCP Remoto" in HTML
+    and "0 relay por operação" in HTML
     and "24 comandos simples" in HTML
-    and "Qualquer cliente MCP" in HTML
-    and "MCP PADRÃO" in HTML
     and "/api/mcp?profile=simple" in HTML
+    and 'copyText("hara-commander mcp"' in JS
     and 'window.location.origin + "/api/mcp?profile=simple"' in JS
     and "Ainda não disponível" not in HTML
     and "Aguardando homologação do primeiro dispositivo real" not in HTML,

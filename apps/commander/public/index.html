@@ -464,45 +464,35 @@
         <aside class="sidebar" data-sidebar></aside>
         <div class="workspace-main">
           <header class="workspace-head">
-            <div><h1 id="connections-title">Conexões</h1><p>Autorize ChatGPT, Codex ou outro cliente MCP a usar o computador selecionado.</p></div>
+            <div><h1 id="connections-title">Conexões</h1><p>Use o Commander localmente para máxima velocidade ou remotamente para acessar o computador de qualquer lugar.</p></div>
           </header>
 
           <div class="connection-readiness" aria-label="Como conectar">
-            <span><b>01</b><small>Instale o Commander no computador</small></span>
+            <span><b>01</b><small>Instale o Commander</small></span>
             <i aria-hidden="true"></i>
             <span><b>02</b><small>Abra a sessão local</small></span>
             <i aria-hidden="true"></i>
-            <span><b>03</b><small>Adicione a URL MCP no seu cliente</small></span>
+            <span><b>03</b><small>Escolha Local ou Remoto</small></span>
           </div>
 
           <div class="connection-list" id="connectionList">
             <article class="connection-card">
-              <div class="connection-icon openai" aria-hidden="true">AI</div>
+              <div class="connection-icon" aria-hidden="true">PC</div>
               <div class="connection-copy">
-                <div class="connection-title"><h2>ChatGPT</h2><span class="integration-badge">ATIVO</span></div>
-                <p>Adicione a URL MCP simples. O cliente cuida do OAuth e o Commander cuida do computador.</p>
-                <ul class="connection-features"><li>24 comandos simples</li><li>OAuth/OIDC</li><li>Sem histórico bruto de comandos</li></ul>
-                <span class="status-line"><i></i> Remote MCP pronto para uso</span>
+                <div class="connection-title"><h2>MCP Local</h2><span class="integration-badge">RECOMENDADO</span></div>
+                <p>Para clientes MCP rodando no mesmo computador. A chamada vai direto para o Agent local.</p>
+                <ul class="connection-features"><li>0 relay por operação</li><li>24 comandos simples</li><li>Menor latência</li></ul>
+                <span class="status-line"><i></i> Comando: hara-commander mcp</span>
               </div>
-              <button class="btn btn-secondary" type="button" data-copy-simple-mcp>Copiar URL MCP</button>
+              <button class="btn btn-secondary" type="button" data-copy-local-mcp>Copiar comando</button>
             </article>
             <article class="connection-card">
-              <div class="connection-icon" aria-hidden="true">CX</div>
+              <div class="connection-icon" aria-hidden="true">↗</div>
               <div class="connection-copy">
-                <div class="connection-title"><h2>Codex</h2><span class="integration-badge">ATIVO</span></div>
-                <p>Use a mesma URL MCP simples em fluxos técnicos e automações.</p>
-                <ul class="connection-features"><li>Remote MCP</li><li>Seleção de computador</li><li>Execução governada</li></ul>
-                <span class="status-line"><i></i> Mesmo endpoint, mesmas regras</span>
-              </div>
-              <button class="btn btn-secondary" type="button" data-copy-simple-mcp>Copiar URL MCP</button>
-            </article>
-            <article class="connection-card">
-              <div class="connection-icon" aria-hidden="true">+</div>
-              <div class="connection-copy">
-                <div class="connection-title"><h2>Qualquer cliente MCP</h2><span class="integration-badge neutral">MCP PADRÃO</span></div>
-                <p>Claude, Cursor, VS Code ou seu próprio cliente podem usar o perfil simples.</p>
-                <ul class="connection-features"><li>Endpoint padrão MCP</li><li>OAuth/OIDC</li><li>24 comandos simples</li></ul>
-                <span class="status-line"><i></i> URL: commander.haralabs.com.br/api/mcp?profile=simple</span>
+                <div class="connection-title"><h2>MCP Remoto</h2><span class="integration-badge neutral">QUALQUER CLIENTE</span></div>
+                <p>Para ChatGPT, Claude, Codex, Cursor, VS Code ou seu próprio cliente em outra máquina.</p>
+                <ul class="connection-features"><li>OAuth/OIDC</li><li>24 comandos simples</li><li>Acesso de qualquer lugar</li></ul>
+                <span class="status-line"><i></i> commander.haralabs.com.br/api/mcp?profile=simple</span>
               </div>
               <button class="btn btn-secondary" type="button" data-copy-simple-mcp>Copiar URL MCP</button>
             </article>

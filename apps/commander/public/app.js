@@ -1446,6 +1446,13 @@
       return;
     }
 
+    const copyLocalMcp = event.target.closest("[data-copy-local-mcp]");
+    if (copyLocalMcp) {
+      event.preventDefault();
+      copyText("hara-commander mcp", "Comando MCP local copiado.");
+      return;
+    }
+
     const copySimpleMcp = event.target.closest("[data-copy-simple-mcp]");
     if (copySimpleMcp) {
       event.preventDefault();
