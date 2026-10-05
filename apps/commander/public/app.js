@@ -1446,6 +1446,13 @@
       return;
     }
 
+    const copySimpleMcp = event.target.closest("[data-copy-simple-mcp]");
+    if (copySimpleMcp) {
+      event.preventDefault();
+      copyText(window.location.origin + "/api/mcp?profile=simple", "URL MCP copiada.");
+      return;
+    }
+
     const copyLinux = event.target.closest("[data-copy-linux]");
     if (copyLinux) {
       event.preventDefault();

@@ -467,43 +467,44 @@
             <div><h1 id="connections-title">Conexões</h1><p>Autorize ChatGPT, Codex ou outro cliente MCP a usar o computador selecionado.</p></div>
           </header>
 
-          <div class="connection-readiness" aria-label="Ordem de ativação das integrações">
-            <span><b>01</b><small>Conectar e selecionar um computador</small></span>
+          <div class="connection-readiness" aria-label="Como conectar">
+            <span><b>01</b><small>Instale o Commander no computador</small></span>
             <i aria-hidden="true"></i>
-            <span><b>02</b><small>Concluir o E2E governado do dispositivo</small></span>
+            <span><b>02</b><small>Abra a sessão local</small></span>
             <i aria-hidden="true"></i>
-            <span><b>03</b><small>Liberar autorização do cliente MCP</small></span>
+            <span><b>03</b><small>Adicione a URL MCP no seu cliente</small></span>
           </div>
 
           <div class="connection-list" id="connectionList">
             <article class="connection-card">
               <div class="connection-icon openai" aria-hidden="true">AI</div>
               <div class="connection-copy">
-                <div class="connection-title"><h2>ChatGPT</h2><span class="integration-badge">HOMOLOGAÇÃO</span></div>
-                <p>Remote MCP + OAuth sobre a superfície governada do H.A.R.A. Commander.</p>
-                <ul class="connection-features"><li>Identidade OAuth/OIDC</li><li>Cinco ferramentas governadas</li><li>Comprovantes por execução</li></ul>
-                <span class="status-line pending"><i></i> Aguardando homologação do primeiro dispositivo real</span>
+                <div class="connection-title"><h2>ChatGPT</h2><span class="integration-badge">ATIVO</span></div>
+                <p>Adicione a URL MCP simples. O cliente cuida do OAuth e o Commander cuida do computador.</p>
+                <ul class="connection-features"><li>24 comandos simples</li><li>OAuth/OIDC</li><li>Sem histórico bruto de comandos</li></ul>
+                <span class="status-line"><i></i> Remote MCP pronto para uso</span>
               </div>
-              <button class="btn btn-secondary" type="button" disabled aria-disabled="true" title="A autorização será liberada após o E2E real do primeiro dispositivo.">Ainda não disponível</button>
+              <button class="btn btn-secondary" type="button" data-copy-simple-mcp>Copiar URL MCP</button>
             </article>
             <article class="connection-card">
               <div class="connection-icon" aria-hidden="true">CX</div>
               <div class="connection-copy">
-                <div class="connection-title"><h2>Codex</h2><span class="integration-badge">HOMOLOGAÇÃO</span></div>
-                <p>Cliente MCP para fluxos técnicos sob as mesmas regras de identidade, dispositivo e quota.</p>
-                <ul class="connection-features"><li>Remote MCP</li><li>Seleção explícita do computador</li><li>Receipts auditáveis</li></ul>
-                <span class="status-line pending"><i></i> Aguardando homologação do primeiro dispositivo real</span>
+                <div class="connection-title"><h2>Codex</h2><span class="integration-badge">ATIVO</span></div>
+                <p>Use a mesma URL MCP simples em fluxos técnicos e automações.</p>
+                <ul class="connection-features"><li>Remote MCP</li><li>Seleção de computador</li><li>Execução governada</li></ul>
+                <span class="status-line"><i></i> Mesmo endpoint, mesmas regras</span>
               </div>
-              <button class="btn btn-secondary" type="button" disabled aria-disabled="true" title="A autorização será liberada após o E2E real do primeiro dispositivo.">Ainda não disponível</button>
+              <button class="btn btn-secondary" type="button" data-copy-simple-mcp>Copiar URL MCP</button>
             </article>
-            <article class="connection-card muted">
+            <article class="connection-card">
               <div class="connection-icon" aria-hidden="true">+</div>
               <div class="connection-copy">
-                <div class="connection-title"><h2>Outros clientes MCP</h2><span class="integration-badge neutral">ROADMAP</span></div>
-                <p>Expansão futura sob as mesmas regras de identidade, autorização e acesso governado.</p>
-                <span class="status-line"><i></i> Sem ativação pública neste momento</span>
+                <div class="connection-title"><h2>Qualquer cliente MCP</h2><span class="integration-badge neutral">MCP PADRÃO</span></div>
+                <p>Claude, Cursor, VS Code ou seu próprio cliente podem usar o perfil simples.</p>
+                <ul class="connection-features"><li>Endpoint padrão MCP</li><li>OAuth/OIDC</li><li>24 comandos simples</li></ul>
+                <span class="status-line"><i></i> URL: commander.haralabs.com.br/api/mcp?profile=simple</span>
               </div>
-              <button class="btn btn-secondary" type="button" disabled aria-disabled="true">Roadmap</button>
+              <button class="btn btn-secondary" type="button" data-copy-simple-mcp>Copiar URL MCP</button>
             </article>
           </div>
         </div>

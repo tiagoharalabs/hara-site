@@ -28,6 +28,7 @@ import {
   verifyHaraIdentityCustomerMcpBearer,
 } from "./mcp-hara-identity-customer.mjs";
 import { handleCustomerMcpRequest } from "./customer-mcp.mjs";
+import { handleSimpleCustomerMcpRequest } from "./customer-mcp-simple.mjs";
 import {
   DEVICE_FUNCTION_ID,
   DEVICE_TOOL_FUNCTION_MAP,
@@ -3115,7 +3116,12 @@ export default {
           return haraIdentityCustomerMcpUnauthorized(request);
         }
 
-        return handleCustomerMcpRequest(request, {
+        const profile=String(url.searchParams.get("profile") || "full").trim().toLowerCase();
+        if (!["full","simple"].includes(profile)) {
+          return json({ ok:false, code:"MCP_PROFILE_INVALID" }, 400);
+        }
+        const handler=profile === "simple" ? handleSimpleCustomerMcpRequest : handleCustomerMcpRequest;
+        return handler(request, {
           authInfo: {
             token: "HARA_IDENTITY_VALIDATED",
             clientId: identity.client_id,

@@ -7,6 +7,7 @@ APP = ROOT / "apps" / "commander"
 CFG = json.loads((APP / "wrangler.jsonc").read_text())
 WORKER = (APP / "src/worker.js").read_text()
 CUSTOMER_MCP = (APP / "src/customer-mcp.mjs").read_text()
+SIMPLE_MCP = (APP / "src/customer-mcp-simple.mjs").read_text()
 DEVICE_TARGETING = (APP / "src/device-targeting.mjs").read_text()
 AUTH = (APP / "src/auth.js").read_text()
 HTML = (APP / "public/index.html").read_text()
@@ -221,6 +222,18 @@ need(
     "MCP_ACTIVITY_SURFACE",
 )
 need(
+    'CUSTOMER_MCP_SIMPLE_TOOLS' in SIMPLE_MCP
+    and '"read_file"' in SIMPLE_MCP
+    and '"write_file"' in SIMPLE_MCP
+    and '"start_process"' in SIMPLE_MCP
+    and '"read_process_output"' in SIMPLE_MCP
+    and 'args.interactive ? "hara.process.start" : "hara.process.run"' in SIMPLE_MCP
+    and 'handleSimpleCustomerMcpRequest' in WORKER
+    and 'profile === "simple"' in WORKER
+    and 'MCP_PROFILE_INVALID' in WORKER,
+    "MCP_SIMPLE_PROFILE",
+)
+need(
     "c.tenant_id = ?" in activity_block
     and "c.subject_id = ?" in activity_block
     and "payload_json" not in activity_block
@@ -257,9 +270,14 @@ need(
 need(
     'class="connection-readiness"' in HTML
     and HTML.count('class="integration-badge"') >= 2
-    and "Cinco ferramentas governadas" in HTML
-    and "Ainda não disponível" in HTML
-    and "Aguardando homologação do primeiro dispositivo real" in HTML,
+    and HTML.count('data-copy-simple-mcp') >= 3
+    and "24 comandos simples" in HTML
+    and "Qualquer cliente MCP" in HTML
+    and "MCP PADRÃO" in HTML
+    and "/api/mcp?profile=simple" in HTML
+    and 'window.location.origin + "/api/mcp?profile=simple"' in JS
+    and "Ainda não disponível" not in HTML
+    and "Aguardando homologação do primeiro dispositivo real" not in HTML,
     "CONNECTIONS_HONEST_READINESS",
 )
 need(
