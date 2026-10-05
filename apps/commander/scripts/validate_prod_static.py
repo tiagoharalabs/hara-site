@@ -381,6 +381,14 @@ need("#dashboardInvokes" not in CSS and ".activity-list" not in CSS, "DEAD_ACTIV
 need('class="user-chip"' not in HTML, "DUPLICATE_INTERNAL_SESSION_IDENTITY_ABSENT")
 need(".user-chip" not in CSS, "DEAD_USER_CHIP_CSS_ABSENT")
 need(
+    '<span class="plan-label">TRIAL</span>' in HTML
+    and '<span class="plan-label">STANDARD</span>' in HTML
+    and '<span class="plan-label">SCALE</span>' not in HTML
+    and 'data-billing-plan="SCALE"' not in HTML
+    and 'grid-template-columns:repeat(2,minmax(0,1fr))' in CSS,
+    "COMMERCIAL_TWO_PLAN_SURFACE",
+)
+need(
     'id="billingReadiness"' in HTML
     and 'data-billing-ready="provider"' in HTML
     and 'data-billing-ready="catalog"' in HTML
