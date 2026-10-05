@@ -14,24 +14,24 @@ ALTER TABLE commander_device_budget_blocks
 CREATE TRIGGER IF NOT EXISTS trg_device_call_local_budget_validate
 BEFORE INSERT ON commander_device_calls
 WHEN NEW.usage_mode = 'LOCAL_BUDGET'
+ AND (
+   NEW.usage_budget_id IS NULL
+   OR NEW.usage_units <= 0
+   OR NEW.usage_period_key IS NULL
+   OR NOT EXISTS (
+     SELECT 1
+       FROM commander_device_budget_blocks b
+      WHERE b.budget_id = NEW.usage_budget_id
+        AND b.tenant_id = NEW.tenant_id
+        AND b.device_id = NEW.device_id
+        AND b.period_key = NEW.usage_period_key
+        AND b.state = 'ACTIVE'
+        AND b.expires_at_utc > NEW.created_at_utc
+        AND b.units_issued + NEW.usage_units <= b.units_allocated
+   )
+ )
 BEGIN
-  SELECT CASE
-    WHEN NEW.usage_budget_id IS NULL
-      OR NEW.usage_units <= 0
-      OR NEW.usage_period_key IS NULL
-      OR NOT EXISTS (
-        SELECT 1
-          FROM commander_device_budget_blocks b
-         WHERE b.budget_id = NEW.usage_budget_id
-           AND b.tenant_id = NEW.tenant_id
-           AND b.device_id = NEW.device_id
-           AND b.period_key = NEW.usage_period_key
-           AND b.state = 'ACTIVE'
-           AND b.expires_at_utc > NEW.created_at_utc
-           AND b.units_issued + NEW.usage_units <= b.units_allocated
-      )
-    THEN RAISE(ABORT, 'LOCAL_BUDGET_CAPACITY_EXHAUSTED')
-  END;
+  SELECT RAISE(ABORT, 'LOCAL_BUDGET_CAPACITY_EXHAUSTED');
 END;
 
 CREATE TRIGGER IF NOT EXISTS trg_device_call_local_budget_issue
