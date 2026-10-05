@@ -219,6 +219,20 @@ DELETE FROM tenants WHERE tenant_id={q(tenant)};
                 fail("BLOCK_SHAPE_INVALID")
             print("LOCAL_BUDGET_DEV_BLOCK_ISSUE=PASS")
             print("LOCAL_BUDGET_DEV_BLOCK_UNITS=100")
+            baseline = rows(
+                "SELECT legacy_consumed_units,source,state "
+                "FROM commander_tenant_budget_baselines "
+                f"WHERE tenant_id={q(tenant)} AND period_key={q(period_key)};"
+            )
+            if (
+                len(baseline) != 1
+                or int(baseline[0]["legacy_consumed_units"]) != 0
+                or baseline[0]["source"] != "FRESH_TENANT_ZERO"
+                or baseline[0]["state"] != "ACTIVE"
+            ):
+                fail("FRESH_BASELINE_INVALID")
+            print("LOCAL_BUDGET_DEV_BASELINE=FRESH_TENANT_ZERO")
+            print("LOCAL_BUDGET_DEV_LEGACY_DO_READS_FOR_BASELINE=0")
 
             device = wait_until(
                 lambda: rows(

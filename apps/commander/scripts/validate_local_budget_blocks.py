@@ -10,7 +10,7 @@ ROOT=Path(__file__).resolve().parents[3]
 APP=ROOT/"apps/commander"
 WORKER=(APP/"src/worker.js").read_text(encoding="utf-8")
 AGENT=APP/"public/agent/linux.py"
-MIG=(APP/"migrations/0023_device_local_budget_blocks.sql").read_text(encoding="utf-8") + chr(10) + (APP/"migrations/0024_local_budget_cloud_ceiling.sql").read_text(encoding="utf-8")
+MIG=(APP/"migrations/0023_device_local_budget_blocks.sql").read_text(encoding="utf-8") + chr(10) + (APP/"migrations/0024_local_budget_cloud_ceiling.sql").read_text(encoding="utf-8") + chr(10) + (APP/"migrations/0025_local_budget_fresh_baseline.sql").read_text(encoding="utf-8")
 PREPROD=APP/"scripts/validate_preprod_readiness.py"
 
 def need(ok, code):
@@ -20,6 +20,8 @@ def need(ok, code):
 
 # Source / architecture contract.
 need("commander_device_budget_blocks" in MIG, "CLOUD_TABLE")
+need("commander_tenant_budget_baselines" in MIG, "FRESH_BASELINE_TABLE")
+need("FRESH_TENANT_ZERO" in MIG and "INVALIDATED" in MIG, "FRESH_BASELINE_STATES")
 need("usage_mode TEXT NOT NULL DEFAULT 'CLOUD_QUOTA'" in MIG, "CALL_USAGE_MODE_COLUMN")
 need("usage_units INTEGER NOT NULL DEFAULT 0" in MIG, "CALL_USAGE_UNITS_COLUMN")
 need("usage_period_key TEXT" in MIG, "CALL_USAGE_PERIOD_COLUMN")
@@ -32,6 +34,11 @@ need("idx_device_budget_tenant_period_sequence" in MIG, "TENANT_SEQUENCE_RACE_GU
 need("idx_device_budget_one_active" in MIG and "WHERE state = 'ACTIVE'" in MIG, "ONE_ACTIVE_PER_DEVICE")
 need("LOCAL_BUDGET_BLOCK_UNITS = 100" in WORKER, "BLOCK_SIZE_100")
 need("LOCAL_BUDGET_MIN_LINUX_PATCH = 35" in WORKER, "AGENT_035_GATE")
+need("tenantFullyLocalBudgetCapable" in WORKER, "FRESH_BASELINE_FLEET_GATE")
+need("freshLocalBudgetBaseline" in WORKER and "FRESH_TENANT_ZERO" in WORKER, "FRESH_BASELINE_SOURCE")
+need("MIXED_OR_INCOMPATIBLE_FLEET" in WORKER, "FRESH_BASELINE_INVALIDATION")
+need("prior_calls" in WORKER and "prior_blocks" in WORKER, "FRESH_BASELINE_ZERO_EVIDENCE")
+need("resolveCallUsageMode" in WORKER and "units_issued < units_allocated" in WORKER, "CLOUD_FALLBACK_WITHOUT_BLOCK")
 need('return "LOCAL_BUDGET"' in WORKER, "USAGE_MODE_SELECTOR")
 need('url.pathname === "/api/device/product-lease"' in WORKER, "PRODUCT_LEASE_ROUTE")
 need("LOCAL_BUDGET_ALLOCATION_CONFLICT" in WORKER, "ALLOCATION_CONFLICT_FAIL_CLOSED")
@@ -60,6 +67,7 @@ need("def local_budget_release" in agent_src, "LOCAL_RELEASE")
 need("PRODUCT_LEASE_REFRESH_SECONDS = 4 * 60 * 60" in agent_src, "LEASE_REFRESH_INTERVAL")
 main_src=agent_src.split("def main():",1)[1]
 need(main_src.index('"/api/device/heartbeat"') < main_src.index("refresh_product_lease(config)"), "HEARTBEAT_BEFORE_LEASE")
+need("LOCAL_BUDGET_ROLLOVER" in agent_src and 'budget_commit.get("exhausted")' in agent_src, "PROACTIVE_BLOCK_ROLLOVER")
 need("LOCAL_BUDGET_REQUEST_ALREADY_COMMITTED" in agent_src, "LOCAL_REPLAY_GUARD")
 
 # Migration replay / schema semantics.
@@ -77,6 +85,11 @@ need({
     "budget_id","tenant_id","device_id","period_key","allocation_sequence",
     "units_allocated","units_issued","units_reported","lease_token_hash","state",
 }.issubset(budget_cols), "MIGRATION_BUDGET_COLUMNS")
+baseline_cols={row[1] for row in db.execute("PRAGMA table_info(commander_tenant_budget_baselines)")}
+need({
+    "tenant_id","period_key","meter_id","legacy_consumed_units","source","state",
+    "established_at_utc","invalidated_at_utc","invalidation_reason",
+}.issubset(baseline_cols), "MIGRATION_BASELINE_COLUMNS")
 
 # Exercise race guards with minimal fixture.
 now="2026-10-05T00:00:00Z"

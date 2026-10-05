@@ -102,7 +102,9 @@ need(
   && worker.includes("productUsageForPolicy")
   && worker.includes('if (kind === "NONE") return { ...unlimitedProductUsage(), available: true };')
   && worker.includes('"USAGE_TEMPORARILY_UNAVAILABLE"')
-  && worker.includes("quota.status"),
+  && worker.includes("freshLocalBudgetBaseline")
+  && worker.includes('baselineSource = "TENANT_QUOTA_LIVE"')
+  && worker.includes("TENANT_QUOTA.getByName(tenantId).status"),
   "WORKER_USAGE_SURFACE",
 );
 need(worker.includes("semverAtLeast(device.agent_version,24)") && worker.includes('tools.push("hara.system.resources","hara.workspace.inspect")'),"WORKER_CONTEXT_TOOLS_0_3_24");
