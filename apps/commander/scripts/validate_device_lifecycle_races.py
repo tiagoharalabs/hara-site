@@ -135,14 +135,12 @@ enqueue_sql = """INSERT OR IGNORE INTO commander_device_calls
  created_at_utc,expires_at_utc,claimed_at_utc,completed_at_utc,result_json,error_code)
 SELECT ?,?,?,?,d.device_id,?,?,'PENDING',?,?,NULL,NULL,NULL,NULL
 FROM commander_devices d
-JOIN commander_device_selections s
-  ON s.tenant_id=d.tenant_id AND s.device_id=d.device_id
 WHERE d.device_id=? AND d.tenant_id=? AND d.state='ACTIVE'
-  AND d.revoked_at_utc IS NULL AND d.last_seen_at_utc>=? AND s.subject_id=?"""
+  AND d.revoked_at_utc IS NULL AND d.last_seen_at_utc>=?"""
 args = (
     "C1","REQ1","T1","S1","hara.functions.invoke",'{"x":1}',
     "2026-09-24T00:10:05.000Z","2026-09-24T00:10:55.000Z",
-    "D1","T1","2026-09-24T00:08:35.000Z","S1",
+    "D1","T1","2026-09-24T00:08:35.000Z",
 )
 first_enqueue = db.execute(enqueue_sql, args)
 assert first_enqueue.rowcount == 1, "FIRST_ENQUEUE_FAILED"
@@ -152,7 +150,7 @@ second_enqueue = db.execute(
     (
         "C2","REQ1","T1","S1","hara.functions.invoke",'{"x":1}',
         "2026-09-24T00:10:06.000Z","2026-09-24T00:10:56.000Z",
-        "D1","T1","2026-09-24T00:08:36.000Z","S1",
+        "D1","T1","2026-09-24T00:08:36.000Z",
     ),
 )
 assert second_enqueue.rowcount == 0, "DUPLICATE_REQUEST_ID_CREATED_SECOND_CALL"
@@ -170,7 +168,7 @@ revoked_enqueue = db.execute(
     (
         "C3","REQ2","T1","S1","hara.functions.invoke",'{"x":2}',
         "2026-09-24T00:10:08.000Z","2026-09-24T00:10:58.000Z",
-        "D1","T1","2026-09-24T00:08:38.000Z","S1",
+        "D1","T1","2026-09-24T00:08:38.000Z",
     ),
 )
 assert revoked_enqueue.rowcount == 0, "CALL_ENQUEUED_AFTER_REVOKE"
@@ -262,7 +260,10 @@ assert "INSERT OR IGNORE INTO commander_device_calls" in enqueue_block
 assert "deviceCallStoredContentMatches" in enqueue_block
 assert "const payloadMatches = await deviceCallStoredContentMatches(" in enqueue_block
 assert "|| !payloadMatches" in enqueue_block
-assert "JOIN commander_device_selections" in enqueue_block
+assert "JOIN commander_device_selections" not in enqueue_block
+assert "resolveCustomerTargetDevice" in enqueue_block
+assert "requestedDeviceId" in enqueue_block
+assert "WHERE d.device_id = ?" in enqueue_block
 assert "d.revoked_at_utc IS NULL" in enqueue_block
 assert "AND expires_at_utc > ?" in complete_block
 assert 'throw new Error("DEVICE_CALL_EXPIRED")' in complete_block
