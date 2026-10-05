@@ -87,3 +87,44 @@ Observed correlated errors:
 5. Remote Simple MCP + cloud Usage is a subsequent acceptance step after DO capacity is restored.
 
 No PROD customer/device/Agent state was mutated by this probe.
+
+## Continuation - local fresh-customer path CLOSED_PASS
+
+After feec164, the live probe progressed through:
+- identity/tenant PASS
+- pairing/enrollment PASS
+- Simple MCP tools exactly 24
+- public hara.* prefix ABSENT
+- local MCP zero-relay PASS
+- filesystem write/read/edit PASS
+
+The remaining LOCAL_MCP_PROCESS_INVALID was a probe assertion-shape defect, not an Agent execution failure.
+
+Actual Local MCP contract:
+1. start_process returns the governed bridge envelope
+2. the governed function result is under result
+3. result.stdout contains the JSON payload returned by process_run
+4. that inner payload carries state EXITED, exit_code 0 and bounded output text
+
+The acceptance probe was corrected to normalize this existing contract while still requiring:
+- governed function process.run
+- bridge process_exit_code 0
+- inner process state EXITED or COMPLETED
+- inner exit code 0 when present
+- expected bounded output marker
+
+Latest live result:
+- FRESH_CUSTOMER_LOCAL_MCP_PROCESS=PASS
+- FRESH_CUSTOMER_LOCAL_MCP_ACTIVITY=PASS
+- FRESH_CUSTOMER_LOCAL_MCP_RECEIPTS=PASS
+- FRESH_CUSTOMER_ACCEPTANCE_LOCAL_PATH=PASS
+- FRESH_CUSTOMER_DEV_FIXTURE_CLEANUP=PASS
+
+Receipt privacy checks remained enabled and PASS; the probe does not print pairing/device tokens.
+
+The only unexercised part is cloud-backed remote Usage:
+FRESH_CUSTOMER_REMOTE_USAGE_PATH=NOT_EXERCISED_DO_CAPACITY
+
+Current state:
+- FRESH_CUSTOMER_LOCAL_PATH=CLOSED_PASS
+- FRESH_CUSTOMER_REMOTE_USAGE=PENDING_DO_CAPACITY
