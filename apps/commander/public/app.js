@@ -410,14 +410,36 @@
     };
   }
 
+  async function localLoopbackPermissionState() {
+    try {
+      if (!navigator.permissions?.query) return "unknown";
+      const status=await navigator.permissions.query({name:"loopback-network"});
+      return String(status?.state || "unknown");
+    } catch (_error) {
+      return "unknown";
+    }
+  }
+
+  async function shouldAttemptLocalActivity(explicitUserRefresh=false) {
+    const state=await localLoopbackPermissionState();
+    if (state === "granted") return true;
+    if (state === "denied") return false;
+    return explicitUserRefresh;
+  }
+
   async function fetchLocalActivityDirect(windowKey) {
     const controller=new AbortController();
     const timer=setTimeout(()=>controller.abort(),LOCAL_ACTIVITY_TIMEOUT_MS);
     try {
-      const response=await fetch(
-        LOCAL_ACTIVITY_ORIGIN + "/v1/activity?limit=50&window=" + encodeURIComponent(windowKey),
-        {cache:"no-store",mode:"cors",credentials:"omit",signal:controller.signal},
-      );
+      const url=LOCAL_ACTIVITY_ORIGIN + "/v1/activity?limit=50&window=" + encodeURIComponent(windowKey);
+      const options={
+        cache:"no-store",
+        mode:"cors",
+        credentials:"omit",
+        signal:controller.signal,
+        targetAddressSpace:"loopback",
+      };
+      const response=await fetch(new Request(url,options));
       if (!response.ok) return null;
       return localActivityToPortal(await response.json().catch(()=>null));
     } catch (_error) {
@@ -611,7 +633,9 @@
       trigger.disabled=true;
       trigger.textContent="Atualizando…";
     }
-    const localPromise=sessionAuthenticated
+    const localAllowed=sessionAuthenticated
+      && await shouldAttemptLocalActivity(Boolean(trigger));
+    const localPromise=localAllowed
       ? fetchLocalActivityDirect(activityWindow)
       : Promise.resolve(null);
     try {
