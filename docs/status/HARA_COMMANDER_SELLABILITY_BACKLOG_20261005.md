@@ -18,7 +18,7 @@ Baseline at creation: `53d53c3b33028712d70ecfb3b18aef9858205210`
 | Live multitenant isolation | Source/model PASS; live dev proof still marked PENDING | Two controlled tenants must prove DENY for cross-tenant enumerate/select/revoke/enqueue/receipt/quota and caller-supplied tenant override | sellability |
 | Fresh customer acceptance | Components exist (3-step onboarding, quickstart, Simple MCP, persistent trust) | New identity -> new tenant/invite -> pair fresh device -> connect Simple MCP -> read -> write -> process -> Usage visible, with no maintainer repair | sellability / beta-sales |
 | Windows current live canary | Starter branch exists with filesystem/process starter toolset; not yet reconciled with current canonical head | Rebase/reconcile `commander-windows-starter-20261005`, run full regression, upgrade/enroll fresh Windows host, prove read/write/process/receipt through Simple MCP | windows-starter |
-| Self-serve Standard checkout | Billing source/schema/webhook/idempotency/entitlement bridge PASS; no price invented | Configure Stripe secret + webhook secret + Standard Price ID; prove checkout -> webhook -> STANDARD entitlement -> portal -> cancel/update lifecycle | beta-sales / human commercial config |
+| Self-serve Standard checkout | Billing source/schema/webhook/idempotency/entitlement bridge PASS; Pro Beta access requests are now captured in-product; no price invented | Configure Stripe secret + webhook secret + Standard Price ID; prove checkout -> webhook -> STANDARD entitlement -> portal -> cancel/update lifecycle | beta-sales / human commercial config |
 
 ## P1 — close for reliable scale
 
@@ -44,6 +44,7 @@ Baseline at creation: `53d53c3b33028712d70ecfb3b18aef9858205210`
 
 - Worktree hygiene: 124 prunable registrations removed; orphan HEAD preserved under local quarantine ref.
 - Standard/Pro Beta catalog reconciled to canonical migration `0019_standard_beta_plan.sql`.
+- Pro Beta access request flow delivered through canonical migration `0020_beta_access_requests.sql` and portal API.
 - Full migration replay through 0019 PASS.
 - Linux Agent 0.3.30 live with `PERSISTENT_TRUSTED`.
 - Simple MCP 24-command surface live.
