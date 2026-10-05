@@ -1168,3 +1168,7 @@ html[data-neon="off"] .brand-copy em{
 .billing-readiness span.ready{border-color:rgba(39,201,154,.25);background:rgba(39,201,154,.08);color:#208365}
 .billing-readiness span.ready::before{background:#27c99a}
 .billing-readiness span.pending{color:#7a8992}
+
+.device-state.ready{background:#e7f8f2;color:#13775d}
+.device-state.attention{background:#fff4dc;color:#9d6a08}
+.device-actions{display:flex;align-items:center;gap:8px;justify-content:flex-end;flex-wrap:wrap}

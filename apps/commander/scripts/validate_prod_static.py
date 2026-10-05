@@ -339,6 +339,18 @@ need(
     "DEVICE_APPROVAL_POLICY_VISIBILITY",
 )
 need(
+    "function deviceReadiness(device)" in JS
+    and '"PERSISTENT_TRUSTED"' in JS
+    and '"SESSION_TRUSTED"' in JS
+    and 'label:"Pronto"' in JS
+    and 'label:"Atenção"' in JS
+    and "function deviceDiagnosticCommand(platform)" in JS
+    and "hara-commander doctor && hara-commander support" in JS
+    and "data-copy-device-diagnostic" in JS
+    and "Comando de diagnóstico copiado." in JS,
+    "DEVICE_SELF_SERVICE_SUPPORT",
+)
+need(
     "function renderDeviceLoading()" in JS
     and 'list.setAttribute("aria-busy", "true")' in JS
     and "device-skeleton" in CSS

@@ -623,6 +623,23 @@
     return { label:"Política padrão", className:"default" };
   }
 
+  function deviceReadiness(device) {
+    if (device?.state === "REVOKED") return { label:"Revogado", className:"revoked", detail:"Acesso revogado" };
+    if (!device?.online) return { label:"Offline", className:"offline", detail:"Sem contato recente com o Agent" };
+    const mode=String(device?.approval_mode || "").toUpperCase();
+    if (mode === "PERSISTENT_TRUSTED" || mode === "SESSION_TRUSTED") {
+      return { label:"Pronto", className:"ready", detail:"Online e autorizado para uso" };
+    }
+    return { label:"Atenção", className:"attention", detail:"Online; confirmações locais ainda podem ser exigidas" };
+  }
+
+  function deviceDiagnosticCommand(platform) {
+    if (String(platform || "").toUpperCase() !== "WINDOWS") {
+      return "hara-commander doctor && hara-commander support";
+    }
+    return "$tmp=Join-Path $env:TEMP ('hara-commander-support-'+[guid]::NewGuid().ToString('N')+'.ps1'); try { Invoke-WebRequest -Uri https://commander.haralabs.com.br/install/windows.ps1 -OutFile $tmp -UseBasicParsing -MaximumRedirection 0 -ErrorAction Stop; & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $tmp -Action doctor; & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $tmp -Action support } finally { Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue }";
+  }
+
   function renderDevices(payload) {
     const list = document.getElementById("deviceList");
     const devices = Array.isArray(payload?.devices) ? payload.devices : [];
@@ -702,9 +719,11 @@
       meta.textContent = String(device.platform || "—") + arch + agentVersion + " · Último contato: " + formatDeviceSeen(device.last_seen_at_utc);
       body.append(titleLine, meta);
 
+      const readiness=deviceReadiness(device);
       const state = document.createElement("span");
-      state.className = "device-state " + (device.state === "REVOKED" ? "revoked" : device.online ? "online" : "offline");
-      state.textContent = device.state === "REVOKED" ? "Revogado" : device.online ? "Online" : "Offline";
+      state.className = "device-state " + readiness.className;
+      state.textContent = readiness.label;
+      state.title = readiness.detail;
 
       row.append(icon, body, state);
 
@@ -712,12 +731,19 @@
         const actions = document.createElement("div");
         actions.className = "device-actions";
 
+        const diagnostic = document.createElement("button");
+        diagnostic.className = "link-button";
+        diagnostic.type = "button";
+        diagnostic.dataset.copyDeviceDiagnostic = String(device.platform || "LINUX");
+        diagnostic.textContent = "Diagnóstico";
+        diagnostic.title = "Copiar comando de diagnóstico sanitizado";
+
         const revoke = document.createElement("button");
         revoke.className = "link-button";
         revoke.type = "button";
         revoke.dataset.revokeDevice = String(device.device_id);
         revoke.textContent = "Revogar";
-        actions.append(revoke);
+        actions.append(diagnostic,revoke);
         row.append(actions);
       }
       list.append(row);
@@ -1450,6 +1476,16 @@
     if (refreshDevices) {
       event.preventDefault();
       loadDevices(refreshDevices);
+      return;
+    }
+
+    const deviceDiagnostic = event.target.closest("[data-copy-device-diagnostic]");
+    if (deviceDiagnostic) {
+      event.preventDefault();
+      copyText(
+        deviceDiagnosticCommand(deviceDiagnostic.dataset.copyDeviceDiagnostic),
+        "Comando de diagnóstico copiado."
+      );
       return;
     }
 
