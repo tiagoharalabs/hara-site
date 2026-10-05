@@ -1,7 +1,7 @@
 # H.A.R.A. Commander — OpenAI / Desktop-Parity Successor Handoff
 
 Date: 2026-10-04
-Status: LIVE_PROVEN_0_3_26_SESSION_TRUSTED + SUCCESSOR_CANDIDATE_0_3_27_APPROVAL_SYNC
+Status: LIVE_PROVEN_0_3_30_PERSISTENT_TRUSTED + SIMPLE_MCP_24 + COMMERCIAL_UX_LIVE
 Scope: ChatGPT/OpenAI customer MCP → H.A.R.A. Identity → Commander edge → outbound Agent → governed Linux execution
 
 ## Executive state
@@ -857,6 +857,70 @@ This establishes the intended product split:
 - Local MCP: preferred for same-machine clients; zero relay transactions per local tool call
 - Remote Simple MCP: access from anywhere through H.A.R.A. Identity + governed relay
 - Full MCP: advanced/backward-compatible H.A.R.A. integration surface
+
+## Sellability closeout — Agent 0.3.30 persistent trust
+
+The commercial default authorization model advanced from session-bound trust to an explicit device-level opt-in:
+
+- ASK_EVERY_ACTION — conservative per-action approval
+- SESSION_TRUSTED — governed authority while a local operator session is open
+- PERSISTENT_TRUSTED — explicit install/device policy allowing the governed toolset in background without requiring hara-commander start
+
+PERSISTENT_TRUSTED does not expose unrestricted shell authority. Existing grants, tool allowlists, schemas, payload bounds, receipts, preimages/rollback, redaction, tenant/device routing and device revocation remain authoritative.
+
+Agent/release:
+- stable Agent: 0.3.30
+- Linux self-test persistent no-session gate: PASS
+- Linux local MCP persistent online gate: PASS
+- full 0.3.30 regression: PASS
+- post-canary execute_call persistent-gate regression: PASS
+- Windows source supports persistent background liveness for the currently admitted Windows toolset; Windows live parity remains a separate gate
+
+Self-service CLI added:
+- hara-commander doctor
+- hara-commander support
+- hara-commander approval-mode always
+- doctor exposes version, authorization mode, background authorization, session state, remote health and last heartbeat without secrets
+- support emits sanitized hara.commander-support-report.v1 with customer_content_included=false and secret_material_exposed=false
+
+Live nucleo-a canary:
+- Agent: 0.3.30
+- approval_mode: PERSISTENT_TRUSTED
+- local operator session: INACTIVE
+- background_authorized: TRUE
+- doctor: PASS
+- H.A.R.A. device state: ONLINE
+- hara.capabilities operator_session_required=false
+- hara.capabilities persistent_device_authorizes_governed_mutations=true
+
+Live governed process proof with no local console/session:
+- tool: hara.process.run
+- command: harmless printf canary
+- result: PASS
+- receipt: a4719d8258ea311fb1b9b8a748041f4685974c13e92d8e245725fa40a2ef2d20
+- mutation_class: PROCESS_EXECUTION_V1
+- human_approval_required: false
+- human_approval_state: APPROVED
+- local_authorization_mode: PERSISTENT_TRUSTED
+- authorization_source: DEVICE_ENROLLMENT_POLICY
+- payload_values_persisted: false
+
+Current PROD Worker after device-policy UX:
+- version: 7f6c16d9-f042-4ccf-a6fa-7184de9f2971
+- deployment: 27af6421-5646-41c2-9843-93f451b15bd4
+- rollback: 24768b04-b29f-4cc7-bae7-32c8d897425a
+
+Portal device rows now expose the active authorization policy:
+- Sempre permitido
+- Por sessão
+- Confirmação
+alongside online state and Agent version.
+
+The main customer portal remains intentionally simple:
+- Computadores
+- Uso
+- Plano e cobrança
+- Configurações
 
 ## Current known limitations
 
