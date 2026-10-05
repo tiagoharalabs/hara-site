@@ -576,8 +576,9 @@ def local_budget_reserve(config,call):
         return None
     units=int(usage.get("units") or 0)
     period_key=str(usage.get("period_key") or "")
+    budget_id=str(usage.get("budget_id") or "")
     request_id=str((call or {}).get("request_id") or "")
-    if units<1 or not period_key or not request_id:
+    if units<1 or not period_key or not budget_id or not request_id:
         raise ValueError("LOCAL_BUDGET_USAGE_INVALID")
 
     for attempt in range(2):
@@ -600,7 +601,20 @@ def local_budget_reserve(config,call):
                     raise ValueError("LOCAL_BUDGET_REQUEST_ALREADY_COMMITTED")
                 raise ValueError("LOCAL_BUDGET_REQUEST_TERMINAL")
 
-            block=_local_budget_find_available(conn,period_key,units)
+            block=conn.execute(
+                """SELECT budget_id,allocated_units,expires_at_utc
+                     FROM local_budget_blocks
+                    WHERE budget_id = ?
+                      AND period_key = ?
+                      AND state = 'ACTIVE'
+                      AND expires_at_utc > ?
+                    LIMIT 1""",
+                (budget_id,period_key,utcnow()),
+            ).fetchone()
+            if block:
+                committed,reserved=_budget_counts(conn,block["budget_id"])
+                if int(block["allocated_units"])-committed-reserved < units:
+                    block=None
             if block:
                 now=utcnow()
                 conn.execute(

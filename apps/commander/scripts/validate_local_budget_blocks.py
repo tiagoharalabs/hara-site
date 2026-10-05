@@ -23,6 +23,11 @@ need("commander_device_budget_blocks" in MIG, "CLOUD_TABLE")
 need("usage_mode TEXT NOT NULL DEFAULT 'CLOUD_QUOTA'" in MIG, "CALL_USAGE_MODE_COLUMN")
 need("usage_units INTEGER NOT NULL DEFAULT 0" in MIG, "CALL_USAGE_UNITS_COLUMN")
 need("usage_period_key TEXT" in MIG, "CALL_USAGE_PERIOD_COLUMN")
+need("usage_budget_id TEXT" in MIG, "CALL_USAGE_BUDGET_COLUMN")
+need("units_issued INTEGER NOT NULL DEFAULT 0" in MIG, "CLOUD_ISSUED_COUNTER")
+need("trg_device_call_local_budget_validate" in MIG, "CLOUD_SLOT_VALIDATE_TRIGGER")
+need("trg_device_call_local_budget_issue" in MIG, "CLOUD_SLOT_ISSUE_TRIGGER")
+need("trg_device_call_local_budget_release" in MIG, "CLOUD_SLOT_RELEASE_TRIGGER")
 need("idx_device_budget_tenant_period_sequence" in MIG, "TENANT_SEQUENCE_RACE_GUARD")
 need("idx_device_budget_one_active" in MIG and "WHERE state = 'ACTIVE'" in MIG, "ONE_ACTIVE_PER_DEVICE")
 need("LOCAL_BUDGET_BLOCK_UNITS = 100" in WORKER, "BLOCK_SIZE_100")
@@ -39,7 +44,9 @@ need('usageMode === "LOCAL_BUDGET"' in WORKER, "CUSTOMER_MCP_LOCAL_MODE")
 need('usageMode === "CLOUD_QUOTA"' in WORKER, "CLOUD_FALLBACK")
 need('context.period_kind === "NONE"' in WORKER and 'state: "UNMETERED"' in WORKER, "UNMETERED_BYPASS")
 need("cloud_quota_transaction: false" in WORKER, "NO_DO_TRANSACTION_MARKER")
-need(all(x in WORKER for x in ("usage_mode","usage_units","usage_period_key")) and "usage: {" in WORKER, "CALL_CARRIES_USAGE_METADATA")
+need(all(x in WORKER for x in ("usage_mode","usage_units","usage_period_key","usage_budget_id")) and "usage: {" in WORKER, "CALL_CARRIES_USAGE_METADATA")
+need("units_issued + NEW.usage_units <= b.units_allocated" in MIG, "LOCAL_TAMPER_CLOUD_CEILING")
+need('budget_id: row.usage_budget_id || null' in WORKER, "CLAIM_BINDS_BUDGET_ID")
 
 agent_src=AGENT.read_text(encoding="utf-8")
 need('AGENT_VERSION = "0.3.35"' in agent_src, "AGENT_VERSION")
@@ -62,11 +69,11 @@ for path in sorted((APP/"migrations").glob("*.sql")):
         raise SystemExit(f"COMMANDER_LOCAL_BUDGET_MIGRATION_REPLAY=FAIL:{path.name}:{exc}")
 need(db.execute("PRAGMA integrity_check").fetchone()[0]=="ok", "MIGRATION_INTEGRITY")
 cols={row[1] for row in db.execute("PRAGMA table_info(commander_device_calls)")}
-need({"usage_mode","usage_units","usage_period_key"}.issubset(cols), "MIGRATION_CALL_COLUMNS")
+need({"usage_mode","usage_units","usage_period_key","usage_budget_id"}.issubset(cols), "MIGRATION_CALL_COLUMNS")
 budget_cols={row[1] for row in db.execute("PRAGMA table_info(commander_device_budget_blocks)")}
 need({
     "budget_id","tenant_id","device_id","period_key","allocation_sequence",
-    "units_allocated","units_reported","lease_token_hash","state",
+    "units_allocated","units_issued","units_reported","lease_token_hash","state",
 }.issubset(budget_cols), "MIGRATION_BUDGET_COLUMNS")
 
 # Exercise race guards with minimal fixture.
@@ -111,6 +118,49 @@ except sqlite3.IntegrityError:
 else:
     raise SystemExit("COMMANDER_LOCAL_BUDGET_ONE_ACTIVE_RUNTIME=FAIL")
 print("COMMANDER_LOCAL_BUDGET_ONE_ACTIVE_RUNTIME=PASS")
+
+# Cloud slot ceiling: local SQLite claims cannot create a 4th call from a
+# 3-unit cloud block. The already-required cloud call insert is the authority.
+cloud=sqlite3.connect(":memory:")
+cloud.execute("PRAGMA foreign_keys=ON")
+for path in sorted((APP/"migrations").glob("*.sql")):
+    cloud.executescript(path.read_text(encoding="utf-8"))
+cloud.execute("PRAGMA foreign_keys=OFF")
+cloud.execute("""INSERT INTO commander_device_budget_blocks
+ (budget_id,tenant_id,device_id,entitlement_id,plan_code,meter_id,period_key,
+  allocation_sequence,units_allocated,units_issued,units_reported,lease_token_hash,state,
+  issued_at_utc,expires_at_utc,last_reported_at_utc)
+ VALUES ('TB','T','D','E','TRIAL','HARA_COMMANDER_GOVERNED_INVOKE','2026-10',
+         1,3,0,0,'th','ACTIVE','2026-10-05T00:00:00Z','2026-11-01T00:00:00Z',NULL)""")
+for i in range(3):
+    cloud.execute("""INSERT INTO commander_device_calls
+      (call_id,request_id,tenant_id,subject_id,device_id,tool_id,payload_json,state,
+       created_at_utc,expires_at_utc,usage_mode,usage_units,usage_period_key,usage_budget_id)
+      VALUES (?,?,?,?,?,'hara.health','{}','PENDING','2026-10-05T00:00:00Z',
+              '2026-10-05T00:01:00Z','LOCAL_BUDGET',1,'2026-10','TB')""",
+      (f"C{i}",f"R{i}","T","S","D"))
+need(cloud.execute("SELECT units_issued FROM commander_device_budget_blocks WHERE budget_id='TB'").fetchone()[0]==3,
+     "CLOUD_SLOT_THREE_ISSUED")
+try:
+    cloud.execute("""INSERT INTO commander_device_calls
+      (call_id,request_id,tenant_id,subject_id,device_id,tool_id,payload_json,state,
+       created_at_utc,expires_at_utc,usage_mode,usage_units,usage_period_key,usage_budget_id)
+      VALUES ('C4','R4','T','S','D','hara.health','{}','PENDING','2026-10-05T00:00:00Z',
+              '2026-10-05T00:01:00Z','LOCAL_BUDGET',1,'2026-10','TB')""")
+except sqlite3.IntegrityError as exc:
+    need("LOCAL_BUDGET_CAPACITY_EXHAUSTED" in str(exc), "CLOUD_SLOT_FOURTH_DENIED")
+else:
+    raise SystemExit("COMMANDER_LOCAL_BUDGET_CLOUD_SLOT_FOURTH_DENIED=FAIL")
+cloud.execute("UPDATE commander_device_calls SET state='FAILED' WHERE call_id='C0'")
+need(cloud.execute("SELECT units_issued FROM commander_device_budget_blocks WHERE budget_id='TB'").fetchone()[0]==2,
+     "CLOUD_SLOT_FAILED_RELEASED")
+cloud.execute("""INSERT INTO commander_device_calls
+  (call_id,request_id,tenant_id,subject_id,device_id,tool_id,payload_json,state,
+   created_at_utc,expires_at_utc,usage_mode,usage_units,usage_period_key,usage_budget_id)
+  VALUES ('C5','R5','T','S','D','hara.health','{}','PENDING','2026-10-05T00:00:00Z',
+          '2026-10-05T00:01:00Z','LOCAL_BUDGET',1,'2026-10','TB')""")
+need(cloud.execute("SELECT units_issued FROM commander_device_budget_blocks WHERE budget_id='TB'").fetchone()[0]==3,
+     "CLOUD_SLOT_REUSED_AFTER_FAILURE")
 
 # Dynamic local Agent block consumption with fake authenticated cloud responses.
 ns=runpy.run_path(str(AGENT))
@@ -191,7 +241,7 @@ with tempfile.TemporaryDirectory(prefix="hara-local-budget-") as td:
     for rid in ("r1","r2","r3"):
         reservation=ns["local_budget_reserve"](config,{
             "request_id":rid,
-            "usage":{"mode":"LOCAL_BUDGET","units":1,"period_key":"2026-10"},
+            "usage":{"mode":"LOCAL_BUDGET","units":1,"period_key":"2026-10","budget_id":"B1"},
         })
         need(reservation["state"]=="RESERVED", "DYNAMIC_RESERVE_"+rid.upper())
         committed=ns["local_budget_commit"](rid)
@@ -200,7 +250,7 @@ with tempfile.TemporaryDirectory(prefix="hara-local-budget-") as td:
     try:
         ns["local_budget_reserve"](config,{
             "request_id":"r1",
-            "usage":{"mode":"LOCAL_BUDGET","units":1,"period_key":"2026-10"},
+            "usage":{"mode":"LOCAL_BUDGET","units":1,"period_key":"2026-10","budget_id":"B1"},
         })
     except ValueError as exc:
         need(str(exc)=="LOCAL_BUDGET_REQUEST_ALREADY_COMMITTED", "DYNAMIC_REPLAY_DENIED")
@@ -210,7 +260,7 @@ with tempfile.TemporaryDirectory(prefix="hara-local-budget-") as td:
     # B1 is exhausted, so r4 causes exactly one cloud refresh and lands on B2.
     r4=ns["local_budget_reserve"](config,{
         "request_id":"r4",
-        "usage":{"mode":"LOCAL_BUDGET","units":1,"period_key":"2026-10"},
+        "usage":{"mode":"LOCAL_BUDGET","units":1,"period_key":"2026-10","budget_id":"B2"},
     })
     need(r4["budget_id"]=="B2", "DYNAMIC_BLOCK_ROLLOVER")
     need(len(cloud_calls)==2, "DYNAMIC_ONE_REFRESH_PER_BLOCK")
@@ -220,7 +270,7 @@ with tempfile.TemporaryDirectory(prefix="hara-local-budget-") as td:
     try:
         ns["local_budget_reserve"](config,{
             "request_id":"r4",
-            "usage":{"mode":"LOCAL_BUDGET","units":1,"period_key":"2026-10"},
+            "usage":{"mode":"LOCAL_BUDGET","units":1,"period_key":"2026-10","budget_id":"B2"},
         })
     except ValueError as exc:
         need(str(exc)=="LOCAL_BUDGET_REQUEST_TERMINAL", "DYNAMIC_RELEASE_TERMINAL")

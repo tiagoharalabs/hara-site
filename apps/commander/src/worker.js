@@ -1124,7 +1124,7 @@ async function reconcileDeviceBudgetReport(env, device, periodKey, report) {
 
   const row = await env.PRODUCT_DB.prepare(
     `SELECT budget_id,tenant_id,device_id,entitlement_id,plan_code,meter_id,period_key,
-            allocation_sequence,units_allocated,units_reported,lease_token_hash,state,issued_at_utc,expires_at_utc
+            allocation_sequence,units_allocated,units_issued,units_reported,lease_token_hash,state,issued_at_utc,expires_at_utc
        FROM commander_device_budget_blocks
       WHERE budget_id = ?
         AND tenant_id = ?
@@ -1181,6 +1181,7 @@ function publicBudgetBlock(row, leaseToken) {
     period_key: row.period_key,
     allocation_sequence: Number(row.allocation_sequence),
     allocated_units: Number(row.units_allocated),
+    cloud_issued_units: Number(row.units_issued || 0),
     committed_units: Number(row.units_reported || 0),
     lease_token: leaseToken,
     issued_at_utc: row.issued_at_utc,
@@ -1267,9 +1268,9 @@ async function issueDeviceBudgetBlock(env, device, entitlement, report = null) {
     await env.PRODUCT_DB.prepare(
       `INSERT INTO commander_device_budget_blocks
          (budget_id,tenant_id,device_id,entitlement_id,plan_code,meter_id,period_key,
-          allocation_sequence,units_allocated,units_reported,lease_token_hash,state,
+          allocation_sequence,units_allocated,units_issued,units_reported,lease_token_hash,state,
           issued_at_utc,expires_at_utc,last_reported_at_utc)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, 'ACTIVE', ?, ?, NULL)`
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, 'ACTIVE', ?, ?, NULL)`
     ).bind(
       budgetId,
       device.tenant_id,
@@ -1302,6 +1303,7 @@ async function issueDeviceBudgetBlock(env, device, entitlement, report = null) {
       period_key: periodKey,
       allocation_sequence: allocationSequence,
       units_allocated: units,
+      units_issued: 0,
       units_reported: 0,
       issued_at_utc: issuedAt,
       expires_at_utc: expiresAt,
@@ -2314,7 +2316,8 @@ async function enqueueDeviceCall(env, body) {
     "DEVICE_CALL_PAYLOAD_INVALID",
   );
   const readExisting = () => env.PRODUCT_DB.prepare(
-    `SELECT call_id, tenant_id, subject_id, device_id, tool_id, payload_json, state, expires_at_utc
+    `SELECT call_id, tenant_id, subject_id, device_id, tool_id, payload_json, state, expires_at_utc,
+            usage_mode, usage_units, usage_period_key, usage_budget_id
        FROM commander_device_calls WHERE request_id = ? LIMIT 1`
   ).bind(requestId).first();
   const existingResponse = async (existing) => {
@@ -2341,6 +2344,10 @@ async function enqueueDeviceCall(env, body) {
       state: existing.state,
       expires_at_utc: existing.expires_at_utc,
       retry_after_ms: deviceCallRetryAfterMs(existing.state, "enqueue"),
+      usage_mode: existing.usage_mode || "CLOUD_QUOTA",
+      usage_units: Number(existing.usage_units || 0),
+      usage_period_key: existing.usage_period_key || null,
+      usage_budget_id: existing.usage_budget_id || null,
     };
   };
 
@@ -2368,8 +2375,20 @@ async function enqueueDeviceCall(env, body) {
     `INSERT OR IGNORE INTO commander_device_calls
       (call_id, request_id, tenant_id, subject_id, device_id, tool_id, payload_json,
        state, created_at_utc, expires_at_utc, claimed_at_utc, completed_at_utc,
-       result_json, error_code, usage_mode, usage_units, usage_period_key)
-     SELECT ?, ?, ?, ?, d.device_id, ?, ?, 'PENDING', ?, ?, NULL, NULL, NULL, NULL, ?, ?, ?
+       result_json, error_code, usage_mode, usage_units, usage_period_key, usage_budget_id)
+     SELECT ?, ?, ?, ?, d.device_id, ?, ?, 'PENDING', ?, ?, NULL, NULL, NULL, NULL, ?, ?, ?,
+            CASE WHEN ? = 'LOCAL_BUDGET' THEN (
+              SELECT b.budget_id
+                FROM commander_device_budget_blocks b
+               WHERE b.tenant_id = d.tenant_id
+                 AND b.device_id = d.device_id
+                 AND b.period_key = ?
+                 AND b.state = 'ACTIVE'
+                 AND b.expires_at_utc > ?
+                 AND b.units_issued + ? <= b.units_allocated
+               ORDER BY b.allocation_sequence ASC
+               LIMIT 1
+            ) ELSE NULL END
        FROM commander_devices d
       WHERE d.device_id = ?
         AND d.tenant_id = ?
@@ -2387,12 +2406,27 @@ async function enqueueDeviceCall(env, body) {
              AND q.tenant_id = d.tenant_id
              AND q.state IN ('PENDING','EXECUTING')
              AND q.expires_at_utc > ?
-        ) < ?`
+        ) < ?
+        AND (
+          ? <> 'LOCAL_BUDGET'
+          OR EXISTS (
+            SELECT 1
+              FROM commander_device_budget_blocks b
+             WHERE b.tenant_id = d.tenant_id
+               AND b.device_id = d.device_id
+               AND b.period_key = ?
+               AND b.state = 'ACTIVE'
+               AND b.expires_at_utc > ?
+               AND b.units_issued + ? <= b.units_allocated
+          )
+        )`
   ).bind(
     callId, requestId, context.tenant_id, context.subject_id, toolId, payloadJson,
     createdAt, expiresAt, usageMode, usageUnits, usagePeriodKey,
+    usageMode, usagePeriodKey, createdAt, usageUnits,
     deviceId, context.tenant_id, eventV2Cutoff, onlineCutoff,
-    createdAt, DEVICE_CALL_ACTIVE_QUEUE_LIMIT
+    createdAt, DEVICE_CALL_ACTIVE_QUEUE_LIMIT,
+    usageMode, usagePeriodKey, createdAt, usageUnits
   ).run();
 
   if (!inserted.meta?.changes) {
@@ -2404,6 +2438,23 @@ async function enqueueDeviceCall(env, body) {
     );
     if (!deviceOnline(currentDevice.last_seen_at_utc, currentDevice.tunnel_mode)) {
       throw new Error("DEVICE_OFFLINE");
+    }
+
+    if (usageMode === "LOCAL_BUDGET") {
+      const block = await env.PRODUCT_DB.prepare(
+        `SELECT budget_id,units_allocated,units_issued
+           FROM commander_device_budget_blocks
+          WHERE tenant_id = ?
+            AND device_id = ?
+            AND period_key = ?
+            AND state = 'ACTIVE'
+            AND expires_at_utc > ?
+          ORDER BY allocation_sequence ASC
+          LIMIT 1`
+      ).bind(context.tenant_id, deviceId, usagePeriodKey, nowIso()).first();
+      if (!block || Number(block.units_issued || 0) + usageUnits > Number(block.units_allocated || 0)) {
+        throw new Error("LOCAL_BUDGET_CAPACITY_EXHAUSTED");
+      }
     }
 
     const activeQueue = await env.PRODUCT_DB.prepare(
@@ -2486,6 +2537,11 @@ async function enqueueDeviceCall(env, body) {
     usage_mode: usageMode,
     usage_units: usageUnits,
     usage_period_key: usagePeriodKey,
+    usage_budget_id: usageMode === "LOCAL_BUDGET"
+      ? await env.PRODUCT_DB.prepare(
+          `SELECT usage_budget_id FROM commander_device_calls WHERE call_id = ? LIMIT 1`
+        ).bind(callId).first().then((row) => row?.usage_budget_id || null)
+      : null,
   };
 
   if (postNotify) {
@@ -3670,7 +3726,7 @@ async function claimNextDeviceCall(env, request) {
          LIMIT 1
       )
       RETURNING call_id, request_id, tool_id, payload_json, expires_at_utc,
-                usage_mode, usage_units, usage_period_key`
+                usage_mode, usage_units, usage_period_key, usage_budget_id`
   ).bind(now, device.device_id, now).all();
 
   const row = (result.results || [])[0];
@@ -3699,6 +3755,7 @@ async function claimNextDeviceCall(env, request) {
       mode: String(row.usage_mode || "CLOUD_QUOTA"),
       units: Number(row.usage_units || 0),
       period_key: row.usage_period_key || null,
+      budget_id: row.usage_budget_id || null,
     },
   };
 }
