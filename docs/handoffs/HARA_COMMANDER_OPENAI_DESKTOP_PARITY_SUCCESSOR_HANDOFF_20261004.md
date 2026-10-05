@@ -739,6 +739,125 @@ Regression:
 - local receipt metadata-only gate PASS
 - customer MCP / device contract / installers / E2E / prod static / privacy-NOC / routing / manifest all PASS
 
+## Simple MCP + zero-relay local MCP — LIVE
+
+The product surface was intentionally simplified after direct comparison with Desktop Commander.
+
+### Remote Simple MCP
+
+Canonical commit:
+- `2e8e730d293c8c277ccd40002e92e28ddc7a7ee6` — add simple MCP compatibility profile
+
+The existing full MCP remains available at:
+- `/api/mcp` — advanced/backward-compatible H.A.R.A. surface
+
+A compact profile is now available at:
+- `/api/mcp?profile=simple`
+
+The simple profile exposes 24 generic verbs with no `hara.*` prefix:
+
+- list_devices
+- get_config
+- get_usage_stats
+- get_activity
+- ping
+- get_device_info
+- read_file
+- read_multiple_files
+- write_file
+- edit_block
+- create_directory
+- list_directory
+- move_file
+- copy_file
+- delete_file
+- search
+- get_file_info
+- list_processes
+- start_process
+- read_process_output
+- interact_with_process
+- kill_process
+- list_sessions
+- get_recent_tool_calls
+
+The aliases route into the same governed H.A.R.A. tools. They do not bypass tenant routing, grants, local-session authorization, receipts, redaction or rollback.
+
+Transaction economy:
+- `start_process` defaults to governed one-shot `hara.process.run`
+- `interactive=true` opts into a persistent managed process session
+- short commands therefore normally need one MCP round-trip rather than start + output polling
+
+Remote Simple MCP production rollout:
+- Worker Version ID: `9bd37e8a-5a8b-4797-b314-14baa4fdde5b`
+- deployment ID: `f9b3eb5b-df56-4ec4-ade4-9750e11a86a5`
+- fail-closed: PASS
+- assets: CURRENT
+- unauthenticated Simple MCP: 401 / OAuth required
+- regression: `COMMANDER_SIMPLE_MCP_FULL_REGRESSION=PASS`
+- tool count: 24
+- exposed H.A.R.A. prefixes: false
+
+The Connections portal now presents ChatGPT, Codex and any standard MCP client as active integrations and provides a Copy MCP URL action for the simple endpoint.
+
+### Local MCP stdio — Agent 0.3.28
+
+Canonical commits:
+- `6fb52a14fd5d126dcbc830c39c7ccf9bfe18561f` — zero-relay local MCP stdio
+- `639b177706c011115c58657c3a234979c3239a01` — preserve executable release modes
+
+Agent 0.3.28 adds:
+- `hara-commander mcp`
+- MCP JSON-RPC over stdio
+- the same 24 simple tool names
+- no new daemon or listening TCP port
+- same operator-session gate
+- same SESSION_TRUSTED / ASK_EVERY_ACTION behavior
+- same filesystem preimages/rollback and receipt machinery
+
+Local execution is direct inside the Agent. Permanent release validation fails if `local_simple_mcp_call()` contains a cloud `post_json()` call.
+
+Release markers:
+- `COMMANDER_LOCAL_MCP_STDIO=PASS`
+- `COMMANDER_LOCAL_MCP_CLOUD_RELAY=ZERO`
+- `COMMANDER_LOCAL_MCP_TOOL_COUNT=24`
+- `COMMANDER_LOCAL_MCP_RELAY_CALLS_PER_LOCAL_TOOL=0`
+- `COMMANDER_LOCAL_MCP_PROCESS_ONE_SHOT_DEFAULT=PASS`
+
+Real stdio protocol smoke passed:
+- JSON-RPC initialize: PASS
+- stdout protocol cleanliness: PASS
+- tools/list: 24 tools
+- get_usage_stats: LOCAL_MCP
+- reported relay calls per local tool: 0
+
+0.3.28 release deployment:
+- Worker Version ID: `4cf61171-ae9b-44ba-a65e-163c6802c9f3`
+- deployment ID: `cb95d514-a7f9-4e43-a096-b726a83fbe29`
+- rollback Worker: `9bd37e8a-5a8b-4797-b314-14baa4fdde5b`
+- release assets: CURRENT
+- fail-closed: PASS
+
+nucleo-a was upgraded to Agent 0.3.28 and a fresh SESSION_TRUSTED operator session was opened.
+
+LIVE installed-binary canary through `~/.local/bin/hara-commander mcp`:
+- Agent version: 0.3.28
+- tool count: 24
+- read_file: PASS
+- start_process one-shot: PASS
+- local MCP reported relay calls: 0
+
+Direct D1 transaction-economy proof was taken around those local MCP calls inside one already-claimed remote canary:
+- remote `commander_device_calls` rows before local MCP calls: 775
+- remote `commander_device_calls` rows after local MCP calls: 775
+- rows created by local MCP tool calls: 0
+- `COMMANDER_LOCAL_MCP_0_3_28_LIVE=PASS`
+
+This establishes the intended product split:
+- Local MCP: preferred for same-machine clients; zero relay transactions per local tool call
+- Remote Simple MCP: access from anywhere through H.A.R.A. Identity + governed relay
+- Full MCP: advanced/backward-compatible H.A.R.A. integration surface
+
 ## Current known limitations
 
 1. Windows purpose-specific parity is not yet proven. Windows version metadata was kept release-coherent, but the new Linux-first purpose-specific filesystem/search behavior must not be declared accepted on Windows without a separate canary.
