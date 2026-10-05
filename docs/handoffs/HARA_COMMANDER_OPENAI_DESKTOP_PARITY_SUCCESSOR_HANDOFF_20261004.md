@@ -538,6 +538,75 @@ A follow-up source candidate 0.3.27 hardens mode changes after installation:
 
 The complete branch regression suite passed for this patch. 0.3.27 is source/regression ready but was not promoted in this continuation; 0.3.26 remains the LIVE_PROVEN version.
 
+## Operational Activity P0 — production/live rollout
+
+The portal observability gap was closed on the canonical Commander branch in commit 078861d81f095c4e2771b181d55b33f54d790b24 (feat(commander): add operational activity dashboard).
+
+Production rollout:
+- Worker version: 841b50c9-6a03-4062-9302-4ae28ba1ec22
+- deployment ID: dbf0c531-d0ae-4ff6-aca8-7c69e442b840
+- rollback Worker: f9826390-ab41-419e-8f24-efe51d314266
+- D1 readback/integrity: PASS
+- pending migrations: none
+- runtime assets: CURRENT
+- public fail-closed smoke: PASS
+- unauthenticated /api/portal/activity: 401 AUTH_REQUIRED
+- live HTML contains the Activity KPI surface
+- live app.js contains loadUsageActivity
+
+Activity API:
+- GET /api/portal/activity?limit=50
+- schema: hara.commander-portal-activity.v1
+- OWNER/ADMIN scope: TENANT
+- other member scope: SUBJECT
+- maximum 100 recent transactions
+- no payload_json/result_json selected by the Activity query
+- request_id not exposed
+- privacy markers: payload_values_exposed=false, result_values_exposed=false, request_id_exposed=false
+
+Operational summary includes:
+- total/completed/failed/pending/executing/expired/cancelled
+- success rate
+- percent of completed calls under three seconds
+- average queue, Agent execution and total latency
+- distinct device count
+- transport modes
+
+Recent transaction rows expose metadata only:
+- timestamp
+- purpose-specific tool
+- source category (CUSTOMER_MCP / QA / E2E / MANUAL / OTHER)
+- computer
+- transport mode
+- Agent version
+- state / sanitized error code
+- queue/execution/total latency
+- shortened trace/call identifier
+
+Portal Usage now renders four operational cards plus the 50 most recent transactions and a functional refresh action instead of the prior homologation placeholder. CSV and richer filters are intentionally deferred to the next cut.
+
+Permanent validation:
+- COMMANDER_PORTAL_ACTIVITY_CONTRACT=PASS
+- Owner/Admin tenant scope PASS
+- Member subject scope PASS
+- cross-tenant isolation PASS
+- content-not-selected PASS
+- privacy markers PASS
+- full Commander regression under Node v24.15.0 PASS
+- COMMANDER_OBSERVABILITY_P0_FULL_REGRESSION=PASS
+
+Measured pre-rollout PROD baseline used to validate the design:
+- 85 technical calls
+- 79 completed / 6 failed
+- 71 CUSTOMER_MCP calls, 66 completed / 5 failed
+- completed average total latency ~2.27 s
+- 74/79 completed below 3 s
+- all 85 then-current stored payload/result fields were redacted/hash markers
+
+The Activity rollout did not require a new table or migration; it reuses existing commander_device_calls operational metadata. Billing/quota units remain a separate commercial metric from technical transaction count.
+
+Release note: the deployed static release channel now advertises Agent 0.3.27 from the canonical branch, while nucleo-a remains on the compatible and LIVE_PROVEN 0.3.26 session. Agent 0.3.27 live canary remains a separate staged rollout and is not required for the Activity API/portal path.
+
 ## Current known limitations
 
 1. Windows purpose-specific parity is not yet proven. Windows version metadata was kept release-coherent, but the new Linux-first purpose-specific filesystem/search behavior must not be declared accepted on Windows without a separate canary.
