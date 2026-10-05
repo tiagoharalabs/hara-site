@@ -99,6 +99,7 @@ need(
 );
 need(worker.includes("customerUsage") && worker.includes("quota.status"),"WORKER_USAGE_SURFACE");
 need(worker.includes("semverAtLeast(device.agent_version,24)") && worker.includes('tools.push("hara.system.resources","hara.workspace.inspect")'),"WORKER_CONTEXT_TOOLS_0_3_24");
+need(worker.includes('platform === "WINDOWS"') && worker.includes('semverAtLeast(device.agent_version,32)') && worker.includes('"hara.files.write"') && worker.includes('"hara.process.run"'),"WORKER_WINDOWS_STARTER_0_3_32");
 need(worker.includes('toolId === "hara.process.run" ? 25') && worker.includes('tools.push("hara.process.run")'),"WORKER_PROCESS_RUN_0_3_25");
 need(worker.includes('tools.push("hara.files.hash","hara.files.diff")') && worker.includes('tools.push("hara.files.copy","hara.files.delete")'),"WORKER_CAPABILITIES_0_3_23_COMPLETE");
 need(worker.includes("capabilityToolDetail") && worker.includes('risk_class:processExecution ? "PROCESS_EXECUTION"') && worker.includes('local_session_authorization_sufficient:mutable && mode === "SESSION_TRUSTED"'),"WORKER_CAPABILITY_RISK_METADATA");
