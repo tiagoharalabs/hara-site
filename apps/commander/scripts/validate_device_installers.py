@@ -26,7 +26,7 @@ def need(text: str, token: str, code: str) -> None:
     assert token in text, f"{code}:{token}"
 
 for token in ('platform": "LINUX"', "/api/device/enroll", "/agent/linux.py",
-              "systemctl --user enable --now", "chmod 600", '"agent_version": "0.3.27"',
+              "systemctl --user enable --now", "chmod 600", '"agent_version": "0.3.28"',
               "HARA_COMMANDER_AGENT_UPDATE=PASS", "HARA_COMMANDER_AGENT_UNINSTALL=PASS",
               "HARA_COMMANDER_AGENT_VERSION=", "HARA_COMMANDER_AGENT_DOCTOR=PASS",
               "/api/device/revoke-self", "SERVER_DEVICE_REVOKE=",
@@ -55,7 +55,7 @@ print("LINUX_INSTALLER_SECRET_ARGV_EXPOSURE=FALSE")
 
 for token in ('platform="WINDOWS"', "/api/device/enroll", "/agent/windows.ps1",
               "ConvertFrom-SecureString", "Register-ScheduledTask", "icacls.exe",
-              'agent_version="0.3.27"', "HARA_COMMANDER_AGENT_UPDATE=PASS",
+              'agent_version="0.3.28"', "HARA_COMMANDER_AGENT_UPDATE=PASS",
               "HARA_COMMANDER_AGENT_UNINSTALL=PASS", "HARA_COMMANDER_AGENT_VERSION=",
               "HARA_COMMANDER_AGENT_DOCTOR=PASS", "/api/device/revoke-self",
               "SERVER_DEVICE_REVOKE=", "HARA_COMMANDER_AGENT_UPDATE_ROLLBACK_READY=TRUE",
@@ -92,7 +92,7 @@ print("WINDOWS_INSTALLER_REDIRECT_FAIL_CLOSED=PASS")
 print("WINDOWS_INSTALLER_DEVICE_TOKEN_MEMORY_HYGIENE=PASS")
 
 assert MANIFEST.get("schema") == "hara.commander-agent-release.v1"
-assert MANIFEST.get("agent_version") == "0.3.27"
+assert MANIFEST.get("agent_version") == "0.3.28"
 entries = {item["path"]: item for item in MANIFEST.get("files", [])}
 for rel in ("agent/linux.py", "agent/windows.ps1", "install/linux.sh", "install/windows.ps1"):
     path = PUBLIC / rel
@@ -185,6 +185,13 @@ assert "FILESYSTEM_MUTATION_V1" in LINUX_AGENT, "LINUX_MUTATION_RECEIPT_CLASS_MI
 print("COMMANDER_LOCAL_MUTATION_APPROVAL_GATE=PASS")
 print("COMMANDER_CONFIGURABLE_APPROVAL_MODE=PASS")
 assert "PROCESS_EXECUTION_V1" in LINUX_AGENT, "LINUX_PROCESS_RECEIPT_CLASS_MISSING"
+assert "LOCAL_SIMPLE_MCP_TOOL_NAMES" in LINUX_AGENT and "run_local_mcp_stdio" in LINUX_AGENT, "LINUX_LOCAL_MCP_STDIO_MISSING"
+assert 'LOCAL_MCP_COMMAND=hara-commander mcp' in LINUX, "LINUX_LOCAL_MCP_INSTALLER_HINT_MISSING"
+local_mcp_block = LINUX_AGENT.split("def local_simple_mcp_call",1)[1].split("def _stdio_mcp_write",1)[0]
+assert "post_json(" not in local_mcp_block, "LINUX_LOCAL_MCP_CLOUD_RELAY_FORBIDDEN"
+assert 'relay_calls_per_local_tool_call":0' in LINUX_AGENT, "LINUX_LOCAL_MCP_ZERO_RELAY_MARKER_MISSING"
+print("COMMANDER_LOCAL_MCP_STDIO=PASS")
+print("COMMANDER_LOCAL_MCP_CLOUD_RELAY=ZERO")
 assert "pty.fork()" in LINUX_AGENT and "cleanup_process_sessions" in LINUX_AGENT, "LINUX_MANAGED_PROCESS_SESSION_MISSING"
 assert "PROCESS_REVOKE" in LINUX_AGENT, "LINUX_PROCESS_REVOKE_ON_SESSION_CLOSE_MISSING"
 print("COMMANDER_LOCAL_PROCESS_EXECUTION_GATE=PASS")
@@ -287,7 +294,7 @@ with tempfile.TemporaryDirectory(prefix="hara-agent-startup-") as tmp:
                     break
             time.sleep(0.1)
         assert startup, "LINUX_AGENT_STARTUP_STATUS_MISSING"
-        assert startup.get("agent_version") == "0.3.27", "LINUX_AGENT_STARTUP_VERSION_INVALID"
+        assert startup.get("agent_version") == "0.3.28", "LINUX_AGENT_STARTUP_VERSION_INVALID"
         assert startup.get("started_at_utc"), "LINUX_AGENT_STARTUP_ATTESTATION_MISSING"
         time.sleep(1.2)
         inert = json.loads(status_path.read_text(encoding="utf-8"))

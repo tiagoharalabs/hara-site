@@ -18,7 +18,7 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
-AGENT_VERSION = "0.3.27"
+AGENT_VERSION = "0.3.28"
 CONFIG_FILE = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home()/".config"))) / "hara-commander/device.env"
 DATA_DIR = Path(os.environ.get("XDG_DATA_HOME", str(Path.home()/".local/share"))) / "hara-commander"
 RECEIPT_DIR = DATA_DIR / "receipts"
@@ -1530,17 +1530,237 @@ def self_test():
         SESSION_FILE.write_text(json.dumps(session,sort_keys=True,separators=(",",":")),encoding="utf-8")
         trusted=request_local_approval(approval_call,timeout_seconds=1)
         assert trusted["state"]=="APPROVED" and trusted["mode"]=="SESSION_TRUSTED" and trusted["source"]=="LOCAL_OPERATOR_SESSION"
+    assert len(local_simple_mcp_tools())==24
+    assert tuple(tool["name"] for tool in local_simple_mcp_tools())==LOCAL_SIMPLE_MCP_TOOL_NAMES
+    mapped_tool,mapped_payload=_local_simple_map({"HARA_DEVICE_ID":"selftest"},"start_process",{"command":"printf hi"})
+    assert mapped_tool=="hara.process.run" and mapped_payload["max_lines"]==200
+    mapped_interactive,_=_local_simple_map({"HARA_DEVICE_ID":"selftest"},"start_process",{"command":"python3 -i","interactive":True})
+    assert mapped_interactive=="hara.process.start"
+    local_usage=local_simple_mcp_call({"HARA_DEVICE_ID":"selftest"},"get_usage_stats",{})
+    assert local_usage["relay_calls_per_local_tool_call"]==0
+    print("COMMANDER_LOCAL_MCP_TOOL_COUNT=24")
+    print("COMMANDER_LOCAL_MCP_RELAY_CALLS_PER_LOCAL_TOOL=0")
+    print("COMMANDER_LOCAL_MCP_PROCESS_ONE_SHOT_DEFAULT=PASS")
     print("COMMANDER_LINUX_OPERATOR_SESSION_GATE=PASS")
     print("COMMANDER_LOCAL_MUTATION_APPROVAL=PASS")
     print("COMMANDER_LINUX_CONSOLE_SANITIZATION=PASS")
     print("COMMANDER_LINUX_FIVE_TOOL_BRIDGE=PASS")
     print("COMMANDER_ARBITRARY_FUNCTION=DENIED")
 
+
+LOCAL_SIMPLE_MCP_TOOL_NAMES = (
+    "list_devices","get_config","get_usage_stats","get_activity","ping","get_device_info",
+    "read_file","read_multiple_files","write_file","edit_block","create_directory","list_directory",
+    "move_file","copy_file","delete_file","search","get_file_info","list_processes","start_process",
+    "read_process_output","interact_with_process","kill_process","list_sessions","get_recent_tool_calls",
+)
+
+def _mcp_schema(properties=None, required=None):
+    return {
+        "type":"object",
+        "properties":properties or {},
+        "required":required or [],
+        "additionalProperties":False,
+    }
+
+def local_simple_mcp_tools():
+    string={"type":"string"}
+    path={"type":"string","minLength":1,"maxLength":4096}
+    computer={"type":"string","minLength":1,"maxLength":120}
+    integer={"type":"integer"}
+    boolean={"type":"boolean"}
+    specs=[
+        ("list_devices","List Devices","List this local Commander device.",_mcp_schema()),
+        ("get_config","Get Config","Get local Commander configuration and capabilities.",_mcp_schema({"computer":computer})),
+        ("get_usage_stats","Get Usage Stats","Describe local MCP transaction mode. Local calls do not use the cloud relay.",_mcp_schema()),
+        ("get_activity","Get Activity","Get privacy-safe local Commander event metadata.",_mcp_schema({"limit":{"type":"integer","minimum":1,"maximum":100}})),
+        ("ping","Ping","Check the local Commander Agent.",_mcp_schema({"computer":computer})),
+        ("get_device_info","Get Device Info","Get local device and Agent information.",_mcp_schema({"computer":computer})),
+        ("read_file","Read File","Read a text file.",_mcp_schema({"computer":computer,"path":path,"offset":{"type":"integer","minimum":0},"length":{"type":"integer","minimum":1,"maximum":5000}},["path"])),
+        ("read_multiple_files","Read Multiple Files","Read multiple text files in one call.",_mcp_schema({"computer":computer,"paths":{"type":"array","items":path,"minItems":1,"maxItems":10},"offset":{"type":"integer","minimum":0},"length":{"type":"integer","minimum":1,"maximum":5000}},["paths"])),
+        ("write_file","Write File","Write or append text to a file.",_mcp_schema({"computer":computer,"path":path,"content":{"type":"string"},"mode":{"type":"string","enum":["rewrite","append"]}},["path","content"])),
+        ("edit_block","Edit Block","Apply a focused text replacement.",_mcp_schema({"computer":computer,"path":path,"old_string":{"type":"string","minLength":1},"new_string":{"type":"string"},"replace_all":boolean},["path","old_string","new_string"])),
+        ("create_directory","Create Directory","Create a directory.",_mcp_schema({"computer":computer,"path":path,"parents":boolean},["path"])),
+        ("list_directory","List Directory","List directory contents.",_mcp_schema({"computer":computer,"path":path,"depth":{"type":"integer","minimum":1,"maximum":8},"limit":{"type":"integer","minimum":1,"maximum":1000}},["path"])),
+        ("move_file","Move File","Move or rename a file or directory.",_mcp_schema({"computer":computer,"source":path,"destination":path},["source","destination"])),
+        ("copy_file","Copy File","Copy a file or directory.",_mcp_schema({"computer":computer,"source":path,"destination":path},["source","destination"])),
+        ("delete_file","Delete File","Delete a file with reversible preimage protection.",_mcp_schema({"computer":computer,"path":path},["path"])),
+        ("search","Search","Search file names or text content.",_mcp_schema({"computer":computer,"path":path,"pattern":{"type":"string","minLength":1},"search_type":{"type":"string","enum":["files","content"]},"max_results":{"type":"integer","minimum":1,"maximum":500},"include_hidden":boolean,"ignore_case":boolean,"file_glob":string},["path","pattern"])),
+        ("get_file_info","Get File Info","Get file metadata.",_mcp_schema({"computer":computer,"path":path},["path"])),
+        ("list_processes","List Processes","List running processes.",_mcp_schema({"computer":computer,"limit":{"type":"integer","minimum":1,"maximum":500}})),
+        ("start_process","Start Process","Run a command. Defaults to bounded one-shot execution; interactive=true keeps a managed session.",_mcp_schema({"computer":computer,"command":{"type":"string","minLength":1,"maxLength":4096},"cwd":path,"timeout_ms":{"type":"integer","minimum":100,"maximum":10000},"max_lines":{"type":"integer","minimum":1,"maximum":500},"interactive":boolean},["command"])),
+        ("read_process_output","Read Process Output","Read a managed process session.",_mcp_schema({"computer":computer,"session_id":{"type":"string","minLength":1},"offset":{"type":"integer","minimum":0},"length":{"type":"integer","minimum":1,"maximum":500},"timeout_ms":{"type":"integer","minimum":0,"maximum":10000}},["session_id"])),
+        ("interact_with_process","Interact With Process","Send input to a managed process session.",_mcp_schema({"computer":computer,"session_id":{"type":"string","minLength":1},"input":{"type":"string"},"timeout_ms":{"type":"integer","minimum":0,"maximum":10000}},["session_id","input"])),
+        ("kill_process","Kill Process","Terminate a managed process session.",_mcp_schema({"computer":computer,"session_id":{"type":"string","minLength":1},"force":boolean},["session_id"])),
+        ("list_sessions","List Sessions","List managed process sessions.",_mcp_schema({"computer":computer})),
+        ("get_recent_tool_calls","Get Recent Tool Calls","Get privacy-safe local call metadata.",_mcp_schema({"computer":computer,"tool":{"type":"string"},"limit":{"type":"integer","minimum":1,"maximum":100}})),
+    ]
+    mutation={"write_file","edit_block","create_directory","move_file","copy_file","delete_file","start_process","interact_with_process","kill_process"}
+    destructive={"write_file","edit_block","move_file","delete_file","interact_with_process","kill_process"}
+    open_world={"start_process","interact_with_process"}
+    return [
+        {
+            "name":name,
+            "title":title,
+            "description":description,
+            "inputSchema":schema,
+            "annotations":{
+                "readOnlyHint":name not in mutation,
+                "destructiveHint":name in destructive,
+                "idempotentHint":name not in mutation,
+                "openWorldHint":name in open_world,
+            },
+        }
+        for name,title,description,schema in specs
+    ]
+
+def _local_simple_device_guard(config,args):
+    requested=str((args or {}).get("computer") or "").strip()
+    if requested and requested not in {str(config.get("HARA_DEVICE_ID") or ""),str(platform.node() or "")}:
+        raise ValueError("LOCAL_MCP_DEVICE_TARGET_MISMATCH")
+
+def _local_recent_events(limit=50,tool=None):
+    limit=max(1,min(100,int(limit)))
+    if not CONSOLE_EVENTS_FILE.is_file():
+        return {"events":[],"metadata_only":True}
+    lines=CONSOLE_EVENTS_FILE.read_text(encoding="utf-8",errors="replace").splitlines()[-1000:]
+    events=[]
+    for line in reversed(lines):
+        try: event=json.loads(line)
+        except Exception: continue
+        if tool and str(event.get("tool") or "")!=str(tool): continue
+        events.append({
+            "at_utc":event.get("at_utc"),
+            "event":event.get("event"),
+            "tool":event.get("tool"),
+            "state":event.get("state"),
+            "receipt_sha256":event.get("receipt_sha256"),
+            "error_code":event.get("error_code"),
+        })
+        if len(events)>=limit: break
+    return {"events":events,"metadata_only":True}
+
+def _local_simple_map(config,name,args):
+    args=dict(args or {})
+    _local_simple_device_guard(config,args)
+    computer=args.pop("computer",None)
+    if name=="ping": return "hara.ping",{}
+    if name=="get_device_info": return "hara.device.info",{}
+    if name=="read_file":
+        return "hara.files.read",{"path":str(args["path"]),**({"offset":int(args["offset"])} if "offset" in args else {}),**({"length":int(args["length"])} if "length" in args else {})}
+    if name=="read_multiple_files":
+        return "hara.files.read_many",{"paths":[str(x) for x in args["paths"]],**({"offset":int(args["offset"])} if "offset" in args else {}),**({"length":int(args["length"])} if "length" in args else {})}
+    if name=="write_file": return "hara.files.write",{"path":str(args["path"]),"content":str(args["content"]),"mode":str(args.get("mode","rewrite"))}
+    if name=="edit_block": return "hara.files.edit",{"path":str(args["path"]),"old_text":str(args["old_string"]),"new_text":str(args["new_string"]),"replace_all":bool(args.get("replace_all",False))}
+    if name=="create_directory": return "hara.files.create_directory",{"path":str(args["path"]),"parents":bool(args.get("parents",True))}
+    if name=="list_directory": return "hara.files.list",{"path":str(args["path"]),**({"depth":int(args["depth"])} if "depth" in args else {}),**({"limit":int(args["limit"])} if "limit" in args else {})}
+    if name=="move_file": return "hara.files.move",{"source":str(args["source"]),"destination":str(args["destination"])}
+    if name=="copy_file": return "hara.files.copy",{"source":str(args["source"]),"destination":str(args["destination"])}
+    if name=="delete_file": return "hara.files.delete",{"path":str(args["path"])}
+    if name=="search":
+        return "hara.files.search",{"path":str(args["path"]),"pattern":str(args["pattern"]),"search_type":str(args.get("search_type","files")),**({"max_results":int(args["max_results"])} if "max_results" in args else {}),**({"include_hidden":bool(args["include_hidden"])} if "include_hidden" in args else {}),**({"ignore_case":bool(args["ignore_case"])} if "ignore_case" in args else {}),**({"file_glob":str(args["file_glob"])} if args.get("file_glob") else {})}
+    if name=="get_file_info": return "hara.files.info",{"path":str(args["path"])}
+    if name=="list_processes":
+        return "hara.processes.list",({"limit":int(args["limit"])} if "limit" in args else {})
+    if name=="start_process":
+        interactive=bool(args.get("interactive",False))
+        payload={"command":str(args["command"]),"timeout_ms":int(args.get("timeout_ms",1000 if interactive else 3000))}
+        if args.get("cwd"): payload["cwd"]=str(args["cwd"])
+        if not interactive: payload["max_lines"]=int(args.get("max_lines",200))
+        return ("hara.process.start" if interactive else "hara.process.run"),payload
+    if name=="read_process_output":
+        return "hara.process.output",{"session_id":str(args["session_id"]),**({"offset":int(args["offset"])} if "offset" in args else {}),**({"length":int(args["length"])} if "length" in args else {}),**({"timeout_ms":int(args["timeout_ms"])} if "timeout_ms" in args else {})}
+    if name=="interact_with_process":
+        return "hara.process.interact",{"session_id":str(args["session_id"]),"input":str(args["input"]),**({"timeout_ms":int(args["timeout_ms"])} if "timeout_ms" in args else {})}
+    if name=="kill_process": return "hara.process.kill",{"session_id":str(args["session_id"]),"force":bool(args.get("force",False))}
+    if name=="list_sessions": return "hara.process.sessions",{}
+    raise ValueError("LOCAL_MCP_TOOL_INVALID")
+
+def local_simple_mcp_call(config,name,args):
+    if name not in LOCAL_SIMPLE_MCP_TOOL_NAMES:
+        raise ValueError("LOCAL_MCP_TOOL_INVALID")
+    _local_simple_device_guard(config,args or {})
+    if name=="list_devices":
+        return {"devices":[{"computer":platform.node(),"device_id":config.get("HARA_DEVICE_ID"),"agent_version":AGENT_VERSION,"state":"ONLINE" if operator_session_active() else "LOCAL_SESSION_REQUIRED","transport":"LOCAL_STDIO"}]}
+    if name=="get_config":
+        return {"computer":platform.node(),"device_id":config.get("HARA_DEVICE_ID"),"agent_version":AGENT_VERSION,"approval_mode":effective_approval_mode(config),"transport":"LOCAL_STDIO","tools":list(LOCAL_SIMPLE_MCP_TOOL_NAMES)}
+    if name=="get_usage_stats":
+        return {"mode":"LOCAL_MCP","relay_calls_per_local_tool_call":0,"cloud_quota_consumed_by_local_tool_call":False,"metadata_only":True}
+    if name=="get_activity":
+        return _local_recent_events((args or {}).get("limit",50))
+    if name=="get_recent_tool_calls":
+        return _local_recent_events((args or {}).get("limit",50),(args or {}).get("tool"))
+    if not operator_session_active():
+        raise ValueError("LOCAL_OPERATOR_SESSION_REQUIRED")
+    tool_id,payload=_local_simple_map(config,name,args or {})
+    call={
+        "call_id":"HARA-LOCAL-MCP-"+uuid.uuid4().hex,
+        "request_id":"HARA-LOCAL-MCP-"+uuid.uuid4().hex,
+        "tool_id":tool_id,
+        "payload":payload,
+    }
+    append_console_event("RECEIVED",call,state="PENDING")
+    if _is_mutation_tool(tool_id):
+        call["_local_approval"]=request_local_approval(call)
+    append_console_event("EXECUTING",call,state="EXECUTING")
+    try:
+        result=execute_tool(config,call)
+    except Exception as exc:
+        append_console_event("DENIED",call,state="FAILED",error_code=safe_error_code(exc))
+        raise
+    append_console_event("PASS",call,state="COMPLETED",receipt_sha256=result.get("bridge_receipt_sha256"))
+    return result
+
+def _stdio_mcp_write(payload):
+    sys.stdout.write(json.dumps(payload,separators=(",",":"),ensure_ascii=False)+"\n")
+    sys.stdout.flush()
+
+def run_local_mcp_stdio():
+    config=load_config()
+    RECEIPT_DIR.mkdir(parents=True,exist_ok=True,mode=0o700)
+    for raw in sys.stdin:
+        if len(raw)>2*1024*1024:
+            _stdio_mcp_write({"jsonrpc":"2.0","id":None,"error":{"code":-32600,"message":"REQUEST_TOO_LARGE"}})
+            continue
+        raw=raw.strip()
+        if not raw: continue
+        try:
+            msg=json.loads(raw)
+        except Exception:
+            _stdio_mcp_write({"jsonrpc":"2.0","id":None,"error":{"code":-32700,"message":"PARSE_ERROR"}})
+            continue
+        req_id=msg.get("id")
+        method=str(msg.get("method") or "")
+        params=msg.get("params") or {}
+        if method.startswith("notifications/"):
+            continue
+        try:
+            if method=="initialize":
+                result={"protocolVersion":"2025-06-18","capabilities":{"tools":{"listChanged":False}},"serverInfo":{"name":"H.A.R.A. Commander Local","version":AGENT_VERSION},"instructions":"Local MCP. Start a H.A.R.A. Commander operator session before executing computer tools."}
+            elif method=="ping":
+                result={}
+            elif method=="tools/list":
+                result={"tools":local_simple_mcp_tools()}
+            elif method=="tools/call":
+                name=str(params.get("name") or "")
+                args=params.get("arguments") or {}
+                value=local_simple_mcp_call(config,name,args)
+                result={"content":[{"type":"text","text":json.dumps(value,separators=(",",":"),ensure_ascii=False)}],"structuredContent":value}
+            else:
+                _stdio_mcp_write({"jsonrpc":"2.0","id":req_id,"error":{"code":-32601,"message":"METHOD_NOT_FOUND"}})
+                continue
+            _stdio_mcp_write({"jsonrpc":"2.0","id":req_id,"result":result})
+        except Exception as exc:
+            code=safe_error_code(exc)
+            _stdio_mcp_write({"jsonrpc":"2.0","id":req_id,"result":{"isError":True,"content":[{"type":"text","text":json.dumps({"ok":False,"code":code},separators=(",",":"))}]}})
+
 def main():
     if "--version" in sys.argv:
         print(AGENT_VERSION); return
     if "--self-test" in sys.argv:
         self_test(); return
+    if len(sys.argv)>1 and sys.argv[1]=="mcp":
+        run_local_mcp_stdio(); return
     if "--session-start" in sys.argv or (len(sys.argv)>1 and sys.argv[1]=="start"):
         start_operator_console(); return
     if len(sys.argv)>1 and sys.argv[1]=="approval-mode":
@@ -1554,11 +1774,11 @@ def main():
     if "--session-stop" in sys.argv or (len(sys.argv)>1 and sys.argv[1]=="stop"):
         stop_operator_session(); return
     if len(sys.argv) > 1 and sys.argv[1] in {"help", "--help", "-h"}:
-        print("Usage: hara-commander [start|status|stop|approval-mode [ask|session]|help]")
+        print("Usage: hara-commander [start|status|stop|mcp|approval-mode [ask|session]|help]")
         return
     if len(sys.argv) > 1:
         print("HARA_COMMANDER_UNKNOWN_COMMAND=" + str(sys.argv[1]), file=sys.stderr)
-        print("Usage: hara-commander [start|status|stop|approval-mode [ask|session]|help]", file=sys.stderr)
+        print("Usage: hara-commander [start|status|stop|mcp|approval-mode [ask|session]|help]", file=sys.stderr)
         raise SystemExit(64)
     config=load_config()
     RECEIPT_DIR.mkdir(parents=True,exist_ok=True,mode=0o700)
