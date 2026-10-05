@@ -97,3 +97,32 @@ fail-closed.
 
 The portal app.js cache key was advanced to 20261005-unlimited1 so existing
 browser sessions load the corrected frontend on a normal page refresh.
+
+## PROD live proof
+
+Final PROD Worker:
+- 3c20f2ff-34ea-4d2c-9007-a19e694b36f3
+
+Rollback Worker:
+- d50332d1-c343-40c8-a0ee-2d990afebc6b
+
+Live authenticated proof after deploy:
+- hara_usage: PASS
+- plan_code: FOUNDER_INTERNAL
+- period_kind: NONE
+- usage period_key: UNLIMITED
+- usage metered: false
+- usage available: true
+- nucleo-a health: PASS
+
+Public runtime proof:
+- app.js cache key 20261005-unlimited1: PASS
+- unlimited UI copy: PASS
+- partial usage degradation copy: PASS
+- stale login-oriented banner copy absent: PASS
+- session-active copy: PASS
+- Free 10k copy: PASS
+- Pro R$ 80 copy: PASS
+- PROD fail-closed suite: PASS
+
+The observed user-facing issue is CLOSED_PASS.
