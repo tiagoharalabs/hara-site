@@ -12,14 +12,17 @@ import select
 import signal
 import sqlite3
 import sys
+import threading
 import uuid
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-AGENT_VERSION = "0.3.33"
+AGENT_VERSION = "0.3.34"
 CONFIG_FILE = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home()/".config"))) / "hara-commander/device.env"
 DATA_DIR = Path(os.environ.get("XDG_DATA_HOME", str(Path.home()/".local/share"))) / "hara-commander"
 RECEIPT_DIR = DATA_DIR / "receipts"
@@ -27,6 +30,8 @@ STATUS_FILE = DATA_DIR / "runtime-status.json"
 SESSION_FILE = DATA_DIR / "operator-session.json"
 CONSOLE_EVENTS_FILE = DATA_DIR / "console-events.jsonl"
 OPERATIONS_DB_FILE = DATA_DIR / "operations.sqlite3"
+LOCAL_PORTAL_HOST = "127.0.0.1"
+LOCAL_PORTAL_PORT = max(1024, min(65535, int(os.environ.get("HARA_COMMANDER_LOCAL_PORT", "32145"))))
 APPROVAL_DIR = DATA_DIR / "approvals"
 PREIMAGE_DIR = DATA_DIR / "preimages"
 SESSION_MAX_SECONDS = 12 * 60 * 60
@@ -407,6 +412,109 @@ def local_activity_heartbeat_snapshot():
         "detail_location":"LOCAL_DEVICE",
         "customer_content_synced":False,
     }
+
+def _portal_origin(value):
+    parsed=urllib.parse.urlparse(str(value or ""))
+    if parsed.scheme not in {"http","https"} or not parsed.netloc:
+        return None
+    return f"{parsed.scheme}://{parsed.netloc}"
+
+class _LocalPortalHandler(BaseHTTPRequestHandler):
+    protocol_version="HTTP/1.1"
+    server_version="HARA-Commander-Local/1"
+
+    def log_message(self, _format, *_args):
+        return
+
+    def _origin_allowed(self):
+        origin=str(self.headers.get("Origin") or "")
+        return not origin or origin in getattr(self.server,"allowed_origins",set())
+
+    def _cors_headers(self):
+        origin=str(self.headers.get("Origin") or "")
+        if origin and origin in getattr(self.server,"allowed_origins",set()):
+            self.send_header("Access-Control-Allow-Origin",origin)
+            self.send_header("Vary","Origin")
+        self.send_header("Access-Control-Allow-Methods","GET, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers","content-type")
+        self.send_header("Access-Control-Allow-Private-Network","true")
+        self.send_header("Cache-Control","no-store")
+
+    def _json(self,status,payload):
+        raw=json.dumps(payload,sort_keys=True,separators=(",",":"),ensure_ascii=False).encode("utf-8")
+        self.send_response(status)
+        self._cors_headers()
+        self.send_header("Content-Type","application/json; charset=utf-8")
+        self.send_header("Content-Length",str(len(raw)))
+        self.end_headers()
+        if raw:
+            self.wfile.write(raw)
+
+    def do_OPTIONS(self):
+        if not self._origin_allowed():
+            self._json(403,{"ok":False,"code":"LOCAL_ORIGIN_DENIED"})
+            return
+        self.send_response(204)
+        self._cors_headers()
+        self.send_header("Content-Length","0")
+        self.end_headers()
+
+    def do_GET(self):
+        if not self._origin_allowed():
+            self._json(403,{"ok":False,"code":"LOCAL_ORIGIN_DENIED"})
+            return
+        parsed=urllib.parse.urlparse(self.path)
+        if parsed.path=="/v1/health":
+            config=getattr(self.server,"hara_config",{})
+            self._json(200,{
+                "schema":"hara.commander-local-portal-health.v1",
+                "ok":True,
+                "computer":platform.node(),
+                "device_id":config.get("HARA_DEVICE_ID"),
+                "agent_version":AGENT_VERSION,
+                "source":"LOCAL_AGENT",
+            })
+            return
+        if parsed.path=="/v1/activity":
+            query=urllib.parse.parse_qs(parsed.query,keep_blank_values=False)
+            window=str((query.get("window") or ["7d"])[0])
+            try:
+                limit=int((query.get("limit") or ["50"])[0])
+            except Exception:
+                limit=50
+            snap=local_activity_snapshot(window,limit=limit,include_events=True)
+            config=getattr(self.server,"hara_config",{})
+            snap.update({
+                "scope":"LOCAL_DEVICE",
+                "computer":platform.node(),
+                "device_id":config.get("HARA_DEVICE_ID"),
+                "agent_version":AGENT_VERSION,
+                "detail_location":"LOCAL_DEVICE",
+                "local_direct":True,
+            })
+            self._json(200,snap)
+            return
+        self._json(404,{"ok":False,"code":"LOCAL_NOT_FOUND"})
+
+def start_local_portal_server(config):
+    origin=_portal_origin(config.get("HARA_COMMANDER_URL"))
+    allowed={origin} if origin else set()
+    try:
+        server=ThreadingHTTPServer((LOCAL_PORTAL_HOST,LOCAL_PORTAL_PORT),_LocalPortalHandler)
+        server.daemon_threads=True
+        server.allowed_origins=allowed
+        server.hara_config=dict(config)
+        thread=threading.Thread(target=server.serve_forever,name="hara-local-portal",daemon=True)
+        thread.start()
+        append_console_event(
+            "LOCAL_PORTAL_ONLINE",
+            state="LOOPBACK_ONLY",
+            action_summary=f"http://{LOCAL_PORTAL_HOST}:{LOCAL_PORTAL_PORT}",
+        )
+        return server
+    except OSError as exc:
+        append_console_event("LOCAL_PORTAL_UNAVAILABLE",state="DEGRADED",error_code=safe_error_code(exc))
+        return None
 
 def append_console_event(event, call=None, *, state=None, error_code=None, receipt_sha256=None, approval_id=None, action_summary=None, duration_ms=None):
     DATA_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -2087,6 +2195,7 @@ def main():
         raise SystemExit(64)
     config=load_config()
     RECEIPT_DIR.mkdir(parents=True,exist_ok=True,mode=0o700)
+    local_portal_server=start_local_portal_server(config)
     if not try_write_runtime_status(started_at=utcnow(), error_code=None, error_at=None):
         raise RuntimeError("RUNTIME_STATUS_STARTUP_WRITE_FAILED")
     last_heartbeat=0.0

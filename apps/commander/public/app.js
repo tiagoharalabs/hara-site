@@ -44,6 +44,8 @@
   const activityCache = new Map();
   let activityWindow = "7d";
   const ACTIVITY_CACHE_MS = 15000;
+  const LOCAL_ACTIVITY_ORIGIN = "http://127.0.0.1:32145";
+  const LOCAL_ACTIVITY_TIMEOUT_MS = 900;
   const revokeConfirmTimers = new Map();
   let currentView = null;
   let deviceSectionTab = "devices";
@@ -357,6 +359,74 @@
     }).format(date);
   }
 
+  function localActivityToPortal(payload) {
+    if (payload?.schema !== "hara.commander-local-activity.v2" || payload?.local_direct !== true) return null;
+    const events=Array.isArray(payload.events) ? payload.events : [];
+    const transactions=events.map((item)=>({
+      created_at_utc:item.at_utc || null,
+      tool_id:item.tool_id || item.function_id || "—",
+      computer:payload.computer || "Este computador",
+      state:item.state || (item.event === "PASS" ? "COMPLETED" : (item.event === "DENIED" ? "FAILED" : item.event)),
+      total_ms:item.duration_ms,
+      queue_ms:0,
+      execution_ms:item.duration_ms,
+      transport_mode:item.transport_mode || "LOCAL_AGENT",
+      agent_version:payload.agent_version || null,
+      error_code:item.error_code || null,
+      trace_id:item.receipt_sha256 || "",
+      action_summary:item.action_summary || null,
+      source:"LOCAL_SQLITE",
+    }));
+    return {
+      schema:"hara.commander-portal-activity.v2",
+      scope:"LOCAL_DEVICE",
+      source:"LOCALHOST_SQLITE",
+      detail_location:"LOCAL_DEVICE",
+      local_direct:true,
+      local_device_id:payload.device_id || null,
+      snapshot_coverage_percent:100,
+      window:payload.window || {},
+      privacy:payload.privacy || {},
+      summary:{...(payload.summary || {}),device_count:1},
+      diagnostics:payload.diagnostics || {top_tools:[],top_errors:[]},
+      transactions,
+    };
+  }
+
+  function mergeLocalActivityDetail(cloud,local) {
+    if (!local) return cloud;
+    if (!cloud) return local;
+    const transactions=[
+      ...(Array.isArray(local.transactions) ? local.transactions : []),
+      ...(Array.isArray(cloud.transactions) ? cloud.transactions : []),
+    ].sort((a,b)=>Date.parse(String(b.created_at_utc || ""))-Date.parse(String(a.created_at_utc || ""))).slice(0,50);
+    return {
+      ...cloud,
+      source:String(cloud.source || "CLOUD") + "+LOCALHOST_DETAIL",
+      detail_location:"LOCAL_DEVICE_WITH_CLOUD_FALLBACK",
+      local_direct:true,
+      local_device_id:local.local_device_id,
+      transactions,
+    };
+  }
+
+  async function fetchLocalActivityDirect(windowKey) {
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),LOCAL_ACTIVITY_TIMEOUT_MS);
+    try {
+      const response=await fetch(
+        LOCAL_ACTIVITY_ORIGIN + "/v1/activity?limit=50&window=" + encodeURIComponent(windowKey),
+        {cache:"no-store",mode:"cors",credentials:"omit",signal:controller.signal},
+      );
+      if (!response.ok) return null;
+      return localActivityToPortal(await response.json().catch(()=>null));
+    } catch (_error) {
+      return null;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   function activityTag(state) {
     const value=String(state || "").toUpperCase();
     if (value === "COMPLETED") return ["PASS","committed"];
@@ -400,13 +470,16 @@
   function renderActivity(payload) {
     const summary=payload?.summary || {};
     setText("activityTotal",number(summary.total_calls || 0));
-    const scopeLabel=payload?.scope === "TENANT" ? "Workspace inteiro" : "Suas execuções";
+    const scopeLabel=payload?.scope === "TENANT"
+      ? "Workspace inteiro"
+      : (payload?.scope === "LOCAL_DEVICE" ? "Este computador" : "Suas execuções");
     const windowLabel=String(payload?.window?.label || "");
     const localCoverage=Number(payload?.snapshot_coverage_percent);
-    const sourceLabel=String(payload?.source || "").startsWith("LOCAL_DEVICE")
-      && Number.isFinite(localCoverage)
-      ? " · " + String(localCoverage).replace(".", ",") + "% local"
-      : "";
+    const sourceLabel=payload?.local_direct === true
+      ? " · detalhe local"
+      : (String(payload?.source || "").startsWith("LOCAL_DEVICE") && Number.isFinite(localCoverage)
+        ? " · " + String(localCoverage).replace(".", ",") + "% local"
+        : "");
     setText("activityScope",scopeLabel + (windowLabel ? " · " + windowLabel : "") + sourceLabel);
     setText("activitySuccessRate",summary.success_rate_percent == null ? "—" : String(summary.success_rate_percent).replace(".",",") + "%");
     setText("activityTerminalSummary",number(summary.completed || 0) + " PASS · " + number(summary.failed || 0) + " falhas");
@@ -430,7 +503,7 @@
       const empty=document.createElement("div");
       empty.className="empty-state";
       const strong=document.createElement("strong");
-      const localDetail=payload?.detail_location === "LOCAL_DEVICE";
+      const localDetail=String(payload?.detail_location || "").startsWith("LOCAL_DEVICE");
       strong.textContent=localDetail ? "Histórico detalhado fica no computador" : "Nenhuma transação ainda";
       empty.append(
         strong,
@@ -454,7 +527,7 @@
       const tool=document.createElement("span");
       tool.className="activity-tool";
       tool.textContent=String(item.tool_id || "—");
-      tool.title=String(item.source || "");
+      tool.title=String(item.action_summary || item.source || "");
 
       const computer=document.createElement("span");
       computer.textContent=String(item.computer || "—");
@@ -538,14 +611,35 @@
       trigger.disabled=true;
       trigger.textContent="Atualizando…";
     }
+    const localPromise=sessionAuthenticated
+      ? fetchLocalActivityDirect(activityWindow)
+      : Promise.resolve(null);
     try {
-      const response=await fetch("/api/portal/activity?limit=50&window="+encodeURIComponent(activityWindow),{cache:"no-store",credentials:"same-origin"});
+      const cloudPromise=fetch(
+        "/api/portal/activity?limit=50&window="+encodeURIComponent(activityWindow),
+        {cache:"no-store",credentials:"same-origin"},
+      );
+      let localPayload=await Promise.race([
+        localPromise,
+        new Promise((resolve)=>setTimeout(()=>resolve(null),200)),
+      ]);
+      if (localPayload) renderActivity(localPayload);
+
+      const response=await cloudPromise;
       if (handlePortalAuthFailure(response,"Entre novamente para consultar a atividade.")) return;
-      const payload=await response.json().catch(()=>({}));
-      if (!response.ok) throw new Error(String(payload?.code || "ACTIVITY_LOAD_FAILED"));
+      const cloudPayload=await response.json().catch(()=>({}));
+      if (!response.ok) throw new Error(String(cloudPayload?.code || "ACTIVITY_LOAD_FAILED"));
+      if (!localPayload) localPayload=await localPromise;
+      const payload=mergeLocalActivityDetail(cloudPayload,localPayload);
       activityCache.set(activityWindow,{at:Date.now(),payload});
       renderActivity(payload);
     } catch (_error) {
+      const localPayload=await localPromise;
+      if (localPayload) {
+        activityCache.set(activityWindow,{at:Date.now(),payload:localPayload});
+        renderActivity(localPayload);
+        return;
+      }
       const ledger=document.getElementById("usageLedger");
       if (ledger) {
         const header=ledger.querySelector(".tr.head");
