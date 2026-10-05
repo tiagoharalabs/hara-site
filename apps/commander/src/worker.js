@@ -986,15 +986,30 @@ function unlimitedProductUsage() {
 
 async function productUsageForPolicy(env, tenantId, periodKind, unitLimit) {
   const kind = String(periodKind || "").trim().toUpperCase();
-  if (kind === "NONE") return unlimitedProductUsage();
+  if (kind === "NONE") return { ...unlimitedProductUsage(), available: true };
 
   const periodKey = kind === "CALENDAR_MONTH" ? monthKey() : "LIFETIME";
   const limit = Number(unitLimit);
-  const quota = env.TENANT_QUOTA.getByName(tenantId);
-  return {
-    ...(await quota.status(periodKey, limit)),
-    metered: true,
-  };
+  try {
+    const quota = env.TENANT_QUOTA.getByName(tenantId);
+    return {
+      ...(await quota.status(periodKey, limit)),
+      metered: true,
+      available: true,
+    };
+  } catch (_error) {
+    // Read-only product surfaces degrade independently from execution authority.
+    // Quota reserve/commit/release paths remain fail-closed.
+    return {
+      period_key: periodKey,
+      limit,
+      consumed_units: null,
+      remaining_units: null,
+      metered: true,
+      available: false,
+      error_code: "USAGE_TEMPORARILY_UNAVAILABLE",
+    };
+  }
 }
 
 async function dashboard(env, tenantId) {

@@ -287,11 +287,12 @@
     const consumed = consumedRaw == null ? 0 : Number(consumedRaw);
     const limit = payload.usage.limit == null ? null : Number(payload.usage.limit);
     const unmetered = payload.usage.metered === false || limit == null;
+    const usageAvailable = payload.usage.available !== false;
     const remaining = payload.usage.remaining_units;
-    const percent = !unmetered && limit ? Math.min(100, (consumed / limit) * 100) : 0;
+    const percent = usageAvailable && !unmetered && limit ? Math.min(100, (consumed / limit) * 100) : 0;
 
     setText("landingPlan", plan);
-    setText("landingUsage", unmetered ? "Ilimitado" : number(consumed));
+    setText("landingUsage", unmetered ? "Ilimitado" : (usageAvailable ? number(consumed) : "—"));
     setText("landingLimit", unmetered ? "" : "de " + number(limit));
     setText("dashboardPlan", plan);
     const planCard = document.getElementById("planSummaryCard");
@@ -301,9 +302,14 @@
       "dashboardPlanDetail",
       isTrial ? "Plano Free · 10.000 chamadas/mês" : (unmetered ? "Plano sem franquia mensal" : "Plano ativo"),
     );
-    setText("dashboardConsumed", unmetered ? "Ilimitado" : number(consumed));
+    setText("dashboardConsumed", unmetered ? "Ilimitado" : (usageAvailable ? number(consumed) : "—"));
     setText("dashboardLimit", unmetered ? "" : "/ " + number(limit));
-    setText("dashboardPercent", unmetered ? "Sem franquia mensal de chamadas" : percent.toFixed(2).replace(".", ",") + "% utilizado");
+    setText(
+      "dashboardPercent",
+      unmetered
+        ? "Sem franquia mensal de chamadas"
+        : (usageAvailable ? percent.toFixed(2).replace(".", ",") + "% utilizado" : "Uso temporariamente indisponível"),
+    );
     const dashboardBar = document.getElementById("dashboardUsageProgress");
     if (dashboardBar) dashboardBar.style.width = (limit == null ? 0 : percent) + "%";
     const dashboardProgress = dashboardBar?.parentElement;
@@ -313,12 +319,26 @@
       usageCard.classList.toggle("usage-warning", percent >= 80 && percent < 100);
       usageCard.classList.toggle("usage-exhausted", percent >= 100);
     }
-    setText("usageConsumed", unmetered ? "Ilimitado" : number(consumed));
+    setText("usageConsumed", unmetered ? "Ilimitado" : (usageAvailable ? number(consumed) : "—"));
     setText("usageLimit", unmetered ? "" : "de " + number(limit));
-    setText("usageRemaining", unmetered ? "Sem franquia mensal de chamadas" : number(remaining) + " unidades disponíveis");
+    setText(
+      "usageRemaining",
+      unmetered
+        ? "Sem franquia mensal de chamadas"
+        : (usageAvailable ? number(remaining) + " unidades disponíveis" : "Uso temporariamente indisponível"),
+    );
     setText("usagePeriod", unmetered ? "Sem limite" : (payload.usage.period_key || "—"));
     const bar = document.getElementById("usageProgress");
-    if (bar) bar.style.width = (limit == null ? 0 : percent) + "%";
+    if (bar) bar.style.width = (unmetered || !usageAvailable ? 0 : percent) + "%";
+    if (!usageAvailable) {
+      showBanner(
+        "info",
+        "Uso temporariamente indisponível",
+        "Plano, sessão e computadores continuam disponíveis. Tente atualizar o uso novamente em instantes.",
+        "Atualizar uso",
+        loadProductDashboard,
+      );
+    }
     // Device state and operational activity are hydrated independently.
   }
 
