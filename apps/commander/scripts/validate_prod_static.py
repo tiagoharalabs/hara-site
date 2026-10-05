@@ -380,6 +380,17 @@ need("https://www.haralabs.com.br/legal/termos/" in HTML and "https://www.harala
 need("#dashboardInvokes" not in CSS and ".activity-list" not in CSS, "DEAD_ACTIVITY_CSS_ABSENT")
 need('class="user-chip"' not in HTML, "DUPLICATE_INTERNAL_SESSION_IDENTITY_ABSENT")
 need(".user-chip" not in CSS, "DEAD_USER_CHIP_CSS_ABSENT")
+need(
+    'id="billingReadiness"' in HTML
+    and 'data-billing-ready="provider"' in HTML
+    and 'data-billing-ready="catalog"' in HTML
+    and 'data-billing-ready="price"' in HTML
+    and 'data-billing-ready="checkout"' in HTML
+    and 'activation.standard_checkout_ready' in JS
+    and 'activation.standard_catalog_active' in JS
+    and 'activation.standard_price_configured' in JS,
+    "BILLING_READINESS_UX",
+)
 
 prod = "https://commander.haralabs.com.br"
 dev = "hara-commander-dev-v2.tiago-sartori.workers.dev"

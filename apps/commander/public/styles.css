@@ -1161,3 +1161,10 @@ html[data-neon="off"] .brand-copy em{
 .device-policy.persistent{border-color:rgba(39,201,154,.24);background:rgba(39,201,154,.08);color:#208365}
 .device-policy.session{border-color:#d7e5ec;background:#f3f8fa;color:#477189}
 .device-policy.ask{border-color:#ead7a9;background:#fff8e7;color:#866719}
+
+.billing-readiness{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;margin-top:14px}
+.billing-readiness span{display:inline-flex;align-items:center;gap:5px;padding:5px 8px;border:1px solid #dce8ee;border-radius:999px;background:#f7fafb;color:#758b98;font-size:8px;font-weight:800}
+.billing-readiness span::before{content:"";width:6px;height:6px;border-radius:50%;background:#b8c6cd}
+.billing-readiness span.ready{border-color:rgba(39,201,154,.25);background:rgba(39,201,154,.08);color:#208365}
+.billing-readiness span.ready::before{background:#27c99a}
+.billing-readiness span.pending{color:#7a8992}

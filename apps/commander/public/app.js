@@ -1148,6 +1148,20 @@
       if (!response.ok) return;
       const payload = await response.json();
       const canManage = payload?.can_manage === true;
+      const activation = payload?.activation || {};
+      const readiness = {
+        provider: activation.provider_configured === true,
+        catalog: activation.standard_catalog_active === true,
+        price: activation.standard_price_configured === true,
+        checkout: activation.standard_checkout_ready === true,
+      };
+      Object.entries(readiness).forEach(([key,ready])=>{
+        const node=document.querySelector('[data-billing-ready="' + key + '"]');
+        if (!node) return;
+        node.classList.toggle("ready",ready);
+        node.classList.toggle("pending",!ready);
+        node.setAttribute("title",ready ? "Pronto" : "Pendente");
+      });
 
       planButtons.forEach((button) => {
         const planCode = String(button.dataset.billingPlan || "").toUpperCase();
@@ -1186,10 +1200,16 @@
         if (payload?.connection?.subscription_present) {
           const state = String(payload?.connection?.subscription_status || "conectada").replaceAll("_", " ");
           statusNode.textContent = "Cobrança conectada. Status da assinatura: " + state + ".";
-        } else if (payload?.configured) {
-          statusNode.textContent = "Billing conectado. O checkout será liberado quando o catálogo comercial estiver ativo.";
+        } else if (activation.first_checkout_ready) {
+          statusNode.textContent = "Standard disponível para assinatura. O pagamento é concluído no checkout seguro do Stripe.";
+        } else if (!activation.provider_configured) {
+          statusNode.textContent = "Checkout comercial ainda não ativado. O produto permanece disponível no plano atual.";
+        } else if (!activation.standard_catalog_active) {
+          statusNode.textContent = "Stripe conectado. Aguardando publicação do catálogo Standard.";
+        } else if (!activation.standard_price_configured) {
+          statusNode.textContent = "Catálogo Standard pronto. Aguardando publicação do preço aprovado.";
         } else {
-          statusNode.textContent = "Somente o Trial está publicado no catálogo de produção neste momento. Standard e Scale permanecem em preparação.";
+          statusNode.textContent = "Checkout Standard em preparação.";
         }
       }
     } catch (_error) {

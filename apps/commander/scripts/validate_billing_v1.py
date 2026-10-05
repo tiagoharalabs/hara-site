@@ -138,6 +138,9 @@ def main() -> int:
     # Commercial price/capacity is deliberately not invented in source.
     assert "STRIPE_PRICE_STANDARD" in source
     assert "STRIPE_PRICE_SCALE" in source
+    assert "price_configured:" in source
+    assert "provider_configured:" in source
+    assert "first_checkout_ready:" in source
     assert "INSERT INTO plans" not in migration
 
     # Activation tooling is read-only by default and records the approved Trial direction.

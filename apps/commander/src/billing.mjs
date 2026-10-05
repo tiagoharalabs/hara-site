@@ -164,14 +164,16 @@ async function billingConnection(env, tenantId) {
 
 export async function billingStatus(env, session) {
   const prices = priceMap(env);
+  const providerConfigured = stripeBillingConfigured(env);
   const plans = {};
   for (const planCode of PAID_PLANS) {
     const plan = await activePlan(env, planCode);
     plans[planCode] = {
       plan_code: planCode,
       catalog_active: Boolean(plan),
+      price_configured: Boolean(prices[planCode]),
       checkout_ready: Boolean(
-        stripeBillingConfigured(env) && plan && prices[planCode]
+        providerConfigured && plan && prices[planCode]
       ),
       unit_limit: plan?.unit_limit == null ? null : Number(plan.unit_limit),
       period_kind: plan ? plan.period_kind : null,
@@ -182,8 +184,18 @@ export async function billingStatus(env, session) {
   return {
     schema: "hara.commander-billing-status.v1",
     provider: "STRIPE",
-    configured: stripeBillingConfigured(env),
+    configured: providerConfigured,
     can_manage: ["OWNER", "ADMIN"].includes(String(session.role || "")),
+    activation:{
+      provider_configured:providerConfigured,
+      standard_catalog_active:Boolean(plans.STANDARD?.catalog_active),
+      standard_price_configured:Boolean(plans.STANDARD?.price_configured),
+      standard_checkout_ready:Boolean(plans.STANDARD?.checkout_ready),
+      scale_catalog_active:Boolean(plans.SCALE?.catalog_active),
+      scale_price_configured:Boolean(plans.SCALE?.price_configured),
+      scale_checkout_ready:Boolean(plans.SCALE?.checkout_ready),
+      first_checkout_ready:Boolean(plans.STANDARD?.checkout_ready),
+    },
     plans,
     connection: connection ? {
       state: connection.state,
