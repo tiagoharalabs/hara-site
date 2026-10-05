@@ -680,6 +680,65 @@ Production Worker:
 
 The current ChatGPT conversation may retain the pre-deploy MCP tool snapshot, so a tool refresh/fresh chat can be required before hara.activity is callable by name from this exact client session. This is a client schema-refresh issue, not a server deployment blocker.
 
+## Activity P0.2 — privacy-safe diagnostics and export LIVE
+
+Canonical commits:
+- `5df8507ae174cc0cb66ba5e3c33915577400c655` — privacy-safe activity diagnostics
+- `6f9e76ffb1daaf8d3664ebabf664c04983f393cd` — restore executable validator mode
+
+Production:
+- Worker version: `691093ce-404e-4b9e-9096-a7f8aa04ba9c`
+- deployment ID: `b4641ea3-bc3e-4dde-a3f5-77a3337bd08c`
+- rollback Worker: `69e17b37-be68-4bfc-a397-900adafd8117`
+- runtime assets: CURRENT
+- fail-closed: PASS
+- Activity P0.2 live asset smoke: PASS
+- pending migrations after rollout: none
+
+New operational surfaces:
+- top tools by count for the selected Activity window
+- top sanitized failure codes by count
+- CSV export of operational metadata only
+- CSV columns: UTC timestamp, tool, computer, state, total/queue/execution latency, transport, Agent version, sanitized error, trace id
+- command text, argument values, payload values, result values and request ids are not CSV columns
+
+Privacy contract is now explicit:
+- `command_text_exposed=false`
+- `argument_values_exposed=false`
+- `payload_values_exposed=false`
+- `result_values_exposed=false`
+- `request_id_exposed=false`
+- `historical_command_text_persisted=false`
+- `payload_hot_path_transient=true`
+- `metadata_only=true`
+
+The cloud transport still necessarily carries a bounded command/payload while a call is PENDING so the Agent can claim it. On Agent claim, `payload_json` is immediately replaced by `HARA_REDACTED_SHA256:<sha256>`. This is transport state, not a customer command-history feature.
+
+Production persistence proof after P0.2 rollout:
+- process calls: 287
+- process payloads redacted: 287
+- terminal process calls: 287
+- terminal process payloads redacted: 287
+- pending process calls: 0
+
+A prior point-in-time query caught two raw PENDING process payloads while they were still in transit; both were subsequently claimed, after which the repeat query showed 287/287 redacted and zero pending. No payload values were read during this verification.
+
+Local Agent receipt contract is also metadata-only:
+- `payload_values_persisted=false`
+- no `command_preview`, raw `command` or `payload_json` persisted by `write_receipt()`
+- no raw stdout persisted; only `result_stdout_sha256`
+- receipt files remain local, mode 0600
+- release validator marker: `COMMANDER_LOCAL_RECEIPT_CONTENT_HISTORY=METADATA_ONLY`
+
+Regression:
+- `COMMANDER_ACTIVITY_P02_FULL_REGRESSION=PASS`
+- Activity privacy markers PASS
+- top tools diagnostics PASS
+- top error diagnostics PASS
+- metadata-only CSV gate PASS
+- local receipt metadata-only gate PASS
+- customer MCP / device contract / installers / E2E / prod static / privacy-NOC / routing / manifest all PASS
+
 ## Current known limitations
 
 1. Windows purpose-specific parity is not yet proven. Windows version metadata was kept release-coherent, but the new Linux-first purpose-specific filesystem/search behavior must not be declared accepted on Windows without a separate canary.
