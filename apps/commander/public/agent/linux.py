@@ -1389,7 +1389,7 @@ def complete(config, call, state, result, error_code=None):
     post_json(config["HARA_COMMANDER_URL"]+"/api/device/calls/complete",config["HARA_DEVICE_TOKEN"],body)
 
 def execute_call(config,call):
-    if not operator_session_active():
+    if effective_approval_mode(config)!="PERSISTENT_TRUSTED" and not operator_session_active():
         code="LOCAL_OPERATOR_SESSION_REQUIRED"
         append_console_event("DENIED",call,state="DENIED",error_code=code)
         complete(config,call,"FAILED",{
