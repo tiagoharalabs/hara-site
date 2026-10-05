@@ -98,7 +98,33 @@ await assert.rejects(
   /STRICT_DENIED/,
 );
 
+const strictDown = {
+  idFromName: () => "id",
+  get: () => ({ limit: async () => { throw new Error("down"); } }),
+};
+const degraded = await enforceLayeredRateLimit(
+  fast,
+  strictDown,
+  "k", 30, 60, "DENIED",
+  { allowStrictUnavailableFallback: true },
+);
+assert.equal(degraded.success, true);
+assert.equal(degraded.degraded, true);
+assert.equal(degraded.enforcement, "FAST_BINDING_ONLY");
+
+await assert.rejects(
+  enforceLayeredRateLimit(
+    { limit: async () => { throw new Error("fast-down"); } },
+    strictDown,
+    "k", 30, 60, "DENIED",
+    { allowStrictUnavailableFallback: true },
+  ),
+  /RATE_LIMIT_CHECK_FAILED/,
+);
+
 console.log("COMMANDER_RATE_LIMIT_KEY_PRIVACY=PASS");
 console.log("COMMANDER_RATE_LIMIT_FIXED_WINDOW=PASS");
 console.log("COMMANDER_RATE_LIMIT_LAYERED_ENFORCEMENT=PASS");
+console.log("COMMANDER_RATE_LIMIT_STRICT_OUTAGE_FALLBACK=FAST_LAYER_ONLY");
+console.log("COMMANDER_RATE_LIMIT_FAST_LAYER_FAIL_CLOSED=PASS");
 console.log("COMMANDER_RATE_LIMIT_FAIL_CLOSED=PASS");

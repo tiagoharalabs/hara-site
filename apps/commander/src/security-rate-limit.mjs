@@ -107,13 +107,35 @@ export async function enforceLayeredRateLimit(
   limit,
   periodSeconds,
   deniedCode,
+  options = {},
 ) {
   await enforceRateLimit(fastBinding, key, deniedCode);
-  const result = await strictRateLimitResult(
-    strictBinding,
-    key,
-    positiveInteger(limit, "RATE_LIMIT_LIMIT_INVALID"),
-    positiveInteger(periodSeconds, "RATE_LIMIT_PERIOD_INVALID"),
-  );
+  let result;
+  try {
+    result = await strictRateLimitResult(
+      strictBinding,
+      key,
+      positiveInteger(limit, "RATE_LIMIT_LIMIT_INVALID"),
+      positiveInteger(periodSeconds, "RATE_LIMIT_PERIOD_INVALID"),
+    );
+  } catch (error) {
+    if (
+      options.allowStrictUnavailableFallback === true
+      && String(error?.message || "") === "STRICT_RATE_LIMIT_CHECK_FAILED"
+    ) {
+      console.warn("HARA_RATE_LIMIT_DEGRADED_FAST_ONLY");
+      return {
+        success: true,
+        degraded: true,
+        enforcement: "FAST_BINDING_ONLY",
+      };
+    }
+    throw error;
+  }
   if (!result?.success) throw new Error(deniedCode);
+  return {
+    success: true,
+    degraded: false,
+    enforcement: "FAST_PLUS_STRICT",
+  };
 }

@@ -210,6 +210,7 @@ async function requireMcpProductToken(request, env) {
     20,
     60,
     "MCP_AUTH_RATE_LIMITED",
+    { allowStrictUnavailableFallback: true },
   );
   if (supplied) {
     await enforceLayeredRateLimit(
@@ -219,6 +220,7 @@ async function requireMcpProductToken(request, env) {
       20,
       60,
       "MCP_AUTH_RATE_LIMITED",
+      { allowStrictUnavailableFallback: true },
     );
   }
   throw new Error("MCP_PRODUCT_ACCESS_DENIED");
@@ -232,6 +234,7 @@ async function enforceLoginInitiationRateLimit(request, env) {
     30,
     60,
     "AUTH_RATE_LIMITED",
+    { allowStrictUnavailableFallback: true },
   );
 }
 
@@ -243,6 +246,7 @@ async function enforceDeviceEnrollClientRateLimit(request, env) {
     60,
     60,
     "DEVICE_ENROLL_RATE_LIMITED",
+    { allowStrictUnavailableFallback: true },
   );
 }
 
@@ -256,6 +260,7 @@ async function enforceDeviceEnrollTokenRateLimit(body, env) {
     10,
     60,
     "DEVICE_ENROLL_RATE_LIMITED",
+    { allowStrictUnavailableFallback: true },
   );
 }
 
@@ -267,6 +272,7 @@ async function enforcePortalMutationRateLimit(env, session) {
     60,
     60,
     "PORTAL_MUTATION_RATE_LIMITED",
+    { allowStrictUnavailableFallback: true },
   );
 }
 
