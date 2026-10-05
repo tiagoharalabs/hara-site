@@ -8,6 +8,7 @@ from pathlib import Path
 COMMANDER = Path(__file__).resolve().parent.parent
 ROOT = COMMANDER.parent.parent
 MIGRATION = COMMANDER / "migrations" / "0013_billing_v1.sql"
+STANDARD_MIGRATION = COMMANDER / "migrations" / "0019_standard_beta_plan.sql"
 BILLING = COMMANDER / "src" / "billing.mjs"
 WORKER = COMMANDER / "src" / "worker.js"
 WRANGLER = COMMANDER / "wrangler.jsonc"
@@ -67,6 +68,7 @@ INSERT INTO billing_connections VALUES
 
 def main() -> int:
     migration = MIGRATION.read_text(encoding="utf-8")
+    standard_migration = STANDARD_MIGRATION.read_text(encoding="utf-8")
     source = BILLING.read_text(encoding="utf-8")
     worker = WORKER.read_text(encoding="utf-8")
     wrangler = WRANGLER.read_text(encoding="utf-8")
@@ -100,6 +102,55 @@ def main() -> int:
     ).fetchone()[0] == "billing_webhook_events"
     assert db.execute("PRAGMA foreign_key_check").fetchall() == []
     assert db.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
+
+    # Standard/Pro Beta catalog is reproducible from Git and idempotent.
+    catalog_db = sqlite3.connect(":memory:")
+    catalog_db.executescript(
+        """
+        PRAGMA foreign_keys = ON;
+        CREATE TABLE plans (
+          plan_code TEXT PRIMARY KEY,
+          display_name TEXT NOT NULL,
+          meter_id TEXT NOT NULL,
+          period_kind TEXT NOT NULL,
+          unit_limit INTEGER,
+          state TEXT NOT NULL
+        );
+        CREATE TABLE plan_grants (
+          plan_code TEXT NOT NULL REFERENCES plans(plan_code) ON DELETE CASCADE,
+          grant_code TEXT NOT NULL,
+          created_at_utc TEXT NOT NULL,
+          PRIMARY KEY (plan_code, grant_code)
+        );
+        """
+    )
+    catalog_db.executescript(standard_migration)
+    catalog_db.executescript(standard_migration)
+    standard = catalog_db.execute(
+        "SELECT display_name,meter_id,period_kind,unit_limit,state FROM plans WHERE plan_code='STANDARD'"
+    ).fetchone()
+    assert standard == (
+        "Pro Beta",
+        "HARA_COMMANDER_GOVERNED_INVOKE",
+        "NONE",
+        None,
+        "ACTIVE",
+    )
+    grants = {
+        row[0]
+        for row in catalog_db.execute(
+            "SELECT grant_code FROM plan_grants WHERE plan_code='STANDARD'"
+        )
+    }
+    assert grants == {
+        "COMMANDER_DISCOVERY",
+        "COMMANDER_READ_ONLY_INVOKE",
+        "COMMANDER_RECEIPT_READ",
+        "COMMANDER_MUTATION_INVOKE",
+        "COMMANDER_PROCESS_EXECUTION",
+    }
+    assert catalog_db.execute("PRAGMA foreign_key_check").fetchall() == []
+    assert catalog_db.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
 
     required_source = (
         "verifyStripeWebhookSignature",
@@ -170,6 +221,7 @@ def main() -> int:
     print("COMMANDER_BILLING_V1_CHECKOUT_PORTAL=PASS")
     print("COMMANDER_BILLING_V1_SECRETS_IN_GIT=FALSE")
     print("COMMANDER_BILLING_V1_COMMERCIAL_PRICE_INVENTED=FALSE")
+    print("COMMANDER_STANDARD_BETA_CATALOG_MIGRATION=PASS")
     print("COMMANDER_BILLING_PROD_ACTIVATION_PREFLIGHT=PASS")
     print("TRIAL_CURRENT_PROD_UNITS=100")
     print("TRIAL_TARGET_MONTHLY_UNITS=10000")
