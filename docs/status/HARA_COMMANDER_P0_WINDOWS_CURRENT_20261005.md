@@ -105,3 +105,37 @@ The remaining gate is isolated DEV enrollment and remote Simple MCP data-plane p
 7. clean the DEV fixture and record rollback state.
 
 Only then mark Windows public-beta parity PASS.
+
+## Continuation - current VM/readback revalidation
+
+The Windows canary was revalidated after the DEV successor deployment without modifying the existing PROD enrollment or Scheduled Task.
+
+Current H.A.R.A. Commander inventory for the owner account:
+- non-revoked HARA_WIN11
+- Agent 0.3.14
+- connector state OFFLINE
+- last seen 2026-10-03T23:02:28.763Z
+- older Windows enrollments remain REVOKED
+
+The VM remains available independently through libvirt/QGA:
+- domain commander-win11 running
+- QEMU Guest Agent PASS
+- guest OS Windows 11 x86_64
+
+The current DEV-served Windows Agent was downloaded inside the guest and revalidated:
+- SHA-256 e01bd2d8d7b57f0eb1de9970cd44039c67ead872e1c3b6c8613c36e186824ca3
+- WINDOWS_SELFTEST_EXIT=0
+- COMMANDER_WINDOWS_OPERATOR_SESSION_GATE=PASS
+- COMMANDER_WINDOWS_CONSOLE_SANITIZATION=PASS
+- COMMANDER_WINDOWS_STARTER_READ=PASS
+- COMMANDER_WINDOWS_FIVE_TOOL_BRIDGE=PASS
+- COMMANDER_WINDOWS_ARBITRARY_FUNCTION=DENIED
+- COMMANDER_WINDOWS_AGENT_SELF_TEST=PASS
+- QGA process exit code 0
+
+The current H.A.R.A. Commander connector exposes operations only for already enrolled computers; it does not expose a credential-safe administrative enrollment operation. Therefore the remaining DEV enrollment is still a human/administrative gate and was not bypassed.
+
+Current state remains:
+- WINDOWS_CURRENT_SOURCE_REGRESSION=PASS
+- WINDOWS_CURRENT_REAL_VM_SELFTEST=PASS
+- WINDOWS_CURRENT_DATA_PLANE_CANARY=PENDING_ALLOWED_ENROLLMENT_CHANNEL

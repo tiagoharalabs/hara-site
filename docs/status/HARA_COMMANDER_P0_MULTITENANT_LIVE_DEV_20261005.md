@@ -106,3 +106,57 @@ This is not classified as an isolation failure. The state-bound tests that reach
    - same `request_id` independently reservable under tenant A and tenant B quota namespaces;
    - cleanup PASS.
 4. Only then change backlog state to `MULTITENANT_ISOLATION_LIVE_DEV=PASS`.
+
+## Continuation - reconciled DO candidate on current canonical
+
+Candidate source:
+- base f7f7d37c880230e526bc1e12c1ea78a7214ea7fb
+- TenantQuota candidate 5c06765c16b3427680a01998602a4a87958d92f9
+- reconciled successor HEAD before acceptance fix/docs 4157dff806514e9192bcfcc7d4fd5d2f5c17de69
+
+Source/regression battery after reconciliation:
+- TenantQuota storage efficiency PASS
+- quota reservation TTL PASS
+- Event V2 quota source probe PASS
+- rate-limit resilience PASS
+- SecurityRateLimit test PASS
+- multitenant source model PASS
+- fresh-customer source validation PASS
+- full E2E harness PASS
+
+DEV-only deployment:
+- first candidate Worker 043d155b-baf7-4556-a663-b7871fd696d2
+- readback PASS
+- previous rollback version 942f32e3-cad0-41b1-ba02-036ba5f2457e
+- canonical DEV canary MCP token was reprovisioned without exposing its value
+- resulting Worker version 122cd8ce-8abc-4b7f-9d06-5fe2340245ce
+- rollback version after secret update 043d155b-baf7-4556-a663-b7871fd696d2
+
+Latest live probe:
+- tenant A/B enumeration PASS
+- cross-tenant select HTTP 404 DEVICE_NOT_FOUND, selection unchanged: DENIED
+- cross-tenant revoke HTTP 404 DEVICE_NOT_FOUND, target device remained ACTIVE: DENIED
+- cross-tenant enqueue HTTP 404 and no call inserted: DENIED
+- caller-supplied tenant override ABSENT
+- cross-tenant call status HTTP 404: DENIED
+- same-tenant call status PASS
+- cross-tenant receipt target HTTP 404: DENIED
+- fixture cleanup PASS
+
+Therefore the portal-mutation gates are now live-proven:
+- MULTITENANT_LIVE_DEVICE_SELECTION=DENIED
+- MULTITENANT_LIVE_DEVICE_REVOKE=DENIED
+
+The remaining multitenant blocker is specifically the independent TenantQuota namespace proof:
+- tenant A internal MCP authorize: HTTP 500 INTERNAL_ERROR
+- MULTITENANT_LIVE_QUOTA_NAMESPACE=BLOCKED_DO_CAPACITY
+
+A filtered DEV Worker tail captured the platform exception directly in both SecurityRateLimit and TenantQuota Durable Objects:
+Exceeded allowed rows read in Durable Objects free tier.
+
+Current state:
+- MULTITENANT_SELECT_REVOKE_LIVE=CLOSED_PASS
+- MULTITENANT_TENANT_QUOTA_NAMESPACE=PENDING_CAPACITY_RESET_OR_UPGRADE
+- MULTITENANT_ISOLATION_LIVE_DEV=BLOCKED_DO_CAPACITY
+
+Do not rerun the quota proof repeatedly while the daily account budget is exhausted. Re-run the unchanged canonical probe after capacity resets or the account tier is upgraded.

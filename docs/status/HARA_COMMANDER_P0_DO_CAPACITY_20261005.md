@@ -111,3 +111,38 @@ Before live promotion:
 - fresh-customer DEV reaches enrollment and Simple MCP acceptance;
 - no regression in strict-rate-limit fail-closed/resilience behavior;
 - no PROD deployment before DEV proof.
+
+## DEV live continuation on current canonical
+
+The published candidate 5c06765 was reconciled onto current canonical f7f7d37 in a clean successor worktree.
+
+Reconciled candidate:
+4157dff806514e9192bcfcc7d4fd5d2f5c17de69
+
+All requested source/regression gates passed before deployment.
+
+DEV-only Worker deployment and readback passed. After canonical DEV canary secret synchronization, the live Worker version was:
+122cd8ce-8abc-4b7f-9d06-5fe2340245ce
+
+Live multitenant execution proved portal select/revoke tenant isolation, but TenantQuota authorize still returned HTTP 500.
+
+A filtered live Worker tail captured the exact Durable Objects platform exception in:
+- SecurityRateLimit
+- TenantQuota
+
+Exception:
+Exceeded allowed rows read in Durable Objects free tier.
+
+This continuation does not claim that P0.2 removed an already-exhausted account-level daily budget. It proves:
+- optimized source/regression model intact
+- DEV bundle/readback healthy
+- portal isolation reaches and passes select/revoke
+- remaining TenantQuota live proof is blocked by the account rows-read budget
+
+No PROD promotion was performed.
+
+Next gate:
+- wait for Durable Objects rows-read capacity reset or upgrade account capacity
+- rerun the unchanged multitenant probe
+- require tenant A and tenant B to independently reserve the same request ID in separate TenantQuota namespaces
+- only then consider promotion
