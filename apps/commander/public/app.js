@@ -14,10 +14,10 @@
     signup: "Criar conta · H.A.R.A. Commander",
     dashboard: "Visão geral · H.A.R.A. Commander",
     devices: "Computadores · H.A.R.A. Commander",
-    usage: "Uso & limite · H.A.R.A. Commander",
-    plans: "Plano · H.A.R.A. Commander",
+    usage: "Uso · H.A.R.A. Commander",
+    plans: "Plano e cobrança · H.A.R.A. Commander",
     connections: "Conexões · H.A.R.A. Commander",
-    security: "Segurança · H.A.R.A. Commander",
+    security: "Configurações · H.A.R.A. Commander",
   });
   const params = new URLSearchParams(location.search);
   const root = document.documentElement;
@@ -120,7 +120,7 @@
       showToast("O HARA Identity ainda não está disponível para autenticação.");
       return;
     }
-    const target = "/auth/login?return_to=" + encodeURIComponent("/#dashboard")
+    const target = "/auth/login?return_to=" + encodeURIComponent("/#devices")
       + (signup ? "&screen_hint=signup" : "")
       + (forceLogin ? "&force_login=1" : "");
     location.assign(target);
@@ -1567,7 +1567,7 @@
         ? "Prévia local carregada. Nenhuma credencial foi persistida."
         : "Prévia local carregada. Nenhuma credencial foi enviada.";
       showToast(label);
-      route("dashboard");
+      route("devices");
       form.reset();
     });
   });

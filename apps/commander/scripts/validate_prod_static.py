@@ -156,9 +156,40 @@ need(
     and '<span class="eyebrow"><i></i> PLANO</span>' not in HTML
     and '<span class="eyebrow"><i></i> INTEGRAÇÕES</span>' not in HTML
     and '<span class="eyebrow"><i></i> SEGURANÇA</span>' not in HTML
-    and '<h1 id="plans-title">Plano</h1>' in HTML
-    and '<h1 id="usage-title">Uso e limites</h1>' in HTML,
+    and '<h1 id="plans-title">Plano e cobrança</h1>' in HTML
+    and '<h1 id="usage-title">Uso</h1>' in HTML
+    and '<h1 id="security-title">Configurações</h1>' in HTML,
     "WORKSPACE_SINGLE_TITLE_HIERARCHY",
+)
+sidebar_block = HTML.split('<template id="sidebarTemplate">',1)[1].split('</template>',1)[0]
+need(
+    sidebar_block.count('data-app-go=') == 4
+    and 'data-app-go="devices"' in sidebar_block
+    and 'data-app-go="usage"' in sidebar_block
+    and 'data-app-go="plans"' in sidebar_block
+    and 'data-app-go="security"' in sidebar_block
+    and 'data-app-go="dashboard"' not in sidebar_block
+    and 'data-app-go="connections"' not in sidebar_block
+    and '<span>Computadores</span>' in sidebar_block
+    and '<span>Uso</span>' in sidebar_block
+    and '<span>Plano e cobrança</span>' in sidebar_block
+    and '<span>Configurações</span>' in sidebar_block,
+    "CUSTOMER_NAV_SIMPLE_FOUR_ITEMS",
+)
+need(
+    'encodeURIComponent("/#devices")' in JS
+    and 'route("devices");' in JS
+    and 'id="devices-title"' in HTML
+    and 'id="activityTotal"' in HTML,
+    "CUSTOMER_DEFAULT_DEVICES_ROUTE",
+)
+need(
+    'device-where-panel' in HTML
+    and '<b>ChatGPT</b>' in HTML
+    and '<b>Claude</b>' in HTML
+    and '<b>Qualquer cliente MCP</b>' in HTML
+    and 'data-copy-simple-mcp' in HTML,
+    "DEVICE_WHERE_TO_USE_SURFACE",
 )
 need(
     "UX polish: single page title, larger useful content, restrained glow" in CSS
@@ -284,15 +315,13 @@ need(
     "CONNECTIONS_HONEST_READINESS",
 )
 need(
-    'data-mobile-more' in HTML
-    and 'data-mobile-more-menu' in HTML
-    and "function toggleMobileMore(button)" in JS
-    and "closeMobileMoreMenus()" in JS
-    and ".workspace-mode .sidebar{position:fixed" in CSS
-    and ".side-nav>.mobile-more-toggle,.mobile-more-menu{display:none!important}" in CSS
-    and ".workspace-mode .side-nav>[data-app-go]:not(.desktop-secondary),.workspace-mode .side-nav>.mobile-more-toggle{display:flex!important" in CSS
-    and ".workspace-mode .side-nav>.desktop-secondary{display:none!important}" in CSS
-    and ".mobile-more-menu:not([hidden]){display:flex}" in CSS,
+    ".workspace-mode .sidebar{position:fixed" in CSS
+    and 'data-app-go="devices"' in sidebar_block
+    and 'data-app-go="usage"' in sidebar_block
+    and 'data-app-go="plans"' in sidebar_block
+    and 'data-app-go="security"' in sidebar_block
+    and 'data-mobile-more' not in sidebar_block
+    and 'desktop-secondary' not in sidebar_block,
     "MOBILE_NAVIGATION",
 )
 need(
@@ -313,9 +342,8 @@ need(
     and '<a class="brand" href="https://www.haralabs.com.br/"' in HTML
     and '<div class="workspace">' not in HTML
     and "sidebar-bottom" not in HTML
-    and "side-nav-link" in HTML
-    and 'href="https://www.haralabs.com.br/support/"' in HTML
-    and HTML.count('class="nav-icon"') >= 7
+    and 'class="side-nav side-nav-simple"' in HTML
+    and HTML.count('class="nav-icon"') >= 4
     and "<span>▦</span>" not in HTML
     and "<span>▣</span>" not in HTML,
     "APPROVED_NAV_LAYOUT",
@@ -333,7 +361,7 @@ need(
     and 'html[data-theme="dark"] .theme-icon-sun{display:block}' in CSS,
     "APPROVED_HEADER_BEHAVIOR",
 )
-need('OWNER: "Proprietário"' in JS and 'data-user-role>Owner<' not in HTML and 'usage: "Uso & limite · H.A.R.A. Commander"' in JS, "PORTUGUESE_ROLE_AND_TITLE_UX")
+need('OWNER: "Proprietário"' in JS and 'data-user-role>Owner<' not in HTML and 'usage: "Uso · H.A.R.A. Commander"' in JS, "PORTUGUESE_ROLE_AND_TITLE_UX")
 need("https://www.haralabs.com.br/legal/termos/" in HTML and "https://www.haralabs.com.br/legal/privacidade/" in HTML and 'class="auth-legal"' in HTML and 'class="product-legal-links"' in HTML, "LEGAL_LINKS_READY")
 need("#dashboardInvokes" not in CSS and ".activity-list" not in CSS, "DEAD_ACTIVITY_CSS_ABSENT")
 need('class="user-chip"' not in HTML, "DUPLICATE_INTERNAL_SESSION_IDENTITY_ABSENT")
