@@ -5,6 +5,7 @@ import base64
 import hashlib
 import json
 import os
+import re
 import secrets
 import sqlite3
 import subprocess
@@ -60,10 +61,26 @@ def download_agent(target: Path) -> None:
         item for item in manifest.get("files", [])
         if item.get("path") == "agent/linux.py"
     )
-    sha = hashlib.sha256(target.read_bytes()).hexdigest()
-    if manifest.get("agent_version") != "0.3.36" or sha != entry.get("sha256"):
+    raw = target.read_bytes()
+    sha = hashlib.sha256(raw).hexdigest()
+    version = str(manifest.get("agent_version") or "")
+    match = re.search(
+        rb'^AGENT_VERSION = "([0-9]+\.[0-9]+\.[0-9]+)"$',
+        raw,
+        re.M,
+    )
+    parts = tuple(int(x) for x in version.split(".")) if version.count(".") == 2 else ()
+    if (
+        len(parts) != 3
+        or parts < (0, 3, 36)
+        or not match
+        or match.group(1).decode() != version
+        or sha != entry.get("sha256")
+        or len(raw) != int(entry.get("bytes") or -1)
+    ):
         fail("SERVED_AGENT_INTEGRITY_INVALID")
     target.chmod(0o700)
+    return version
 
 
 def main() -> int:
@@ -152,7 +169,7 @@ DELETE FROM tenants WHERE tenant_id={q(tenant)};
             device_token = ""
 
             served_agent = root / "agent.py"
-            download_agent(served_agent)
+            served_agent_version = download_agent(served_agent)
             env = os.environ.copy()
             env["XDG_CONFIG_HOME"] = str(xdg_config)
             env["XDG_DATA_HOME"] = str(xdg_data)
@@ -242,7 +259,7 @@ DELETE FROM tenants WHERE tenant_id={q(tenant)};
                 ),
                 timeout=10,
             )
-            if not device or device[0]["agent_version"] != "0.3.36":
+            if not device or device[0]["agent_version"] != served_agent_version:
                 fail("AGENT_HEARTBEAT_INVALID")
 
             requests = []

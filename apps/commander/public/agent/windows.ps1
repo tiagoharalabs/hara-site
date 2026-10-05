@@ -989,6 +989,12 @@ function Invoke-AgentSelfTest {
       if ([string]$activity.source -ne "LOCAL_SQLITE") { throw "SELF_TEST_LOCAL_DB_SOURCE_FAILED" }
       if ([int64]$activity.summary.total_calls -lt 1) { throw "SELF_TEST_LOCAL_DB_ACTIVITY_FAILED" }
       if (-not (Test-Path -LiteralPath $script:OperationsDb -PathType Leaf)) { throw "SELF_TEST_LOCAL_DB_MISSING" }
+
+      $snapshot=Get-LocalActivityHeartbeatSnapshot
+      if ([string]$snapshot.schema -ne "hara.commander-local-activity-snapshots.v1") { throw "SELF_TEST_LOCAL_SNAPSHOT_SCHEMA_FAILED" }
+      if ($snapshot.customer_content_synced -ne $false) { throw "SELF_TEST_LOCAL_SNAPSHOT_PRIVACY_FAILED" }
+      $snapshotJson=$snapshot | ConvertTo-Json -Depth 12 -Compress
+      if ($snapshotJson -match '"payload_json"|"result_json"|"action_summary"|"stdout"|"stderr"') { throw "SELF_TEST_LOCAL_SNAPSHOT_CONTENT_LEAK" }
     } finally {
       $script:SessionPath=$previousSessionPath
       $script:ConsoleEvents=$previousConsoleEvents
@@ -999,6 +1005,7 @@ function Invoke-AgentSelfTest {
     Write-Host "COMMANDER_WINDOWS_STARTER_READ=PASS"
     Write-Host "COMMANDER_WINDOWS_LOCAL_ACTIVITY_SQLITE=PASS"
     Write-Host "COMMANDER_WINDOWS_LOCAL_ACTIVITY_RAW_CONTENT=ABSENT"
+    Write-Host "COMMANDER_WINDOWS_LOCAL_ACTIVITY_SNAPSHOT_PRIVACY=PASS"
     Write-Host "COMMANDER_WINDOWS_FIVE_TOOL_BRIDGE=PASS"
     Write-Host "COMMANDER_WINDOWS_ARBITRARY_FUNCTION=DENIED"
     Write-Host "COMMANDER_WINDOWS_AGENT_SELF_TEST=PASS"

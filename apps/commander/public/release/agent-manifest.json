@@ -8,9 +8,9 @@
       "sha256": "1ab9f835d1aaf18c8aa90da217608a3531d28a56b6d07cc3f7027041735a361a"
     },
     {
-      "bytes": 51631,
+      "bytes": 52214,
       "path": "agent/windows.ps1",
-      "sha256": "cf4deaf41689b0c6e6c4ee31945f9da59be25553871a64c1379d48ffe011f233"
+      "sha256": "3170f62794f9bd9566d7506c1f67e9dab14ce3afbb9c821341637973dbe38304"
     },
     {
       "bytes": 25965,
