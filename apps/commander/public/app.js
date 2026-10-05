@@ -402,7 +402,12 @@
     setText("activityTotal",number(summary.total_calls || 0));
     const scopeLabel=payload?.scope === "TENANT" ? "Workspace inteiro" : "Suas execuções";
     const windowLabel=String(payload?.window?.label || "");
-    setText("activityScope",scopeLabel + (windowLabel ? " · " + windowLabel : ""));
+    const localCoverage=Number(payload?.snapshot_coverage_percent);
+    const sourceLabel=String(payload?.source || "").startsWith("LOCAL_DEVICE")
+      && Number.isFinite(localCoverage)
+      ? " · " + String(localCoverage).replace(".", ",") + "% local"
+      : "";
+    setText("activityScope",scopeLabel + (windowLabel ? " · " + windowLabel : "") + sourceLabel);
     setText("activitySuccessRate",summary.success_rate_percent == null ? "—" : String(summary.success_rate_percent).replace(".",",") + "%");
     setText("activityTerminalSummary",number(summary.completed || 0) + " PASS · " + number(summary.failed || 0) + " falhas");
     setText("activityAvgLatency",activityDuration(summary.avg_total_ms));
@@ -425,8 +430,16 @@
       const empty=document.createElement("div");
       empty.className="empty-state";
       const strong=document.createElement("strong");
-      strong.textContent="Nenhuma transação ainda";
-      empty.append(strong,document.createTextNode("As execuções governadas aparecerão aqui sem expor payloads ou resultados."));
+      const localDetail=payload?.detail_location === "LOCAL_DEVICE";
+      strong.textContent=localDetail ? "Histórico detalhado fica no computador" : "Nenhuma transação ainda";
+      empty.append(
+        strong,
+        document.createTextNode(
+          localDetail
+            ? "Os cards acima vieram do banco local do Agent. Comandos e detalhes permanecem na máquina do usuário."
+            : "As execuções governadas aparecerão aqui sem expor payloads ou resultados.",
+        ),
+      );
       ledger.append(empty);
       return;
     }

@@ -10,6 +10,7 @@ import pty
 import re
 import select
 import signal
+import sqlite3
 import sys
 import uuid
 import time
@@ -18,13 +19,14 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
-AGENT_VERSION = "0.3.32"
+AGENT_VERSION = "0.3.33"
 CONFIG_FILE = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home()/".config"))) / "hara-commander/device.env"
 DATA_DIR = Path(os.environ.get("XDG_DATA_HOME", str(Path.home()/".local/share"))) / "hara-commander"
 RECEIPT_DIR = DATA_DIR / "receipts"
 STATUS_FILE = DATA_DIR / "runtime-status.json"
 SESSION_FILE = DATA_DIR / "operator-session.json"
 CONSOLE_EVENTS_FILE = DATA_DIR / "console-events.jsonl"
+OPERATIONS_DB_FILE = DATA_DIR / "operations.sqlite3"
 APPROVAL_DIR = DATA_DIR / "approvals"
 PREIMAGE_DIR = DATA_DIR / "preimages"
 SESSION_MAX_SECONDS = 12 * 60 * 60
@@ -185,7 +187,228 @@ def read_operator_session():
 def operator_session_active():
     return read_operator_session() is not None
 
-def append_console_event(event, call=None, *, state=None, error_code=None, receipt_sha256=None, approval_id=None, action_summary=None):
+def _ops_connect():
+    DATA_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
+    conn=sqlite3.connect(str(OPERATIONS_DB_FILE),timeout=2.0)
+    conn.row_factory=sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA synchronous=NORMAL")
+    conn.executescript("""
+      CREATE TABLE IF NOT EXISTS activity_events (
+        event_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        at_utc TEXT NOT NULL,
+        event TEXT NOT NULL,
+        state TEXT,
+        tool_id TEXT,
+        function_id TEXT,
+        request_id TEXT,
+        error_code TEXT,
+        receipt_sha256 TEXT,
+        approval_id TEXT,
+        action_summary TEXT,
+        duration_ms INTEGER,
+        transport_mode TEXT,
+        local_only INTEGER NOT NULL DEFAULT 1
+      );
+      CREATE INDEX IF NOT EXISTS idx_activity_events_at
+        ON activity_events(at_utc DESC);
+      CREATE INDEX IF NOT EXISTS idx_activity_events_terminal
+        ON activity_events(event, at_utc DESC);
+      CREATE INDEX IF NOT EXISTS idx_activity_events_tool
+        ON activity_events(tool_id, at_utc DESC);
+      CREATE TABLE IF NOT EXISTS local_store_meta (
+        meta_key TEXT PRIMARY KEY,
+        meta_value TEXT NOT NULL
+      );
+    """)
+    try:
+        os.chmod(OPERATIONS_DB_FILE,0o600)
+        for suffix in ("-wal","-shm"):
+            sidecar=Path(str(OPERATIONS_DB_FILE)+suffix)
+            if sidecar.exists(): os.chmod(sidecar,0o600)
+    except Exception:
+        pass
+    _ops_migrate_legacy_jsonl(conn)
+    return conn
+
+def _ops_migrate_legacy_jsonl(conn):
+    marker=conn.execute(
+        "SELECT meta_value FROM local_store_meta WHERE meta_key='console_events_jsonl_v1'"
+    ).fetchone()
+    if marker:
+        return
+    if CONSOLE_EVENTS_FILE.is_file():
+        for raw in CONSOLE_EVENTS_FILE.read_text(encoding="utf-8",errors="replace").splitlines():
+            try:
+                event=json.loads(raw)
+            except Exception:
+                continue
+            if event.get("schema")!="hara.commander-console-event.v1":
+                continue
+            conn.execute(
+                """INSERT INTO activity_events
+                   (at_utc,event,state,tool_id,function_id,request_id,error_code,
+                    receipt_sha256,approval_id,action_summary,duration_ms,transport_mode,local_only)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,1)""",
+                (
+                    str(event.get("at_utc") or utcnow()),
+                    str(event.get("event") or "EVENT"),
+                    event.get("state"),
+                    event.get("tool_id") or event.get("tool"),
+                    event.get("function_id"),
+                    event.get("request_id"),
+                    event.get("error_code"),
+                    event.get("receipt_sha256"),
+                    event.get("approval_id"),
+                    event.get("action_summary"),
+                    event.get("duration_ms"),
+                    event.get("transport_mode") or "LEGACY_JSONL",
+                ),
+            )
+    conn.execute(
+        "INSERT OR REPLACE INTO local_store_meta(meta_key,meta_value) VALUES('console_events_jsonl_v1',?)",
+        (utcnow(),),
+    )
+    conn.commit()
+
+def _ops_insert_event(payload):
+    try:
+        with _ops_connect() as conn:
+            conn.execute(
+                """INSERT INTO activity_events
+                   (at_utc,event,state,tool_id,function_id,request_id,error_code,
+                    receipt_sha256,approval_id,action_summary,duration_ms,transport_mode,local_only)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,1)""",
+                (
+                    payload.get("at_utc"),payload.get("event"),payload.get("state"),
+                    payload.get("tool_id"),payload.get("function_id"),payload.get("request_id"),
+                    payload.get("error_code"),payload.get("receipt_sha256"),payload.get("approval_id"),
+                    payload.get("action_summary"),payload.get("duration_ms"),payload.get("transport_mode"),
+                ),
+            )
+    except Exception:
+        # JSONL remains the compatibility/fail-safe sink.
+        pass
+
+def _activity_window(value):
+    raw=str(value or "7d").strip().lower()
+    hours={"24h":24,"7d":7*24,"30d":30*24}.get(raw,7*24)
+    return raw if raw in {"24h","7d","30d"} else "7d", hours
+
+def local_activity_snapshot(window="7d",limit=50,include_events=True):
+    key,hours=_activity_window(window)
+    since=datetime.fromtimestamp(time.time()-(hours*3600),timezone.utc).isoformat()
+    limit=max(1,min(100,int(limit)))
+    try:
+        with _ops_connect() as conn:
+            row=conn.execute(
+                """SELECT
+                     COUNT(*) AS total_calls,
+                     SUM(CASE WHEN state='COMPLETED' THEN 1 ELSE 0 END) AS completed,
+                     SUM(CASE WHEN state='FAILED' THEN 1 ELSE 0 END) AS failed,
+                     ROUND(AVG(CASE WHEN duration_ms IS NOT NULL THEN duration_ms END),1) AS avg_total_ms,
+                     SUM(CASE WHEN state='COMPLETED' AND duration_ms < 3000 THEN 1 ELSE 0 END) AS under_3s
+                   FROM activity_events
+                  WHERE at_utc >= ?
+                    AND event IN ('PASS','DENIED')""",
+                (since,),
+            ).fetchone()
+            tools=conn.execute(
+                """SELECT COALESCE(tool_id,'unknown') AS tool_id,COUNT(*) AS calls
+                     FROM activity_events
+                    WHERE at_utc >= ? AND event IN ('PASS','DENIED')
+                    GROUP BY COALESCE(tool_id,'unknown')
+                    ORDER BY calls DESC,tool_id
+                    LIMIT 6""",
+                (since,),
+            ).fetchall()
+            errors=conn.execute(
+                """SELECT COALESCE(error_code,'UNKNOWN') AS error_code,COUNT(*) AS calls
+                     FROM activity_events
+                    WHERE at_utc >= ? AND event='DENIED'
+                    GROUP BY COALESCE(error_code,'UNKNOWN')
+                    ORDER BY calls DESC,error_code
+                    LIMIT 6""",
+                (since,),
+            ).fetchall()
+            transports=conn.execute(
+                """SELECT DISTINCT COALESCE(transport_mode,'LOCAL_AGENT') AS transport_mode
+                     FROM activity_events
+                    WHERE at_utc >= ? AND event IN ('PASS','DENIED')
+                    ORDER BY transport_mode""",
+                (since,),
+            ).fetchall()
+            events=[]
+            if include_events:
+                events=conn.execute(
+                    """SELECT at_utc,event,state,tool_id,function_id,error_code,receipt_sha256,
+                              action_summary,duration_ms,transport_mode
+                         FROM activity_events
+                        WHERE at_utc >= ? AND event IN ('PASS','DENIED')
+                        ORDER BY event_id DESC
+                        LIMIT ?""",
+                    (since,limit),
+                ).fetchall()
+    except Exception:
+        row=None; tools=[]; errors=[]; transports=[]; events=[]
+    total=int((row["total_calls"] if row else 0) or 0)
+    completed=int((row["completed"] if row else 0) or 0)
+    failed=int((row["failed"] if row else 0) or 0)
+    terminal=completed+failed
+    under3=int((row["under_3s"] if row else 0) or 0)
+    return {
+        "schema":"hara.commander-local-activity.v2",
+        "source":"LOCAL_SQLITE",
+        "window":{"key":key,"label":{"24h":"24 horas","7d":"7 dias","30d":"30 dias"}[key],"since_at_utc":since},
+        "privacy":{
+            "local_authoritative":True,
+            "payload_values_exposed":False,
+            "result_values_exposed":False,
+            "cloud_history_persisted":False,
+            "action_summary_local_only":True,
+        },
+        "summary":{
+            "total_calls":total,
+            "completed":completed,
+            "failed":failed,
+            "pending":0,
+            "executing":0,
+            "expired":0,
+            "cancelled":0,
+            "success_rate_percent":round((completed/terminal)*100,1) if terminal else None,
+            "under_3s_percent":round((under3/completed)*100,1) if completed else None,
+            "avg_queue_ms":0.0 if total else None,
+            "avg_execution_ms":float(row["avg_total_ms"]) if row and row["avg_total_ms"] is not None else None,
+            "avg_total_ms":float(row["avg_total_ms"]) if row and row["avg_total_ms"] is not None else None,
+            "device_count":1 if total else 0,
+            "transport_modes":[str(x["transport_mode"]) for x in transports],
+        },
+        "diagnostics":{
+            "top_tools":[{"tool_id":str(x["tool_id"]),"calls":int(x["calls"])} for x in tools],
+            "top_errors":[{"error_code":str(x["error_code"]),"calls":int(x["calls"])} for x in errors],
+        },
+        "events":[{
+            "at_utc":x["at_utc"],"event":x["event"],"state":x["state"],
+            "tool_id":x["tool_id"],"function_id":x["function_id"],
+            "error_code":x["error_code"],"receipt_sha256":x["receipt_sha256"],
+            "action_summary":x["action_summary"],"duration_ms":x["duration_ms"],
+            "transport_mode":x["transport_mode"],"local_only":True,
+        } for x in events],
+    }
+
+def local_activity_heartbeat_snapshot():
+    return {
+        "schema":"hara.commander-local-activity-snapshots.v1",
+        "generated_at_utc":utcnow(),
+        "windows":{
+            key:local_activity_snapshot(key,limit=1,include_events=False)
+            for key in ("24h","7d","30d")
+        },
+        "detail_location":"LOCAL_DEVICE",
+        "customer_content_synced":False,
+    }
+
+def append_console_event(event, call=None, *, state=None, error_code=None, receipt_sha256=None, approval_id=None, action_summary=None, duration_ms=None):
     DATA_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
     payload = {
         "schema":"hara.commander-console-event.v1",
@@ -199,6 +422,9 @@ def append_console_event(event, call=None, *, state=None, error_code=None, recei
         "receipt_sha256":receipt_sha256,
         "approval_id":approval_id,
         "action_summary":action_summary,
+        "duration_ms":None if duration_ms is None else max(0,int(duration_ms)),
+        "transport_mode":str((call or {}).get("_transport") or "OUTBOUND_RELAY") if isinstance(call,dict) else "LOCAL_AGENT",
+        "local_only":True,
         "payload_values_exposed":False,
         "secret_material_exposed":False,
     }
@@ -207,6 +433,9 @@ def append_console_event(event, call=None, *, state=None, error_code=None, recei
         inner = call.get("payload") or {}
         payload["function_id"] = str(inner.get("function_id") or DIRECT_TOOL_FUNCTIONS.get(payload["tool_id"]) or "") or None
         payload["request_id"] = str(call.get("request_id") or "") or None
+        if not payload.get("action_summary") and _is_mutation_tool(payload.get("tool_id")):
+            payload["action_summary"] = _safe_action_summary(call)
+    _ops_insert_event(payload)
     with CONSOLE_EVENTS_FILE.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n")
     os.chmod(CONSOLE_EVENTS_FILE, 0o600)
@@ -1389,6 +1618,8 @@ def complete(config, call, state, result, error_code=None):
     post_json(config["HARA_COMMANDER_URL"]+"/api/device/calls/complete",config["HARA_DEVICE_TOKEN"],body)
 
 def execute_call(config,call):
+    started=time.monotonic()
+    call["_transport"]="OUTBOUND_RELAY"
     if effective_approval_mode(config)!="PERSISTENT_TRUSTED" and not operator_session_active():
         code="LOCAL_OPERATOR_SESSION_REQUIRED"
         append_console_event("DENIED",call,state="DENIED",error_code=code)
@@ -1408,10 +1639,11 @@ def execute_call(config,call):
         append_console_event(
             "PASS",call,state="COMPLETED",
             receipt_sha256=result.get("bridge_receipt_sha256") if isinstance(result,dict) else None,
+            duration_ms=round((time.monotonic()-started)*1000),
         )
     except Exception as exc:
         code=safe_error_code(exc)
-        append_console_event("DENIED",call,state="FAILED",error_code=code)
+        append_console_event("DENIED",call,state="FAILED",error_code=code,duration_ms=round((time.monotonic()-started)*1000))
         complete(config,call,"FAILED",{
             "state":"DENIED","operational_authority":"LOCAL_OPERATOR_SESSION",
             "runtime_authority_from_chatgpt":False,"mutation_performed":False,
@@ -1497,11 +1729,12 @@ def self_test():
             raise AssertionError("ARBITRARY_FUNCTION_NOT_DENIED")
         except ValueError as exc:
             assert str(exc)=="UNKNOWN_FUNCTION_ID"
-    global SESSION_FILE, CONSOLE_EVENTS_FILE, APPROVAL_DIR, CONFIG_FILE
+    global SESSION_FILE, CONSOLE_EVENTS_FILE, OPERATIONS_DB_FILE, APPROVAL_DIR, CONFIG_FILE
     old_config_file=CONFIG_FILE
     with tempfile.TemporaryDirectory() as session_dir:
         SESSION_FILE=Path(session_dir)/"operator-session.json"
         CONSOLE_EVENTS_FILE=Path(session_dir)/"console-events.jsonl"
+        OPERATIONS_DB_FILE=Path(session_dir)/"operations.sqlite3"
         APPROVAL_DIR=Path(session_dir)/"approvals"
         CONFIG_FILE=Path(session_dir)/"device.env"
         CONFIG_FILE.write_text("HARA_COMMANDER_URL=https://commander.invalid\nHARA_DEVICE_ID=selftest\nHARA_DEVICE_TOKEN=selftest-token\nHARA_DEVICE_ARCH=x86_64\nHARA_COMMANDER_APPROVAL_MODE=ASK_EVERY_ACTION\n",encoding="utf-8")
@@ -1594,7 +1827,7 @@ def local_simple_mcp_tools():
         ("list_devices","List Devices","List this local Commander device.",_mcp_schema()),
         ("get_config","Get Config","Get local Commander configuration and capabilities.",_mcp_schema({"computer":computer})),
         ("get_usage_stats","Get Usage Stats","Describe local MCP transaction mode. Local calls do not use the cloud relay.",_mcp_schema()),
-        ("get_activity","Get Activity","Get privacy-safe local Commander event metadata.",_mcp_schema({"limit":{"type":"integer","minimum":1,"maximum":100}})),
+        ("get_activity","Get Activity","Get privacy-safe local Commander event metadata.",_mcp_schema({"limit":{"type":"integer","minimum":1,"maximum":100},"window":{"type":"string","enum":["24h","7d","30d"]}})),
         ("ping","Ping","Check the local Commander Agent.",_mcp_schema({"computer":computer})),
         ("get_device_info","Get Device Info","Get local device and Agent information.",_mcp_schema({"computer":computer})),
         ("read_file","Read File","Read a text file.",_mcp_schema({"computer":computer,"path":path,"offset":{"type":"integer","minimum":0},"length":{"type":"integer","minimum":1,"maximum":5000}},["path"])),
@@ -1640,26 +1873,21 @@ def _local_simple_device_guard(config,args):
     if requested and requested not in {str(config.get("HARA_DEVICE_ID") or ""),str(platform.node() or "")}:
         raise ValueError("LOCAL_MCP_DEVICE_TARGET_MISMATCH")
 
-def _local_recent_events(limit=50,tool=None):
-    limit=max(1,min(100,int(limit)))
-    if not CONSOLE_EVENTS_FILE.is_file():
-        return {"events":[],"metadata_only":True}
-    lines=CONSOLE_EVENTS_FILE.read_text(encoding="utf-8",errors="replace").splitlines()[-1000:]
-    events=[]
-    for line in reversed(lines):
-        try: event=json.loads(line)
-        except Exception: continue
-        if tool and str(event.get("tool") or "")!=str(tool): continue
-        events.append({
-            "at_utc":event.get("at_utc"),
-            "event":event.get("event"),
-            "tool":event.get("tool"),
-            "state":event.get("state"),
-            "receipt_sha256":event.get("receipt_sha256"),
-            "error_code":event.get("error_code"),
-        })
-        if len(events)>=limit: break
-    return {"events":events,"metadata_only":True}
+def _local_recent_events(limit=50,tool=None,window="7d"):
+    snap=local_activity_snapshot(window,limit=limit,include_events=True)
+    events=snap.get("events") or []
+    if tool:
+        events=[x for x in events if str(x.get("tool_id") or "")==str(tool)]
+    return {
+        "events":events[:max(1,min(100,int(limit)))],
+        "summary":snap.get("summary") or {},
+        "diagnostics":snap.get("diagnostics") or {},
+        "window":snap.get("window") or {},
+        "source":"LOCAL_SQLITE",
+        "metadata_only":True,
+        "detail_location":"LOCAL_DEVICE",
+        "cloud_history_persisted":False,
+    }
 
 def _local_simple_map(config,name,args):
     args=dict(args or {})
@@ -1709,17 +1937,19 @@ def local_simple_mcp_call(config,name,args):
     if name=="get_usage_stats":
         return {"mode":"LOCAL_MCP","relay_calls_per_local_tool_call":0,"cloud_quota_consumed_by_local_tool_call":False,"metadata_only":True}
     if name=="get_activity":
-        return _local_recent_events((args or {}).get("limit",50))
+        return _local_recent_events((args or {}).get("limit",50),window=(args or {}).get("window","7d"))
     if name=="get_recent_tool_calls":
-        return _local_recent_events((args or {}).get("limit",50),(args or {}).get("tool"))
+        return _local_recent_events((args or {}).get("limit",50),(args or {}).get("tool"),(args or {}).get("window","7d"))
     if effective_approval_mode(config)!="PERSISTENT_TRUSTED" and not operator_session_active():
         raise ValueError("LOCAL_OPERATOR_SESSION_REQUIRED")
     tool_id,payload=_local_simple_map(config,name,args or {})
+    started=time.monotonic()
     call={
         "call_id":"HARA-LOCAL-MCP-"+uuid.uuid4().hex,
         "request_id":"HARA-LOCAL-MCP-"+uuid.uuid4().hex,
         "tool_id":tool_id,
         "payload":payload,
+        "_transport":"LOCAL_MCP",
     }
     append_console_event("RECEIVED",call,state="PENDING")
     if _is_mutation_tool(tool_id):
@@ -1728,9 +1958,9 @@ def local_simple_mcp_call(config,name,args):
     try:
         result=execute_tool(config,call)
     except Exception as exc:
-        append_console_event("DENIED",call,state="FAILED",error_code=safe_error_code(exc))
+        append_console_event("DENIED",call,state="FAILED",error_code=safe_error_code(exc),duration_ms=round((time.monotonic()-started)*1000))
         raise
-    append_console_event("PASS",call,state="COMPLETED",receipt_sha256=result.get("bridge_receipt_sha256"))
+    append_console_event("PASS",call,state="COMPLETED",receipt_sha256=result.get("bridge_receipt_sha256"),duration_ms=round((time.monotonic()-started)*1000))
     return result
 
 def _stdio_mcp_write(payload):
@@ -1889,6 +2119,7 @@ def main():
                 post_json(config["HARA_COMMANDER_URL"]+"/api/device/heartbeat",config["HARA_DEVICE_TOKEN"],{
                     "device_id":config["HARA_DEVICE_ID"],"architecture":config["HARA_DEVICE_ARCH"],"agent_version":AGENT_VERSION,
                     "approval_mode":effective_approval_mode(config),
+                    "activity_snapshots":local_activity_heartbeat_snapshot(),
                 })
                 last_heartbeat=now
                 last_error_code=None

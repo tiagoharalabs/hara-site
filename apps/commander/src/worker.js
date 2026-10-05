@@ -1662,6 +1662,70 @@ async function resolveDeviceCredential(env, request) {
   return device;
 }
 
+function activitySnapshotNumber(value, max = 1_000_000_000) {
+  const num = Number(value);
+  if (!Number.isFinite(num) || num < 0) return 0;
+  return Math.min(max, Math.round(num * 10) / 10);
+}
+
+function cleanAgentActivityWindow(value, key) {
+  if (!value || typeof value !== "object") return null;
+  const summary = value.summary || {};
+  const diagnostics = value.diagnostics || {};
+  const topTools = Array.isArray(diagnostics.top_tools) ? diagnostics.top_tools.slice(0, 6) : [];
+  const topErrors = Array.isArray(diagnostics.top_errors) ? diagnostics.top_errors.slice(0, 6) : [];
+  const transports = Array.isArray(summary.transport_modes)
+    ? summary.transport_modes.slice(0, 8).map((item) => cleanAgentValue(item, 80)).filter(Boolean)
+    : [];
+  return {
+    schema: "hara.commander-device-activity-window.v1",
+    window_key: key,
+    summary: {
+      total_calls: activitySnapshotNumber(summary.total_calls),
+      completed: activitySnapshotNumber(summary.completed),
+      failed: activitySnapshotNumber(summary.failed),
+      pending: activitySnapshotNumber(summary.pending),
+      executing: activitySnapshotNumber(summary.executing),
+      expired: activitySnapshotNumber(summary.expired),
+      cancelled: activitySnapshotNumber(summary.cancelled),
+      success_rate_percent: summary.success_rate_percent == null ? null : activitySnapshotNumber(summary.success_rate_percent, 100),
+      under_3s_percent: summary.under_3s_percent == null ? null : activitySnapshotNumber(summary.under_3s_percent, 100),
+      avg_queue_ms: summary.avg_queue_ms == null ? null : activitySnapshotNumber(summary.avg_queue_ms),
+      avg_execution_ms: summary.avg_execution_ms == null ? null : activitySnapshotNumber(summary.avg_execution_ms),
+      avg_total_ms: summary.avg_total_ms == null ? null : activitySnapshotNumber(summary.avg_total_ms),
+      transport_modes: [...new Set(transports)],
+    },
+    diagnostics: {
+      top_tools: topTools.map((row) => ({
+        tool_id: cleanAgentValue(row?.tool_id, 120) || "unknown",
+        calls: activitySnapshotNumber(row?.calls),
+      })),
+      top_errors: topErrors.map((row) => ({
+        error_code: cleanAgentValue(row?.error_code, 120) || "UNKNOWN",
+        calls: activitySnapshotNumber(row?.calls),
+      })),
+    },
+  };
+}
+
+function cleanAgentActivitySnapshots(value) {
+  if (!value || typeof value !== "object") return null;
+  if (value.schema !== "hara.commander-local-activity-snapshots.v1") return null;
+  const windows = {};
+  for (const key of ["24h", "7d", "30d"]) {
+    const cleaned = cleanAgentActivityWindow(value.windows?.[key], key);
+    if (cleaned) windows[key] = cleaned;
+  }
+  if (!Object.keys(windows).length) return null;
+  const raw = JSON.stringify({
+    schema: "hara.commander-device-activity-snapshots.v1",
+    windows,
+    detail_location: "LOCAL_DEVICE",
+    customer_content_synced: false,
+  });
+  return raw.length <= 32 * 1024 ? raw : null;
+}
+
 async function heartbeatDevice(env, request, body) {
   const device = await resolveDeviceCredential(env, request);
   const requestedId = body.device_id ? cleanId(body.device_id, 180) : device.device_id;
@@ -1670,6 +1734,7 @@ async function heartbeatDevice(env, request, body) {
   const agentVersion = cleanAgentValue(body.agent_version, 80) || device.agent_version;
   const architecture = cleanAgentValue(body.architecture, 80) || device.architecture;
   const approvalMode = normalizeApprovalMode(body.approval_mode, normalizeApprovalMode(device.approval_mode, "ASK_EVERY_ACTION"));
+  const activitySummaryJson = cleanAgentActivitySnapshots(body.activity_snapshots);
   const seenAt = nowIso();
 
   const heartbeat = await env.PRODUCT_DB.prepare(
@@ -1678,9 +1743,16 @@ async function heartbeatDevice(env, request, body) {
             agent_version = ?,
             architecture = ?,
             approval_mode = ?,
-            tunnel_mode = 'OUTBOUND_RELAY'
+            tunnel_mode = 'OUTBOUND_RELAY',
+            activity_summary_json = CASE WHEN ? IS NULL THEN activity_summary_json ELSE ? END,
+            activity_summary_at_utc = CASE WHEN ? IS NULL THEN activity_summary_at_utc ELSE ? END
       WHERE device_id = ? AND state = 'ACTIVE' AND revoked_at_utc IS NULL`
-  ).bind(seenAt, agentVersion, architecture, approvalMode, device.device_id).run();
+  ).bind(
+    seenAt, agentVersion, architecture, approvalMode,
+    activitySummaryJson, activitySummaryJson,
+    activitySummaryJson, seenAt,
+    device.device_id
+  ).run();
   if (!heartbeat.meta?.changes) throw new Error("DEVICE_AUTH_INVALID");
 
   return {
@@ -1690,6 +1762,7 @@ async function heartbeatDevice(env, request, body) {
     state: "ACTIVE",
     server_time_utc: seenAt,
     heartbeat_after_seconds: 30,
+    local_activity_snapshot_accepted: Boolean(activitySummaryJson),
   };
 }
 
@@ -2627,12 +2700,229 @@ async function requestPortalBetaAccess(env, session) {
   return await portalBetaAccessStatus(env,session);
 }
 
+async function portalActivityFromLocalSnapshots(env, session, window) {
+  if (!["OWNER","ADMIN"].includes(String(session.role || "").toUpperCase())) return null;
+  const result=await env.PRODUCT_DB.prepare(
+    `SELECT device_id,device_name,tunnel_mode,agent_version,
+            activity_summary_json,activity_summary_at_utc
+       FROM commander_devices
+      WHERE tenant_id = ?
+        AND state = 'ACTIVE'
+        AND revoked_at_utc IS NULL
+      ORDER BY device_name`
+  ).bind(session.tenant_id).all();
+
+  const deviceRows=result.results || [];
+  const snapshots=[];
+  for (const row of deviceRows) {
+    try {
+      const parsed=JSON.parse(String(row.activity_summary_json || ""));
+      const selected=parsed?.windows?.[window.key];
+      if (!selected?.summary) continue;
+      snapshots.push({row, selected});
+    } catch (_error) {}
+  }
+  if (!snapshots.length) return null;
+
+  const totals={
+    total_calls:0,completed:0,failed:0,pending:0,executing:0,expired:0,cancelled:0,
+    under3_weighted:0,total_ms_weighted:0,queue_ms_weighted:0,exec_ms_weighted:0,
+    duration_weight:0,
+  };
+  const tools=new Map();
+  const errors=new Map();
+  const transports=new Set();
+
+  for (const item of snapshots) {
+    const summary=item.selected.summary || {};
+    const total=Number(summary.total_calls || 0);
+    const completed=Number(summary.completed || 0);
+    totals.total_calls+=total;
+    totals.completed+=completed;
+    totals.failed+=Number(summary.failed || 0);
+    totals.pending+=Number(summary.pending || 0);
+    totals.executing+=Number(summary.executing || 0);
+    totals.expired+=Number(summary.expired || 0);
+    totals.cancelled+=Number(summary.cancelled || 0);
+    if (summary.under_3s_percent != null) {
+      totals.under3_weighted+=(Number(summary.under_3s_percent || 0)/100)*completed;
+    }
+    if (total > 0) {
+      totals.duration_weight+=total;
+      if (summary.avg_total_ms != null) totals.total_ms_weighted+=Number(summary.avg_total_ms)*total;
+      if (summary.avg_queue_ms != null) totals.queue_ms_weighted+=Number(summary.avg_queue_ms)*total;
+      if (summary.avg_execution_ms != null) totals.exec_ms_weighted+=Number(summary.avg_execution_ms)*total;
+    }
+    for (const mode of summary.transport_modes || []) transports.add(String(mode));
+    for (const row of item.selected.diagnostics?.top_tools || []) {
+      const key=String(row.tool_id || "unknown");
+      tools.set(key,(tools.get(key)||0)+Number(row.calls || 0));
+    }
+    for (const row of item.selected.diagnostics?.top_errors || []) {
+      const key=String(row.error_code || "UNKNOWN");
+      errors.set(key,(errors.get(key)||0)+Number(row.calls || 0));
+    }
+  }
+
+  const terminal=totals.completed+totals.failed+totals.expired+totals.cancelled;
+  const top=(map,key)=>[...map.entries()]
+    .map(([name,calls])=>({[key]:name,calls}))
+    .sort((a,b)=>b.calls-a.calls || String(a[key]).localeCompare(String(b[key])))
+    .slice(0,6);
+
+  const payload={
+    schema:"hara.commander-portal-activity.v2",
+    scope:"TENANT",
+    source:"LOCAL_DEVICE_SNAPSHOTS",
+    detail_location:"LOCAL_DEVICE",
+    cloud_history_scanned:false,
+    snapshot_device_count:snapshots.length,
+    active_device_count:deviceRows.length,
+    snapshot_coverage_percent:deviceRows.length
+      ? Number(((snapshots.length/deviceRows.length)*100).toFixed(1))
+      : 100,
+    snapshot_updated_at_utc:snapshots
+      .map((item)=>String(item.row.activity_summary_at_utc || ""))
+      .filter(Boolean).sort().at(-1) || null,
+    window,
+    privacy:{
+      payload_values_exposed:false,
+      result_values_exposed:false,
+      request_id_exposed:false,
+      command_text_exposed:false,
+      argument_values_exposed:false,
+      historical_command_text_persisted:false,
+      detailed_history_location:"LOCAL_DEVICE",
+      customer_content_synced:false,
+      metadata_only:true,
+    },
+    diagnostics:{
+      top_tools:top(tools,"tool_id"),
+      top_errors:top(errors,"error_code"),
+    },
+    summary:{
+      total_calls:totals.total_calls,
+      completed:totals.completed,
+      failed:totals.failed,
+      pending:totals.pending,
+      executing:totals.executing,
+      expired:totals.expired,
+      cancelled:totals.cancelled,
+      success_rate_percent:terminal ? Number(((totals.completed/terminal)*100).toFixed(1)) : null,
+      under_3s_percent:totals.completed ? Number(((totals.under3_weighted/totals.completed)*100).toFixed(1)) : null,
+      avg_queue_ms:totals.duration_weight ? Number((totals.queue_ms_weighted/totals.duration_weight).toFixed(1)) : null,
+      avg_execution_ms:totals.duration_weight ? Number((totals.exec_ms_weighted/totals.duration_weight).toFixed(1)) : null,
+      avg_total_ms:totals.duration_weight ? Number((totals.total_ms_weighted/totals.duration_weight).toFixed(1)) : null,
+      device_count:snapshots.length,
+      transport_modes:[...transports],
+    },
+    transactions:[],
+  };
+  Object.defineProperty(payload, "_covered_device_ids", {
+    value:snapshots.map((item)=>String(item.row.device_id || "")).filter(Boolean),
+    enumerable:false,
+  });
+  return payload;
+}
+
+function mergeActivityBreakdown(localItems, cloudItems, key) {
+  const combined=new Map();
+  for (const item of [...(localItems || []), ...(cloudItems || [])]) {
+    const name=String(item?.[key] || (key === "tool_id" ? "unknown" : "UNKNOWN"));
+    combined.set(name,(combined.get(name)||0)+Number(item?.calls || 0));
+  }
+  return [...combined.entries()]
+    .map(([name,calls])=>({[key]:name,calls}))
+    .sort((a,b)=>b.calls-a.calls || String(a[key]).localeCompare(String(b[key])))
+    .slice(0,6);
+}
+
+function mergePortalActivity(local, cloud) {
+  if (!local) return cloud;
+  const a=local.summary || {};
+  const b=cloud.summary || {};
+  const localTotal=Number(a.total_calls || 0);
+  const cloudTotal=Number(b.total_calls || 0);
+  const total=localTotal+cloudTotal;
+  const completed=Number(a.completed || 0)+Number(b.completed || 0);
+  const failed=Number(a.failed || 0)+Number(b.failed || 0);
+  const expired=Number(a.expired || 0)+Number(b.expired || 0);
+  const cancelled=Number(a.cancelled || 0)+Number(b.cancelled || 0);
+  const terminal=completed+failed+expired+cancelled;
+  const weighted=(field)=>{
+    const values=[];
+    if (a[field] != null && localTotal) values.push([Number(a[field]),localTotal]);
+    if (b[field] != null && cloudTotal) values.push([Number(b[field]),cloudTotal]);
+    const weight=values.reduce((sum,item)=>sum+item[1],0);
+    return weight ? Number((values.reduce((sum,item)=>sum+(item[0]*item[1]),0)/weight).toFixed(1)) : null;
+  };
+  const under3Count=
+    (a.under_3s_percent == null ? 0 : (Number(a.under_3s_percent)/100)*Number(a.completed || 0))
+    +(b.under_3s_percent == null ? 0 : (Number(b.under_3s_percent)/100)*Number(b.completed || 0));
+  return {
+    ...cloud,
+    schema:"hara.commander-portal-activity.v2",
+    source:cloudTotal ? "LOCAL_DEVICE_SNAPSHOTS_WITH_CLOUD_FALLBACK" : "LOCAL_DEVICE_SNAPSHOTS",
+    detail_location:cloudTotal ? "LOCAL_DEVICE_WITH_CLOUD_FALLBACK" : "LOCAL_DEVICE",
+    cloud_history_scanned:Boolean(cloud.cloud_history_scanned),
+    snapshot_device_count:local.snapshot_device_count,
+    active_device_count:local.active_device_count,
+    snapshot_coverage_percent:local.snapshot_coverage_percent,
+    snapshot_updated_at_utc:local.snapshot_updated_at_utc,
+    privacy:{
+      ...cloud.privacy,
+      detailed_history_location:cloudTotal ? "LOCAL_DEVICE_AND_LEGACY_CLOUD_FALLBACK" : "LOCAL_DEVICE",
+      customer_content_synced:false,
+      metadata_only:true,
+    },
+    diagnostics:{
+      top_tools:mergeActivityBreakdown(local.diagnostics?.top_tools,cloud.diagnostics?.top_tools,"tool_id"),
+      top_errors:mergeActivityBreakdown(local.diagnostics?.top_errors,cloud.diagnostics?.top_errors,"error_code"),
+    },
+    summary:{
+      total_calls:total,
+      completed,
+      failed,
+      pending:Number(a.pending || 0)+Number(b.pending || 0),
+      executing:Number(a.executing || 0)+Number(b.executing || 0),
+      expired,
+      cancelled,
+      success_rate_percent:terminal ? Number(((completed/terminal)*100).toFixed(1)) : null,
+      under_3s_percent:completed ? Number(((under3Count/completed)*100).toFixed(1)) : null,
+      avg_queue_ms:weighted("avg_queue_ms"),
+      avg_execution_ms:weighted("avg_execution_ms"),
+      avg_total_ms:weighted("avg_total_ms"),
+      device_count:Number(local.snapshot_device_count || 0)+Number(b.device_count || 0),
+      transport_modes:[...new Set([
+        ...(a.transport_modes || []),
+        ...(b.transport_modes || []),
+      ])],
+    },
+    transactions:cloud.transactions || [],
+  };
+}
+
 async function portalActivity(env, session, limitValue=50, windowValue="7d") {
   const limit=Math.max(1,Math.min(100,Number(limitValue || 50)));
   const window=portalActivityWindow(windowValue);
   const privileged=["OWNER","ADMIN"].includes(String(session.role || "").toUpperCase());
+  const local=privileged
+    ? await portalActivityFromLocalSnapshots(env,session,window)
+    : null;
+  if (
+    local
+    && Number(local.active_device_count || 0) > 0
+    && Number(local.snapshot_device_count || 0) === Number(local.active_device_count || 0)
+  ) {
+    return local;
+  }
   const clauses=["c.tenant_id = ?","c.created_at_utc >= ?"];
   const binds=[session.tenant_id,window.since_at_utc];
+  if (local?._covered_device_ids?.length) {
+    const placeholders=local._covered_device_ids.map(()=>"?").join(",");
+    clauses.push(`c.device_id NOT IN (${placeholders})`);
+    binds.push(...local._covered_device_ids);
+  }
   if (!privileged) {
     clauses.push("c.subject_id = ?");
     binds.push(session.subject_id);
@@ -2722,9 +3012,12 @@ async function portalActivity(env, session, limitValue=50, windowValue="7d") {
     error_code:row.error_code || null,
   }));
 
-  return {
+  const cloud={
     schema:"hara.commander-portal-activity.v1",
     scope:privileged ? "TENANT" : "SUBJECT",
+    source:"CLOUD_CALL_HISTORY",
+    detail_location:"CLOUD_LEGACY",
+    cloud_history_scanned:true,
     window,
     privacy:{
       payload_values_exposed:false,
@@ -2764,6 +3057,7 @@ async function portalActivity(env, session, limitValue=50, windowValue="7d") {
     },
     transactions,
   };
+  return mergePortalActivity(local,cloud);
 }
 
 async function executeCustomerMcpTool(
