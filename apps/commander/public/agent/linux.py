@@ -659,7 +659,8 @@ def local_budget_commit(request_id):
             "SELECT allocated_units FROM local_budget_blocks WHERE budget_id=?",
             (str(row["budget_id"]),),
         ).fetchone()
-        if block and committed>=int(block["allocated_units"]) and reserved==0:
+        exhausted=bool(block and committed>=int(block["allocated_units"]) and reserved==0)
+        if exhausted:
             conn.execute(
                 "UPDATE local_budget_blocks SET state='EXHAUSTED' WHERE budget_id=?",
                 (str(row["budget_id"]),),
@@ -668,6 +669,7 @@ def local_budget_commit(request_id):
         return {
             "state":"COMMITTED","existing":False,"budget_id":str(row["budget_id"]),
             "committed_units":committed,
+            "exhausted":exhausted,
         }
 
 def local_budget_release(request_id):
@@ -2022,10 +2024,22 @@ def execute_call(config,call):
             call["_local_approval"]=request_local_approval(call)
         append_console_event("EXECUTING",call,state="EXECUTING")
         result=execute_tool(config,call)
+        budget_commit=None
         if budget_reservation:
-            local_budget_commit(call.get("request_id"))
+            budget_commit=local_budget_commit(call.get("request_id"))
             budget_committed=True
         complete(config,call,"COMPLETED",result)
+        if budget_commit and budget_commit.get("exhausted"):
+            try:
+                refresh_product_lease(config)
+                append_console_event("LOCAL_BUDGET_ROLLOVER",call,state="READY")
+            except Exception as refresh_exc:
+                append_console_event(
+                    "PRODUCT_LEASE_DEGRADED",
+                    call,
+                    state="DEGRADED",
+                    error_code=safe_error_code(refresh_exc),
+                )
         append_console_event(
             "PASS",call,state="COMPLETED",
             receipt_sha256=result.get("bridge_receipt_sha256") if isinstance(result,dict) else None,

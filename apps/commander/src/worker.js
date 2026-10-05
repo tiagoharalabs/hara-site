@@ -171,7 +171,8 @@ function monthEndUtc(periodKey) {
 
 function localBudgetEligibleDevice(device) {
   return String(device?.platform || "").toUpperCase() === "LINUX"
-    && semverAtLeast(device?.agent_version, LOCAL_BUDGET_MIN_LINUX_PATCH);
+    && semverAtLeast(device?.agent_version, LOCAL_BUDGET_MIN_LINUX_PATCH)
+    && !String(device?.tunnel_mode || "").toUpperCase().startsWith("EVENT_V2");
 }
 
 function callUsageMode(context, device, purposeFunctionId) {
@@ -180,6 +181,25 @@ function callUsageMode(context, device, purposeFunctionId) {
     return "LOCAL_BUDGET";
   }
   return "CLOUD_QUOTA";
+}
+
+async function resolveCallUsageMode(env, context, device, purposeFunctionId) {
+  const preferred = callUsageMode(context, device, purposeFunctionId);
+  if (preferred !== "LOCAL_BUDGET") return preferred;
+  const periodKey = mcpPeriodKey(context);
+  const row = await env.PRODUCT_DB.prepare(
+    `SELECT budget_id
+       FROM commander_device_budget_blocks
+      WHERE tenant_id = ?
+        AND device_id = ?
+        AND period_key = ?
+        AND state = 'ACTIVE'
+        AND expires_at_utc > ?
+        AND units_issued < units_allocated
+      ORDER BY allocation_sequence ASC
+      LIMIT 1`
+  ).bind(context.tenant_id, device.device_id, periodKey, nowIso()).first();
+  return row ? "LOCAL_BUDGET" : "CLOUD_QUOTA";
 }
 
 async function localBudgetAllocatedUnits(env, tenantId, periodKey) {
@@ -202,6 +222,100 @@ async function effectiveCloudQuotaLimit(env, context, periodKey) {
     periodKey,
   );
   return Math.max(configured - localAllocated, 0);
+}
+
+async function tenantFullyLocalBudgetCapable(env, tenantId) {
+  const result = await env.PRODUCT_DB.prepare(
+    `SELECT platform,agent_version,tunnel_mode
+       FROM commander_devices
+      WHERE tenant_id = ?
+        AND state = 'ACTIVE'
+        AND revoked_at_utc IS NULL`
+  ).bind(tenantId).all();
+  const rows = result.results || [];
+  return rows.length > 0 && rows.every((row) => localBudgetEligibleDevice(row));
+}
+
+async function freshLocalBudgetBaseline(
+  env,
+  tenantId,
+  periodKey,
+  meterId,
+  { createIfEligible = false } = {},
+) {
+  const existing = await env.PRODUCT_DB.prepare(
+    `SELECT tenant_id,period_key,meter_id,legacy_consumed_units,source,state,
+            established_at_utc,invalidated_at_utc,invalidation_reason
+       FROM commander_tenant_budget_baselines
+      WHERE tenant_id = ?
+        AND period_key = ?
+        AND meter_id = ?
+      LIMIT 1`
+  ).bind(tenantId, periodKey, meterId).first().catch(() => null);
+
+  const compatible = await tenantFullyLocalBudgetCapable(env, tenantId);
+  if (existing) {
+    if (existing.state === "ACTIVE" && compatible) return existing;
+    if (existing.state === "ACTIVE" && !compatible) {
+      await env.PRODUCT_DB.prepare(
+        `UPDATE commander_tenant_budget_baselines
+            SET state = 'INVALIDATED',
+                invalidated_at_utc = ?,
+                invalidation_reason = 'MIXED_OR_INCOMPATIBLE_FLEET'
+          WHERE tenant_id = ?
+            AND period_key = ?
+            AND meter_id = ?
+            AND state = 'ACTIVE'`
+      ).bind(nowIso(), tenantId, periodKey, meterId).run();
+    }
+    return null;
+  }
+
+  if (!createIfEligible || !compatible) return null;
+
+  const periodStart = periodKey + "-01T00:00:00.000Z";
+  const periodEnd = monthEndUtc(periodKey);
+  const [history, blocks] = await Promise.all([
+    env.PRODUCT_DB.prepare(
+      `SELECT COUNT(*) AS prior_calls
+         FROM commander_device_calls
+        WHERE tenant_id = ?
+          AND created_at_utc >= ?
+          AND created_at_utc < ?`
+    ).bind(tenantId, periodStart, periodEnd).first(),
+    env.PRODUCT_DB.prepare(
+      `SELECT COUNT(*) AS prior_blocks
+         FROM commander_device_budget_blocks
+        WHERE tenant_id = ?
+          AND period_key = ?`
+    ).bind(tenantId, periodKey).first(),
+  ]);
+
+  if (
+    Number(history?.prior_calls || 0) !== 0
+    || Number(blocks?.prior_blocks || 0) !== 0
+  ) {
+    return null;
+  }
+
+  const establishedAt = nowIso();
+  await env.PRODUCT_DB.prepare(
+    `INSERT OR IGNORE INTO commander_tenant_budget_baselines
+       (tenant_id,period_key,meter_id,legacy_consumed_units,source,state,
+        established_at_utc,invalidated_at_utc,invalidation_reason)
+     VALUES (?, ?, ?, 0, 'FRESH_TENANT_ZERO', 'ACTIVE', ?, NULL, NULL)`
+  ).bind(tenantId, periodKey, meterId, establishedAt).run();
+
+  return env.PRODUCT_DB.prepare(
+    `SELECT tenant_id,period_key,meter_id,legacy_consumed_units,source,state,
+            established_at_utc,invalidated_at_utc,invalidation_reason
+       FROM commander_tenant_budget_baselines
+      WHERE tenant_id = ?
+        AND period_key = ?
+        AND meter_id = ?
+        AND state = 'ACTIVE'
+      LIMIT 1`
+  ).bind(tenantId, periodKey, meterId).first();
 }
 
 function requireRuntime(env) {
@@ -936,16 +1050,29 @@ function unlimitedProductUsage() {
   };
 }
 
-async function productUsageForPolicy(env, tenantId, periodKind, unitLimit) {
+async function productUsageForPolicy(
+  env,
+  tenantId,
+  periodKind,
+  unitLimit,
+  meterId = MCP_METER_ID,
+) {
   const kind = String(periodKind || "").trim().toUpperCase();
   if (kind === "NONE") return { ...unlimitedProductUsage(), available: true };
 
   const periodKey = kind === "CALENDAR_MONTH" ? monthKey() : "LIFETIME";
   const limit = Number(unitLimit);
   try {
-    const quota = env.TENANT_QUOTA.getByName(tenantId);
-    const [legacy, localBudget] = await Promise.all([
-      quota.status(periodKey, limit),
+    const [freshBaseline, localBudget] = await Promise.all([
+      kind === "CALENDAR_MONTH"
+        ? freshLocalBudgetBaseline(
+            env,
+            tenantId,
+            periodKey,
+            meterId,
+            { createIfEligible: false },
+          )
+        : Promise.resolve(null),
       env.PRODUCT_DB.prepare(
         `SELECT COALESCE(SUM(units_allocated),0) AS allocated,
                 COALESCE(SUM(units_reported),0) AS reported
@@ -954,7 +1081,18 @@ async function productUsageForPolicy(env, tenantId, periodKind, unitLimit) {
             AND period_key = ?`
       ).bind(tenantId, periodKey).first().catch(() => null),
     ]);
-    const legacyConsumed = Number(legacy?.consumed_units || 0);
+
+    let legacyConsumed;
+    let baselineSource;
+    if (freshBaseline) {
+      legacyConsumed = Number(freshBaseline.legacy_consumed_units || 0);
+      baselineSource = String(freshBaseline.source || "FRESH_TENANT_ZERO");
+    } else {
+      const legacy = await env.TENANT_QUOTA.getByName(tenantId).status(periodKey, limit);
+      legacyConsumed = Number(legacy?.consumed_units || 0);
+      baselineSource = "TENANT_QUOTA_LIVE";
+    }
+
     const localAllocated = Number(localBudget?.allocated || 0);
     const localReported = Number(localBudget?.reported || 0);
     const consumed = legacyConsumed + localReported;
@@ -967,6 +1105,7 @@ async function productUsageForPolicy(env, tenantId, periodKind, unitLimit) {
       available: true,
       consistency: localAllocated > 0 ? "EVENTUAL_LOCAL_BUDGET" : "CLOUD_AUTHORITATIVE",
       cloud_legacy_consumed_units: legacyConsumed,
+      legacy_baseline_source: baselineSource,
       local_budget_allocated_units: localAllocated,
       local_budget_reported_units: localReported,
       local_budget_unreported_capacity_units: Math.max(localAllocated - localReported, 0),
@@ -996,6 +1135,7 @@ async function dashboard(env, tenantId) {
     tenantId,
     ent.period_kind,
     ent.unit_limit,
+    ent.meter_id,
   );
 
   return {
@@ -1051,6 +1191,7 @@ async function dashboardForSubject(env, subjectId, tenantId) {
     tenantId,
     ent.period_kind,
     ent.unit_limit,
+    ent.meter_id,
   );
 
   return {
@@ -1242,10 +1383,25 @@ async function issueDeviceBudgetBlock(env, device, entitlement, report = null) {
   ).bind(device.tenant_id, periodKey).first();
 
   const limit = Number(entitlement.unit_limit);
-  const legacyUsage = await env.TENANT_QUOTA
-    .getByName(device.tenant_id)
-    .status(periodKey, limit);
-  const legacyConsumed = Number(legacyUsage?.consumed_units || 0);
+  const freshBaseline = await freshLocalBudgetBaseline(
+    env,
+    device.tenant_id,
+    periodKey,
+    entitlement.meter_id,
+    { createIfEligible: true },
+  );
+  let legacyConsumed;
+  let legacyBaselineSource;
+  if (freshBaseline) {
+    legacyConsumed = Number(freshBaseline.legacy_consumed_units || 0);
+    legacyBaselineSource = String(freshBaseline.source || "FRESH_TENANT_ZERO");
+  } else {
+    const legacyUsage = await env.TENANT_QUOTA
+      .getByName(device.tenant_id)
+      .status(periodKey, limit);
+    legacyConsumed = Number(legacyUsage?.consumed_units || 0);
+    legacyBaselineSource = "TENANT_QUOTA_LIVE";
+  }
   const allocated = Number(totals?.allocated || 0);
   const allocationSequence = Number(totals?.block_count || 0) + 1;
   const remaining = Math.max(limit - legacyConsumed - allocated, 0);
@@ -1254,6 +1410,7 @@ async function issueDeviceBudgetBlock(env, device, entitlement, report = null) {
       exhausted: true,
       block: null,
       legacy_consumed_units: legacyConsumed,
+      legacy_baseline_source: legacyBaselineSource,
       locally_allocated_units: allocated,
     };
   }
@@ -1292,6 +1449,7 @@ async function issueDeviceBudgetBlock(env, device, entitlement, report = null) {
   return {
     exhausted: false,
     legacy_consumed_units: legacyConsumed,
+    legacy_baseline_source: legacyBaselineSource,
     locally_allocated_units: allocated + units,
     block: publicBudgetBlock({
       budget_id: budgetId,
@@ -1329,12 +1487,19 @@ async function deviceProductLease(env, request, body = {}) {
   let budget = null;
 
   if (productLease.usage_mode === "LOCAL_BUDGET") {
-    budget = await issueDeviceBudgetBlock(
-      env,
-      device,
-      context,
-      body?.budget_report || null,
-    );
+    try {
+      budget = await issueDeviceBudgetBlock(
+        env,
+        device,
+        context,
+        body?.budget_report || null,
+      );
+    } catch (error) {
+      productLease.usage_mode = "CLOUD_QUOTA";
+      productLease.local_budget_degraded = true;
+      productLease.local_budget_degraded_code = sanitizeErrorCode(error);
+      budget = null;
+    }
   }
 
   return {
@@ -2361,7 +2526,7 @@ async function enqueueDeviceCall(env, body) {
   if (!deviceOnline(device.last_seen_at_utc, device.tunnel_mode)) throw new Error("DEVICE_OFFLINE");
 
   const usageFunctionId = quotaFunctionIdForTool(toolId, canonicalPayload);
-  const usageMode = callUsageMode(context, device, usageFunctionId);
+  const usageMode = await resolveCallUsageMode(env, context, device, usageFunctionId);
   const usageUnits = usageFunctionId ? 1 : 0;
   const usagePeriodKey = usageUnits ? mcpPeriodKey(context) : null;
   const enqueueAt = nowIso();
@@ -2978,6 +3143,7 @@ async function customerUsage(env, context) {
     context.tenant_id,
     context.period_kind,
     context.unit_limit,
+    context.meter_id,
   );
   return {
     plan_code:context.plan_code,
@@ -3542,7 +3708,7 @@ async function executeCustomerMcpTool(
   const dispatchToolId = dispatchAsLegacyInvoke ? "hara.functions.invoke" : toolId;
   const dispatchPayload = dispatchAsLegacyInvoke ? legacyPayload : payload;
 
-  const usageMode = callUsageMode(context, targetDevice, purposeFunctionId);
+  const usageMode = await resolveCallUsageMode(env, context, targetDevice, purposeFunctionId);
   let quota = null;
   let reservation = null;
   let cloudQuotaLimit = context.unit_limit;

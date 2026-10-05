@@ -3,9 +3,9 @@
   "channel": "stable",
   "files": [
     {
-      "bytes": 141068,
+      "bytes": 141655,
       "path": "agent/linux.py",
-      "sha256": "b1ef2383aa9635028a03e414b983a4815ec3ff27668c46b67c01cdcc1fd8114b"
+      "sha256": "06b70463a29944794433a671c5a75b1369f662227122a9ce2a99f58587f824fb"
     },
     {
       "bytes": 35355,
