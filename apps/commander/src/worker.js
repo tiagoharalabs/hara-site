@@ -2478,11 +2478,27 @@ function elapsedMs(start,end) {
   return Math.round(b-a);
 }
 
-async function portalActivity(env, session, limitValue=50) {
+function portalActivityWindow(value) {
+  const raw=String(value || "7d").trim().toLowerCase();
+  const windows={
+    "24h":{ key:"24h", label:"24 horas", hours:24 },
+    "7d":{ key:"7d", label:"7 dias", hours:7*24 },
+    "30d":{ key:"30d", label:"30 dias", hours:30*24 },
+  };
+  const selected=windows[raw] || windows["7d"];
+  return {
+    key:selected.key,
+    label:selected.label,
+    since_at_utc:new Date(Date.now()-(selected.hours*60*60*1000)).toISOString(),
+  };
+}
+
+async function portalActivity(env, session, limitValue=50, windowValue="7d") {
   const limit=Math.max(1,Math.min(100,Number(limitValue || 50)));
+  const window=portalActivityWindow(windowValue);
   const privileged=["OWNER","ADMIN"].includes(String(session.role || "").toUpperCase());
-  const clauses=["c.tenant_id = ?"];
-  const binds=[session.tenant_id];
+  const clauses=["c.tenant_id = ?","c.created_at_utc >= ?"];
+  const binds=[session.tenant_id,window.since_at_utc];
   if (!privileged) {
     clauses.push("c.subject_id = ?");
     binds.push(session.subject_id);
@@ -2556,6 +2572,7 @@ async function portalActivity(env, session, limitValue=50) {
   return {
     schema:"hara.commander-portal-activity.v1",
     scope:privileged ? "TENANT" : "SUBJECT",
+    window,
     privacy:{
       payload_values_exposed:false,
       result_values_exposed:false,
@@ -3254,7 +3271,8 @@ export default {
         const session = await resolvePortalSession(request, env);
         if (!session) return json({ ok: false, code: "AUTH_REQUIRED" }, 401);
         const limit=Number(url.searchParams.get("limit") || 50);
-        return json(await portalActivity(env,session,limit));
+        const window=url.searchParams.get("window") || "7d";
+        return json(await portalActivity(env,session,limit,window));
       }
 
       if (url.pathname === "/api/portal/billing" && request.method === "GET") {

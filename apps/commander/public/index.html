@@ -391,7 +391,17 @@
           <p class="activity-privacy-note" id="activityPrivacyNote">Telemetria operacional somente. Payloads e resultados do cliente não são exibidos nesta tela.</p>
 
           <article class="panel table-panel">
-            <div class="panel-head"><div><span>ATIVIDADE</span><h2>Transações recentes</h2></div><button class="btn btn-secondary small" type="button" data-refresh-activity>Atualizar</button></div>
+            <div class="panel-head">
+              <div><span>ATIVIDADE</span><h2>Transações recentes</h2></div>
+              <div class="activity-actions">
+                <div class="activity-window-picker" role="radiogroup" aria-label="Janela da atividade">
+                  <button type="button" role="radio" aria-checked="false" data-activity-window="24h">24h</button>
+                  <button class="active" type="button" role="radio" aria-checked="true" data-activity-window="7d">7 dias</button>
+                  <button type="button" role="radio" aria-checked="false" data-activity-window="30d">30 dias</button>
+                </div>
+                <button class="btn btn-secondary small" type="button" data-refresh-activity>Atualizar</button>
+              </div>
+            </div>
             <div class="data-table usage-ledger" id="usageLedger" aria-live="polite">
               <div class="tr head"><span>Horário</span><span>Tool</span><span>Computador</span><span>Estado</span><span>Duração</span><span>Rastro</span></div>
               <div class="empty-state"><strong>Carregando atividade</strong>Consultando metadados operacionais das últimas execuções.</div>

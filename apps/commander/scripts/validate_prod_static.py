@@ -201,7 +201,12 @@ need(
     and 'id="activityTransport"' in HTML
     and 'function renderActivity(payload)' in JS
     and 'function loadUsageActivity(' in JS
-    and 'data-refresh-activity' in HTML,
+    and 'data-refresh-activity' in HTML
+    and 'data-activity-window="24h"' in HTML
+    and 'data-activity-window="7d"' in HTML
+    and 'data-activity-window="30d"' in HTML
+    and 'function setActivityWindow(value)' in JS
+    and 'window="+encodeURIComponent(activityWindow)' in JS,
     "USAGE_ACTIVITY_SURFACE",
 )
 need(

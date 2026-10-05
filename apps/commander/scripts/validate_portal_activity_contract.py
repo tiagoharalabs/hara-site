@@ -14,9 +14,12 @@ def need(ok, code):
 need("async function portalActivity" in WORKER,"FUNCTION_PRESENT")
 block=WORKER.split("async function portalActivity",1)[1].split("async function executeCustomerMcpTool",1)[0]
 need('["OWNER","ADMIN"]' in block,"PRIVILEGED_SCOPE")
-need('clauses=["c.tenant_id = ?"]' in block and 'clauses.push("c.subject_id = ?")' in block,"SUBJECT_SCOPE")
+need('"c.tenant_id = ?"' in block and '"c.created_at_utc >= ?"' in block and 'clauses.push("c.subject_id = ?")' in block,"SUBJECT_SCOPE")
 need("payload_json" not in block and "result_json" not in block,"CONTENT_NOT_SELECTED")
 need("payload_values_exposed:false" in block and "result_values_exposed:false" in block and "request_id_exposed:false" in block,"PRIVACY_MARKERS")
+need("function portalActivityWindow" in WORKER and '"24h"' in WORKER and '"7d"' in WORKER and '"30d"' in WORKER,"WINDOW_ENUM")
+need('"c.created_at_utc >= ?"' in block and "since_at_utc" in block,"WINDOW_SQL_BOUND")
+
 need('url.pathname === "/api/portal/activity"' in WORKER,"ROUTE_PRESENT")
 route=WORKER.split('url.pathname === "/api/portal/activity"',1)[1].split('url.pathname === "/api/portal/billing"',1)[0]
 need("resolvePortalSession" in route and "AUTH_REQUIRED" in route,"AUTH_GUARD")
@@ -64,5 +67,16 @@ SELECT COUNT(*) total,
 FROM commander_device_calls c WHERE c.tenant_id=?
 """,("T1",)).fetchone()
 need(row==(2,1,1),"SUMMARY_COUNTS")
+
+migration=(APP/"migrations/0018_activity_indexes.sql").read_text(encoding="utf-8")
+db.executescript(migration)
+indexes={row[1] for row in db.execute("PRAGMA index_list(commander_device_calls)")}
+need("idx_device_calls_activity_tenant_created" in indexes,"TENANT_ACTIVITY_INDEX")
+need("idx_device_calls_activity_subject_created" in indexes,"SUBJECT_ACTIVITY_INDEX")
+plan=" ".join(str(row) for row in db.execute(
+    "EXPLAIN QUERY PLAN SELECT call_id FROM commander_device_calls WHERE tenant_id=? AND created_at_utc>=? ORDER BY created_at_utc DESC LIMIT 50",
+    ("T1","2026-10-01T00:00:00Z"),
+))
+need("idx_device_calls_activity_tenant_created" in plan,"TENANT_INDEX_QUERY_PLAN")
 
 print("COMMANDER_PORTAL_ACTIVITY_CONTRACT=PASS")

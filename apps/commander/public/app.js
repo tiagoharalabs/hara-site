@@ -41,8 +41,8 @@
   let devicesCache = null;
   let devicesCacheAt = 0;
   let pairingExpiryTimer = null;
-  let activityCache = null;
-  let activityCacheAt = 0;
+  const activityCache = new Map();
+  let activityWindow = "7d";
   const ACTIVITY_CACHE_MS = 15000;
   const revokeConfirmTimers = new Map();
   let currentView = null;
@@ -345,7 +345,9 @@
   function renderActivity(payload) {
     const summary=payload?.summary || {};
     setText("activityTotal",number(summary.total_calls || 0));
-    setText("activityScope",payload?.scope === "TENANT" ? "Workspace inteiro" : "Suas execuções");
+    const scopeLabel=payload?.scope === "TENANT" ? "Workspace inteiro" : "Suas execuções";
+    const windowLabel=String(payload?.window?.label || "");
+    setText("activityScope",scopeLabel + (windowLabel ? " · " + windowLabel : ""));
     setText("activitySuccessRate",summary.success_rate_percent == null ? "—" : String(summary.success_rate_percent).replace(".",",") + "%");
     setText("activityTerminalSummary",number(summary.completed || 0) + " PASS · " + number(summary.failed || 0) + " falhas");
     setText("activityAvgLatency",activityDuration(summary.avg_total_ms));
@@ -408,10 +410,23 @@
     });
   }
 
+  function setActivityWindow(value) {
+    const next=["24h","7d","30d"].includes(String(value)) ? String(value) : "7d";
+    activityWindow=next;
+    document.querySelectorAll("[data-activity-window]").forEach((button)=>{
+      const active=button.dataset.activityWindow === next;
+      button.classList.toggle("active",active);
+      button.setAttribute("aria-checked",String(active));
+      button.tabIndex=active ? 0 : -1;
+    });
+    loadUsageActivity(null,true);
+  }
+
   async function loadUsageActivity(trigger=null, force=false) {
     if (!remotePortal) return;
-    if (!force && activityCache && Date.now()-activityCacheAt < ACTIVITY_CACHE_MS) {
-      renderActivity(activityCache);
+    const cached=activityCache.get(activityWindow);
+    if (!force && cached && Date.now()-cached.at < ACTIVITY_CACHE_MS) {
+      renderActivity(cached.payload);
       return;
     }
     const original=trigger?.textContent || "Atualizar";
@@ -420,12 +435,11 @@
       trigger.textContent="Atualizando…";
     }
     try {
-      const response=await fetch("/api/portal/activity?limit=50",{cache:"no-store",credentials:"same-origin"});
+      const response=await fetch("/api/portal/activity?limit=50&window="+encodeURIComponent(activityWindow),{cache:"no-store",credentials:"same-origin"});
       if (handlePortalAuthFailure(response,"Entre novamente para consultar a atividade.")) return;
       const payload=await response.json().catch(()=>({}));
       if (!response.ok) throw new Error(String(payload?.code || "ACTIVITY_LOAD_FAILED"));
-      activityCache=payload;
-      activityCacheAt=Date.now();
+      activityCache.set(activityWindow,{at:Date.now(),payload});
       renderActivity(payload);
     } catch (_error) {
       const ledger=document.getElementById("usageLedger");
@@ -1311,6 +1325,13 @@
       return;
     }
 
+    const activityWindowButton = event.target.closest("[data-activity-window]");
+    if (activityWindowButton) {
+      event.preventDefault();
+      setActivityWindow(activityWindowButton.dataset.activityWindow);
+      return;
+    }
+
     const refreshActivity = event.target.closest("[data-refresh-activity]");
     if (refreshActivity) {
       event.preventDefault();
@@ -1406,6 +1427,18 @@
       const nextOs = osChoice.dataset.osChoice === "linux" ? "windows" : "linux";
       setInstallOs(nextOs);
       document.querySelector('[data-os-choice="' + nextOs + '"]')?.focus();
+      return;
+    }
+
+    const activityWindowButton = event.target.closest?.("[data-activity-window]");
+    if (activityWindowButton && ["ArrowLeft","ArrowRight"].includes(event.key)) {
+      event.preventDefault();
+      const windows=["24h","7d","30d"];
+      const current=windows.indexOf(activityWindowButton.dataset.activityWindow);
+      const delta=event.key === "ArrowRight" ? 1 : -1;
+      const next=windows[(current+delta+windows.length)%windows.length];
+      setActivityWindow(next);
+      document.querySelector('[data-activity-window="' + next + '"]')?.focus();
       return;
     }
 
