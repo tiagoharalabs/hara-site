@@ -124,3 +124,20 @@ LOCAL_BUDGET_DEV=CLOSED_PASS
 LOCAL_BUDGET_FRESH_TENANT_ZERO_BASELINE=CLOSED_PASS
 AGENT_0_3_35_RELEASE=CLOSED_PASS
 PROD_PROMOTION=PENDING
+
+## Successor security gate
+
+Do not promote the 0.3.35 local-budget release to PROD.
+
+The audited successor branch local/commander-local-budget-audit-20261005
+hardens the product lease with a cloud-signed RS256 token and raises the
+LOCAL_BUDGET Agent gate to 0.3.36.
+
+Until the Cloudflare Worker secret PRODUCT_LEASE_PRIVATE_JWK is provisioned
+and the 0.3.36 DEV canary passes:
+- keep PROD on the prior safe release;
+- do not enable LOCAL_BUDGET in PROD;
+- 0.3.35 and older devices must remain on CLOUD_QUOTA for production rollout.
+
+Successor source/test commit:
+bc25de10bda3b1aaea856121056ba748c1eec76a
