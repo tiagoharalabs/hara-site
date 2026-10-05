@@ -5,8 +5,9 @@ $ReceiptDir = Join-Path $Root "receipts"
 $RuntimeStatus = Join-Path $Root "runtime-status.json"
 $SessionPath = Join-Path $Root "operator-session.json"
 $ConsoleEvents = Join-Path $Root "console-events.jsonl"
+$OperationsDb = Join-Path $Root "operations.sqlite3"
 $SessionMaxHours = 12
-$AgentVersion = "0.3.36"
+$AgentVersion = "0.3.37"
 $FunctionId = "device.info"
 
 function Get-PlainText([Security.SecureString]$SecureValue) {
@@ -82,6 +83,358 @@ function Test-OperatorSessionActive {
   return $null -ne (Get-OperatorSession)
 }
 
+function Initialize-WinSqlite {
+  if ("HaraWinSqlite" -as [type]) { return }
+  $source=@"
+using System;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
+
+public static class HaraWinSqlite {
+  const int OK=0, ROW=100, DONE=101;
+  const int INTEGER=1, FLOAT=2, TEXT=3, NULL=5;
+  static readonly IntPtr TRANSIENT=new IntPtr(-1);
+
+  [DllImport("winsqlite3.dll",CallingConvention=CallingConvention.Cdecl)]
+  static extern int sqlite3_open16([MarshalAs(UnmanagedType.LPWStr)] string filename,out IntPtr db);
+  [DllImport("winsqlite3.dll",CallingConvention=CallingConvention.Cdecl)]
+  static extern int sqlite3_close(IntPtr db);
+  [DllImport("winsqlite3.dll",CallingConvention=CallingConvention.Cdecl)]
+  static extern IntPtr sqlite3_errmsg16(IntPtr db);
+  [DllImport("winsqlite3.dll",CallingConvention=CallingConvention.Cdecl)]
+  static extern int sqlite3_prepare16_v2(IntPtr db,[MarshalAs(UnmanagedType.LPWStr)] string sql,int n,out IntPtr stmt,IntPtr tail);
+  [DllImport("winsqlite3.dll",CallingConvention=CallingConvention.Cdecl)]
+  static extern int sqlite3_bind_null(IntPtr stmt,int index);
+  [DllImport("winsqlite3.dll",CallingConvention=CallingConvention.Cdecl)]
+  static extern int sqlite3_bind_text16(IntPtr stmt,int index,[MarshalAs(UnmanagedType.LPWStr)] string value,int n,IntPtr destructor);
+  [DllImport("winsqlite3.dll",CallingConvention=CallingConvention.Cdecl)]
+  static extern int sqlite3_bind_int64(IntPtr stmt,int index,long value);
+  [DllImport("winsqlite3.dll",CallingConvention=CallingConvention.Cdecl)]
+  static extern int sqlite3_bind_double(IntPtr stmt,int index,double value);
+  [DllImport("winsqlite3.dll",CallingConvention=CallingConvention.Cdecl)]
+  static extern int sqlite3_step(IntPtr stmt);
+  [DllImport("winsqlite3.dll",CallingConvention=CallingConvention.Cdecl)]
+  static extern int sqlite3_finalize(IntPtr stmt);
+  [DllImport("winsqlite3.dll",CallingConvention=CallingConvention.Cdecl)]
+  static extern int sqlite3_column_count(IntPtr stmt);
+  [DllImport("winsqlite3.dll",CallingConvention=CallingConvention.Cdecl)]
+  static extern IntPtr sqlite3_column_name16(IntPtr stmt,int col);
+  [DllImport("winsqlite3.dll",CallingConvention=CallingConvention.Cdecl)]
+  static extern int sqlite3_column_type(IntPtr stmt,int col);
+  [DllImport("winsqlite3.dll",CallingConvention=CallingConvention.Cdecl)]
+  static extern IntPtr sqlite3_column_text16(IntPtr stmt,int col);
+  [DllImport("winsqlite3.dll",CallingConvention=CallingConvention.Cdecl)]
+  static extern long sqlite3_column_int64(IntPtr stmt,int col);
+  [DllImport("winsqlite3.dll",CallingConvention=CallingConvention.Cdecl)]
+  static extern double sqlite3_column_double(IntPtr stmt,int col);
+
+  static Exception Failure(IntPtr db,string where,int rc) {
+    string message="";
+    try { message=Marshal.PtrToStringUni(sqlite3_errmsg16(db)) ?? ""; } catch {}
+    return new InvalidOperationException(where+":"+rc+":"+message);
+  }
+  static void Check(IntPtr db,int rc,string where) {
+    if (rc!=OK) throw Failure(db,where,rc);
+  }
+  static void Bind(IntPtr db,IntPtr stmt,object[] values) {
+    if (values==null) return;
+    for (int i=0;i<values.Length;i++) {
+      object value=values[i];
+      int rc;
+      if (value==null || value is DBNull) rc=sqlite3_bind_null(stmt,i+1);
+      else if (
+        value is byte || value is sbyte || value is short || value is ushort ||
+        value is int || value is uint || value is long
+      ) rc=sqlite3_bind_int64(stmt,i+1,Convert.ToInt64(value));
+      else if (value is float || value is double || value is decimal)
+        rc=sqlite3_bind_double(stmt,i+1,Convert.ToDouble(value));
+      else rc=sqlite3_bind_text16(stmt,i+1,Convert.ToString(value),-1,TRANSIENT);
+      Check(db,rc,"bind");
+    }
+  }
+
+  public static void Execute(string path,string sql,object[] values) {
+    IntPtr db=IntPtr.Zero,stmt=IntPtr.Zero;
+    int open=sqlite3_open16(path,out db);
+    if (open!=OK) throw Failure(db,"open",open);
+    try {
+      Check(db,sqlite3_prepare16_v2(db,sql,-1,out stmt,IntPtr.Zero),"prepare");
+      Bind(db,stmt,values);
+      int rc=sqlite3_step(stmt);
+      if (rc!=DONE && rc!=ROW) throw Failure(db,"step",rc);
+    } finally {
+      if (stmt!=IntPtr.Zero) sqlite3_finalize(stmt);
+      if (db!=IntPtr.Zero) sqlite3_close(db);
+    }
+  }
+
+  public static List<Dictionary<string,object>> Query(string path,string sql,object[] values) {
+    var rows=new List<Dictionary<string,object>>();
+    IntPtr db=IntPtr.Zero,stmt=IntPtr.Zero;
+    int open=sqlite3_open16(path,out db);
+    if (open!=OK) throw Failure(db,"open",open);
+    try {
+      Check(db,sqlite3_prepare16_v2(db,sql,-1,out stmt,IntPtr.Zero),"prepare");
+      Bind(db,stmt,values);
+      int count=sqlite3_column_count(stmt);
+      while (true) {
+        int rc=sqlite3_step(stmt);
+        if (rc==DONE) break;
+        if (rc!=ROW) throw Failure(db,"step",rc);
+        var row=new Dictionary<string,object>(StringComparer.OrdinalIgnoreCase);
+        for (int col=0;col<count;col++) {
+          string name=Marshal.PtrToStringUni(sqlite3_column_name16(stmt,col)) ?? ("c"+col);
+          int type=sqlite3_column_type(stmt,col);
+          object value=null;
+          if (type==INTEGER) value=sqlite3_column_int64(stmt,col);
+          else if (type==FLOAT) value=sqlite3_column_double(stmt,col);
+          else if (type==TEXT) value=Marshal.PtrToStringUni(sqlite3_column_text16(stmt,col));
+          row[name]=value;
+        }
+        rows.Add(row);
+      }
+      return rows;
+    } finally {
+      if (stmt!=IntPtr.Zero) sqlite3_finalize(stmt);
+      if (db!=IntPtr.Zero) sqlite3_close(db);
+    }
+  }
+}
+"@
+  Add-Type -TypeDefinition $source -Language CSharp
+}
+
+function Invoke-LocalDbExec([string]$Sql,[object[]]$Values=@()) {
+  Initialize-WinSqlite
+  [HaraWinSqlite]::Execute($script:OperationsDb,$Sql,$Values)
+}
+
+function Invoke-LocalDbQuery([string]$Sql,[object[]]$Values=@()) {
+  Initialize-WinSqlite
+  return [HaraWinSqlite]::Query($script:OperationsDb,$Sql,$Values)
+}
+
+function Set-LocalStoreAcl {
+  if (-not (Test-Path -LiteralPath $script:OperationsDb -PathType Leaf)) { return }
+  try {
+    $sid=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+    & icacls.exe $script:OperationsDb /inheritance:r /grant:r ("*$sid" + ":(F)") "*S-1-5-18:(F)" | Out-Null
+  } catch {}
+}
+
+function Initialize-LocalActivityStore {
+  New-Item -ItemType Directory -Path $Root -Force | Out-Null
+  Invoke-LocalDbExec "PRAGMA journal_mode=WAL"
+  Invoke-LocalDbExec "PRAGMA synchronous=NORMAL"
+  Invoke-LocalDbExec @"
+CREATE TABLE IF NOT EXISTS activity_events (
+  event_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  at_utc TEXT NOT NULL,
+  event TEXT NOT NULL,
+  state TEXT,
+  tool_id TEXT,
+  function_id TEXT,
+  request_id TEXT,
+  error_code TEXT,
+  receipt_sha256 TEXT,
+  approval_id TEXT,
+  action_summary TEXT,
+  duration_ms INTEGER,
+  transport_mode TEXT,
+  local_only INTEGER NOT NULL DEFAULT 1
+)
+"@
+  Invoke-LocalDbExec "CREATE INDEX IF NOT EXISTS idx_activity_events_at ON activity_events(at_utc DESC)"
+  Invoke-LocalDbExec "CREATE INDEX IF NOT EXISTS idx_activity_events_terminal ON activity_events(event,at_utc DESC)"
+  Invoke-LocalDbExec "CREATE INDEX IF NOT EXISTS idx_activity_events_tool ON activity_events(tool_id,at_utc DESC)"
+  Invoke-LocalDbExec "CREATE TABLE IF NOT EXISTS local_store_meta (meta_key TEXT PRIMARY KEY,meta_value TEXT NOT NULL)"
+  Set-LocalStoreAcl
+
+  $marker=@(Invoke-LocalDbQuery "SELECT meta_value FROM local_store_meta WHERE meta_key=?" @("console_events_jsonl_v1"))
+  if ($marker.Count -eq 0) {
+    if (Test-Path -LiteralPath $ConsoleEvents -PathType Leaf) {
+      foreach($line in @(Get-Content -LiteralPath $ConsoleEvents)) {
+        try {
+          $legacy=$line | ConvertFrom-Json
+          if ([string]$legacy.schema -ne "hara.commander-console-event.v1") { continue }
+          Invoke-LocalDbExec @"
+INSERT INTO activity_events
+(at_utc,event,state,tool_id,function_id,request_id,error_code,receipt_sha256,approval_id,action_summary,duration_ms,transport_mode,local_only)
+VALUES (?,?,?,?,?,?,?,?,?,?,?,?,1)
+"@ @(
+            [string]$legacy.at_utc,
+            [string]$legacy.event,
+            $(if ($legacy.state) {[string]$legacy.state} else {$null}),
+            $(if ($legacy.tool_id) {[string]$legacy.tool_id} else {$null}),
+            $(if ($legacy.function_id) {[string]$legacy.function_id} else {$null}),
+            $(if ($legacy.request_id) {[string]$legacy.request_id} else {$null}),
+            $(if ($legacy.error_code) {[string]$legacy.error_code} else {$null}),
+            $(if ($legacy.receipt_sha256) {[string]$legacy.receipt_sha256} else {$null}),
+            $(if ($legacy.approval_id) {[string]$legacy.approval_id} else {$null}),
+            $(if ($legacy.action_summary) {[string]$legacy.action_summary} else {$null}),
+            $(if ($null -ne $legacy.duration_ms) {[long]$legacy.duration_ms} else {$null}),
+            $(if ($legacy.transport_mode) {[string]$legacy.transport_mode} else {"LEGACY_JSONL"})
+          )
+        } catch {}
+      }
+    }
+    Invoke-LocalDbExec "INSERT OR REPLACE INTO local_store_meta(meta_key,meta_value) VALUES(?,?)" @(
+      "console_events_jsonl_v1",[DateTime]::UtcNow.ToString("o")
+    )
+  }
+}
+
+function Write-LocalActivityEvent($Entry) {
+  try {
+    Initialize-LocalActivityStore
+    Invoke-LocalDbExec @"
+INSERT INTO activity_events
+(at_utc,event,state,tool_id,function_id,request_id,error_code,receipt_sha256,approval_id,action_summary,duration_ms,transport_mode,local_only)
+VALUES (?,?,?,?,?,?,?,?,?,?,?,?,1)
+"@ @(
+      [string]$Entry.at_utc,
+      [string]$Entry.event,
+      $Entry.state,
+      $Entry.tool_id,
+      $Entry.function_id,
+      $Entry.request_id,
+      $Entry.error_code,
+      $Entry.receipt_sha256,
+      $Entry.approval_id,
+      $Entry.action_summary,
+      $Entry.duration_ms,
+      $(if ($Entry.transport_mode) {[string]$Entry.transport_mode} else {"OUTBOUND_RELAY"})
+    )
+  } catch {
+    # JSONL remains the compatibility/fail-safe sink.
+  }
+}
+
+function Get-LocalActivityWindow([string]$Window="7d") {
+  Initialize-LocalActivityStore
+  $hours=switch ($Window) { "24h" {24}; "30d" {720}; default {168} }
+  if (@("24h","7d","30d") -notcontains $Window) { $Window="7d"; $hours=168 }
+  $since=[DateTime]::UtcNow.AddHours(-$hours).ToString("o")
+
+  $summaryRows=@(Invoke-LocalDbQuery @"
+SELECT COUNT(*) AS total_calls,
+       SUM(CASE WHEN state='COMPLETED' THEN 1 ELSE 0 END) AS completed,
+       SUM(CASE WHEN state='FAILED' THEN 1 ELSE 0 END) AS failed,
+       ROUND(AVG(CASE WHEN duration_ms IS NOT NULL THEN duration_ms END),1) AS avg_total_ms,
+       SUM(CASE WHEN state='COMPLETED' AND duration_ms < 3000 THEN 1 ELSE 0 END) AS under_3s
+FROM activity_events
+WHERE at_utc >= ? AND event IN ('PASS','DENIED')
+"@ @($since))
+  $row=if ($summaryRows.Count) {$summaryRows[0]} else {$null}
+
+  $tools=@(Invoke-LocalDbQuery @"
+SELECT COALESCE(tool_id,'unknown') AS tool_id,COUNT(*) AS calls
+FROM activity_events
+WHERE at_utc >= ? AND event IN ('PASS','DENIED')
+GROUP BY COALESCE(tool_id,'unknown')
+ORDER BY calls DESC,tool_id LIMIT 6
+"@ @($since))
+  $errors=@(Invoke-LocalDbQuery @"
+SELECT COALESCE(error_code,'UNKNOWN') AS error_code,COUNT(*) AS calls
+FROM activity_events
+WHERE at_utc >= ? AND event='DENIED'
+GROUP BY COALESCE(error_code,'UNKNOWN')
+ORDER BY calls DESC,error_code LIMIT 6
+"@ @($since))
+  $transports=@(Invoke-LocalDbQuery @"
+SELECT DISTINCT COALESCE(transport_mode,'OUTBOUND_RELAY') AS transport_mode
+FROM activity_events
+WHERE at_utc >= ? AND event IN ('PASS','DENIED')
+ORDER BY transport_mode
+"@ @($since))
+
+  $total=if ($row -and $null -ne $row["total_calls"]) {[int64]$row["total_calls"]} else {0}
+  $completed=if ($row -and $null -ne $row["completed"]) {[int64]$row["completed"]} else {0}
+  $failed=if ($row -and $null -ne $row["failed"]) {[int64]$row["failed"]} else {0}
+  $under3=if ($row -and $null -ne $row["under_3s"]) {[int64]$row["under_3s"]} else {0}
+  $avg=if ($row -and $null -ne $row["avg_total_ms"]) {[double]$row["avg_total_ms"]} else {$null}
+  $terminal=$completed+$failed
+
+  return [ordered]@{
+    schema="hara.commander-local-activity.v2"
+    source="LOCAL_SQLITE"
+    window=[ordered]@{
+      key=$Window
+      label=$(switch($Window){"24h"{"24 horas"}"30d"{"30 dias"}default{"7 dias"}})
+      since_at_utc=$since
+    }
+    privacy=[ordered]@{
+      local_authoritative=$true
+      payload_values_exposed=$false
+      result_values_exposed=$false
+      cloud_history_persisted=$false
+      action_summary_local_only=$true
+    }
+    summary=[ordered]@{
+      total_calls=$total
+      completed=$completed
+      failed=$failed
+      pending=0
+      executing=0
+      expired=0
+      cancelled=0
+      success_rate_percent=$(if ($terminal) {[Math]::Round(($completed/$terminal)*100,1)} else {$null})
+      under_3s_percent=$(if ($completed) {[Math]::Round(($under3/$completed)*100,1)} else {$null})
+      avg_queue_ms=$(if ($total) {0.0} else {$null})
+      avg_execution_ms=$avg
+      avg_total_ms=$avg
+      device_count=$(if ($total) {1} else {0})
+      transport_modes=@($transports | ForEach-Object {[string]$_['transport_mode']})
+    }
+    diagnostics=[ordered]@{
+      top_tools=@($tools | ForEach-Object {@{tool_id=[string]$_['tool_id'];calls=[int64]$_['calls']}})
+      top_errors=@($errors | ForEach-Object {@{error_code=[string]$_['error_code'];calls=[int64]$_['calls']}})
+    }
+  }
+}
+
+function Get-LocalActivityHeartbeatSnapshot {
+  return [ordered]@{
+    schema="hara.commander-local-activity-snapshots.v1"
+    generated_at_utc=[DateTime]::UtcNow.ToString("o")
+    windows=[ordered]@{
+      "24h"=(Get-LocalActivityWindow "24h")
+      "7d"=(Get-LocalActivityWindow "7d")
+      "30d"=(Get-LocalActivityWindow "30d")
+    }
+    detail_location="LOCAL_DEVICE"
+    customer_content_synced=$false
+  }
+}
+
+function Protect-LocalCommandPreview([string]$Value) {
+  $text=[string]$Value
+  $text=[regex]::Replace($text,'(?i)\b(password|passwd|token|secret|api[_-]?key)\s*=\s*([^\s]+)','$1=<redacted>')
+  $text=[regex]::Replace($text,'(?i)(authorization\s*:\s*bearer\s+)[^\s]+','$1<redacted>')
+  if ($text.Length -gt 240) { return $text.Substring(0,237)+"..." }
+  return $text
+}
+
+function Get-LocalActionSummary($Call) {
+  if ($null -eq $Call) { return $null }
+  $tool=[string]$Call.tool_id
+  $payload=$Call.payload
+  if ($tool -eq "hara.process.run") {
+    return "process.run cwd="+$(if ($payload.cwd) {[string]$payload.cwd} else {"~"})+
+      " timeout_ms="+$(if ($null -ne $payload.timeout_ms) {[string]$payload.timeout_ms} else {"3000"})+
+      " command="+(Protect-LocalCommandPreview ([string]$payload.command))
+  }
+  if ($tool -eq "hara.files.write") {
+    $bytes=[Text.Encoding]::UTF8.GetByteCount([string]$payload.content)
+    return "write mode="+$(if ($payload.mode) {[string]$payload.mode} else {"rewrite"})+
+      " path="+[string]$payload.path+" bytes="+$bytes
+  }
+  if ($tool -eq "hara.files.create_directory") {
+    return "mkdir path="+[string]$payload.path
+  }
+  return $null
+}
+
 function Write-ConsoleEvent([string]$Event,$Call=$null,[string]$State="",[string]$ErrorCode="",[string]$ReceiptSha="") {
   New-Item -ItemType Directory -Path $Root -Force | Out-Null
   $tool=$null; $functionId=$null; $requestId=$null
@@ -100,9 +453,15 @@ function Write-ConsoleEvent([string]$Event,$Call=$null,[string]$State="",[string
     request_id=if ($requestId) {$requestId} else {$null}
     error_code=if ($ErrorCode) {$ErrorCode} else {$null}
     receipt_sha256=if ($ReceiptSha) {$ReceiptSha} else {$null}
+    approval_id=$null
+    action_summary=Get-LocalActionSummary $Call
+    duration_ms=$null
+    transport_mode="OUTBOUND_RELAY"
+    local_only=$true
     payload_values_exposed=$false
     secret_material_exposed=$false
   }
+  Write-LocalActivityEvent $entry
   Add-Content -LiteralPath $ConsoleEvents -Value ($entry | ConvertTo-Json -Compress) -Encoding UTF8
 }
 
@@ -553,9 +912,11 @@ function Complete-Call($Cfg,[string]$Token,$Call,[string]$State,$Result,[string]
 
 function Invoke-AgentSelfTest {
   $previousReceiptDir=$script:ReceiptDir
+  $previousOperationsDb=$script:OperationsDb
   $testRoot=Join-Path ([IO.Path]::GetTempPath()) ("hara-commander-selftest-"+[guid]::NewGuid().ToString("N"))
   try {
     $script:ReceiptDir=Join-Path $testRoot "receipts"
+    $script:OperationsDb=Join-Path $testRoot "operations.sqlite3"
     New-Item -ItemType Directory -Path $script:ReceiptDir -Force | Out-Null
     $cfg=[pscustomobject]@{device_id="selftest";architecture="test"}
     $base=[ordered]@{call_id="selftest";request_id="selftest-001";tool_id="hara.health";payload=[pscustomobject]@{}}
@@ -615,10 +976,19 @@ function Invoke-AgentSelfTest {
         started_at_utc=[DateTime]::UtcNow.ToString("o")
       } | ConvertTo-Json -Compress | Set-Content -LiteralPath $script:SessionPath -Encoding UTF8
       if (-not (Test-OperatorSessionActive)) { throw "SELF_TEST_SESSION_GATE_FAILED" }
-      Write-ConsoleEvent "SELFTEST" ([pscustomobject]@{request_id="r";tool_id="hara.health";payload=[pscustomobject]@{secret="never"}})
+      $selfCall=[pscustomobject]@{request_id="r";tool_id="hara.health";payload=[pscustomobject]@{secret="never"}}
+      Write-ConsoleEvent "SELFTEST" $selfCall
+      Write-ConsoleEvent "PASS" $selfCall "COMPLETED"
       $entry=(Get-Content -LiteralPath $script:ConsoleEvents | Select-Object -Last 1) | ConvertFrom-Json
       if ($entry.payload_values_exposed -ne $false -or $entry.secret_material_exposed -ne $false) { throw "SELF_TEST_CONSOLE_SANITIZATION_FAILED" }
       if (($entry | ConvertTo-Json -Compress) -match "never") { throw "SELF_TEST_CONSOLE_PAYLOAD_LEAK" }
+      $columns=@(Invoke-LocalDbQuery "PRAGMA table_info(activity_events)")
+      $columnNames=@($columns | ForEach-Object {[string]$_["name"]})
+      if ($columnNames -contains "payload_json" -or $columnNames -contains "result_json") { throw "SELF_TEST_LOCAL_DB_RAW_CONTENT_COLUMN" }
+      $activity=Get-LocalActivityWindow "7d"
+      if ([string]$activity.source -ne "LOCAL_SQLITE") { throw "SELF_TEST_LOCAL_DB_SOURCE_FAILED" }
+      if ([int64]$activity.summary.total_calls -lt 1) { throw "SELF_TEST_LOCAL_DB_ACTIVITY_FAILED" }
+      if (-not (Test-Path -LiteralPath $script:OperationsDb -PathType Leaf)) { throw "SELF_TEST_LOCAL_DB_MISSING" }
     } finally {
       $script:SessionPath=$previousSessionPath
       $script:ConsoleEvents=$previousConsoleEvents
@@ -627,11 +997,14 @@ function Invoke-AgentSelfTest {
     Write-Host "COMMANDER_WINDOWS_OPERATOR_SESSION_GATE=PASS"
     Write-Host "COMMANDER_WINDOWS_CONSOLE_SANITIZATION=PASS"
     Write-Host "COMMANDER_WINDOWS_STARTER_READ=PASS"
+    Write-Host "COMMANDER_WINDOWS_LOCAL_ACTIVITY_SQLITE=PASS"
+    Write-Host "COMMANDER_WINDOWS_LOCAL_ACTIVITY_RAW_CONTENT=ABSENT"
     Write-Host "COMMANDER_WINDOWS_FIVE_TOOL_BRIDGE=PASS"
     Write-Host "COMMANDER_WINDOWS_ARBITRARY_FUNCTION=DENIED"
     Write-Host "COMMANDER_WINDOWS_AGENT_SELF_TEST=PASS"
   } finally {
     $script:ReceiptDir=$previousReceiptDir
+    $script:OperationsDb=$previousOperationsDb
     Remove-Item -LiteralPath $testRoot -Recurse -Force -ErrorAction SilentlyContinue
   }
 }
@@ -695,6 +1068,7 @@ while ($true) {
         architecture=[string]$Cfg.architecture
         agent_version=$AgentVersion
         approval_mode=(Get-ApprovalMode $Cfg)
+        activity_snapshots=(Get-LocalActivityHeartbeatSnapshot)
       } 20 | Out-Null
       $LastHeartbeat=Get-Date
       $LastErrorCode=$null
