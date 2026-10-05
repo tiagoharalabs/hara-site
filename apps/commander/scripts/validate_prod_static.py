@@ -18,6 +18,7 @@ WINDOWS = (APP / "public/install/windows.ps1").read_text()
 HEADERS = (APP / "public/_headers").read_text()
 READBACK = (APP / "scripts/commander_prod_readback.py").read_text()
 TRIAL_MIGRATION = (APP / "migrations/0008_trial_onboarding.sql").read_text()
+COMMERCIAL_MIGRATION = (APP / "migrations/0021_commercial_terms_20261005.sql").read_text()
 APPROVAL_MODE_MIGRATION = (APP / "migrations/0017_device_approval_mode.sql").read_text()
 
 def need(ok, code):
@@ -122,9 +123,12 @@ need("Confirmar revogação" in JS and "data-confirm-revoke" not in HTML and "wi
 need(WORKER.count("error_code = 'DEVICE_REVOKED'") >= 2, "PORTAL_DEVICE_REVOKE_CANCELS_CALLS")
 need("function requirePortalMutationOrigin" in WORKER and 'if (!origin || origin !== expectedOrigin)' in WORKER and WORKER.count("requirePortalMutationOrigin(request);") >= 4, "PORTAL_MUTATION_ORIGIN_GUARD")
 need("fonts.googleapis.com" not in HTML and "fonts.gstatic.com" not in HTML, "EXTERNAL_FONT_DEPENDENCY_ABSENT")
-need("'TRIAL', 'Trial', 'HARA_COMMANDER_GOVERNED_INVOKE', 'CALENDAR_MONTH', 100, 'ACTIVE'" in TRIAL_MIGRATION, "TRIAL_PLAN_CANONICAL_LIMIT")
-need('100 <small>execuções / mês</small>' in HTML and '1.000 <small>invokes / período</small>' not in HTML and '10.000 <small>invokes / período</small>' not in HTML, "TRIAL_PLAN_UI_ALIGNMENT")
-need("10000" not in HTML and "10000" not in JS and "10.000" not in HTML and "1.000" not in HTML, "FALSE_QUOTA_CLAIMS_ABSENT")
+need("'TRIAL', 'Trial', 'HARA_COMMANDER_GOVERNED_INVOKE', 'CALENDAR_MONTH', 100, 'ACTIVE'" in TRIAL_MIGRATION, "TRIAL_PLAN_HISTORICAL_BASE")
+need("'TRIAL', 'Free', 'HARA_COMMANDER_GOVERNED_INVOKE', 'CALENDAR_MONTH', 10000, 'ACTIVE'" in COMMERCIAL_MIGRATION, "FREE_PLAN_CANONICAL_LIMIT")
+need("'STANDARD', 'Pro', 'HARA_COMMANDER_GOVERNED_INVOKE', 'NONE', NULL, 'ACTIVE'" in COMMERCIAL_MIGRATION, "PRO_PLAN_CANONICAL_UNLIMITED")
+need('10.000 <small>chamadas / mês</small>' in HTML and '10.000 chamadas renovadas todo mês' in HTML, "FREE_PLAN_UI_ALIGNMENT")
+need('R$ 80 <small>/ mês</small>' in HTML and 'Chamadas ilimitadas' in HTML, "PRO_PLAN_UI_ALIGNMENT")
+need('100 <small>execuções / mês</small>' not in HTML, "STALE_TRIAL_QUOTA_ABSENT")
 need(
     'activeDevices.find((device) => Boolean(device.selected))' not in JS
     and 'device-selected-badge' not in JS
@@ -436,8 +440,8 @@ need("#dashboardInvokes" not in CSS and ".activity-list" not in CSS, "DEAD_ACTIV
 need('class="user-chip"' not in HTML, "DUPLICATE_INTERNAL_SESSION_IDENTITY_ABSENT")
 need(".user-chip" not in CSS, "DEAD_USER_CHIP_CSS_ABSENT")
 need(
-    '<span class="plan-label">TRIAL</span>' in HTML
-    and '<span class="plan-label">STANDARD</span>' in HTML
+    '<span class="plan-label">FREE</span>' in HTML
+    and '<span class="plan-label">PRO</span>' in HTML
     and '<span class="plan-label">SCALE</span>' not in HTML
     and 'data-billing-plan="SCALE"' not in HTML
     and 'grid-template-columns:repeat(2,minmax(0,1fr))' in CSS,

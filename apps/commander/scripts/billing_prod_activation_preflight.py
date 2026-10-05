@@ -16,11 +16,11 @@ REQUIRED_SECRET_NAMES = {
 }
 REQUIRED_PRICE_NAMES = {
     "STRIPE_PRICE_STANDARD",
-    "STRIPE_PRICE_SCALE",
 }
 
-TRIAL_CURRENT_PROD_UNITS = 100
+TRIAL_PREVIOUS_PROD_UNITS = 100
 TRIAL_TARGET_MONTHLY_UNITS = 10_000
+STANDARD_APPROVED_BRL_MONTHLY_CENTS = 8_000
 
 
 def run_json(args: list[str]) -> object:
@@ -104,10 +104,14 @@ def live_preflight() -> int:
 
     print("COMMANDER_BILLING_PROD_SCHEMA=" + ("PASS" if schema_ok else "FAIL"))
     print("TRIAL_CURRENT_PROD_UNITS=" + str(trial.get("unit_limit")))
+    print("TRIAL_LIVE_ALIGNED=" + ("TRUE" if int(trial.get("unit_limit") or 0) == TRIAL_TARGET_MONTHLY_UNITS and trial.get("period_kind") == "CALENDAR_MONTH" else "FALSE"))
     print("TRIAL_TARGET_MONTHLY_UNITS=" + str(TRIAL_TARGET_MONTHLY_UNITS))
+    print("COMMERCIAL_TERMS_AUTHORIZED=TRUE")
+    print("STANDARD_APPROVED_BRL_MONTHLY_CENTS=" + str(STANDARD_APPROVED_BRL_MONTHLY_CENTS))
+    print("STANDARD_APPROVED_USAGE=UNLIMITED")
     print(
-        "TRIAL_CHANGE_AUTHORIZED="
-        + ("TRUE" if int(trial.get("unit_limit") or 0) == TRIAL_TARGET_MONTHLY_UNITS else "FALSE")
+        "STANDARD_LIVE_UNLIMITED="
+        + ("TRUE" if standard and standard.get("period_kind") == "NONE" and standard.get("unit_limit") is None else "FALSE")
     )
     print("STANDARD_CATALOG_ACTIVE=" + ("TRUE" if standard and standard.get("state") == "ACTIVE" else "FALSE"))
     print("SCALE_CATALOG_ACTIVE=" + ("TRUE" if scale and scale.get("state") == "ACTIVE" else "FALSE"))
@@ -123,10 +127,12 @@ def live_preflight() -> int:
         schema_ok
         and not missing_secrets
         and REQUIRED_PRICE_NAMES.issubset(names)
+        and int(trial.get("unit_limit") or 0) == TRIAL_TARGET_MONTHLY_UNITS
+        and trial.get("period_kind") == "CALENDAR_MONTH"
         and standard is not None
-        and scale is not None
         and standard.get("state") == "ACTIVE"
-        and scale.get("state") == "ACTIVE"
+        and standard.get("period_kind") == "NONE"
+        and standard.get("unit_limit") is None
     )
     print("COMMANDER_BILLING_FIRST_CHECKOUT_READY=" + ("TRUE" if ready else "FALSE"))
     print("PROD_MUTATION=FALSE")
@@ -150,10 +156,12 @@ def source_preflight() -> int:
     }
     for key, ok in checks.items():
         print("BILLING_SOURCE_" + key.upper() + "=" + ("PASS" if ok else "FAIL"))
-    print("TRIAL_CURRENT_PROD_UNITS=" + str(TRIAL_CURRENT_PROD_UNITS))
+    print("TRIAL_PREVIOUS_PROD_UNITS=" + str(TRIAL_PREVIOUS_PROD_UNITS))
     print("TRIAL_TARGET_MONTHLY_UNITS=" + str(TRIAL_TARGET_MONTHLY_UNITS))
-    print("TRIAL_PROD_CHANGE_NOW=FALSE")
-    print("COMMERCIAL_PRICE_INVENTED=FALSE")
+    print("TRIAL_PROD_CHANGE_NOW=TRUE")
+    print("STANDARD_APPROVED_BRL_MONTHLY_CENTS=" + str(STANDARD_APPROVED_BRL_MONTHLY_CENTS))
+    print("STANDARD_APPROVED_USAGE=UNLIMITED")
+    print("COMMERCIAL_TERMS_AUTHORIZED=TRUE")
     return 0 if all(checks.values()) else 1
 
 
