@@ -61,6 +61,9 @@ const DEVICE_CALL_CONTENT_REDACTION_BATCH = 64;
 const DEVICE_CALL_CONTENT_REDACTION_MAX_BATCHES = 8;
 const DEVICE_CALL_REDACTED_PREFIX = "HARA_REDACTED_SHA256:";
 const EVENT_V2_TERMINAL_FAST_PATH_WAIT_MS = 500;
+const LOCAL_BUDGET_MIN_LINUX_PATCH = 35;
+const LOCAL_BUDGET_BLOCK_UNITS = 100;
+const PRODUCT_LEASE_TTL_SECONDS = 6 * 60 * 60;
 const TRANSIENT_EXECUTE_OR_REPLAY = "EXECUTE_OR_REPLAY";
 const TRANSIENT_REPLAY_ONLY = "REPLAY_ONLY";
 const TRANSIENT_SAFE_PREEXEC_RELEASE_CODES = new Set([
@@ -155,6 +158,50 @@ function rateLimitedJson(code) {
 
 function monthKey(now = new Date()) {
   return now.toISOString().slice(0, 7);
+}
+
+function monthEndUtc(periodKey) {
+  const match=/^([0-9]{4})-([0-9]{2})$/.exec(String(periodKey || ""));
+  if (!match) throw new Error("PERIOD_KEY_INVALID");
+  const year=Number(match[1]);
+  const month=Number(match[2]);
+  if (month < 1 || month > 12) throw new Error("PERIOD_KEY_INVALID");
+  return new Date(Date.UTC(year, month, 1)).toISOString();
+}
+
+function localBudgetEligibleDevice(device) {
+  return String(device?.platform || "").toUpperCase() === "LINUX"
+    && semverAtLeast(device?.agent_version, LOCAL_BUDGET_MIN_LINUX_PATCH);
+}
+
+function callUsageMode(context, device, purposeFunctionId) {
+  if (!purposeFunctionId || context.period_kind === "NONE") return "UNMETERED";
+  if (context.period_kind === "CALENDAR_MONTH" && localBudgetEligibleDevice(device)) {
+    return "LOCAL_BUDGET";
+  }
+  return "CLOUD_QUOTA";
+}
+
+async function localBudgetAllocatedUnits(env, tenantId, periodKey) {
+  const row = await env.PRODUCT_DB.prepare(
+    `SELECT COALESCE(SUM(units_allocated),0) AS allocated
+       FROM commander_device_budget_blocks
+      WHERE tenant_id = ?
+        AND period_key = ?`
+  ).bind(tenantId, periodKey).first().catch(() => null);
+  return Math.max(0, Number(row?.allocated || 0));
+}
+
+async function effectiveCloudQuotaLimit(env, context, periodKey) {
+  if (context.period_kind === "NONE") return null;
+  const configured = Number(context.unit_limit);
+  if (context.period_kind !== "CALENDAR_MONTH") return configured;
+  const localAllocated = await localBudgetAllocatedUnits(
+    env,
+    context.tenant_id,
+    periodKey,
+  );
+  return Math.max(configured - localAllocated, 0);
 }
 
 function requireRuntime(env) {
@@ -897,10 +944,32 @@ async function productUsageForPolicy(env, tenantId, periodKind, unitLimit) {
   const limit = Number(unitLimit);
   try {
     const quota = env.TENANT_QUOTA.getByName(tenantId);
+    const [legacy, localBudget] = await Promise.all([
+      quota.status(periodKey, limit),
+      env.PRODUCT_DB.prepare(
+        `SELECT COALESCE(SUM(units_allocated),0) AS allocated,
+                COALESCE(SUM(units_reported),0) AS reported
+           FROM commander_device_budget_blocks
+          WHERE tenant_id = ?
+            AND period_key = ?`
+      ).bind(tenantId, periodKey).first().catch(() => null),
+    ]);
+    const legacyConsumed = Number(legacy?.consumed_units || 0);
+    const localAllocated = Number(localBudget?.allocated || 0);
+    const localReported = Number(localBudget?.reported || 0);
+    const consumed = legacyConsumed + localReported;
     return {
-      ...(await quota.status(periodKey, limit)),
+      period_key: periodKey,
+      limit,
+      consumed_units: consumed,
+      remaining_units: Math.max(limit - consumed, 0),
       metered: true,
       available: true,
+      consistency: localAllocated > 0 ? "EVENTUAL_LOCAL_BUDGET" : "CLOUD_AUTHORITATIVE",
+      cloud_legacy_consumed_units: legacyConsumed,
+      local_budget_allocated_units: localAllocated,
+      local_budget_reported_units: localReported,
+      local_budget_unreported_capacity_units: Math.max(localAllocated - localReported, 0),
     };
   } catch (_error) {
     // Read-only product surfaces degrade independently from execution authority.
@@ -1012,6 +1081,266 @@ async function grantsForPlan(env, planCode) {
       ORDER BY grant_code`
   ).bind(planCode).all();
   return (result.results || []).map((row) => String(row.grant_code));
+}
+
+function productLeaseForContext(context, device, grants, now = new Date()) {
+  const issuedAt = now.toISOString();
+  const leaseEnd = new Date(now.getTime() + PRODUCT_LEASE_TTL_SECONDS * 1000);
+  const periodEnd = context.period_kind === "CALENDAR_MONTH"
+    ? new Date(monthEndUtc(monthKey(now)))
+    : null;
+  const validUntil = periodEnd && periodEnd < leaseEnd ? periodEnd : leaseEnd;
+  const usageMode = context.period_kind === "NONE"
+    ? "UNMETERED"
+    : (localBudgetEligibleDevice(device) && context.period_kind === "CALENDAR_MONTH"
+      ? "LOCAL_BUDGET"
+      : "CLOUD_QUOTA");
+  return {
+    schema: "hara.commander-device-product-lease.v1",
+    lease_id: "HARA-PRODUCT-LEASE-" + crypto.randomUUID(),
+    authority: "HARA_COMMANDER_CLOUD",
+    device_id: device.device_id,
+    tenant_id: context.tenant_id,
+    entitlement_id: context.entitlement_id,
+    plan_code: context.plan_code,
+    plan_name: context.plan_name,
+    grants: [...grants].sort(),
+    meter_id: context.meter_id,
+    period_kind: context.period_kind,
+    unit_limit: context.unit_limit,
+    usage_mode: usageMode,
+    issued_at_utc: issuedAt,
+    valid_until_utc: validUntil.toISOString(),
+  };
+}
+
+async function reconcileDeviceBudgetReport(env, device, periodKey, report) {
+  if (!report) return null;
+  if (!report || typeof report !== "object") throw new Error("LOCAL_BUDGET_REPORT_INVALID");
+  const budgetId = cleanId(report.budget_id, 180);
+  const leaseToken = cleanOpaque(report.lease_token, 512);
+  const committed = Number(report.committed_units);
+  if (!Number.isInteger(committed) || committed < 0) throw new Error("LOCAL_BUDGET_REPORT_INVALID");
+
+  const row = await env.PRODUCT_DB.prepare(
+    `SELECT budget_id,tenant_id,device_id,entitlement_id,plan_code,meter_id,period_key,
+            allocation_sequence,units_allocated,units_reported,lease_token_hash,state,issued_at_utc,expires_at_utc
+       FROM commander_device_budget_blocks
+      WHERE budget_id = ?
+        AND tenant_id = ?
+        AND device_id = ?
+      LIMIT 1`
+  ).bind(budgetId, device.tenant_id, device.device_id).first();
+
+  if (!row || String(row.period_key) !== String(periodKey)) {
+    throw new Error("LOCAL_BUDGET_REPORT_INVALID");
+  }
+  const suppliedHash = await sha256(leaseToken);
+  if (!secretMatches(row.lease_token_hash, suppliedHash)) {
+    throw new Error("LOCAL_BUDGET_TOKEN_INVALID");
+  }
+  const allocated = Number(row.units_allocated);
+  const prior = Number(row.units_reported);
+  if (committed < prior || committed > allocated) {
+    throw new Error("LOCAL_BUDGET_REPORT_NON_MONOTONIC");
+  }
+  const nextState = committed >= allocated ? "EXHAUSTED" : "ACTIVE";
+  const reportedAt = nowIso();
+  await env.PRODUCT_DB.prepare(
+    `UPDATE commander_device_budget_blocks
+        SET units_reported = ?,
+            state = ?,
+            last_reported_at_utc = ?
+      WHERE budget_id = ?
+        AND tenant_id = ?
+        AND device_id = ?`
+  ).bind(
+    committed, nextState, reportedAt,
+    budgetId, device.tenant_id, device.device_id
+  ).run();
+
+  return {
+    ...row,
+    units_allocated: allocated,
+    units_reported: committed,
+    state: nextState,
+    lease_token: leaseToken,
+  };
+}
+
+function publicBudgetBlock(row, leaseToken) {
+  if (!row) return null;
+  return {
+    schema: "hara.commander-local-budget-block.v1",
+    budget_id: row.budget_id,
+    device_id: row.device_id,
+    tenant_id: row.tenant_id,
+    entitlement_id: row.entitlement_id,
+    plan_code: row.plan_code,
+    meter_id: row.meter_id,
+    period_key: row.period_key,
+    allocation_sequence: Number(row.allocation_sequence),
+    allocated_units: Number(row.units_allocated),
+    committed_units: Number(row.units_reported || 0),
+    lease_token: leaseToken,
+    issued_at_utc: row.issued_at_utc,
+    expires_at_utc: row.expires_at_utc,
+    cloud_authoritative: true,
+  };
+}
+
+async function issueDeviceBudgetBlock(env, device, entitlement, report = null) {
+  const periodKey = monthKey();
+  const now = nowIso();
+  const expiresAt = monthEndUtc(periodKey);
+  const reconciled = await reconcileDeviceBudgetReport(
+    env, device, periodKey, report
+  );
+
+  if (
+    reconciled
+    && reconciled.state === "ACTIVE"
+    && reconciled.units_reported < reconciled.units_allocated
+    && String(reconciled.expires_at_utc) > now
+  ) {
+    return {
+      exhausted: false,
+      block: publicBudgetBlock(reconciled, reconciled.lease_token),
+    };
+  }
+
+  const staleActive = await env.PRODUCT_DB.prepare(
+    `SELECT budget_id
+       FROM commander_device_budget_blocks
+      WHERE tenant_id = ?
+        AND device_id = ?
+        AND period_key = ?
+        AND state = 'ACTIVE'
+      ORDER BY issued_at_utc DESC
+      LIMIT 1`
+  ).bind(device.tenant_id, device.device_id, periodKey).first();
+
+  if (staleActive && !reconciled) {
+    await env.PRODUCT_DB.prepare(
+      `UPDATE commander_device_budget_blocks
+          SET state = 'EXPIRED',
+              last_reported_at_utc = ?
+        WHERE budget_id = ?
+          AND tenant_id = ?
+          AND device_id = ?
+          AND state = 'ACTIVE'`
+    ).bind(now, staleActive.budget_id, device.tenant_id, device.device_id).run();
+  }
+
+  const totals = await env.PRODUCT_DB.prepare(
+    `SELECT COALESCE(SUM(units_allocated),0) AS allocated,
+            COUNT(*) AS block_count
+       FROM commander_device_budget_blocks
+      WHERE tenant_id = ?
+        AND period_key = ?`
+  ).bind(device.tenant_id, periodKey).first();
+
+  const limit = Number(entitlement.unit_limit);
+  const legacyUsage = await env.TENANT_QUOTA
+    .getByName(device.tenant_id)
+    .status(periodKey, limit);
+  const legacyConsumed = Number(legacyUsage?.consumed_units || 0);
+  const allocated = Number(totals?.allocated || 0);
+  const allocationSequence = Number(totals?.block_count || 0) + 1;
+  const remaining = Math.max(limit - legacyConsumed - allocated, 0);
+  if (remaining < 1) {
+    return {
+      exhausted: true,
+      block: null,
+      legacy_consumed_units: legacyConsumed,
+      locally_allocated_units: allocated,
+    };
+  }
+
+  const units = Math.min(LOCAL_BUDGET_BLOCK_UNITS, remaining);
+  const budgetId = "HARA-BUDGET-" + crypto.randomUUID();
+  const leaseToken = randomToken(32);
+  const leaseTokenHash = await sha256(leaseToken);
+  const issuedAt = nowIso();
+
+  try {
+    await env.PRODUCT_DB.prepare(
+      `INSERT INTO commander_device_budget_blocks
+         (budget_id,tenant_id,device_id,entitlement_id,plan_code,meter_id,period_key,
+          allocation_sequence,units_allocated,units_reported,lease_token_hash,state,
+          issued_at_utc,expires_at_utc,last_reported_at_utc)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, 'ACTIVE', ?, ?, NULL)`
+    ).bind(
+      budgetId,
+      device.tenant_id,
+      device.device_id,
+      entitlement.entitlement_id,
+      entitlement.plan_code,
+      entitlement.meter_id,
+      periodKey,
+      allocationSequence,
+      units,
+      leaseTokenHash,
+      issuedAt,
+      expiresAt,
+    ).run();
+  } catch (_error) {
+    throw new Error("LOCAL_BUDGET_ALLOCATION_CONFLICT");
+  }
+
+  return {
+    exhausted: false,
+    legacy_consumed_units: legacyConsumed,
+    locally_allocated_units: allocated + units,
+    block: publicBudgetBlock({
+      budget_id: budgetId,
+      tenant_id: device.tenant_id,
+      device_id: device.device_id,
+      entitlement_id: entitlement.entitlement_id,
+      plan_code: entitlement.plan_code,
+      meter_id: entitlement.meter_id,
+      period_key: periodKey,
+      allocation_sequence: allocationSequence,
+      units_allocated: units,
+      units_reported: 0,
+      issued_at_utc: issuedAt,
+      expires_at_utc: expiresAt,
+    }, leaseToken),
+  };
+}
+
+async function deviceProductLease(env, request, body = {}) {
+  const device = await resolveDeviceCredential(env, request);
+  const entitlement = await entitlementForTenant(env, device.tenant_id);
+  if (!entitlement) throw new Error("ENTITLEMENT_NOT_FOUND");
+  const grants = await grantsForPlan(env, entitlement.plan_code);
+  const context = {
+    tenant_id: entitlement.tenant_id,
+    entitlement_id: entitlement.entitlement_id,
+    plan_code: entitlement.plan_code,
+    plan_name: entitlement.plan_name,
+    meter_id: entitlement.meter_id,
+    period_kind: entitlement.period_kind,
+    unit_limit: entitlement.period_kind === "NONE" ? null : Number(entitlement.unit_limit),
+  };
+  const productLease = productLeaseForContext(context, device, grants);
+  let budget = null;
+
+  if (productLease.usage_mode === "LOCAL_BUDGET") {
+    budget = await issueDeviceBudgetBlock(
+      env,
+      device,
+      context,
+      body?.budget_report || null,
+    );
+  }
+
+  return {
+    schema: "hara.commander-device-product-lease-response.v1",
+    ok: true,
+    product_lease: productLease,
+    budget,
+  };
 }
 
 async function ensureSecondaryMcpBinding(env, {
@@ -2024,6 +2353,10 @@ async function enqueueDeviceCall(env, body) {
   const deviceId = cleanId(device.device_id, 180);
   if (!deviceOnline(device.last_seen_at_utc, device.tunnel_mode)) throw new Error("DEVICE_OFFLINE");
 
+  const usageFunctionId = quotaFunctionIdForTool(toolId, canonicalPayload);
+  const usageMode = callUsageMode(context, device, usageFunctionId);
+  const usageUnits = usageFunctionId ? 1 : 0;
+  const usagePeriodKey = usageUnits ? mcpPeriodKey(context) : null;
   const enqueueAt = nowIso();
 
   const callId = "HARA-CALL-" + crypto.randomUUID();
@@ -2035,8 +2368,8 @@ async function enqueueDeviceCall(env, body) {
     `INSERT OR IGNORE INTO commander_device_calls
       (call_id, request_id, tenant_id, subject_id, device_id, tool_id, payload_json,
        state, created_at_utc, expires_at_utc, claimed_at_utc, completed_at_utc,
-       result_json, error_code)
-     SELECT ?, ?, ?, ?, d.device_id, ?, ?, 'PENDING', ?, ?, NULL, NULL, NULL, NULL
+       result_json, error_code, usage_mode, usage_units, usage_period_key)
+     SELECT ?, ?, ?, ?, d.device_id, ?, ?, 'PENDING', ?, ?, NULL, NULL, NULL, NULL, ?, ?, ?
        FROM commander_devices d
       WHERE d.device_id = ?
         AND d.tenant_id = ?
@@ -2057,7 +2390,8 @@ async function enqueueDeviceCall(env, body) {
         ) < ?`
   ).bind(
     callId, requestId, context.tenant_id, context.subject_id, toolId, payloadJson,
-    createdAt, expiresAt, deviceId, context.tenant_id, eventV2Cutoff, onlineCutoff,
+    createdAt, expiresAt, usageMode, usageUnits, usagePeriodKey,
+    deviceId, context.tenant_id, eventV2Cutoff, onlineCutoff,
     createdAt, DEVICE_CALL_ACTIVE_QUEUE_LIMIT
   ).run();
 
@@ -2149,6 +2483,9 @@ async function enqueueDeviceCall(env, body) {
     state: responseState,
     expires_at_utc: expiresAt,
     retry_after_ms: deviceCallRetryAfterMs(responseState, "enqueue"),
+    usage_mode: usageMode,
+    usage_units: usageUnits,
+    usage_period_key: usagePeriodKey,
   };
 
   if (postNotify) {
@@ -3149,18 +3486,22 @@ async function executeCustomerMcpTool(
   const dispatchToolId = dispatchAsLegacyInvoke ? "hara.functions.invoke" : toolId;
   const dispatchPayload = dispatchAsLegacyInvoke ? legacyPayload : payload;
 
+  const usageMode = callUsageMode(context, targetDevice, purposeFunctionId);
   let quota = null;
   let reservation = null;
-  if (purposeFunctionId) {
+  let cloudQuotaLimit = context.unit_limit;
+  if (purposeFunctionId && usageMode === "CLOUD_QUOTA") {
     const functionId = cleanId(purposeFunctionId, 180);
     if (!functionId.startsWith("tool:") && !isDeviceFunctionAllowed(functionId)) throw new Error("POLICY_DENIED");
+    const cloudPeriodKey = mcpPeriodKey(context);
+    cloudQuotaLimit = await effectiveCloudQuotaLimit(env, context, cloudPeriodKey);
     quota = env.TENANT_QUOTA.getByName(context.tenant_id);
     reservation = await quota.reserve(
       requestId,
       context.subject_id,
-      mcpPeriodKey(context),
+      cloudPeriodKey,
       functionId,
-      context.unit_limit,
+      cloudQuotaLimit,
     );
     if (!reservation.ok) {
       throw new Error(String(reservation.code || "QUOTA_DENIED"));
@@ -3196,6 +3537,23 @@ async function executeCustomerMcpTool(
     if (reservation.state !== "RESERVED") {
       throw new Error("CUSTOMER_MCP_QUOTA_STATE_INVALID");
     }
+  } else if (purposeFunctionId && usageMode === "LOCAL_BUDGET") {
+    reservation = {
+      ok: true,
+      state: "LOCAL_BUDGET",
+      mode: "LOCAL_BUDGET",
+      period_key: mcpPeriodKey(context),
+      units: 1,
+      cloud_quota_transaction: false,
+    };
+  } else if (purposeFunctionId && usageMode === "UNMETERED") {
+    reservation = {
+      ok: true,
+      state: "UNMETERED",
+      mode: "UNMETERED",
+      units: 0,
+      cloud_quota_transaction: false,
+    };
   }
 
   let call;
@@ -3209,8 +3567,8 @@ async function executeCustomerMcpTool(
       payload: dispatchPayload,
     });
   } catch (error) {
-    if (quota && reservation?.state === "RESERVED") {
-      await quota.release(requestId, context.subject_id, context.unit_limit)
+    if (usageMode === "CLOUD_QUOTA" && quota && reservation?.state === "RESERVED") {
+      await quota.release(requestId, context.subject_id, cloudQuotaLimit)
         .catch(() => undefined);
     }
     throw error;
@@ -3218,8 +3576,8 @@ async function executeCustomerMcpTool(
 
   const status = await customerMcpWaitForCall(env, identity, call);
   if (status.state === "FAILED") {
-    if (quota && reservation?.state === "RESERVED") {
-      await quota.release(requestId, context.subject_id, context.unit_limit);
+    if (usageMode === "CLOUD_QUOTA" && quota && reservation?.state === "RESERVED") {
+      await quota.release(requestId, context.subject_id, cloudQuotaLimit);
     }
     if (status.result && typeof status.result === "object") {
       return { ...projectCustomerToolResult(toolId, status.result), computer: targetComputer };
@@ -3227,8 +3585,8 @@ async function executeCustomerMcpTool(
     throw new Error(String(status.error_code || "DEVICE_EXECUTION_FAILED"));
   }
   if (status.state !== "COMPLETED") {
-    if (quota && reservation?.state === "RESERVED") {
-      await quota.release(requestId, context.subject_id, context.unit_limit);
+    if (usageMode === "CLOUD_QUOTA" && quota && reservation?.state === "RESERVED") {
+      await quota.release(requestId, context.subject_id, cloudQuotaLimit);
     }
     throw new Error("DEVICE_CALL_" + String(status.state || "FAILED"));
   }
@@ -3238,7 +3596,7 @@ async function executeCustomerMcpTool(
     computer: targetComputer,
   };
   let usage = null;
-  if (purposeFunctionId) {
+  if (purposeFunctionId && usageMode === "CLOUD_QUOTA") {
     const receiptSha = String(projected.bridge_receipt_sha256 || "");
     if (
       projected.state === "PASS"
@@ -3248,7 +3606,7 @@ async function executeCustomerMcpTool(
         requestId,
         context.subject_id,
         receiptSha,
-        context.unit_limit,
+        cloudQuotaLimit,
       );
       if (!usage.ok) {
         throw new Error(String(usage.code || "PRODUCT_USAGE_COMMIT_DENIED"));
@@ -3257,9 +3615,27 @@ async function executeCustomerMcpTool(
       usage = await quota.release(
         requestId,
         context.subject_id,
-        context.unit_limit,
+        cloudQuotaLimit,
       );
     }
+  } else if (purposeFunctionId && usageMode === "LOCAL_BUDGET") {
+    usage = {
+      ok: true,
+      state: "LOCAL_BUDGET",
+      mode: "LOCAL_BUDGET",
+      period_key: mcpPeriodKey(context),
+      units: 1,
+      cloud_quota_transaction: false,
+      local_enforced: true,
+    };
+  } else if (purposeFunctionId && usageMode === "UNMETERED") {
+    usage = {
+      ok: true,
+      state: "UNMETERED",
+      mode: "UNMETERED",
+      units: 0,
+      cloud_quota_transaction: false,
+    };
   }
 
   return {
@@ -3293,7 +3669,8 @@ async function claimNextDeviceCall(env, request) {
          ORDER BY c.created_at_utc
          LIMIT 1
       )
-      RETURNING call_id, request_id, tool_id, payload_json, expires_at_utc`
+      RETURNING call_id, request_id, tool_id, payload_json, expires_at_utc,
+                usage_mode, usage_units, usage_period_key`
   ).bind(now, device.device_id, now).all();
 
   const row = (result.results || [])[0];
@@ -3318,6 +3695,11 @@ async function claimNextDeviceCall(env, request) {
     tool_id: row.tool_id,
     payload: rawPayload,
     expires_at_utc: row.expires_at_utc,
+    usage: {
+      mode: String(row.usage_mode || "CLOUD_QUOTA"),
+      units: Number(row.usage_units || 0),
+      period_key: row.usage_period_key || null,
+    },
   };
 }
 
@@ -3847,6 +4229,11 @@ export default {
         return json(await heartbeatDevice(env, request, body));
       }
 
+      if (url.pathname === "/api/device/product-lease" && request.method === "POST") {
+        const body = await request.json().catch(() => ({}));
+        return json(await deviceProductLease(env, request, body));
+      }
+
       if (url.pathname === "/api/device/offline" && request.method === "POST") {
         const body = await request.json().catch(() => ({}));
         return json(await markDeviceOffline(env, request, body));
@@ -3950,9 +4337,24 @@ export default {
           });
         }
         const periodKey = mcpPeriodKey(context);
-        const reservation = await env.TENANT_QUOTA
-          .getByName(context.tenant_id)
-          .reserve(requestId, context.subject_id, periodKey, functionId, context.unit_limit);
+        const reservation = context.period_kind === "NONE"
+          ? {
+              ok: true,
+              state: "UNMETERED",
+              mode: "UNMETERED",
+              period_key: periodKey,
+              units: 0,
+              cloud_quota_transaction: false,
+            }
+          : await env.TENANT_QUOTA
+              .getByName(context.tenant_id)
+              .reserve(
+                requestId,
+                context.subject_id,
+                periodKey,
+                functionId,
+                await effectiveCloudQuotaLimit(env, context, periodKey),
+              );
 
         if (!reservation.ok) {
           return internalJson({
@@ -3995,18 +4397,31 @@ export default {
           return internalJson({ ok: false, code: "INVALID_RECEIPT_SHA256" }, 400);
         }
 
-        const identity = await mcpIdentityBinding(env, body.issuer, body.subject);
-        if (!identity.ok) return internalJson({ ok: false, code: identity.code }, 403);
+        const context = await mcpProductContext(env, body.issuer, body.subject);
+        if (!context.ok) return internalJson({ ok: false, code: context.code }, 403);
 
-        const usage = await env.TENANT_QUOTA
-          .getByName(identity.tenant_id)
-          .commit(requestId, identity.subject_id, receiptSha256, null);
+        const usage = context.period_kind === "NONE"
+          ? {
+              ok: true,
+              state: "UNMETERED",
+              mode: "UNMETERED",
+              units: 0,
+              cloud_quota_transaction: false,
+            }
+          : await env.TENANT_QUOTA
+              .getByName(context.tenant_id)
+              .commit(
+                requestId,
+                context.subject_id,
+                receiptSha256,
+                await effectiveCloudQuotaLimit(env, context, mcpPeriodKey(context)),
+              );
 
         return internalJson({
           schema: "hara.commander-mcp-usage-transition.v1",
           transition: "COMMIT",
-          subject_id: identity.subject_id,
-          tenant_id: identity.tenant_id,
+          subject_id: context.subject_id,
+          tenant_id: context.tenant_id,
           request_id: requestId,
           receipt_sha256: receiptSha256,
           usage,
@@ -4016,18 +4431,30 @@ export default {
       if (url.pathname === "/api/internal/mcp/release" && request.method === "POST") {
         const body = await request.json();
         const requestId = cleanId(body.request_id, 220);
-        const identity = await mcpIdentityBinding(env, body.issuer, body.subject);
-        if (!identity.ok) return internalJson({ ok: false, code: identity.code }, 403);
+        const context = await mcpProductContext(env, body.issuer, body.subject);
+        if (!context.ok) return internalJson({ ok: false, code: context.code }, 403);
 
-        const usage = await env.TENANT_QUOTA
-          .getByName(identity.tenant_id)
-          .release(requestId, identity.subject_id, null);
+        const usage = context.period_kind === "NONE"
+          ? {
+              ok: true,
+              state: "UNMETERED",
+              mode: "UNMETERED",
+              units: 0,
+              cloud_quota_transaction: false,
+            }
+          : await env.TENANT_QUOTA
+              .getByName(context.tenant_id)
+              .release(
+                requestId,
+                context.subject_id,
+                await effectiveCloudQuotaLimit(env, context, mcpPeriodKey(context)),
+              );
 
         return internalJson({
           schema: "hara.commander-mcp-usage-transition.v1",
           transition: "RELEASE",
-          subject_id: identity.subject_id,
-          tenant_id: identity.tenant_id,
+          subject_id: context.subject_id,
+          tenant_id: context.tenant_id,
           request_id: requestId,
           usage,
         });

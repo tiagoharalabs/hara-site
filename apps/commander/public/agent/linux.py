@@ -22,7 +22,7 @@ from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-AGENT_VERSION = "0.3.34"
+AGENT_VERSION = "0.3.35"
 CONFIG_FILE = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home()/".config"))) / "hara-commander/device.env"
 DATA_DIR = Path(os.environ.get("XDG_DATA_HOME", str(Path.home()/".local/share"))) / "hara-commander"
 RECEIPT_DIR = DATA_DIR / "receipts"
@@ -35,6 +35,7 @@ LOCAL_PORTAL_PORT = max(1024, min(65535, int(os.environ.get("HARA_COMMANDER_LOCA
 APPROVAL_DIR = DATA_DIR / "approvals"
 PREIMAGE_DIR = DATA_DIR / "preimages"
 SESSION_MAX_SECONDS = 12 * 60 * 60
+PRODUCT_LEASE_REFRESH_SECONDS = 4 * 60 * 60
 APPROVAL_MODES = {"ASK_EVERY_ACTION","SESSION_TRUSTED","PERSISTENT_TRUSTED"}
 FUNCTION_ID = "device.info"
 FUNCTION_IDS = (
@@ -225,6 +226,39 @@ def _ops_connect():
         meta_key TEXT PRIMARY KEY,
         meta_value TEXT NOT NULL
       );
+      CREATE TABLE IF NOT EXISTS product_lease (
+        singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
+        lease_json TEXT NOT NULL,
+        valid_until_utc TEXT NOT NULL,
+        updated_at_utc TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS local_budget_blocks (
+        budget_id TEXT PRIMARY KEY,
+        tenant_id TEXT NOT NULL,
+        device_id TEXT NOT NULL,
+        entitlement_id TEXT NOT NULL,
+        plan_code TEXT NOT NULL,
+        meter_id TEXT NOT NULL,
+        period_key TEXT NOT NULL,
+        allocated_units INTEGER NOT NULL,
+        lease_token TEXT NOT NULL,
+        issued_at_utc TEXT NOT NULL,
+        expires_at_utc TEXT NOT NULL,
+        state TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_local_budget_period
+        ON local_budget_blocks(period_key, state, issued_at_utc);
+      CREATE TABLE IF NOT EXISTS local_budget_debits (
+        request_id TEXT PRIMARY KEY,
+        budget_id TEXT NOT NULL,
+        units INTEGER NOT NULL,
+        state TEXT NOT NULL,
+        created_at_utc TEXT NOT NULL,
+        updated_at_utc TEXT NOT NULL,
+        FOREIGN KEY (budget_id) REFERENCES local_budget_blocks(budget_id)
+      );
+      CREATE INDEX IF NOT EXISTS idx_local_budget_debits_block
+        ON local_budget_debits(budget_id, state);
     """)
     try:
         os.chmod(OPERATIONS_DB_FILE,0o600)
@@ -412,6 +446,234 @@ def local_activity_heartbeat_snapshot():
         "detail_location":"LOCAL_DEVICE",
         "customer_content_synced":False,
     }
+
+def _budget_counts(conn,budget_id):
+    row=conn.execute(
+        """SELECT
+             COALESCE(SUM(CASE WHEN state='COMMITTED' THEN units ELSE 0 END),0) AS committed,
+             COALESCE(SUM(CASE WHEN state='RESERVED' THEN units ELSE 0 END),0) AS reserved
+           FROM local_budget_debits
+          WHERE budget_id = ?""",
+        (str(budget_id),),
+    ).fetchone()
+    return int(row["committed"] or 0), int(row["reserved"] or 0)
+
+def _local_budget_report():
+    try:
+        with _ops_connect() as conn:
+            row=conn.execute(
+                """SELECT budget_id,lease_token,allocated_units,state,expires_at_utc
+                     FROM local_budget_blocks
+                    ORDER BY issued_at_utc DESC
+                    LIMIT 1"""
+            ).fetchone()
+            if not row:
+                return None
+            committed,_reserved=_budget_counts(conn,row["budget_id"])
+            return {
+                "budget_id":str(row["budget_id"]),
+                "lease_token":str(row["lease_token"]),
+                "committed_units":committed,
+            }
+    except Exception:
+        return None
+
+def _store_product_lease_response(config,payload):
+    if not isinstance(payload,dict) or payload.get("schema")!="hara.commander-device-product-lease-response.v1":
+        raise ValueError("PRODUCT_LEASE_RESPONSE_INVALID")
+    lease=payload.get("product_lease") or {}
+    if lease.get("schema")!="hara.commander-device-product-lease.v1":
+        raise ValueError("PRODUCT_LEASE_INVALID")
+    if str(lease.get("device_id") or "")!=str(config.get("HARA_DEVICE_ID") or ""):
+        raise ValueError("PRODUCT_LEASE_DEVICE_MISMATCH")
+    valid_until=str(lease.get("valid_until_utc") or "")
+    if not valid_until:
+        raise ValueError("PRODUCT_LEASE_INVALID")
+    budget=payload.get("budget") or {}
+    block=budget.get("block") if isinstance(budget,dict) else None
+    with _ops_connect() as conn:
+        conn.execute(
+            """INSERT INTO product_lease(singleton,lease_json,valid_until_utc,updated_at_utc)
+               VALUES (1,?,?,?)
+               ON CONFLICT(singleton) DO UPDATE SET
+                 lease_json=excluded.lease_json,
+                 valid_until_utc=excluded.valid_until_utc,
+                 updated_at_utc=excluded.updated_at_utc""",
+            (
+                json.dumps(lease,sort_keys=True,separators=(",",":")),
+                valid_until,
+                utcnow(),
+            ),
+        )
+        if block:
+            required={
+                "budget_id","tenant_id","device_id","entitlement_id","plan_code","meter_id",
+                "period_key","allocated_units","lease_token","issued_at_utc","expires_at_utc",
+            }
+            if not required.issubset(block):
+                raise ValueError("LOCAL_BUDGET_BLOCK_INVALID")
+            if str(block["device_id"])!=str(config.get("HARA_DEVICE_ID") or ""):
+                raise ValueError("LOCAL_BUDGET_DEVICE_MISMATCH")
+            units=int(block["allocated_units"])
+            if units<1 or units>10000:
+                raise ValueError("LOCAL_BUDGET_BLOCK_INVALID")
+            conn.execute(
+                """INSERT INTO local_budget_blocks
+                   (budget_id,tenant_id,device_id,entitlement_id,plan_code,meter_id,period_key,
+                    allocated_units,lease_token,issued_at_utc,expires_at_utc,state)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,'ACTIVE')
+                   ON CONFLICT(budget_id) DO UPDATE SET
+                     lease_token=excluded.lease_token,
+                     expires_at_utc=excluded.expires_at_utc""",
+                (
+                    str(block["budget_id"]),str(block["tenant_id"]),str(block["device_id"]),
+                    str(block["entitlement_id"]),str(block["plan_code"]),str(block["meter_id"]),
+                    str(block["period_key"]),units,str(block["lease_token"]),
+                    str(block["issued_at_utc"]),str(block["expires_at_utc"]),
+                ),
+            )
+        conn.commit()
+    return lease
+
+def refresh_product_lease(config):
+    report=_local_budget_report()
+    body={}
+    if report:
+        body["budget_report"]=report
+    payload=post_json(
+        config["HARA_COMMANDER_URL"]+"/api/device/product-lease",
+        config["HARA_DEVICE_TOKEN"],
+        body,
+        timeout=20,
+    )
+    lease=_store_product_lease_response(config,payload)
+    append_console_event(
+        "PRODUCT_LEASE_REFRESH",
+        state=str(lease.get("usage_mode") or "UNKNOWN"),
+        action_summary="plan="+str(lease.get("plan_code") or ""),
+    )
+    return payload
+
+def _local_budget_find_available(conn,period_key,units):
+    rows=conn.execute(
+        """SELECT budget_id,allocated_units,expires_at_utc
+             FROM local_budget_blocks
+            WHERE period_key = ?
+              AND state = 'ACTIVE'
+              AND expires_at_utc > ?
+            ORDER BY issued_at_utc ASC""",
+        (str(period_key),utcnow()),
+    ).fetchall()
+    for row in rows:
+        committed,reserved=_budget_counts(conn,row["budget_id"])
+        if int(row["allocated_units"])-committed-reserved >= units:
+            return row
+    return None
+
+def local_budget_reserve(config,call):
+    usage=(call or {}).get("usage") or {}
+    if str(usage.get("mode") or "")!="LOCAL_BUDGET":
+        return None
+    units=int(usage.get("units") or 0)
+    period_key=str(usage.get("period_key") or "")
+    request_id=str((call or {}).get("request_id") or "")
+    if units<1 or not period_key or not request_id:
+        raise ValueError("LOCAL_BUDGET_USAGE_INVALID")
+
+    for attempt in range(2):
+        with _ops_connect() as conn:
+            existing=conn.execute(
+                "SELECT budget_id,units,state FROM local_budget_debits WHERE request_id = ?",
+                (request_id,),
+            ).fetchone()
+            if existing:
+                state=str(existing["state"])
+                if state=="RESERVED":
+                    return {
+                        "request_id":request_id,
+                        "budget_id":str(existing["budget_id"]),
+                        "units":int(existing["units"]),
+                        "state":state,
+                        "existing":True,
+                    }
+                if state=="COMMITTED":
+                    raise ValueError("LOCAL_BUDGET_REQUEST_ALREADY_COMMITTED")
+                raise ValueError("LOCAL_BUDGET_REQUEST_TERMINAL")
+
+            block=_local_budget_find_available(conn,period_key,units)
+            if block:
+                now=utcnow()
+                conn.execute(
+                    """INSERT INTO local_budget_debits
+                       (request_id,budget_id,units,state,created_at_utc,updated_at_utc)
+                       VALUES (?,?,?,'RESERVED',?,?)""",
+                    (request_id,str(block["budget_id"]),units,now,now),
+                )
+                conn.commit()
+                return {
+                    "request_id":request_id,
+                    "budget_id":str(block["budget_id"]),
+                    "units":units,
+                    "state":"RESERVED",
+                    "existing":False,
+                }
+
+        if attempt==0:
+            refresh_product_lease(config)
+
+    raise ValueError("LOCAL_BUDGET_EXHAUSTED")
+
+def local_budget_commit(request_id):
+    with _ops_connect() as conn:
+        row=conn.execute(
+            "SELECT budget_id,units,state FROM local_budget_debits WHERE request_id = ?",
+            (str(request_id),),
+        ).fetchone()
+        if not row:
+            raise ValueError("LOCAL_BUDGET_DEBIT_NOT_FOUND")
+        if str(row["state"])=="COMMITTED":
+            return {"state":"COMMITTED","existing":True,"budget_id":str(row["budget_id"])}
+        if str(row["state"])!="RESERVED":
+            raise ValueError("LOCAL_BUDGET_DEBIT_NOT_ACTIVE")
+        now=utcnow()
+        conn.execute(
+            "UPDATE local_budget_debits SET state='COMMITTED',updated_at_utc=? WHERE request_id=?",
+            (now,str(request_id)),
+        )
+        committed,reserved=_budget_counts(conn,row["budget_id"])
+        block=conn.execute(
+            "SELECT allocated_units FROM local_budget_blocks WHERE budget_id=?",
+            (str(row["budget_id"]),),
+        ).fetchone()
+        if block and committed>=int(block["allocated_units"]) and reserved==0:
+            conn.execute(
+                "UPDATE local_budget_blocks SET state='EXHAUSTED' WHERE budget_id=?",
+                (str(row["budget_id"]),),
+            )
+        conn.commit()
+        return {
+            "state":"COMMITTED","existing":False,"budget_id":str(row["budget_id"]),
+            "committed_units":committed,
+        }
+
+def local_budget_release(request_id):
+    with _ops_connect() as conn:
+        row=conn.execute(
+            "SELECT budget_id,state FROM local_budget_debits WHERE request_id = ?",
+            (str(request_id),),
+        ).fetchone()
+        if not row:
+            return {"state":"ABSENT","existing":False}
+        if str(row["state"])=="RELEASED":
+            return {"state":"RELEASED","existing":True,"budget_id":str(row["budget_id"])}
+        if str(row["state"])=="COMMITTED":
+            return {"state":"COMMITTED","existing":True,"budget_id":str(row["budget_id"])}
+        conn.execute(
+            "UPDATE local_budget_debits SET state='RELEASED',updated_at_utc=? WHERE request_id=?",
+            (utcnow(),str(request_id)),
+        )
+        conn.commit()
+        return {"state":"RELEASED","existing":False,"budget_id":str(row["budget_id"])}
 
 def _portal_origin(value):
     parsed=urllib.parse.urlparse(str(value or ""))
@@ -1728,6 +1990,8 @@ def complete(config, call, state, result, error_code=None):
 def execute_call(config,call):
     started=time.monotonic()
     call["_transport"]="OUTBOUND_RELAY"
+    budget_reservation=None
+    budget_committed=False
     if effective_approval_mode(config)!="PERSISTENT_TRUSTED" and not operator_session_active():
         code="LOCAL_OPERATOR_SESSION_REQUIRED"
         append_console_event("DENIED",call,state="DENIED",error_code=code)
@@ -1739,10 +2003,14 @@ def execute_call(config,call):
         return
     append_console_event("RECEIVED",call,state="PENDING")
     try:
+        budget_reservation=local_budget_reserve(config,call)
         if _is_mutation_tool(call.get("tool_id")):
             call["_local_approval"]=request_local_approval(call)
         append_console_event("EXECUTING",call,state="EXECUTING")
         result=execute_tool(config,call)
+        if budget_reservation:
+            local_budget_commit(call.get("request_id"))
+            budget_committed=True
         complete(config,call,"COMPLETED",result)
         append_console_event(
             "PASS",call,state="COMPLETED",
@@ -1751,6 +2019,11 @@ def execute_call(config,call):
         )
     except Exception as exc:
         code=safe_error_code(exc)
+        if budget_reservation and not budget_committed:
+            try:
+                local_budget_release(call.get("request_id"))
+            except Exception:
+                pass
         append_console_event("DENIED",call,state="FAILED",error_code=code,duration_ms=round((time.monotonic()-started)*1000))
         complete(config,call,"FAILED",{
             "state":"DENIED","operational_authority":"LOCAL_OPERATOR_SESSION",
@@ -2199,9 +2472,19 @@ def main():
     if not try_write_runtime_status(started_at=utcnow(), error_code=None, error_at=None):
         raise RuntimeError("RUNTIME_STATUS_STARTUP_WRITE_FAILED")
     last_heartbeat=0.0
+    last_product_lease=0.0
     last_error_code=None
     last_error_write=0.0
     was_authorized=False
+    try:
+        refresh_product_lease(config)
+        last_product_lease=time.monotonic()
+    except Exception as exc:
+        append_console_event(
+            "PRODUCT_LEASE_DEGRADED",
+            state="DEGRADED",
+            error_code=safe_error_code(exc),
+        )
     persistent=effective_approval_mode(config)=="PERSISTENT_TRUSTED"
     if not operator_session_active() and not persistent:
         mark_device_offline(config)
@@ -2224,6 +2507,16 @@ def main():
             append_console_event("AGENT_ONLINE",state="PERSISTENT_TRUSTED" if persistent else "AUTHORIZED")
             was_authorized=True
         try:
+            if now-last_product_lease>=PRODUCT_LEASE_REFRESH_SECONDS:
+                try:
+                    refresh_product_lease(config)
+                    last_product_lease=now
+                except Exception as exc:
+                    append_console_event(
+                        "PRODUCT_LEASE_DEGRADED",
+                        state="DEGRADED",
+                        error_code=safe_error_code(exc),
+                    )
             if now-last_heartbeat>=30:
                 post_json(config["HARA_COMMANDER_URL"]+"/api/device/heartbeat",config["HARA_DEVICE_TOKEN"],{
                     "device_id":config["HARA_DEVICE_ID"],"architecture":config["HARA_DEVICE_ARCH"],"agent_version":AGENT_VERSION,
