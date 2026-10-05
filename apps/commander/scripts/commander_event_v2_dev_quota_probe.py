@@ -256,6 +256,8 @@ def self_check() -> None:
 
     assert "expireReservations = true" in status_block
     assert "if (expireReservations) this.expireStaleReservations();" in status_block
+    assert "FROM period_usage" in status_block
+    assert "SUM(units)" not in status_block
     assert reserve_block.count("this.expireStaleReservations()") == 1
     assert reserve_block.count("this.status(periodKey, limit, false)") == 2
     assert "const consumedUnits = balance.consumed_units + 1;" in reserve_block
@@ -277,8 +279,9 @@ def self_check() -> None:
     print("COMMANDER_EVENT_V2_QUOTA_PROBE_SOURCE=PASS")
     print("COMMANDER_EVENT_V2_QUOTA_PROBE_ORIGIN=DEV_ONLY")
     print("COMMANDER_EVENT_V2_QUOTA_PROBE_TOKEN_OUTPUT=ABSENT")
-    print("COMMANDER_TENANT_QUOTA_EXPIRY_SWEEP_PER_RPC=ONE")
-    print("COMMANDER_TENANT_QUOTA_RESERVE_SUM_QUERIES=ONE")
+    print("COMMANDER_TENANT_QUOTA_EXPIRY_SWEEP_PER_RPC=ONE_INDEXED")
+    print("COMMANDER_TENANT_QUOTA_HOT_STATUS_SUM_QUERIES=ZERO")
+    print("COMMANDER_TENANT_QUOTA_HOT_STATUS_COMPLEXITY=O1")
     print("COMMANDER_TENANT_QUOTA_NEW_RESERVE_SQL_EXEC_TARGET=4")
 
 
