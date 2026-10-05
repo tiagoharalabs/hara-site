@@ -76,3 +76,24 @@ PASS:
 - device tool contract
 - E2E harness
 - preprod readiness
+
+## Metered read resilience
+
+Read-only usage projection for metered plans now degrades independently if the
+quota read backend is temporarily unavailable.
+
+Instead of failing the authenticated dashboard, the Worker returns a bounded
+usage projection with metered=true, available=false, the known plan period and
+limit, and error_code=USAGE_TEMPORARILY_UNAVAILABLE. It does not invent consumed
+or remaining values.
+
+The UI keeps the authenticated workspace, plan, devices and operational
+activity available and marks only usage as temporarily unavailable.
+
+Execution reserve, commit and release behavior is unchanged and remains
+fail-closed.
+
+## Browser cache delivery
+
+The portal app.js cache key was advanced to 20261005-unlimited1 so existing
+browser sessions load the corrected frontend on a normal page refresh.

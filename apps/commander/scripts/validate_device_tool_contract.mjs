@@ -100,7 +100,8 @@ need(
 need(
   worker.includes("customerUsage")
   && worker.includes("productUsageForPolicy")
-  && worker.includes('if (kind === "NONE") return unlimitedProductUsage();')
+  && worker.includes('if (kind === "NONE") return { ...unlimitedProductUsage(), available: true };')
+  && worker.includes('"USAGE_TEMPORARILY_UNAVAILABLE"')
   && worker.includes("quota.status"),
   "WORKER_USAGE_SURFACE",
 );

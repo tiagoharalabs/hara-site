@@ -12,7 +12,7 @@ def need(ok, code):
 
 need("function unlimitedProductUsage()" in WORKER, "HELPER")
 need('period_key: "UNLIMITED"' in WORKER and "metered: false" in WORKER, "CONTRACT")
-need('if (kind === "NONE") return unlimitedProductUsage();' in WORKER, "NONE_BYPASS")
+need('if (kind === "NONE") return { ...unlimitedProductUsage(), available: true };' in WORKER, "NONE_BYPASS")
 helper=WORKER.split("async function productUsageForPolicy",1)[1].split("async function dashboard",1)[0]
 need(helper.index('if (kind === "NONE")') < helper.index("TENANT_QUOTA.getByName"), "BYPASS_BEFORE_DO")
 dashboard=WORKER.split("async function dashboard(env",1)[1].split("async function dashboardForSubject",1)[0]
@@ -24,4 +24,7 @@ need("productUsageForPolicy" in usage and "TENANT_QUOTA.getByName" not in usage,
 need('"Ilimitado"' in APP and '"Sem limite"' in APP, "UNLIMITED_UI")
 need("Dados da conta não atualizados" not in APP, "STALE_LOGIN_BANNER_ABSENT")
 need("Sua sessão continua ativa." in APP and "Atualizar dados" in APP, "DEGRADED_COPY")
+need('"USAGE_TEMPORARILY_UNAVAILABLE"' in WORKER and "available: false" in WORKER, "METERED_READ_DEGRADE")
+need("Quota reserve/commit/release paths remain fail-closed" in WORKER, "EXECUTION_FAIL_CLOSED_COMMENT")
+need("Uso temporariamente indisponível" in APP and "Plano, sessão e computadores continuam disponíveis" in APP, "PARTIAL_UI")
 print("COMMANDER_UNLIMITED_PLAN_FASTPATH=PASS")
