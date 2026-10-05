@@ -287,6 +287,10 @@ VALUES
                 fail("LOCAL_DB_MISSING")
             with sqlite3.connect(ops) as local:
                 local.row_factory = sqlite3.Row
+                lease_row = local.execute(
+                    "SELECT lease_json,lease_token,valid_until_utc "
+                    "FROM product_lease WHERE singleton=1"
+                ).fetchone()
                 debits = local.execute(
                     "SELECT request_id,state,units FROM local_budget_debits "
                     "ORDER BY created_at_utc"
@@ -295,6 +299,19 @@ VALUES
                     "SELECT budget_id,allocated_units,state "
                     "FROM local_budget_blocks"
                 ).fetchall()
+            if not lease_row:
+                fail("SIGNED_LEASE_LOCAL_ROW_MISSING")
+            lease_token = str(lease_row["lease_token"] or "")
+            if len(lease_token.split(".")) != 3:
+                fail("SIGNED_LEASE_TOKEN_SHAPE_INVALID")
+            lease_json = json.loads(str(lease_row["lease_json"] or "{}"))
+            if (
+                lease_json.get("usage_mode") != "LOCAL_BUDGET"
+                or lease_json.get("device_id") != device_id
+                or not lease_row["valid_until_utc"]
+            ):
+                fail("SIGNED_LEASE_LOCAL_BINDING_INVALID")
+            print("LOCAL_BUDGET_DEV_SIGNED_LEASE_VERIFIED=PASS")
             observed = {
                 row["request_id"]: (row["state"], int(row["units"]))
                 for row in debits

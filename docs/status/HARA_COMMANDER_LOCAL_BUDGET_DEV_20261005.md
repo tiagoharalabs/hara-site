@@ -133,11 +133,15 @@ The audited successor branch local/commander-local-budget-audit-20261005
 hardens the product lease with a cloud-signed RS256 token and raises the
 LOCAL_BUDGET Agent gate to 0.3.36.
 
-Until the Cloudflare Worker secret PRODUCT_LEASE_PRIVATE_JWK is provisioned
-and the 0.3.36 DEV canary passes:
-- keep PROD on the prior safe release;
-- do not enable LOCAL_BUDGET in PROD;
-- 0.3.35 and older devices must remain on CLOUD_QUOTA for production rollout.
+The DEV successor gate is now closed:
+- PRODUCT_LEASE_PRIVATE_JWK provisioned as a Worker secret without exposing it;
+- signed Worker DEV live;
+- Agent 0.3.36 signed-lease canary PASS;
+- explicit LOCAL_BUDGET_DEV_SIGNED_LEASE_VERIFIED=PASS;
+- Windows 0.3.36 release self-test PASS.
 
-Successor source/test commit:
+PROD remains on the prior safe 0.3.34 release until the same signing key is
+configured as a PROD secret and the signed successor is promoted deliberately.
+
+Successor source/test commit lineage:
 bc25de10bda3b1aaea856121056ba748c1eec76a
