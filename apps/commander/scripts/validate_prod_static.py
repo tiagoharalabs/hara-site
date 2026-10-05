@@ -351,6 +351,15 @@ need(
     "DEVICE_SELF_SERVICE_SUPPORT",
 )
 need(
+    'class="panel quickstart-panel"' in HTML
+    and 'id="quickStartDeviceState"' in HTML
+    and 'data-copy-first-prompt' in HTML
+    and 'Verifique se meu computador está online e mostre as informações básicas dele.' in JS
+    and 'quickStartDeviceStep' in JS
+    and 'onlineCount > 0' in JS,
+    "DEVICE_FIRST_SUCCESS_QUICKSTART",
+)
+need(
     "function renderDeviceLoading()" in JS
     and 'list.setAttribute("aria-busy", "true")' in JS
     and "device-skeleton" in CSS

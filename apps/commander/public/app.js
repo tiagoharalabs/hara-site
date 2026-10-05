@@ -659,6 +659,8 @@
     }
     setText("landingConnections", number(onlineCount));
     setText("landingConnectionsDetail", onlineCount ? "Commander Agent online" : "Nenhum computador online");
+    setText("quickStartDeviceState",onlineCount ? (onlineCount === 1 ? "1 computador pronto" : onlineCount + " computadores prontos") : "Aguardando dispositivo online");
+    document.getElementById("quickStartDeviceStep")?.classList.toggle("done",onlineCount > 0);
     if (onlineCount > 0) {
       setState(
         "Pronto",
@@ -1528,6 +1530,13 @@
     if (copySimpleMcp) {
       event.preventDefault();
       copyText(window.location.origin + "/api/mcp?profile=simple", "URL MCP copiada.");
+      return;
+    }
+
+    const copyFirstPrompt = event.target.closest("[data-copy-first-prompt]");
+    if (copyFirstPrompt) {
+      event.preventDefault();
+      copyText("Verifique se meu computador está online e mostre as informações básicas dele.", "Prompt de teste copiado.");
       return;
     }
 
