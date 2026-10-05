@@ -399,35 +399,43 @@
           </div>
           <p class="activity-privacy-note" id="activityPrivacyNote">Telemetria operacional somente. Comandos, argumentos, payloads e resultados do cliente não fazem parte deste histórico.</p>
 
-          <div class="activity-diagnostics-grid">
-            <article class="panel activity-diagnostic-panel">
-              <div class="panel-head"><div><span>ADOÇÃO</span><h2>Tools mais usadas</h2></div></div>
-              <div class="activity-breakdown" id="activityTopTools"><div class="empty-state"><strong>Carregando</strong>Calculando distribuição de tools.</div></div>
-            </article>
-            <article class="panel activity-diagnostic-panel">
-              <div class="panel-head"><div><span>DIAGNÓSTICO</span><h2>Falhas por motivo</h2></div></div>
-              <div class="activity-breakdown" id="activityTopErrors"><div class="empty-state"><strong>Carregando</strong>Calculando códigos de falha sanitizados.</div></div>
-            </article>
-          </div>
+          <details class="usage-advanced panel">
+            <summary>
+              <span><b>Detalhes avançados</b><small>Tools, falhas e transações recentes</small></span>
+              <em>Mostrar</em>
+            </summary>
+            <div class="usage-advanced-body">
+              <div class="activity-diagnostics-grid">
+                <article class="activity-diagnostic-panel">
+                  <div class="panel-head"><div><span>ADOÇÃO</span><h2>Tools mais usadas</h2></div></div>
+                  <div class="activity-breakdown" id="activityTopTools"><div class="empty-state"><strong>Carregando</strong>Calculando distribuição de tools.</div></div>
+                </article>
+                <article class="activity-diagnostic-panel">
+                  <div class="panel-head"><div><span>DIAGNÓSTICO</span><h2>Falhas por motivo</h2></div></div>
+                  <div class="activity-breakdown" id="activityTopErrors"><div class="empty-state"><strong>Carregando</strong>Calculando códigos de falha sanitizados.</div></div>
+                </article>
+              </div>
 
-          <article class="panel table-panel">
-            <div class="panel-head">
-              <div><span>ATIVIDADE</span><h2>Transações recentes</h2></div>
-              <div class="activity-actions">
-                <div class="activity-window-picker" role="radiogroup" aria-label="Janela da atividade">
-                  <button type="button" role="radio" aria-checked="false" data-activity-window="24h">24h</button>
-                  <button class="active" type="button" role="radio" aria-checked="true" data-activity-window="7d">7 dias</button>
-                  <button type="button" role="radio" aria-checked="false" data-activity-window="30d">30 dias</button>
+              <div class="table-panel">
+                <div class="panel-head">
+                  <div><span>ATIVIDADE</span><h2>Transações recentes</h2></div>
+                  <div class="activity-actions">
+                    <div class="activity-window-picker" role="radiogroup" aria-label="Janela da atividade">
+                      <button type="button" role="radio" aria-checked="false" data-activity-window="24h">24h</button>
+                      <button class="active" type="button" role="radio" aria-checked="true" data-activity-window="7d">7 dias</button>
+                      <button type="button" role="radio" aria-checked="false" data-activity-window="30d">30 dias</button>
+                    </div>
+                    <button class="btn btn-secondary small" type="button" data-export-activity>Exportar CSV</button>
+                    <button class="btn btn-secondary small" type="button" data-refresh-activity>Atualizar</button>
+                  </div>
                 </div>
-                <button class="btn btn-secondary small" type="button" data-export-activity>Exportar CSV</button>
-                <button class="btn btn-secondary small" type="button" data-refresh-activity>Atualizar</button>
+                <div class="data-table usage-ledger" id="usageLedger" aria-live="polite">
+                  <div class="tr head"><span>Horário</span><span>Tool</span><span>Computador</span><span>Estado</span><span>Duração</span><span>Rastro</span></div>
+                  <div class="empty-state"><strong>Carregando atividade</strong>Consultando metadados operacionais das últimas execuções.</div>
+                </div>
               </div>
             </div>
-            <div class="data-table usage-ledger" id="usageLedger" aria-live="polite">
-              <div class="tr head"><span>Horário</span><span>Tool</span><span>Computador</span><span>Estado</span><span>Duração</span><span>Rastro</span></div>
-              <div class="empty-state"><strong>Carregando atividade</strong>Consultando metadados operacionais das últimas execuções.</div>
-            </div>
-          </article>
+          </details>
         </div>
       </div>
     </section>
@@ -518,22 +526,46 @@
             <div><h1 id="security-title">Configurações</h1><p>Conta, acesso, integrações e preferências do Commander.</p></div>
           </header>
 
-          <div class="security-grid">
-            <article class="panel security-card">
-              <div class="panel-head"><div><span>Identidade</span><h2>OAuth / OIDC</h2></div><span class="status-pill"><i></i> Ativo</span></div>
+          <div class="settings-grid">
+            <article class="panel settings-card full-panel">
+              <div class="panel-head"><div><span>CONEXÃO</span><h2>Use no cliente que preferir</h2></div></div>
+              <div class="settings-connection-list">
+                <div>
+                  <span class="where-badge">LOCAL</span>
+                  <p><b>MCP local</b><small>Mais rápido e sem relay por operação. Ideal quando o cliente MCP roda nesta máquina.</small></p>
+                  <button class="btn btn-secondary small" type="button" data-copy-local-mcp>Copiar comando</button>
+                </div>
+                <div>
+                  <span class="where-badge">MCP</span>
+                  <p><b>MCP remoto</b><small>ChatGPT, Claude, Cursor, VS Code, Codex ou qualquer cliente MCP compatível.</small></p>
+                  <button class="btn btn-secondary small" type="button" data-copy-simple-mcp>Copiar endpoint</button>
+                </div>
+              </div>
+            </article>
+
+            <article class="panel settings-card">
+              <div class="panel-head"><div><span>Conta</span><h2>Identidade</h2></div><span class="status-pill"><i></i> Ativo</span></div>
               <dl><div><dt>Identidade</dt><dd data-security-subject>—</dd></div><div><dt>Workspace</dt><dd data-security-tenant>—</dd></div><div><dt>Perfil</dt><dd data-security-role>—</dd></div><div><dt>Vínculo</dt><dd>HARA Identity</dd></div></dl>
             </article>
-            <article class="panel security-card">
-              <div class="panel-head"><div><span>Sessões</span><h2>Sessão web atual</h2></div><button class="link-button" type="button" disabled aria-disabled="true" title="Gerenciamento global de sessões será habilitado após homologação.">Gerenciar sessões · em breve</button></div>
-              <div class="session"><i class="ok"></i><div><b>Sessão web atual</b><small>HARA Commander · autenticada pelo HARA Identity</small></div><span>Agora</span></div>
+
+            <article class="panel settings-card">
+              <div class="panel-head"><div><span>Privacidade</span><h2>Conteúdo do cliente</h2></div></div>
+              <ul class="settings-check-list">
+                <li>Sem histórico persistente de comandos em texto puro</li>
+                <li>Payload/resultados redigidos após a execução</li>
+                <li>Receipts locais com metadados e hashes</li>
+              </ul>
             </article>
-            <article class="panel security-card full-panel">
-              <div class="panel-head"><div><span>Autorizações</span><h2>Permissões do Commander</h2></div></div>
-              <div class="grant-grid">
-                <span><i></i><b>Descoberta do workspace</b><small>COMMANDER_DISCOVERY · ativo</small></span>
-                <span><i></i><b>Execução governada read-only</b><small>COMMANDER_READ_ONLY_INVOKE · ativo</small></span>
-                <span><i></i><b>Leitura de comprovantes</b><small>COMMANDER_RECEIPT_READ · ativo</small></span>
-              </div>
+
+            <article class="panel settings-card">
+              <div class="panel-head"><div><span>Sessão</span><h2>Acesso atual</h2></div></div>
+              <div class="session"><i class="ok"></i><div><b>Sessão web ativa</b><small>Autenticada pelo HARA Identity</small></div><span>Agora</span></div>
+            </article>
+
+            <article class="panel settings-card">
+              <div class="panel-head"><div><span>Ajuda</span><h2>Suporte</h2></div></div>
+              <p class="settings-help-copy">Documentação, diagnóstico e contato com suporte ficam em um único lugar.</p>
+              <a class="btn btn-secondary" href="https://www.haralabs.com.br/support/" target="_blank" rel="noreferrer">Abrir suporte</a>
             </article>
           </div>
         </div>
