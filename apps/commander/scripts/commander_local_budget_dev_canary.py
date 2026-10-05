@@ -61,7 +61,7 @@ def download_agent(target: Path) -> None:
         if item.get("path") == "agent/linux.py"
     )
     sha = hashlib.sha256(target.read_bytes()).hexdigest()
-    if manifest.get("agent_version") != "0.3.35" or sha != entry.get("sha256"):
+    if manifest.get("agent_version") != "0.3.36" or sha != entry.get("sha256"):
         fail("SERVED_AGENT_INTEGRITY_INVALID")
     target.chmod(0o700)
 
@@ -242,7 +242,7 @@ DELETE FROM tenants WHERE tenant_id={q(tenant)};
                 ),
                 timeout=10,
             )
-            if not device or device[0]["agent_version"] != "0.3.35":
+            if not device or device[0]["agent_version"] != "0.3.36":
                 fail("AGENT_HEARTBEAT_INVALID")
 
             requests = []

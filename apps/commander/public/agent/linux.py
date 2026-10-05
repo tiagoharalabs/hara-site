@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
+import base64
 import hashlib
+import hmac
 import json
 import fnmatch
 import difflib
@@ -22,7 +24,7 @@ from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-AGENT_VERSION = "0.3.35"
+AGENT_VERSION = "0.3.36"
 CONFIG_FILE = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home()/".config"))) / "hara-commander/device.env"
 DATA_DIR = Path(os.environ.get("XDG_DATA_HOME", str(Path.home()/".local/share"))) / "hara-commander"
 RECEIPT_DIR = DATA_DIR / "receipts"
@@ -30,6 +32,10 @@ STATUS_FILE = DATA_DIR / "runtime-status.json"
 SESSION_FILE = DATA_DIR / "operator-session.json"
 CONSOLE_EVENTS_FILE = DATA_DIR / "console-events.jsonl"
 OPERATIONS_DB_FILE = DATA_DIR / "operations.sqlite3"
+PRODUCT_LEASE_KID = "commander-lease-v1"
+PRODUCT_LEASE_AUDIENCE = "hara-commander-agent"
+PRODUCT_LEASE_RSA_N = "pq_Ql3poia63FAgi3MwPXFe9M9LNyJXPMKsjII0d6zgeu0RUcWwFvdBOnjCt6b2bVfElQF4ykvKLxEF6anfQT00nOmI1crDUpLcmx34cB1yZPkDcXiNqkN1g0rkhlkWJXNkGye6jYM7WLxS_Y_jx0Taky-5pGFHmY70Mh1XNv9hGhfXeN6mV83n8-v1oFJ9S0mMjbACwzIGjPs70wb8mZdGRZU_oT0mGlAOvG2oIToEwWZCQbTVVgap0XF2mEeY8IkNWiDh2wYCiTeAWTH5M2tJnkBZC0lx1HLC6jwnRowjIDTJvQhLUzs58ilbDwWPSPihehJ9WiImvnYu0M6xy-Q"
+PRODUCT_LEASE_RSA_E = "AQAB"
 LOCAL_PORTAL_HOST = "127.0.0.1"
 LOCAL_PORTAL_PORT = max(1024, min(65535, int(os.environ.get("HARA_COMMANDER_LOCAL_PORT", "32145"))))
 APPROVAL_DIR = DATA_DIR / "approvals"
@@ -229,6 +235,7 @@ def _ops_connect():
       CREATE TABLE IF NOT EXISTS product_lease (
         singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
         lease_json TEXT NOT NULL,
+        lease_token TEXT,
         valid_until_utc TEXT NOT NULL,
         updated_at_utc TEXT NOT NULL
       );
@@ -260,6 +267,10 @@ def _ops_connect():
       CREATE INDEX IF NOT EXISTS idx_local_budget_debits_block
         ON local_budget_debits(budget_id, state);
     """)
+    lease_columns={row["name"] for row in conn.execute("PRAGMA table_info(product_lease)")}
+    if "lease_token" not in lease_columns:
+        conn.execute("ALTER TABLE product_lease ADD COLUMN lease_token TEXT")
+        conn.commit()
     try:
         os.chmod(OPERATIONS_DB_FILE,0o600)
         for suffix in ("-wal","-shm"):
@@ -478,10 +489,101 @@ def _local_budget_report():
     except Exception:
         return None
 
+def _b64url_decode(value):
+    text=str(value or "")
+    if not text or not re.fullmatch(r"[A-Za-z0-9_-]+",text):
+        raise ValueError("PRODUCT_LEASE_TOKEN_INVALID")
+    return base64.urlsafe_b64decode(text + ("="*((4-len(text)%4)%4)))
+
+def _verify_rs256(signing_input,signature_b64):
+    n=int.from_bytes(_b64url_decode(PRODUCT_LEASE_RSA_N),"big")
+    e=int.from_bytes(_b64url_decode(PRODUCT_LEASE_RSA_E),"big")
+    signature=_b64url_decode(signature_b64)
+    size=(n.bit_length()+7)//8
+    if len(signature)!=size:
+        raise ValueError("PRODUCT_LEASE_SIGNATURE_INVALID")
+    em=pow(int.from_bytes(signature,"big"),e,n).to_bytes(size,"big")
+    digest=hashlib.sha256(signing_input.encode("ascii")).digest()
+    digest_info=bytes.fromhex("3031300d060960864801650304020105000420")+digest
+    pad_len=size-len(digest_info)-3
+    if pad_len<8:
+        raise ValueError("PRODUCT_LEASE_SIGNATURE_INVALID")
+    expected=b"\x00\x01"+(b"\xff"*pad_len)+b"\x00"+digest_info
+    if not hmac.compare_digest(em,expected):
+        raise ValueError("PRODUCT_LEASE_SIGNATURE_INVALID")
+
+def verify_product_lease_token(config,token):
+    parts=str(token or "").split(".")
+    if len(parts)!=3:
+        raise ValueError("PRODUCT_LEASE_TOKEN_INVALID")
+    try:
+        header=json.loads(_b64url_decode(parts[0]).decode("utf-8"))
+        claims=json.loads(_b64url_decode(parts[1]).decode("utf-8"))
+    except Exception as exc:
+        raise ValueError("PRODUCT_LEASE_TOKEN_INVALID") from exc
+    if (
+        header.get("alg")!="RS256"
+        or header.get("kid")!=PRODUCT_LEASE_KID
+        or header.get("typ")!="JWT"
+    ):
+        raise ValueError("PRODUCT_LEASE_TOKEN_INVALID")
+    _verify_rs256(parts[0]+"."+parts[1],parts[2])
+    expected_issuer=_portal_origin(config.get("HARA_COMMANDER_URL"))
+    if str(claims.get("iss") or "")!=str(expected_issuer or ""):
+        raise ValueError("PRODUCT_LEASE_ISSUER_INVALID")
+    if str(claims.get("aud") or "")!=PRODUCT_LEASE_AUDIENCE:
+        raise ValueError("PRODUCT_LEASE_AUDIENCE_INVALID")
+    lease=claims.get("lease") or {}
+    if lease.get("schema")!="hara.commander-device-product-lease.v1":
+        raise ValueError("PRODUCT_LEASE_INVALID")
+    if str(claims.get("sub") or "")!=str(config.get("HARA_DEVICE_ID") or ""):
+        raise ValueError("PRODUCT_LEASE_DEVICE_MISMATCH")
+    if str(lease.get("device_id") or "")!=str(config.get("HARA_DEVICE_ID") or ""):
+        raise ValueError("PRODUCT_LEASE_DEVICE_MISMATCH")
+    if str(claims.get("jti") or "")!=str(lease.get("lease_id") or ""):
+        raise ValueError("PRODUCT_LEASE_TOKEN_INVALID")
+    now=int(time.time())
+    try:
+        issued=int(claims.get("iat"))
+        expires=int(claims.get("exp"))
+    except Exception as exc:
+        raise ValueError("PRODUCT_LEASE_TOKEN_INVALID") from exc
+    if issued>now+60 or expires<=now or expires-issued>PRODUCT_LEASE_REFRESH_SECONDS+3*60*60:
+        raise ValueError("PRODUCT_LEASE_EXPIRED")
+    lease_expiry=datetime.fromisoformat(str(lease.get("valid_until_utc")).replace("Z","+00:00")).timestamp()
+    if abs(lease_expiry-expires)>2:
+        raise ValueError("PRODUCT_LEASE_TOKEN_INVALID")
+    return lease
+
+def _active_verified_product_lease(conn,config):
+    row=conn.execute(
+        "SELECT lease_json,lease_token,valid_until_utc FROM product_lease WHERE singleton=1"
+    ).fetchone()
+    if not row or not row["lease_token"]:
+        return None
+    try:
+        lease=verify_product_lease_token(config,str(row["lease_token"]))
+        stored=json.loads(str(row["lease_json"]))
+        expires=datetime.fromisoformat(str(row["valid_until_utc"]).replace("Z","+00:00")).timestamp()
+    except Exception:
+        return None
+    if expires<=time.time():
+        return None
+    if json.dumps(lease,sort_keys=True,separators=(",",":"))!=json.dumps(stored,sort_keys=True,separators=(",",":")):
+        return None
+    return lease
+
 def _store_product_lease_response(config,payload):
     if not isinstance(payload,dict) or payload.get("schema")!="hara.commander-device-product-lease-response.v1":
         raise ValueError("PRODUCT_LEASE_RESPONSE_INVALID")
+    token=str(payload.get("product_lease_token") or "")
+    signature=payload.get("product_lease_signature") or {}
+    if signature.get("alg")!="RS256" or signature.get("kid")!=PRODUCT_LEASE_KID:
+        raise ValueError("PRODUCT_LEASE_SIGNATURE_INVALID")
+    verified=verify_product_lease_token(config,token)
     lease=payload.get("product_lease") or {}
+    if json.dumps(verified,sort_keys=True,separators=(",",":"))!=json.dumps(lease,sort_keys=True,separators=(",",":")):
+        raise ValueError("PRODUCT_LEASE_PAYLOAD_MISMATCH")
     if lease.get("schema")!="hara.commander-device-product-lease.v1":
         raise ValueError("PRODUCT_LEASE_INVALID")
     if str(lease.get("device_id") or "")!=str(config.get("HARA_DEVICE_ID") or ""):
@@ -493,14 +595,16 @@ def _store_product_lease_response(config,payload):
     block=budget.get("block") if isinstance(budget,dict) else None
     with _ops_connect() as conn:
         conn.execute(
-            """INSERT INTO product_lease(singleton,lease_json,valid_until_utc,updated_at_utc)
-               VALUES (1,?,?,?)
+            """INSERT INTO product_lease(singleton,lease_json,lease_token,valid_until_utc,updated_at_utc)
+               VALUES (1,?,?,?,?)
                ON CONFLICT(singleton) DO UPDATE SET
                  lease_json=excluded.lease_json,
+                 lease_token=excluded.lease_token,
                  valid_until_utc=excluded.valid_until_utc,
                  updated_at_utc=excluded.updated_at_utc""",
             (
                 json.dumps(lease,sort_keys=True,separators=(",",":")),
+                token,
                 valid_until,
                 utcnow(),
             ),
@@ -514,6 +618,11 @@ def _store_product_lease_response(config,payload):
                 raise ValueError("LOCAL_BUDGET_BLOCK_INVALID")
             if str(block["device_id"])!=str(config.get("HARA_DEVICE_ID") or ""):
                 raise ValueError("LOCAL_BUDGET_DEVICE_MISMATCH")
+            for key in ("tenant_id","entitlement_id","plan_code","meter_id"):
+                if str(block.get(key) or "")!=str(lease.get(key) or ""):
+                    raise ValueError("LOCAL_BUDGET_LEASE_BINDING_INVALID")
+            if str(lease.get("usage_mode") or "")!="LOCAL_BUDGET":
+                raise ValueError("LOCAL_BUDGET_LEASE_BINDING_INVALID")
             units=int(block["allocated_units"])
             if units<1 or units>10000:
                 raise ValueError("LOCAL_BUDGET_BLOCK_INVALID")
@@ -581,60 +690,76 @@ def local_budget_reserve(config,call):
     if units<1 or not period_key or not budget_id or not request_id:
         raise ValueError("LOCAL_BUDGET_USAGE_INVALID")
 
+    missing_lease=False
     for attempt in range(2):
+        missing_lease=False
         with _ops_connect() as conn:
-            existing=conn.execute(
-                "SELECT budget_id,units,state FROM local_budget_debits WHERE request_id = ?",
-                (request_id,),
-            ).fetchone()
-            if existing:
-                state=str(existing["state"])
-                if state=="RESERVED":
+            lease=_active_verified_product_lease(conn,config)
+            if not lease or str(lease.get("usage_mode") or "")!="LOCAL_BUDGET":
+                missing_lease=True
+            else:
+                existing=conn.execute(
+                    "SELECT budget_id,units,state FROM local_budget_debits WHERE request_id = ?",
+                    (request_id,),
+                ).fetchone()
+                if existing:
+                    if str(existing["budget_id"])!=budget_id or int(existing["units"])!=units:
+                        raise ValueError("LOCAL_BUDGET_IDEMPOTENCY_CONFLICT")
+                    state=str(existing["state"])
+                    if state=="RESERVED":
+                        return {
+                            "request_id":request_id,
+                            "budget_id":str(existing["budget_id"]),
+                            "units":int(existing["units"]),
+                            "state":state,
+                            "existing":True,
+                        }
+                    if state=="COMMITTED":
+                        raise ValueError("LOCAL_BUDGET_REQUEST_ALREADY_COMMITTED")
+                    raise ValueError("LOCAL_BUDGET_REQUEST_TERMINAL")
+
+                block=conn.execute(
+                    """SELECT budget_id,tenant_id,device_id,entitlement_id,plan_code,meter_id,
+                              period_key,allocated_units,expires_at_utc
+                         FROM local_budget_blocks
+                        WHERE budget_id = ?
+                          AND period_key = ?
+                          AND state = 'ACTIVE'
+                          AND expires_at_utc > ?
+                        LIMIT 1""",
+                    (budget_id,period_key,utcnow()),
+                ).fetchone()
+                if block:
+                    for key in ("tenant_id","device_id","entitlement_id","plan_code","meter_id"):
+                        expected=str(lease.get(key) or "")
+                        observed=str(block[key] or "")
+                        if observed!=expected:
+                            raise ValueError("LOCAL_BUDGET_LEASE_BINDING_INVALID")
+                    committed,reserved=_budget_counts(conn,block["budget_id"])
+                    if int(block["allocated_units"])-committed-reserved < units:
+                        block=None
+                if block:
+                    now=utcnow()
+                    conn.execute(
+                        """INSERT INTO local_budget_debits
+                           (request_id,budget_id,units,state,created_at_utc,updated_at_utc)
+                           VALUES (?,?,?,'RESERVED',?,?)""",
+                        (request_id,str(block["budget_id"]),units,now,now),
+                    )
+                    conn.commit()
                     return {
                         "request_id":request_id,
-                        "budget_id":str(existing["budget_id"]),
-                        "units":int(existing["units"]),
-                        "state":state,
-                        "existing":True,
+                        "budget_id":str(block["budget_id"]),
+                        "units":units,
+                        "state":"RESERVED",
+                        "existing":False,
                     }
-                if state=="COMMITTED":
-                    raise ValueError("LOCAL_BUDGET_REQUEST_ALREADY_COMMITTED")
-                raise ValueError("LOCAL_BUDGET_REQUEST_TERMINAL")
-
-            block=conn.execute(
-                """SELECT budget_id,allocated_units,expires_at_utc
-                     FROM local_budget_blocks
-                    WHERE budget_id = ?
-                      AND period_key = ?
-                      AND state = 'ACTIVE'
-                      AND expires_at_utc > ?
-                    LIMIT 1""",
-                (budget_id,period_key,utcnow()),
-            ).fetchone()
-            if block:
-                committed,reserved=_budget_counts(conn,block["budget_id"])
-                if int(block["allocated_units"])-committed-reserved < units:
-                    block=None
-            if block:
-                now=utcnow()
-                conn.execute(
-                    """INSERT INTO local_budget_debits
-                       (request_id,budget_id,units,state,created_at_utc,updated_at_utc)
-                       VALUES (?,?,?,'RESERVED',?,?)""",
-                    (request_id,str(block["budget_id"]),units,now,now),
-                )
-                conn.commit()
-                return {
-                    "request_id":request_id,
-                    "budget_id":str(block["budget_id"]),
-                    "units":units,
-                    "state":"RESERVED",
-                    "existing":False,
-                }
 
         if attempt==0:
             refresh_product_lease(config)
 
+    if missing_lease:
+        raise ValueError("PRODUCT_LEASE_REQUIRED")
     raise ValueError("LOCAL_BUDGET_EXHAUSTED")
 
 def local_budget_commit(request_id):

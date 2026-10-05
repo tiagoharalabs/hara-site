@@ -80,6 +80,7 @@ def main():
         ("COMMANDER_PREPROD_LOCAL_ACTIVITY_STORE", "validate_local_activity_store.py"),
         ("COMMANDER_PREPROD_LOCALHOST_ACTIVITY_REFRESH", "validate_localhost_activity_refresh.py"),
         ("COMMANDER_PREPROD_LOCAL_BUDGET_BLOCKS", "validate_local_budget_blocks.py"),
+        ("COMMANDER_PREPROD_SIGNED_PRODUCT_LEASE", "validate_signed_product_lease.py"),
         ("COMMANDER_PREPROD_MCP_TOKEN_STORAGE", "validate_mcp_product_token_storage.py"),
         ("COMMANDER_PREPROD_FIRST_DEVICE_PREFLIGHT", "validate_first_device_preflight.py"),
     )
