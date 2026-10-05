@@ -4,19 +4,30 @@ State: **SOURCE READY / PROD COMMERCIAL ACTIVATION PENDING**
 
 Issue: hara-site #296
 
-This runbook activates the already-implemented Stripe Billing V1 without
-inventing commercial pricing or changing the current Trial quota.
+This runbook activates the already-implemented Stripe Billing V1 using the
+commercial terms approved by the product owner on 2026-10-05. Stripe secret
+material and Price IDs remain runtime-only configuration.
 
 ## Current commercial direction
 
 ```text
-TRIAL_CURRENT_PROD_MONTHLY_UNITS=100
-TRIAL_TARGET_MONTHLY_UNITS=10000
-TRIAL_PROD_CHANGE_NOW=FALSE
+FREE_INTERNAL_PLAN_CODE=TRIAL
+FREE_MONTHLY_CALLS=10000
+FREE_RESET=CALENDAR_MONTH
+TRIAL_PROD_CHANGE_NOW=TRUE
+
+PRO_INTERNAL_PLAN_CODE=STANDARD
+STANDARD_APPROVED_PRICE=R$80_MONTH
+STANDARD_APPROVED_USAGE=UNLIMITED
+STANDARD_PERIOD_KIND=NONE
 ```
 
-The 10,000-unit Trial is the future commercial target. Production remains at
-100 units/month during first-customer billing and OpenAI homologation.
+The Free tier receives 10,000 governed calls per calendar month. The allowance
+resets every month. The Pro/Standard tier is R$ 80 per month with no Commander
+monthly call quota.
+
+Internal plan codes remain `TRIAL` and `STANDARD` to preserve existing
+entitlements, webhook mappings and billing compatibility.
 
 ## Existing product path
 
@@ -57,21 +68,33 @@ No secret value belongs in Git, issue comments, receipts or support bundles.
 The first activation should use Stripe test mode. Live-mode keys and live price
 IDs are installed only after the complete first-customer acceptance succeeds.
 
-## Commercial decisions required before checkout
+## Approved terms and remaining Stripe configuration
 
-The following values must be explicitly approved outside application source:
+Approved product terms:
 
 ```text
-STANDARD recurring price
-SCALE recurring price
-STANDARD monthly unit limit
-SCALE monthly unit limit
-currency
-billing interval
+Free = 10,000 calls / calendar month
+Pro  = BRL 80 / month
+Pro usage = unlimited
+```
+
+These values are no longer pending commercial decisions.
+
+Still required outside application source:
+
+```text
+STRIPE_SECRET_KEY
+STRIPE_WEBHOOK_SECRET
+STRIPE_PRICE_STANDARD
 tax configuration
 ```
 
-Application code must not infer or invent these values.
+The configured `STRIPE_PRICE_STANDARD` must point to the Stripe recurring price
+for exactly BRL 80/month before checkout is activated. The Price ID itself is
+never committed to Git.
+
+SCALE remains roadmap and does not block first Pro checkout.
+
 ## Read-only preflight
 
 From the repository root:
@@ -89,25 +112,28 @@ The live command reads only:
 
 It performs no PROD mutation.
 
-Expected before Stripe activation:
+Expected after migration `0021_commercial_terms_20261005.sql` and before Stripe activation:
 
 ```text
 COMMANDER_BILLING_PROD_SCHEMA=PASS
-TRIAL_CURRENT_PROD_UNITS=100
+TRIAL_CURRENT_PROD_UNITS=10000
+TRIAL_LIVE_ALIGNED=TRUE
 TRIAL_TARGET_MONTHLY_UNITS=10000
-STANDARD_CATALOG_ACTIVE=FALSE
-SCALE_CATALOG_ACTIVE=FALSE
+COMMERCIAL_TERMS_AUTHORIZED=TRUE
+STANDARD_APPROVED_BRL_MONTHLY_CENTS=8000
+STANDARD_APPROVED_USAGE=UNLIMITED
+STANDARD_LIVE_UNLIMITED=TRUE
+STANDARD_CATALOG_ACTIVE=TRUE
 STRIPE_SECRET_KEY=PENDING
 STRIPE_WEBHOOK_SECRET=PENDING
 STRIPE_PRICE_STANDARD=PENDING
-STRIPE_PRICE_SCALE=PENDING
 COMMANDER_BILLING_FIRST_CHECKOUT_READY=FALSE
 PROD_MUTATION=FALSE
 ```
 ## Stripe test-mode activation
 
 1. Create the H.A.R.A. Commander product in Stripe test mode.
-2. Create recurring STANDARD and SCALE prices using approved commercial values.
+2. Create the recurring STANDARD price at exactly BRL 80/month. SCALE remains roadmap.
 3. Configure Stripe Customer Portal for subscription management.
 4. Create webhook endpoint:
    `https://commander.haralabs.com.br/api/billing/stripe/webhook`.
@@ -118,8 +144,8 @@ PROD_MUTATION=FALSE
    - `customer.subscription.deleted`
    - `invoice.payment_failed`
 6. Store the test secret key and signing secret as Worker secrets.
-7. Store the exact test price IDs as runtime configuration.
-8. Activate matching STANDARD/SCALE Commander plans with approved quota limits.
+7. Store the exact STANDARD test Price ID as runtime configuration.
+8. Verify Free remains 10,000/mmonth and STANDARD remains unlimited.
 9. Run the live preflight again.
 
 Do not expose Stripe webhook secret, API key, Checkout session secrets or
@@ -130,9 +156,9 @@ The first paid tenant is H.A.R.A. Labs.
 
 Acceptance order:
 
-1. tenant starts on TRIAL/100;
+1. tenant starts on Free (`TRIAL` internally) with 10,000 calls/month;
 2. OWNER opens the Commander Plan page;
-3. select STANDARD;
+3. select Pro (`STANDARD` internally), displayed as R$ 80/month and unlimited;
 4. Commander creates a Stripe hosted Checkout session;
 5. complete a test-mode payment;
 6. verify `checkout.session.completed` is recorded once;
@@ -140,7 +166,7 @@ Acceptance order:
 8. verify `billing_connections` contains customer + subscription IDs;
 9. verify paid entitlement becomes STANDARD/ACTIVE;
 10. verify prior active Trial entitlement is expired;
-11. verify quota/grants reflect STANDARD;
+11. verify STANDARD has `period_kind=NONE`, `unit_limit=NULL` and the expected grants;
 12. run `hara-commander start`;
 13. execute one governed OpenAI/MCP read-only call;
 14. verify receipt correlation;

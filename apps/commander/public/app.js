@@ -1083,7 +1083,7 @@
 
   function applyScenario(name, payload) {
     if (!name) return;
-    const limit = Number(payload?.usage?.limit || payload?.entitlement?.unit_limit || 100);
+    const limit = Number(payload?.usage?.limit || payload?.entitlement?.unit_limit || 10000);
     const connections = document.querySelectorAll("#connectionList button:not([disabled])");
 
     if (name === "loading") {
@@ -1252,7 +1252,11 @@
           : (planCode === "SCALE" ? "Roadmap" : "Em preparação");
 
         const priceLabel = document.querySelector('[data-billing-price-label="' + planCode + '"]');
-        if (priceLabel && ready) {
+        const commercial = plan?.commercial_terms || {};
+        if (priceLabel && commercial.price_display) {
+          const interval = commercial.billing_interval === "month" ? "/ mês" : "assinatura";
+          priceLabel.innerHTML = commercial.price_display + " <small>" + interval + "</small>";
+        } else if (priceLabel && ready) {
           priceLabel.innerHTML = 'Preço no checkout <small>assinatura recorrente</small>';
         }
       });
@@ -1292,13 +1296,13 @@
           const state = String(payload?.connection?.subscription_status || "conectada").replaceAll("_", " ");
           statusNode.textContent = "Cobrança conectada. Status da assinatura: " + state + ".";
         } else if (activation.first_checkout_ready) {
-          statusNode.textContent = "Standard disponível para assinatura. O pagamento é concluído no checkout seguro do Stripe.";
+          statusNode.textContent = "Pro disponível por R$ 80/mês, com chamadas ilimitadas. O pagamento é concluído no checkout seguro do Stripe.";
         } else if (!activation.provider_configured) {
           statusNode.textContent = "Checkout automático ainda não ativado. O Standard está disponível em beta por convite.";
         } else if (!activation.standard_catalog_active) {
           statusNode.textContent = "Stripe conectado. Aguardando publicação do catálogo Standard.";
         } else if (!activation.standard_price_configured) {
-          statusNode.textContent = "Catálogo Standard pronto. Aguardando publicação do preço aprovado.";
+          statusNode.textContent = "Preço Pro aprovado em R$ 80/mês. Aguardando o Price ID correspondente no Stripe.";
         } else {
           statusNode.textContent = "Checkout Standard em preparação.";
         }

@@ -2,6 +2,16 @@ const STRIPE_API = "https://api.stripe.com/v1";
 const WEBHOOK_TOLERANCE_SECONDS = 300;
 const WEBHOOK_MAX_BYTES = 512 * 1024;
 const PAID_PLANS = Object.freeze(["STANDARD", "SCALE"]);
+export const APPROVED_COMMERCIAL_TERMS = Object.freeze({
+  STANDARD: Object.freeze({
+    public_name: "Pro",
+    currency: "BRL",
+    price_amount_cents: 8000,
+    price_display: "R$ 80",
+    billing_interval: "month",
+    usage_unlimited: true,
+  }),
+});
 const ACTIVE_SUBSCRIPTION_STATES = new Set(["active", "trialing"]);
 const SUSPENDED_SUBSCRIPTION_STATES = new Set(["incomplete", "past_due", "unpaid", "paused"]);
 const REVOKED_SUBSCRIPTION_STATES = new Set(["canceled", "incomplete_expired"]);
@@ -177,6 +187,7 @@ export async function billingStatus(env, session) {
       ),
       unit_limit: plan?.unit_limit == null ? null : Number(plan.unit_limit),
       period_kind: plan ? plan.period_kind : null,
+      commercial_terms: APPROVED_COMMERCIAL_TERMS[planCode] || null,
     };
   }
 
