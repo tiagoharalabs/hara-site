@@ -6,7 +6,7 @@ $RuntimeStatus = Join-Path $Root "runtime-status.json"
 $SessionPath = Join-Path $Root "operator-session.json"
 $ConsoleEvents = Join-Path $Root "console-events.jsonl"
 $SessionMaxHours = 12
-$AgentVersion = "0.3.30"
+$AgentVersion = "0.3.31"
 $FunctionId = "device.info"
 
 function Get-PlainText([Security.SecureString]$SecureValue) {
@@ -144,7 +144,10 @@ function Start-OperatorConsole {
   Write-Host ("Agent     : "+$AgentVersion)
   Write-Host ""
   Write-Host "Comandos permitidos nesta sessao:"
-  Write-Host "  hara.health"
+  Write-Host "  hara.health / hara.ping / hara.device.info"
+  Write-Host "  hara.files.info / list / read"
+  Write-Host "  hara.files.create_directory / write  [starter]"
+  Write-Host "  hara.processes.list / hara.process.run  [starter]"
   Write-Host "  hara.functions.list"
   Write-Host "  hara.functions.describe"
   Write-Host "  hara.functions.invoke (somente funcoes governadas)"
@@ -212,6 +215,154 @@ function Get-DeviceInfo($Cfg) {
     tunnel_mode="OUTBOUND_RELAY"
   }
 }
+
+function Assert-StarterMutationAuthorized($Cfg) {
+  $mode=Get-ApprovalMode $Cfg
+  if ($mode -eq "ASK_EVERY_ACTION") { throw "WINDOWS_PER_ACTION_APPROVAL_UNSUPPORTED" }
+  if ($mode -eq "SESSION_TRUSTED" -and -not (Test-OperatorSessionActive)) { throw "LOCAL_OPERATOR_SESSION_REQUIRED" }
+}
+
+function New-DirectResult([string]$FunctionId,[string]$RiskClass,$Data,[int]$ExitCode=0) {
+  return @{
+    function_id=$FunctionId
+    risk_class=$RiskClass
+    process_exit_code=$ExitCode
+    stdout=($Data | ConvertTo-Json -Depth 8 -Compress)
+    domain_success_inferred=$false
+  }
+}
+
+function Get-WindowsPing($Cfg) {
+  return @{device_id=[string]$Cfg.device_id;hostname=$env:COMPUTERNAME;reachable=$true;agent_version=$AgentVersion}
+}
+
+function Get-WindowsProcesses([int]$Limit=50) {
+  $Limit=[Math]::Max(1,[Math]::Min(500,$Limit))
+  $rows=@()
+  Get-Process | Sort-Object -Property CPU -Descending | Select-Object -First $Limit | ForEach-Object {
+    $rows+=@{pid=$_.Id;name=$_.ProcessName;cpu_seconds=if ($null -ne $_.CPU) {[Math]::Round([double]$_.CPU,3)} else {$null};working_set_bytes=[int64]$_.WorkingSet64}
+  }
+  return @{processes=$rows;count=$rows.Count}
+}
+
+function Get-WindowsFileInfo([string]$PathValue) {
+  $item=Get-Item -LiteralPath $PathValue -Force -ErrorAction Stop
+  return @{
+    path=$item.FullName
+    name=$item.Name
+    type=if ($item.PSIsContainer) {"directory"} else {"file"}
+    size_bytes=if ($item.PSIsContainer) {$null} else {[int64]$item.Length}
+    modified_at_utc=$item.LastWriteTimeUtc.ToString("o")
+    created_at_utc=$item.CreationTimeUtc.ToString("o")
+    attributes=[string]$item.Attributes
+  }
+}
+
+function Get-WindowsDirectory([string]$PathValue,[int]$Depth=1,[int]$Limit=200) {
+  $Depth=[Math]::Max(1,[Math]::Min(8,$Depth))
+  $Limit=[Math]::Max(1,[Math]::Min(1000,$Limit))
+  $root=(Get-Item -LiteralPath $PathValue -Force -ErrorAction Stop)
+  if (-not $root.PSIsContainer) { throw "FILESYSTEM_NOT_DIRECTORY" }
+  $queue=New-Object System.Collections.Queue
+  $queue.Enqueue(@($root.FullName,1))
+  $rows=@()
+  while ($queue.Count -gt 0 -and $rows.Count -lt $Limit) {
+    $entry=$queue.Dequeue(); $current=[string]$entry[0]; $level=[int]$entry[1]
+    foreach ($item in @(Get-ChildItem -LiteralPath $current -Force -ErrorAction SilentlyContinue | Sort-Object Name)) {
+      if ($rows.Count -ge $Limit) { break }
+      $rows+=@{path=$item.FullName;name=$item.Name;type=if ($item.PSIsContainer) {"directory"} else {"file"};depth=$level;size_bytes=if ($item.PSIsContainer) {$null} else {[int64]$item.Length}}
+      if ($item.PSIsContainer -and $level -lt $Depth) { $queue.Enqueue(@($item.FullName,$level+1)) }
+    }
+  }
+  return @{path=$root.FullName;entries=$rows;count=$rows.Count;truncated=($rows.Count -ge $Limit)}
+}
+
+function Read-WindowsTextFile([string]$PathValue,[int]$Offset=0,[int]$Length=200) {
+  $Offset=[Math]::Max(0,$Offset)
+  $Length=[Math]::Max(1,[Math]::Min(5000,$Length))
+  $lines=@(Get-Content -LiteralPath $PathValue -Encoding UTF8 -ErrorAction Stop)
+  $slice=@()
+  if ($Offset -lt $lines.Count) {
+    $end=[Math]::Min($lines.Count,$Offset+$Length)
+    if ($end -gt $Offset) { $slice=@($lines[$Offset..($end-1)]) }
+  }
+  return @{path=(Resolve-Path -LiteralPath $PathValue).Path;offset=$Offset;line_count=$slice.Count;total_lines=$lines.Count;text=($slice -join [Environment]::NewLine)}
+}
+
+function Write-WindowsTextFile($Cfg,[string]$PathValue,[string]$Content,[string]$Mode="rewrite") {
+  Assert-StarterMutationAuthorized $Cfg
+  if ($Content.Length -gt 1048576) { throw "FUNCTION_ARGUMENTS_DENIED" }
+  $full=[IO.Path]::GetFullPath($PathValue)
+  $parent=[IO.Path]::GetDirectoryName($full)
+  if (-not $parent -or -not (Test-Path -LiteralPath $parent -PathType Container)) { throw "FILESYSTEM_PARENT_NOT_FOUND" }
+  if ($Mode -eq "append") { Add-Content -LiteralPath $full -Value $Content -Encoding UTF8 }
+  elseif ($Mode -eq "rewrite") { [IO.File]::WriteAllText($full,$Content,(New-Object Text.UTF8Encoding($false))) }
+  else { throw "FUNCTION_ARGUMENTS_DENIED" }
+  return @{path=$full;mode=$Mode;bytes_written=[Text.Encoding]::UTF8.GetByteCount($Content)}
+}
+
+function New-WindowsDirectory($Cfg,[string]$PathValue,[bool]$Parents=$true) {
+  Assert-StarterMutationAuthorized $Cfg
+  $full=[IO.Path]::GetFullPath($PathValue)
+  if (Test-Path -LiteralPath $full) {
+    if (-not (Test-Path -LiteralPath $full -PathType Container)) { throw "FILESYSTEM_PATH_EXISTS" }
+    return @{path=$full;created=$false}
+  }
+  if (-not $Parents) {
+    $parent=[IO.Path]::GetDirectoryName($full)
+    if (-not (Test-Path -LiteralPath $parent -PathType Container)) { throw "FILESYSTEM_PARENT_NOT_FOUND" }
+  }
+  New-Item -ItemType Directory -Path $full -Force:$Parents | Out-Null
+  return @{path=$full;created=$true}
+}
+
+function Invoke-WindowsOneShotProcess($Cfg,[string]$Command,[string]$Cwd=$null,[int]$TimeoutMs=3000,[int]$MaxLines=200) {
+  Assert-StarterMutationAuthorized $Cfg
+  if ([string]::IsNullOrWhiteSpace($Command) -or $Command.Length -gt 4096) { throw "FUNCTION_ARGUMENTS_DENIED" }
+  $TimeoutMs=[Math]::Max(100,[Math]::Min(10000,$TimeoutMs))
+  $MaxLines=[Math]::Max(1,[Math]::Min(500,$MaxLines))
+  $bytes=[Text.Encoding]::Unicode.GetBytes($Command)
+  $encoded=[Convert]::ToBase64String($bytes)
+  $psi=New-Object Diagnostics.ProcessStartInfo
+  $psi.FileName="powershell.exe"
+  $psi.Arguments="-NoLogo -NoProfile -NonInteractive -EncodedCommand $encoded"
+  $psi.UseShellExecute=$false
+  $psi.RedirectStandardOutput=$true
+  $psi.RedirectStandardError=$true
+  $psi.CreateNoWindow=$true
+  if ($Cwd) {
+    $resolved=(Resolve-Path -LiteralPath $Cwd -ErrorAction Stop).Path
+    $psi.WorkingDirectory=$resolved
+  }
+  $proc=New-Object Diagnostics.Process
+  $proc.StartInfo=$psi
+  if (-not $proc.Start()) { throw "PROCESS_START_FAILED" }
+  $stdoutTask=$proc.StandardOutput.ReadToEndAsync()
+  $stderrTask=$proc.StandardError.ReadToEndAsync()
+  $timedOut=-not $proc.WaitForExit($TimeoutMs)
+  if ($timedOut) {
+    try { $proc.Kill() } catch {}
+    try { $proc.WaitForExit(1000) | Out-Null } catch {}
+  }
+  $stdout=$stdoutTask.GetAwaiter().GetResult()
+  $stderr=$stderrTask.GetAwaiter().GetResult()
+  $combined=($stdout + $(if ($stderr) {[Environment]::NewLine+$stderr} else {""}))
+  $lines=@($combined -split "?
+")
+  $truncated=$lines.Count -gt $MaxLines
+  if ($truncated) { $lines=@($lines[0..($MaxLines-1)]) }
+  $exit=if ($timedOut) {$null} else {$proc.ExitCode}
+  return @{
+    state=if ($timedOut) {"TIMED_OUT"} else {"EXITED"}
+    exit_code=$exit
+    timed_out=$timedOut
+    cwd=if ($psi.WorkingDirectory) {$psi.WorkingDirectory} else {(Get-Location).Path}
+    command_sha256=Get-Utf8Sha256 $Command
+    text=($lines -join [Environment]::NewLine)
+    output_truncated=$truncated
+    session_retained=$false
+  }
+}
 function Get-Catalog {
   return @{
     registered_function_count=1
@@ -263,6 +414,9 @@ function New-Receipt($Cfg,$Call,[string]$State,$Result) {
     $resultBinding="STDOUT_SHA256_V1"
     $resultStdoutSha256=Get-Utf8Sha256 ([string]$Result.stdout)
   }
+  $tool=[string]$Call.tool_id
+  $mutationClass=if ($tool -eq "hara.process.run") {"PROCESS_EXECUTION_V1"} elseif (@("hara.files.create_directory","hara.files.write") -contains $tool) {"FILESYSTEM_MUTATION_V1"} else {"READ_ONLY_OR_NONE_V1"}
+  $approvalMode=Get-ApprovalMode $Cfg
   $receipt = [ordered]@{
     schema="hara.commander-device-receipt.v1"
     request_id=[string]$Call.request_id
@@ -272,9 +426,13 @@ function New-Receipt($Cfg,$Call,[string]$State,$Result) {
     transport_mode="OUTBOUND_RELAY"
     operational_authority="HARA_SERVICES"
     execution_authority="HARA_COMMANDER_AGENT"
-    mutation_class="READ_ONLY_OR_NONE_V1"
+    mutation_class=$mutationClass
     state=$State
     payload_values_persisted=$false
+    human_approval_required=($mutationClass -ne "READ_ONLY_OR_NONE_V1" -and $approvalMode -eq "ASK_EVERY_ACTION")
+    human_approval_state=if ($mutationClass -ne "READ_ONLY_OR_NONE_V1") {"APPROVED"} else {$null}
+    local_authorization_mode=if ($mutationClass -ne "READ_ONLY_OR_NONE_V1") {$approvalMode} else {$null}
+    authorization_source=if ($mutationClass -ne "READ_ONLY_OR_NONE_V1") {$(if ($approvalMode -eq "PERSISTENT_TRUSTED") {"DEVICE_ENROLLMENT_POLICY"} else {"LOCAL_OPERATOR_SESSION"})} else {$null}
     result_binding=$resultBinding
     result_stdout_sha256=$resultStdoutSha256
     completed_at_utc=[DateTime]::UtcNow.ToString("o")
@@ -298,7 +456,37 @@ function Get-Receipt([string]$Identifier) {
 function Invoke-Tool($Cfg,$Call) {
   $tool=[string]$Call.tool_id
   $payload=$Call.payload
-  if ($tool -eq "hara.health") {
+  if ($tool -eq "hara.ping") {
+    $result=New-DirectResult "device.ping" "READ_ONLY" (Get-WindowsPing $Cfg)
+  } elseif ($tool -eq "hara.device.info") {
+    $result=New-DirectResult "device.info" "READ_ONLY" (Get-DeviceInfo $Cfg)
+  } elseif ($tool -eq "hara.processes.list") {
+    $limit=if ($null -ne $payload.limit) {[int]$payload.limit} else {50}
+    $result=New-DirectResult "process.list" "READ_ONLY" (Get-WindowsProcesses $limit)
+  } elseif ($tool -eq "hara.files.info") {
+    $result=New-DirectResult "filesystem.info" "READ_ONLY" (Get-WindowsFileInfo ([string]$payload.path))
+  } elseif ($tool -eq "hara.files.list") {
+    $depth=if ($null -ne $payload.depth) {[int]$payload.depth} else {1}
+    $limit=if ($null -ne $payload.limit) {[int]$payload.limit} else {200}
+    $result=New-DirectResult "filesystem.list" "READ_ONLY" (Get-WindowsDirectory ([string]$payload.path) $depth $limit)
+  } elseif ($tool -eq "hara.files.read") {
+    $offset=if ($null -ne $payload.offset) {[int]$payload.offset} else {0}
+    $length=if ($null -ne $payload.length) {[int]$payload.length} else {200}
+    $result=New-DirectResult "filesystem.read" "READ_ONLY" (Read-WindowsTextFile ([string]$payload.path) $offset $length)
+  } elseif ($tool -eq "hara.files.create_directory") {
+    $parents=if ($null -ne $payload.parents) {[bool]$payload.parents} else {$true}
+    $result=New-DirectResult "filesystem.create_directory" "MUTATING" (New-WindowsDirectory $Cfg ([string]$payload.path) $parents)
+  } elseif ($tool -eq "hara.files.write") {
+    $mode=if ($payload.mode) {[string]$payload.mode} else {"rewrite"}
+    $result=New-DirectResult "filesystem.write" "MUTATING" (Write-WindowsTextFile $Cfg ([string]$payload.path) ([string]$payload.content) $mode)
+  } elseif ($tool -eq "hara.process.run") {
+    $cwd=if ($payload.cwd) {[string]$payload.cwd} else {$null}
+    $timeout=if ($null -ne $payload.timeout_ms) {[int]$payload.timeout_ms} else {3000}
+    $maxLines=if ($null -ne $payload.max_lines) {[int]$payload.max_lines} else {200}
+    $run=Invoke-WindowsOneShotProcess $Cfg ([string]$payload.command) $cwd $timeout $maxLines
+    $exit=if ($null -ne $run.exit_code) {[int]$run.exit_code} else {0}
+    $result=New-DirectResult "process.run" "PROCESS_EXECUTION" $run $exit
+  } elseif ($tool -eq "hara.health") {
     $result=@{
       services_bridge_state="PASS"; hara_services_state="PASS"
       registered_function_count=1; executable_function_count=1
@@ -382,6 +570,17 @@ function Invoke-AgentSelfTest {
     $receipt=[string]$invoked.bridge_receipt_sha256
     if ($receipt -notmatch "^[0-9a-f]{64}$") { throw "SELF_TEST_RECEIPT_FAILED" }
 
+    $base.request_id="selftest-win-info"; $base.tool_id="hara.device.info"; $base.payload=[pscustomobject]@{}
+    $directInfo=Invoke-Tool $cfg ([pscustomobject]$base)
+    if ([string]$directInfo.state -ne "PASS") { throw "SELF_TEST_DIRECT_DEVICE_INFO_FAILED" }
+
+    $sample=Join-Path $testRoot "sample.txt"
+    $sampleText="alpha"+[Environment]::NewLine+"beta"
+    [IO.File]::WriteAllText($sample,$sampleText,(New-Object Text.UTF8Encoding($false)))
+    $base.request_id="selftest-win-read"; $base.tool_id="hara.files.read"; $base.payload=[pscustomobject]@{path=$sample;offset=0;length=10}
+    $directRead=Invoke-Tool $cfg ([pscustomobject]$base)
+    if ([string]$directRead.result.function_id -ne "filesystem.read") { throw "SELF_TEST_WINDOWS_READ_FAILED" }
+
     $base.request_id="selftest-005"; $base.tool_id="hara.receipts.get"
     $base.payload=[pscustomobject]@{receipt_id_or_sha256=$receipt}
     $read=Invoke-Tool $cfg ([pscustomobject]$base)
@@ -419,6 +618,7 @@ function Invoke-AgentSelfTest {
 
     Write-Host "COMMANDER_WINDOWS_OPERATOR_SESSION_GATE=PASS"
     Write-Host "COMMANDER_WINDOWS_CONSOLE_SANITIZATION=PASS"
+    Write-Host "COMMANDER_WINDOWS_STARTER_READ=PASS"
     Write-Host "COMMANDER_WINDOWS_FIVE_TOOL_BRIDGE=PASS"
     Write-Host "COMMANDER_WINDOWS_ARBITRARY_FUNCTION=DENIED"
     Write-Host "COMMANDER_WINDOWS_AGENT_SELF_TEST=PASS"

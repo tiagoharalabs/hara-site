@@ -2293,7 +2293,16 @@ function legacyInvokePayload(toolId, payload) {
 }
 
 function agentPurposeToolReady(device, toolId) {
-  if (String(device?.platform || "").toUpperCase() !== "LINUX") return false;
+  const platform=String(device?.platform || "").toUpperCase();
+  if (platform === "WINDOWS") {
+    const starter=[
+      "hara.ping","hara.device.info","hara.processes.list",
+      "hara.files.info","hara.files.list","hara.files.read",
+      "hara.files.create_directory","hara.files.write","hara.process.run",
+    ];
+    return starter.includes(toolId) && semverAtLeast(device.agent_version,31);
+  }
+  if (platform !== "LINUX") return false;
   const parts=String(device?.agent_version || "0.0.0").split(".").map((v)=>Number(v));
   const [a=0,b=0,c=0]=parts;
   const minPatch =
@@ -2363,6 +2372,15 @@ function capabilitiesForDevice(device, grants) {
   const tools=["hara.health","hara.functions.list","hara.functions.describe","hara.receipts.get"];
   if (platform === "WINDOWS") {
     tools.push("hara.device.info","hara.functions.invoke");
+    if (semverAtLeast(device.agent_version,31)) {
+      tools.push("hara.ping","hara.processes.list","hara.files.info","hara.files.list","hara.files.read");
+      if (grants.includes("COMMANDER_MUTATION_INVOKE")) {
+        tools.push("hara.files.create_directory","hara.files.write");
+      }
+      if (grants.includes("COMMANDER_PROCESS_EXECUTION")) {
+        tools.push("hara.process.run");
+      }
+    }
   }
   if (linux && semverAtLeast(device.agent_version,16)) {
     tools.push("hara.ping","hara.device.info","hara.system.uptime","hara.processes.list","hara.files.info","hara.files.list","hara.files.read");

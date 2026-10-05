@@ -26,7 +26,7 @@ def need(text: str, token: str, code: str) -> None:
     assert token in text, f"{code}:{token}"
 
 for token in ('platform": "LINUX"', "/api/device/enroll", "/agent/linux.py",
-              "systemctl --user enable --now", "chmod 600", '"agent_version": "0.3.30"',
+              "systemctl --user enable --now", "chmod 600", '"agent_version": "0.3.31"',
               "HARA_COMMANDER_AGENT_UPDATE=PASS", "HARA_COMMANDER_AGENT_UNINSTALL=PASS",
               "HARA_COMMANDER_AGENT_VERSION=", "HARA_COMMANDER_AGENT_DOCTOR=PASS",
               "/api/device/revoke-self", "SERVER_DEVICE_REVOKE=",
@@ -55,7 +55,7 @@ print("LINUX_INSTALLER_SECRET_ARGV_EXPOSURE=FALSE")
 
 for token in ('platform="WINDOWS"', "/api/device/enroll", "/agent/windows.ps1",
               "ConvertFrom-SecureString", "Register-ScheduledTask", "icacls.exe",
-              'agent_version="0.3.30"', "HARA_COMMANDER_AGENT_UPDATE=PASS",
+              'agent_version="0.3.31"', "HARA_COMMANDER_AGENT_UPDATE=PASS",
               "HARA_COMMANDER_AGENT_UNINSTALL=PASS", "HARA_COMMANDER_AGENT_VERSION=",
               "HARA_COMMANDER_AGENT_DOCTOR=PASS", "/api/device/revoke-self",
               "SERVER_DEVICE_REVOKE=", "HARA_COMMANDER_AGENT_UPDATE_ROLLBACK_READY=TRUE",
@@ -92,7 +92,7 @@ print("WINDOWS_INSTALLER_REDIRECT_FAIL_CLOSED=PASS")
 print("WINDOWS_INSTALLER_DEVICE_TOKEN_MEMORY_HYGIENE=PASS")
 
 assert MANIFEST.get("schema") == "hara.commander-agent-release.v1"
-assert MANIFEST.get("agent_version") == "0.3.30"
+assert MANIFEST.get("agent_version") == "0.3.31"
 entries = {item["path"]: item for item in MANIFEST.get("files", [])}
 for rel in ("agent/linux.py", "agent/windows.ps1", "install/linux.sh", "install/windows.ps1"):
     path = PUBLIC / rel
@@ -109,6 +109,14 @@ TOOLS = ("hara.health","hara.functions.list","hara.functions.describe",
 for token in TOOLS:
     need(LINUX_AGENT, token, "LINUX_AGENT_TOOL_MISSING")
     need(WINDOWS_AGENT, token, "WINDOWS_AGENT_TOOL_MISSING")
+for token in (
+    "hara.ping","hara.device.info","hara.processes.list",
+    "hara.files.info","hara.files.list","hara.files.read",
+    "hara.files.create_directory","hara.files.write","hara.process.run",
+):
+    need(WINDOWS_AGENT, token, "WINDOWS_STARTER_TOOL_MISSING")
+need(WINDOWS_AGENT, "WINDOWS_PER_ACTION_APPROVAL_UNSUPPORTED", "WINDOWS_STARTER_FAIL_CLOSED_APPROVAL")
+need(WINDOWS_AGENT, "-EncodedCommand", "WINDOWS_STARTER_ENCODED_PROCESS_COMMAND")
 for forbidden in ("subprocess.", "os.system(", "shell=True", "paramiko", "ssh "):
     assert forbidden not in LINUX_AGENT, f"LINUX_AGENT_ARBITRARY_EXEC:{forbidden}"
 for forbidden in ("Invoke-Expression", "Start-Process", "cmd.exe", "powershell.exe -Command"):
@@ -301,7 +309,7 @@ with tempfile.TemporaryDirectory(prefix="hara-agent-startup-") as tmp:
                     break
             time.sleep(0.1)
         assert startup, "LINUX_AGENT_STARTUP_STATUS_MISSING"
-        assert startup.get("agent_version") == "0.3.30", "LINUX_AGENT_STARTUP_VERSION_INVALID"
+        assert startup.get("agent_version") == "0.3.31", "LINUX_AGENT_STARTUP_VERSION_INVALID"
         assert startup.get("started_at_utc"), "LINUX_AGENT_STARTUP_ATTESTATION_MISSING"
         time.sleep(1.2)
         inert = json.loads(status_path.read_text(encoding="utf-8"))
