@@ -53,38 +53,55 @@ PROD D1 currently contains one non-revoked Windows enrollment:
 
 Older Windows enrollments for the same name are REVOKED.
 
-Desktop Commander inventory at this continuation contains only:
-- nucleo-a;
-- sentinela-d;
-- sentinela-c;
-- services.
+Desktop Commander inventory does not include a Windows connector, but the canary VM was recovered directly from libvirt on nucleo-a:
 
-No Windows host is currently online/reachable through the available administrative channel.
+- libvirt domain: `commander-win11`;
+- state: running;
+- guest IP observed: `192.168.122.177`;
+- QEMU Guest Agent: available;
+- `guest-exec`: available;
+- QGA execution identity: Windows SYSTEM;
+- guest -> Commander DEV health: PASS.
+
+Existing PROD isolation was preserved:
+- Scheduled Task `HARA Commander Agent`: present;
+- SYSTEM-context PROD config: absent.
+
+Real Windows 0.3.32 proof:
+- published Agent SHA matched the release manifest;
+- `WINDOWS_SELFTEST_EXIT=0`;
+- operator-session gate PASS;
+- console sanitization PASS;
+- starter read PASS;
+- five-tool bridge PASS;
+- arbitrary function DENIED;
+- Agent self-test PASS.
+
+The previous 0.3.31 candidate had a real PowerShell definition-order bug: `Get-ApprovalMode` was referenced by receipt code before its declaration during `--self-test`. That defect was fixed in 0.3.32 and is already canonical.
 
 ## Current P0 state
 
 `WINDOWS_CURRENT_SOURCE_REGRESSION=PASS`
 
-`WINDOWS_CURRENT_LIVE_CANARY=BLOCKED_HOST_UNAVAILABLE`
+`WINDOWS_CURRENT_REAL_VM_SELFTEST=PASS`
 
-This is not a source failure. The remaining live gate requires an accessible Windows host.
+`WINDOWS_CURRENT_DATA_PLANE_CANARY=PENDING_ALLOWED_ENROLLMENT_CHANNEL`
 
-## Required live canary
+The remaining gate is isolated DEV enrollment and remote Simple MCP data-plane proof. An attempted fully automated guest enrollment was blocked by the administrative connector security policy around credential handling; no bypass was attempted and the temporary DEV fixture was cleaned completely.
 
-When a Windows host becomes reachable:
+## Required final live canary
 
-1. preserve existing enrollment or pair a fresh Windows device;
-2. update/install the current canonical Windows Agent;
-3. require integrity + self-test + startup attestation PASS;
-4. verify current Agent version and capabilities;
-5. through Simple MCP prove:
+1. use an allowed administrative/human channel to create or approve isolated DEV enrollment on `commander-win11`;
+2. preserve the existing PROD task/config;
+3. run current Agent 0.3.32 from the isolated canary root;
+4. through Simple MCP prove:
    - read file;
    - write file;
    - filesystem metadata/list/search;
    - one-shot process command;
    - receipt/audit metadata;
-6. verify no secret/token output;
-7. verify fail-closed behavior for unsupported approval/tool paths;
-8. record rollback state.
+5. verify no secret/token output;
+6. verify fail-closed behavior for unsupported approval/tool paths;
+7. clean the DEV fixture and record rollback state.
 
 Only then mark Windows public-beta parity PASS.
