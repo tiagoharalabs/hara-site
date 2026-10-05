@@ -607,6 +607,79 @@ The Activity rollout did not require a new table or migration; it reuses existin
 
 Release note: the deployed static release channel now advertises Agent 0.3.27 from the canonical branch, while nucleo-a remains on the compatible and LIVE_PROVEN 0.3.26 session. Agent 0.3.27 live canary remains a separate staged rollout and is not required for the Activity API/portal path.
 
+## Operational Activity P0.1 — bounded/indexed production queries
+
+The Activity surface was hardened for production scale in commit 57caafab797a3c0c00a0609fb86a659cdfde1d58 (perf(commander): bound and index activity queries).
+
+Changes:
+- Activity windows: 24h / 7d / 30d
+- default operational window: 7d
+- backend adds c.created_at_utc >= ? to both summary and recent-transaction queries
+- client cache is isolated per activity window
+- migration 0018_activity_indexes.sql adds:
+  - idx_device_calls_activity_tenant_created (tenant_id, created_at_utc DESC)
+  - idx_device_calls_activity_subject_created (tenant_id, subject_id, created_at_utc DESC)
+
+Production proof:
+- migration 0018 applied successfully
+- no pending migrations after apply
+- remote EXPLAIN QUERY PLAN used idx_device_calls_activity_tenant_created for tenant + created_at timeline query
+- Worker version: 6d36008c-f55f-4d7b-a305-8c1010ead3c5
+- deployment ID: 6ec43c48-d0f4-46a6-942d-c2a551ec6ba2
+- rollback Worker: 841b50c9-6a03-4062-9302-4ae28ba1ec22
+- runtime assets: CURRENT
+- public fail-closed smoke: PASS
+- live HTML contains all 24h / 7d / 30d controls
+- live app.js contains setActivityWindow
+- COMMANDER_ACTIVITY_WINDOWS_LIVE=PASS
+- COMMANDER_ACTIVITY_P01_FULL_REGRESSION=PASS
+
+This cut intentionally does not introduce automatic deletion/retention of commander_device_calls. Technical metadata retention also participates in audit/idempotency and requires an explicit product retention policy before destructive cleanup is added.
+
+## MCP operational Activity — hara.activity
+
+Operational telemetry is now also projected to the authenticated MCP surface in commit 9e4657296d0f8aca049bfe4ee1c58f958d58a70e (feat(commander): expose operational activity to MCP).
+
+New purpose-specific tool:
+- hara.activity
+
+MCP surface count:
+- 37 public tools
+
+Input:
+- window: 24h / 7d / 30d
+- limit: 1..100
+
+Security/privacy:
+- grant: COMMANDER_RECEIPT_READ
+- MCP activity is always forced to SUBJECT scope, including Owner/Admin sessions
+- portal Owner/Admin tenant-wide activity remains a separate UI capability
+- payload_json/result_json are not selected by the Activity engine
+- request IDs are not exposed
+- customer_services_relay=false
+- metadata-only operational response
+
+The response reuses the same production Activity engine, returning success/failure counts, latency stages, device/transport metadata and recent call metadata without customer payload/result content.
+
+Validation:
+- customer MCP protocol PASS
+- 37-tool list PASS
+- hara.activity schema/call dispatch PASS
+- MCP activity grant PASS
+- forced subject scope PASS
+- service-side/no-quota activity branch PASS
+- COMMANDER_HARA_ACTIVITY_FULL_REGRESSION=PASS
+
+Production Worker:
+- version: 69e17b37-be68-4bfc-a397-900adafd8117
+- deployment ID: ebb7f54d-d84c-4425-ab47-4e63ba91e8f4
+- rollback Worker: 6d36008c-f55f-4d7b-a305-8c1010ead3c5
+- assets: CURRENT
+- fail-closed smoke: PASS
+- COMMANDER_HARA_ACTIVITY_POST_DEPLOY=PASS
+
+The current ChatGPT conversation may retain the pre-deploy MCP tool snapshot, so a tool refresh/fresh chat can be required before hara.activity is callable by name from this exact client session. This is a client schema-refresh issue, not a server deployment blocker.
+
 ## Current known limitations
 
 1. Windows purpose-specific parity is not yet proven. Windows version metadata was kept release-coherent, but the new Linux-first purpose-specific filesystem/search behavior must not be declared accepted on Windows without a separate canary.
