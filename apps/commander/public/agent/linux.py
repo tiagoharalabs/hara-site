@@ -2490,15 +2490,6 @@ def main():
     last_error_code=None
     last_error_write=0.0
     was_authorized=False
-    try:
-        refresh_product_lease(config)
-        last_product_lease=time.monotonic()
-    except Exception as exc:
-        append_console_event(
-            "PRODUCT_LEASE_DEGRADED",
-            state="DEGRADED",
-            error_code=safe_error_code(exc),
-        )
     persistent=effective_approval_mode(config)=="PERSISTENT_TRUSTED"
     if not operator_session_active() and not persistent:
         mark_device_offline(config)
@@ -2521,6 +2512,15 @@ def main():
             append_console_event("AGENT_ONLINE",state="PERSISTENT_TRUSTED" if persistent else "AUTHORIZED")
             was_authorized=True
         try:
+            if now-last_heartbeat>=30:
+                post_json(config["HARA_COMMANDER_URL"]+"/api/device/heartbeat",config["HARA_DEVICE_TOKEN"],{
+                    "device_id":config["HARA_DEVICE_ID"],"architecture":config["HARA_DEVICE_ARCH"],"agent_version":AGENT_VERSION,
+                    "approval_mode":effective_approval_mode(config),
+                    "activity_snapshots":local_activity_heartbeat_snapshot(),
+                })
+                last_heartbeat=now
+                last_error_code=None
+                try_write_runtime_status(heartbeat_at=utcnow(),error_code=None,error_at=None)
             if now-last_product_lease>=PRODUCT_LEASE_REFRESH_SECONDS:
                 try:
                     refresh_product_lease(config)
@@ -2531,15 +2531,6 @@ def main():
                         state="DEGRADED",
                         error_code=safe_error_code(exc),
                     )
-            if now-last_heartbeat>=30:
-                post_json(config["HARA_COMMANDER_URL"]+"/api/device/heartbeat",config["HARA_DEVICE_TOKEN"],{
-                    "device_id":config["HARA_DEVICE_ID"],"architecture":config["HARA_DEVICE_ARCH"],"agent_version":AGENT_VERSION,
-                    "approval_mode":effective_approval_mode(config),
-                    "activity_snapshots":local_activity_heartbeat_snapshot(),
-                })
-                last_heartbeat=now
-                last_error_code=None
-                try_write_runtime_status(heartbeat_at=utcnow(),error_code=None,error_at=None)
             call=post_json(config["HARA_COMMANDER_URL"]+"/api/device/calls/next",config["HARA_DEVICE_TOKEN"],{})
             if call: execute_call(config,call)
         except Exception as exc:

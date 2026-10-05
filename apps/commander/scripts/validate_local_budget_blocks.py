@@ -58,6 +58,8 @@ need("def local_budget_reserve" in agent_src, "LOCAL_RESERVE")
 need("def local_budget_commit" in agent_src, "LOCAL_COMMIT")
 need("def local_budget_release" in agent_src, "LOCAL_RELEASE")
 need("PRODUCT_LEASE_REFRESH_SECONDS = 4 * 60 * 60" in agent_src, "LEASE_REFRESH_INTERVAL")
+main_src=agent_src.split("def main():",1)[1]
+need(main_src.index('"/api/device/heartbeat"') < main_src.index("refresh_product_lease(config)"), "HEARTBEAT_BEFORE_LEASE")
 need("LOCAL_BUDGET_REQUEST_ALREADY_COMMITTED" in agent_src, "LOCAL_REPLAY_GUARD")
 
 # Migration replay / schema semantics.
