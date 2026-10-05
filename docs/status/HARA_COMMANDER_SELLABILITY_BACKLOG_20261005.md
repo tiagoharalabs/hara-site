@@ -43,6 +43,8 @@ Baseline at creation: `53d53c3b33028712d70ecfb3b18aef9858205210`
 
 ## Recently closed
 
+- PROD login regression CLOSED_PASS: /auth/login restored from 503 STRICT_RATE_LIMIT_CHECK_FAILED to 302 HARA Identity redirect via commit feec164; fast rate-limit remains mandatory and invalid MCP auth returns 401 again.
+
 - Worktree hygiene: 124 prunable registrations removed; orphan HEAD preserved under local quarantine ref.
 - Standard/Pro Beta catalog reconciled to canonical migration `0019_standard_beta_plan.sql`.
 - Pro Beta access request flow delivered through canonical migration `0020_beta_access_requests.sql` and portal API.
