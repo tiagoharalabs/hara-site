@@ -15,10 +15,11 @@ Baseline at creation: `53d53c3b33028712d70ecfb3b18aef9858205210`
 
 | Gate | Current truth | Next proof / delivery | Parallel ownership |
 | --- | --- | --- | --- |
-| Live multitenant isolation | Source/model PASS; live dev proof still marked PENDING | Two controlled tenants must prove DENY for cross-tenant enumerate/select/revoke/enqueue/receipt/quota and caller-supplied tenant override | sellability |
+| Live multitenant isolation | PARTIAL LIVE PASS: enumerate A/B, cross-tenant enqueue, call-status, receipt-target and caller tenant override proved; portal select/revoke + quota currently blocked by Durable Object capacity | Restore/upgrade DO capacity, rerun canonical live probe, require select/revoke state-bound DENY + independent tenant quota reservations | sellability |
 | Fresh customer acceptance | Components exist (3-step onboarding, quickstart, Simple MCP, persistent trust) | New identity -> new tenant/invite -> pair fresh device -> connect Simple MCP -> read -> write -> process -> Usage visible, with no maintainer repair | sellability / beta-sales |
 | Windows current live canary | Starter branch exists with filesystem/process starter toolset; not yet reconciled with current canonical head | Rebase/reconcile `commander-windows-starter-20261005`, run full regression, upgrade/enroll fresh Windows host, prove read/write/process/receipt through Simple MCP | windows-starter |
 | Self-serve Standard checkout | Billing source/schema/webhook/idempotency/entitlement bridge PASS; Pro Beta access requests are now captured in-product; no price invented | Configure Stripe secret + webhook secret + Standard Price ID; prove checkout -> webhook -> STANDARD entitlement -> portal -> cancel/update lifecycle | beta-sales / human commercial config |
+| Durable Object capacity | DEV portal mutations return `STRICT_RATE_LIMIT_CHECK_FAILED`; TenantQuota authorize returns 500; H.A.R.A. execution path also observed Cloudflare free-tier rows-read exhaustion | Remove free-tier capacity blocker (account capacity and/or measured DO cost), then rerun multitenant + normal H.A.R.A. canaries | sellability / infra |
 
 ## P1 — close for reliable scale
 
@@ -50,3 +51,5 @@ Baseline at creation: `53d53c3b33028712d70ecfb3b18aef9858205210`
 - Simple MCP 24-command surface live.
 - Multi-device Linux proof on nucleo-a + sentinela-d.
 - Device self-service, quickstart, customer-visible service health and paid-beta invite fallback delivered.
+- DEV aligned through migration `0020` and current canonical Worker; DEV readback PASS after secret-binding validator correction.
+- Canonical live multitenant probe added with automatic fixture cleanup; partial live isolation evidence captured.
