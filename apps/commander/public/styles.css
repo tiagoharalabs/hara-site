@@ -1175,3 +1175,8 @@ html[data-neon="off"] .brand-copy em{
 
 .quickstart-panel{margin-top:16px}.quickstart-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:8px}.quickstart-steps>div{display:grid;grid-template-columns:30px 1fr;gap:10px;align-items:start;padding:14px;border-left:1px solid #edf2f5}.quickstart-steps>div:first-child{border-left:0}.quickstart-steps>div>span{display:grid;place-items:center;width:24px;height:24px;border-radius:999px;background:#edf4f8;color:#477189;font-size:8px;font-weight:900}.quickstart-steps>div.done>span{background:#e5f8f2;color:#168162}.quickstart-steps p{display:grid;gap:4px;margin:0}.quickstart-steps b{font-size:9px;color:#244c63}.quickstart-steps small{font-size:8px;color:#78909f;line-height:1.45}.quickstart-steps .link-button{grid-column:2;justify-self:start;margin-top:7px}
 @media(max-width:850px){.quickstart-steps{grid-template-columns:1fr}.quickstart-steps>div{border-left:0;border-top:1px solid #edf2f5}.quickstart-steps>div:first-child{border-top:0}}
+
+.status-pill.service-health.healthy{background:#e5f8f2;color:#168162;border-color:#cdeee4}
+.status-pill.service-health.degraded{background:#fff0e7;color:#bd641d;border-color:#f2d6c3}
+.status-pill.service-health.healthy i{background:#20b985}
+.status-pill.service-health.degraded i{background:#d77c30}

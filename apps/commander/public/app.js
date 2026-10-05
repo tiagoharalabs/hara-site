@@ -527,6 +527,45 @@
     }
   }
 
+  async function loadServiceHealth(trigger=null) {
+    const pill=document.getElementById("serviceHealthPill");
+    const detail=document.getElementById("serviceHealthDetail");
+    const original=trigger?.textContent || "Atualizar status";
+    if (trigger) {
+      trigger.disabled=true;
+      trigger.textContent="Verificando…";
+    }
+    if (pill) {
+      pill.classList.remove("healthy","degraded");
+      pill.innerHTML="<i></i> Verificando";
+    }
+    try {
+      const started=performance.now();
+      const response=await fetch("/api/health",{cache:"no-store"});
+      const payload=await response.json().catch(()=>({}));
+      const latency=Math.max(0,Math.round(performance.now()-started));
+      const ok=Boolean(response.ok && payload?.ok === true && payload?.service === "hara-commander");
+      if (pill) {
+        pill.classList.toggle("healthy",ok);
+        pill.classList.toggle("degraded",!ok);
+        pill.innerHTML="<i></i> " + (ok ? "Operacional" : "Degradado");
+      }
+      if (detail) detail.textContent=(ok ? "Serviço respondeu normalmente" : "O serviço respondeu com degradação") + " · " + latency + " ms · " + new Date().toLocaleTimeString("pt-BR");
+    } catch (_error) {
+      if (pill) {
+        pill.classList.remove("healthy");
+        pill.classList.add("degraded");
+        pill.innerHTML="<i></i> Indisponível";
+      }
+      if (detail) detail.textContent="Não foi possível alcançar o serviço agora.";
+    } finally {
+      if (trigger?.isConnected) {
+        trigger.disabled=false;
+        trigger.textContent=original;
+      }
+    }
+  }
+
   async function hydrateSessionHeader() {
     if (!remotePortal) return false;
     try {
@@ -1381,6 +1420,7 @@
       skipNextWorkspaceLoad = false;
       if (next === "plans") loadBillingState();
       if (next === "usage") loadUsageActivity();
+      if (next === "security") loadServiceHealth();
       return;
     }
     if (next === "devices") {
@@ -1391,6 +1431,7 @@
       if (next === "dashboard") loadDevices();
       if (next === "usage") loadUsageActivity();
       if (next === "plans") loadBillingState();
+      if (next === "security") loadServiceHealth();
     }
   }
 
@@ -1471,6 +1512,13 @@
     if (refreshActivity) {
       event.preventDefault();
       loadUsageActivity(refreshActivity,true);
+      return;
+    }
+
+    const refreshServiceHealth = event.target.closest("[data-refresh-service-health]");
+    if (refreshServiceHealth) {
+      event.preventDefault();
+      loadServiceHealth(refreshServiceHealth);
       return;
     }
 

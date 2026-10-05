@@ -360,6 +360,18 @@ need(
     "DEVICE_FIRST_SUCCESS_QUICKSTART",
 )
 need(
+    'id="serviceHealthPill"' in HTML
+    and 'id="serviceHealthDetail"' in HTML
+    and 'data-refresh-service-health' in HTML
+    and "async function loadServiceHealth(trigger=null)" in JS
+    and 'fetch("/api/health"' in JS
+    and 'payload?.service === "hara-commander"' in JS
+    and '"Operacional"' in JS
+    and '"Degradado"' in JS
+    and 'next === "security"' in JS,
+    "CUSTOMER_SERVICE_HEALTH_SURFACE",
+)
+need(
     "function renderDeviceLoading()" in JS
     and 'list.setAttribute("aria-busy", "true")' in JS
     and "device-skeleton" in CSS
