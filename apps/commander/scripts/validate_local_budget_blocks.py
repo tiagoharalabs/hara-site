@@ -4,6 +4,7 @@ from __future__ import annotations
 import runpy
 import sqlite3
 import tempfile
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[3]
@@ -33,7 +34,7 @@ need("trg_device_call_local_budget_release" in MIG, "CLOUD_SLOT_RELEASE_TRIGGER"
 need("idx_device_budget_tenant_period_sequence" in MIG, "TENANT_SEQUENCE_RACE_GUARD")
 need("idx_device_budget_one_active" in MIG and "WHERE state = 'ACTIVE'" in MIG, "ONE_ACTIVE_PER_DEVICE")
 need("LOCAL_BUDGET_BLOCK_UNITS = 100" in WORKER, "BLOCK_SIZE_100")
-need("LOCAL_BUDGET_MIN_LINUX_PATCH = 35" in WORKER, "AGENT_035_GATE")
+need("LOCAL_BUDGET_MIN_LINUX_PATCH = 36" in WORKER, "AGENT_036_GATE")
 need("tenantFullyLocalBudgetCapable" in WORKER, "FRESH_BASELINE_FLEET_GATE")
 need("freshLocalBudgetBaseline" in WORKER and "FRESH_TENANT_ZERO" in WORKER, "FRESH_BASELINE_SOURCE")
 need("MIXED_OR_INCOMPATIBLE_FLEET" in WORKER, "FRESH_BASELINE_INVALIDATION")
@@ -56,7 +57,7 @@ need("units_issued + NEW.usage_units <= b.units_allocated" in MIG, "LOCAL_TAMPER
 need('budget_id: row.usage_budget_id || null' in WORKER, "CLAIM_BINDS_BUDGET_ID")
 
 agent_src=AGENT.read_text(encoding="utf-8")
-need('AGENT_VERSION = "0.3.35"' in agent_src, "AGENT_VERSION")
+need('AGENT_VERSION = "0.3.36"' in agent_src, "AGENT_VERSION")
 need("CREATE TABLE IF NOT EXISTS product_lease" in agent_src, "LOCAL_LEASE_TABLE")
 need("CREATE TABLE IF NOT EXISTS local_budget_blocks" in agent_src, "LOCAL_BLOCK_TABLE")
 need("CREATE TABLE IF NOT EXISTS local_budget_debits" in agent_src, "LOCAL_DEBIT_TABLE")
@@ -193,27 +194,35 @@ with tempfile.TemporaryDirectory(prefix="hara-local-budget-") as td:
         "HARA_DEVICE_TOKEN":"token-local",
     }
     cloud_calls=[]
+    signed_leases={}
     def response(block_id,token,units):
+        issued=datetime.now(timezone.utc)
+        valid_until=issued+timedelta(hours=6)
+        lease={
+            "schema":"hara.commander-device-product-lease.v1",
+            "lease_id":"LEASE-"+block_id,
+            "authority":"HARA_COMMANDER_CLOUD",
+            "device_id":"DEVICE-LOCAL",
+            "tenant_id":"TENANT-LOCAL",
+            "entitlement_id":"ENT-LOCAL",
+            "plan_code":"TRIAL",
+            "plan_name":"Free",
+            "grants":["COMMANDER_READ_ONLY_INVOKE"],
+            "meter_id":"HARA_COMMANDER_GOVERNED_INVOKE",
+            "period_kind":"CALENDAR_MONTH",
+            "unit_limit":10000,
+            "usage_mode":"LOCAL_BUDGET",
+            "issued_at_utc":issued.isoformat().replace("+00:00","Z"),
+            "valid_until_utc":valid_until.isoformat().replace("+00:00","Z"),
+        }
+        signed_token="mock-signed-"+block_id
+        signed_leases[signed_token]=lease
         return {
             "schema":"hara.commander-device-product-lease-response.v1",
             "ok":True,
-            "product_lease":{
-                "schema":"hara.commander-device-product-lease.v1",
-                "lease_id":"LEASE-"+block_id,
-                "authority":"HARA_COMMANDER_CLOUD",
-                "device_id":"DEVICE-LOCAL",
-                "tenant_id":"TENANT-LOCAL",
-                "entitlement_id":"ENT-LOCAL",
-                "plan_code":"TRIAL",
-                "plan_name":"Free",
-                "grants":["COMMANDER_READ_ONLY_INVOKE"],
-                "meter_id":"HARA_COMMANDER_GOVERNED_INVOKE",
-                "period_kind":"CALENDAR_MONTH",
-                "unit_limit":10000,
-                "usage_mode":"LOCAL_BUDGET",
-                "issued_at_utc":"2026-10-05T00:00:00Z",
-                "valid_until_utc":"2026-10-05T06:00:00Z",
-            },
+            "product_lease":lease,
+            "product_lease_token":signed_token,
+            "product_lease_signature":{"alg":"RS256","kid":"commander-lease-v1"},
             "budget":{
                 "exhausted":False,
                 "block":{
@@ -249,6 +258,7 @@ with tempfile.TemporaryDirectory(prefix="hara-local-budget-") as td:
         assert report.get("committed_units")==3
         return response("B2","tok2",2)
 
+    agent_globals["verify_product_lease_token"]=lambda _cfg,signed: signed_leases[str(signed)]
     agent_globals["post_json"]=fake_post
     lease=ns["refresh_product_lease"](config)
     need(lease["product_lease"]["usage_mode"]=="LOCAL_BUDGET", "DYNAMIC_LEASE")

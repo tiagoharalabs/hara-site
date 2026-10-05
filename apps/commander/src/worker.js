@@ -48,6 +48,7 @@ import {
   rateLimitClientKey,
   rateLimitSecretKey,
 } from "./security-rate-limit.mjs";
+import { signProductLease } from "./product-lease.mjs";
 export { DeviceChannel };
 export { SecurityRateLimit };
 
@@ -61,7 +62,7 @@ const DEVICE_CALL_CONTENT_REDACTION_BATCH = 64;
 const DEVICE_CALL_CONTENT_REDACTION_MAX_BATCHES = 8;
 const DEVICE_CALL_REDACTED_PREFIX = "HARA_REDACTED_SHA256:";
 const EVENT_V2_TERMINAL_FAST_PATH_WAIT_MS = 500;
-const LOCAL_BUDGET_MIN_LINUX_PATCH = 35;
+const LOCAL_BUDGET_MIN_LINUX_PATCH = 36;
 const LOCAL_BUDGET_BLOCK_UNITS = 100;
 const PRODUCT_LEASE_TTL_SECONDS = 6 * 60 * 60;
 const TRANSIENT_EXECUTE_OR_REPLAY = "EXECUTE_OR_REPLAY";
@@ -1502,10 +1503,21 @@ async function deviceProductLease(env, request, body = {}) {
     }
   }
 
+  const productLeaseToken = await signProductLease(
+    env,
+    productLease,
+    new URL(request.url).origin,
+  );
+
   return {
     schema: "hara.commander-device-product-lease-response.v1",
     ok: true,
     product_lease: productLease,
+    product_lease_token: productLeaseToken,
+    product_lease_signature: {
+      alg: "RS256",
+      kid: "commander-lease-v1",
+    },
     budget,
   };
 }
