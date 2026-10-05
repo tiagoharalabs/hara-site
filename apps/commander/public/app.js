@@ -615,6 +615,14 @@
     if (devicesCache) renderDevices(devicesCache);
   }
 
+  function deviceApprovalLabel(mode) {
+    const value=String(mode || "").toUpperCase();
+    if (value === "PERSISTENT_TRUSTED") return { label:"Sempre permitido", className:"persistent" };
+    if (value === "SESSION_TRUSTED") return { label:"Por sessão", className:"session" };
+    if (value === "ASK_EVERY_ACTION") return { label:"Confirmação", className:"ask" };
+    return { label:"Política padrão", className:"default" };
+  }
+
   function renderDevices(payload) {
     const list = document.getElementById("deviceList");
     const devices = Array.isArray(payload?.devices) ? payload.devices : [];
@@ -681,6 +689,13 @@
       const name = document.createElement("b");
       name.textContent = String(device.device_name || "Computador");
       titleLine.append(name);
+      if (device.state !== "REVOKED") {
+        const approvalPolicy=deviceApprovalLabel(device.approval_mode);
+        const policy=document.createElement("span");
+        policy.className="device-policy " + approvalPolicy.className;
+        policy.textContent=approvalPolicy.label;
+        titleLine.append(policy);
+      }
       const meta = document.createElement("small");
       const arch = device.architecture ? " · " + String(device.architecture) : "";
       const agentVersion = device.agent_version ? " · Agent " + String(device.agent_version) : "";

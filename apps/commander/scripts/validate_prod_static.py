@@ -328,6 +328,17 @@ need(
     "MOBILE_NAVIGATION",
 )
 need(
+    "function deviceApprovalLabel(mode)" in JS
+    and '"PERSISTENT_TRUSTED"' in JS
+    and '"Sempre permitido"' in JS
+    and '"SESSION_TRUSTED"' in JS
+    and '"Por sessão"' in JS
+    and '"ASK_EVERY_ACTION"' in JS
+    and '"Confirmação"' in JS
+    and ".device-policy.persistent" in CSS,
+    "DEVICE_APPROVAL_POLICY_VISIBILITY",
+)
+need(
     "function renderDeviceLoading()" in JS
     and 'list.setAttribute("aria-busy", "true")' in JS
     and "device-skeleton" in CSS
