@@ -1261,6 +1261,23 @@
         const standardCurrent = payload?.connection?.plan_code === "STANDARD"
           && ["active","trialing"].includes(String(payload?.connection?.subscription_status || "").toLowerCase());
         betaAccess.hidden = Boolean(activation.first_checkout_ready || standardCurrent);
+        if (!betaAccess.hidden) {
+          const betaResponse=await fetch("/api/portal/beta-access",{cache:"no-store",credentials:"same-origin"});
+          if (betaResponse.ok) {
+            const betaPayload=await betaResponse.json().catch(()=>({}));
+            const state=String(betaPayload?.request?.state || "").toUpperCase();
+            if (["REQUESTED","CONTACTED"].includes(state)) {
+              betaAccess.disabled=true;
+              betaAccess.textContent="Solicitação enviada";
+            } else if (state === "APPROVED") {
+              betaAccess.disabled=true;
+              betaAccess.textContent="Acesso beta aprovado";
+            } else {
+              betaAccess.disabled=betaPayload?.can_request !== true;
+              betaAccess.textContent=betaPayload?.can_request === true ? "Solicitar acesso beta" : "Owner/Admin necessário";
+            }
+          }
+        }
       }
 
       if (portalButton) {
@@ -1288,6 +1305,34 @@
       }
     } catch (_error) {
       // Billing is additive. A billing read failure must not degrade the portal.
+    }
+  }
+
+  async function requestBetaAccess(button) {
+    if (!remotePortal || !sessionAuthenticated || !button) return;
+    const original=button.textContent || "Solicitar acesso beta";
+    button.disabled=true;
+    button.textContent="Enviando solicitação...";
+    try {
+      const response=await fetch("/api/portal/beta-access",{
+        method:"POST",
+        credentials:"same-origin",
+        headers:{"content-type":"application/json"},
+        body:"{}",
+      });
+      const payload=await response.json().catch(()=>({}));
+      if (!response.ok) throw new Error(String(payload?.code || "BETA_ACCESS_REQUEST_FAILED"));
+      button.textContent="Solicitação enviada";
+      showBanner("success","Solicitação recebida","Seu workspace entrou na fila do Pro Beta. O contato será feito usando a identidade já cadastrada.");
+    } catch (error) {
+      const code=String(error?.message || "BETA_ACCESS_REQUEST_FAILED");
+      const messages={
+        BETA_ACCESS_ADMIN_REQUIRED:"Somente OWNER ou ADMIN pode solicitar o Pro Beta para este workspace.",
+        BETA_ACCESS_PLAN_UNAVAILABLE:"O Pro Beta não está disponível para solicitação neste momento.",
+      };
+      button.disabled=false;
+      button.textContent=original;
+      showBanner("warning","Não foi possível solicitar o beta",messages[code] || "Tente novamente em alguns instantes.");
     }
   }
 
@@ -1620,6 +1665,13 @@
     if (revokeDeviceButton) {
       event.preventDefault();
       revokeDevice(revokeDeviceButton.dataset.revokeDevice, revokeDeviceButton);
+      return;
+    }
+
+    const betaAccess = event.target.closest("[data-beta-access]");
+    if (betaAccess) {
+      event.preventDefault();
+      if (!betaAccess.disabled) requestBetaAccess(betaAccess);
       return;
     }
 

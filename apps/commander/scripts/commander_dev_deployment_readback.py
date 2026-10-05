@@ -16,6 +16,7 @@ DEV_ORIGIN = "https://hara-commander-dev-v2.tiago-sartori.workers.dev"
 REQUIRED_SECRETS = {
     "AUTH_CLIENT_SECRET",
     "DEV_ACCESS_TOKEN",
+    "HARA_IDENTITY_MCP_DCR_CLIENT_ID",
     "MCP_PRODUCT_TOKEN",
     "MCP_PRODUCT_CANARY_TOKEN",
 }
