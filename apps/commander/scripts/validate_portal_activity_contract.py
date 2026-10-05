@@ -78,5 +78,10 @@ plan=" ".join(str(row) for row in db.execute(
     ("T1","2026-10-01T00:00:00Z"),
 ))
 need("idx_device_calls_activity_tenant_created" in plan,"TENANT_INDEX_QUERY_PLAN")
+need('"hara.activity": "COMMANDER_RECEIPT_READ"' in WORKER,"MCP_ACTIVITY_GRANT")
+activity_branch=WORKER.split('if (toolId === "hara.activity")',1)[1].split('if (toolId === "hara.calls.recent")',1)[0]
+need('role:"MEMBER"' in activity_branch and 'portalActivity(' in activity_branch,"MCP_ACTIVITY_SUBJECT_SCOPE")
+need('customer_services_relay:false' in activity_branch and 'quota:null' in activity_branch,"MCP_ACTIVITY_SERVICE_SIDE")
+
 
 print("COMMANDER_PORTAL_ACTIVITY_CONTRACT=PASS")

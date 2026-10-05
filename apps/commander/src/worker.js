@@ -77,6 +77,7 @@ const MCP_TOOL_GRANTS = Object.freeze({
   "hara.devices.list": "COMMANDER_DISCOVERY",
   "hara.capabilities": "COMMANDER_DISCOVERY",
   "hara.usage": "COMMANDER_RECEIPT_READ",
+  "hara.activity": "COMMANDER_RECEIPT_READ",
   "hara.health": "COMMANDER_DISCOVERY",
   "hara.ping": "COMMANDER_DISCOVERY",
   "hara.device.info": "COMMANDER_READ_ONLY_INVOKE",
@@ -2639,6 +2640,21 @@ async function executeCustomerMcpTool(
   if (toolId === "hara.usage") {
     const usage=await customerUsage(env,context);
     return {state:"PASS",operational_authority:"HARA_SERVICES",execution_authority:"HARA_SERVICES",runtime_authority_from_chatgpt:false,mutation_performed:false,customer_services_relay:false,result:usage,product:{plan_code:context.plan_code,entitlement_id:context.entitlement_id,quota:usage.usage}};
+  }
+
+  if (toolId === "hara.activity") {
+    const activity=await portalActivity(
+      env,
+      {tenant_id:context.tenant_id,subject_id:context.subject_id,role:"MEMBER"},
+      args?.limit || 50,
+      args?.window || "7d",
+    );
+    return {
+      state:"PASS", operational_authority:"HARA_SERVICES", execution_authority:"HARA_SERVICES",
+      runtime_authority_from_chatgpt:false, mutation_performed:false, customer_services_relay:false,
+      result:activity,
+      product:{plan_code:context.plan_code,entitlement_id:context.entitlement_id,quota:null},
+    };
   }
 
   if (toolId === "hara.calls.recent") {

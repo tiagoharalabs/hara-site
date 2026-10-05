@@ -69,7 +69,7 @@ assert.deepEqual(
   tools.map((tool) => tool.name),
   CUSTOMER_MCP_TOOLS,
 );
-assert.equal(tools.length, 36);
+assert.equal(tools.length, 37);
 const mutationTools = new Set([
   "hara.files.create_directory",
   "hara.files.write",
@@ -150,12 +150,21 @@ assert.equal(runCall.result?.isError, undefined);
 assert.equal(calls.at(-1).tool_id, "hara.process.run");
 assert.equal(calls.at(-1).arguments.timeout_ms, 500);
 
+const activityCall = await rpc(44, "tools/call", {
+  name: "hara.activity",
+  arguments: { window: "7d", limit: 25 },
+});
+assert.equal(activityCall.result?.isError, undefined);
+assert.equal(calls.at(-1).tool_id, "hara.activity");
+assert.equal(calls.at(-1).arguments.window, "7d");
+assert.equal(calls.at(-1).arguments.limit, 25);
+
 const deniedUnknown = await rpc(5, "tools/call", {
   name: "shell.run",
   arguments: {},
 });
 assert.ok(deniedUnknown.error);
-assert.equal(calls.length, 5);
+assert.equal(calls.length, 6);
 
 const badHost = await handleCustomerMcpRequest(
   new Request("https://evil.example/mcp", {

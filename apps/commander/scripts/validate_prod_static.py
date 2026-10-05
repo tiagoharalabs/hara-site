@@ -210,6 +210,13 @@ need(
     "USAGE_ACTIVITY_SURFACE",
 )
 need(
+    '"hara.activity"' in CUSTOMER_MCP
+    and 'H.A.R.A. Operational Activity' in CUSTOMER_MCP
+    and '"hara.activity": "COMMANDER_RECEIPT_READ"' in WORKER
+    and 'if (toolId === "hara.activity")' in WORKER,
+    "MCP_ACTIVITY_SURFACE",
+)
+need(
     "c.tenant_id = ?" in activity_block
     and "c.subject_id = ?" in activity_block
     and "payload_json" not in activity_block

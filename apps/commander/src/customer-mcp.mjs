@@ -8,6 +8,7 @@ export const CUSTOMER_MCP_TOOLS = Object.freeze([
   "hara.devices.list",
   "hara.capabilities",
   "hara.usage",
+  "hara.activity",
   "hara.health",
   "hara.ping",
   "hara.device.info",
@@ -166,6 +167,19 @@ export function createCustomerMcpServer({ executeTool }) {
       inputSchema: z.object({}).strict(),
     }),
     call("hara.usage"),
+  );
+
+  server.registerTool(
+    "hara.activity",
+    toolConfig({
+      title: "H.A.R.A. Operational Activity",
+      description: "Read metadata-only operational activity for the authenticated subject: transaction counts, success rate, queue/Agent/total latency, devices, transport and recent governed calls. Customer payload and result content are never returned.",
+      inputSchema: z.object({
+        window: z.enum(["24h","7d","30d"]).optional(),
+        limit: z.number().int().min(1).max(100).optional(),
+      }).strict(),
+    }),
+    call("hara.activity"),
   );
 
   server.registerTool(
