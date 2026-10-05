@@ -211,7 +211,7 @@ need(
     and 'data-os-choice="windows"' in HTML
     and 'data-os-panel="linux"' in HTML
     and 'data-os-panel="windows"' in HTML
-    and "Sempre permitir neste computador" in HTML
+    and "Sempre permitir" in HTML
     and "Pedir confirmação" in HTML
     and "<b>Pronto</b>" in HTML
     and "hara-commander doctor" in HTML
@@ -219,6 +219,20 @@ need(
     and 'tabindex="-1" aria-live="polite"' in HTML
     and 'function setInstallOs(os)' in JS,
     "PAIRING_ONBOARDING_ORDER",
+)
+onboarding_block = HTML.split('<div class="device-onboarding">',1)[1].split('</section>',1)[0]
+need(
+    onboarding_block.count('class="onboarding-step-no"') == 3
+    and '<span class="onboarding-step-no">01</span>' in onboarding_block
+    and '<span class="onboarding-step-no">02</span>' in onboarding_block
+    and '<span class="onboarding-step-no">03</span>' in onboarding_block
+    and '<span class="onboarding-step-no">04</span>' not in onboarding_block
+    and '<span class="onboarding-step-no">05</span>' not in onboarding_block
+    and "Instale e pronto" in onboarding_block
+    and "Sempre permitir" in onboarding_block
+    and "mantenha esse console aberto" not in onboarding_block
+    and "sessão de IA precisa ser aberta manualmente" not in onboarding_block,
+    "COMMERCIAL_ONBOARDING_THREE_STEPS",
 )
 need(
     'id="dashboardUsageProgress"' in HTML

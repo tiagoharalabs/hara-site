@@ -1182,3 +1182,6 @@ html[data-neon="off"] .brand-copy em{
 .status-pill.service-health.degraded i{background:#d77c30}
 
 .beta-access-cta{margin-top:8px;text-align:center;text-decoration:none}.beta-access-cta[hidden]{display:none!important}
+
+.onboarding-choice-row{display:grid;grid-template-columns:1fr 1.45fr;gap:12px;width:100%}.choice-label{display:block;margin-bottom:5px;color:#78909f;font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:.04em}.onboarding-ready{padding-left:52px}.onboarding-ready>div{display:grid;gap:3px}.onboarding-ready b{color:#168162}
+@media(max-width:760px){.onboarding-choice-row{grid-template-columns:1fr}.onboarding-ready{padding-left:0}}

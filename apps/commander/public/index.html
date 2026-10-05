@@ -318,7 +318,7 @@
                   <div><span>NOVO DISPOSITIVO</span><h2>Conectar ao Commander</h2></div>
                   <span class="status-pill"><i></i> Pronto para instalar</span>
                 </div>
-                <p>Gere um código temporário, instale o Agent e depois abra uma sessão local quando quiser usar ChatGPT ou outro cliente de IA. A conexão é somente de saída.</p>
+                <p>Gere um código temporário e instale o Agent. No modo recomendado, o computador fica pronto em segundo plano assim que a instalação termina. A conexão é somente de saída.</p>
 
                 <div class="onboarding-step">
                   <span class="onboarding-step-no">01</span>
@@ -331,41 +331,43 @@
                   <div class="pairing-token"><code id="pairingToken">—</code><button class="btn btn-secondary small" type="button" data-copy-pairing>Copiar código</button></div>
                 </div>
 
-                <div class="onboarding-step onboarding-step-stack">
+                <div class="onboarding-step onboarding-step-stack onboarding-platform-policy">
                   <span class="onboarding-step-no">02</span>
-                  <div><b>Escolha o sistema operacional</b><small>O mesmo código funciona para Linux ou Windows.</small></div>
-                  <div class="os-picker" role="tablist" aria-label="Sistema operacional">
-                    <button class="active" type="button" role="tab" aria-selected="true" data-os-choice="linux">Linux</button>
-                    <button type="button" role="tab" aria-selected="false" data-os-choice="windows">Windows</button>
-                  </div>
-                </div>
-
-                <div class="onboarding-step onboarding-step-stack">
-                  <span class="onboarding-step-no">03</span>
-                  <div><b>Escolha como autorizar ações</b><small>Você decide se o Commander pode operar em segundo plano ou se deve exigir confirmação local.</small></div>
-                  <div class="os-picker approval-picker" role="radiogroup" aria-label="Modo de autorização">
-                    <button class="active" type="button" role="radio" aria-checked="true" data-approval-choice="always">Sempre permitir neste computador</button>
-                    <button type="button" role="radio" aria-checked="false" data-approval-choice="ask">Pedir confirmação</button>
+                  <div><b>Escolha a plataforma e a autorização</b><small>O mesmo código funciona em Linux ou Windows. “Sempre permitir” é o modo recomendado para uso diário.</small></div>
+                  <div class="onboarding-choice-row">
+                    <div>
+                      <small class="choice-label">Sistema</small>
+                      <div class="os-picker" role="tablist" aria-label="Sistema operacional">
+                        <button class="active" type="button" role="tab" aria-selected="true" data-os-choice="linux">Linux</button>
+                        <button type="button" role="tab" aria-selected="false" data-os-choice="windows">Windows</button>
+                      </div>
+                    </div>
+                    <div>
+                      <small class="choice-label">Autorização</small>
+                      <div class="os-picker approval-picker" role="radiogroup" aria-label="Modo de autorização">
+                        <button class="active" type="button" role="radio" aria-checked="true" data-approval-choice="always">Sempre permitir</button>
+                        <button type="button" role="radio" aria-checked="false" data-approval-choice="ask">Pedir confirmação</button>
+                      </div>
+                    </div>
                   </div>
                   <small class="install-note" id="approvalModeNote">Recomendado: o Agent fica disponível em segundo plano e executa somente operações governadas autorizadas neste computador.</small>
                 </div>
 
                 <div class="onboarding-step onboarding-step-stack">
-                  <span class="onboarding-step-no">04</span>
-                  <div><b>Copie e execute o instalador</b><small>Depois cole o código quando o instalador solicitar “Pairing token”.</small></div>
+                  <span class="onboarding-step-no">03</span>
+                  <div><b>Instale e pronto</b><small>Copie o comando, execute e cole o código quando o instalador solicitar “Pairing token”.</small></div>
                   <div class="install-pane" data-os-panel="linux">
                     <div class="install-command"><code data-install-linux-code>(tmp=$(mktemp) && trap 'rm -f $tmp' EXIT && curl -fsS --proto '=https' --tlsv1.2 --location --max-redirs 0 https://commander.haralabs.com.br/install/linux.sh -o $tmp && HARA_COMMANDER_APPROVAL_MODE=PERSISTENT_TRUSTED HARA_COMMANDER_URL=https://commander.haralabs.com.br bash $tmp)</code><button class="btn btn-secondary small" type="button" data-copy-linux>Copiar comando Linux</button></div>
-                    <small class="install-note">Instale uma vez. Para liberar o acesso da IA, execute <code>hara-commander start</code> e mantenha esse console aberto.</small>
+                    <small class="install-note">No modo “Sempre permitir”, a instalação termina com o Agent pronto em segundo plano. Em “Pedir confirmação”, use <code>hara-commander start</code> quando quiser autorizar ações.</small>
                   </div>
                   <div class="install-pane" data-os-panel="windows" hidden>
                     <div class="install-command"><code data-install-windows-code>$haraPrevUrl=$env:HARA_COMMANDER_URL; $haraPrevApproval=$env:HARA_COMMANDER_APPROVAL_MODE; $haraInstaller=Join-Path $env:TEMP ('hara-commander-install-'+[guid]::NewGuid().ToString('N')+'.ps1'); try { $env:HARA_COMMANDER_URL='https://commander.haralabs.com.br'; $env:HARA_COMMANDER_APPROVAL_MODE='PERSISTENT_TRUSTED'; Invoke-WebRequest -Uri https://commander.haralabs.com.br/install/windows.ps1 -OutFile $haraInstaller -UseBasicParsing -MaximumRedirection 0 -ErrorAction Stop; & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $haraInstaller; if ($LASTEXITCODE -ne 0) { throw ('HARA_COMMANDER_INSTALL_EXIT_'+$LASTEXITCODE) } } finally { Remove-Item -LiteralPath $haraInstaller -Force -ErrorAction SilentlyContinue; $env:HARA_COMMANDER_URL=$haraPrevUrl; $env:HARA_COMMANDER_APPROVAL_MODE=$haraPrevApproval }</code><button class="btn btn-secondary small" type="button" data-copy-windows>Copiar comando Windows</button></div>
-                    <small class="install-note">O daemon permanece instalado no logon, mas fica inerte. A sessão de IA precisa ser aberta manualmente no PowerShell e o console mostra cada execução.</small>
+                    <small class="install-note">No modo “Sempre permitir”, o Agent fica pronto em segundo plano após a instalação. Em “Pedir confirmação”, abra a sessão local quando quiser autorizar ações.</small>
                   </div>
                 </div>
 
-                <div class="onboarding-finish">
-                  <span class="onboarding-step-no">05</span>
-                  <div><b>Pronto</b><small>No modo “Sempre permitir”, o Agent já fica disponível em segundo plano. No modo “Pedir confirmação”, abra <code>hara-commander start</code> quando quiser autorizar ações. Diagnóstico: <code>hara-commander doctor</code>.</small></div>
+                <div class="onboarding-finish onboarding-ready">
+                  <div><b>Pronto</b><small>O computador aparecerá na lista assim que o Agent conectar. Diagnóstico: <code>hara-commander doctor</code>.</small></div>
                 </div>
               </article>
             </div>
