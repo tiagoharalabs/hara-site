@@ -2510,6 +2510,51 @@ function portalActivityWindow(value) {
   };
 }
 
+function betaAccessCanManage(session) {
+  return ["OWNER","ADMIN"].includes(String(session?.role || "").toUpperCase());
+}
+
+async function portalBetaAccessStatus(env, session) {
+  const row=await env.PRODUCT_DB.prepare(
+    `SELECT plan_code,state,requested_at_utc,updated_at_utc
+       FROM commander_beta_access_requests
+      WHERE tenant_id = ? AND subject_id = ? AND plan_code = 'STANDARD'
+      LIMIT 1`
+  ).bind(session.tenant_id,session.subject_id).first();
+
+  return {
+    schema:"hara.commander-beta-access.v1",
+    plan_code:"STANDARD",
+    can_request:betaAccessCanManage(session),
+    request:row ? {
+      plan_code:String(row.plan_code || "STANDARD"),
+      state:String(row.state || "REQUESTED"),
+      requested_at_utc:row.requested_at_utc,
+      updated_at_utc:row.updated_at_utc,
+    } : null,
+  };
+}
+
+async function requestPortalBetaAccess(env, session) {
+  if (!betaAccessCanManage(session)) throw new Error("BETA_ACCESS_ADMIN_REQUIRED");
+  const plan=await env.PRODUCT_DB.prepare(
+    `SELECT plan_code,state FROM plans WHERE plan_code = 'STANDARD' LIMIT 1`
+  ).first();
+  if (!plan || String(plan.state || "").toUpperCase() !== "ACTIVE") {
+    throw new Error("BETA_ACCESS_PLAN_UNAVAILABLE");
+  }
+  const now=nowIso();
+  const requestId="HARA-BETA-"+crypto.randomUUID();
+  await env.PRODUCT_DB.prepare(
+    `INSERT INTO commander_beta_access_requests
+       (request_id,tenant_id,subject_id,plan_code,state,requested_at_utc,updated_at_utc)
+     VALUES (?, ?, ?, 'STANDARD', 'REQUESTED', ?, ?)
+     ON CONFLICT(tenant_id,subject_id,plan_code)
+     DO UPDATE SET state='REQUESTED',updated_at_utc=excluded.updated_at_utc`
+  ).bind(requestId,session.tenant_id,session.subject_id,now,now).run();
+  return await portalBetaAccessStatus(env,session);
+}
+
 async function portalActivity(env, session, limitValue=50, windowValue="7d") {
   const limit=Math.max(1,Math.min(100,Number(limitValue || 50)));
   const window=portalActivityWindow(windowValue);
@@ -3345,6 +3390,20 @@ export default {
         return json(await portalActivity(env,session,limit,window));
       }
 
+      if (url.pathname === "/api/portal/beta-access" && request.method === "GET") {
+        const session = await resolvePortalSession(request, env);
+        if (!session) return json({ ok:false, code:"AUTH_REQUIRED" },401);
+        return json(await portalBetaAccessStatus(env,session));
+      }
+
+      if (url.pathname === "/api/portal/beta-access" && request.method === "POST") {
+        requirePortalMutationOrigin(request);
+        const session = await resolvePortalSession(request, env);
+        if (!session) return json({ ok:false, code:"AUTH_REQUIRED" },401);
+        await enforcePortalMutationRateLimit(env,session);
+        return json(await requestPortalBetaAccess(env,session),201);
+      }
+
       if (url.pathname === "/api/portal/billing" && request.method === "GET") {
         const session = await resolvePortalSession(request, env);
         if (!session) return json({ ok: false, code: "AUTH_REQUIRED" }, 401);
@@ -3682,6 +3741,8 @@ export default {
         OIDC_STATE_REPLAYED: 400,
         OIDC_STATE_EXPIRED: 400,
         OIDC_PROVIDER_ERROR: 400,
+        BETA_ACCESS_ADMIN_REQUIRED: 403,
+        BETA_ACCESS_PLAN_UNAVAILABLE: 409,
         BILLING_NOT_CONFIGURED: 503,
         BILLING_ADMIN_REQUIRED: 403,
         BILLING_PLAN_INVALID: 400,
