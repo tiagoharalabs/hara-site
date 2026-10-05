@@ -47,10 +47,11 @@ need('return json({ configured: authStatus(env).configured });' in auth_config_b
 need('DEV_ENDPOINT_DISABLED: 404' in WORKER, "DEV_DISABLED_STATUS")
 need("auth-bootstrap-pending" in HTML, "AUTH_FIRST_PAINT")
 need(
-    'data-approval-choice="session"' in HTML
+    'data-approval-choice="always"' in HTML
     and 'data-approval-choice="ask"' in HTML
-    and 'HARA_COMMANDER_APPROVAL_MODE=SESSION_TRUSTED' in HTML
-    and 'let installApprovalMode = "SESSION_TRUSTED"' in JS
+    and 'HARA_COMMANDER_APPROVAL_MODE=PERSISTENT_TRUSTED' in HTML
+    and 'let installApprovalMode = "PERSISTENT_TRUSTED"' in JS
+    and 'hara-commander doctor' in HTML
     and 'setInstallApprovalMode' in JS
     and 'installCommandLinux' in JS
     and 'installCommandWindows' in JS,
@@ -210,9 +211,11 @@ need(
     and 'data-os-choice="windows"' in HTML
     and 'data-os-panel="linux"' in HTML
     and 'data-os-panel="windows"' in HTML
-    and "Abra a sessão local" in HTML
-    and "Mantenha o console aberto enquanto usar a IA" in HTML
-    and "hara-commander start" in HTML
+    and "Sempre permitir neste computador" in HTML
+    and "Pedir confirmação" in HTML
+    and "<b>Pronto</b>" in HTML
+    and "hara-commander doctor" in HTML
+    and "Mantenha o console aberto enquanto usar a IA" not in HTML
     and 'tabindex="-1" aria-live="polite"' in HTML
     and 'function setInstallOs(os)' in JS,
     "PAIRING_ONBOARDING_ORDER",

@@ -6,7 +6,7 @@ $RuntimeStatus = Join-Path $Root "runtime-status.json"
 $SessionPath = Join-Path $Root "operator-session.json"
 $ConsoleEvents = Join-Path $Root "console-events.jsonl"
 $SessionMaxHours = 12
-$AgentVersion = "0.3.28"
+$AgentVersion = "0.3.30"
 $FunctionId = "device.info"
 
 function Get-PlainText([Security.SecureString]$SecureValue) {
@@ -461,12 +461,20 @@ $LastHeartbeat=[datetime]::MinValue
 $LastErrorCode=$null
 $LastErrorWrite=[datetime]::MinValue
 $WasAuthorized=$false
-if (-not (Test-OperatorSessionActive)) {
+function Get-ApprovalMode($Cfg) {
+  $mode=if ($Cfg.approval_mode) {[string]$Cfg.approval_mode} else {"ASK_EVERY_ACTION"}
+  $mode=$mode.Trim().ToUpperInvariant()
+  if (@("ASK_EVERY_ACTION","SESSION_TRUSTED","PERSISTENT_TRUSTED") -notcontains $mode) { return "ASK_EVERY_ACTION" }
+  return $mode
+}
+if (-not (Test-OperatorSessionActive) -and (Get-ApprovalMode $StartupCfg) -ne "PERSISTENT_TRUSTED") {
   Set-DeviceOffline $StartupCfg | Out-Null
   Write-ConsoleEvent "AGENT_INERT" $null "LOCAL_SESSION_REQUIRED"
 }
 while ($true) {
-  if (-not (Test-OperatorSessionActive)) {
+  $Cfg=Get-Content -Raw -Path $ConfigPath | ConvertFrom-Json
+  $Persistent=(Get-ApprovalMode $Cfg) -eq "PERSISTENT_TRUSTED"
+  if (-not $Persistent -and -not (Test-OperatorSessionActive)) {
     $WasAuthorized=$false
     Start-Sleep -Seconds 1
     continue
@@ -477,7 +485,6 @@ while ($true) {
     $WasAuthorized=$true
   }
   try {
-    $Cfg=Get-Content -Raw -Path $ConfigPath | ConvertFrom-Json
     $SecureToken=ConvertTo-SecureString ([string]$Cfg.encrypted_device_token)
     $DeviceToken=Get-PlainText $SecureToken
     if (((Get-Date)-$LastHeartbeat).TotalSeconds -ge 30) {
@@ -485,6 +492,7 @@ while ($true) {
         device_id=[string]$Cfg.device_id
         architecture=[string]$Cfg.architecture
         agent_version=$AgentVersion
+        approval_mode=(Get-ApprovalMode $Cfg)
       } 20 | Out-Null
       $LastHeartbeat=Get-Date
       $LastErrorCode=$null
@@ -496,7 +504,7 @@ while ($true) {
       if ($_.Exception.Response -and [int]$_.Exception.Response.StatusCode -eq 204) { $Call=$null } else { throw }
     }
     if ($null -ne $Call -and $Call.call_id) {
-      if (-not (Test-OperatorSessionActive)) {
+      if (-not $Persistent -and -not (Test-OperatorSessionActive)) {
         $code="LOCAL_OPERATOR_SESSION_REQUIRED"
         Write-ConsoleEvent "DENIED" $Call "DENIED" $code
         $denied=@{

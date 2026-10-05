@@ -48,7 +48,7 @@
   let currentView = null;
   let deviceSectionTab = "devices";
   let deviceTab = "active";
-  let installApprovalMode = "SESSION_TRUSTED";
+  let installApprovalMode = "PERSISTENT_TRUSTED";
 
   function currentTheme() {
     return root.dataset.theme === "dark" ? "dark" : "light";
@@ -956,16 +956,16 @@
     if (windows) windows.textContent = installCommandWindows();
     const note = document.getElementById("approvalModeNote");
     if (note) {
-      note.textContent = installApprovalMode === "SESSION_TRUSTED"
-        ? "Recomendado: a sessão local aberta autoriza operações governadas até Ctrl+C, sem prompts por ação."
-        : "Modo restritivo: escrita, rollback e comandos pedem confirmação local individual.";
+      note.textContent = installApprovalMode === "PERSISTENT_TRUSTED"
+        ? "Recomendado: o Agent fica disponível em segundo plano e executa somente operações governadas autorizadas neste computador."
+        : "Modo restritivo: alterações e comandos exigem uma sessão local para confirmação.";
     }
   }
 
   function setInstallApprovalMode(mode) {
     installApprovalMode = mode === "ask" || mode === "ASK_EVERY_ACTION"
       ? "ASK_EVERY_ACTION"
-      : "SESSION_TRUSTED";
+      : "PERSISTENT_TRUSTED";
     document.querySelectorAll("[data-approval-choice]").forEach((button) => {
       const active = (button.dataset.approvalChoice === "ask") === (installApprovalMode === "ASK_EVERY_ACTION");
       button.classList.toggle("active", active);
@@ -1333,7 +1333,7 @@
 
   copySidebars();
   setInstallOs("linux");
-  setInstallApprovalMode("session");
+  setInstallApprovalMode("always");
 
   if (bannerAction) {
     bannerAction.addEventListener("click", () => {

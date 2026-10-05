@@ -340,11 +340,14 @@ function normalizeApprovalMode(value, fallback = "ASK_EVERY_ACTION") {
     "ASK": "ASK_EVERY_ACTION",
     "ASK_EVERY_ACTION": "ASK_EVERY_ACTION",
     "SESSION": "SESSION_TRUSTED",
-    "AUTO": "SESSION_TRUSTED",
     "SESSION_TRUSTED": "SESSION_TRUSTED",
+    "AUTO": "PERSISTENT_TRUSTED",
+    "ALWAYS": "PERSISTENT_TRUSTED",
+    "PERSISTENT": "PERSISTENT_TRUSTED",
+    "PERSISTENT_TRUSTED": "PERSISTENT_TRUSTED",
   };
   const mode = raw ? aliases[raw] : fallback;
-  if (!["ASK_EVERY_ACTION","SESSION_TRUSTED"].includes(mode)) {
+  if (!["ASK_EVERY_ACTION","SESSION_TRUSTED","PERSISTENT_TRUSTED"].includes(mode)) {
     throw new Error("DEVICE_APPROVAL_MODE_INVALID");
   }
   return mode;
@@ -2348,6 +2351,7 @@ function capabilityToolDetail(toolId, approvalMode = "ASK_EVERY_ACTION") {
     risk_class:processExecution ? "PROCESS_EXECUTION" : (filesystemMutation ? "FILESYSTEM_MUTATION" : "READ_ONLY"),
     local_approval_required:mutable && mode === "ASK_EVERY_ACTION",
     local_session_authorization_sufficient:mutable && mode === "SESSION_TRUSTED",
+    persistent_device_authorization_sufficient:mutable && mode === "PERSISTENT_TRUSTED",
     required_grant:MCP_TOOL_GRANTS[id] || null,
     preferred_interface:id !== "hara.functions.invoke",
   };
@@ -2398,10 +2402,11 @@ function capabilitiesForDevice(device, grants) {
     tool_details:availableTools.map((toolId)=>capabilityToolDetail(toolId,approvalMode)),
     capability_detail_schema:"hara.commander-capability-tool.v2",
     approval_mode:approvalMode,
-    operator_session_required:true,
+    operator_session_required:approvalMode !== "PERSISTENT_TRUSTED",
     mutation_requires_local_approval:approvalMode === "ASK_EVERY_ACTION",
     process_execution_requires_local_approval:approvalMode === "ASK_EVERY_ACTION",
     local_session_authorizes_governed_mutations:approvalMode === "SESSION_TRUSTED",
+    persistent_device_authorizes_governed_mutations:approvalMode === "PERSISTENT_TRUSTED",
     process_sessions_revoked_with_operator_session:true,
     payload_hot_path_redaction:true,
     receipt_binding:true,

@@ -18,7 +18,7 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
-AGENT_VERSION = "0.3.28"
+AGENT_VERSION = "0.3.30"
 CONFIG_FILE = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home()/".config"))) / "hara-commander/device.env"
 DATA_DIR = Path(os.environ.get("XDG_DATA_HOME", str(Path.home()/".local/share"))) / "hara-commander"
 RECEIPT_DIR = DATA_DIR / "receipts"
@@ -28,7 +28,7 @@ CONSOLE_EVENTS_FILE = DATA_DIR / "console-events.jsonl"
 APPROVAL_DIR = DATA_DIR / "approvals"
 PREIMAGE_DIR = DATA_DIR / "preimages"
 SESSION_MAX_SECONDS = 12 * 60 * 60
-APPROVAL_MODES = {"ASK_EVERY_ACTION","SESSION_TRUSTED"}
+APPROVAL_MODES = {"ASK_EVERY_ACTION","SESSION_TRUSTED","PERSISTENT_TRUSTED"}
 FUNCTION_ID = "device.info"
 FUNCTION_IDS = (
     "device.info", "device.ping", "system.uptime", "system.resources", "workspace.inspect", "process.list",
@@ -268,15 +268,20 @@ def _approval_paths(approval_id):
     return APPROVAL_DIR/(safe+".request.json"), APPROVAL_DIR/(safe+".response.json")
 
 def request_local_approval(call, timeout_seconds=30):
+    config=load_config()
+    configured_mode=str(config.get("HARA_COMMANDER_APPROVAL_MODE") or "ASK_EVERY_ACTION").upper()
+    approval_id=str(call.get("call_id") or call.get("request_id") or "")
+    if not approval_id: raise ValueError("APPROVAL_ID_MISSING")
+    summary=_safe_action_summary(call)
+    if configured_mode=="PERSISTENT_TRUSTED":
+        append_console_event("APPROVAL_GRANTED",call,state="APPROVED",approval_id=approval_id,action_summary=summary)
+        return {"state":"APPROVED","approval_id":approval_id,"decided_at_utc":utcnow(),"mode":"PERSISTENT_TRUSTED","source":"DEVICE_ENROLLMENT_POLICY"}
     session=read_operator_session()
     if not session: raise ValueError("LOCAL_OPERATOR_SESSION_REQUIRED")
     if str(session.get("agent_version") or "") != AGENT_VERSION:
         raise ValueError("LOCAL_OPERATOR_SESSION_UPGRADE_REQUIRED")
     mode=str(session.get("approval_mode") or "ASK_EVERY_ACTION").upper()
     if mode not in APPROVAL_MODES: raise ValueError("LOCAL_OPERATOR_APPROVAL_MODE_INVALID")
-    approval_id=str(call.get("call_id") or call.get("request_id") or "")
-    if not approval_id: raise ValueError("APPROVAL_ID_MISSING")
-    summary=_safe_action_summary(call)
     if mode=="SESSION_TRUSTED":
         append_console_event("APPROVAL_GRANTED",call,state="APPROVED",approval_id=approval_id,action_summary=summary)
         return {"state":"APPROVED","approval_id":approval_id,"decided_at_utc":utcnow(),"mode":"SESSION_TRUSTED","source":"LOCAL_OPERATOR_SESSION"}
@@ -738,9 +743,10 @@ def start_operator_console():
         except Exception as exc:
             SESSION_FILE.unlink(missing_ok=True)
             append_console_event("SESSION_CLEANUP_ERROR", state="FAILED", error_code=safe_error_code(exc))
-        killed=cleanup_process_sessions()
-        if killed: append_console_event("PROCESS_REVOKE",state="KILLED",action_summary=f"managed_processes={killed}")
-        mark_device_offline(config)
+        if effective_approval_mode(config)!="PERSISTENT_TRUSTED":
+            killed=cleanup_process_sessions()
+            if killed: append_console_event("PROCESS_REVOKE",state="KILLED",action_summary=f"managed_processes={killed}")
+            mark_device_offline(config)
         append_console_event("SESSION_CLOSE", state="REVOKED")
         print("HARA_COMMANDER_SESSION=INACTIVE")
 
@@ -757,7 +763,8 @@ def stop_operator_session():
     SESSION_FILE.unlink(missing_ok=True)
     try:
         config = load_config()
-        mark_device_offline(config)
+        if effective_approval_mode(config)!="PERSISTENT_TRUSTED":
+            mark_device_offline(config)
     except Exception as exc:
         append_console_event("OFFLINE_SYNC_ERROR", state="FAILED", error_code=safe_error_code(exc))
     append_console_event("SESSION_CLOSE", state="REVOKED")
@@ -780,7 +787,7 @@ def load_config():
     return data
 def set_approval_mode(value):
     raw=str(value or "").strip().lower()
-    aliases={"ask":"ASK_EVERY_ACTION","per-action":"ASK_EVERY_ACTION","session":"SESSION_TRUSTED","auto":"SESSION_TRUSTED","trusted":"SESSION_TRUSTED"}
+    aliases={"ask":"ASK_EVERY_ACTION","per-action":"ASK_EVERY_ACTION","session":"SESSION_TRUSTED","trusted":"SESSION_TRUSTED","auto":"PERSISTENT_TRUSTED","always":"PERSISTENT_TRUSTED","persistent":"PERSISTENT_TRUSTED"}
     mode=aliases.get(raw,str(value or "").strip().upper())
     if mode not in APPROVAL_MODES: raise RuntimeError("DEVICE_APPROVAL_MODE_INVALID")
     lines=CONFIG_FILE.read_text(encoding="utf-8").splitlines()
@@ -793,16 +800,18 @@ def set_approval_mode(value):
     if operator_session_active(): print("SESSION_RESTART_REQUIRED=TRUE")
 
 def effective_approval_mode(config=None):
+    if config is None:
+        try: config=load_config()
+        except Exception: config={}
+    configured=str((config or {}).get("HARA_COMMANDER_APPROVAL_MODE") or "ASK_EVERY_ACTION").upper()
+    if configured=="PERSISTENT_TRUSTED":
+        return configured
     session=read_operator_session()
     if session:
         mode=str(session.get("approval_mode") or "").upper()
         if mode in APPROVAL_MODES:
             return mode
-    if config is None:
-        try: config=load_config()
-        except Exception: config={}
-    mode=str((config or {}).get("HARA_COMMANDER_APPROVAL_MODE") or "ASK_EVERY_ACTION").upper()
-    return mode if mode in APPROVAL_MODES else "ASK_EVERY_ACTION"
+    return configured if configured in APPROVAL_MODES else "ASK_EVERY_ACTION"
 
 def post_json(url, token, payload, timeout=25):
     req = urllib.request.Request(
@@ -1488,11 +1497,14 @@ def self_test():
             raise AssertionError("ARBITRARY_FUNCTION_NOT_DENIED")
         except ValueError as exc:
             assert str(exc)=="UNKNOWN_FUNCTION_ID"
-    global SESSION_FILE, CONSOLE_EVENTS_FILE, APPROVAL_DIR
+    global SESSION_FILE, CONSOLE_EVENTS_FILE, APPROVAL_DIR, CONFIG_FILE
+    old_config_file=CONFIG_FILE
     with tempfile.TemporaryDirectory() as session_dir:
         SESSION_FILE=Path(session_dir)/"operator-session.json"
         CONSOLE_EVENTS_FILE=Path(session_dir)/"console-events.jsonl"
         APPROVAL_DIR=Path(session_dir)/"approvals"
+        CONFIG_FILE=Path(session_dir)/"device.env"
+        CONFIG_FILE.write_text("HARA_COMMANDER_URL=https://commander.invalid\nHARA_DEVICE_ID=selftest\nHARA_DEVICE_TOKEN=selftest-token\nHARA_DEVICE_ARCH=x86_64\nHARA_COMMANDER_APPROVAL_MODE=ASK_EVERY_ACTION\n",encoding="utf-8")
         assert operator_session_active() is False
         SESSION_FILE.write_text(json.dumps({
             "schema":"hara.commander-operator-session.v1",
@@ -1530,6 +1542,13 @@ def self_test():
         SESSION_FILE.write_text(json.dumps(session,sort_keys=True,separators=(",",":")),encoding="utf-8")
         trusted=request_local_approval(approval_call,timeout_seconds=1)
         assert trusted["state"]=="APPROVED" and trusted["mode"]=="SESSION_TRUSTED" and trusted["source"]=="LOCAL_OPERATOR_SESSION"
+        CONFIG_FILE.write_text("HARA_COMMANDER_URL=https://commander.invalid\nHARA_DEVICE_ID=selftest\nHARA_DEVICE_TOKEN=selftest-token\nHARA_DEVICE_ARCH=x86_64\nHARA_COMMANDER_APPROVAL_MODE=PERSISTENT_TRUSTED\n",encoding="utf-8")
+        SESSION_FILE.unlink(missing_ok=True)
+        persistent=request_local_approval(approval_call,timeout_seconds=1)
+        assert persistent["state"]=="APPROVED" and persistent["mode"]=="PERSISTENT_TRUSTED" and persistent["source"]=="DEVICE_ENROLLMENT_POLICY"
+        local_devices=local_simple_mcp_call(load_config(),"list_devices",{})
+        assert local_devices["devices"][0]["state"]=="ONLINE"
+    CONFIG_FILE=old_config_file
     assert len(local_simple_mcp_tools())==24
     assert tuple(tool["name"] for tool in local_simple_mcp_tools())==LOCAL_SIMPLE_MCP_TOOL_NAMES
     mapped_tool,mapped_payload=_local_simple_map({"HARA_DEVICE_ID":"selftest"},"start_process",{"command":"printf hi"})
@@ -1543,6 +1562,8 @@ def self_test():
     print("COMMANDER_LOCAL_MCP_PROCESS_ONE_SHOT_DEFAULT=PASS")
     print("COMMANDER_LINUX_OPERATOR_SESSION_GATE=PASS")
     print("COMMANDER_LOCAL_MUTATION_APPROVAL=PASS")
+    print("COMMANDER_PERSISTENT_TRUSTED_NO_SESSION=PASS")
+    print("COMMANDER_PERSISTENT_TRUSTED_LOCAL_MCP_ONLINE=PASS")
     print("COMMANDER_LINUX_CONSOLE_SANITIZATION=PASS")
     print("COMMANDER_LINUX_FIVE_TOOL_BRIDGE=PASS")
     print("COMMANDER_ARBITRARY_FUNCTION=DENIED")
@@ -1681,7 +1702,8 @@ def local_simple_mcp_call(config,name,args):
         raise ValueError("LOCAL_MCP_TOOL_INVALID")
     _local_simple_device_guard(config,args or {})
     if name=="list_devices":
-        return {"devices":[{"computer":platform.node(),"device_id":config.get("HARA_DEVICE_ID"),"agent_version":AGENT_VERSION,"state":"ONLINE" if operator_session_active() else "LOCAL_SESSION_REQUIRED","transport":"LOCAL_STDIO"}]}
+        authorized=effective_approval_mode(config)=="PERSISTENT_TRUSTED" or operator_session_active()
+        return {"devices":[{"computer":platform.node(),"device_id":config.get("HARA_DEVICE_ID"),"agent_version":AGENT_VERSION,"state":"ONLINE" if authorized else "LOCAL_SESSION_REQUIRED","transport":"LOCAL_STDIO"}]}
     if name=="get_config":
         return {"computer":platform.node(),"device_id":config.get("HARA_DEVICE_ID"),"agent_version":AGENT_VERSION,"approval_mode":effective_approval_mode(config),"transport":"LOCAL_STDIO","tools":list(LOCAL_SIMPLE_MCP_TOOL_NAMES)}
     if name=="get_usage_stats":
@@ -1690,7 +1712,7 @@ def local_simple_mcp_call(config,name,args):
         return _local_recent_events((args or {}).get("limit",50))
     if name=="get_recent_tool_calls":
         return _local_recent_events((args or {}).get("limit",50),(args or {}).get("tool"))
-    if not operator_session_active():
+    if effective_approval_mode(config)!="PERSISTENT_TRUSTED" and not operator_session_active():
         raise ValueError("LOCAL_OPERATOR_SESSION_REQUIRED")
     tool_id,payload=_local_simple_map(config,name,args or {})
     call={
@@ -1754,6 +1776,55 @@ def run_local_mcp_stdio():
             code=safe_error_code(exc)
             _stdio_mcp_write({"jsonrpc":"2.0","id":req_id,"result":{"isError":True,"content":[{"type":"text","text":json.dumps({"ok":False,"code":code},separators=(",",":"))}]}})
 
+def commander_doctor():
+    config=load_config()
+    mode=effective_approval_mode(config)
+    runtime={}
+    try:
+        if STATUS_FILE.is_file(): runtime=json.loads(STATUS_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        runtime={}
+    health_ok=False
+    try:
+        req=urllib.request.Request(config["HARA_COMMANDER_URL"]+"/api/health",method="GET",headers={"accept":"application/json","user-agent":"HARA-Commander-Doctor/"+AGENT_VERSION})
+        with NO_REDIRECT_OPENER.open(req,timeout=10) as response:
+            obj=json.loads(response.read().decode() or "{}")
+            health_ok=response.status==200 and obj.get("ok") is True and obj.get("service")=="hara-commander"
+    except Exception:
+        health_ok=False
+    print("HARA_COMMANDER_DOCTOR="+("PASS" if health_ok else "DEGRADED"))
+    print("HARA_COMMANDER_AGENT_VERSION="+AGENT_VERSION)
+    print("HARA_COMMANDER_APPROVAL_MODE="+mode)
+    print("HARA_COMMANDER_BACKGROUND_AUTHORIZED="+("TRUE" if mode=="PERSISTENT_TRUSTED" else "FALSE"))
+    print("HARA_COMMANDER_SESSION="+("ACTIVE" if operator_session_active() else "INACTIVE"))
+    print("HARA_COMMANDER_REMOTE_HEALTH="+("PASS" if health_ok else "FAIL"))
+    print("HARA_COMMANDER_LAST_HEARTBEAT_UTC="+str(runtime.get("last_successful_heartbeat_at_utc") or ""))
+    print("SECRET_MATERIAL_EXPOSED=FALSE")
+    return 0 if health_ok else 2
+
+def commander_support():
+    config=load_config()
+    runtime={}
+    try:
+        if STATUS_FILE.is_file(): runtime=json.loads(STATUS_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        runtime={}
+    report={
+        "schema":"hara.commander-support-report.v1",
+        "computer":platform.node(),
+        "device_id":config.get("HARA_DEVICE_ID"),
+        "agent_version":AGENT_VERSION,
+        "approval_mode":effective_approval_mode(config),
+        "operator_session_active":operator_session_active(),
+        "last_successful_heartbeat_at_utc":runtime.get("last_successful_heartbeat_at_utc"),
+        "last_runtime_error_code":runtime.get("last_runtime_error_code"),
+        "last_runtime_error_at_utc":runtime.get("last_runtime_error_at_utc"),
+        "secret_material_exposed":False,
+        "customer_content_included":False,
+    }
+    print(json.dumps(report,sort_keys=True,separators=(",",":"),ensure_ascii=False))
+    return 0
+
 def main():
     if "--version" in sys.argv:
         print(AGENT_VERSION); return
@@ -1761,6 +1832,10 @@ def main():
         self_test(); return
     if len(sys.argv)>1 and sys.argv[1]=="mcp":
         run_local_mcp_stdio(); return
+    if len(sys.argv)>1 and sys.argv[1]=="doctor":
+        raise SystemExit(commander_doctor())
+    if len(sys.argv)>1 and sys.argv[1]=="support":
+        raise SystemExit(commander_support())
     if "--session-start" in sys.argv or (len(sys.argv)>1 and sys.argv[1]=="start"):
         start_operator_console(); return
     if len(sys.argv)>1 and sys.argv[1]=="approval-mode":
@@ -1774,11 +1849,11 @@ def main():
     if "--session-stop" in sys.argv or (len(sys.argv)>1 and sys.argv[1]=="stop"):
         stop_operator_session(); return
     if len(sys.argv) > 1 and sys.argv[1] in {"help", "--help", "-h"}:
-        print("Usage: hara-commander [start|status|stop|mcp|approval-mode [ask|session]|help]")
+        print("Usage: hara-commander [start|status|stop|mcp|doctor|support|approval-mode [ask|session|always]|help]")
         return
     if len(sys.argv) > 1:
         print("HARA_COMMANDER_UNKNOWN_COMMAND=" + str(sys.argv[1]), file=sys.stderr)
-        print("Usage: hara-commander [start|status|stop|mcp|approval-mode [ask|session]|help]", file=sys.stderr)
+        print("Usage: hara-commander [start|status|stop|mcp|doctor|support|approval-mode [ask|session|always]|help]", file=sys.stderr)
         raise SystemExit(64)
     config=load_config()
     RECEIPT_DIR.mkdir(parents=True,exist_ok=True,mode=0o700)
@@ -1788,12 +1863,16 @@ def main():
     last_error_code=None
     last_error_write=0.0
     was_authorized=False
-    if not operator_session_active():
+    persistent=effective_approval_mode(config)=="PERSISTENT_TRUSTED"
+    if not operator_session_active() and not persistent:
         mark_device_offline(config)
         append_console_event("AGENT_INERT", state="LOCAL_SESSION_REQUIRED")
+    elif persistent:
+        append_console_event("AGENT_ONLINE",state="PERSISTENT_TRUSTED")
     while True:
         now=time.monotonic()
-        authorized=operator_session_active()
+        persistent=effective_approval_mode(config)=="PERSISTENT_TRUSTED"
+        authorized=persistent or operator_session_active()
         if not authorized:
             if was_authorized:
                 killed=cleanup_process_sessions()
@@ -1803,7 +1882,7 @@ def main():
             continue
         if not was_authorized:
             last_heartbeat=0.0
-            append_console_event("AGENT_ONLINE",state="AUTHORIZED")
+            append_console_event("AGENT_ONLINE",state="PERSISTENT_TRUSTED" if persistent else "AUTHORIZED")
             was_authorized=True
         try:
             if now-last_heartbeat>=30:
