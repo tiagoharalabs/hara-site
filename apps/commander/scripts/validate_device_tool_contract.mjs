@@ -97,7 +97,13 @@ need(
   && worker.includes("deviceId=resolveNamedCustomerDevice(devices,args.computer).device_id"),
   "WORKER_ACTIVE_DEVICE_NAME_RESOLUTION",
 );
-need(worker.includes("customerUsage") && worker.includes("quota.status"),"WORKER_USAGE_SURFACE");
+need(
+  worker.includes("customerUsage")
+  && worker.includes("productUsageForPolicy")
+  && worker.includes('if (kind === "NONE") return unlimitedProductUsage();')
+  && worker.includes("quota.status"),
+  "WORKER_USAGE_SURFACE",
+);
 need(worker.includes("semverAtLeast(device.agent_version,24)") && worker.includes('tools.push("hara.system.resources","hara.workspace.inspect")'),"WORKER_CONTEXT_TOOLS_0_3_24");
 need(worker.includes('platform === "WINDOWS"') && worker.includes('semverAtLeast(device.agent_version,32)') && worker.includes('"hara.files.write"') && worker.includes('"hara.process.run"'),"WORKER_WINDOWS_STARTER_0_3_32");
 need(worker.includes('toolId === "hara.process.run" ? 25') && worker.includes('tools.push("hara.process.run")'),"WORKER_PROCESS_RUN_0_3_25");

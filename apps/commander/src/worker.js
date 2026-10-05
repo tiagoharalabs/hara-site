@@ -879,14 +879,40 @@ async function entitlementForTenant(env, tenantId) {
   ).bind(tenantId).first();
 }
 
+function unlimitedProductUsage() {
+  return {
+    period_key: "UNLIMITED",
+    limit: null,
+    consumed_units: null,
+    remaining_units: null,
+    metered: false,
+  };
+}
+
+async function productUsageForPolicy(env, tenantId, periodKind, unitLimit) {
+  const kind = String(periodKind || "").trim().toUpperCase();
+  if (kind === "NONE") return unlimitedProductUsage();
+
+  const periodKey = kind === "CALENDAR_MONTH" ? monthKey() : "LIFETIME";
+  const limit = Number(unitLimit);
+  const quota = env.TENANT_QUOTA.getByName(tenantId);
+  return {
+    ...(await quota.status(periodKey, limit)),
+    metered: true,
+  };
+}
+
 async function dashboard(env, tenantId) {
   const ent = await entitlementForTenant(env, tenantId);
   if (!ent) return null;
 
-  const quota = env.TENANT_QUOTA.getByName(tenantId);
-  const periodKey = ent.period_kind === "CALENDAR_MONTH" ? monthKey() : "LIFETIME";
   const limit = ent.period_kind === "NONE" ? null : Number(ent.unit_limit);
-  const usage = await quota.status(periodKey, limit);
+  const usage = await productUsageForPolicy(
+    env,
+    tenantId,
+    ent.period_kind,
+    ent.unit_limit,
+  );
 
   return {
     schema: "hara.commander-dashboard-dev.v1",
@@ -935,10 +961,13 @@ async function dashboardForSubject(env, subjectId, tenantId) {
   ).bind(tenantId, subjectId, subjectId).first();
 
   if (!ent) return null;
-  const quota = env.TENANT_QUOTA.getByName(tenantId);
-  const periodKey = ent.period_kind === "CALENDAR_MONTH" ? monthKey() : "LIFETIME";
   const limit = ent.period_kind === "NONE" ? null : Number(ent.unit_limit);
-  const usage = await quota.status(periodKey, limit);
+  const usage = await productUsageForPolicy(
+    env,
+    tenantId,
+    ent.period_kind,
+    ent.unit_limit,
+  );
 
   return {
     schema: "hara.commander-portal-dashboard.v1",
@@ -2463,8 +2492,12 @@ async function customerCapabilities(env, context, args) {
 }
 
 async function customerUsage(env, context) {
-  const quota=env.TENANT_QUOTA.getByName(context.tenant_id);
-  const usage=await quota.status(mcpPeriodKey(context),context.unit_limit);
+  const usage=await productUsageForPolicy(
+    env,
+    context.tenant_id,
+    context.period_kind,
+    context.unit_limit,
+  );
   return {
     plan_code:context.plan_code,
     plan_name:context.plan_name,

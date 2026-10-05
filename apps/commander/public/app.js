@@ -282,22 +282,28 @@
     if (!payload?.entitlement || !payload?.usage) return;
     applyIdentity(payload);
     const plan = payload.entitlement.plan_name || payload.entitlement.plan_code || "—";
-    const consumed = Number(payload.usage.consumed_units || 0);
+    const planCode = String(payload.entitlement.plan_code || "").trim().toUpperCase();
+    const consumedRaw = payload.usage.consumed_units;
+    const consumed = consumedRaw == null ? 0 : Number(consumedRaw);
     const limit = payload.usage.limit == null ? null : Number(payload.usage.limit);
+    const unmetered = payload.usage.metered === false || limit == null;
     const remaining = payload.usage.remaining_units;
-    const percent = limit ? Math.min(100, (consumed / limit) * 100) : 0;
+    const percent = !unmetered && limit ? Math.min(100, (consumed / limit) * 100) : 0;
 
     setText("landingPlan", plan);
-    setText("landingUsage", number(consumed));
-    setText("landingLimit", limit == null ? "sem limite" : "de " + number(limit));
+    setText("landingUsage", unmetered ? "Ilimitado" : number(consumed));
+    setText("landingLimit", unmetered ? "" : "de " + number(limit));
     setText("dashboardPlan", plan);
     const planCard = document.getElementById("planSummaryCard");
-    const isTrial = String(plan).trim().toUpperCase() === "TRIAL";
+    const isTrial = planCode === "TRIAL";
     if (planCard) planCard.classList.toggle("trial", isTrial);
-    setText("dashboardPlanDetail", isTrial ? "Plano temporário de homologação" : "Plano ativo");
-    setText("dashboardConsumed", number(consumed));
-    setText("dashboardLimit", limit == null ? "/ sem limite" : "/ " + number(limit));
-    setText("dashboardPercent", limit == null ? "Plano sem limite definido" : percent.toFixed(2).replace(".", ",") + "% utilizado");
+    setText(
+      "dashboardPlanDetail",
+      isTrial ? "Plano Free · 10.000 chamadas/mês" : (unmetered ? "Plano sem franquia mensal" : "Plano ativo"),
+    );
+    setText("dashboardConsumed", unmetered ? "Ilimitado" : number(consumed));
+    setText("dashboardLimit", unmetered ? "" : "/ " + number(limit));
+    setText("dashboardPercent", unmetered ? "Sem franquia mensal de chamadas" : percent.toFixed(2).replace(".", ",") + "% utilizado");
     const dashboardBar = document.getElementById("dashboardUsageProgress");
     if (dashboardBar) dashboardBar.style.width = (limit == null ? 0 : percent) + "%";
     const dashboardProgress = dashboardBar?.parentElement;
@@ -307,10 +313,10 @@
       usageCard.classList.toggle("usage-warning", percent >= 80 && percent < 100);
       usageCard.classList.toggle("usage-exhausted", percent >= 100);
     }
-    setText("usageConsumed", number(consumed));
-    setText("usageLimit", limit == null ? "sem limite" : "de " + number(limit));
-    setText("usageRemaining", remaining == null ? "Capacidade sem limite definido" : number(remaining) + " unidades disponíveis");
-    setText("usagePeriod", payload.usage.period_key || "—");
+    setText("usageConsumed", unmetered ? "Ilimitado" : number(consumed));
+    setText("usageLimit", unmetered ? "" : "de " + number(limit));
+    setText("usageRemaining", unmetered ? "Sem franquia mensal de chamadas" : number(remaining) + " unidades disponíveis");
+    setText("usagePeriod", unmetered ? "Sem limite" : (payload.usage.period_key || "—"));
     const bar = document.getElementById("usageProgress");
     if (bar) bar.style.width = (limit == null ? 0 : percent) + "%";
     // Device state and operational activity are hydrated independently.
@@ -1194,7 +1200,7 @@
       applyScenario(scenario, payload);
     } catch (_error) {
       setState("Aguardando", "Dados da conta ainda não carregados");
-      showBanner("info", "Dados da conta não atualizados", "O login continua válido. Atualize para carregar plano e uso quando o serviço responder.", "Atualizar", loadProductDashboard);
+      showBanner("info", "Plano e uso temporariamente indisponíveis", "Sua sessão continua ativa. Atualize para consultar os dados do Commander novamente.", "Atualizar dados", loadProductDashboard);
     } finally {
       setLoading(false);
     }
