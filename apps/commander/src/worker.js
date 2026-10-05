@@ -2413,13 +2413,27 @@ function capabilitiesForDevice(device, grants) {
   };
 }
 
+function resolveNamedCustomerDevice(devices, computer) {
+  const wanted=String(computer || "").trim().toLowerCase();
+  const matches=devices.filter((d)=>String(d.device_name||"").toLowerCase()===wanted);
+  if (!matches.length) throw new Error("DEVICE_NOT_FOUND");
+
+  const active=matches.filter((d)=>!d.revoked_at_utc);
+  if (active.length===1) return active[0];
+  if (active.length>1) {
+    const online=active.filter((d)=>d.online);
+    if (online.length===1) return online[0];
+    throw new Error("COMPUTER_NAME_AMBIGUOUS");
+  }
+
+  if (matches.length===1) return matches[0];
+  throw new Error("COMPUTER_NAME_AMBIGUOUS");
+}
+
 async function customerCapabilities(env, context, args) {
   let devices=await listDevices(env,{tenant_id:context.tenant_id});
   if (args?.computer) {
-    const wanted=String(args.computer).trim().toLowerCase();
-    devices=devices.filter((d)=>String(d.device_name||"").toLowerCase()===wanted);
-    if (!devices.length) throw new Error("DEVICE_NOT_FOUND");
-    if (devices.length>1) throw new Error("COMPUTER_NAME_AMBIGUOUS");
+    devices=[resolveNamedCustomerDevice(devices,args.computer)];
   }
   return devices.map((d)=>capabilitiesForDevice(d,context.grants));
 }
@@ -2442,12 +2456,8 @@ async function recentCustomerCalls(env, context, args) {
   const tool=String(args?.tool || "").trim();
   let deviceId=null;
   if (args?.computer) {
-    const wanted=String(args.computer).trim().toLowerCase();
     const devices=await listDevices(env,{tenant_id:context.tenant_id});
-    const matches=devices.filter((d)=>String(d.device_name||"").toLowerCase()===wanted);
-    if (matches.length===0) throw new Error("DEVICE_NOT_FOUND");
-    if (matches.length>1) throw new Error("COMPUTER_NAME_AMBIGUOUS");
-    deviceId=matches[0].device_id;
+    deviceId=resolveNamedCustomerDevice(devices,args.computer).device_id;
   }
   const clauses=["c.tenant_id = ?","c.subject_id = ?"];
   const binds=[context.tenant_id,context.subject_id];

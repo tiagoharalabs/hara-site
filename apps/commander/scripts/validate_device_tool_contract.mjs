@@ -89,6 +89,14 @@ need(worker.includes('"COMMANDER_MUTATION_INVOKE"'),"WORKER_MUTATION_GRANT");
 need(worker.includes('"COMMANDER_PROCESS_EXECUTION"'),"WORKER_PROCESS_EXECUTION_GRANT");
 need(worker.includes("transport_request_id") && worker.includes("transportRequestId"),"WORKER_TRANSPORT_REQUEST_ID_BINDING");
 need(worker.includes("customerCapabilities") && worker.includes("capabilitiesForDevice"),"WORKER_CAPABILITY_NEGOTIATION");
+need(
+  worker.includes("function resolveNamedCustomerDevice")
+  && worker.includes("const active=matches.filter((d)=>!d.revoked_at_utc)")
+  && worker.includes("if (active.length===1) return active[0]")
+  && worker.includes("const online=active.filter((d)=>d.online)")
+  && worker.includes("deviceId=resolveNamedCustomerDevice(devices,args.computer).device_id"),
+  "WORKER_ACTIVE_DEVICE_NAME_RESOLUTION",
+);
 need(worker.includes("customerUsage") && worker.includes("quota.status"),"WORKER_USAGE_SURFACE");
 need(worker.includes("semverAtLeast(device.agent_version,24)") && worker.includes('tools.push("hara.system.resources","hara.workspace.inspect")'),"WORKER_CONTEXT_TOOLS_0_3_24");
 need(worker.includes('toolId === "hara.process.run" ? 25') && worker.includes('tools.push("hara.process.run")'),"WORKER_PROCESS_RUN_0_3_25");
