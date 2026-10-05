@@ -176,6 +176,11 @@ assert "effective_approval_mode" in LINUX_AGENT and '"approval_mode":effective_a
 assert 'HARA_COMMANDER_APPROVAL_MODE' in LINUX and 'HARA_COMMANDER_APPROVAL_MODE' in WINDOWS, "INSTALLER_APPROVAL_MODE_PROPAGATION_MISSING"
 assert 'SESSION_TRUSTED' in LINUX and 'SESSION_TRUSTED' in WINDOWS, "INSTALLER_SESSION_TRUSTED_DEFAULT_MISSING"
 assert 'local_authorization_mode' in LINUX_AGENT and 'authorization_source' in LINUX_AGENT, "LINUX_RECEIPT_AUTHORIZATION_MODE_MISSING"
+receipt_block = LINUX_AGENT.split("def write_receipt",1)[1].split("def read_receipt",1)[0]
+assert '"payload_values_persisted":False' in receipt_block, "LINUX_RECEIPT_PAYLOAD_PERSISTENCE_MARKER_MISSING"
+assert "command_preview" not in receipt_block and '"command"' not in receipt_block and "payload_json" not in receipt_block, "LINUX_RECEIPT_RAW_COMMAND_PERSISTENCE_FORBIDDEN"
+assert "result_stdout_sha256" in receipt_block and '"stdout":' not in receipt_block, "LINUX_RECEIPT_RAW_STDOUT_PERSISTENCE_FORBIDDEN"
+print("COMMANDER_LOCAL_RECEIPT_CONTENT_HISTORY=METADATA_ONLY")
 assert "FILESYSTEM_MUTATION_V1" in LINUX_AGENT, "LINUX_MUTATION_RECEIPT_CLASS_MISSING"
 print("COMMANDER_LOCAL_MUTATION_APPROVAL_GATE=PASS")
 print("COMMANDER_CONFIGURABLE_APPROVAL_MODE=PASS")

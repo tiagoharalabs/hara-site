@@ -16,9 +16,20 @@ block=WORKER.split("async function portalActivity",1)[1].split("async function e
 need('["OWNER","ADMIN"]' in block,"PRIVILEGED_SCOPE")
 need('"c.tenant_id = ?"' in block and '"c.created_at_utc >= ?"' in block and 'clauses.push("c.subject_id = ?")' in block,"SUBJECT_SCOPE")
 need("payload_json" not in block and "result_json" not in block,"CONTENT_NOT_SELECTED")
-need("payload_values_exposed:false" in block and "result_values_exposed:false" in block and "request_id_exposed:false" in block,"PRIVACY_MARKERS")
+need(
+    "payload_values_exposed:false" in block
+    and "result_values_exposed:false" in block
+    and "request_id_exposed:false" in block
+    and "command_text_exposed:false" in block
+    and "argument_values_exposed:false" in block
+    and "historical_command_text_persisted:false" in block
+    and "payload_hot_path_transient:true" in block,
+    "PRIVACY_MARKERS",
+)
 need("function portalActivityWindow" in WORKER and '"24h"' in WORKER and '"7d"' in WORKER and '"30d"' in WORKER,"WINDOW_ENUM")
 need('"c.created_at_utc >= ?"' in block and "since_at_utc" in block,"WINDOW_SQL_BOUND")
+need("topToolsSql" in block and "GROUP BY c.tool_id" in block and "top_tools:" in block,"TOP_TOOLS_DIAGNOSTICS")
+need("topErrorsSql" in block and "c.state='FAILED'" in block and "top_errors:" in block,"TOP_ERRORS_DIAGNOSTICS")
 
 need('url.pathname === "/api/portal/activity"' in WORKER,"ROUTE_PRESENT")
 route=WORKER.split('url.pathname === "/api/portal/activity"',1)[1].split('url.pathname === "/api/portal/billing"',1)[0]

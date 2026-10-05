@@ -206,7 +206,11 @@ need(
     and 'data-activity-window="7d"' in HTML
     and 'data-activity-window="30d"' in HTML
     and 'function setActivityWindow(value)' in JS
-    and 'window="+encodeURIComponent(activityWindow)' in JS,
+    and 'window="+encodeURIComponent(activityWindow)' in JS
+    and 'id="activityTopTools"' in HTML
+    and 'id="activityTopErrors"' in HTML
+    and 'data-export-activity' in HTML
+    and 'function exportUsageActivityCsv(trigger=null)' in JS,
     "USAGE_ACTIVITY_SURFACE",
 )
 need(
@@ -223,8 +227,24 @@ need(
     and "result_json" not in activity_block
     and "payload_values_exposed:false" in activity_block
     and "result_values_exposed:false" in activity_block
-    and "request_id_exposed:false" in activity_block,
+    and "request_id_exposed:false" in activity_block
+    and "command_text_exposed:false" in activity_block
+    and "argument_values_exposed:false" in activity_block
+    and "historical_command_text_persisted:false" in activity_block
+    and "payload_hot_path_transient:true" in activity_block,
     "USAGE_ACTIVITY_PRIVACY_SCOPE",
+)
+activity_csv = JS.split("function exportUsageActivityCsv",1)[1].split("async function loadUsageActivity",1)[0]
+need(
+    "item.command" not in activity_csv
+    and "item.payload" not in activity_csv
+    and "item.request_id" not in activity_csv
+    and '"command"' not in activity_csv
+    and '"payload"' not in activity_csv
+    and '"request_id"' not in activity_csv
+    and "item.tool_id" in activity_csv
+    and "item.trace_id" in activity_csv,
+    "USAGE_ACTIVITY_CSV_METADATA_ONLY",
 )
 need(
     'class="skip-link" href="#mainContent"' in HTML

@@ -388,7 +388,18 @@
             <article class="summary-card"><span>Latência média</span><strong id="activityAvgLatency">—</strong><small id="activityLatencyStages">Fila + execução</small></article>
             <article class="summary-card"><span>Transporte</span><strong id="activityTransport">—</strong><small id="activityDeviceCount">Computadores envolvidos</small></article>
           </div>
-          <p class="activity-privacy-note" id="activityPrivacyNote">Telemetria operacional somente. Payloads e resultados do cliente não são exibidos nesta tela.</p>
+          <p class="activity-privacy-note" id="activityPrivacyNote">Telemetria operacional somente. Comandos, argumentos, payloads e resultados do cliente não fazem parte deste histórico.</p>
+
+          <div class="activity-diagnostics-grid">
+            <article class="panel activity-diagnostic-panel">
+              <div class="panel-head"><div><span>ADOÇÃO</span><h2>Tools mais usadas</h2></div></div>
+              <div class="activity-breakdown" id="activityTopTools"><div class="empty-state"><strong>Carregando</strong>Calculando distribuição de tools.</div></div>
+            </article>
+            <article class="panel activity-diagnostic-panel">
+              <div class="panel-head"><div><span>DIAGNÓSTICO</span><h2>Falhas por motivo</h2></div></div>
+              <div class="activity-breakdown" id="activityTopErrors"><div class="empty-state"><strong>Carregando</strong>Calculando códigos de falha sanitizados.</div></div>
+            </article>
+          </div>
 
           <article class="panel table-panel">
             <div class="panel-head">
@@ -399,6 +410,7 @@
                   <button class="active" type="button" role="radio" aria-checked="true" data-activity-window="7d">7 dias</button>
                   <button type="button" role="radio" aria-checked="false" data-activity-window="30d">30 dias</button>
                 </div>
+                <button class="btn btn-secondary small" type="button" data-export-activity>Exportar CSV</button>
                 <button class="btn btn-secondary small" type="button" data-refresh-activity>Atualizar</button>
               </div>
             </div>

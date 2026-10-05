@@ -2538,9 +2538,28 @@ async function portalActivity(env, session, limitValue=50, windowValue="7d") {
      ORDER BY c.created_at_utc DESC
      LIMIT ?`;
 
-  const [summaryRow,recentResult]=await Promise.all([
+  const topToolsSql=`
+    SELECT c.tool_id,COUNT(*) AS calls
+      FROM commander_device_calls c
+     WHERE ${where}
+     GROUP BY c.tool_id
+     ORDER BY calls DESC,c.tool_id
+     LIMIT 6`;
+
+  const topErrorsSql=`
+    SELECT COALESCE(c.error_code,'UNKNOWN') AS error_code,COUNT(*) AS calls
+      FROM commander_device_calls c
+     WHERE ${where}
+       AND c.state='FAILED'
+     GROUP BY COALESCE(c.error_code,'UNKNOWN')
+     ORDER BY calls DESC,error_code
+     LIMIT 6`;
+
+  const [summaryRow,recentResult,topToolsResult,topErrorsResult]=await Promise.all([
     env.PRODUCT_DB.prepare(summarySql).bind(...binds).first(),
     env.PRODUCT_DB.prepare(recentSql).bind(...binds,limit).all(),
+    env.PRODUCT_DB.prepare(topToolsSql).bind(...binds).all(),
+    env.PRODUCT_DB.prepare(topErrorsSql).bind(...binds).all(),
   ]);
 
   const summary=summaryRow || {};
@@ -2578,7 +2597,21 @@ async function portalActivity(env, session, limitValue=50, windowValue="7d") {
       payload_values_exposed:false,
       result_values_exposed:false,
       request_id_exposed:false,
+      command_text_exposed:false,
+      argument_values_exposed:false,
+      historical_command_text_persisted:false,
+      payload_hot_path_transient:true,
       metadata_only:true,
+    },
+    diagnostics:{
+      top_tools:(topToolsResult.results || []).map((row)=>({
+        tool_id:String(row.tool_id || ""),
+        calls:Number(row.calls || 0),
+      })),
+      top_errors:(topErrorsResult.results || []).map((row)=>({
+        error_code:String(row.error_code || "UNKNOWN"),
+        calls:Number(row.calls || 0),
+      })),
     },
     summary:{
       total_calls:total,

@@ -342,6 +342,35 @@
     return [value || "—","released"];
   }
 
+  function renderActivityBreakdown(targetId,items,labelKey,emptyTitle,emptyText) {
+    const target=document.getElementById(targetId);
+    if (!target) return;
+    target.replaceChildren();
+    if (!Array.isArray(items) || !items.length) {
+      const empty=document.createElement("div");
+      empty.className="empty-state compact";
+      const strong=document.createElement("strong");
+      strong.textContent=emptyTitle;
+      empty.append(strong,document.createTextNode(emptyText));
+      target.append(empty);
+      return;
+    }
+    const max=Math.max(...items.map((item)=>Number(item.calls || 0)),1);
+    items.forEach((item)=>{
+      const row=document.createElement("div");
+      row.className="activity-breakdown-row";
+      const label=document.createElement("span");
+      label.textContent=String(item[labelKey] || "—");
+      label.title=label.textContent;
+      const bar=document.createElement("i");
+      bar.style.width=Math.max(4,Math.round((Number(item.calls || 0)/max)*100))+"%";
+      const count=document.createElement("b");
+      count.textContent=number(item.calls || 0);
+      row.append(label,bar,count);
+      target.append(row);
+    });
+  }
+
   function renderActivity(payload) {
     const summary=payload?.summary || {};
     setText("activityTotal",number(summary.total_calls || 0));
@@ -355,6 +384,9 @@
     const transports=Array.isArray(summary.transport_modes) ? summary.transport_modes : [];
     setText("activityTransport",transports[0] || "—");
     setText("activityDeviceCount",number(summary.device_count || 0) + " computador(es) · " + (summary.under_3s_percent == null ? "—" : String(summary.under_3s_percent).replace(".",",") + "% < 3 s"));
+    const diagnostics=payload?.diagnostics || {};
+    renderActivityBreakdown("activityTopTools",diagnostics.top_tools,"tool_id","Sem atividade","Nenhuma tool executada nesta janela.");
+    renderActivityBreakdown("activityTopErrors",diagnostics.top_errors,"error_code","Sem falhas","Nenhuma falha registrada nesta janela.");
 
     const ledger=document.getElementById("usageLedger");
     if (!ledger) return;
@@ -420,6 +452,39 @@
       button.tabIndex=active ? 0 : -1;
     });
     loadUsageActivity(null,true);
+  }
+
+  function csvCell(value) {
+    const text=String(value == null ? "" : value);
+    return '"' + text.replaceAll('"','""') + '"';
+  }
+
+  function exportUsageActivityCsv(trigger=null) {
+    const cached=activityCache.get(activityWindow);
+    const payload=cached?.payload;
+    const rows=Array.isArray(payload?.transactions) ? payload.transactions : [];
+    if (!rows.length) {
+      showToast("Não há transações nesta janela para exportar.");
+      return;
+    }
+    const header=["horario_utc","tool","computador","estado","duracao_ms","fila_ms","execucao_ms","transporte","agent","erro","rastro"];
+    const lines=[header.map(csvCell).join(",")];
+    rows.forEach((item)=>{
+      lines.push([
+        item.created_at_utc,item.tool_id,item.computer,item.state,item.total_ms,item.queue_ms,
+        item.execution_ms,item.transport_mode,item.agent_version,item.error_code,item.trace_id
+      ].map(csvCell).join(","));
+    });
+    const blob=new Blob(["\ufeff"+lines.join("\r\n")],{type:"text/csv;charset=utf-8"});
+    const url=URL.createObjectURL(blob);
+    const anchor=document.createElement("a");
+    anchor.href=url;
+    anchor.download="hara-commander-activity-"+activityWindow+".csv";
+    document.body.append(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+    if (trigger) showToast("CSV de metadados operacionais exportado.");
   }
 
   async function loadUsageActivity(trigger=null, force=false) {
@@ -1329,6 +1394,13 @@
     if (activityWindowButton) {
       event.preventDefault();
       setActivityWindow(activityWindowButton.dataset.activityWindow);
+      return;
+    }
+
+    const exportActivity = event.target.closest("[data-export-activity]");
+    if (exportActivity) {
+      event.preventDefault();
+      exportUsageActivityCsv(exportActivity);
       return;
     }
 
