@@ -10,7 +10,7 @@ ROOT=Path(__file__).resolve().parents[3]
 APP=ROOT/"apps/commander"
 WORKER=(APP/"src/worker.js").read_text(encoding="utf-8")
 AGENT=APP/"public/agent/linux.py"
-MIG=(APP/"migrations/0023_device_local_budget_blocks.sql").read_text(encoding="utf-8")
+MIG=(APP/"migrations/0023_device_local_budget_blocks.sql").read_text(encoding="utf-8") + chr(10) + (APP/"migrations/0024_local_budget_cloud_ceiling.sql").read_text(encoding="utf-8")
 PREPROD=APP/"scripts/validate_preprod_readiness.py"
 
 def need(ok, code):
