@@ -64,7 +64,7 @@ need(
     "APPROVAL_MODE_MIGRATION",
 )
 need("styles.css?v=20260925-neon7" in HTML, "STYLE_CACHE_KEY")
-need("app.js?v=20261005-localfirst1" in HTML, "SCRIPT_CACHE_KEY")
+need("app.js?v=20261005-localdirect1" in HTML, "SCRIPT_CACHE_KEY")
 need(
     'class="neon-toggle"' in HTML
     and 'class="neon-icon"' in HTML
@@ -474,6 +474,9 @@ need(not (ROOT / "public/dev/commander").exists(), "DEV_SNAPSHOT_ARCHIVE")
 need(not (APP / "seed/dev.sql").exists(), "DEV_SEED_RESIDUE")
 need("Strict-Transport-Security: max-age=31536000; includeSubDomains" in HEADERS, "STATIC_HSTS")
 need("Content-Security-Policy:" in HEADERS and "frame-ancestors 'none'" in HEADERS, "STATIC_CSP")
+need("connect-src 'self' http://127.0.0.1:32145" in HEADERS, "LOCALHOST_ACTIVITY_CSP")
+need("http://0.0.0.0" not in HEADERS and "192.168." not in HEADERS and "10.0.0.0" not in HEADERS, "LOCALHOST_ACTIVITY_CSP_NARROW")
+need("upgrade-insecure-requests" not in HEADERS, "LOCALHOST_ACTIVITY_NOT_UPGRADED")
 need("X-Content-Type-Options: nosniff" in HEADERS, "STATIC_NOSNIFF")
 need("SECURITY_HEADERS" in WORKER and '"strict-transport-security"' in WORKER, "WORKER_SECURITY_HEADERS")
 need("7403" in READBACK and "TRANSIENT_MARKERS" in READBACK, "D1_TRANSIENT_RETRY")
