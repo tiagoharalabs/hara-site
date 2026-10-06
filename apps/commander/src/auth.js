@@ -97,8 +97,6 @@ export function isD1WriteLimitError(error) {
   return text.includes("d1") && (
     text.includes("daily row write limit")
     || text.includes("free tier daily row write limit")
-    || text.includes("code: 7500")
-    || text.includes("[code: 7500]")
   );
 }
 

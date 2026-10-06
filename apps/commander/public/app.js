@@ -1738,7 +1738,6 @@
     if (skipNextWorkspaceLoad && appViews.has(next)) {
       skipNextWorkspaceLoad = false;
       if (next === "plans") loadBillingState();
-      if (next === "usage") loadUsageActivity();
       if (next === "security") loadServiceHealth();
       return;
     }
@@ -1748,7 +1747,6 @@
     } else if (appViews.has(next) || (next === "landing" && localHost)) {
       loadProductDashboard();
       if (next === "dashboard") loadDevices();
-      if (next === "usage") loadUsageActivity();
       if (next === "plans") loadBillingState();
       if (next === "security") loadServiceHealth();
     }
