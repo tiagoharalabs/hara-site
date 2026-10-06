@@ -1143,6 +1143,7 @@ html[data-neon="off"] .brand-copy em{
 .device-where-list{display:grid;gap:0;margin-top:8px}
 .device-where-list>div{display:grid;grid-template-columns:42px 1fr auto;gap:12px;align-items:center;padding:14px 0;border-top:1px solid #edf2f5}
 .where-badge{display:grid;place-items:center;width:34px;height:34px;border-radius:9px;background:#edf6fa;color:#2f7698;font-size:8px;font-weight:900}
+.where-badge-brand{overflow:hidden;background:#fff}.where-badge-brand img{display:block;width:26px;height:26px;object-fit:contain}
 .device-where-list p{display:grid;gap:3px;margin:0}.device-where-list b{font-size:10px;color:#244c63}.device-where-list small{font-size:8px;color:#78909f}
 .where-state{font-size:8px;font-weight:800;color:#2f8b70}
 @media(max-width:720px){.device-where-list>div{grid-template-columns:36px 1fr}.device-where-list>div>:last-child{grid-column:2}}
