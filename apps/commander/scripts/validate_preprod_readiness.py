@@ -62,6 +62,9 @@ def main():
     run("COMMANDER_PREPROD_MCP_CLIENT_CONFORMANCE", [
         "node", "apps/commander/scripts/test_customer_mcp_conformance.mjs",
     ])
+    run("COMMANDER_PREPROD_MCP_IDENTITY_METADATA", [
+        sys.executable, "apps/identity-login/scripts/validate_mcp_oauth_metadata.py",
+    ])
     checks = (
         ("COMMANDER_PREPROD_UI", "validate_prod_static.py"),
         ("COMMANDER_PREPROD_AGENT", "validate_device_installers.py"),

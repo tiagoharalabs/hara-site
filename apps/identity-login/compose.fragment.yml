@@ -10,6 +10,30 @@ services:
     labels:
       - 'traefik.http.routers.zitadel-login.rule=Host(`${ZITADEL_DOMAIN}`) && PathPrefix(`/ui/v2/login`)'
 
+
+  zitadel-oauth-metadata:
+    image: hara-identity-oauth-metadata:v1.0.0
+    restart: unless-stopped
+    entrypoint: ["node", "/app/server.mjs"]
+    environment:
+      HARA_IDENTITY_ISSUER: https://auth.haralabs.com.br
+      PORT: "8081"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8081/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    networks: [identity]
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=hara-identity
+      - traefik.http.services.zitadel-oauth-metadata.loadbalancer.server.port=8081
+      - 'traefik.http.routers.zitadel-oauth-metadata.rule=Host(`${ZITADEL_DOMAIN}`) && Path(`/.well-known/oauth-authorization-server`)'
+      - traefik.http.routers.zitadel-oauth-metadata.entrypoints=web
+      - traefik.http.routers.zitadel-oauth-metadata.service=zitadel-oauth-metadata
+      - traefik.http.routers.zitadel-oauth-metadata.priority=700
+
   zitadel-assets:
     image: hara-identity-login:v4.16.0-hara.8
     restart: unless-stopped

@@ -92,3 +92,73 @@ Canonical aligner:
 `python3 apps/identity-login/scripts/align_login_default_redirect.py --pat-file <secure-owner-pat>`
 
 The script reads the existing policy, preserves its supported fields, changes only `defaultRedirectUri`, and reads the policy back. `validate_identity_backend.py` fails on redirect drift.
+
+## MCP OAuth metadata adapter
+
+The Commander MCP compatibility path uses a dedicated, isolated metadata
+service for RFC 8414 Authorization Server Metadata.
+
+Image:
+
+`hara-identity-oauth-metadata:v1.0.0`
+
+Build:
+
+```bash
+docker build -t hara-identity-oauth-metadata:v1.0.0 \
+  apps/identity-login/oauth-metadata
+```
+
+The service owns only:
+
+`/.well-known/oauth-authorization-server`
+
+Traefik priority is 700 so the exact well-known path is served by the adapter
+before the catch-all ZITADEL API router. It does not replace or proxy Login V2,
+OIDC, Session API, token, authorization, introspection, revocation or JWKS
+endpoints.
+
+The first stage intentionally advertises:
+
+- Authorization Code;
+- Refresh Token;
+- PKCE S256;
+- existing HARA Identity authorization/token/introspection/revocation/JWKS URLs;
+- `client_id_metadata_document_supported=false`;
+- no `registration_endpoint`.
+
+This closes RFC 8414 discovery without pretending CIMD or public DCR is already
+available.
+
+Source gate:
+
+```bash
+python3 apps/identity-login/scripts/validate_mcp_oauth_metadata.py
+```
+
+Live gate after deployment:
+
+```bash
+python3 apps/identity-login/scripts/validate_mcp_oauth_metadata_live.py \
+  --expect-cimd disabled
+```
+
+### CIMD preparation
+
+The image also packages a non-routed CIMD admission/fetch policy for the next
+slice. It is not advertised or reachable as an authorization feature yet.
+
+The prepared policy requires:
+
+- HTTPS client-id metadata URLs with a non-root path;
+- no userinfo, query string or fragment;
+- public DNS targets only;
+- DNS result validation and address pinning to reduce SSRF/rebinding exposure;
+- no redirects while fetching metadata;
+- JSON response with a 64 KiB maximum;
+- exact `client_id` self-match;
+- Authorization Code public clients (`token_endpoint_auth_method=none`);
+- redirect URIs restricted to HTTPS or HTTP loopback IP literals.
+
+CIMD must only be advertised after the authorization layer actually consumes
+this policy and the strict live gate passes.
