@@ -24,7 +24,7 @@ from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-AGENT_VERSION = "0.3.37"
+AGENT_VERSION = "0.3.38"
 CONFIG_FILE = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home()/".config"))) / "hara-commander/device.env"
 DATA_DIR = Path(os.environ.get("XDG_DATA_HOME", str(Path.home()/".local/share"))) / "hara-commander"
 RECEIPT_DIR = DATA_DIR / "receipts"
@@ -42,6 +42,13 @@ APPROVAL_DIR = DATA_DIR / "approvals"
 PREIMAGE_DIR = DATA_DIR / "preimages"
 SESSION_MAX_SECONDS = 12 * 60 * 60
 PRODUCT_LEASE_REFRESH_SECONDS = 4 * 60 * 60
+SLO_PROFILE = "INTERNAL_BETA_V1"
+SLO_MIN_SUCCESS_PERCENT = 99.0
+SLO_P50_MAX_MS = 1000
+SLO_P95_MAX_MS = 6000
+SLO_P99_MAX_MS = 12000
+SLO_MIN_LATENCY_SAMPLES = 20
+SLO_LATENCY_SAMPLE_MAX = 5000
 APPROVAL_MODES = {"ASK_EVERY_ACTION","SESSION_TRUSTED","PERSISTENT_TRUSTED"}
 FUNCTION_ID = "device.info"
 FUNCTION_IDS = (
@@ -345,6 +352,39 @@ def _activity_window(value):
     hours={"24h":24,"7d":7*24,"30d":30*24}.get(raw,7*24)
     return raw if raw in {"24h","7d","30d"} else "7d", hours
 
+def _nearest_rank_percentile(values,percent):
+    if not values:
+        return None
+    ordered=sorted(int(v) for v in values)
+    rank=max(1,(len(ordered)*int(percent)+99)//100)
+    return ordered[min(len(ordered)-1,rank-1)]
+
+def _internal_slo(summary):
+    sample=int(summary.get("latency_sample_size") or 0)
+    terminal=int(summary.get("completed") or 0)+int(summary.get("failed") or 0)
+    success=summary.get("success_rate_percent")
+    checks={
+        "success_rate":None if success is None else float(success)>=SLO_MIN_SUCCESS_PERCENT,
+        "p50":None if summary.get("latency_p50_ms") is None else float(summary["latency_p50_ms"])<=SLO_P50_MAX_MS,
+        "p95":None if summary.get("latency_p95_ms") is None else float(summary["latency_p95_ms"])<=SLO_P95_MAX_MS,
+        "p99":None if summary.get("latency_p99_ms") is None else float(summary["latency_p99_ms"])<=SLO_P99_MAX_MS,
+    }
+    evaluable=sample>=SLO_MIN_LATENCY_SAMPLES and terminal>=SLO_MIN_LATENCY_SAMPLES
+    status="INSUFFICIENT_DATA" if not evaluable else ("PASS" if all(v is True for v in checks.values()) else "DEGRADED")
+    return {
+        "profile":SLO_PROFILE,
+        "status":status,
+        "evaluable":evaluable,
+        "targets":{
+            "min_success_rate_percent":SLO_MIN_SUCCESS_PERCENT,
+            "p50_max_ms":SLO_P50_MAX_MS,
+            "p95_max_ms":SLO_P95_MAX_MS,
+            "p99_max_ms":SLO_P99_MAX_MS,
+            "min_latency_samples":SLO_MIN_LATENCY_SAMPLES,
+        },
+        "checks":checks,
+    }
+
 def local_activity_snapshot(window="7d",limit=50,include_events=True):
     key,hours=_activity_window(window)
     since=datetime.fromtimestamp(time.time()-(hours*3600),timezone.utc).isoformat()
@@ -357,7 +397,8 @@ def local_activity_snapshot(window="7d",limit=50,include_events=True):
                      SUM(CASE WHEN state='COMPLETED' THEN 1 ELSE 0 END) AS completed,
                      SUM(CASE WHEN state='FAILED' THEN 1 ELSE 0 END) AS failed,
                      ROUND(AVG(CASE WHEN duration_ms IS NOT NULL THEN duration_ms END),1) AS avg_total_ms,
-                     SUM(CASE WHEN state='COMPLETED' AND duration_ms < 3000 THEN 1 ELSE 0 END) AS under_3s
+                     SUM(CASE WHEN state='COMPLETED' AND duration_ms < 3000 THEN 1 ELSE 0 END) AS under_3s,
+                     SUM(CASE WHEN state='COMPLETED' AND duration_ms IS NOT NULL THEN 1 ELSE 0 END) AS duration_population
                    FROM activity_events
                   WHERE at_utc >= ?
                     AND event IN ('PASS','DENIED')""",
@@ -388,6 +429,16 @@ def local_activity_snapshot(window="7d",limit=50,include_events=True):
                     ORDER BY transport_mode""",
                 (since,),
             ).fetchall()
+            duration_rows=conn.execute(
+                """SELECT duration_ms
+                     FROM activity_events
+                    WHERE at_utc >= ?
+                      AND state='COMPLETED'
+                      AND duration_ms IS NOT NULL
+                    ORDER BY event_id DESC
+                    LIMIT ?""",
+                (since,SLO_LATENCY_SAMPLE_MAX),
+            ).fetchall()
             events=[]
             if include_events:
                 events=conn.execute(
@@ -400,12 +451,39 @@ def local_activity_snapshot(window="7d",limit=50,include_events=True):
                     (since,limit),
                 ).fetchall()
     except Exception:
-        row=None; tools=[]; errors=[]; transports=[]; events=[]
+        row=None; tools=[]; errors=[]; transports=[]; duration_rows=[]; events=[]
     total=int((row["total_calls"] if row else 0) or 0)
     completed=int((row["completed"] if row else 0) or 0)
     failed=int((row["failed"] if row else 0) or 0)
     terminal=completed+failed
     under3=int((row["under_3s"] if row else 0) or 0)
+    duration_population=int((row["duration_population"] if row else 0) or 0)
+    durations=[int(x["duration_ms"]) for x in duration_rows if x["duration_ms"] is not None]
+    latency_p50=_nearest_rank_percentile(durations,50)
+    latency_p95=_nearest_rank_percentile(durations,95)
+    latency_p99=_nearest_rank_percentile(durations,99)
+    summary={
+        "total_calls":total,
+        "completed":completed,
+        "failed":failed,
+        "pending":0,
+        "executing":0,
+        "expired":0,
+        "cancelled":0,
+        "success_rate_percent":round((completed/terminal)*100,1) if terminal else None,
+        "under_3s_percent":round((under3/completed)*100,1) if completed else None,
+        "avg_queue_ms":0.0 if total else None,
+        "avg_execution_ms":float(row["avg_total_ms"]) if row and row["avg_total_ms"] is not None else None,
+        "avg_total_ms":float(row["avg_total_ms"]) if row and row["avg_total_ms"] is not None else None,
+        "latency_p50_ms":latency_p50,
+        "latency_p95_ms":latency_p95,
+        "latency_p99_ms":latency_p99,
+        "latency_sample_size":len(durations),
+        "latency_population_size":duration_population,
+        "latency_sample_capped":duration_population>len(durations),
+        "device_count":1 if total else 0,
+        "transport_modes":[str(x["transport_mode"]) for x in transports],
+    }
     return {
         "schema":"hara.commander-local-activity.v2",
         "source":"LOCAL_SQLITE",
@@ -417,22 +495,8 @@ def local_activity_snapshot(window="7d",limit=50,include_events=True):
             "cloud_history_persisted":False,
             "action_summary_local_only":True,
         },
-        "summary":{
-            "total_calls":total,
-            "completed":completed,
-            "failed":failed,
-            "pending":0,
-            "executing":0,
-            "expired":0,
-            "cancelled":0,
-            "success_rate_percent":round((completed/terminal)*100,1) if terminal else None,
-            "under_3s_percent":round((under3/completed)*100,1) if completed else None,
-            "avg_queue_ms":0.0 if total else None,
-            "avg_execution_ms":float(row["avg_total_ms"]) if row and row["avg_total_ms"] is not None else None,
-            "avg_total_ms":float(row["avg_total_ms"]) if row and row["avg_total_ms"] is not None else None,
-            "device_count":1 if total else 0,
-            "transport_modes":[str(x["transport_mode"]) for x in transports],
-        },
+        "summary":summary,
+        "slo":_internal_slo(summary),
         "diagnostics":{
             "top_tools":[{"tool_id":str(x["tool_id"]),"calls":int(x["calls"])} for x in tools],
             "top_errors":[{"error_code":str(x["error_code"]),"calls":int(x["calls"])} for x in errors],
@@ -2573,8 +2637,73 @@ def commander_support():
         if STATUS_FILE.is_file(): runtime=json.loads(STATUS_FILE.read_text(encoding="utf-8"))
     except Exception:
         runtime={}
+
+    activity=local_activity_snapshot("24h",limit=1,include_events=False)
+    lease_summary=None
+    budget_summary=None
+    recent_receipts=[]
+    try:
+        with _ops_connect() as conn:
+            row=conn.execute(
+                "SELECT lease_json,valid_until_utc,CASE WHEN lease_token IS NULL THEN 0 ELSE 1 END AS signed FROM product_lease WHERE singleton=1"
+            ).fetchone()
+            if row:
+                lease=json.loads(str(row["lease_json"]))
+                lease_summary={
+                    "plan_code":lease.get("plan_code"),
+                    "usage_mode":lease.get("usage_mode"),
+                    "period_kind":lease.get("period_kind"),
+                    "valid_until_utc":row["valid_until_utc"],
+                    "signed_token_present":bool(row["signed"]),
+                }
+            block=conn.execute(
+                """SELECT budget_id,allocated_units,state,expires_at_utc
+                     FROM local_budget_blocks
+                    ORDER BY issued_at_utc DESC
+                    LIMIT 1"""
+            ).fetchone()
+            if block:
+                committed,reserved=_budget_counts(conn,block["budget_id"])
+                allocated=int(block["allocated_units"] or 0)
+                budget_summary={
+                    "budget_id":str(block["budget_id"]),
+                    "state":str(block["state"]),
+                    "allocated_units":allocated,
+                    "committed_units":committed,
+                    "reserved_units":reserved,
+                    "remaining_units":max(0,allocated-committed-reserved),
+                    "expires_at_utc":block["expires_at_utc"],
+                }
+            recent_receipts=[
+                str(x["receipt_sha256"])
+                for x in conn.execute(
+                    """SELECT DISTINCT receipt_sha256
+                         FROM activity_events
+                        WHERE receipt_sha256 IS NOT NULL
+                          AND length(receipt_sha256)=64
+                        ORDER BY event_id DESC
+                        LIMIT 10"""
+                ).fetchall()
+            ]
+    except Exception:
+        lease_summary=None
+        budget_summary=None
+        recent_receipts=[]
+
+    db_stat=None
+    try:
+        if OPERATIONS_DB_FILE.is_file():
+            db_stat={
+                "present":True,
+                "bytes":int(OPERATIONS_DB_FILE.stat().st_size),
+                "mode":oct(OPERATIONS_DB_FILE.stat().st_mode & 0o777)[2:],
+            }
+    except Exception:
+        db_stat=None
+
     report={
-        "schema":"hara.commander-support-report.v1",
+        "schema":"hara.commander-support-report.v2",
+        "platform":"LINUX",
         "computer":platform.node(),
         "device_id":config.get("HARA_DEVICE_ID"),
         "agent_version":AGENT_VERSION,
@@ -2583,8 +2712,22 @@ def commander_support():
         "last_successful_heartbeat_at_utc":runtime.get("last_successful_heartbeat_at_utc"),
         "last_runtime_error_code":runtime.get("last_runtime_error_code"),
         "last_runtime_error_at_utc":runtime.get("last_runtime_error_at_utc"),
-        "secret_material_exposed":False,
-        "customer_content_included":False,
+        "activity_24h":{
+            "summary":activity.get("summary") or {},
+            "slo":activity.get("slo") or {},
+            "top_errors":((activity.get("diagnostics") or {}).get("top_errors") or []),
+        },
+        "product_lease":lease_summary,
+        "local_budget":budget_summary,
+        "operations_db":db_stat,
+        "recent_receipt_sha256":recent_receipts,
+        "privacy":{
+            "secret_material_exposed":False,
+            "customer_content_included":False,
+            "command_content_included":False,
+            "payload_content_included":False,
+            "result_content_included":False,
+        },
     }
     print(json.dumps(report,sort_keys=True,separators=(",",":"),ensure_ascii=False))
     return 0

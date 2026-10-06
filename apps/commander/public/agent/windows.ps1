@@ -7,7 +7,14 @@ $SessionPath = Join-Path $Root "operator-session.json"
 $ConsoleEvents = Join-Path $Root "console-events.jsonl"
 $OperationsDb = Join-Path $Root "operations.sqlite3"
 $SessionMaxHours = 12
-$AgentVersion = "0.3.37"
+$AgentVersion = "0.3.38"
+$SloProfile = "INTERNAL_BETA_V1"
+$SloMinSuccessPercent = 99.0
+$SloP50MaxMs = 1000
+$SloP95MaxMs = 6000
+$SloP99MaxMs = 12000
+$SloMinLatencySamples = 20
+$SloLatencySampleMax = 5000
 $FunctionId = "device.info"
 
 function Get-PlainText([Security.SecureString]$SecureValue) {
@@ -310,6 +317,42 @@ VALUES (?,?,?,?,?,?,?,?,?,?,?,?,1)
   }
 }
 
+
+function Get-NearestRankPercentile($Values,[int]$Percent) {
+  $items=@($Values | Where-Object { $null -ne $_ } | ForEach-Object {[int64]$_} | Sort-Object)
+  if (-not $items.Count) { return $null }
+  $rank=[Math]::Max(1,[Math]::Ceiling($items.Count*$Percent/100.0))
+  return [int64]$items[[Math]::Min($items.Count-1,$rank-1)]
+}
+
+function Get-InternalSlo($Summary) {
+  $sample=[int64]$(if ($null -ne $Summary.latency_sample_size) {$Summary.latency_sample_size} else {0})
+  $terminal=[int64]$Summary.completed+[int64]$Summary.failed
+  $success=$Summary.success_rate_percent
+  $checks=[ordered]@{
+    success_rate=$(if ($null -eq $success) {$null} else {[double]$success -ge $SloMinSuccessPercent})
+    p50=$(if ($null -eq $Summary.latency_p50_ms) {$null} else {[double]$Summary.latency_p50_ms -le $SloP50MaxMs})
+    p95=$(if ($null -eq $Summary.latency_p95_ms) {$null} else {[double]$Summary.latency_p95_ms -le $SloP95MaxMs})
+    p99=$(if ($null -eq $Summary.latency_p99_ms) {$null} else {[double]$Summary.latency_p99_ms -le $SloP99MaxMs})
+  }
+  $evaluable=($sample -ge $SloMinLatencySamples -and $terminal -ge $SloMinLatencySamples)
+  $allPass=$true
+  foreach($value in $checks.Values){ if($value -ne $true){$allPass=$false} }
+  return [ordered]@{
+    profile=$SloProfile
+    status=$(if(-not $evaluable){"INSUFFICIENT_DATA"}elseif($allPass){"PASS"}else{"DEGRADED"})
+    evaluable=$evaluable
+    targets=[ordered]@{
+      min_success_rate_percent=$SloMinSuccessPercent
+      p50_max_ms=$SloP50MaxMs
+      p95_max_ms=$SloP95MaxMs
+      p99_max_ms=$SloP99MaxMs
+      min_latency_samples=$SloMinLatencySamples
+    }
+    checks=$checks
+  }
+}
+
 function Get-LocalActivityWindow([string]$Window="7d") {
   Initialize-LocalActivityStore
   $hours=switch ($Window) { "24h" {24}; "30d" {720}; default {168} }
@@ -321,7 +364,8 @@ SELECT COUNT(*) AS total_calls,
        SUM(CASE WHEN state='COMPLETED' THEN 1 ELSE 0 END) AS completed,
        SUM(CASE WHEN state='FAILED' THEN 1 ELSE 0 END) AS failed,
        ROUND(AVG(CASE WHEN duration_ms IS NOT NULL THEN duration_ms END),1) AS avg_total_ms,
-       SUM(CASE WHEN state='COMPLETED' AND duration_ms < 3000 THEN 1 ELSE 0 END) AS under_3s
+       SUM(CASE WHEN state='COMPLETED' AND duration_ms < 3000 THEN 1 ELSE 0 END) AS under_3s,
+       SUM(CASE WHEN state='COMPLETED' AND duration_ms IS NOT NULL THEN 1 ELSE 0 END) AS duration_population
 FROM activity_events
 WHERE at_utc >= ? AND event IN ('PASS','DENIED')
 "@ @($since))
@@ -347,13 +391,44 @@ FROM activity_events
 WHERE at_utc >= ? AND event IN ('PASS','DENIED')
 ORDER BY transport_mode
 "@ @($since))
+  $durationRows=@(Invoke-LocalDbQuery @"
+SELECT duration_ms
+FROM activity_events
+WHERE at_utc >= ? AND state='COMPLETED' AND duration_ms IS NOT NULL
+ORDER BY rowid DESC
+LIMIT ?
+"@ @($since,$SloLatencySampleMax))
 
   $total=if ($row -and $null -ne $row["total_calls"]) {[int64]$row["total_calls"]} else {0}
   $completed=if ($row -and $null -ne $row["completed"]) {[int64]$row["completed"]} else {0}
   $failed=if ($row -and $null -ne $row["failed"]) {[int64]$row["failed"]} else {0}
   $under3=if ($row -and $null -ne $row["under_3s"]) {[int64]$row["under_3s"]} else {0}
   $avg=if ($row -and $null -ne $row["avg_total_ms"]) {[double]$row["avg_total_ms"]} else {$null}
+  $durationPopulation=if ($row -and $null -ne $row["duration_population"]) {[int64]$row["duration_population"]} else {0}
   $terminal=$completed+$failed
+  $durations=@($durationRows | ForEach-Object {[int64]$_['duration_ms']})
+  $summary=[ordered]@{
+    total_calls=$total
+    completed=$completed
+    failed=$failed
+    pending=0
+    executing=0
+    expired=0
+    cancelled=0
+    success_rate_percent=$(if ($terminal) {[Math]::Round(($completed/$terminal)*100,1)} else {$null})
+    under_3s_percent=$(if ($completed) {[Math]::Round(($under3/$completed)*100,1)} else {$null})
+    avg_queue_ms=$(if ($total) {0.0} else {$null})
+    avg_execution_ms=$avg
+    avg_total_ms=$avg
+    latency_p50_ms=(Get-NearestRankPercentile $durations 50)
+    latency_p95_ms=(Get-NearestRankPercentile $durations 95)
+    latency_p99_ms=(Get-NearestRankPercentile $durations 99)
+    latency_sample_size=$durations.Count
+    latency_population_size=$durationPopulation
+    latency_sample_capped=($durationPopulation -gt $durations.Count)
+    device_count=$(if ($total) {1} else {0})
+    transport_modes=@($transports | ForEach-Object {[string]$_['transport_mode']})
+  }
 
   return [ordered]@{
     schema="hara.commander-local-activity.v2"
@@ -370,22 +445,8 @@ ORDER BY transport_mode
       cloud_history_persisted=$false
       action_summary_local_only=$true
     }
-    summary=[ordered]@{
-      total_calls=$total
-      completed=$completed
-      failed=$failed
-      pending=0
-      executing=0
-      expired=0
-      cancelled=0
-      success_rate_percent=$(if ($terminal) {[Math]::Round(($completed/$terminal)*100,1)} else {$null})
-      under_3s_percent=$(if ($completed) {[Math]::Round(($under3/$completed)*100,1)} else {$null})
-      avg_queue_ms=$(if ($total) {0.0} else {$null})
-      avg_execution_ms=$avg
-      avg_total_ms=$avg
-      device_count=$(if ($total) {1} else {0})
-      transport_modes=@($transports | ForEach-Object {[string]$_['transport_mode']})
-    }
+    summary=$summary
+    slo=(Get-InternalSlo $summary)
     diagnostics=[ordered]@{
       top_tools=@($tools | ForEach-Object {@{tool_id=[string]$_['tool_id'];calls=[int64]$_['calls']}})
       top_errors=@($errors | ForEach-Object {@{error_code=[string]$_['error_code'];calls=[int64]$_['calls']}})

@@ -2280,6 +2280,28 @@ function cleanAgentActivityWindow(value, key) {
   const transports = Array.isArray(summary.transport_modes)
     ? summary.transport_modes.slice(0, 8).map((item) => cleanAgentValue(item, 80)).filter(Boolean)
     : [];
+  const rawSlo = value.slo && typeof value.slo === "object" ? value.slo : {};
+  const sloStatus = ["PASS","DEGRADED","INSUFFICIENT_DATA"].includes(String(rawSlo.status || ""))
+    ? String(rawSlo.status)
+    : "INSUFFICIENT_DATA";
+  const slo = {
+    profile:"INTERNAL_BETA_V1",
+    status:sloStatus,
+    evaluable:rawSlo.evaluable === true,
+    targets:{
+      min_success_rate_percent:activitySnapshotNumber(rawSlo.targets?.min_success_rate_percent ?? 99,100),
+      p50_max_ms:activitySnapshotNumber(rawSlo.targets?.p50_max_ms ?? 1000),
+      p95_max_ms:activitySnapshotNumber(rawSlo.targets?.p95_max_ms ?? 6000),
+      p99_max_ms:activitySnapshotNumber(rawSlo.targets?.p99_max_ms ?? 12000),
+      min_latency_samples:activitySnapshotNumber(rawSlo.targets?.min_latency_samples ?? 20,100000),
+    },
+    checks:{
+      success_rate:typeof rawSlo.checks?.success_rate === "boolean" ? rawSlo.checks.success_rate : null,
+      p50:typeof rawSlo.checks?.p50 === "boolean" ? rawSlo.checks.p50 : null,
+      p95:typeof rawSlo.checks?.p95 === "boolean" ? rawSlo.checks.p95 : null,
+      p99:typeof rawSlo.checks?.p99 === "boolean" ? rawSlo.checks.p99 : null,
+    },
+  };
   return {
     schema: "hara.commander-device-activity-window.v1",
     window_key: key,
@@ -2296,8 +2318,15 @@ function cleanAgentActivityWindow(value, key) {
       avg_queue_ms: summary.avg_queue_ms == null ? null : activitySnapshotNumber(summary.avg_queue_ms),
       avg_execution_ms: summary.avg_execution_ms == null ? null : activitySnapshotNumber(summary.avg_execution_ms),
       avg_total_ms: summary.avg_total_ms == null ? null : activitySnapshotNumber(summary.avg_total_ms),
+      latency_p50_ms: summary.latency_p50_ms == null ? null : activitySnapshotNumber(summary.latency_p50_ms),
+      latency_p95_ms: summary.latency_p95_ms == null ? null : activitySnapshotNumber(summary.latency_p95_ms),
+      latency_p99_ms: summary.latency_p99_ms == null ? null : activitySnapshotNumber(summary.latency_p99_ms),
+      latency_sample_size: activitySnapshotNumber(summary.latency_sample_size,100000),
+      latency_population_size: activitySnapshotNumber(summary.latency_population_size,100000000),
+      latency_sample_capped: summary.latency_sample_capped === true,
       transport_modes: [...new Set(transports)],
     },
+    slo,
     diagnostics: {
       top_tools: topTools.map((row) => ({
         tool_id: cleanAgentValue(row?.tool_id, 120) || "unknown",
@@ -3398,6 +3427,13 @@ async function portalActivityFromLocalSnapshots(env, session, window) {
   const tools=new Map();
   const errors=new Map();
   const transports=new Set();
+  const percentileValues={p50:[],p95:[],p99:[]};
+  let latencySampleSize=0;
+  let latencyPopulationSize=0;
+  let latencySampleCapped=false;
+  let sloPass=0;
+  let sloDegraded=0;
+  let sloInsufficient=0;
 
   for (const item of snapshots) {
     const summary=item.selected.summary || {};
@@ -3419,6 +3455,16 @@ async function portalActivityFromLocalSnapshots(env, session, window) {
       if (summary.avg_queue_ms != null) totals.queue_ms_weighted+=Number(summary.avg_queue_ms)*total;
       if (summary.avg_execution_ms != null) totals.exec_ms_weighted+=Number(summary.avg_execution_ms)*total;
     }
+    for (const [key,field] of [["p50","latency_p50_ms"],["p95","latency_p95_ms"],["p99","latency_p99_ms"]]) {
+      if (summary[field] != null) percentileValues[key].push(Number(summary[field]));
+    }
+    latencySampleSize+=Number(summary.latency_sample_size || 0);
+    latencyPopulationSize+=Number(summary.latency_population_size || 0);
+    latencySampleCapped=latencySampleCapped || summary.latency_sample_capped === true;
+    const deviceSlo=String(item.selected.slo?.status || "INSUFFICIENT_DATA");
+    if (deviceSlo === "PASS") sloPass+=1;
+    else if (deviceSlo === "DEGRADED") sloDegraded+=1;
+    else sloInsufficient+=1;
     for (const mode of summary.transport_modes || []) transports.add(String(mode));
     for (const row of item.selected.diagnostics?.top_tools || []) {
       const key=String(row.tool_id || "unknown");
@@ -3436,6 +3482,9 @@ async function portalActivityFromLocalSnapshots(env, session, window) {
     .sort((a,b)=>b.calls-a.calls || String(a[key]).localeCompare(String(b[key])))
     .slice(0,6);
 
+  const aggregateSloStatus=sloDegraded
+    ? "DEGRADED"
+    : (sloPass ? "PASS" : "INSUFFICIENT_DATA");
   const payload={
     schema:"hara.commander-portal-activity.v2",
     scope:"TENANT",
@@ -3479,8 +3528,22 @@ async function portalActivityFromLocalSnapshots(env, session, window) {
       avg_queue_ms:totals.duration_weight ? Number((totals.queue_ms_weighted/totals.duration_weight).toFixed(1)) : null,
       avg_execution_ms:totals.duration_weight ? Number((totals.exec_ms_weighted/totals.duration_weight).toFixed(1)) : null,
       avg_total_ms:totals.duration_weight ? Number((totals.total_ms_weighted/totals.duration_weight).toFixed(1)) : null,
+      latency_p50_ms:percentileValues.p50.length ? Math.max(...percentileValues.p50) : null,
+      latency_p95_ms:percentileValues.p95.length ? Math.max(...percentileValues.p95) : null,
+      latency_p99_ms:percentileValues.p99.length ? Math.max(...percentileValues.p99) : null,
+      latency_sample_size:latencySampleSize,
+      latency_population_size:latencyPopulationSize,
+      latency_sample_capped:latencySampleCapped,
       device_count:snapshots.length,
       transport_modes:[...transports],
+    },
+    slo:{
+      profile:"INTERNAL_BETA_V1",
+      status:aggregateSloStatus,
+      evaluable_devices:sloPass+sloDegraded,
+      pass_devices:sloPass,
+      degraded_devices:sloDegraded,
+      insufficient_devices:sloInsufficient,
     },
     transactions:[],
   };
@@ -3525,6 +3588,10 @@ function mergePortalActivity(local, cloud) {
   const under3Count=
     (a.under_3s_percent == null ? 0 : (Number(a.under_3s_percent)/100)*Number(a.completed || 0))
     +(b.under_3s_percent == null ? 0 : (Number(b.under_3s_percent)/100)*Number(b.completed || 0));
+  const percentileMax=(field)=>{
+    const values=[a[field],b[field]].filter((value)=>value != null).map(Number);
+    return values.length ? Math.max(...values) : null;
+  };
   return {
     ...cloud,
     schema:"hara.commander-portal-activity.v2",
@@ -3545,6 +3612,7 @@ function mergePortalActivity(local, cloud) {
       top_tools:mergeActivityBreakdown(local.diagnostics?.top_tools,cloud.diagnostics?.top_tools,"tool_id"),
       top_errors:mergeActivityBreakdown(local.diagnostics?.top_errors,cloud.diagnostics?.top_errors,"error_code"),
     },
+    slo:local.slo || cloud.slo || {profile:"INTERNAL_BETA_V1",status:"INSUFFICIENT_DATA"},
     summary:{
       total_calls:total,
       completed,
@@ -3558,6 +3626,12 @@ function mergePortalActivity(local, cloud) {
       avg_queue_ms:weighted("avg_queue_ms"),
       avg_execution_ms:weighted("avg_execution_ms"),
       avg_total_ms:weighted("avg_total_ms"),
+      latency_p50_ms:percentileMax("latency_p50_ms"),
+      latency_p95_ms:percentileMax("latency_p95_ms"),
+      latency_p99_ms:percentileMax("latency_p99_ms"),
+      latency_sample_size:Number(a.latency_sample_size || 0)+Number(b.latency_sample_size || 0),
+      latency_population_size:Number(a.latency_population_size || 0)+Number(b.latency_population_size || 0),
+      latency_sample_capped:a.latency_sample_capped === true || b.latency_sample_capped === true,
       device_count:Number(local.snapshot_device_count || 0)+Number(b.device_count || 0),
       transport_modes:[...new Set([
         ...(a.transport_modes || []),
