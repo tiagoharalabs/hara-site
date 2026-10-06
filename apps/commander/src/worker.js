@@ -873,6 +873,83 @@ export class TenantQuota extends DurableObject {
 
         CREATE INDEX IF NOT EXISTS idx_request_period
           ON request_state(period_key, state);
+
+        CREATE INDEX IF NOT EXISTS idx_request_state_expiry
+          ON request_state(state, updated_at_utc);
+
+        CREATE TABLE IF NOT EXISTS period_usage (
+          period_key TEXT PRIMARY KEY,
+          consumed_units INTEGER NOT NULL DEFAULT 0 CHECK (consumed_units >= 0)
+        );
+
+        CREATE TABLE IF NOT EXISTS quota_meta (
+          id INTEGER PRIMARY KEY CHECK (id = 1),
+          usage_schema_version INTEGER NOT NULL DEFAULT 0
+        );
+
+        INSERT OR IGNORE INTO quota_meta (id, usage_schema_version)
+        VALUES (1, 0);
+
+        CREATE TRIGGER IF NOT EXISTS trg_request_state_usage_insert
+        AFTER INSERT ON request_state
+        WHEN NEW.state IN ('RESERVED', 'COMMITTED') AND NEW.units <> 0
+        BEGIN
+          INSERT INTO period_usage (period_key, consumed_units)
+          VALUES (NEW.period_key, NEW.units)
+          ON CONFLICT(period_key) DO UPDATE SET
+            consumed_units = consumed_units + excluded.consumed_units;
+        END;
+
+        CREATE TRIGGER IF NOT EXISTS trg_request_state_usage_update_same_period
+        AFTER UPDATE OF period_key, state, units ON request_state
+        WHEN OLD.period_key = NEW.period_key
+          AND (OLD.state <> NEW.state OR OLD.units <> NEW.units)
+        BEGIN
+          UPDATE period_usage
+             SET consumed_units = consumed_units
+               - CASE
+                   WHEN OLD.state IN ('RESERVED', 'COMMITTED') THEN OLD.units
+                   ELSE 0
+                 END
+               + CASE
+                   WHEN NEW.state IN ('RESERVED', 'COMMITTED') THEN NEW.units
+                   ELSE 0
+                 END
+           WHERE period_key = NEW.period_key;
+        END;
+
+        CREATE TRIGGER IF NOT EXISTS trg_request_state_usage_update_period
+        AFTER UPDATE OF period_key, state, units ON request_state
+        WHEN OLD.period_key <> NEW.period_key
+        BEGIN
+          UPDATE period_usage
+             SET consumed_units = consumed_units
+               - CASE
+                   WHEN OLD.state IN ('RESERVED', 'COMMITTED') THEN OLD.units
+                   ELSE 0
+                 END
+           WHERE period_key = OLD.period_key;
+
+          INSERT INTO period_usage (period_key, consumed_units)
+          VALUES (
+            NEW.period_key,
+            CASE
+              WHEN NEW.state IN ('RESERVED', 'COMMITTED') THEN NEW.units
+              ELSE 0
+            END
+          )
+          ON CONFLICT(period_key) DO UPDATE SET
+            consumed_units = consumed_units + excluded.consumed_units;
+        END;
+
+        CREATE TRIGGER IF NOT EXISTS trg_request_state_usage_delete
+        AFTER DELETE ON request_state
+        WHEN OLD.state IN ('RESERVED', 'COMMITTED') AND OLD.units <> 0
+        BEGIN
+          UPDATE period_usage
+             SET consumed_units = consumed_units - OLD.units
+           WHERE period_key = OLD.period_key;
+        END;
       `);
 
       const columns = [...this.ctx.storage.sql.exec("PRAGMA table_info(request_state)")];
@@ -880,6 +957,25 @@ export class TenantQuota extends DurableObject {
         this.ctx.storage.sql.exec(
           "ALTER TABLE request_state ADD COLUMN subject_id TEXT NOT NULL DEFAULT 'LEGACY'"
         );
+      }
+
+      const usageMeta = [...this.ctx.storage.sql.exec(
+        "SELECT usage_schema_version FROM quota_meta WHERE id = 1"
+      )][0] || { usage_schema_version: 0 };
+      if (Number(usageMeta.usage_schema_version || 0) < 1) {
+        this.ctx.storage.sql.exec(`
+          DELETE FROM period_usage;
+
+          INSERT INTO period_usage (period_key, consumed_units)
+          SELECT period_key, COALESCE(SUM(units), 0)
+            FROM request_state
+           WHERE state IN ('RESERVED', 'COMMITTED')
+           GROUP BY period_key;
+
+          UPDATE quota_meta
+             SET usage_schema_version = 1
+           WHERE id = 1;
+        `);
       }
     });
   }
@@ -901,13 +997,12 @@ export class TenantQuota extends DurableObject {
 
   status(periodKey, limit, expireReservations = true) {
     if (expireReservations) this.expireStaleReservations();
-    const row = this.ctx.storage.sql.exec(
-      `SELECT COALESCE(SUM(units), 0) AS consumed
-         FROM request_state
-        WHERE period_key = ?
-          AND state IN ('RESERVED', 'COMMITTED')`,
+    const row = [...this.ctx.storage.sql.exec(
+      `SELECT consumed_units AS consumed
+         FROM period_usage
+        WHERE period_key = ?`,
       periodKey
-    ).one();
+    )][0] || { consumed: 0 };
 
     const consumed = Number(row.consumed || 0);
     return {

@@ -76,6 +76,7 @@ def main():
         ("COMMANDER_PREPROD_OIDC_TX_HYGIENE", "validate_oidc_transaction_hygiene.py"),
         ("COMMANDER_PREPROD_E2E_HARNESS", "validate_e2e_harness.py"),
         ("COMMANDER_PREPROD_QUOTA_RESERVATION_TTL", "validate_quota_reservation_ttl.py"),
+        ("COMMANDER_PREPROD_TENANT_QUOTA_STORAGE_EFFICIENCY", "validate_tenant_quota_storage_efficiency.py"),
         ("COMMANDER_PREPROD_UNLIMITED_PLAN_FASTPATH", "validate_unlimited_plan_fastpath.py"),
         ("COMMANDER_PREPROD_LOCAL_ACTIVITY_STORE", "validate_local_activity_store.py"),
         ("COMMANDER_PREPROD_WINDOWS_LOCAL_ACTIVITY_STORE", "validate_windows_local_activity_store.py"),
