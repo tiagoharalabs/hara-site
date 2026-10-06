@@ -167,3 +167,45 @@ PASS:
 
 The portal reads current observed SLO immediately from bounded device snapshots.
 Persisted cron state is used for breach/recovery streaks and incident history.
+
+## PROD live proof
+
+Migration:
+- 0026_slo_incidents.sql applied to PROD
+
+Backend Worker:
+- 664cc5d5-396c-4515-8a8b-7e37dd4a4c75
+- rollback: 9bb49ba2-2955-4b22-b96f-ad8833247200
+- fail-closed PASS
+- SLO state/incident tables present
+
+Portal/observed Worker:
+- 2975e2e4-f544-459e-8c91-b78a8aa1e1c7
+- rollback: 664cc5d5-396c-4515-8a8b-7e37dd4a4c75
+
+Portal live:
+- cache key 20261005-sloincident1 PASS
+- SLO card asset PASS
+- SLO fetch wiring PASS
+- OWNER/ADMIN gate PASS
+- live observed-state rendering PASS
+- PASS/DEGRADED UI states PASS
+- unauthenticated /api/portal/slo -> 401 AUTH_REQUIRED
+- fail-closed suite PASS
+
+At immediate post-deploy readback, the scheduled maintenance cron had not yet
+run after the production deployment, so persisted commander_slo_state and open
+incident rows were empty. This is not treated as a failure: the portal computes
+the current observed SLO on read, while incident persistence is owned by the
+scheduled handler. No manual PROD maintenance endpoint exists.
+
+## Final state
+
+SLO_INCIDENT_SOURCE=CLOSED_PASS
+SLO_INCIDENT_PREPROD=CLOSED_PASS
+SLO_INCIDENT_DEV_LIVE=CLOSED_PASS
+SLO_INCIDENT_PROD_RUNTIME=CLOSED_PASS
+SLO_INCIDENT_PORTAL_PROD=CLOSED_PASS
+SLO_INCIDENT_PROD_NATURAL_CRON=PENDING_NEXT_SCHEDULED_TICK
+EXTERNAL_ALERT_DELIVERY=PENDING_TRANSPORT
+PROD_ROLLBACK_READY=664cc5d5-396c-4515-8a8b-7e37dd4a4c75

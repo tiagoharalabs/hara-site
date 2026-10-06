@@ -9,7 +9,7 @@ Baseline at creation: `53d53c3b33028712d70ecfb3b18aef9858205210`
 - **Paid beta / invite / Linux:** READY.
 - **Public beta:** PENDING Windows production re-enrollment/current data-plane canary; live multitenant isolation and fresh local customer acceptance are CLOSED_PASS.
 - **Self-serve paid:** PENDING Stripe runtime secrets + Price IDs + first real checkout lifecycle.
-- **General availability:** PENDING public-beta gates plus SLO/support maturity.
+- **General availability:** PENDING public-beta/clean-lifecycle gates plus external alert delivery, cost analytics and commercial billing activation; internal SLO/support maturity is CLOSED_PASS.
 
 ## P0 — close before public beta
 
@@ -25,7 +25,7 @@ Baseline at creation: `53d53c3b33028712d70ecfb3b18aef9858205210`
 
 | Gate | Current truth | Next proof / delivery |
 | --- | --- | --- |
-| SLO | INTERNAL_BETA_V1 live in PROD: success>=99%, p50<=1s, p95<=6s, p99<=12s, min sample 20. Fleet acceptance PASS at 99.259% weighted success / worst p95 5.749s / p99 10.341s | Accumulate broader natural samples, define alert delivery/escalation, then tighten thresholds from evidence; this is not yet contractual SLA |
+| SLO | INTERNAL_BETA_V1 live; fleet 2/2 PASS. Persistent incident state with 2-breach/2-recovery hysteresis is live in PROD; OWNER/ADMIN portal card shows current observed state and persisted incident context | Observe first natural cron state row, then add external notification transport/ack/escalation; thresholds remain internal, not contractual SLA |
 | Cost model | Local-first unit economics CLOSED_PASS: full Free 10k old quota plane 20,000 RPCs vs <=100 block allocations (99.5% reduction); 100-user and 1,000-user rungs modeled. USD intentionally unclaimed | Obtain read-only Cloudflare Analytics and measure Worker CPU, DO requests/duration, D1 rows/egress on 100 -> 1,000 user campaign |
 | Support bundle | support-report.v2 live on Linux 0.3.38: version/health/error class, 24h SLO, lease/budget metadata, DB size/mode, receipt hashes; explicit no command/payload/result/secret flags | Add support-plane ingestion/attachment workflow and retention policy; preserve v1 pre-install fallback |
 | Clean Linux acceptance | Linux live proven on existing hosts | Fresh VM install/update/uninstall/re-enroll acceptance with no developer state present |
