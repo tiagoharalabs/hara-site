@@ -1,6 +1,6 @@
 {
   "schema": "hara.commander.mcp-certification-campaign.v1",
-  "state": "PREPARED_NOT_STARTED",
+  "state": "PAUSED_RECOVERY",
   "campaign_id": "HARA-MCP-CAMPAIGN-V1-20261006",
   "certification_revision": "V1",
   "server_url": "https://commander.haralabs.com.br/api/mcp?profile=simple",
@@ -15,8 +15,8 @@
   ],
   "clients": {
     "mcp-inspector": {
-      "state": "NOT_STARTED",
-      "evidence": null,
+      "state": "PAUSED_RECOVERY",
+      "evidence": "external:hara-evidence/mcp-certification/inspector/evidence.json",
       "certificate": null
     },
     "vscode": {
@@ -40,6 +40,7 @@
   "notes": [
     "Do not edit certification matrix after first client starts.",
     "Do not run clients in parallel.",
-    "Do not use static bearer token in primary certification."
+    "Do not use static bearer token in primary certification.",
+    "Inspector DISC-01 passed. OAuth/DCR certification was paused after a user-visible login regression report; public DCR was rolled back closed before continuing."
   ]
 }

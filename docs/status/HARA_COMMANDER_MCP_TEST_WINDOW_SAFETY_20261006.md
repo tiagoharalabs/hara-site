@@ -66,3 +66,14 @@ Campaign skeleton:
 - `apps/commander/mcp/certification-campaign.v1.json`
 
 The campaign remains `PREPARED_NOT_STARTED`; all four clients remain `NOT_STARTED`.
+
+## First client attempt / recovery
+
+- MCP Inspector 2.9.0 DISC-01: PASS (`auth_required` with isolated empty OAuth store).
+- DCR registration and Authorization Code + PKCE flow started.
+- User-visible login regression reported during the OAuth attempt.
+- Test stopped before certification completion.
+- Public DCR rollback: CLOSED / registration endpoint hidden / register route 404.
+- Normal Commander login + HARA Identity validation after rollback: PASS.
+
+CAMPAIGN_STATE=PAUSED_RECOVERY

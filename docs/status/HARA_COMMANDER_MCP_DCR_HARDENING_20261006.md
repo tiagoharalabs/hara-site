@@ -162,3 +162,32 @@ GENERIC_AUTO_OAUTH=CLOSED_PASS
 DCR_LIFECYCLE_CANARY=CLOSED_PASS
 CIMD_ADVERTISED=FALSE
 REAL_CLIENT_SMOKE_MATRIX=PENDING
+
+## Recovery rollback after first real Inspector OAuth attempt
+
+Executed: 2026-10-06
+
+The first real MCP Inspector OAuth certification attempt was stopped after a
+user-visible login error was reported. Certification was paused immediately.
+
+Recovery actions:
+- Inspector process stopped;
+- public DCR gateway switched `guarded -> closed`;
+- RFC 8414 `registration_endpoint` hidden;
+- isolated metadata + DCR sidecars recreated and healthy;
+- public `/oauth/v2/register` readback = HTTP 404;
+- normal Commander `/auth/login` = HTTP 302 to the canonical HARA Identity OIDC flow;
+- HARA Identity white-label/live validation = PASS;
+- OIDC PKCE = PASS;
+- Commander account selection = PASS.
+
+The ZITADEL backend DCR setting is not being changed in this recovery slice
+because the secret-backed admin path is intentionally isolated. Public DCR is
+fail-closed and unreachable through the HARA edge.
+
+DCR_GATEWAY_PROD=CLOSED_RECOVERY
+DCR_REGISTRATION_ADVERTISED=FALSE
+DCR_PUBLIC_ROUTE=404
+COMMANDER_LOGIN_REDIRECT=PASS
+HARA_IDENTITY_WHITE_LABEL=PASS
+MCP_CLIENT_CERTIFICATION=PAUSED_RECOVERY
