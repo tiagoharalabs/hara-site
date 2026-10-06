@@ -81,6 +81,7 @@ def main():
         ("COMMANDER_PREPROD_SLO_INCIDENT_STATE", "validate_slo_incident_state.py"),
         ("COMMANDER_PREPROD_SLO_INCIDENT_ACTIONS", "validate_slo_incident_actions.py"),
         ("COMMANDER_PREPROD_SUPPORT_BUNDLE_V2", "validate_support_bundle_v2.py"),
+        ("COMMANDER_PREPROD_SUPPORT_PLANE", "validate_support_plane.py"),
         ("COMMANDER_PREPROD_LOCAL_FIRST_UNIT_ECONOMICS", "validate_local_first_unit_economics.py"),
         ("COMMANDER_PREPROD_UNLIMITED_PLAN_FASTPATH", "validate_unlimited_plan_fastpath.py"),
         ("COMMANDER_PREPROD_LOCAL_ACTIVITY_STORE", "validate_local_activity_store.py"),

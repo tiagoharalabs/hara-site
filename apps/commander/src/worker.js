@@ -74,6 +74,9 @@ const SLO_ALERT_INCIDENT_RETENTION_SECONDS = 90 * 24 * 60 * 60;
 const SLO_ALERT_ESCALATION_L1_SECONDS = 60 * 60;
 const SLO_ALERT_ESCALATION_L2_SECONDS = 4 * 60 * 60;
 const SLO_ALERT_ESCALATION_L3_SECONDS = 12 * 60 * 60;
+const SUPPORT_REPORT_RETENTION_SECONDS = 30 * 24 * 60 * 60;
+const SUPPORT_REPORT_RETENTION_BATCH = 500;
+const SUPPORT_REPORT_MAX_BYTES = 16 * 1024;
 const TRANSIENT_EXECUTE_OR_REPLAY = "EXECUTE_OR_REPLAY";
 const TRANSIENT_REPLAY_ONLY = "REPLAY_ONLY";
 const TRANSIENT_SAFE_PREEXEC_RELEASE_CODES = new Set([
@@ -3626,6 +3629,216 @@ async function runSloAlertMaintenance(env) {
   ).bind(cutoff).run();
 }
 
+function supportReportTime(value) {
+  const ms=Date.parse(String(value || ""));
+  return Number.isFinite(ms) ? new Date(ms).toISOString() : null;
+}
+
+function supportReportNumber(value,max=1_000_000_000) {
+  const number=Number(value);
+  if (!Number.isFinite(number) || number < 0) return null;
+  return Math.min(max,Math.round(number*10)/10);
+}
+
+function cleanSupportReportV2(body) {
+  if (!body || typeof body !== "object" || body.schema !== "hara.commander-support-report.v2") {
+    throw new Error("SUPPORT_REPORT_SCHEMA_INVALID");
+  }
+  const privacy=body.privacy || {};
+  for (const key of [
+    "secret_material_exposed",
+    "customer_content_included",
+    "command_content_included",
+    "payload_content_included",
+    "result_content_included",
+  ]) {
+    if (privacy[key] !== false) throw new Error("SUPPORT_REPORT_PRIVACY_INVALID");
+  }
+
+  const deviceId=cleanId(body.device_id,180);
+  if (!deviceId) throw new Error("SUPPORT_REPORT_DEVICE_REQUIRED");
+  const summary=body.activity_24h?.summary || {};
+  const slo=body.activity_24h?.slo || {};
+  const topErrors=Array.isArray(body.activity_24h?.top_errors)
+    ? body.activity_24h.top_errors.slice(0,6)
+    : [];
+  const lease=body.product_lease && typeof body.product_lease === "object"
+    ? body.product_lease
+    : null;
+  const budget=body.local_budget && typeof body.local_budget === "object"
+    ? body.local_budget
+    : null;
+  const operations=body.operations_db && typeof body.operations_db === "object"
+    ? body.operations_db
+    : null;
+  const receipts=Array.isArray(body.recent_receipt_sha256)
+    ? [...new Set(body.recent_receipt_sha256
+        .map((value)=>String(value || "").toLowerCase())
+        .filter((value)=>/^[a-f0-9]{64}$/.test(value)))]
+        .slice(0,10)
+    : [];
+
+  const sanitized={
+    schema:"hara.commander-support-report.v2",
+    platform:cleanAgentValue(body.platform,40) || "UNKNOWN",
+    computer:cleanAgentValue(body.computer,160) || null,
+    device_id:deviceId,
+    agent_version:cleanAgentValue(body.agent_version,80) || null,
+    approval_mode:cleanAgentValue(body.approval_mode,80) || null,
+    operator_session_active:body.operator_session_active === true,
+    last_successful_heartbeat_at_utc:supportReportTime(body.last_successful_heartbeat_at_utc),
+    last_runtime_error_code:cleanAgentValue(body.last_runtime_error_code,120) || null,
+    last_runtime_error_at_utc:supportReportTime(body.last_runtime_error_at_utc),
+    activity_24h:{
+      summary:{
+        total_calls:supportReportNumber(summary.total_calls),
+        completed:supportReportNumber(summary.completed),
+        failed:supportReportNumber(summary.failed),
+        success_rate_percent:supportReportNumber(summary.success_rate_percent,100),
+        avg_total_ms:supportReportNumber(summary.avg_total_ms),
+        latency_p50_ms:supportReportNumber(summary.latency_p50_ms),
+        latency_p95_ms:supportReportNumber(summary.latency_p95_ms),
+        latency_p99_ms:supportReportNumber(summary.latency_p99_ms),
+        latency_sample_size:supportReportNumber(summary.latency_sample_size,100000),
+        latency_population_size:supportReportNumber(summary.latency_population_size,100000000),
+        latency_sample_capped:summary.latency_sample_capped === true,
+      },
+      slo:{
+        profile:SLO_ALERT_PROFILE,
+        status:["PASS","DEGRADED","INSUFFICIENT_DATA"].includes(String(slo.status || ""))
+          ? String(slo.status)
+          : "INSUFFICIENT_DATA",
+        evaluable:slo.evaluable === true,
+      },
+      top_errors:topErrors.map((row)=>({
+        error_code:cleanAgentValue(row?.error_code,120) || "UNKNOWN",
+        calls:supportReportNumber(row?.calls,1000000) || 0,
+      })),
+    },
+    product_lease:lease ? {
+      plan_code:cleanAgentValue(lease.plan_code,80) || null,
+      usage_mode:cleanAgentValue(lease.usage_mode,80) || null,
+      period_kind:cleanAgentValue(lease.period_kind,80) || null,
+      valid_until_utc:supportReportTime(lease.valid_until_utc),
+      signed_token_present:lease.signed_token_present === true,
+    } : null,
+    local_budget:budget ? {
+      budget_id:cleanAgentValue(budget.budget_id,180) || null,
+      state:cleanAgentValue(budget.state,40) || null,
+      allocated_units:supportReportNumber(budget.allocated_units,1000000),
+      committed_units:supportReportNumber(budget.committed_units,1000000),
+      reserved_units:supportReportNumber(budget.reserved_units,1000000),
+      remaining_units:supportReportNumber(budget.remaining_units,1000000),
+      expires_at_utc:supportReportTime(budget.expires_at_utc),
+    } : null,
+    operations_db:operations ? {
+      present:operations.present === true,
+      bytes:supportReportNumber(operations.bytes,1024*1024*1024),
+      mode:/^[0-7]{3,4}$/.test(String(operations.mode || "")) ? String(operations.mode) : null,
+    } : null,
+    recent_receipt_sha256:receipts,
+    privacy:{
+      secret_material_exposed:false,
+      customer_content_included:false,
+      command_content_included:false,
+      payload_content_included:false,
+      result_content_included:false,
+    },
+  };
+  const raw=JSON.stringify(sanitized);
+  if (new TextEncoder().encode(raw).length > SUPPORT_REPORT_MAX_BYTES) {
+    throw new Error("SUPPORT_REPORT_TOO_LARGE");
+  }
+  return sanitized;
+}
+
+async function submitPortalSupportReport(env,session,body) {
+  if (!betaAccessCanManage(session)) throw new Error("SUPPORT_REPORT_ADMIN_REQUIRED");
+  const report=cleanSupportReportV2(body);
+  const device=await env.PRODUCT_DB.prepare(
+    "SELECT device_id FROM commander_devices WHERE device_id=? AND tenant_id=? AND state='ACTIVE' AND revoked_at_utc IS NULL LIMIT 1"
+  ).bind(report.device_id,session.tenant_id).first();
+  if (!device) throw new Error("SUPPORT_REPORT_DEVICE_NOT_FOUND");
+  const now=nowIso();
+  const reportId="HARA-SUPPORT-"+crypto.randomUUID();
+  const expires=new Date(Date.now()+(SUPPORT_REPORT_RETENTION_SECONDS*1000)).toISOString();
+  const sql="INSERT INTO commander_support_reports "+
+    "(support_report_id,tenant_id,subject_id,device_id,schema_version,platform,"+
+    "agent_version,captured_at_utc,submitted_at_utc,expires_at_utc,slo_status,"+
+    "last_runtime_error_code,report_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+  await env.PRODUCT_DB.prepare(sql).bind(
+    reportId,session.tenant_id,session.subject_id,report.device_id,report.schema,
+    report.platform,report.agent_version,report.last_successful_heartbeat_at_utc,
+    now,expires,report.activity_24h?.slo?.status || null,
+    report.last_runtime_error_code,JSON.stringify(report),
+  ).run();
+  return {
+    schema:"hara.commander-support-report-receipt.v1",
+    support_report_id:reportId,
+    device_id:report.device_id,
+    submitted_at_utc:now,
+    expires_at_utc:expires,
+    report,
+  };
+}
+
+async function listPortalSupportReports(env,session,limitValue=20,deviceValue=null) {
+  if (!betaAccessCanManage(session)) throw new Error("SUPPORT_REPORT_ADMIN_REQUIRED");
+  const limit=Math.max(1,Math.min(50,Number(limitValue || 20)));
+  const deviceId=deviceValue ? cleanId(deviceValue,180) : null;
+  let result;
+  if (deviceId) {
+    const sql="SELECT support_report_id,device_id,platform,agent_version,captured_at_utc,"+
+      "submitted_at_utc,expires_at_utc,slo_status,last_runtime_error_code,report_json "+
+      "FROM commander_support_reports WHERE tenant_id=? AND device_id=? "+
+      "ORDER BY submitted_at_utc DESC LIMIT ?";
+    result=await env.PRODUCT_DB.prepare(sql).bind(session.tenant_id,deviceId,limit).all();
+  } else {
+    const sql="SELECT support_report_id,device_id,platform,agent_version,captured_at_utc,"+
+      "submitted_at_utc,expires_at_utc,slo_status,last_runtime_error_code,report_json "+
+      "FROM commander_support_reports WHERE tenant_id=? "+
+      "ORDER BY submitted_at_utc DESC LIMIT ?";
+    result=await env.PRODUCT_DB.prepare(sql).bind(session.tenant_id,limit).all();
+  }
+  return {
+    schema:"hara.commander-support-report-list.v1",
+    reports:(result.results || []).map((row)=>({
+      support_report_id:String(row.support_report_id),
+      device_id:String(row.device_id),
+      platform:String(row.platform),
+      agent_version:row.agent_version || null,
+      captured_at_utc:row.captured_at_utc || null,
+      submitted_at_utc:row.submitted_at_utc,
+      expires_at_utc:row.expires_at_utc,
+      slo_status:row.slo_status || null,
+      last_runtime_error_code:row.last_runtime_error_code || null,
+      report:(()=>{ try { return JSON.parse(String(row.report_json || "{}")); } catch (_error) { return null; } })(),
+    })),
+  };
+}
+
+async function deletePortalSupportReport(env,session,body) {
+  if (!betaAccessCanManage(session)) throw new Error("SUPPORT_REPORT_ADMIN_REQUIRED");
+  const reportId=cleanId(body?.support_report_id,180);
+  if (!reportId) throw new Error("SUPPORT_REPORT_ID_REQUIRED");
+  const existing=await env.PRODUCT_DB.prepare(
+    "SELECT support_report_id FROM commander_support_reports WHERE support_report_id=? AND tenant_id=? LIMIT 1"
+  ).bind(reportId,session.tenant_id).first();
+  if (!existing) throw new Error("SUPPORT_REPORT_NOT_FOUND");
+  await env.PRODUCT_DB.prepare(
+    "DELETE FROM commander_support_reports WHERE support_report_id=? AND tenant_id=?"
+  ).bind(reportId,session.tenant_id).run();
+  return {schema:"hara.commander-support-report-delete.v1",support_report_id:reportId,deleted:true};
+}
+
+async function cleanupExpiredSupportReports(env) {
+  const cutoff=nowIso();
+  const sql="DELETE FROM commander_support_reports WHERE support_report_id IN ("+
+    "SELECT support_report_id FROM commander_support_reports WHERE expires_at_utc < ? "+
+    "ORDER BY expires_at_utc LIMIT ?)";
+  await env.PRODUCT_DB.prepare(sql).bind(cutoff,SUPPORT_REPORT_RETENTION_BATCH).run();
+}
+
 async function portalActivityFromLocalSnapshots(env, session, window) {
   if (!["OWNER","ADMIN"].includes(String(session.role || "").toUpperCase())) return null;
   const result=await env.PRODUCT_DB.prepare(
@@ -4803,6 +5016,32 @@ export default {
         return json(await portalEscalateSloIncident(env,session,body));
       }
 
+      if (url.pathname === "/api/portal/support-reports" && request.method === "GET") {
+        const session = await resolvePortalSession(request, env);
+        if (!session) return json({ ok:false, code:"AUTH_REQUIRED" },401);
+        const limit=Number(url.searchParams.get("limit") || 20);
+        const deviceId=url.searchParams.get("device_id");
+        return json(await listPortalSupportReports(env,session,limit,deviceId));
+      }
+
+      if (url.pathname === "/api/portal/support-reports" && request.method === "POST") {
+        requirePortalMutationOrigin(request);
+        const session = await resolvePortalSession(request, env);
+        if (!session) return json({ ok:false, code:"AUTH_REQUIRED" },401);
+        await enforcePortalMutationRateLimit(env,session);
+        const body=await request.json();
+        return json(await submitPortalSupportReport(env,session,body),201);
+      }
+
+      if (url.pathname === "/api/portal/support-reports/delete" && request.method === "POST") {
+        requirePortalMutationOrigin(request);
+        const session = await resolvePortalSession(request, env);
+        if (!session) return json({ ok:false, code:"AUTH_REQUIRED" },401);
+        await enforcePortalMutationRateLimit(env,session);
+        const body=await request.json();
+        return json(await deletePortalSupportReport(env,session,body));
+      }
+
       if (url.pathname === "/api/portal/beta-access" && request.method === "GET") {
         const session = await resolvePortalSession(request, env);
         if (!session) return json({ ok:false, code:"AUTH_REQUIRED" },401);
@@ -5202,6 +5441,14 @@ export default {
         BETA_ACCESS_ADMIN_REQUIRED: 403,
         BETA_ACCESS_PLAN_UNAVAILABLE: 409,
         SLO_STATUS_ADMIN_REQUIRED: 403,
+        SUPPORT_REPORT_ADMIN_REQUIRED: 403,
+        SUPPORT_REPORT_SCHEMA_INVALID: 400,
+        SUPPORT_REPORT_PRIVACY_INVALID: 400,
+        SUPPORT_REPORT_DEVICE_REQUIRED: 400,
+        SUPPORT_REPORT_DEVICE_NOT_FOUND: 404,
+        SUPPORT_REPORT_TOO_LARGE: 413,
+        SUPPORT_REPORT_ID_REQUIRED: 400,
+        SUPPORT_REPORT_NOT_FOUND: 404,
         BILLING_NOT_CONFIGURED: 503,
         BILLING_ADMIN_REQUIRED: 403,
         BILLING_PLAN_INVALID: 400,
@@ -5291,5 +5538,6 @@ export default {
     ctx.waitUntil(runAuthRetentionMaintenance(env));
     ctx.waitUntil(cleanupExpiredDeviceCalls(env));
     ctx.waitUntil(runSloAlertMaintenance(env));
+    ctx.waitUntil(cleanupExpiredSupportReports(env));
   }
 };
