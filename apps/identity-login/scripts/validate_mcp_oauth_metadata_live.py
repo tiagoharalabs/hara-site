@@ -21,6 +21,7 @@ def need(ok,code):
 def main():
     ap=argparse.ArgumentParser()
     ap.add_argument("--expect-cimd",choices=("disabled","enabled"),default="disabled")
+    ap.add_argument("--expect-dcr",choices=("disabled","enabled"),default="disabled")
     args=ap.parse_args()
     rfc_status,rfc=get_json(RFC8414)
     oidc_status,oidc=get_json(OIDC)
@@ -36,6 +37,9 @@ def main():
         need(rfc.get("client_id_metadata_document_supported") is True,"CIMD_ENABLED")
     else:
         need(rfc.get("client_id_metadata_document_supported") is False,"CIMD_DISABLED")
+    if args.expect_dcr=="enabled":
+        need(rfc.get("registration_endpoint")==ISSUER+"/oauth/v2/register","DCR_ADVERTISED")
+    else:
         need("registration_endpoint" not in rfc,"DCR_NOT_ADVERTISED")
     print("HARA_IDENTITY_MCP_METADATA_LIVE=PASS")
     return 0

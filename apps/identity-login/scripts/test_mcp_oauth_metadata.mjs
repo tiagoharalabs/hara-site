@@ -16,6 +16,18 @@ assert.ok(metadata.grant_types_supported.includes("authorization_code"));
 assert.ok(metadata.code_challenge_methods_supported.includes("S256"));
 assert.equal(metadata.client_id_metadata_document_supported,false);
 assert.ok(!("registration_endpoint" in metadata));
+
+const dcrMetadata=oauthMetadataForIssuer(issuer,{dcrRegistrationEnabled:true});
+assert.equal(dcrMetadata.registration_endpoint,issuer+"/oauth/v2/register");
+assert.equal(dcrMetadata.client_id_metadata_document_supported,false);
+
+const cimdMetadata=oauthMetadataForIssuer(issuer,{cimdSupported:true});
+assert.equal(cimdMetadata.client_id_metadata_document_supported,true);
+assert.ok(!("registration_endpoint" in cimdMetadata));
+
+const bothMetadata=oauthMetadataForIssuer(issuer,{cimdSupported:true,dcrRegistrationEnabled:true});
+assert.equal(bothMetadata.client_id_metadata_document_supported,true);
+assert.equal(bothMetadata.registration_endpoint,issuer+"/oauth/v2/register");
 assert.throws(()=>oauthMetadataForIssuer("http://auth.example.test"),/HTTPS_REQUIRED/);
 
 const server=createOAuthMetadataServer({issuer});
@@ -40,6 +52,30 @@ try {
   assert.equal((await health.json()).component,"hara-identity-oauth-metadata");
 } finally {
   await new Promise((resolve)=>server.close(resolve));
+}
+
+const advertisedServer=createOAuthMetadataServer({
+  issuer,
+  cimdSupported:false,
+  dcrRegistrationEnabled:true,
+});
+await new Promise((resolve,reject)=>{
+  advertisedServer.once("error",reject);
+  advertisedServer.listen(0,"127.0.0.1",resolve);
+});
+try {
+  const address=advertisedServer.address();
+  const baseUrl=`http://127.0.0.1:${address.port}`;
+  const metadataResponse=await fetch(baseUrl+"/.well-known/oauth-authorization-server");
+  const advertised=await metadataResponse.json();
+  assert.equal(advertised.registration_endpoint,issuer+"/oauth/v2/register");
+  assert.equal(advertised.client_id_metadata_document_supported,false);
+  const healthResponse=await fetch(baseUrl+"/healthz");
+  const health=await healthResponse.json();
+  assert.equal(health.dcr_registration_enabled,true);
+  assert.equal(health.cimd_supported,false);
+} finally {
+  await new Promise((resolve)=>advertisedServer.close(resolve));
 }
 
 const validClientId="https://client.example.com/oauth/mcp-client.json";
@@ -88,6 +124,8 @@ console.log("HARA_IDENTITY_RFC8414_ADAPTER_METADATA=PASS");
 console.log("HARA_IDENTITY_RFC8414_ADAPTER_HTTP=PASS");
 console.log("HARA_IDENTITY_RFC8414_CIMD_NOT_ADVERTISED=PASS");
 console.log("HARA_IDENTITY_RFC8414_DCR_NOT_ADVERTISED=PASS");
+console.log("HARA_IDENTITY_RFC8414_DCR_CONDITIONAL_ADVERTISEMENT=PASS");
+console.log("HARA_IDENTITY_RFC8414_CIMD_CONDITIONAL_ADVERTISEMENT=PASS");
 console.log("HARA_IDENTITY_CIMD_URL_POLICY=PASS");
 console.log("HARA_IDENTITY_CIMD_REDIRECT_POLICY=PASS");
 console.log("HARA_IDENTITY_CIMD_PUBLIC_CLIENT_POLICY=PASS");

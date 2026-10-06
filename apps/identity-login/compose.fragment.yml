@@ -12,7 +12,7 @@ services:
 
 
   zitadel-dcr-gateway:
-    image: hara-identity-dcr-gateway:v0.1.0
+    image: hara-identity-dcr-gateway:v0.2.0
     restart: unless-stopped
     environment:
       HARA_DCR_GATEWAY_MODE: closed
@@ -20,6 +20,11 @@ services:
       HARA_DCR_UPSTREAM_PORT: "8080"
       HARA_IDENTITY_HOST: auth.haralabs.com.br
       HARA_DCR_ALLOW_CUSTOM_SCHEMES: "true"
+      HARA_DCR_REGISTRATION_LIMIT_PER_CLIENT: "10"
+      HARA_DCR_REGISTRATION_GLOBAL_LIMIT: "200"
+      HARA_DCR_REGISTRATION_WINDOW_MS: "3600000"
+      HARA_DCR_TRUST_CF_CONNECTING_IP: "true"
+      HARA_DCR_TRUST_FORWARDED_FOR: "false"
       PORT: "8082"
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8082/healthz"]
@@ -36,13 +41,20 @@ services:
       - traefik.http.routers.zitadel-dcr-gateway.entrypoints=web
       - traefik.http.routers.zitadel-dcr-gateway.service=zitadel-dcr-gateway
       - traefik.http.routers.zitadel-dcr-gateway.priority=800
+      - traefik.http.routers.zitadel-dcr-gateway.middlewares=zitadel-dcr-rate
+      - traefik.http.middlewares.zitadel-dcr-rate.ratelimit.average=30
+      - traefik.http.middlewares.zitadel-dcr-rate.ratelimit.period=1m
+      - traefik.http.middlewares.zitadel-dcr-rate.ratelimit.burst=10
+      - traefik.http.middlewares.zitadel-dcr-rate.ratelimit.sourcecriterion.requestheadername=CF-Connecting-IP
 
   zitadel-oauth-metadata:
-    image: hara-identity-oauth-metadata:v1.0.0
+    image: hara-identity-oauth-metadata:v1.1.0
     restart: unless-stopped
     entrypoint: ["node", "/app/server.mjs"]
     environment:
       HARA_IDENTITY_ISSUER: https://auth.haralabs.com.br
+      HARA_CIMD_ADVERTISED: "false"
+      HARA_DCR_REGISTRATION_ADVERTISED: "false"
       PORT: "8081"
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8081/healthz"]

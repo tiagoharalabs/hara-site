@@ -171,7 +171,7 @@ ZITADEL registration endpoint directly.
 
 Guard image:
 
-`hara-identity-dcr-gateway:v0.1.0`
+`hara-identity-dcr-gateway:v0.2.0`
 
 Default mode:
 
@@ -190,7 +190,9 @@ The guarded mode, which is not enabled merely by deploying the service:
 - rejects remote plaintext HTTP and dangerous URI schemes;
 - caps request size and redirect count;
 - strips unrecognized registration metadata before forwarding;
-- rate-limits new registrations by source address;
+- rate-limits new registrations twice: per client and globally in the gateway, plus a Traefik edge limiter;
+- derives the client rate key from Cloudflare `CF-Connecting-IP`; untrusted `X-Forwarded-For` is ignored by default;
+- strips client-address forwarding headers before proxying to ZITADEL;
 - requires a registration bearer token for management GET/DELETE;
 - validates replacement metadata on management PUT.
 
@@ -201,5 +203,16 @@ python3 apps/identity-login/scripts/validate_mcp_dcr_gateway.py
 ```
 
 Deploying the closed guard does **not** enable ZITADEL DCR and does not add a
-`registration_endpoint` to discovery. Enabling backend open DCR and switching
-the guard to `guarded` are separate promotion gates.
+`registration_endpoint` to discovery. The RFC 8414 adapter now supports a
+conditional DCR advertisement flag, but its compose default remains `false`.
+Enabling backend open DCR, switching the guard to `guarded`, and advertising the
+endpoint are one coordinated promotion transaction with automatic rollback.
+
+Promotion tooling:
+
+```bash
+python3 apps/identity-login/scripts/promote_mcp_dcr_guarded.py --self-test
+```
+
+A real promotion is intentionally explicit and must be run on the Identity host
+with `--pat-file`, `--compose-file` and `--execute`. Dry-run is the default.

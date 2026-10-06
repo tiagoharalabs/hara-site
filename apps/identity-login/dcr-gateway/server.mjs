@@ -1,6 +1,7 @@
 import { createServer } from "node:http";
 import { request as httpRequest } from "node:http";
 import { pathToFileURL } from "node:url";
+import { isIP } from "node:net";
 import { DCR_ADMISSION_LIMITS, validateDcrRegistration } from "./dcr-policy.mjs";
 
 const REGISTRATION_ROOT="/oauth/v2/register";
@@ -16,9 +17,25 @@ function json(res,status,value,headers={}) {
   res.end(JSON.stringify(value));
 }
 
-function clientAddress(req) {
-  const forwarded=String(req.headers["x-forwarded-for"] || "").split(",")[0].trim();
-  return forwarded || String(req.socket?.remoteAddress || "unknown");
+function normalizedIp(value) {
+  const text=String(value || "").trim().replace(/^\[/,"").replace(/\]$/,"");
+  return isIP(text) ? text : "";
+}
+
+export function clientAddress(req,{trustCfConnectingIp=true,trustForwardedFor=false}={}) {
+  if (trustCfConnectingIp) {
+    const cf=normalizedIp(req.headers["cf-connecting-ip"]);
+    if (cf) return "cf:"+cf;
+  }
+  if (trustForwardedFor) {
+    const forwarded=String(req.headers["x-forwarded-for"] || "")
+      .split(",")
+      .map((item)=>normalizedIp(item))
+      .find(Boolean);
+    if (forwarded) return "xff:"+forwarded;
+  }
+  const socket=normalizedIp(req.socket?.remoteAddress);
+  return "socket:"+(socket || "unknown");
 }
 
 function fixedWindowLimiter({limit,windowMs}) {
@@ -59,6 +76,8 @@ function proxyToUpstream(req,res,{upstreamHost,upstreamPort,body,externalHost}) 
     delete headers["content-length"];
     delete headers["connection"];
     delete headers["x-forwarded-for"];
+    delete headers["x-real-ip"];
+    delete headers["cf-connecting-ip"];
     headers.host=externalHost;
     headers["x-forwarded-proto"]="https";
     if (body) headers["content-length"]=String(body.length);
@@ -95,18 +114,31 @@ export function createDcrGatewayServer({
   upstreamPort=8080,
   externalHost="auth.haralabs.com.br",
   allowCustomSchemes=true,
-  registrationLimit=20,
+  registrationLimit=10,
+  registrationGlobalLimit=200,
   registrationWindowMs=60*60*1000,
+  trustCfConnectingIp=true,
+  trustForwardedFor=false,
 }={}) {
   if (!VALID_MODES.has(mode)) throw new Error("DCR_GATEWAY_MODE_INVALID");
   const consumeRegistration=fixedWindowLimiter({limit:registrationLimit,windowMs:registrationWindowMs});
+  const consumeGlobalRegistration=fixedWindowLimiter({limit:registrationGlobalLimit,windowMs:registrationWindowMs});
 
   return createServer(async(req,res)=>{
     const pathname=new URL(req.url || "/", "http://localhost").pathname;
     const method=String(req.method || "GET").toUpperCase();
 
     if (pathname === "/healthz") {
-      return json(res,200,{ok:true,component:"hara-identity-dcr-gateway",mode});
+      return json(res,200,{
+        ok:true,
+        component:"hara-identity-dcr-gateway",
+        mode,
+        registration_limit_per_client:registrationLimit,
+        registration_global_limit:registrationGlobalLimit,
+        registration_window_ms:registrationWindowMs,
+        trust_cf_connecting_ip:Boolean(trustCfConnectingIp),
+        trust_forwarded_for:Boolean(trustForwardedFor),
+      });
     }
     if (!(pathname === REGISTRATION_ROOT || pathname.startsWith(REGISTRATION_ROOT+"/"))) {
       return json(res,404,{error:"not_found"});
@@ -136,7 +168,11 @@ export function createDcrGatewayServer({
       catch { return json(res,400,{error:"invalid_client_metadata"}); }
 
       if (method === "POST" && pathname === REGISTRATION_ROOT) {
-        const rate=consumeRegistration(clientAddress(req));
+        const globalRate=consumeGlobalRegistration("global");
+        if (!globalRate.ok) {
+          return json(res,429,{error:"temporarily_unavailable"},{"retry-after":String(globalRate.retryAfter)});
+        }
+        const rate=consumeRegistration(clientAddress(req,{trustCfConnectingIp,trustForwardedFor}));
         if (!rate.ok) {
           return json(res,429,{error:"temporarily_unavailable"},{"retry-after":String(rate.retryAfter)});
         }
@@ -181,5 +217,10 @@ if (isDirectExecution()) {
     upstreamPort:Number(process.env.HARA_DCR_UPSTREAM_PORT || 8080),
     externalHost:process.env.HARA_IDENTITY_HOST || "auth.haralabs.com.br",
     allowCustomSchemes:String(process.env.HARA_DCR_ALLOW_CUSTOM_SCHEMES || "true").toLowerCase() === "true",
+    registrationLimit:Number(process.env.HARA_DCR_REGISTRATION_LIMIT_PER_CLIENT || 10),
+    registrationGlobalLimit:Number(process.env.HARA_DCR_REGISTRATION_GLOBAL_LIMIT || 200),
+    registrationWindowMs:Number(process.env.HARA_DCR_REGISTRATION_WINDOW_MS || 60*60*1000),
+    trustCfConnectingIp:String(process.env.HARA_DCR_TRUST_CF_CONNECTING_IP || "true").toLowerCase() === "true",
+    trustForwardedFor:String(process.env.HARA_DCR_TRUST_FORWARDED_FOR || "false").toLowerCase() === "true",
   }).listen(port,"0.0.0.0");
 }

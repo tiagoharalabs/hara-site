@@ -68,6 +68,9 @@ def main():
     run("COMMANDER_PREPROD_MCP_DCR_GATEWAY", [
         sys.executable, "apps/identity-login/scripts/validate_mcp_dcr_gateway.py",
     ])
+    run("COMMANDER_PREPROD_MCP_DCR_PROMOTION", [
+        sys.executable, "apps/identity-login/scripts/validate_mcp_dcr_promotion.py",
+    ])
     checks = (
         ("COMMANDER_PREPROD_UI", "validate_prod_static.py"),
         ("COMMANDER_PREPROD_AGENT", "validate_device_installers.py"),

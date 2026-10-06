@@ -5,7 +5,7 @@ import {
   DCR_ADMISSION_LIMITS,
   validateDcrRegistration,
 } from "../dcr-gateway/dcr-policy.mjs";
-import { createDcrGatewayServer } from "../dcr-gateway/server.mjs";
+import { clientAddress, createDcrGatewayServer } from "../dcr-gateway/server.mjs";
 
 assert.equal(classifyDcrRedirectUri("https://vscode.dev/redirect").type,"web");
 assert.equal(classifyDcrRedirectUri("http://127.0.0.1:33418").type,"loopback");
@@ -68,6 +68,27 @@ assert.throws(()=>validateDcrRegistration({
 }),/AUTHORIZATION_CODE_REQUIRED|GRANT_TYPE_NOT_ALLOWED/);
 assert.equal(DCR_ADMISSION_LIMITS.max_document_bytes,65536);
 
+const fakeReq=(headers={},remoteAddress="10.0.0.2")=>({
+  headers,
+  socket:{remoteAddress},
+});
+assert.equal(
+  clientAddress(fakeReq({"cf-connecting-ip":"203.0.113.10","x-forwarded-for":"198.51.100.9"})),
+  "cf:203.0.113.10",
+);
+assert.equal(
+  clientAddress(fakeReq({"x-forwarded-for":"198.51.100.9"})),
+  "socket:10.0.0.2",
+);
+assert.equal(
+  clientAddress(fakeReq({"x-forwarded-for":"198.51.100.9"}),{trustCfConnectingIp:false,trustForwardedFor:true}),
+  "xff:198.51.100.9",
+);
+assert.equal(
+  clientAddress(fakeReq({"cf-connecting-ip":"not-an-ip"})),
+  "socket:10.0.0.2",
+);
+
 const upstreamRequests=[];
 const upstream=createServer(async(req,res)=>{
   const chunks=[];
@@ -122,7 +143,12 @@ try {
     const base=`http://127.0.0.1:${closed.address().port}`;
     const health=await fetch(base+"/healthz");
     assert.equal(health.status,200);
-    assert.equal((await health.json()).mode,"closed");
+    const healthBody=await health.json();
+    assert.equal(healthBody.mode,"closed");
+    assert.equal(healthBody.registration_limit_per_client,10);
+    assert.equal(healthBody.registration_global_limit,200);
+    assert.equal(healthBody.trust_cf_connecting_ip,true);
+    assert.equal(healthBody.trust_forwarded_for,false);
 
     const denied=await fetch(base+"/oauth/v2/register",{
       method:"POST",
@@ -142,7 +168,8 @@ try {
       method:"POST",
       headers:{
         "content-type":"application/json",
-        "x-forwarded-for":"203.0.113.40",
+        "cf-connecting-ip":"203.0.113.40",
+        "x-forwarded-for":"198.51.100.200",
       },
       body:JSON.stringify({...cursor,untrusted_extension:"DROP_ME"}),
     });
@@ -152,6 +179,8 @@ try {
     assert.equal(response.untrusted_extension,undefined);
     assert.equal(upstreamRequests.at(-1).headers.host,"auth.haralabs.com.br");
     assert.equal(upstreamRequests.at(-1).headers["x-forwarded-proto"],"https");
+    assert.equal(upstreamRequests.at(-1).headers["cf-connecting-ip"],undefined);
+    assert.equal(upstreamRequests.at(-1).headers["x-forwarded-for"],undefined);
     const forwarded=JSON.parse(upstreamRequests.at(-1).body);
     assert.equal(forwarded.untrusted_extension,undefined);
     assert.equal(forwarded.token_endpoint_auth_method,"none");
@@ -167,7 +196,7 @@ try {
 
     const bad=await fetch(base+"/oauth/v2/register",{
       method:"POST",
-      headers:{"content-type":"application/json","x-forwarded-for":"203.0.113.41"},
+      headers:{"content-type":"application/json","cf-connecting-ip":"203.0.113.41"},
       body:JSON.stringify({client_name:"Bad",redirect_uris:["http://evil.example/cb"]}),
     });
     assert.equal(bad.status,400);
@@ -175,19 +204,24 @@ try {
     await new Promise((resolve)=>guarded.close(resolve));
   }
 
-  const limited=await startGateway({mode:"guarded",registrationLimit:1,registrationWindowMs:60000});
+  const limited=await startGateway({
+    mode:"guarded",
+    registrationLimit:1,
+    registrationGlobalLimit:50,
+    registrationWindowMs:60000,
+  });
   try {
     const base=`http://127.0.0.1:${limited.address().port}`;
     const payload=JSON.stringify(vscode);
     const first=await fetch(base+"/oauth/v2/register",{
       method:"POST",
-      headers:{"content-type":"application/json","x-forwarded-for":"203.0.113.50"},
+      headers:{"content-type":"application/json","cf-connecting-ip":"203.0.113.50"},
       body:payload,
     });
     assert.equal(first.status,201);
     const second=await fetch(base+"/oauth/v2/register",{
       method:"POST",
-      headers:{"content-type":"application/json","x-forwarded-for":"203.0.113.50"},
+      headers:{"content-type":"application/json","cf-connecting-ip":"203.0.113.50"},
       body:payload,
     });
     assert.equal(second.status,429);
@@ -195,6 +229,34 @@ try {
   } finally {
     await new Promise((resolve)=>limited.close(resolve));
   }
+  const globallyLimited=await startGateway({
+    mode:"guarded",
+    registrationLimit:10,
+    registrationGlobalLimit:2,
+    registrationWindowMs:60000,
+  });
+  try {
+    const base=`http://127.0.0.1:${globallyLimited.address().port}`;
+    const payload=JSON.stringify(vscode);
+    for (const ip of ["203.0.113.61","203.0.113.62"]) {
+      const response=await fetch(base+"/oauth/v2/register",{
+        method:"POST",
+        headers:{"content-type":"application/json","cf-connecting-ip":ip},
+        body:payload,
+      });
+      assert.equal(response.status,201);
+    }
+    const third=await fetch(base+"/oauth/v2/register",{
+      method:"POST",
+      headers:{"content-type":"application/json","cf-connecting-ip":"203.0.113.63"},
+      body:payload,
+    });
+    assert.equal(third.status,429);
+    assert.ok(Number(third.headers.get("retry-after")) >= 1);
+  } finally {
+    await new Promise((resolve)=>globallyLimited.close(resolve));
+  }
+
 } finally {
   await new Promise((resolve)=>upstream.close(resolve));
 }
@@ -208,4 +270,6 @@ console.log("HARA_IDENTITY_DCR_GATEWAY_GUARDED_PROXY=PASS");
 console.log("HARA_IDENTITY_DCR_GATEWAY_METADATA_SANITIZED=PASS");
 console.log("HARA_IDENTITY_DCR_GATEWAY_MANAGEMENT_TOKEN=PASS");
 console.log("HARA_IDENTITY_DCR_GATEWAY_RATE_LIMIT=PASS");
+console.log("HARA_IDENTITY_DCR_GATEWAY_GLOBAL_RATE_LIMIT=PASS");
+console.log("HARA_IDENTITY_DCR_GATEWAY_CF_IP_TRUST=PASS");
 console.log("HARA_IDENTITY_DCR_GATEWAY_SOURCE=PASS");
