@@ -187,8 +187,9 @@ def internal_canary() -> str:
         [
             "docker","run","--rm","-i",
             "--network",DOCKER_NETWORK,
+            "--entrypoint","node",
             CANARY_IMAGE,
-            "node","--input-type=module","-",
+            "--input-type=module","-",
         ],
         input=NODE_CANARY,
         text=True,
