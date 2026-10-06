@@ -125,3 +125,88 @@ Disposable 0.3.38 SLO heartbeat canary:
 
 DEV_SLO_HEARTBEAT=PASS
 DEV_SLO_RAW_CONTENT_SYNCED=FALSE
+
+## PROD live proof
+
+Worker:
+- 9bb49ba2-2955-4b22-b96f-ad8833247200
+- rollback: 7491e096-4e98-4978-8e09-c2b1f6ef5d0c
+- fail-closed suite PASS
+- public Agent release 0.3.38
+
+nucleo-a:
+- Agent 0.3.38
+- health PASS
+- support schema hara.commander-support-report.v2
+- SLO status PASS
+- success 99.2%
+- p50 700 ms at initial support read
+- p95 5,749 ms
+- p99 10,341 ms
+- latency sample >300
+- Founder lease metadata present without token disclosure
+- recent receipt hashes exposed as SHA-256 only
+- secret/customer content flags false
+
+sentinela-d:
+- Agent 0.3.38
+- health PASS
+- support schema hara.commander-support-report.v2
+- success 100%
+- p50 338 ms
+- p95 3,530 ms
+- p99 3,530 ms
+- latency sample 16
+- SLO status INSUFFICIENT_DATA (correct minimum-sample behavior)
+- secret exposure false
+
+Cloud aggregate:
+- D1 heartbeat snapshot contains percentile/SLO aggregates
+- raw events/action summary/command/payload/result/stdout/stderr absent
+
+Fleet 24h SLO at acceptance:
+- fleet_state PASS
+- online devices 2
+- evaluable devices 1
+- PASS devices 1
+- degraded devices 0
+- insufficient-data devices 1
+- missing snapshots 0
+- stale snapshots 0
+- weighted success rate 99.259%
+- worst-device p50 704 ms
+- worst-device p95 5,749 ms
+- worst-device p99 10,341 ms
+
+## Unit economics acceptance
+
+At one Free user consuming the full 10,000 monthly allowance:
+- old per-call quota model: 20,000 cloud reserve/terminal quota RPCs
+- local-budget model: <=100 cloud block allocations
+- quota-plane decision reduction: 99.5%
+
+At 100 all-Free users consuming full allowance:
+- 1,000,000 calls/month
+- 2,000,000 legacy quota RPCs
+- <=10,000 block allocations
+- 1,990,000 quota RPCs avoided
+
+At 1,000 all-Free users consuming full allowance:
+- 10,000,000 calls/month
+- 20,000,000 legacy quota RPCs
+- <=100,000 block allocations
+- 19,900,000 quota RPCs avoided
+
+USD cost remains intentionally unclaimed until live read-only analytics provides
+Worker CPU, DO requests/duration, D1 rows and egress.
+
+## Final state
+
+INTERNAL_BETA_SLO_SOURCE=CLOSED_PASS
+INTERNAL_BETA_SLO_DEV=CLOSED_PASS
+INTERNAL_BETA_SLO_PROD=CLOSED_PASS
+SUPPORT_BUNDLE_V2_SOURCE=CLOSED_PASS
+SUPPORT_BUNDLE_V2_LINUX_PROD=CLOSED_PASS
+LOCAL_FIRST_UNIT_ECONOMICS=CLOSED_PASS
+LIVE_USD_COST=PENDING_READ_ONLY_ANALYTICS
+PROD_ROLLBACK_READY=7491e096-4e98-4978-8e09-c2b1f6ef5d0c

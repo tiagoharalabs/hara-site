@@ -1,3 +1,22 @@
+# CURRENT OVERRIDE — Support report V2 — 2026-10-05
+
+Installed Linux Agent 0.3.38 now emits hara.commander-support-report.v2.
+
+V2 remains metadata-only and adds:
+- 24h Activity summary and INTERNAL_BETA_V1 SLO;
+- local product-lease plan/mode/expiry with only a boolean for signed-token presence;
+- local-budget counters/state without lease token;
+- operations.sqlite3 size/mode;
+- up to 10 recent receipt SHA-256 identifiers.
+
+Explicit privacy flags are false for secret/customer/command/payload/result
+content inclusion.
+
+The installer retains hara.commander-support-report.v1 only as a compatibility
+fallback when the installed Agent is absent or cannot emit v2.
+
+---
+
 # H.A.R.A. Commander — customer support workflow V1 — 2026-09-23
 
 ## Scope

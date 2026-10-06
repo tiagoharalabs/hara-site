@@ -25,9 +25,9 @@ Baseline at creation: `53d53c3b33028712d70ecfb3b18aef9858205210`
 
 | Gate | Current truth | Next proof / delivery |
 | --- | --- | --- |
-| SLO | Activity already measures queue/execution/total latency and success | Define first customer SLO, publish internal p50/p95/p99 + availability gate, alert on violations |
-| Cost model | Transaction accounting exists; human 10k model still marks D1 duration cost PENDING live analytics | Run controlled 10k workload, measure Worker/D1/DO cost and calls-per-user economics |
-| Support bundle | Device doctor/health/readiness exist | One sanitized bundle with version, health, last error classes, transport, receipt IDs and no command/payload content |
+| SLO | INTERNAL_BETA_V1 live in PROD: success>=99%, p50<=1s, p95<=6s, p99<=12s, min sample 20. Fleet acceptance PASS at 99.259% weighted success / worst p95 5.749s / p99 10.341s | Accumulate broader natural samples, define alert delivery/escalation, then tighten thresholds from evidence; this is not yet contractual SLA |
+| Cost model | Local-first unit economics CLOSED_PASS: full Free 10k old quota plane 20,000 RPCs vs <=100 block allocations (99.5% reduction); 100-user and 1,000-user rungs modeled. USD intentionally unclaimed | Obtain read-only Cloudflare Analytics and measure Worker CPU, DO requests/duration, D1 rows/egress on 100 -> 1,000 user campaign |
+| Support bundle | support-report.v2 live on Linux 0.3.38: version/health/error class, 24h SLO, lease/budget metadata, DB size/mode, receipt hashes; explicit no command/payload/result/secret flags | Add support-plane ingestion/attachment workflow and retention policy; preserve v1 pre-install fallback |
 | Clean Linux acceptance | Linux live proven on existing hosts | Fresh VM install/update/uninstall/re-enroll acceptance with no developer state present |
 | Bootstrap trust maturity | HTTPS origin + manifest + SHA + version + self-test + runtime attestation PASS | Add an independent release trust anchor/signature when moving beyond beta |
 
