@@ -171,6 +171,8 @@ def main() -> int:
         "/agent/linux.py",
         "/agent/windows.ps1",
         "/release/agent-manifest.json",
+        "/release/agent-manifest.sig.json",
+        "/release/release-signing-public.jwk",
         "/release/SHA256SUMS",
     ):
         need(public_path in DRIFT, "RUNTIME_DRIFT_" + public_path.upper().replace("/", "_").replace(".", "_"))
@@ -180,7 +182,8 @@ def main() -> int:
     need("AGENT_SELF_TEST_FAILED" in WINDOWS, "WINDOWS_SELF_TEST_FAIL_CLOSED")
 
     print("COMMANDER_BOOTSTRAP_INITIAL_TRUST=WEB_ORIGIN")
-    print("COMMANDER_BOOTSTRAP_INDEPENDENT_TRUST_ANCHOR=PENDING_MATURITY")
+    print("COMMANDER_RELEASE_MANIFEST_INDEPENDENT_TRUST_ANCHOR=PASS")
+    print("COMMANDER_BOOTSTRAP_OUT_OF_BAND_TRUST=PENDING_GA_MATURITY")
     print("COMMANDER_AGENT_POST_BOOTSTRAP_INTEGRITY=PASS")
     print("COMMANDER_RELEASE_RUNTIME_ATTESTATION=READY")
     print("COMMANDER_SUPPLY_CHAIN=PASS")

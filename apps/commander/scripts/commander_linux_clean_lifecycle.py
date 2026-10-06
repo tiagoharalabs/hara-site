@@ -61,6 +61,14 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(raw)
             return
+        if path == "/release/agent-manifest.sig.json":
+            raw = (APP / "public" / "release" / "agent-manifest.sig.json").read_bytes()
+            self.send_response(200)
+            self.send_header("content-type", "application/json")
+            self.send_header("content-length", str(len(raw)))
+            self.end_headers()
+            self.wfile.write(raw)
+            return
         if path == "/agent/linux.py":
             raw = AGENT.read_bytes()
             self.send_response(200)

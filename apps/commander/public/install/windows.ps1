@@ -3,6 +3,9 @@ $ErrorActionPreference = "Stop"
 $Action = $Action.TrimStart("-").ToLowerInvariant()
 
 $BaseUrl = if ($env:HARA_COMMANDER_URL) { $env:HARA_COMMANDER_URL.TrimEnd("/") } else { "https://commander.haralabs.com.br" }
+$ReleaseSigningKid = "commander-release-v1"
+$ReleaseSigningN = "pydKPlIuz-00dO2sGHCTY1Z968YbjZ_-r7qWSKRhFCyCfJfaaL53XWS-jaXxWFzhqEryeqFxuUvL-8OdCKxtG_Lo7Ac6FWS_k2EFrgQmdCPja9N78MMQd7gC8Hu68BhyqkoNa2NMpg610NWcYwTQjAz9bcyKcoc8uV5G-iX3aXSRAJYe0BKi4H9xfARD5TWE3N3DuMrNZybabsnfk-88xR5AFcXZ58WhvMuUvRp7_26cYhuHd4RLyPKNUI7WK9if8aa48UMqF49KQ64NSQHhOVfnZjjmiwfKtWOBsO_DstVYyLnVtfttmeaTZGgwuHd37XOsz0Q267CKHUORYyvTJw"
+$ReleaseSigningE = "AQAB"
 $ApprovalModeRaw = if ($env:HARA_COMMANDER_APPROVAL_MODE) { ([string]$env:HARA_COMMANDER_APPROVAL_MODE).Trim().ToUpperInvariant() } else { "PERSISTENT_TRUSTED" }
 $ApprovalMode = switch ($ApprovalModeRaw) {
   "ASK" { "ASK_EVERY_ACTION" }
@@ -53,12 +56,54 @@ function Wait-AgentStartup([string]$ExpectedVersion,[string]$PreviousStarted,[in
   return $false
 }
 
+function Convert-Base64UrlBytes([string]$Value) {
+  $text = $Value.Replace("-","+").Replace("_","/")
+  switch ($text.Length % 4) {
+    2 { $text += "==" }
+    3 { $text += "=" }
+  }
+  return [Convert]::FromBase64String($text)
+}
+
+function Assert-ReleaseManifestSignature([byte[]]$ManifestBytes,$SignatureObject) {
+  if (-not $SignatureObject -or [string]$SignatureObject.schema -ne "hara.commander-release-signature.v1") { throw "AGENT_RELEASE_SIGNATURE_INVALID" }
+  if ([string]$SignatureObject.alg -ne "RS256" -or [string]$SignatureObject.kid -ne $ReleaseSigningKid) { throw "AGENT_RELEASE_SIGNATURE_INVALID" }
+  $sha=[Security.Cryptography.SHA256]::Create()
+  try { $digest=$sha.ComputeHash($ManifestBytes) } finally { $sha.Dispose() }
+  $hex=([BitConverter]::ToString($digest)).Replace("-","").ToLowerInvariant()
+  if ($hex -ne ([string]$SignatureObject.manifest_sha256).ToLowerInvariant()) { throw "AGENT_RELEASE_SIGNATURE_INVALID" }
+  $rsa=[Security.Cryptography.RSA]::Create()
+  try {
+    $params=New-Object Security.Cryptography.RSAParameters
+    $params.Modulus=Convert-Base64UrlBytes $ReleaseSigningN
+    $params.Exponent=Convert-Base64UrlBytes $ReleaseSigningE
+    $rsa.ImportParameters($params)
+    $sig=Convert-Base64UrlBytes ([string]$SignatureObject.signature)
+    if (-not $rsa.VerifyData($ManifestBytes,$sig,[Security.Cryptography.HashAlgorithmName]::SHA256,[Security.Cryptography.RSASignaturePadding]::Pkcs1)) {
+      throw "AGENT_RELEASE_SIGNATURE_INVALID"
+    }
+  } finally {
+    $rsa.Dispose()
+  }
+}
+
 function Get-AgentReleaseMetadata {
-  $manifest = Invoke-RestMethod -Uri "$BaseUrl/release/agent-manifest.json" -Method Get -Headers @{ Accept="application/json" } -TimeoutSec 30 -MaximumRedirection 0
-  if (-not $manifest -or [string]$manifest.schema -ne "hara.commander-agent-release.v1") { throw "AGENT_RELEASE_MANIFEST_INVALID" }
-  $entry = @($manifest.files | Where-Object { [string]$_.path -eq "agent/windows.ps1" } | Select-Object -First 1)
-  if (-not $entry -or -not $entry.sha256 -or -not $manifest.agent_version) { throw "AGENT_RELEASE_MANIFEST_INVALID" }
-  return [PSCustomObject]@{ Version=[string]$manifest.agent_version; Sha256=([string]$entry.sha256).ToLowerInvariant() }
+  $manifestPath=Join-Path $env:TEMP ("hara-commander-manifest-"+[guid]::NewGuid().ToString("N")+".json")
+  $signaturePath=Join-Path $env:TEMP ("hara-commander-manifest-"+[guid]::NewGuid().ToString("N")+".sig.json")
+  try {
+    Invoke-WebRequest -Uri "$BaseUrl/release/agent-manifest.json" -OutFile $manifestPath -UseBasicParsing -TimeoutSec 30 -MaximumRedirection 0
+    Invoke-WebRequest -Uri "$BaseUrl/release/agent-manifest.sig.json" -OutFile $signaturePath -UseBasicParsing -TimeoutSec 30 -MaximumRedirection 0
+    $manifestBytes=[IO.File]::ReadAllBytes($manifestPath)
+    $signature=Get-Content -Raw -LiteralPath $signaturePath | ConvertFrom-Json
+    Assert-ReleaseManifestSignature $manifestBytes $signature
+    $manifest=[Text.Encoding]::UTF8.GetString($manifestBytes) | ConvertFrom-Json
+    if (-not $manifest -or [string]$manifest.schema -ne "hara.commander-agent-release.v1") { throw "AGENT_RELEASE_MANIFEST_INVALID" }
+    $entry = @($manifest.files | Where-Object { [string]$_.path -eq "agent/windows.ps1" } | Select-Object -First 1)
+    if (-not $entry -or -not $entry.sha256 -or -not $manifest.agent_version) { throw "AGENT_RELEASE_MANIFEST_INVALID" }
+    return [PSCustomObject]@{ Version=[string]$manifest.agent_version; Sha256=([string]$entry.sha256).ToLowerInvariant() }
+  } finally {
+    Remove-Item -Force -LiteralPath $manifestPath,$signaturePath -ErrorAction SilentlyContinue
+  }
 }
 
 function Assert-AgentIntegrity {
@@ -118,8 +163,7 @@ function Invoke-DeviceAction {
 function Invoke-Preflight {
   $health = Invoke-RestMethod -Uri "$BaseUrl/api/health" -Method Get -Headers @{ Accept="application/json" } -TimeoutSec 15 -MaximumRedirection 0
   if (-not $health.ok -or [string]$health.service -ne "hara-commander") { throw "COMMANDER_HEALTH_INVALID" }
-  $manifest = Invoke-RestMethod -Uri "$BaseUrl/release/agent-manifest.json" -Method Get -Headers @{ Accept="application/json" } -TimeoutSec 15 -MaximumRedirection 0
-  if (-not $manifest -or [string]$manifest.schema -ne "hara.commander-agent-release.v1" -or -not $manifest.agent_version) { throw "AGENT_RELEASE_MANIFEST_INVALID" }
+  $release = Get-AgentReleaseMetadata
   $scheduledTaskReady = [bool](Get-Command Register-ScheduledTask -ErrorAction SilentlyContinue)
   $powershellReady = [bool](Get-Command powershell.exe -ErrorAction SilentlyContinue)
   $report = [ordered]@{
@@ -129,7 +173,8 @@ function Invoke-Preflight {
     commander_url = $BaseUrl
     commander_health = $true
     release_manifest = $true
-    stable_agent_version = [string]$manifest.agent_version
+    release_signature = $true
+    stable_agent_version = [string]$release.Version
     persistence = "scheduled-task"
     persistence_ready = ($scheduledTaskReady -and $powershellReady)
     mutation_performed = $false

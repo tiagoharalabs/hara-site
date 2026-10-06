@@ -29,7 +29,7 @@ Baseline at creation: `53d53c3b33028712d70ecfb3b18aef9858205210`
 | Cost model | Local-first unit economics CLOSED_PASS: full Free 10k old quota plane 20,000 RPCs vs <=100 block allocations (99.5% reduction); 100-user and 1,000-user rungs modeled. USD intentionally unclaimed | Obtain read-only Cloudflare Analytics and measure Worker CPU, DO requests/duration, D1 rows/egress on 100 -> 1,000 user campaign |
 | Support bundle | support-report.v2 live on Linux 0.3.38 plus tenant-scoped support-plane live in PROD: OWNER/ADMIN submit/list/delete, server allowlist sanitization, 16KiB cap, 30d retention, cross-tenant deny, no raw command/payload/result | Add optional external ticket/export integration only if needed; current in-product retention/support evidence is closed |
 | Clean Linux acceptance | Hermetic clean-home lifecycle PASS with official installer + local HTTP backend: install, support v2, update/rollback-ready, revoked credential re-enroll, uninstall, token non-exposure and clean home | Repeat once on a truly fresh external VM before GA; lifecycle logic itself is now a permanent preprod gate |
-| Bootstrap trust maturity | HTTPS origin + manifest + SHA + version + self-test + runtime attestation PASS | Add an independent release trust anchor/signature when moving beyond beta |
+| Bootstrap trust maturity | Independent RS256 trust anchor for signed release manifest is SOURCE/PREPROD PASS; Linux/Windows install/update verify manifest signature before Agent hash/version/self-test. Initial installer bootstrap still relies on canonical HTTPS origin | Prove DEV/PROD served signature on Linux/Windows; before GA add an out-of-band installer/key distribution channel if required by threat model |
 
 ## Canonical product rules
 

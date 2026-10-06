@@ -2,6 +2,9 @@
 set -euo pipefail
 
 BASE_URL="${HARA_COMMANDER_URL:-https://commander.haralabs.com.br}"
+RELEASE_SIGNING_KID="commander-release-v1"
+RELEASE_SIGNING_N="pydKPlIuz-00dO2sGHCTY1Z968YbjZ_-r7qWSKRhFCyCfJfaaL53XWS-jaXxWFzhqEryeqFxuUvL-8OdCKxtG_Lo7Ac6FWS_k2EFrgQmdCPja9N78MMQd7gC8Hu68BhyqkoNa2NMpg610NWcYwTQjAz9bcyKcoc8uV5G-iX3aXSRAJYe0BKi4H9xfARD5TWE3N3DuMrNZybabsnfk-88xR5AFcXZ58WhvMuUvRp7_26cYhuHd4RLyPKNUI7WK9if8aa48UMqF49KQ64NSQHhOVfnZjjmiwfKtWOBsO_DstVYyLnVtfttmeaTZGgwuHd37XOsz0Q267CKHUORYyvTJw"
+RELEASE_SIGNING_E="AQAB"
 CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/hara-commander"
 BIN_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/hara-commander"
 USER_BIN="${HOME}/.local/bin"
@@ -39,6 +42,30 @@ need() {
 need curl
 need python3
 need systemctl
+
+verify_release_manifest_signature() {
+  local manifest="$1" signature="$2"
+  python3 - "$manifest" "$signature" "$RELEASE_SIGNING_KID" "$RELEASE_SIGNING_N" "$RELEASE_SIGNING_E" <<'PYRELEASESIG'
+import base64,hashlib,hmac,json,sys
+manifest_path,sig_path,kid,n_b64,e_b64=sys.argv[1:6]
+def b64ud(value):
+    return base64.urlsafe_b64decode(value+"="*((4-len(value)%4)%4))
+raw=open(manifest_path,"rb").read()
+obj=json.load(open(sig_path,encoding="utf-8"))
+if obj.get("schema")!="hara.commander-release-signature.v1": raise SystemExit(2)
+if obj.get("alg")!="RS256" or obj.get("kid")!=kid: raise SystemExit(2)
+if obj.get("manifest_sha256")!=hashlib.sha256(raw).hexdigest(): raise SystemExit(3)
+sig=b64ud(str(obj.get("signature") or ""))
+n=int.from_bytes(b64ud(n_b64),"big"); e=int.from_bytes(b64ud(e_b64),"big")
+size=(n.bit_length()+7)//8
+if len(sig)!=size: raise SystemExit(4)
+em=pow(int.from_bytes(sig,"big"),e,n).to_bytes(size,"big")
+digest_info=bytes.fromhex("3031300d060960864801650304020105000420")+hashlib.sha256(raw).digest()
+padding=size-len(digest_info)-3
+expected=b"\x00\x01"+(b"\xff"*padding)+b"\x00"+digest_info
+if padding<8 or not hmac.compare_digest(em,expected): raise SystemExit(5)
+PYRELEASESIG
+}
 
 read_config_value() {
   local key="$1"
@@ -117,14 +144,21 @@ PY
 
 download_agent() {
   mkdir -p "$BIN_DIR"
-  local tmp manifest expected_sha expected_version actual_sha actual_version
+  local tmp manifest signature expected_sha expected_version actual_sha actual_version
   tmp="$(mktemp "$BIN_DIR/.hara-commander-agent.XXXXXX")"
   manifest="$(mktemp "$BIN_DIR/.hara-commander-manifest.XXXXXX")"
+  signature="$(mktemp "$BIN_DIR/.hara-commander-signature.XXXXXX")"
   if ! curl -fsS --max-time 30 "$BASE_URL/agent/linux.py" -o "$tmp"; then
-    rm -f "$tmp" "$manifest"; return 1
+    rm -f "$tmp" "$manifest" "$signature"; return 1
   fi
   if ! curl -fsS --max-time 30 "$BASE_URL/release/agent-manifest.json" -o "$manifest"; then
-    rm -f "$tmp" "$manifest"; echo 'AGENT_RELEASE_MANIFEST_DOWNLOAD_FAILED' >&2; return 1
+    rm -f "$tmp" "$manifest" "$signature"; echo 'AGENT_RELEASE_MANIFEST_DOWNLOAD_FAILED' >&2; return 1
+  fi
+  if ! curl -fsS --max-time 30 "$BASE_URL/release/agent-manifest.sig.json" -o "$signature"; then
+    rm -f "$tmp" "$manifest" "$signature"; echo 'AGENT_RELEASE_SIGNATURE_DOWNLOAD_FAILED' >&2; return 1
+  fi
+  if ! verify_release_manifest_signature "$manifest" "$signature"; then
+    rm -f "$tmp" "$manifest" "$signature"; echo 'AGENT_RELEASE_SIGNATURE_INVALID' >&2; return 1
   fi
   readarray -t META < <(python3 - "$manifest" <<'PYMANIFEST'
 import json,sys
@@ -135,7 +169,7 @@ entry=next((item for item in obj.get("files",[]) if item.get("path")=="agent/lin
 if not isinstance(version,str) or not entry or not isinstance(entry.get("sha256"),str): raise SystemExit("AGENT_RELEASE_MANIFEST_INVALID")
 print(version); print(entry["sha256"].lower())
 PYMANIFEST
-  ) || { rm -f "$tmp" "$manifest"; echo 'AGENT_RELEASE_MANIFEST_INVALID' >&2; return 1; }
+  ) || { rm -f "$tmp" "$manifest" "$signature"; echo 'AGENT_RELEASE_MANIFEST_INVALID' >&2; return 1; }
   expected_version="${META[0]}"
   expected_sha="${META[1]}"
   actual_sha="$(python3 - "$tmp" <<'PYHASH'
@@ -143,14 +177,14 @@ import hashlib,sys
 print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest())
 PYHASH
 )"
-  [ "$actual_sha" = "$expected_sha" ] || { rm -f "$tmp" "$manifest"; echo 'AGENT_SHA256_MISMATCH' >&2; return 1; }
+  [ "$actual_sha" = "$expected_sha" ] || { rm -f "$tmp" "$manifest" "$signature"; echo 'AGENT_SHA256_MISMATCH' >&2; return 1; }
   chmod 700 "$tmp"
   actual_version="$(python3 "$tmp" --version 2>/dev/null || true)"
-  [ "$actual_version" = "$expected_version" ] || { rm -f "$tmp" "$manifest"; echo 'AGENT_VERSION_MANIFEST_MISMATCH' >&2; return 1; }
+  [ "$actual_version" = "$expected_version" ] || { rm -f "$tmp" "$manifest" "$signature"; echo 'AGENT_VERSION_MANIFEST_MISMATCH' >&2; return 1; }
   if ! python3 "$tmp" --self-test >/dev/null; then
-    rm -f "$tmp" "$manifest"; echo 'AGENT_UPDATE_VALIDATION_FAILED' >&2; return 1
+    rm -f "$tmp" "$manifest" "$signature"; echo 'AGENT_UPDATE_VALIDATION_FAILED' >&2; return 1
   fi
-  rm -f "$manifest"
+  rm -f "$manifest" "$signature"
   mv -f "$tmp" "$AGENT"
   chmod 700 "$AGENT"
   printf 'HARA_COMMANDER_AGENT_INTEGRITY=PASS\n'
@@ -347,12 +381,15 @@ cleanup_failed_reenroll() {
 }
 
 preflight_agent() {
-  local manifest health persistence_ready=FALSE arch
+  local manifest signature health persistence_ready=FALSE arch
   manifest="$(mktemp)"
+  signature="$(mktemp)"
   health="$(mktemp)"
-  trap 'rm -f "$manifest" "$health"' RETURN
+  trap 'rm -f "$manifest" "$signature" "$health"' RETURN
   curl -fsS --max-time 15 "$BASE_URL/api/health" -o "$health" || { echo 'COMMANDER_HEALTH_UNREACHABLE' >&2; return 10; }
   curl -fsS --max-time 15 "$BASE_URL/release/agent-manifest.json" -o "$manifest" || { echo 'AGENT_RELEASE_MANIFEST_UNREACHABLE' >&2; return 11; }
+  curl -fsS --max-time 15 "$BASE_URL/release/agent-manifest.sig.json" -o "$signature" || { echo 'AGENT_RELEASE_SIGNATURE_UNREACHABLE' >&2; return 11; }
+  verify_release_manifest_signature "$manifest" "$signature" || { echo 'AGENT_RELEASE_SIGNATURE_INVALID' >&2; return 11; }
   systemctl --user show-environment >/dev/null 2>&1 && persistence_ready=TRUE || true
   arch="$(uname -m)"
   python3 - "$health" "$manifest" "$BASE_URL" "$arch" "$persistence_ready" <<'PYPREFLIGHT'
@@ -371,6 +408,7 @@ report={
   "commander_url":sys.argv[3],
   "commander_health":True,
   "release_manifest":True,
+  "release_signature":True,
   "stable_agent_version":version,
   "persistence":"systemd-user",
   "persistence_ready":ready,

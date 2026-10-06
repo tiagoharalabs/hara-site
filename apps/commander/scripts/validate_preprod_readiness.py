@@ -83,6 +83,7 @@ def main():
         ("COMMANDER_PREPROD_SUPPORT_BUNDLE_V2", "validate_support_bundle_v2.py"),
         ("COMMANDER_PREPROD_SUPPORT_PLANE", "validate_support_plane.py"),
         ("COMMANDER_PREPROD_CLEAN_LINUX_LIFECYCLE", "validate_clean_linux_lifecycle.py"),
+        ("COMMANDER_PREPROD_RELEASE_TRUST", "validate_release_signature.py"),
         ("COMMANDER_PREPROD_LOCAL_FIRST_UNIT_ECONOMICS", "validate_local_first_unit_economics.py"),
         ("COMMANDER_PREPROD_UNLIMITED_PLAN_FASTPATH", "validate_unlimited_plan_fastpath.py"),
         ("COMMANDER_PREPROD_LOCAL_ACTIVITY_STORE", "validate_local_activity_store.py"),
