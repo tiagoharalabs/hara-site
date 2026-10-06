@@ -73,3 +73,33 @@ PASS:
 RELEASE_MANIFEST_INDEPENDENT_TRUST_ANCHOR=CLOSED_PASS
 INITIAL_BOOTSTRAP_TRUST=HTTPS_WEB_ORIGIN
 OUT_OF_BAND_BOOTSTRAP_TRUST=PENDING_GA_MATURITY
+
+## DEV live proof
+
+Worker:
+- 27ec7858-fef0-48b2-8bb5-ce9e5f1b6864
+
+Linux served installer preflight:
+- schema hara.commander-device-preflight.v1
+- release_manifest=true
+- release_signature=true
+- stable_agent_version=0.3.38
+- mutation_performed=false
+- PASS
+
+Windows 11 VM served installer preflight:
+- platform WINDOWS
+- architecture x64
+- release_manifest=true
+- release_signature=true
+- stable_agent_version=0.3.38
+- persistence_ready=true
+- mutation_performed=false
+- preflight exit 0
+- QGA exit 0
+
+The Windows proof used the real DEV-served installer and verified the detached
+signature over exact downloaded manifest bytes. No enrollment or local product
+state was changed.
+
+RELEASE_MANIFEST_TRUST_DEV=CLOSED_PASS
