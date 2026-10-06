@@ -47,10 +47,11 @@ need("upgrade-insecure-requests" not in HEADERS, "CSP_NO_HTTP_UPGRADE")
 ns = runpy.run_path(str(AGENT))
 with tempfile.TemporaryDirectory(prefix="hara-localhost-activity-") as td:
     root = Path(td)
-    ns["DATA_DIR"] = root
-    ns["OPERATIONS_DB_FILE"] = root / "operations.sqlite3"
-    ns["CONSOLE_EVENTS_FILE"] = root / "console-events.jsonl"
-    ns["LOCAL_PORTAL_PORT"] = 0
+    globals_map = ns["start_local_portal_server"].__globals__
+    globals_map["DATA_DIR"] = root
+    globals_map["OPERATIONS_DB_FILE"] = root / "operations.sqlite3"
+    globals_map["CONSOLE_EVENTS_FILE"] = root / "console-events.jsonl"
+    globals_map["LOCAL_PORTAL_PORT"] = 0
 
     config = {
         "HARA_COMMANDER_URL": "https://commander.haralabs.com.br",
