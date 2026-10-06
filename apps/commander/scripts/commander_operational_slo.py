@@ -162,13 +162,13 @@ def self_test() -> None:
     }
     rows = [
         {
-            "device_name": "A", "platform": "LINUX", "agent_version": "0.3.38",
+            "device_name": "A", "platform": "LINUX", "agent_version": "0.3.39",
             "last_seen_at_utc": (now - timedelta(seconds=10)).isoformat(),
             "activity_summary_at_utc": (now - timedelta(seconds=10)).isoformat(),
             "activity_summary_json": json.dumps(good),
         },
         {
-            "device_name": "B", "platform": "LINUX", "agent_version": "0.3.38",
+            "device_name": "B", "platform": "LINUX", "agent_version": "0.3.39",
             "last_seen_at_utc": (now - timedelta(seconds=10)).isoformat(),
             "activity_summary_at_utc": (now - timedelta(seconds=10)).isoformat(),
             "activity_summary_json": json.dumps(sparse),

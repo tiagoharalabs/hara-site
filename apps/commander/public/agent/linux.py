@@ -24,7 +24,7 @@ from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-AGENT_VERSION = "0.3.38"
+AGENT_VERSION = "0.3.39"
 CONFIG_FILE = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home()/".config"))) / "hara-commander/device.env"
 DATA_DIR = Path(os.environ.get("XDG_DATA_HOME", str(Path.home()/".local/share"))) / "hara-commander"
 RECEIPT_DIR = DATA_DIR / "receipts"
@@ -960,6 +960,9 @@ class _LocalPortalHandler(BaseHTTPRequestHandler):
                 "local_direct":True,
             })
             self._json(200,snap)
+            return
+        if parsed.path=="/v1/support":
+            self._json(200,build_support_report())
             return
         self._json(404,{"ok":False,"code":"LOCAL_NOT_FOUND"})
 
@@ -2630,7 +2633,7 @@ def commander_doctor():
     print("SECRET_MATERIAL_EXPOSED=FALSE")
     return 0 if health_ok else 2
 
-def commander_support():
+def build_support_report():
     config=load_config()
     runtime={}
     try:
@@ -2729,6 +2732,10 @@ def commander_support():
             "result_content_included":False,
         },
     }
+    return report
+
+def commander_support():
+    report=build_support_report()
     print(json.dumps(report,sort_keys=True,separators=(",",":"),ensure_ascii=False))
     return 0
 

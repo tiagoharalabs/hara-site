@@ -47,6 +47,7 @@
   const ACTIVITY_CACHE_MS = 15000;
   const LOCAL_ACTIVITY_ORIGIN = "http://127.0.0.1:32145";
   const LOCAL_ACTIVITY_TIMEOUT_MS = 900;
+  const LOCAL_SUPPORT_TIMEOUT_MS = 1500;
   const revokeConfirmTimers = new Map();
   let currentView = null;
   let deviceSectionTab = "devices";
@@ -450,6 +451,94 @@
       return null;
     } finally {
       clearTimeout(timer);
+    }
+  }
+
+  function supportReportPrivacySafe(report) {
+    if (!report || report.schema !== "hara.commander-support-report.v2") return false;
+    const privacy=report.privacy || {};
+    return [
+      "secret_material_exposed",
+      "customer_content_included",
+      "command_content_included",
+      "payload_content_included",
+      "result_content_included",
+    ].every((key)=>privacy[key] === false);
+  }
+
+  async function fetchLocalSupportReport() {
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),LOCAL_SUPPORT_TIMEOUT_MS);
+    try {
+      const request=new Request(LOCAL_ACTIVITY_ORIGIN + "/v1/support",{
+        cache:"no-store",
+        mode:"cors",
+        credentials:"omit",
+        signal:controller.signal,
+        targetAddressSpace:"loopback",
+      });
+      const response=await fetch(request);
+      if (!response.ok) return null;
+      const payload=await response.json().catch(()=>null);
+      return supportReportPrivacySafe(payload) ? payload : null;
+    } catch (_error) {
+      return null;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  async function submitLocalSupportReport(trigger=null) {
+    const statusNode=document.getElementById("supportReportStatus");
+    const original=trigger?.textContent || "Enviar diagnóstico";
+    if (!remotePortal || !sessionAuthenticated) {
+      if (statusNode) statusNode.textContent="Entre no Commander para enviar um diagnóstico.";
+      return;
+    }
+    if (!["OWNER","ADMIN"].includes(String(currentRole || "").toUpperCase())) {
+      if (statusNode) statusNode.textContent="Somente OWNER/ADMIN podem enviar diagnósticos ao suporte.";
+      return;
+    }
+    const allowed=await shouldAttemptLocalActivity(true);
+    if (!allowed) {
+      if (statusNode) statusNode.textContent="O navegador bloqueou o acesso ao Agent local. Use o comando Diagnóstico na lista de computadores.";
+      return;
+    }
+    if (trigger) {
+      trigger.disabled=true;
+      trigger.textContent="Coletando…";
+    }
+    try {
+      const report=await fetchLocalSupportReport();
+      if (!report) throw new Error("LOCAL_SUPPORT_UNAVAILABLE");
+      if (trigger) trigger.textContent="Enviando…";
+      const response=await fetch("/api/portal/support-reports",{
+        method:"POST",
+        cache:"no-store",
+        credentials:"same-origin",
+        headers:{"content-type":"application/json"},
+        body:JSON.stringify(report),
+      });
+      if (handlePortalAuthFailure(response,"Entre novamente para enviar o diagnóstico.")) return;
+      const payload=await response.json().catch(()=>({}));
+      if (!response.ok) throw new Error(String(payload?.code || "SUPPORT_REPORT_SUBMIT_FAILED"));
+      const expires=payload?.expires_at_utc ? new Date(payload.expires_at_utc).toLocaleDateString("pt-BR") : "30 dias";
+      if (statusNode) statusNode.textContent="Diagnóstico sanitizado enviado · retenção até " + expires + ".";
+      showToast("Diagnóstico sanitizado enviado ao suporte.");
+    } catch (error) {
+      const code=String(error?.message || "");
+      if (statusNode) {
+        statusNode.textContent=code === "LOCAL_SUPPORT_UNAVAILABLE"
+          ? "O Agent local não respondeu. Use Diagnóstico na lista de computadores como fallback."
+          : (code === "SUPPORT_REPORT_ADMIN_REQUIRED"
+            ? "Somente OWNER/ADMIN podem enviar diagnósticos."
+            : "Não foi possível enviar o diagnóstico agora. Tente novamente.");
+      }
+    } finally {
+      if (trigger?.isConnected) {
+        trigger.disabled=false;
+        trigger.textContent=original;
+      }
     }
   }
 
@@ -1852,6 +1941,13 @@
       event.preventDefault();
       loadUsageActivity(refreshActivity,true);
       loadSloStatus();
+      return;
+    }
+
+    const submitLocalSupport = event.target.closest("[data-submit-local-support]");
+    if (submitLocalSupport) {
+      event.preventDefault();
+      submitLocalSupportReport(submitLocalSupport);
       return;
     }
 

@@ -59,7 +59,7 @@ def enroll(pairing_token: str, name: str) -> tuple[str, str]:
         "device_name": name,
         "platform": "LINUX",
         "architecture": "x86_64",
-        "agent_version": "0.3.38",
+        "agent_version": "0.3.39",
         "approval_mode": "PERSISTENT_TRUSTED",
     }, separators=(",", ":")).encode()
     req = urllib.request.Request(
@@ -76,7 +76,7 @@ def heartbeat(device_id: str, token: str, snapshot: dict) -> None:
     body = json.dumps({
         "device_id": device_id,
         "architecture": "x86_64",
-        "agent_version": "0.3.38",
+        "agent_version": "0.3.39",
         "approval_mode": "PERSISTENT_TRUSTED",
         "activity_snapshots": snapshot,
     }, separators=(",", ":")).encode()
@@ -194,7 +194,7 @@ DELETE FROM tenants WHERE tenant_id={q(tenant)};
                     collect_keys(item, out)
         observed_keys=set()
         collect_keys(stored,observed_keys)
-        assert result[0]["agent_version"] == "0.3.38"
+        assert result[0]["agent_version"] == "0.3.39"
         assert summary["latency_p50_ms"] == 500
         assert summary["latency_p95_ms"] == 5000
         assert summary["latency_p99_ms"] == 5000

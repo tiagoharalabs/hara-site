@@ -586,8 +586,12 @@
 
             <article class="panel settings-card">
               <div class="panel-head"><div><span>Ajuda</span><h2>Suporte</h2></div></div>
-              <p class="settings-help-copy">Documentação, diagnóstico e contato com suporte ficam em um único lugar.</p>
-              <a class="btn btn-secondary" href="https://www.haralabs.com.br/support/" target="_blank" rel="noreferrer">Abrir suporte</a>
+              <p class="settings-help-copy">Envie um diagnóstico sanitizado da máquina local sem compartilhar comandos, payloads, resultados ou tokens.</p>
+              <div class="settings-actions">
+                <button class="btn btn-secondary" type="button" data-submit-local-support>Enviar diagnóstico</button>
+                <a class="btn btn-secondary" href="https://www.haralabs.com.br/support/" target="_blank" rel="noreferrer">Abrir suporte</a>
+              </div>
+              <p class="settings-help-copy" id="supportReportStatus">Nenhum diagnóstico enviado nesta sessão.</p>
             </article>
           </div>
         </div>
@@ -618,6 +622,6 @@
     </nav>
   </template>
 
-  <script src="./app.js?v=20261005-sloincident2"></script>
+  <script src="./app.js?v=20261006-support1"></script>
 </body>
 </html>
