@@ -74,6 +74,9 @@ const SLO_ALERT_INCIDENT_RETENTION_SECONDS = 90 * 24 * 60 * 60;
 const SLO_ALERT_ESCALATION_L1_SECONDS = 60 * 60;
 const SLO_ALERT_ESCALATION_L2_SECONDS = 4 * 60 * 60;
 const SLO_ALERT_ESCALATION_L3_SECONDS = 12 * 60 * 60;
+const SLO_ALERT_DELIVERY_BATCH = 25;
+const SLO_ALERT_DELIVERY_RETRY_SECONDS = 5 * 60;
+const SLO_ALERT_DELIVERY_RETENTION_SECONDS = 30 * 24 * 60 * 60;
 const SUPPORT_REPORT_RETENTION_SECONDS = 30 * 24 * 60 * 60;
 const SUPPORT_REPORT_RETENTION_BATCH = 500;
 const SUPPORT_REPORT_MAX_BYTES = 16 * 1024;
@@ -3573,6 +3576,111 @@ async function portalEscalateSloIncident(env, session, body) {
   return await portalSloStatus(env,session);
 }
 
+function sloAlertDeliveryPayload(tenantId, incidentId, eventType, escalationLevel, occurredAtUtc, summary) {
+  return {
+    schema:"hara.commander-slo-alert.v1",
+    profile:SLO_ALERT_PROFILE,
+    tenant_id:String(tenantId || ""),
+    incident_id:String(incidentId || ""),
+    event_type:String(eventType || ""),
+    escalation_level:Number(escalationLevel || 0),
+    occurred_at_utc:occurredAtUtc,
+    slo:{
+      state:String(summary?.state || ""),
+      online_devices:Number(summary?.online_devices || 0),
+      pass_devices:Number(summary?.pass_devices || 0),
+      degraded_devices:Number(summary?.degraded_devices || 0),
+      insufficient_devices:Number(summary?.insufficient_devices || 0),
+      missing_snapshot_devices:Number(summary?.missing_snapshot_devices || 0),
+      stale_snapshot_devices:Number(summary?.stale_snapshot_devices || 0),
+      weighted_availability_success_rate_percent:summary?.weighted_availability_success_rate_percent ?? null,
+      worst_p50_ms:summary?.worst_p50_ms ?? null,
+      worst_p95_ms:summary?.worst_p95_ms ?? null,
+      worst_p99_ms:summary?.worst_p99_ms ?? null,
+    },
+    privacy:{
+      command_content_included:false,
+      payload_content_included:false,
+      result_content_included:false,
+      customer_content_included:false,
+      secret_material_exposed:false,
+    },
+  };
+}
+
+async function queueSloAlertDelivery(env, tenantId, incidentId, eventType, escalationLevel, occurredAtUtc, summary) {
+  const deliveryKey=[incidentId,eventType,String(escalationLevel || 0)].join(":");
+  const payload=JSON.stringify(sloAlertDeliveryPayload(
+    tenantId,incidentId,eventType,escalationLevel,occurredAtUtc,summary
+  ));
+  await env.PRODUCT_DB.prepare(
+    "INSERT OR IGNORE INTO commander_slo_alert_deliveries (delivery_id,delivery_key,tenant_id,incident_id,event_type,escalation_level,payload_json,state,attempt_count,next_attempt_at_utc,last_attempt_at_utc,delivered_at_utc,last_error_code,created_at_utc,updated_at_utc) VALUES (?, ?, ?, ?, ?, ?, ?, 'PENDING', 0, ?, NULL, NULL, NULL, ?, ?)"
+  ).bind(
+    "HARA-SLO-DEL-"+crypto.randomUUID(),deliveryKey,tenantId,incidentId,eventType,
+    Number(escalationLevel || 0),payload,occurredAtUtc,occurredAtUtc,occurredAtUtc
+  ).run();
+}
+
+async function sloAlertSignature(secret, body) {
+  const key=await crypto.subtle.importKey(
+    "raw",new TextEncoder().encode(String(secret)),{name:"HMAC",hash:"SHA-256"},false,["sign"]
+  );
+  const sig=await crypto.subtle.sign("HMAC",key,new TextEncoder().encode(body));
+  return "sha256="+Array.from(new Uint8Array(sig)).map((b)=>b.toString(16).padStart(2,"0")).join("");
+}
+
+function sloAlertDeliveryErrorCode(error) {
+  const code=String(error?.message || error || "DELIVERY_FAILED").toUpperCase().replace(/[^A-Z0-9_:-]/g,"_");
+  return code.slice(0,96) || "DELIVERY_FAILED";
+}
+
+async function deliverPendingSloAlerts(env) {
+  const endpoint=String(env.SLO_ALERT_WEBHOOK_URL || "").trim();
+  const secret=String(env.SLO_ALERT_WEBHOOK_SECRET || "").trim();
+  if (!endpoint || !secret) return;
+  let parsed;
+  try { parsed=new URL(endpoint); }
+  catch (_error) { return; }
+  if (parsed.protocol !== "https:") return;
+
+  const now=nowIso();
+  const rows=await env.PRODUCT_DB.prepare(
+    "SELECT delivery_id,event_type,payload_json,attempt_count FROM commander_slo_alert_deliveries WHERE state IN ('PENDING','RETRY') AND next_attempt_at_utc <= ? ORDER BY created_at_utc LIMIT ?"
+  ).bind(now,SLO_ALERT_DELIVERY_BATCH).all();
+
+  for (const row of rows.results || []) {
+    const body=String(row.payload_json || "{}");
+    const attemptedAt=nowIso();
+    try {
+      const signature=await sloAlertSignature(secret,body);
+      const response=await fetch(endpoint,{
+        method:"POST",
+        headers:{
+          "content-type":"application/json",
+          "user-agent":"hara-commander-slo-alert/1",
+          "x-hara-event":String(row.event_type || ""),
+          "x-hara-signature":signature,
+        },
+        body,
+      });
+      if (!response.ok) throw new Error("HTTP_"+String(response.status));
+      await env.PRODUCT_DB.prepare(
+        "UPDATE commander_slo_alert_deliveries SET state='DELIVERED',attempt_count=attempt_count+1,last_attempt_at_utc=?,delivered_at_utc=?,last_error_code=NULL,updated_at_utc=? WHERE delivery_id=? AND state IN ('PENDING','RETRY')"
+      ).bind(attemptedAt,attemptedAt,attemptedAt,row.delivery_id).run();
+    } catch (error) {
+      const next=new Date(Date.now()+(SLO_ALERT_DELIVERY_RETRY_SECONDS*1000)).toISOString();
+      await env.PRODUCT_DB.prepare(
+        "UPDATE commander_slo_alert_deliveries SET state='RETRY',attempt_count=attempt_count+1,next_attempt_at_utc=?,last_attempt_at_utc=?,last_error_code=?,updated_at_utc=? WHERE delivery_id=? AND state IN ('PENDING','RETRY')"
+      ).bind(next,attemptedAt,sloAlertDeliveryErrorCode(error),attemptedAt,row.delivery_id).run();
+    }
+  }
+
+  const cutoff=new Date(Date.now()-(SLO_ALERT_DELIVERY_RETENTION_SECONDS*1000)).toISOString();
+  await env.PRODUCT_DB.prepare(
+    "DELETE FROM commander_slo_alert_deliveries WHERE delivery_id IN (SELECT delivery_id FROM commander_slo_alert_deliveries WHERE state='DELIVERED' AND delivered_at_utc IS NOT NULL AND delivered_at_utc < ? ORDER BY delivered_at_utc LIMIT 500)"
+  ).bind(cutoff).run();
+}
+
 async function runSloAlertMaintenance(env) {
   const now=nowIso();
   const result=await env.PRODUCT_DB.prepare(
@@ -3601,6 +3709,7 @@ async function runSloAlertMaintenance(env) {
         await env.PRODUCT_DB.prepare(
           "INSERT INTO commander_slo_incidents (incident_id,tenant_id,profile,state,opened_at_utc,resolved_at_utc,first_breach_at_utc,last_breach_at_utc,last_seen_at_utc,summary_json,resolution_json,updated_at_utc) VALUES (?, ?, ?, 'OPEN', ?, NULL, ?, ?, ?, ?, NULL, ?)"
         ).bind(incidentId,tenantId,SLO_ALERT_PROFILE,now,now,now,now,JSON.stringify(summary),now).run();
+        await queueSloAlertDelivery(env,tenantId,incidentId,"OPENED",0,now,summary);
       } else if (incidentId) {
         await env.PRODUCT_DB.prepare(
           "UPDATE commander_slo_incidents SET last_breach_at_utc=?,last_seen_at_utc=?,summary_json=?,updated_at_utc=? WHERE incident_id=? AND state='OPEN'"
@@ -3614,6 +3723,7 @@ async function runSloAlertMaintenance(env) {
         await env.PRODUCT_DB.prepare(
           "UPDATE commander_slo_incidents SET state='RESOLVED',resolved_at_utc=?,last_seen_at_utc=?,resolution_json=?,updated_at_utc=? WHERE incident_id=? AND state='OPEN'"
         ).bind(now,now,JSON.stringify(resolution),now,incidentId).run();
+        await queueSloAlertDelivery(env,tenantId,incidentId,"RESOLVED",0,now,summary);
         incidentId=null;
         recovery=0;
       } else if (incidentId) {
@@ -3645,6 +3755,7 @@ async function runSloAlertMaintenance(env) {
           await env.PRODUCT_DB.prepare(
             "UPDATE commander_slo_incidents SET escalation_level=?,escalated_at_utc=?,updated_at_utc=? WHERE incident_id=? AND tenant_id=? AND state='OPEN' AND escalation_level < ?"
           ).bind(targetLevel,now,now,incidentId,tenantId,targetLevel).run();
+          await queueSloAlertDelivery(env,tenantId,incidentId,"ESCALATED",targetLevel,now,summary);
         }
       }
     }
@@ -3653,6 +3764,7 @@ async function runSloAlertMaintenance(env) {
   await env.PRODUCT_DB.prepare(
     "DELETE FROM commander_slo_incidents WHERE incident_id IN (SELECT incident_id FROM commander_slo_incidents WHERE state='RESOLVED' AND resolved_at_utc IS NOT NULL AND resolved_at_utc < ? ORDER BY resolved_at_utc LIMIT 500)"
   ).bind(cutoff).run();
+  await deliverPendingSloAlerts(env);
 }
 
 function supportReportTime(value) {

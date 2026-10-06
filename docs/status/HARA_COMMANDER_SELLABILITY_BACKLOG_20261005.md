@@ -9,7 +9,7 @@ Baseline at creation: `53d53c3b33028712d70ecfb3b18aef9858205210`
 - **Paid beta / invite / Linux:** READY.
 - **Public beta:** PENDING Windows production re-enrollment/current data-plane canary; live multitenant isolation and fresh local customer acceptance are CLOSED_PASS.
 - **Self-serve paid:** PENDING Stripe runtime secrets + Price IDs + first real checkout lifecycle.
-- **General availability:** PENDING public-beta/clean-lifecycle gates plus external alert delivery, cost analytics and commercial billing activation; internal SLO/support maturity is CLOSED_PASS.
+- **General availability:** PENDING public-beta/clean-lifecycle gates plus live external alert destination, cost analytics and commercial billing activation; internal SLO/support maturity and external-alert source/preprod transport are CLOSED_PASS.
 
 ## P0 — close before public beta
 
@@ -25,7 +25,7 @@ Baseline at creation: `53d53c3b33028712d70ecfb3b18aef9858205210`
 
 | Gate | Current truth | Next proof / delivery |
 | --- | --- | --- |
-| SLO | INTERNAL_BETA_V1 live. Persistent incidents + 2-breach/2-recovery hysteresis + ack/escalation L1/L2/L3 are live in PROD. Agent/Worker 0.3.40 now separates raw tool outcome from service availability, fails unknown errors closed as SERVICE, passed DEV hysteresis canary and is live in PROD at `c8cfc1d1-592c-4d71-8788-d237e07828c6`. Versioned promotion enforces trigger sync and CURRENT runtime assets. Sentinela D is on Agent 0.3.40; Nucleo A upgrade waits for its unrelated child workload to drain safely | Observe natural PROD evaluations with 0.3.40 heartbeats and first real incident/ack path, then add external notification transport; thresholds remain internal, not contractual SLA |
+| SLO | INTERNAL_BETA_V1 live. Persistent incidents + 2-breach/2-recovery hysteresis + ack/escalation L1/L2/L3 are live in PROD. External notification source/preprod transport is now CLOSED_PASS with durable idempotent outbox, OPENED/ESCALATED/RESOLVED events, HTTPS-only delivery, HMAC-SHA256 signing, retry and privacy-bounded aggregate payload. Agent/Worker 0.3.40 separates raw tool outcome from service availability and is live in PROD at `c8cfc1d1-592c-4d71-8788-d237e07828c6` | Select an explicit HTTPS destination + signing secret, run DEV receiver-side signature canary, then promote the transport to PROD; thresholds remain internal, not contractual SLA |
 | Cost model | Local-first unit economics CLOSED_PASS: full Free 10k old quota plane 20,000 RPCs vs <=100 block allocations (99.5% reduction); 100-user and 1,000-user rungs modeled. USD intentionally unclaimed | Obtain read-only Cloudflare Analytics and measure Worker CPU, DO requests/duration, D1 rows/egress on 100 -> 1,000 user campaign |
 | Support bundle | support-report.v2 live on Linux 0.3.38 plus tenant-scoped support-plane live in PROD: OWNER/ADMIN submit/list/delete, server allowlist sanitization, 16KiB cap, 30d retention, cross-tenant deny, no raw command/payload/result | Add optional external ticket/export integration only if needed; current in-product retention/support evidence is closed |
 | Clean Linux acceptance | Hermetic clean-home lifecycle PASS with official installer + local HTTP backend: install, support v2, update/rollback-ready, revoked credential re-enroll, uninstall, token non-exposure and clean home | Repeat once on a truly fresh external VM before GA; lifecycle logic itself is now a permanent preprod gate |

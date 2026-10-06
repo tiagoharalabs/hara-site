@@ -81,6 +81,7 @@ def main():
         ("COMMANDER_PREPROD_SLO_FAILURE_SEMANTICS", "validate_slo_failure_semantics.py"),
         ("COMMANDER_PREPROD_SLO_INCIDENT_STATE", "validate_slo_incident_state.py"),
         ("COMMANDER_PREPROD_SLO_INCIDENT_ACTIONS", "validate_slo_incident_actions.py"),
+        ("COMMANDER_PREPROD_SLO_ALERT_DELIVERY", "validate_slo_alert_delivery.py"),
         ("COMMANDER_PREPROD_SUPPORT_BUNDLE_V2", "validate_support_bundle_v2.py"),
         ("COMMANDER_PREPROD_SUPPORT_PLANE", "validate_support_plane.py"),
         ("COMMANDER_PREPROD_SUPPORT_ONECLICK", "validate_support_oneclick.py"),
