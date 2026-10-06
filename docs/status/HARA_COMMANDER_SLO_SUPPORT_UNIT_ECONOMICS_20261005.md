@@ -101,3 +101,27 @@ PASS:
 4. verify heartbeat carries percentiles/SLO;
 5. run DEV operational SLO probe;
 6. then promote to PROD and update HARA Linux devices one-by-one.
+
+## DEV live proof
+
+Worker:
+- 398b55e0-1c1b-4935-8179-d8591d37c7d6
+- rollback: 8fa82e3d-00d6-441f-aa6a-9e650a52b616
+
+DEV readback:
+- config/secrets/D1/DeviceChannel PASS
+- health/login/PKCE/cookie/account-switch PASS
+
+Disposable 0.3.38 SLO heartbeat canary:
+- local SQLite generated 25 completed operations
+- p50=500 ms
+- p95=5,000 ms
+- p99=5,000 ms
+- INTERNAL_BETA_V1 status=PASS
+- heartbeat accepted
+- Worker stored aggregate percentile/SLO fields
+- raw events/action summary/payload/result/command fields absent
+- fixture cleanup PASS
+
+DEV_SLO_HEARTBEAT=PASS
+DEV_SLO_RAW_CONTENT_SYNCED=FALSE
