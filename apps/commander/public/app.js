@@ -340,6 +340,32 @@
         : (usageAvailable ? number(remaining) + " unidades disponíveis" : "Uso temporariamente indisponível"),
     );
     setText("usagePeriod", unmetered ? "Sem limite" : (payload.usage.period_key || "—"));
+
+    setText("usageCardConsumed", unmetered ? "Ilimitado" : (usageAvailable ? number(consumed) : "—"));
+    setText(
+      "usageCardConsumedDetail",
+      unmetered
+        ? "Sem franquia mensal"
+        : (usageAvailable ? "de " + number(limit) + " chamadas" : "Uso temporariamente indisponível"),
+    );
+    setText("usageCardRemaining", unmetered ? "Ilimitado" : (usageAvailable ? number(remaining) : "—"));
+    setText(
+      "usageCardRemainingDetail",
+      unmetered
+        ? "Sem limite mensal"
+        : (usageAvailable ? "chamadas restantes" : "Saldo temporariamente indisponível"),
+    );
+    setText("usageCardPlan", plan);
+    setText(
+      "usageCardPlanDetail",
+      unmetered ? "Chamadas sem franquia mensal" : (isTrial ? "Free · 10.000 chamadas/mês" : "Plano ativo"),
+    );
+    setText("usageCardPeriod", unmetered ? "Sem limite" : "Mensal");
+    setText(
+      "usageCardPeriodDetail",
+      unmetered ? "Sem fechamento de franquia" : (payload.usage.period_key || "Ciclo atual"),
+    );
+
     const bar = document.getElementById("usageProgress");
     if (bar) bar.style.width = (unmetered || !usageAvailable ? 0 : percent) + "%";
     if (!usageAvailable) {
