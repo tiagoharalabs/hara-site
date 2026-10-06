@@ -1272,6 +1272,34 @@ async function dashboard(env, tenantId) {
   };
 }
 
+async function productTransactionHistory(env, tenantId, subjectId) {
+  const since7d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  try {
+    const row = await env.PRODUCT_DB.prepare(
+      `SELECT
+         COUNT(*) AS calls_total,
+         SUM(CASE WHEN created_at_utc >= ? THEN 1 ELSE 0 END) AS calls_7d
+       FROM commander_device_calls
+       WHERE tenant_id = ? AND subject_id = ?`
+    ).bind(since7d, tenantId, subjectId).first();
+    return {
+      available: true,
+      window: "7d",
+      calls_7d: Number(row?.calls_7d || 0),
+      calls_total: Number(row?.calls_total || 0),
+      detail_level: "AGGREGATE_ONLY",
+    };
+  } catch (_error) {
+    return {
+      available: false,
+      window: "7d",
+      calls_7d: null,
+      calls_total: null,
+      detail_level: "AGGREGATE_ONLY",
+    };
+  }
+}
+
 async function dashboardForSubject(env, subjectId, tenantId) {
   const ent = await env.PRODUCT_DB.prepare(
     `SELECT
@@ -1300,13 +1328,16 @@ async function dashboardForSubject(env, subjectId, tenantId) {
 
   if (!ent) return null;
   const limit = ent.period_kind === "NONE" ? null : Number(ent.unit_limit);
-  const usage = await productUsageForPolicy(
-    env,
-    tenantId,
-    ent.period_kind,
-    ent.unit_limit,
-    ent.meter_id,
-  );
+  const [usage, transactionHistory] = await Promise.all([
+    productUsageForPolicy(
+      env,
+      tenantId,
+      ent.period_kind,
+      ent.unit_limit,
+      ent.meter_id,
+    ),
+    productTransactionHistory(env, tenantId, subjectId),
+  ]);
 
   return {
     schema: "hara.commander-portal-dashboard.v1",
@@ -1324,7 +1355,8 @@ async function dashboardForSubject(env, subjectId, tenantId) {
       period_kind: ent.period_kind,
       unit_limit: limit
     },
-    usage
+    usage,
+    transaction_history: transactionHistory,
   };
 }
 

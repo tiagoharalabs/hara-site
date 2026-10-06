@@ -341,19 +341,21 @@
     );
     setText("usagePeriod", unmetered ? "Sem limite" : (payload.usage.period_key || "—"));
 
-    setText("usageCardConsumed", unmetered ? "Ilimitado" : (usageAvailable ? number(consumed) : "—"));
+    const history = payload.transaction_history || {};
+    const historyAvailable = history.available !== false;
+    setText("usageCardTransactions", historyAvailable && history.calls_7d != null ? number(history.calls_7d) : "—");
     setText(
-      "usageCardConsumedDetail",
+      "usageCardTransactionsDetail",
+      historyAvailable && history.calls_total != null
+        ? "Últimos 7 dias · " + number(history.calls_total) + " no histórico registrado"
+        : "Histórico temporariamente indisponível",
+    );
+    setText("usageCardCapacity", unmetered ? "Ilimitado" : (usageAvailable ? number(remaining) : "—"));
+    setText(
+      "usageCardCapacityDetail",
       unmetered
         ? "Sem franquia mensal"
-        : (usageAvailable ? "de " + number(limit) + " chamadas" : "Uso temporariamente indisponível"),
-    );
-    setText("usageCardRemaining", unmetered ? "Ilimitado" : (usageAvailable ? number(remaining) : "—"));
-    setText(
-      "usageCardRemainingDetail",
-      unmetered
-        ? "Sem limite mensal"
-        : (usageAvailable ? "chamadas restantes" : "Saldo temporariamente indisponível"),
+        : (usageAvailable ? "chamadas restantes de " + number(limit) : "Capacidade temporariamente indisponível"),
     );
     setText("usageCardPlan", plan);
     setText(
