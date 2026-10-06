@@ -66,3 +66,28 @@ CLOUD_ACTIVITY_SNAPSHOT_PERSISTENCE=DISABLED
 HEARTBEAT_PERSIST_SECONDS=120
 ONLINE_GRACE_SECONDS=240
 SIGNED_AGENT_CHANGED=FALSE
+
+
+## PROD proof
+
+Worker:
+- `f864b2f0-3dde-4479-8e5c-fbfe17748dd9`
+
+Rollback:
+- `8968a5e8-95f9-4a1a-a9ed-34833047f918`
+
+Live proof:
+- public HTML does not contain internal diagnostic labels;
+- Usage page contains the public privacy boundary copy;
+- `/api/portal/activity` -> HTTP 404 `INTERNAL_DIAGNOSTICS_NOT_IN_PRODUCT`;
+- `/api/portal/slo` -> HTTP 404 `INTERNAL_DIAGNOSTICS_NOT_IN_PRODUCT`;
+- `/auth/login` -> HTTP 302 to HARA Identity with PKCE;
+- runtime assets = CURRENT.
+
+Legacy D1 cleanup remains intentionally pending while D1 writes are constrained.
+The legacy rows are no longer read or updated by the public product path.
+
+PUBLIC_MCP_BRIDGE_BOUNDARY_PROD=CLOSED_PASS
+PROD_WORKER=f864b2f0-3dde-4479-8e5c-fbfe17748dd9
+PROD_ROLLBACK=8968a5e8-95f9-4a1a-a9ed-34833047f918
+LEGACY_D1_PURGE=PENDING_WRITE_PLANE_RECOVERY
