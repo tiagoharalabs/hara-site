@@ -38,6 +38,7 @@ import {
   isDeviceMutationTool,
   isDeviceProcessTool,
   isDeviceProcessMutationTool,
+  isDeviceLocalActivityTool,
   canonicalDeviceToolPayload,
 } from "./device-tool-contract.mjs";
 import { chooseCustomerTargetDevice } from "./device-targeting.mjs";
@@ -70,6 +71,8 @@ const SLO_ALERT_PROFILE = "INTERNAL_BETA_V1";
 const SLO_ALERT_BREACH_STREAK = 2;
 const SLO_ALERT_RECOVERY_STREAK = 2;
 const SLO_ALERT_ONLINE_GRACE_SECONDS = 120;
+const DEVICE_HEARTBEAT_PERSIST_SECONDS = 120;
+const DEVICE_ONLINE_GRACE_SECONDS = 240;
 const SLO_ALERT_SNAPSHOT_GRACE_SECONDS = 180;
 const SLO_ALERT_INCIDENT_RETENTION_SECONDS = 90 * 24 * 60 * 60;
 const SLO_ALERT_ESCALATION_L1_SECONDS = 60 * 60;
@@ -98,7 +101,8 @@ const MCP_TOOL_GRANTS = Object.freeze({
   "hara.devices.list": "COMMANDER_DISCOVERY",
   "hara.capabilities": "COMMANDER_DISCOVERY",
   "hara.usage": "COMMANDER_RECEIPT_READ",
-  "hara.activity": "COMMANDER_RECEIPT_READ",
+  "hara.activity": "COMMANDER_READ_ONLY_INVOKE",
+  "hara.activity.local": "COMMANDER_READ_ONLY_INVOKE",
   "hara.health": "COMMANDER_DISCOVERY",
   "hara.ping": "COMMANDER_DISCOVERY",
   "hara.device.info": "COMMANDER_READ_ONLY_INVOKE",
@@ -131,7 +135,8 @@ const MCP_TOOL_GRANTS = Object.freeze({
   "hara.functions.describe": "COMMANDER_DISCOVERY",
   "hara.functions.invoke": "COMMANDER_READ_ONLY_INVOKE",
   "hara.receipts.get": "COMMANDER_RECEIPT_READ",
-  "hara.calls.recent": "COMMANDER_RECEIPT_READ",
+  "hara.calls.recent": "COMMANDER_READ_ONLY_INVOKE",
+  "hara.calls.recent.local": "COMMANDER_READ_ONLY_INVOKE",
 });
 
 const SECURITY_HEADERS = Object.freeze({
@@ -552,7 +557,7 @@ function deviceOnline(lastSeenAtUtc, tunnelMode = "OUTBOUND_RELAY", now = Date.n
   if (!Number.isFinite(seen)) return false;
   const onlineWindowMs = mode === "EVENT_V2"
     ? 7 * 60 * 60 * 1000
-    : 90_000;
+    : DEVICE_ONLINE_GRACE_SECONDS * 1000;
   return now - seen <= onlineWindowMs;
 }
 
@@ -2391,26 +2396,37 @@ async function heartbeatDevice(env, request, body) {
   const agentVersion = cleanAgentValue(body.agent_version, 80) || device.agent_version;
   const architecture = cleanAgentValue(body.architecture, 80) || device.architecture;
   const approvalMode = normalizeApprovalMode(body.approval_mode, normalizeApprovalMode(device.approval_mode, "ASK_EVERY_ACTION"));
-  const activitySummaryJson = cleanAgentActivitySnapshots(body.activity_snapshots);
   const seenAt = nowIso();
+  const persistCutoff = new Date(Date.now() - DEVICE_HEARTBEAT_PERSIST_SECONDS * 1000).toISOString();
+  const metadataChanged =
+    String(agentVersion || "") !== String(device.agent_version || "")
+    || String(architecture || "") !== String(device.architecture || "")
+    || String(approvalMode || "") !== String(device.approval_mode || "")
+    || String(device.tunnel_mode || "") !== "OUTBOUND_RELAY";
+  const persistPresence = metadataChanged
+    || !device.last_seen_at_utc
+    || String(device.last_seen_at_utc) < persistCutoff;
 
-  const heartbeat = await env.PRODUCT_DB.prepare(
-    `UPDATE commander_devices
-        SET last_seen_at_utc = ?,
-            agent_version = ?,
-            architecture = ?,
-            approval_mode = ?,
-            tunnel_mode = 'OUTBOUND_RELAY',
-            activity_summary_json = CASE WHEN ? IS NULL THEN activity_summary_json ELSE ? END,
-            activity_summary_at_utc = CASE WHEN ? IS NULL THEN activity_summary_at_utc ELSE ? END
-      WHERE device_id = ? AND state = 'ACTIVE' AND revoked_at_utc IS NULL`
-  ).bind(
-    seenAt, agentVersion, architecture, approvalMode,
-    activitySummaryJson, activitySummaryJson,
-    activitySummaryJson, seenAt,
-    device.device_id
-  ).run();
-  if (!heartbeat.meta?.changes) throw new Error("DEVICE_AUTH_INVALID");
+  let persisted = false;
+  if (persistPresence) {
+    const heartbeat = await env.PRODUCT_DB.prepare(
+      `UPDATE commander_devices
+          SET last_seen_at_utc = ?,
+              agent_version = ?,
+              architecture = ?,
+              approval_mode = ?,
+              tunnel_mode = 'OUTBOUND_RELAY'
+        WHERE device_id = ? AND state = 'ACTIVE' AND revoked_at_utc IS NULL`
+    ).bind(
+      seenAt, agentVersion, architecture, approvalMode, device.device_id
+    ).run();
+    if (!heartbeat.meta?.changes) throw new Error("DEVICE_AUTH_INVALID");
+    persisted = true;
+  }
+
+  // Customer activity detail is local-authoritative. Public Commander ignores
+  // legacy activity_snapshots sent by older Agents instead of persisting them.
+  const diagnosticsAccepted = false;
 
   return {
     schema: "hara.commander-device-heartbeat.v1",
@@ -2419,7 +2435,9 @@ async function heartbeatDevice(env, request, body) {
     state: "ACTIVE",
     server_time_utc: seenAt,
     heartbeat_after_seconds: 30,
-    local_activity_snapshot_accepted: Boolean(activitySummaryJson),
+    presence_persisted: persisted,
+    local_activity_snapshot_accepted: diagnosticsAccepted,
+    customer_activity_detail_persisted: false,
   };
 }
 
@@ -2695,7 +2713,7 @@ async function enqueueDeviceCall(env, body) {
   const callId = "HARA-CALL-" + crypto.randomUUID();
   const createdAt = nowIso();
   const expiresAt = nowIso(DEVICE_CALL_TTL_SECONDS);
-  const onlineCutoff = new Date(Date.now() - 90_000).toISOString();
+  const onlineCutoff = new Date(Date.now() - DEVICE_ONLINE_GRACE_SECONDS * 1000).toISOString();
   const eventV2Cutoff = new Date(Date.now() - 7 * 60 * 60 * 1000).toISOString();
   const inserted = await env.PRODUCT_DB.prepare(
     `INSERT OR IGNORE INTO commander_device_calls
@@ -2968,7 +2986,7 @@ function projectCustomerToolResult(toolId, response) {
       projectedResult.change_intent_required = changeIntent;
     }
     if (typeof failClosed === "boolean") projectedResult.fail_closed = failClosed;
-  } else if (toolId === "hara.functions.invoke" || deviceFunctionForTool(toolId) || isDeviceMutationTool(toolId) || isDeviceProcessTool(toolId) || toolId === "hara.files.preimages.list") {
+  } else if (toolId === "hara.functions.invoke" || deviceFunctionForTool(toolId) || isDeviceMutationTool(toolId) || isDeviceProcessTool(toolId) || isDeviceLocalActivityTool(toolId) || toolId === "hara.files.preimages.list") {
     for (const key of [
       "function_id",
       "risk_class",
@@ -3074,6 +3092,8 @@ function customerMcpDevicePayload(toolId, args) {
   if (toolId === "hara.files.preimages.list") return {limit:args.limit === undefined ? 50 : Number(args.limit),...(args.path === undefined ? {} : {path:String(args.path)})};
   if (toolId === "hara.files.rollback") return {preimage_id:String(args.preimage_id || "")};
   if (toolId === "hara.process.sessions") return {};
+  if (toolId === "hara.activity.local") return {window:String(args.window || "7d"),limit:args.limit === undefined ? 50 : Number(args.limit)};
+  if (toolId === "hara.calls.recent.local") return {window:String(args.window || "7d"),limit:args.limit === undefined ? 50 : Number(args.limit),...(args.tool === undefined ? {} : {tool:String(args.tool)})};
   if (toolId === "hara.process.run") return {command:String(args.command ?? ""),...(args.cwd === undefined ? {} : {cwd:String(args.cwd)}),timeout_ms:args.timeout_ms === undefined ? 3000 : Number(args.timeout_ms),max_lines:args.max_lines === undefined ? 200 : Number(args.max_lines)};
   if (toolId === "hara.process.start") return {command:String(args.command ?? ""),...(args.cwd === undefined ? {} : {cwd:String(args.cwd)}),timeout_ms:args.timeout_ms === undefined ? 1000 : Number(args.timeout_ms)};
   if (toolId === "hara.process.output") return {session_id:String(args.session_id || ""),...(args.offset === undefined ? {} : {offset:Number(args.offset)}),length:args.length === undefined ? 200 : Number(args.length),timeout_ms:args.timeout_ms === undefined ? 500 : Number(args.timeout_ms)};
@@ -3098,7 +3118,7 @@ function customerMcpDevicePayload(toolId, args) {
 
 function quotaFunctionIdForTool(toolId, payload) {
   if (toolId === "hara.functions.invoke") return cleanId(payload.function_id, 180);
-  if (["hara.ping","hara.health","hara.functions.list","hara.functions.describe","hara.receipts.get"].includes(toolId)) return null;
+  if (["hara.ping","hara.health","hara.functions.list","hara.functions.describe","hara.receipts.get","hara.activity.local","hara.calls.recent.local"].includes(toolId)) return null;
   const functionId=deviceFunctionForTool(toolId);
   if (functionId) return functionId;
   if (isDeviceMutationTool(toolId) || isDeviceProcessTool(toolId) || toolId === "hara.files.preimages.list") return "tool:"+toolId;
@@ -3136,6 +3156,7 @@ function legacyInvokePayload(toolId, payload) {
 
 function agentPurposeToolReady(device, toolId) {
   const platform=String(device?.platform || "").toUpperCase();
+  if (isDeviceLocalActivityTool(toolId)) return semverAtLeast(device?.agent_version,41);
   if (platform === "WINDOWS") {
     const starter=[
       "hara.ping","hara.device.info","hara.processes.list",
@@ -3248,6 +3269,9 @@ function capabilitiesForDevice(device, grants) {
   }
   if (linux && semverAtLeast(device.agent_version,25) && grants.includes("COMMANDER_PROCESS_EXECUTION")) {
     tools.push("hara.process.run");
+  }
+  if (semverAtLeast(device.agent_version,41)) {
+    tools.push("hara.activity.local","hara.calls.recent.local");
   }
   const availableTools=[...new Set(tools)].sort();
   const approvalMode=normalizeApprovalMode(device.approval_mode, "ASK_EVERY_ACTION");
@@ -4418,6 +4442,8 @@ async function executeCustomerMcpTool(
   mcpRequestId,
   transportRequestId,
 ) {
+  if (toolId === "hara.activity") toolId = "hara.activity.local";
+  if (toolId === "hara.calls.recent") toolId = "hara.calls.recent.local";
   const requiredGrant = MCP_TOOL_GRANTS[toolId];
   if (!requiredGrant) throw new Error("POLICY_DENIED");
 
@@ -4452,31 +4478,6 @@ async function executeCustomerMcpTool(
     return {state:"PASS",operational_authority:"HARA_SERVICES",execution_authority:"HARA_SERVICES",runtime_authority_from_chatgpt:false,mutation_performed:false,customer_services_relay:false,result:usage,product:{plan_code:context.plan_code,entitlement_id:context.entitlement_id,quota:usage.usage}};
   }
 
-  if (toolId === "hara.activity") {
-    const activity=await portalActivity(
-      env,
-      {tenant_id:context.tenant_id,subject_id:context.subject_id,role:"MEMBER"},
-      args?.limit || 50,
-      args?.window || "7d",
-    );
-    return {
-      state:"PASS", operational_authority:"HARA_SERVICES", execution_authority:"HARA_SERVICES",
-      runtime_authority_from_chatgpt:false, mutation_performed:false, customer_services_relay:false,
-      result:activity,
-      product:{plan_code:context.plan_code,entitlement_id:context.entitlement_id,quota:null},
-    };
-  }
-
-  if (toolId === "hara.calls.recent") {
-    const calls = await recentCustomerCalls(env, context, args);
-    return {
-      state:"PASS", operational_authority:"HARA_SERVICES", execution_authority:"HARA_SERVICES",
-      runtime_authority_from_chatgpt:false, mutation_performed:false, customer_services_relay:false,
-      result:{count:calls.length,calls},
-      product:{plan_code:context.plan_code,entitlement_id:context.entitlement_id,quota:null},
-    };
-  }
-
   const targetDevice = await resolveCustomerTargetDevice(
     env, context, args?.computer || null, null
   );
@@ -4490,7 +4491,7 @@ async function executeCustomerMcpTool(
     mcpRequestId,
     transportRequestId,
   );
-  if ((isDeviceMutationTool(toolId) || isDeviceProcessTool(toolId) || toolId === "hara.files.preimages.list") && !agentPurposeToolReady(targetDevice, toolId)) {
+  if ((isDeviceMutationTool(toolId) || isDeviceProcessTool(toolId) || isDeviceLocalActivityTool(toolId) || toolId === "hara.files.preimages.list") && !agentPurposeToolReady(targetDevice, toolId)) {
     throw new Error("AGENT_UPGRADE_REQUIRED");
   }
   const purposeFunctionId = quotaFunctionIdForTool(toolId, payload);
@@ -5179,6 +5180,7 @@ export default {
       }
 
       if (url.pathname === "/api/portal/activity" && request.method === "GET") {
+        return json({ ok:false, code:"INTERNAL_DIAGNOSTICS_NOT_IN_PRODUCT" },404);
         const session = await resolvePortalSession(request, env);
         if (!session) return json({ ok: false, code: "AUTH_REQUIRED" }, 401);
         const limit=Number(url.searchParams.get("limit") || 50);
@@ -5187,12 +5189,14 @@ export default {
       }
 
       if (url.pathname === "/api/portal/slo" && request.method === "GET") {
+        return json({ ok:false, code:"INTERNAL_DIAGNOSTICS_NOT_IN_PRODUCT" },404);
         const session = await resolvePortalSession(request, env);
         if (!session) return json({ ok:false, code:"AUTH_REQUIRED" },401);
         return json(await portalSloStatus(env,session));
       }
 
       if (url.pathname === "/api/portal/slo/ack" && request.method === "POST") {
+        return json({ ok:false, code:"INTERNAL_DIAGNOSTICS_NOT_IN_PRODUCT" },404);
         requirePortalMutationOrigin(request);
         const session = await resolvePortalSession(request, env);
         if (!session) return json({ ok:false, code:"AUTH_REQUIRED" },401);
@@ -5202,6 +5206,7 @@ export default {
       }
 
       if (url.pathname === "/api/portal/slo/escalate" && request.method === "POST") {
+        return json({ ok:false, code:"INTERNAL_DIAGNOSTICS_NOT_IN_PRODUCT" },404);
         requirePortalMutationOrigin(request);
         const session = await resolvePortalSession(request, env);
         if (!session) return json({ ok:false, code:"AUTH_REQUIRED" },401);
@@ -5731,7 +5736,6 @@ export default {
     requireRuntime(env);
     ctx.waitUntil(runAuthRetentionMaintenance(env));
     ctx.waitUntil(cleanupExpiredDeviceCalls(env));
-    ctx.waitUntil(runSloAlertMaintenance(env));
     ctx.waitUntil(cleanupExpiredSupportReports(env));
   }
 };

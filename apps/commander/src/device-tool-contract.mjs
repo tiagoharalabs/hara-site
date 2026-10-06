@@ -48,6 +48,14 @@ export const DEVICE_PROCESS_TOOLS = Object.freeze([
   "hara.process.interact",
   "hara.process.kill",
 ]);
+
+export const DEVICE_LOCAL_ACTIVITY_TOOLS = Object.freeze([
+  "hara.activity.local",
+  "hara.calls.recent.local",
+]);
+const DEVICE_LOCAL_ACTIVITY_TOOL_SET = new Set(DEVICE_LOCAL_ACTIVITY_TOOLS);
+export function isDeviceLocalActivityTool(value) { return DEVICE_LOCAL_ACTIVITY_TOOL_SET.has(String(value || "")); }
+
 export const DEVICE_PROCESS_MUTATION_TOOLS = Object.freeze([
   "hara.process.run",
   "hara.process.start",
@@ -259,6 +267,22 @@ export function canonicalDeviceToolPayload(toolId, payload) {
   if (toolId === "hara.process.sessions") {
     if (!exactKeys(body,[])) fail("DEVICE_CALL_PAYLOAD_INVALID");
     return {};
+  }
+  if (toolId === "hara.activity.local") {
+    if (!onlyKeys(body,["window","limit"])) fail("DEVICE_CALL_PAYLOAD_INVALID");
+    const window=body.window === undefined ? "7d" : String(body.window);
+    if (!["24h","7d","30d"].includes(window)) fail("DEVICE_CALL_PAYLOAD_INVALID");
+    return {window,limit:body.limit === undefined ? 50 : intNumber(body.limit,1,100)};
+  }
+  if (toolId === "hara.calls.recent.local") {
+    if (!onlyKeys(body,["window","tool","limit"])) fail("DEVICE_CALL_PAYLOAD_INVALID");
+    const window=body.window === undefined ? "7d" : String(body.window);
+    if (!["24h","7d","30d"].includes(window)) fail("DEVICE_CALL_PAYLOAD_INVALID");
+    return {
+      window,
+      limit:body.limit === undefined ? 50 : intNumber(body.limit,1,100),
+      ...(body.tool === undefined ? {} : {tool:textArg(body.tool,160)}),
+    };
   }
   if (toolId === "hara.process.run") {
     if (!onlyKeys(body,["command","cwd","timeout_ms","max_lines"],["command"])) fail("DEVICE_CALL_PAYLOAD_INVALID");
