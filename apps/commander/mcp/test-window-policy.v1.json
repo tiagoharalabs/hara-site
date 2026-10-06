@@ -1,0 +1,62 @@
+{
+  "schema": "hara.commander.mcp-test-window-policy.v1",
+  "state": "PREPARED_NOT_EXECUTED",
+  "canonical_branch": "local/commander-openai-desktop-parity-20261004",
+  "certification_bundle_commit": "c4e2a50e81c1d7487116c35b551924862f21018c",
+  "certification_bundle_seal_commit": "8619509be1651ce62baa4c9fadb0dc6ee7efa5bc",
+  "entry_order": [
+    "git_canonical_alignment",
+    "certification_preflight_live_readonly",
+    "environment_snapshot_live_readonly",
+    "client_version_freeze",
+    "evidence_plan_creation",
+    "single_client_open"
+  ],
+  "exit_order": [
+    "certification_cleanup",
+    "client_registration_cleanup_if_applicable",
+    "evidence_finalize",
+    "failure_classification",
+    "certificate_issue_if_eligible",
+    "environment_post_snapshot"
+  ],
+  "stop_conditions": [
+    "registration_storm",
+    "unexpected_client_secret",
+    "invalid_redirect_admitted",
+    "management_endpoint_without_registration_token",
+    "identity_issuer_mismatch",
+    "rate_limit_bypass",
+    "uncontrolled_tool_invocation",
+    "credential_material_in_evidence"
+  ],
+  "emergency_close": {
+    "script": "apps/identity-login/scripts/close_mcp_dcr_guarded.py",
+    "dry_run_default": true,
+    "explicit_execute_required": true,
+    "fail_closed_order": [
+      "public_gateway_closed",
+      "registration_endpoint_hidden",
+      "public_dcr_404_readback",
+      "backend_dcr_disabled",
+      "backend_post_state_readback"
+    ],
+    "hash_sha256": "a7a2852aa76b7990ef22ed0a6c8f71dc8d60538eb24da633a01a4adbc5d49755"
+  },
+  "preflight": {
+    "script": "apps/commander/scripts/commander_mcp_certification_preflight.py",
+    "hash_sha256": "7c9b39a11a7f16792ed5aafe35187c43bd03a6ed242c0e2151bdd667a0d62b43"
+  },
+  "snapshot": {
+    "script": "apps/commander/scripts/commander_mcp_certification_snapshot.py",
+    "hash_sha256": "6709297405282493f0d4b98f4c08de1399449e4e532a162ed5f049b700389ddb"
+  },
+  "runbook": {
+    "path": "docs/workflows/HARA_COMMANDER_MCP_TEST_WINDOW_SAFETY_20261006.md",
+    "hash_sha256": "8e233e5557e7c812744c1760978a121f03256b4973c07e6cc9dd0772fd4fedb6"
+  },
+  "one_client_at_a_time": true,
+  "parallel_client_certification": false,
+  "local_client_execution": false,
+  "real_client_execution": false
+}

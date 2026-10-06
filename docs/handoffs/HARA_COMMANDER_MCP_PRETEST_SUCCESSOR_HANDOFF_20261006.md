@@ -84,3 +84,28 @@ Bundle commit:
 `c4e2a50e81c1d7487116c35b551924862f21018c`
 
 Do not alter matrix/evidence/fixture artifacts after the first client run without creating a new certification revision.
+
+
+## Test-window safety controls
+
+Prepared after the certification bundle freeze:
+
+- `apps/commander/scripts/commander_mcp_certification_preflight.py`
+- `apps/commander/scripts/commander_mcp_certification_snapshot.py`
+- `apps/identity-login/scripts/close_mcp_dcr_guarded.py`
+- `apps/commander/mcp/test-window-policy.v1.json`
+- `apps/commander/mcp/certification-campaign.v1.json`
+- `docs/workflows/HARA_COMMANDER_MCP_TEST_WINDOW_SAFETY_20261006.md`
+- `docs/status/HARA_COMMANDER_MCP_TEST_WINDOW_SAFETY_20261006.md`
+
+These controls were prepared but NOT executed in this slice.
+
+The future test window must be one client at a time. Emergency DCR closure is
+public-first/backend-second and dry-run by default.
+
+Campaign state remains:
+- MCP Inspector: NOT_STARTED
+- VS Code: NOT_STARTED
+- Cursor: NOT_STARTED
+- Claude Code: NOT_STARTED
+- MULTI_CLIENT_CERTIFIED: FALSE
