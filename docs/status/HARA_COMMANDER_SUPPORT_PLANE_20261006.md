@@ -65,3 +65,24 @@ PASS:
 - 30-day retention
 - bounded purge
 - full Commander preprod readiness
+
+## DEV live proof
+
+Worker:
+- 4df21d89-20b7-493e-a1f3-ac7dc9a3046d
+
+Migration:
+- 0028_support_reports.sql applied to DEV
+
+Live canary:
+- privacy-invalid report rejected: PASS
+- server-side sanitizer: PASS
+- OWNER list: PASS
+- cross-tenant list: DENIED
+- cross-tenant delete: DENIED
+- D1 stored JSON contains no injected raw command/payload/stdout: PASS
+- receipt hash filter: PASS
+- owner delete: PASS
+- fixture cleanup: PASS
+
+COMMANDER_SUPPORT_PLANE_DEV=CLOSED_PASS
