@@ -143,6 +143,11 @@ def main():
             sys.executable,
             "apps/identity-login/scripts/validate_live_white_label.py",
         ])
+        run("COMMANDER_IDENTITY_MCP_METADATA_LIVE_READONLY", [
+            sys.executable,
+            "apps/identity-login/scripts/validate_mcp_oauth_metadata_live.py",
+            "--expect-cimd", "disabled",
+        ])
         mcp_auth_output = run("COMMANDER_MCP_AUTH_DISCOVERY_LIVE_READONLY", [
             sys.executable,
             "apps/commander/scripts/commander_mcp_auth_discovery_probe.py",

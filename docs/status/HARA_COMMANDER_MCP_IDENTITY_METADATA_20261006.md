@@ -1,7 +1,7 @@
 # H.A.R.A. Commander — MCP Identity Metadata / CIMD Readiness
 
 Date: 2026-10-06
-State: RFC8414 SOURCE/PREPROD CLOSED_PASS; LIVE PENDING DEPLOY
+State: RFC8414 SOURCE/PREPROD/PROD CLOSED_PASS
 CIMD: ADMISSION/FETCH POLICY READY; NOT ADVERTISED
 
 ## Runtime discovery
@@ -94,8 +94,43 @@ Future live:
 - generic client gate:
   `commander_mcp_auth_discovery_probe.py --require-generic-auto`
 
+## PROD proof
+
+Deployed 2026-10-06 as a sixth isolated Identity service on `storage`:
+
+- service: `hara-identity-zitadel-oauth-metadata-1`;
+- image: `hara-identity-oauth-metadata:v1.0.0`;
+- image ID: `sha256:f7e5984ad00f85f74f93dd66f14c711e9f9da0a0450472e7cd56a8826bdc05c4`;
+- live compose backup:
+  `/srv/hara/identity/compose/compose.yml.pre-mcp-rfc8414-20261006T151956Z`.
+
+Deployment used `docker compose up -d --no-deps zitadel-oauth-metadata`.
+The pre-existing proxy, ZITADEL API, login, assets and Postgres containers kept
+the same container IDs and uptime across the change.
+
+Public live validation:
+- RFC 8414 HTTP: PASS;
+- issuer and auth/token/introspection/revocation/JWKS exact-match OIDC: PASS;
+- Authorization Code: PASS;
+- PKCE S256: PASS;
+- CIMD disabled: PASS;
+- DCR not advertised: PASS;
+- existing HARA Identity white-label: PASS.
+
+Commander full live-readonly regression after deployment:
+- source/preprod readiness: PASS;
+- D1: PASS/APPLIED;
+- runtime assets: CURRENT;
+- fail-closed: PASS;
+- exact Worker deployment: PROVEN;
+- Worker remains `5f6f29aa-e333-4898-a11b-e7cc29c77f12`.
+
+Rollback of this Identity-only slice is to remove/stop
+`zitadel-oauth-metadata` and restore the timestamped compose backup. No Worker,
+ZITADEL API, Login or database rollback is required.
+
 RFC8414_SOURCE=CLOSED_PASS
-RFC8414_LIVE=PENDING_DEPLOY
+RFC8414_LIVE=CLOSED_PASS
 CIMD_ADMISSION_POLICY=CLOSED_PASS
 CIMD_FETCH_SSRF_GUARD=CLOSED_PASS
 CIMD_ADVERTISED=FALSE
