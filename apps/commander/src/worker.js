@@ -70,6 +70,8 @@ const SLO_ALERT_PROFILE = "INTERNAL_BETA_V1";
 const SLO_ALERT_BREACH_STREAK = 2;
 const SLO_ALERT_RECOVERY_STREAK = 2;
 const SLO_ALERT_ONLINE_GRACE_SECONDS = 120;
+const DEVICE_HEARTBEAT_PERSIST_SECONDS = 120;
+const DEVICE_ONLINE_GRACE_SECONDS = 240;
 const SLO_ALERT_SNAPSHOT_GRACE_SECONDS = 180;
 const SLO_ALERT_INCIDENT_RETENTION_SECONDS = 90 * 24 * 60 * 60;
 const SLO_ALERT_ESCALATION_L1_SECONDS = 60 * 60;
@@ -552,7 +554,7 @@ function deviceOnline(lastSeenAtUtc, tunnelMode = "OUTBOUND_RELAY", now = Date.n
   if (!Number.isFinite(seen)) return false;
   const onlineWindowMs = mode === "EVENT_V2"
     ? 7 * 60 * 60 * 1000
-    : 90_000;
+    : DEVICE_ONLINE_GRACE_SECONDS * 1000;
   return now - seen <= onlineWindowMs;
 }
 
@@ -2391,27 +2393,34 @@ async function heartbeatDevice(env, request, body) {
   const agentVersion = cleanAgentValue(body.agent_version, 80) || device.agent_version;
   const architecture = cleanAgentValue(body.architecture, 80) || device.architecture;
   const approvalMode = normalizeApprovalMode(body.approval_mode, normalizeApprovalMode(device.approval_mode, "ASK_EVERY_ACTION"));
-  const activitySummaryJson = cleanAgentActivitySnapshots(body.activity_snapshots);
   const seenAt = nowIso();
+  const persistCutoff = new Date(Date.now() - DEVICE_HEARTBEAT_PERSIST_SECONDS * 1000).toISOString();
+  const metadataChanged =
+    String(agentVersion || "") !== String(device.agent_version || "")
+    || String(architecture || "") !== String(device.architecture || "")
+    || String(approvalMode || "") !== String(device.approval_mode || "")
+    || String(device.tunnel_mode || "") !== "OUTBOUND_RELAY";
+  const persistPresence = metadataChanged
+    || !device.last_seen_at_utc
+    || String(device.last_seen_at_utc) < persistCutoff;
 
-  const heartbeat = await env.PRODUCT_DB.prepare(
-    `UPDATE commander_devices
-        SET last_seen_at_utc = ?,
-            agent_version = ?,
-            architecture = ?,
-            approval_mode = ?,
-            tunnel_mode = 'OUTBOUND_RELAY',
-            activity_summary_json = CASE WHEN ? IS NULL THEN activity_summary_json ELSE ? END,
-            activity_summary_at_utc = CASE WHEN ? IS NULL THEN activity_summary_at_utc ELSE ? END
-      WHERE device_id = ? AND state = 'ACTIVE' AND revoked_at_utc IS NULL`
-  ).bind(
-    seenAt, agentVersion, architecture, approvalMode,
-    activitySummaryJson, activitySummaryJson,
-    activitySummaryJson, seenAt,
-    device.device_id
-  ).run();
-  if (!heartbeat.meta?.changes) throw new Error("DEVICE_AUTH_INVALID");
+  let persisted = false;
+  if (persistPresence) {
+    const heartbeat = await env.PRODUCT_DB.prepare(
+      `UPDATE commander_devices
+          SET last_seen_at_utc = ?,
+              agent_version = ?,
+              architecture = ?,
+              approval_mode = ?,
+              tunnel_mode = 'OUTBOUND_RELAY'
+        WHERE device_id = ? AND state = 'ACTIVE' AND revoked_at_utc IS NULL`
+    ).bind(seenAt, agentVersion, architecture, approvalMode, device.device_id).run();
+    if (!heartbeat.meta?.changes) throw new Error("DEVICE_AUTH_INVALID");
+    persisted = true;
+  }
 
+  // Detailed customer activity is local-authoritative. Older Agents may still
+  // send activity_snapshots during transition; public Commander ignores them.
   return {
     schema: "hara.commander-device-heartbeat.v1",
     ok: true,
@@ -2419,7 +2428,9 @@ async function heartbeatDevice(env, request, body) {
     state: "ACTIVE",
     server_time_utc: seenAt,
     heartbeat_after_seconds: 30,
-    local_activity_snapshot_accepted: Boolean(activitySummaryJson),
+    presence_persisted: persisted,
+    local_activity_snapshot_accepted: false,
+    customer_activity_detail_persisted: false,
   };
 }
 
@@ -2695,7 +2706,7 @@ async function enqueueDeviceCall(env, body) {
   const callId = "HARA-CALL-" + crypto.randomUUID();
   const createdAt = nowIso();
   const expiresAt = nowIso(DEVICE_CALL_TTL_SECONDS);
-  const onlineCutoff = new Date(Date.now() - 90_000).toISOString();
+  const onlineCutoff = new Date(Date.now() - DEVICE_ONLINE_GRACE_SECONDS * 1000).toISOString();
   const eventV2Cutoff = new Date(Date.now() - 7 * 60 * 60 * 1000).toISOString();
   const inserted = await env.PRODUCT_DB.prepare(
     `INSERT OR IGNORE INTO commander_device_calls
@@ -4452,29 +4463,11 @@ async function executeCustomerMcpTool(
     return {state:"PASS",operational_authority:"HARA_SERVICES",execution_authority:"HARA_SERVICES",runtime_authority_from_chatgpt:false,mutation_performed:false,customer_services_relay:false,result:usage,product:{plan_code:context.plan_code,entitlement_id:context.entitlement_id,quota:usage.usage}};
   }
 
-  if (toolId === "hara.activity") {
-    const activity=await portalActivity(
-      env,
-      {tenant_id:context.tenant_id,subject_id:context.subject_id,role:"MEMBER"},
-      args?.limit || 50,
-      args?.window || "7d",
-    );
-    return {
-      state:"PASS", operational_authority:"HARA_SERVICES", execution_authority:"HARA_SERVICES",
-      runtime_authority_from_chatgpt:false, mutation_performed:false, customer_services_relay:false,
-      result:activity,
-      product:{plan_code:context.plan_code,entitlement_id:context.entitlement_id,quota:null},
-    };
-  }
-
-  if (toolId === "hara.calls.recent") {
-    const calls = await recentCustomerCalls(env, context, args);
-    return {
-      state:"PASS", operational_authority:"HARA_SERVICES", execution_authority:"HARA_SERVICES",
-      runtime_authority_from_chatgpt:false, mutation_performed:false, customer_services_relay:false,
-      result:{count:calls.length,calls},
-      product:{plan_code:context.plan_code,entitlement_id:context.entitlement_id,quota:null},
-    };
+  if (toolId === "hara.activity" || toolId === "hara.calls.recent") {
+    // Detailed history belongs to the local Agent store. Until the next signed
+    // Agent exposes the local-history bridge, public Commander must not rebuild
+    // or persist this information in Cloudflare.
+    throw new Error("LOCAL_DIAGNOSTICS_REQUIRE_SIGNED_AGENT_UPDATE");
   }
 
   const targetDevice = await resolveCustomerTargetDevice(
@@ -5179,6 +5172,7 @@ export default {
       }
 
       if (url.pathname === "/api/portal/activity" && request.method === "GET") {
+        return json({ ok:false, code:"INTERNAL_DIAGNOSTICS_NOT_IN_PRODUCT" },404);
         const session = await resolvePortalSession(request, env);
         if (!session) return json({ ok: false, code: "AUTH_REQUIRED" }, 401);
         const limit=Number(url.searchParams.get("limit") || 50);
@@ -5187,12 +5181,14 @@ export default {
       }
 
       if (url.pathname === "/api/portal/slo" && request.method === "GET") {
+        return json({ ok:false, code:"INTERNAL_DIAGNOSTICS_NOT_IN_PRODUCT" },404);
         const session = await resolvePortalSession(request, env);
         if (!session) return json({ ok:false, code:"AUTH_REQUIRED" },401);
         return json(await portalSloStatus(env,session));
       }
 
       if (url.pathname === "/api/portal/slo/ack" && request.method === "POST") {
+        return json({ ok:false, code:"INTERNAL_DIAGNOSTICS_NOT_IN_PRODUCT" },404);
         requirePortalMutationOrigin(request);
         const session = await resolvePortalSession(request, env);
         if (!session) return json({ ok:false, code:"AUTH_REQUIRED" },401);
@@ -5202,6 +5198,7 @@ export default {
       }
 
       if (url.pathname === "/api/portal/slo/escalate" && request.method === "POST") {
+        return json({ ok:false, code:"INTERNAL_DIAGNOSTICS_NOT_IN_PRODUCT" },404);
         requirePortalMutationOrigin(request);
         const session = await resolvePortalSession(request, env);
         if (!session) return json({ ok:false, code:"AUTH_REQUIRED" },401);
@@ -5712,6 +5709,7 @@ export default {
         DEVICE_CALL_ENQUEUE_CONFLICT: 409,
         DEVICE_CALL_NOT_FOUND: 404,
         GRANT_MISSING: 403,
+        LOCAL_DIAGNOSTICS_REQUIRE_SIGNED_AGENT_UPDATE: 409,
         IDEMPOTENCY_CONFLICT: 409,
       };
 
@@ -5731,7 +5729,6 @@ export default {
     requireRuntime(env);
     ctx.waitUntil(runAuthRetentionMaintenance(env));
     ctx.waitUntil(cleanupExpiredDeviceCalls(env));
-    ctx.waitUntil(runSloAlertMaintenance(env));
     ctx.waitUntil(cleanupExpiredSupportReports(env));
   }
 };

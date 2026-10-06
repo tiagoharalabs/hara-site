@@ -11,7 +11,7 @@
   <style>html.auth-bootstrap-pending body>*{visibility:hidden}html.auth-bootstrap-pending body::before{content:"H.A.R.A. COMMANDER · verificando sessão";position:fixed;inset:0;display:grid;place-items:center;visibility:visible;background:#eef8fd;color:#315d78;font:600 12px/1.4 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:.12em}html[data-theme="dark"].auth-bootstrap-pending body::before{background:#061721;color:#a9c8d9}</style>
   <title>H.A.R.A. Commander</title>
   <link rel="icon" type="image/webp" href="./assets/hara-commander-royal.webp?v=20260921-final1" />
-  <link rel="stylesheet" href="./styles.css?v=20261006-clientbrands1" />
+  <link rel="stylesheet" href="./styles.css?v=20261006-productboundary1" />
 </head>
 <body>
   <a class="skip-link" href="#mainContent">Pular para o conteúdo</a>
@@ -398,23 +398,24 @@
             </div>
           </div>
 
-          <div class="summary-grid usage-ops-grid" aria-label="Saúde operacional">
-            <article class="summary-card"><span>Transações</span><strong id="activityTotal">—</strong><small id="activityScope">Carregando atividade</small></article>
-            <article class="summary-card"><span>Taxa de sucesso</span><strong id="activitySuccessRate">—</strong><small id="activityTerminalSummary">Chamadas terminais</small></article>
-            <article class="summary-card"><span>Latência média</span><strong id="activityAvgLatency">—</strong><small id="activityLatencyStages">Fila + execução</small></article>
-            <article class="summary-card"><span>Transporte</span><strong id="activityTransport">—</strong><small id="activityDeviceCount">Computadores envolvidos</small></article>
-            <article class="summary-card" id="sloSummaryCard" hidden>
-              <span>SLO interno</span><strong id="activitySloStatus">—</strong>
-              <small id="activitySloDetail">Carregando estado operacional</small>
-              <div class="activity-actions" id="activitySloActions" hidden>
-                <button class="btn btn-secondary small" type="button" data-slo-ack>Reconhecer</button>
-                <button class="btn btn-secondary small" type="button" data-slo-escalate>Escalar</button>
-              </div>
-            </article>
-          </div>
-          <p class="activity-privacy-note" id="activityPrivacyNote">Telemetria operacional somente. Comandos, argumentos, payloads e resultados do cliente não fazem parte deste histórico.</p>
+          <section id="internalBetaDiagnostics" class="internal-beta-diagnostics" hidden>
+            <div class="internal-beta-banner">
+              <strong>DIAGNÓSTICO LOCAL · BETA</strong>
+              <span>Somente para desenvolvimento. Este bloco será removido da versão final do Commander.</span>
+            </div>
+            <div class="summary-grid usage-ops-grid" aria-label="Diagnóstico local beta">
+              <article class="summary-card"><span>Transações locais</span><strong id="activityTotal">—</strong><small id="activityScope">Carregando atividade local</small></article>
+              <article class="summary-card"><span>Taxa de sucesso local</span><strong id="activitySuccessRate">—</strong><small id="activityTerminalSummary">Chamadas terminais</small></article>
+              <article class="summary-card"><span>Duração média local</span><strong id="activityAvgLatency">—</strong><small id="activityLatencyStages">Tempo de execução da tool</small></article>
+              <article class="summary-card"><span>Transporte local</span><strong id="activityTransport">—</strong><small id="activityDeviceCount">Este computador</small></article>
+              <article class="summary-card" id="sloSummaryCard">
+                <span>Disponibilidade local · beta</span><strong id="activitySloStatus">—</strong>
+                <small id="activitySloDetail">Avaliando somente disponibilidade local</small>
+              </article>
+            </div>
+            <p class="activity-privacy-note" id="activityPrivacyNote">Detalhes lidos diretamente do SQLite local do Agent. Não são enviados ao Cloudflare/D1.</p>
 
-          <details class="usage-advanced panel">
+            <details class="usage-advanced panel">
             <summary>
               <span><b>Detalhes avançados</b><small>Tools, falhas e transações recentes</small></span>
               <em>Mostrar</em>
@@ -450,7 +451,8 @@
                 </div>
               </div>
             </div>
-          </details>
+            </details>
+          </section>
         </div>
       </div>
     </section>
@@ -622,6 +624,6 @@
     </nav>
   </template>
 
-  <script src="./app.js?v=20261006-authrecovery1"></script>
+  <script src="./app.js?v=20261006-productboundary1"></script>
 </body>
 </html>

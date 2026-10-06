@@ -55,7 +55,6 @@
   let deviceSectionTab = "devices";
   let deviceTab = "active";
   let installApprovalMode = "PERSISTENT_TRUSTED";
-  let currentSloIncident = null;
 
   function currentTheme() {
     return root.dataset.theme === "dark" ? "dark" : "light";
@@ -399,6 +398,7 @@
       window:payload.window || {},
       privacy:payload.privacy || {},
       summary:{...(payload.summary || {}),device_count:1},
+      slo:payload.slo || null,
       diagnostics:payload.diagnostics || {top_tools:[],top_errors:[]},
       transactions,
     };
@@ -589,6 +589,10 @@
   }
 
   function renderActivity(payload) {
+    const diagnosticsPanel=document.getElementById("internalBetaDiagnostics");
+    const localOnly=payload?.local_direct === true || String(payload?.source || "").startsWith("LOCALHOST_SQLITE");
+    if (diagnosticsPanel) diagnosticsPanel.hidden=!localOnly;
+    if (!localOnly) return;
     const summary=payload?.summary || {};
     setText("activityTotal",number(summary.total_calls || 0));
     const scopeLabel=payload?.scope === "TENANT"
@@ -612,6 +616,17 @@
     const diagnostics=payload?.diagnostics || {};
     renderActivityBreakdown("activityTopTools",diagnostics.top_tools,"tool_id","Sem atividade","Nenhuma tool executada nesta janela.");
     renderActivityBreakdown("activityTopErrors",diagnostics.top_errors,"error_code","Sem falhas","Nenhuma falha registrada nesta janela.");
+
+    const localSlo=payload?.slo || {};
+    const localSloStatus=String(localSlo.status || "INSUFFICIENT_DATA");
+    setText("activitySloStatus",localSloStatus === "PASS" ? "OK" : (localSloStatus === "DEGRADED" ? "Degradado" : "Aguardando amostra"));
+    const success=summary.availability_success_rate_percent;
+    setText(
+      "activitySloDetail",
+      success == null
+        ? "Disponibilidade local ainda sem amostra suficiente."
+        : "Disponibilidade local " + String(success).replace(".",",") + "% · duração das tools não entra no SLO.",
+    );
 
     const ledger=document.getElementById("usageLedger");
     if (!ledger) return;
@@ -675,109 +690,6 @@
     });
   }
 
-  function renderSloStatus(payload) {
-    const card=document.getElementById("sloSummaryCard");
-    if (!card) return;
-    const allowed=["OWNER","ADMIN"].includes(currentRole);
-    card.hidden=!allowed;
-    if (!allowed) return;
-
-    const persisted=payload?.state;
-    const observed=payload?.observed;
-    const current=persisted || observed;
-    const status=String(observed?.state || persisted?.state || "INSUFFICIENT_DATA");
-    const incidentId=String(persisted?.current_incident_id || "");
-    const incident=incidentId
-      ? (Array.isArray(payload?.incidents) ? payload.incidents.find((row)=>String(row?.incident_id || "")===incidentId) : null)
-      : null;
-    currentSloIncident=incident || null;
-    const actions=document.getElementById("activitySloActions");
-    if (actions) actions.hidden=!incident;
-    const ackButton=document.querySelector("[data-slo-ack]");
-    const escalateButton=document.querySelector("[data-slo-escalate]");
-    if (ackButton) {
-      ackButton.hidden=!incident || Boolean(incident?.acknowledged_at_utc);
-      ackButton.disabled=!incident;
-    }
-    if (escalateButton) {
-      escalateButton.hidden=!incident || Number(incident?.escalation_level || 0)>=3;
-      escalateButton.disabled=!incident;
-      if (incident) escalateButton.textContent="Escalar L"+Math.min(3,Number(incident.escalation_level || 0)+1);
-    }
-    const summary=observed || persisted?.summary || {};
-    const p95=summary.worst_device_p95_ms;
-    const success=summary.weighted_success_rate_percent;
-
-    if (!current) {
-      setText("activitySloStatus","Aguardando");
-      setText("activitySloDetail","A primeira avaliação do cron ainda não foi registrada.");
-      return;
-    }
-    if (status === "PASS") {
-      setText("activitySloStatus","Dentro do SLO");
-      setText(
-        "activitySloDetail",
-        (success == null ? "" : String(success).replace(".",",")+"% disponibilidade · ")
-        +(p95 == null ? "p95 sem amostra" : "p95 "+activityDuration(p95)),
-      );
-      return;
-    }
-    if (status === "DEGRADED") {
-      setText("activitySloStatus","Degradado");
-      setText(
-        "activitySloDetail",
-        incidentId
-          ? "Incidente "+incidentId.slice(-8)+" aberto · L"+number(incident?.escalation_level || 0)
-            +(incident?.acknowledged_at_utc ? " · reconhecido" : " · não reconhecido")
-          : "Degradação observada · aguardando confirmação da histerese",
-      );
-      return;
-    }
-    setText("activitySloStatus","Pouca evidência");
-    setText("activitySloDetail","Amostra insuficiente para avaliar o SLO interno.");
-  }
-
-  async function mutateSloIncident(action, level=null) {
-    if (!currentSloIncident?.incident_id) return;
-    const body={incident_id:String(currentSloIncident.incident_id)};
-    if (level != null) body.level=level;
-    const response=await fetch("/api/portal/slo/"+action,{
-      method:"POST",
-      cache:"no-store",
-      credentials:"same-origin",
-      headers:{"content-type":"application/json"},
-      body:JSON.stringify(body),
-    });
-    if (handlePortalAuthFailure(response,"Entre novamente para operar o incidente.")) return;
-    const payload=await response.json().catch(()=>({}));
-    if (!response.ok) throw new Error(String(payload?.code || "SLO_INCIDENT_MUTATION_FAILED"));
-    renderSloStatus(payload);
-    showToast(action === "ack" ? "Incidente reconhecido." : "Incidente escalado.");
-  }
-
-  async function loadSloStatus() {
-    const card=document.getElementById("sloSummaryCard");
-    if (!remotePortal || !sessionAuthenticated || !["OWNER","ADMIN"].includes(currentRole)) {
-      if (card) card.hidden=true;
-      return;
-    }
-    if (card) card.hidden=false;
-    try {
-      const response=await fetch("/api/portal/slo",{cache:"no-store",credentials:"same-origin"});
-      if (handlePortalAuthFailure(response,"Entre novamente para consultar o estado operacional.")) return;
-      if (response.status === 403) {
-        if (card) card.hidden=true;
-        return;
-      }
-      const payload=await response.json().catch(()=>({}));
-      if (!response.ok) throw new Error(String(payload?.code || "SLO_STATUS_LOAD_FAILED"));
-      renderSloStatus(payload);
-    } catch (_error) {
-      setText("activitySloStatus","Indisponível");
-      setText("activitySloDetail","O estado de SLO não pôde ser consultado agora.");
-    }
-  }
-
   function setActivityWindow(value) {
     const next=["24h","7d","30d"].includes(String(value)) ? String(value) : "7d";
     activityWindow=next;
@@ -824,7 +736,8 @@
   }
 
   async function loadUsageActivity(trigger=null, force=false) {
-    if (!remotePortal) return;
+    if (!remotePortal || !sessionAuthenticated) return;
+    const diagnosticsPanel=document.getElementById("internalBetaDiagnostics");
     const cached=activityCache.get(activityWindow);
     if (!force && cached && Date.now()-cached.at < ACTIVITY_CACHE_MS) {
       renderActivity(cached.payload);
@@ -835,49 +748,21 @@
       trigger.disabled=true;
       trigger.textContent="Atualizando…";
     }
-    const localAllowed=sessionAuthenticated
-      && await shouldAttemptLocalActivity(Boolean(trigger));
-    const localPromise=localAllowed
-      ? fetchLocalActivityDirect(activityWindow)
-      : Promise.resolve(null);
     try {
-      const cloudPromise=fetch(
-        "/api/portal/activity?limit=50&window="+encodeURIComponent(activityWindow),
-        {cache:"no-store",credentials:"same-origin"},
-      );
-      let localPayload=await Promise.race([
-        localPromise,
-        new Promise((resolve)=>setTimeout(()=>resolve(null),200)),
-      ]);
-      if (localPayload) renderActivity(localPayload);
-
-      const response=await cloudPromise;
-      if (handlePortalAuthFailure(response,"Entre novamente para consultar a atividade.")) return;
-      const cloudPayload=await response.json().catch(()=>({}));
-      if (!response.ok) throw new Error(String(cloudPayload?.code || "ACTIVITY_LOAD_FAILED"));
-      if (!localPayload) localPayload=await localPromise;
-      const payload=mergeLocalActivityDetail(cloudPayload,localPayload);
-      activityCache.set(activityWindow,{at:Date.now(),payload});
-      renderActivity(payload);
-    } catch (_error) {
-      const localPayload=await localPromise;
-      if (localPayload) {
-        activityCache.set(activityWindow,{at:Date.now(),payload:localPayload});
-        renderActivity(localPayload);
+      const permissionState=await localLoopbackPermissionState();
+      if (permissionState === "denied") {
+        if (diagnosticsPanel) diagnosticsPanel.hidden=true;
+        if (trigger) showToast("Diagnóstico beta disponível somente no computador que executa o Agent local.");
         return;
       }
-      const ledger=document.getElementById("usageLedger");
-      if (ledger) {
-        const header=ledger.querySelector(".tr.head");
-        ledger.replaceChildren();
-        if (header) ledger.append(header);
-        const empty=document.createElement("div");
-        empty.className="empty-state";
-        const strong=document.createElement("strong");
-        strong.textContent="Atividade indisponível";
-        empty.append(strong,document.createTextNode("Não foi possível consultar a telemetria agora. Tente novamente."));
-        ledger.append(empty);
+      const payload=await fetchLocalActivityDirect(activityWindow);
+      if (!payload) {
+        if (diagnosticsPanel) diagnosticsPanel.hidden=true;
+        if (trigger) showToast("O Agent local não respondeu ao diagnóstico beta.");
+        return;
       }
+      activityCache.set(activityWindow,{at:Date.now(),payload});
+      renderActivity(payload);
     } finally {
       if (trigger?.isConnected) {
         trigger.disabled=false;
@@ -1509,7 +1394,6 @@
     ) {
       applyDashboard(dashboardCache);
       applyScenario(scenario, dashboardCache);
-      if (currentView === "usage") loadSloStatus();
       return;
     }
 
@@ -1555,7 +1439,6 @@
       }
       applyDashboard(payload);
       applyScenario(scenario, payload);
-      if (currentView === "usage") loadSloStatus();
     } catch (_error) {
       setState("Aguardando", "Dados da conta ainda não carregados");
       showBanner("info", "Plano e uso temporariamente indisponíveis", "Sua sessão continua ativa. Atualize para consultar os dados do Commander novamente.", "Atualizar dados", loadProductDashboard);
@@ -1928,23 +1811,6 @@
       return;
     }
 
-    const sloAck = event.target.closest("[data-slo-ack]");
-    if (sloAck) {
-      event.preventDefault();
-      sloAck.disabled=true;
-      mutateSloIncident("ack").catch(()=>showToast("Não foi possível reconhecer o incidente.")).finally(()=>{ if (sloAck.isConnected) sloAck.disabled=false; });
-      return;
-    }
-
-    const sloEscalate = event.target.closest("[data-slo-escalate]");
-    if (sloEscalate) {
-      event.preventDefault();
-      const next=Math.min(3,Number(currentSloIncident?.escalation_level || 0)+1);
-      sloEscalate.disabled=true;
-      mutateSloIncident("escalate",next).catch(()=>showToast("Não foi possível escalar o incidente.")).finally(()=>{ if (sloEscalate.isConnected) sloEscalate.disabled=false; });
-      return;
-    }
-
     const activityWindowButton = event.target.closest("[data-activity-window]");
     if (activityWindowButton) {
       event.preventDefault();
@@ -1963,7 +1829,6 @@
     if (refreshActivity) {
       event.preventDefault();
       loadUsageActivity(refreshActivity,true);
-      loadSloStatus();
       return;
     }
 
