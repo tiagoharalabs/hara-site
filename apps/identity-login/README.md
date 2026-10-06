@@ -162,3 +162,44 @@ The prepared policy requires:
 
 CIMD must only be advertised after the authorization layer actually consumes
 this policy and the strict live gate passes.
+## MCP DCR guard
+
+Legacy MCP clients may still use OAuth Dynamic Client Registration. HARA
+Identity keeps ZITADEL DCR disabled by default, and any future public DCR
+traffic is designed to pass through a dedicated guard rather than reach the
+ZITADEL registration endpoint directly.
+
+Guard image:
+
+`hara-identity-dcr-gateway:v0.1.0`
+
+Default mode:
+
+`HARA_DCR_GATEWAY_MODE=closed`
+
+In closed mode the public registration path returns 404 and no request is sent
+to ZITADEL.
+
+The guarded mode, which is not enabled merely by deploying the service:
+
+- accepts only public OAuth clients (`token_endpoint_auth_method=none`);
+- requires Authorization Code; Refresh Token is optional;
+- accepts HTTPS redirects;
+- accepts HTTP loopback redirects for desktop/CLI MCP clients;
+- accepts native custom-scheme redirects only for native applications;
+- rejects remote plaintext HTTP and dangerous URI schemes;
+- caps request size and redirect count;
+- strips unrecognized registration metadata before forwarding;
+- rate-limits new registrations by source address;
+- requires a registration bearer token for management GET/DELETE;
+- validates replacement metadata on management PUT.
+
+Source gate:
+
+```bash
+python3 apps/identity-login/scripts/validate_mcp_dcr_gateway.py
+```
+
+Deploying the closed guard does **not** enable ZITADEL DCR and does not add a
+`registration_endpoint` to discovery. Enabling backend open DCR and switching
+the guard to `guarded` are separate promotion gates.

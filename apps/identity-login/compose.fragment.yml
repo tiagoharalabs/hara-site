@@ -11,6 +11,32 @@ services:
       - 'traefik.http.routers.zitadel-login.rule=Host(`${ZITADEL_DOMAIN}`) && PathPrefix(`/ui/v2/login`)'
 
 
+  zitadel-dcr-gateway:
+    image: hara-identity-dcr-gateway:v0.1.0
+    restart: unless-stopped
+    environment:
+      HARA_DCR_GATEWAY_MODE: closed
+      HARA_DCR_UPSTREAM_HOST: zitadel-api
+      HARA_DCR_UPSTREAM_PORT: "8080"
+      HARA_IDENTITY_HOST: auth.haralabs.com.br
+      HARA_DCR_ALLOW_CUSTOM_SCHEMES: "true"
+      PORT: "8082"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8082/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    networks: [identity]
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=hara-identity
+      - traefik.http.services.zitadel-dcr-gateway.loadbalancer.server.port=8082
+      - 'traefik.http.routers.zitadel-dcr-gateway.rule=Host(`${ZITADEL_DOMAIN}`) && PathPrefix(`/oauth/v2/register`)'
+      - traefik.http.routers.zitadel-dcr-gateway.entrypoints=web
+      - traefik.http.routers.zitadel-dcr-gateway.service=zitadel-dcr-gateway
+      - traefik.http.routers.zitadel-dcr-gateway.priority=800
+
   zitadel-oauth-metadata:
     image: hara-identity-oauth-metadata:v1.0.0
     restart: unless-stopped
