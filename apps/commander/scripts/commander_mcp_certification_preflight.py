@@ -75,7 +75,7 @@ def main():
     ids=[case["id"] for case in matrix.get("cases",[])]
     need(len(ids)==22 and len(set(ids))==22,"MATRIX_22_UNIQUE_CASES")
     need(set(matrix.get("required_clients",[]))=={"vscode","cursor","claude-code","mcp-inspector"},"MATRIX_FOUR_CLIENTS")
-    need(matrix.get("certification_policy",{}).get("static_bearer_primary_certification_forbidden") is True,"NO_STATIC_BEARER_PRIMARY")
+    need(matrix.get("certification_policy",{}).get("no_static_bearer_fallback_for_certification") is True,"NO_STATIC_BEARER_PRIMARY")
 
     fixture=load(MCP/"certification-fixture-policy.v1.json")
     need(fixture.get("scratch",{}).get("root_template")=="/tmp/hara-mcp-cert/{run_id}","SCRATCH_ROOT")

@@ -45,7 +45,7 @@
   },
   "preflight": {
     "script": "apps/commander/scripts/commander_mcp_certification_preflight.py",
-    "hash_sha256": "7c9b39a11a7f16792ed5aafe35187c43bd03a6ed242c0e2151bdd667a0d62b43"
+    "hash_sha256": "6da18140dc7b3f60af646a4cbb61f97d2d7ff11c8ef000937fd98759c616b76b"
   },
   "snapshot": {
     "script": "apps/commander/scripts/commander_mcp_certification_snapshot.py",
