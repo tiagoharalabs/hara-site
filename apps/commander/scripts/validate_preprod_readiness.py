@@ -153,10 +153,12 @@ def main():
             sys.executable,
             "apps/identity-login/scripts/validate_mcp_oauth_metadata_live.py",
             "--expect-cimd", "disabled",
+            "--expect-dcr", "enabled",
         ])
         mcp_auth_output = run("COMMANDER_MCP_AUTH_DISCOVERY_LIVE_READONLY", [
             sys.executable,
             "apps/commander/scripts/commander_mcp_auth_discovery_probe.py",
+            "--require-generic-auto",
         ])
         for line in mcp_auth_output.splitlines():
             if line.startswith("COMMANDER_MCP_GENERIC_AUTO_OAUTH_ONBOARDING="):

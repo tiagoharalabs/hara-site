@@ -106,3 +106,59 @@ DCR_METADATA_CONDITIONAL_ADVERTISEMENT=CLOSED_PASS
 DCR_PROMOTION_TRANSACTION=CLOSED_PASS
 DCR_PUBLIC_OPEN=FALSE
 DCR_PROD_HARDENED_CLOSED=PENDING
+
+
+## PROD guarded promotion — CLOSED_PASS
+
+Executed: 2026-10-06
+
+The guarded DCR promotion completed successfully on the authoritative Identity
+stack at `storage:/srv/hara/identity/compose/compose.yml`.
+
+Preflight:
+- DCR_PROMOTION_PREFLIGHT=CLOSED_PASS
+- backend pre-enabled=false
+- backend pre-allow-unauthenticated=false
+- candidate state=guarded
+- secret material stdout=false
+
+Promotion:
+- backend DCR enabled;
+- unauthenticated DCR enabled behind the HARA guard;
+- gateway mode=guarded;
+- RFC8414 registration_endpoint advertised;
+- public invalid registration guard=PASS;
+- isolated metadata + gateway services healthy.
+
+Rollback checkpoint:
+- `/srv/hara/identity/compose/compose.yml.pre-mcp-dcr-guarded-20261006T162712Z`
+
+Strict generic OAuth discovery:
+- COMMANDER_MCP_AUTH_RFC8414_METADATA=PASS
+- COMMANDER_MCP_AUTH_DCR_ADVERTISED=PASS
+- COMMANDER_MCP_GENERIC_AUTO_OAUTH_ONBOARDING=PASS
+- CIMD remains deliberately not advertised.
+
+Disposable DCR lifecycle canary:
+- register public PKCE client: PASS;
+- no client secret issued: PASS;
+- registration management read: PASS;
+- delete: PASS;
+- post-delete deny: PASS;
+- registration access token received but not printed;
+- no canary client left behind.
+
+Repeatable mutating canary:
+- `apps/identity-login/scripts/commander_mcp_dcr_lifecycle_canary.py --execute`
+
+The Commander live-readonly gate now requires generic auto OAuth discovery to
+remain PASS but does not run the mutating lifecycle canary.
+
+DCR_GATEWAY_PROD=GUARDED_PASS
+DCR_BACKEND_PROD=ENABLED
+DCR_BACKEND_UNAUTHENTICATED=ENABLED_BEHIND_GUARD
+DCR_REGISTRATION_ADVERTISED=TRUE
+GENERIC_AUTO_OAUTH=CLOSED_PASS
+DCR_LIFECYCLE_CANARY=CLOSED_PASS
+CIMD_ADVERTISED=FALSE
+REAL_CLIENT_SMOKE_MATRIX=PENDING
