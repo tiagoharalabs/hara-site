@@ -1,0 +1,90 @@
+{
+  "schema": "hara.commander.mcp-client-adapter-expectations.v1",
+  "state": "PREPARED_NOT_EXECUTED",
+  "canonical_url": "https://commander.haralabs.com.br/api/mcp?profile=simple",
+  "server_invariants": {
+    "transport": "Streamable HTTP",
+    "oauth_authorization_server": "https://auth.haralabs.com.br",
+    "oauth_pkce": "S256",
+    "registration_endpoint": "https://auth.haralabs.com.br/oauth/v2/register",
+    "public_client_only": true,
+    "client_secret": false,
+    "tools": 24
+  },
+  "clients": {
+    "vscode": {
+      "config": [
+        "portable .mcp.json",
+        ".vscode/mcp.json"
+      ],
+      "current_known_features": [
+        "HTTP remote MCP",
+        "OAuth",
+        "server instructions",
+        "tool annotations",
+        "CIMD-capable"
+      ],
+      "certification_registration_mode": "guarded DCR while HARA CIMD advertisement remains false",
+      "static_client_id_fallback": "available but not primary certification path"
+    },
+    "cursor": {
+      "config": [
+        ".cursor/mcp.json",
+        "~/.cursor/mcp.json"
+      ],
+      "current_known_features": [
+        "Streamable HTTP",
+        "OAuth",
+        "tools",
+        "prompts",
+        "resources",
+        "roots",
+        "elicitation",
+        "MCP Apps"
+      ],
+      "certification_registration_mode": "guarded DCR",
+      "known_redirects": [
+        "http://localhost:8787/callback",
+        "https://www.cursor.com/agents/mcp/oauth/callback"
+      ],
+      "static_client_id_fallback": "available but not primary certification path"
+    },
+    "claude-code": {
+      "config": [
+        "remote MCP URL"
+      ],
+      "current_known_features": [
+        "remote MCP",
+        "native OAuth"
+      ],
+      "certification_registration_mode": "host-managed standards path",
+      "bearer_token_fallback": "not primary certification path",
+      "note": "Anthropic Messages API MCP connector is a separate surface because it consumes a pre-obtained authorization token."
+    },
+    "mcp-inspector": {
+      "config": [
+        "Streamable HTTP URL"
+      ],
+      "current_known_features": [
+        "tool discovery",
+        "manual calls",
+        "Quick OAuth Flow"
+      ],
+      "certification_registration_mode": "guarded DCR",
+      "role": "reference manual/wire client"
+    }
+  },
+  "failure_classification": [
+    "HARA_PROTOCOL_OR_AUTH_DEFECT",
+    "HARA_PRODUCT_UX_DEFECT",
+    "CLIENT_LIMITATION_OR_BUG",
+    "OPTIONAL_OR_UNSUPPORTED_MCP_CAPABILITY",
+    "TEST_ENVIRONMENT_DEFECT"
+  ],
+  "change_control": {
+    "vendor_specific_tool_aliases_forbidden": true,
+    "weaken_auth_for_single_client_forbidden": true,
+    "static_bearer_primary_certification_forbidden": true,
+    "cross_client_protocol_change_requires_recertification": true
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "schema": "hara.commander.mcp-certification-fixture-policy.v1",
+  "state": "PREPARED_NOT_EXECUTED",
+  "scratch": {
+    "root_template": "/tmp/hara-mcp-cert/{run_id}",
+    "max_total_bytes": 1048576,
+    "max_single_file_bytes": 65536,
+    "required_cleanup": true,
+    "forbidden_roots": [
+      "/etc",
+      "/usr",
+      "/var/lib",
+      "/srv",
+      "/home",
+      "/root"
+    ]
+  },
+  "files": [
+    {
+      "relative_path": "seed.txt",
+      "initial_content_class": "deterministic-small-text",
+      "purpose": "read/search fixture"
+    },
+    {
+      "relative_path": "mutation.txt",
+      "initial_content_class": "empty",
+      "purpose": "write/edit fixture"
+    }
+  ],
+  "process_cases": {
+    "one_shot": {
+      "command_class": "deterministic-stdout-only",
+      "shell_example": "printf HARA_MCP_CERT_PROCESS",
+      "network": false,
+      "filesystem_mutation": false,
+      "max_expected_seconds": 5
+    },
+    "interactive": {
+      "optional": true,
+      "command_class": "bounded-stdin-echo",
+      "network": false,
+      "max_expected_seconds": 30,
+      "must_be_killed_or_exit": true
+    }
+  },
+  "mutation_rules": {
+    "only_under_scratch_root": true,
+    "delete_cleanup_required": true,
+    "no_privilege_escalation": true,
+    "no_package_install": true,
+    "no_service_control": true,
+    "no_reboot_or_power_action": true,
+    "no_network_side_effects": true
+  },
+  "evidence_rules": {
+    "record_path_names": true,
+    "record_raw_file_content": false,
+    "record_command_content": false,
+    "record_process_output_content": false,
+    "record_request_ids": true,
+    "record_bridge_receipt_sha256": true
+  }
+}

@@ -1,0 +1,244 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://commander.haralabs.com.br/mcp/schemas/client-certification-evidence.v1.schema.json",
+  "title": "H.A.R.A. Commander MCP Client Certification Evidence V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "run_id",
+    "client",
+    "server",
+    "started_at_utc",
+    "state",
+    "cases",
+    "privacy"
+  ],
+  "properties": {
+    "schema": {
+      "const": "hara.commander.mcp-client-certification-evidence.v1"
+    },
+    "run_id": {
+      "type": "string",
+      "pattern": "^HARA-MCP-CERT-[A-Za-z0-9._-]{8,120}$"
+    },
+    "client": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "version",
+        "surface"
+      ],
+      "properties": {
+        "id": {
+          "enum": [
+            "vscode",
+            "cursor",
+            "claude-code",
+            "mcp-inspector"
+          ]
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "surface": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "platform": {
+          "type": "string",
+          "maxLength": 120
+        }
+      }
+    },
+    "server": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "url",
+        "simple_profile_version"
+      ],
+      "properties": {
+        "url": {
+          "const": "https://commander.haralabs.com.br/api/mcp?profile=simple"
+        },
+        "simple_profile_version": {
+          "const": "1.1.0"
+        },
+        "protocol_version": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 32
+        }
+      }
+    },
+    "started_at_utc": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "finished_at_utc": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "state": {
+      "enum": [
+        "PLANNED",
+        "RUNNING",
+        "PASS",
+        "FAIL",
+        "BLOCKED"
+      ]
+    },
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "case_id",
+          "requirement",
+          "state"
+        ],
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "pattern": "^[A-Z]+-[0-9]{2}$"
+          },
+          "requirement": {
+            "enum": [
+              "REQUIRED",
+              "OPTIONAL"
+            ]
+          },
+          "state": {
+            "enum": [
+              "PENDING",
+              "PASS",
+              "FAIL",
+              "NOT_APPLICABLE",
+              "BLOCKED"
+            ]
+          },
+          "http_status": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 100,
+            "maximum": 599
+          },
+          "mcp_error_code": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 120
+          },
+          "tool_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 120
+          },
+          "transport_request_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 180
+          },
+          "bridge_receipt_sha256": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "latency_ms": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 800
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "required_pass": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "required_fail": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "required_pending": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "optional_pass": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "optional_not_applicable": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "access_token_recorded",
+        "refresh_token_recorded",
+        "registration_access_token_recorded",
+        "client_secret_recorded",
+        "raw_command_content_recorded",
+        "raw_result_content_recorded"
+      ],
+      "properties": {
+        "access_token_recorded": {
+          "const": false
+        },
+        "refresh_token_recorded": {
+          "const": false
+        },
+        "registration_access_token_recorded": {
+          "const": false
+        },
+        "client_secret_recorded": {
+          "const": false
+        },
+        "raw_command_content_recorded": {
+          "const": false
+        },
+        "raw_result_content_recorded": {
+          "const": false
+        }
+      }
+    }
+  }
+}

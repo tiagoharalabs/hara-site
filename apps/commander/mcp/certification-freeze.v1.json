@@ -1,0 +1,24 @@
+{
+  "schema": "hara.commander.mcp-certification-freeze.v1",
+  "state": "FROZEN_CANDIDATE_NOT_EXECUTED",
+  "frozen_at_utc": "2026-10-06T16:00:00Z",
+  "server_contract_commit": "ccdb642e643174484a57a34115f7b24c964e8c20",
+  "artifacts": {
+    "client-compatibility-profile.v1.json": "5ac1da274d19115fd1e7db693f948c4d148a1679df12e395da31729f569d0939",
+    "client-adapter-expectations.v1.json": "f465ac4c823c680e57dfe8bf44190af7686e5b8a1a9ea66517feebdaf2a589db",
+    "client-certification-matrix.v1.json": "47c16cc7ee13d32cde5fa4805c5888234f5b6141db2cb4a5a9a9458d27e79b0f",
+    "certification-fixture-policy.v1.json": "b8e9c860606504568e689acd6d5184aa0b71a8d166c387e5d280b06316267f43",
+    "certification-rollup-policy.v1.json": "e45f47093b1b195abd5456b7f78997cf96512b3d9b14df7c3a6b396251534e63",
+    "client-certification-evidence.schema.json": "580bd1b37f4dd70217de22f3788b228d6cb970a2332299b4d95db2060c3cb98f",
+    "client-certification-certificate.schema.json": "2a59139ed8cf4dfbd313236811792052e96781127885969eba28acc86798206e"
+  },
+  "required_clients": [
+    "mcp-inspector",
+    "vscode",
+    "cursor",
+    "claude-code"
+  ],
+  "rule": "Any artifact hash change after first client execution creates a new certification revision.",
+  "client_execution": false,
+  "local_client_execution": false
+}
