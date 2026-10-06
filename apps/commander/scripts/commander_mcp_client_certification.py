@@ -27,10 +27,23 @@ def save(path: pathlib.Path, value):
 def now():
     return dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00","Z")
 
+PRIVACY_ATTESTATION_KEYS={
+    "access_token_recorded",
+    "refresh_token_recorded",
+    "registration_access_token_recorded",
+    "client_secret_recorded",
+    "raw_command_content_recorded",
+    "raw_result_content_recorded",
+}
+
 def scrub(value, where="root"):
     if isinstance(value,dict):
         for key,item in value.items():
             normalized=str(key).lower().replace("-","_")
+            if where=="root.privacy" and normalized in PRIVACY_ATTESTATION_KEYS:
+                if item is not False:
+                    raise SystemExit(f"CERT_EVIDENCE_PRIVACY_ATTESTATION_NOT_FALSE:{where}.{key}")
+                continue
             if normalized in FORBIDDEN_KEYS or "token" in normalized or "secret" in normalized:
                 raise SystemExit(f"CERT_EVIDENCE_FORBIDDEN_SECRET_FIELD:{where}.{key}")
             scrub(item,where+"."+str(key))
