@@ -11,6 +11,7 @@ APP = ROOT / "apps" / "commander"
 WRANGLER = ROOT / "node_modules" / ".bin" / "wrangler"
 CONFIG = APP / "wrangler.jsonc"
 READBACK = APP / "scripts" / "commander_prod_deployment_readback.py"
+RUNTIME_DRIFT = APP / "scripts" / "validate_prod_runtime_drift.py"
 UUID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.I)
 REQUIRED_VERSION_SECRETS = {
     "AUTH_CLIENT_SECRET",
@@ -88,10 +89,12 @@ def main() -> int:
         "python3", str(READBACK),
         "--expect-version", args.version,
     ])
+    run(["python3", str(RUNTIME_DRIFT), "--expect-assets", "current"])
 
     print("COMMANDER_VERSIONED_PROMOTE_WORKER=PASS")
     print("COMMANDER_VERSIONED_PROMOTE_TRIGGERS=PASS")
     print("COMMANDER_VERSIONED_PROMOTE_READBACK=PASS")
+    print("COMMANDER_VERSIONED_PROMOTE_RUNTIME_ASSETS=PASS")
     print("COMMANDER_VERSIONED_PROMOTE=PASS")
     return 0
 
