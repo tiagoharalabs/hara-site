@@ -165,7 +165,7 @@ def state(tenant: str) -> dict:
 
 def incident(tenant: str) -> list[dict]:
     return rows(
-        "SELECT incident_id,state,opened_at_utc,resolved_at_utc "
+        "SELECT incident_id,state,opened_at_utc,resolved_at_utc,acknowledged_at_utc,acknowledged_by_subject_id,escalation_level,escalated_at_utc "
         f"FROM commander_slo_incidents WHERE tenant_id={q(tenant)} ORDER BY opened_at_utc;"
     )
 
@@ -238,6 +238,20 @@ DELETE FROM tenants WHERE tenant_id={q(tenant)};
         assert second["current_incident_id"]
         assert len(opened) == 1 and opened[0]["state"] == "OPEN"
         print("COMMANDER_SLO_INCIDENT_DEV_OPEN=PASS")
+
+        incident_id = str(opened[0]["incident_id"])
+        for hours, expected_level in ((2, 1), (5, 2), (13, 3)):
+            aged = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat(timespec="seconds").replace("+00:00", "Z")
+            d1(
+                "UPDATE commander_slo_incidents SET opened_at_utc="
+                f"{q(aged)} WHERE incident_id={q(incident_id)};"
+            )
+            set_snapshot(device_id, "DEGRADED")
+            maintenance(token)
+            escalated = incident(tenant)
+            assert int(escalated[0]["escalation_level"]) == expected_level
+            assert escalated[0]["escalated_at_utc"]
+            print(f"COMMANDER_SLO_INCIDENT_DEV_AUTO_ESCALATION_L{expected_level}=PASS")
 
         set_snapshot(device_id, "PASS")
         maintenance(token)

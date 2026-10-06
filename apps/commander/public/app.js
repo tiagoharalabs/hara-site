@@ -52,6 +52,7 @@
   let deviceSectionTab = "devices";
   let deviceTab = "active";
   let installApprovalMode = "PERSISTENT_TRUSTED";
+  let currentSloIncident = null;
 
   function currentTheme() {
     return root.dataset.theme === "dark" ? "dark" : "light";
@@ -591,6 +592,23 @@
     const current=persisted || observed;
     const status=String(observed?.state || persisted?.state || "INSUFFICIENT_DATA");
     const incidentId=String(persisted?.current_incident_id || "");
+    const incident=incidentId
+      ? (Array.isArray(payload?.incidents) ? payload.incidents.find((row)=>String(row?.incident_id || "")===incidentId) : null)
+      : null;
+    currentSloIncident=incident || null;
+    const actions=document.getElementById("activitySloActions");
+    if (actions) actions.hidden=!incident;
+    const ackButton=document.querySelector("[data-slo-ack]");
+    const escalateButton=document.querySelector("[data-slo-escalate]");
+    if (ackButton) {
+      ackButton.hidden=!incident || Boolean(incident?.acknowledged_at_utc);
+      ackButton.disabled=!incident;
+    }
+    if (escalateButton) {
+      escalateButton.hidden=!incident || Number(incident?.escalation_level || 0)>=3;
+      escalateButton.disabled=!incident;
+      if (incident) escalateButton.textContent="Escalar L"+Math.min(3,Number(incident.escalation_level || 0)+1);
+    }
     const summary=observed || persisted?.summary || {};
     const p95=summary.worst_device_p95_ms;
     const success=summary.weighted_success_rate_percent;
@@ -614,13 +632,32 @@
       setText(
         "activitySloDetail",
         incidentId
-          ? "Incidente "+incidentId.slice(-8)+" aberto · streak "+number(current.breach_streak || 0)
+          ? "Incidente "+incidentId.slice(-8)+" aberto · L"+number(incident?.escalation_level || 0)
+            +(incident?.acknowledged_at_utc ? " · reconhecido" : " · não reconhecido")
           : "Degradação observada · aguardando confirmação da histerese",
       );
       return;
     }
     setText("activitySloStatus","Pouca evidência");
     setText("activitySloDetail","Amostra insuficiente para avaliar o SLO interno.");
+  }
+
+  async function mutateSloIncident(action, level=null) {
+    if (!currentSloIncident?.incident_id) return;
+    const body={incident_id:String(currentSloIncident.incident_id)};
+    if (level != null) body.level=level;
+    const response=await fetch("/api/portal/slo/"+action,{
+      method:"POST",
+      cache:"no-store",
+      credentials:"same-origin",
+      headers:{"content-type":"application/json"},
+      body:JSON.stringify(body),
+    });
+    if (handlePortalAuthFailure(response,"Entre novamente para operar o incidente.")) return;
+    const payload=await response.json().catch(()=>({}));
+    if (!response.ok) throw new Error(String(payload?.code || "SLO_INCIDENT_MUTATION_FAILED"));
+    renderSloStatus(payload);
+    showToast(action === "ack" ? "Incidente reconhecido." : "Incidente escalado.");
   }
 
   async function loadSloStatus() {
@@ -1776,6 +1813,23 @@
     if (pairing) {
       event.preventDefault();
       createPairing();
+      return;
+    }
+
+    const sloAck = event.target.closest("[data-slo-ack]");
+    if (sloAck) {
+      event.preventDefault();
+      sloAck.disabled=true;
+      mutateSloIncident("ack").catch(()=>showToast("Não foi possível reconhecer o incidente.")).finally(()=>{ if (sloAck.isConnected) sloAck.disabled=false; });
+      return;
+    }
+
+    const sloEscalate = event.target.closest("[data-slo-escalate]");
+    if (sloEscalate) {
+      event.preventDefault();
+      const next=Math.min(3,Number(currentSloIncident?.escalation_level || 0)+1);
+      sloEscalate.disabled=true;
+      mutateSloIncident("escalate",next).catch(()=>showToast("Não foi possível escalar o incidente.")).finally(()=>{ if (sloEscalate.isConnected) sloEscalate.disabled=false; });
       return;
     }
 

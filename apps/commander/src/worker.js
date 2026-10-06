@@ -71,6 +71,9 @@ const SLO_ALERT_RECOVERY_STREAK = 2;
 const SLO_ALERT_ONLINE_GRACE_SECONDS = 120;
 const SLO_ALERT_SNAPSHOT_GRACE_SECONDS = 180;
 const SLO_ALERT_INCIDENT_RETENTION_SECONDS = 90 * 24 * 60 * 60;
+const SLO_ALERT_ESCALATION_L1_SECONDS = 60 * 60;
+const SLO_ALERT_ESCALATION_L2_SECONDS = 4 * 60 * 60;
+const SLO_ALERT_ESCALATION_L3_SECONDS = 12 * 60 * 60;
 const TRANSIENT_EXECUTE_OR_REPLAY = "EXECUTE_OR_REPLAY";
 const TRANSIENT_REPLAY_ONLY = "REPLAY_ONLY";
 const TRANSIENT_SAFE_PREEXEC_RELEASE_CODES = new Set([
@@ -3473,7 +3476,7 @@ async function portalSloStatus(env, session) {
   ).bind(session.tenant_id).all();
   const observed=evaluateTenantSloRows(currentRows.results || []);
   const incidentRows=await env.PRODUCT_DB.prepare(
-    "SELECT incident_id,state,opened_at_utc,resolved_at_utc,first_breach_at_utc,last_breach_at_utc,last_seen_at_utc,summary_json,resolution_json FROM commander_slo_incidents WHERE tenant_id = ? ORDER BY opened_at_utc DESC LIMIT 10"
+    "SELECT incident_id,state,opened_at_utc,resolved_at_utc,first_breach_at_utc,last_breach_at_utc,last_seen_at_utc,summary_json,resolution_json,acknowledged_at_utc,acknowledged_by_subject_id,escalation_level,escalated_at_utc FROM commander_slo_incidents WHERE tenant_id = ? ORDER BY opened_at_utc DESC LIMIT 10"
   ).bind(session.tenant_id).all();
   const parse=(value)=>{ try { return value ? JSON.parse(String(value)) : null; } catch (_error) { return null; } };
   return {
@@ -3498,10 +3501,47 @@ async function portalSloStatus(env, session) {
       first_breach_at_utc:row.first_breach_at_utc,
       last_breach_at_utc:row.last_breach_at_utc || null,
       last_seen_at_utc:row.last_seen_at_utc,
+      acknowledged_at_utc:row.acknowledged_at_utc || null,
+      acknowledged_by_subject_id:row.acknowledged_by_subject_id || null,
+      escalation_level:Number(row.escalation_level || 0),
+      escalated_at_utc:row.escalated_at_utc || null,
       summary:parse(row.summary_json),
       resolution:parse(row.resolution_json),
     })),
   };
+}
+
+async function portalAcknowledgeSloIncident(env, session, body) {
+  if (!betaAccessCanManage(session)) throw new Error("SLO_STATUS_ADMIN_REQUIRED");
+  const incidentId=cleanId(body?.incident_id,180);
+  if (!incidentId) throw new Error("SLO_INCIDENT_ID_REQUIRED");
+  const row=await env.PRODUCT_DB.prepare(
+    "SELECT incident_id,state,acknowledged_at_utc,escalation_level FROM commander_slo_incidents WHERE incident_id=? AND tenant_id=? LIMIT 1"
+  ).bind(incidentId,session.tenant_id).first();
+  if (!row) throw new Error("SLO_INCIDENT_NOT_FOUND");
+  if (String(row.state) !== "OPEN") throw new Error("SLO_INCIDENT_NOT_OPEN");
+  const now=nowIso();
+  await env.PRODUCT_DB.prepare(
+    "UPDATE commander_slo_incidents SET acknowledged_at_utc=COALESCE(acknowledged_at_utc,?),acknowledged_by_subject_id=COALESCE(acknowledged_by_subject_id,?),escalation_level=CASE WHEN escalation_level < 1 THEN 1 ELSE escalation_level END,updated_at_utc=? WHERE incident_id=? AND tenant_id=? AND state='OPEN'"
+  ).bind(now,session.subject_id,now,incidentId,session.tenant_id).run();
+  return await portalSloStatus(env,session);
+}
+
+async function portalEscalateSloIncident(env, session, body) {
+  if (!betaAccessCanManage(session)) throw new Error("SLO_STATUS_ADMIN_REQUIRED");
+  const incidentId=cleanId(body?.incident_id,180);
+  const level=Math.max(1,Math.min(3,Number(body?.level || 2)));
+  if (!incidentId) throw new Error("SLO_INCIDENT_ID_REQUIRED");
+  const row=await env.PRODUCT_DB.prepare(
+    "SELECT incident_id,state,escalation_level FROM commander_slo_incidents WHERE incident_id=? AND tenant_id=? LIMIT 1"
+  ).bind(incidentId,session.tenant_id).first();
+  if (!row) throw new Error("SLO_INCIDENT_NOT_FOUND");
+  if (String(row.state) !== "OPEN") throw new Error("SLO_INCIDENT_NOT_OPEN");
+  const now=nowIso();
+  await env.PRODUCT_DB.prepare(
+    "UPDATE commander_slo_incidents SET escalation_level=CASE WHEN escalation_level < ? THEN ? ELSE escalation_level END,escalated_at_utc=?,updated_at_utc=? WHERE incident_id=? AND tenant_id=? AND state='OPEN'"
+  ).bind(level,level,now,now,incidentId,session.tenant_id).run();
+  return await portalSloStatus(env,session);
 }
 
 async function runSloAlertMaintenance(env) {
@@ -3559,6 +3599,26 @@ async function runSloAlertMaintenance(env) {
     await env.PRODUCT_DB.prepare(
       "INSERT INTO commander_slo_state (tenant_id,profile,state,breach_streak,recovery_streak,current_incident_id,last_evaluated_at_utc,last_snapshot_at_utc,summary_json,updated_at_utc) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(tenant_id) DO UPDATE SET profile=excluded.profile,state=excluded.state,breach_streak=excluded.breach_streak,recovery_streak=excluded.recovery_streak,current_incident_id=excluded.current_incident_id,last_evaluated_at_utc=excluded.last_evaluated_at_utc,last_snapshot_at_utc=excluded.last_snapshot_at_utc,summary_json=excluded.summary_json,updated_at_utc=excluded.updated_at_utc"
     ).bind(tenantId,SLO_ALERT_PROFILE,summary.state,breach,recovery,incidentId,now,summary.last_snapshot_at_utc,JSON.stringify(summary),now).run();
+
+    if (incidentId) {
+      const open=await env.PRODUCT_DB.prepare(
+        "SELECT opened_at_utc,escalation_level FROM commander_slo_incidents WHERE incident_id=? AND tenant_id=? AND state='OPEN' LIMIT 1"
+      ).bind(incidentId,tenantId).first();
+      const openedMs=Date.parse(String(open?.opened_at_utc || ""));
+      if (Number.isFinite(openedMs)) {
+        const ageSeconds=Math.max(0,Math.floor((Date.now()-openedMs)/1000));
+        const targetLevel=ageSeconds >= SLO_ALERT_ESCALATION_L3_SECONDS
+          ? 3
+          : (ageSeconds >= SLO_ALERT_ESCALATION_L2_SECONDS
+            ? 2
+            : (ageSeconds >= SLO_ALERT_ESCALATION_L1_SECONDS ? 1 : 0));
+        if (targetLevel > Number(open?.escalation_level || 0)) {
+          await env.PRODUCT_DB.prepare(
+            "UPDATE commander_slo_incidents SET escalation_level=?,escalated_at_utc=?,updated_at_utc=? WHERE incident_id=? AND tenant_id=? AND state='OPEN' AND escalation_level < ?"
+          ).bind(targetLevel,now,now,incidentId,tenantId,targetLevel).run();
+        }
+      }
+    }
   }
   const cutoff=new Date(Date.now()-(SLO_ALERT_INCIDENT_RETENTION_SECONDS*1000)).toISOString();
   await env.PRODUCT_DB.prepare(
@@ -4723,6 +4783,24 @@ export default {
         const session = await resolvePortalSession(request, env);
         if (!session) return json({ ok:false, code:"AUTH_REQUIRED" },401);
         return json(await portalSloStatus(env,session));
+      }
+
+      if (url.pathname === "/api/portal/slo/ack" && request.method === "POST") {
+        requirePortalMutationOrigin(request);
+        const session = await resolvePortalSession(request, env);
+        if (!session) return json({ ok:false, code:"AUTH_REQUIRED" },401);
+        await enforcePortalMutationRateLimit(env,session);
+        const body=await request.json();
+        return json(await portalAcknowledgeSloIncident(env,session,body));
+      }
+
+      if (url.pathname === "/api/portal/slo/escalate" && request.method === "POST") {
+        requirePortalMutationOrigin(request);
+        const session = await resolvePortalSession(request, env);
+        if (!session) return json({ ok:false, code:"AUTH_REQUIRED" },401);
+        await enforcePortalMutationRateLimit(env,session);
+        const body=await request.json();
+        return json(await portalEscalateSloIncident(env,session,body));
       }
 
       if (url.pathname === "/api/portal/beta-access" && request.method === "GET") {

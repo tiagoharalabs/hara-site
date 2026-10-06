@@ -79,6 +79,7 @@ def main():
         ("COMMANDER_PREPROD_TENANT_QUOTA_STORAGE_EFFICIENCY", "validate_tenant_quota_storage_efficiency.py"),
         ("COMMANDER_PREPROD_OPERATIONAL_SLO", "validate_operational_slo.py"),
         ("COMMANDER_PREPROD_SLO_INCIDENT_STATE", "validate_slo_incident_state.py"),
+        ("COMMANDER_PREPROD_SLO_INCIDENT_ACTIONS", "validate_slo_incident_actions.py"),
         ("COMMANDER_PREPROD_SUPPORT_BUNDLE_V2", "validate_support_bundle_v2.py"),
         ("COMMANDER_PREPROD_LOCAL_FIRST_UNIT_ECONOMICS", "validate_local_first_unit_economics.py"),
         ("COMMANDER_PREPROD_UNLIMITED_PLAN_FASTPATH", "validate_unlimited_plan_fastpath.py"),
@@ -89,6 +90,7 @@ def main():
         ("COMMANDER_PREPROD_SIGNED_PRODUCT_LEASE", "validate_signed_product_lease.py"),
         ("COMMANDER_PREPROD_MCP_TOKEN_STORAGE", "validate_mcp_product_token_storage.py"),
         ("COMMANDER_PREPROD_FIRST_DEVICE_PREFLIGHT", "validate_first_device_preflight.py"),
+        ("COMMANDER_PREPROD_VERSIONED_PROD_PROMOTE", "validate_versioned_prod_promote.py"),
     )
     for label, script in checks:
         run(label, [

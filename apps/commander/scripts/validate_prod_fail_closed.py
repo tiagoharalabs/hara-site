@@ -77,6 +77,23 @@ def main() -> int:
         payload={},
     )
 
+    for label,path in (
+        ("SLO_ACK","/api/portal/slo/ack"),
+        ("SLO_ESCALATE","/api/portal/slo/escalate"),
+    ):
+        expect(
+            f"COMMANDER_PROD_FAIL_CLOSED_{label}_NO_SESSION",
+            path,401,"AUTH_REQUIRED",
+            method="POST",headers=same_origin,payload={"incident_id":"HARA-SLO-INC-TEST"},
+        )
+        expect(
+            f"COMMANDER_PROD_FAIL_CLOSED_{label}_CROSS_ORIGIN",
+            path,403,"PORTAL_ORIGIN_DENIED",
+            method="POST",
+            headers={"Origin":"https://evil.example","Sec-Fetch-Site":"cross-site"},
+            payload={"incident_id":"HARA-SLO-INC-TEST"},
+        )
+
     expect(
         "COMMANDER_PROD_FAIL_CLOSED_HEARTBEAT",
         "/api/device/heartbeat",
