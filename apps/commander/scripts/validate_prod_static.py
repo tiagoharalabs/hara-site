@@ -63,7 +63,7 @@ need(
     and 'idx_commander_devices_approval_mode' in APPROVAL_MODE_MIGRATION,
     "APPROVAL_MODE_MIGRATION",
 )
-need("styles.css?v=20261006-productboundary1" in HTML, "STYLE_CACHE_KEY")
+need("styles.css?v=20261006-productusage1" in HTML, "STYLE_CACHE_KEY")
 need("app.js?v=20261006-productusage1" in HTML, "SCRIPT_CACHE_KEY")
 need('./brand/chatgpt-official.webp' in HTML and (APP / "public/brand/chatgpt-official.webp").stat().st_size > 0, "CHATGPT_BRAND_ICON")
 need('./brand/claude-official.svg' in HTML and (APP / "public/brand/claude-official.svg").stat().st_size > 0, "CLAUDE_BRAND_ICON")
@@ -267,15 +267,26 @@ need(
     "USAGE_PRODUCT_BOUNDARY_NO_INTERNAL_DIAGNOSTICS",
 )
 need(
-    'id="usageCardConsumed"' in HTML
-    and 'id="usageCardRemaining"' in HTML
+    'id="usageCardTransactions"' in HTML
+    and 'id="usageCardCapacity"' in HTML
     and 'id="usageCardPlan"' in HTML
     and 'id="usageCardPeriod"' in HTML
-    and 'setText("usageCardConsumed"' in JS
-    and 'setText("usageCardRemaining"' in JS
+    and 'setText("usageCardTransactions"' in JS
+    and 'setText("usageCardCapacity"' in JS
     and 'setText("usageCardPlan"' in JS
     and 'setText("usageCardPeriod"' in JS,
     "USAGE_CUSTOMER_SUMMARY_CARDS",
+)
+history_block = WORKER.split("async function productTransactionHistory",1)[1].split("async function dashboardForSubject",1)[0]
+need(
+    'COUNT(*) AS calls_total' in history_block
+    and 'AS calls_7d' in history_block
+    and 'WHERE tenant_id = ? AND subject_id = ?' in history_block
+    and 'detail_level: "AGGREGATE_ONLY"' in history_block
+    and 'tool_id' not in history_block
+    and 'payload_json' not in history_block
+    and 'result_json' not in history_block,
+    "USAGE_TRANSACTION_HISTORY_AGGREGATE_ONLY",
 )
 need(
     'url.pathname === "/api/portal/activity"' in WORKER

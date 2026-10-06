@@ -11,7 +11,7 @@
   <style>html.auth-bootstrap-pending body>*{visibility:hidden}html.auth-bootstrap-pending body::before{content:"H.A.R.A. COMMANDER · verificando sessão";position:fixed;inset:0;display:grid;place-items:center;visibility:visible;background:#eef8fd;color:#315d78;font:600 12px/1.4 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:.12em}html[data-theme="dark"].auth-bootstrap-pending body::before{background:#061721;color:#a9c8d9}</style>
   <title>H.A.R.A. Commander</title>
   <link rel="icon" type="image/webp" href="./assets/hara-commander-royal.webp?v=20260921-final1" />
-  <link rel="stylesheet" href="./styles.css?v=20261006-productboundary1" />
+  <link rel="stylesheet" href="./styles.css?v=20261006-productusage1" />
 </head>
 <body>
   <a class="skip-link" href="#mainContent">Pular para o conteúdo</a>
@@ -399,15 +399,15 @@
           </div>
 
           <div class="summary-grid usage-product-grid" aria-label="Resumo do uso">
-            <article class="summary-card">
-              <span>Chamadas utilizadas</span>
-              <strong id="usageCardConsumed">—</strong>
-              <small id="usageCardConsumedDetail">No período atual</small>
+            <article class="summary-card usage-history-card">
+              <span>Transações</span>
+              <strong id="usageCardTransactions">—</strong>
+              <small id="usageCardTransactionsDetail">Últimos 7 dias</small>
             </article>
             <article class="summary-card">
-              <span>Disponível</span>
-              <strong id="usageCardRemaining">—</strong>
-              <small id="usageCardRemainingDetail">Saldo do plano</small>
+              <span>Capacidade do plano</span>
+              <strong id="usageCardCapacity">—</strong>
+              <small id="usageCardCapacityDetail">Carregando capacidade</small>
             </article>
             <article class="summary-card">
               <span>Plano atual</span>

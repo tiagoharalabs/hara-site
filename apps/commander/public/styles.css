@@ -1191,3 +1191,14 @@ html[data-neon="off"] .brand-copy em{
 .internal-beta-diagnostics{margin-top:14px}
 .internal-beta-banner{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 10px;padding:9px 12px;border:1px dashed rgba(246,190,43,.45);border-radius:10px;background:rgba(246,190,43,.07);font-size:11px}
 .internal-beta-banner strong{letter-spacing:.08em;color:#f6be2b}.internal-beta-banner span{color:var(--muted)}
+
+/* Product Usage summary — customer metrics only */
+.usage-product-grid{grid-template-columns:1.05fr 1.05fr 1.4fr 1fr;gap:16px;margin-top:18px;align-items:stretch}
+.usage-product-grid .summary-card{min-height:126px;padding:21px 20px 19px;display:flex;flex-direction:column;justify-content:center}
+.usage-product-grid .summary-card span{font-size:10px}
+.usage-product-grid .summary-card strong{margin-top:11px;font-size:24px;line-height:1.15}
+.usage-product-grid .summary-card small{margin-top:8px;font-size:9px;line-height:1.45}
+.usage-product-grid .usage-history-card strong{font-size:27px}
+.usage-product-grid #usageCardPlan{font-size:18px;line-height:1.25}
+@media(max-width:1180px){.usage-product-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){.usage-product-grid{grid-template-columns:1fr;gap:12px;margin-top:14px}.usage-product-grid .summary-card{min-height:112px}}
