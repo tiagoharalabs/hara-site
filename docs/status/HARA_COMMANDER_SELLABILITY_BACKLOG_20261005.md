@@ -7,7 +7,7 @@ Baseline at creation: `53d53c3b33028712d70ecfb3b18aef9858205210`
 ## Launch interpretation
 
 - **Paid beta / invite / Linux:** READY.
-- **Public beta:** PENDING P0 live-isolation + fresh-customer acceptance + Windows current-canary policy decision.
+- **Public beta:** PENDING Windows production re-enrollment/current data-plane canary; live multitenant isolation and fresh local customer acceptance are CLOSED_PASS.
 - **Self-serve paid:** PENDING Stripe runtime secrets + Price IDs + first real checkout lifecycle.
 - **General availability:** PENDING public-beta gates plus SLO/support maturity.
 
@@ -15,11 +15,11 @@ Baseline at creation: `53d53c3b33028712d70ecfb3b18aef9858205210`
 
 | Gate | Current truth | Next proof / delivery | Parallel ownership |
 | --- | --- | --- | --- |
-| Live multitenant isolation | SELECT/REVOKE LIVE CLOSED_PASS: A/B enumeration, select DENY, revoke DENY, cross-tenant enqueue, call-status, receipt-target and tenant-override protections are live-proven. Remaining gate is independent TenantQuota namespace proof; authorize is blocked by exhausted Durable Objects rows-read budget | After DO daily capacity resets or account capacity is upgraded, rerun the unchanged canonical probe and require independent A/B quota reservations + cleanup PASS | sellability / do-capacity |
-| Fresh customer acceptance | LOCAL PATH CLOSED_PASS: DEV enrollment, 24 Simple MCP tools, no public hara.*, zero relay, filesystem, governed process, Activity and privacy-safe receipts all PASS after correcting the probe result-shape assertion | Exercise remote/cloud Usage after Durable Objects capacity is available; keep local acceptance closed | sellability / beta-sales |
+| Live multitenant isolation | CLOSED_PASS on current DEV O(1): A/B enumeration, cross-tenant select/revoke/enqueue/call-status/receipt deny, tenant override absent, independent quota A/B HTTP 200 ALLOW, tenant derivation PASS, cleanup PASS | Preserve as regression gate; no remaining DO-capacity blocker for this proof | sellability / do-capacity |
+| Fresh customer acceptance | LOCAL PATH CLOSED_PASS: DEV enrollment, 24 Simple MCP tools, no public hara.*, zero relay, filesystem, governed process, Activity and privacy-safe receipts PASS. Signed local-budget canary separately proves metered cloud allocation + local debit/reconcile on fresh tenant | Preserve both harnesses as release gates; Windows remains separate | sellability / beta-sales |
 | Windows current live canary | Source/regression PASS on Agent 0.3.32. Real VM `commander-win11` is running and reachable through QEMU Guest Agent; published SHA + real Windows self-test PASS. PROD `HARA_WIN11` remains stale 0.3.14 | Finish isolated DEV enrollment/data-plane through an allowed administrative/human channel, then prove Simple MCP write/read/process/receipt; do not bypass connector credential restrictions | windows-starter |
 | Self-serve Pro checkout | COMMERCIAL TERMS PROD LIVE: Free 10.000 calls/month with monthly reset; Pro/Standard R$ 80/month unlimited. PROD D1 + public UI aligned; fail-closed PASS. Stripe checkout remains disabled because runtime secret/webhook/Standard Price ID are pending | Create/configure the real Stripe Standard recurring Price at exactly BRL 80/month, configure secret + webhook, then prove checkout -> signed webhook -> STANDARD entitlement -> portal -> failure/recovery -> cancellation | beta-sales / human Stripe config |
-| Durable Object capacity | TenantQuota O(1) candidate is deployed on DEV successor and source/regression/readback PASS. Filtered live logs show account-level rows-read exhaustion in both SecurityRateLimit and TenantQuota; no PROD promotion | Wait for daily rows-read reset or upgrade account capacity, rerun independent quota namespace proof, then decide promotion | do-capacity / infra |
+| Durable Object capacity | TenantQuota O(1) reconciled on current 0.3.37 canonical candidate; source/preprod PASS; DEV live multitenant independent quota namespace PASS and signed local-budget canary PASS. Old rows-read blocker is no longer reproduced | Attach PROD signing secret to O(1) Worker version, deploy deliberately, then monitor live fallback/legacy quota behavior | do-capacity / infra |
 
 ## P1 — close for reliable scale
 
