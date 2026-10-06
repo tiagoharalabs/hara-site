@@ -64,7 +64,7 @@ need(
     "APPROVAL_MODE_MIGRATION",
 )
 need("styles.css?v=20261006-productboundary1" in HTML, "STYLE_CACHE_KEY")
-need("app.js?v=20261006-productboundary3" in HTML, "SCRIPT_CACHE_KEY")
+need("app.js?v=20261006-productusage1" in HTML, "SCRIPT_CACHE_KEY")
 need('./brand/chatgpt-official.webp' in HTML and (APP / "public/brand/chatgpt-official.webp").stat().st_size > 0, "CHATGPT_BRAND_ICON")
 need('./brand/claude-official.svg' in HTML and (APP / "public/brand/claude-official.svg").stat().st_size > 0, "CLAUDE_BRAND_ICON")
 need('class="where-badge">AI</span><p><b>ChatGPT' not in HTML and 'class="where-badge">AI</span><p><b>Claude' not in HTML, "CLIENT_PLACEHOLDER_BADGES_REMOVED")
@@ -265,6 +265,17 @@ need(
     and 'if (next === "usage") loadUsageActivity();' not in JS
     and 'O Commander na nuvem mantém apenas o mínimo necessário' in HTML,
     "USAGE_PRODUCT_BOUNDARY_NO_INTERNAL_DIAGNOSTICS",
+)
+need(
+    'id="usageCardConsumed"' in HTML
+    and 'id="usageCardRemaining"' in HTML
+    and 'id="usageCardPlan"' in HTML
+    and 'id="usageCardPeriod"' in HTML
+    and 'setText("usageCardConsumed"' in JS
+    and 'setText("usageCardRemaining"' in JS
+    and 'setText("usageCardPlan"' in JS
+    and 'setText("usageCardPeriod"' in JS,
+    "USAGE_CUSTOMER_SUMMARY_CARDS",
 )
 need(
     'url.pathname === "/api/portal/activity"' in WORKER
