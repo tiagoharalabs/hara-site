@@ -86,3 +86,26 @@ Live canary:
 - fixture cleanup: PASS
 
 COMMANDER_SUPPORT_PLANE_DEV=CLOSED_PASS
+
+## PROD live proof
+
+Worker:
+- 996e1bbd-dd48-4a53-96c4-5a058da0bb1c
+- rollback: f21917b0-b02e-46f4-aad6-fb0f333643ca
+
+Migration:
+- 0028_support_reports.sql applied to PROD
+- no pending migrations after rollout
+
+Acceptance:
+- versioned promotion preflight PASS
+- required secrets PASS
+- trigger sync PASS
+- Worker promotion PASS
+- deployment readback PASS
+- full PROD fail-closed suite PASS
+- support table rows at rollout: 0
+- unauthenticated support list: 401 AUTH_REQUIRED
+- unauthenticated delete with correct origin: 401 AUTH_REQUIRED
+
+COMMANDER_SUPPORT_PLANE_PROD=CLOSED_PASS
