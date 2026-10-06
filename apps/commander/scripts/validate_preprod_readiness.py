@@ -56,28 +56,60 @@ def main():
     run("COMMANDER_PREPROD_AUTH_JS", [
         "node", "--check", "apps/commander/src/auth.js",
     ])
+    run("COMMANDER_PREPROD_AUTH_DEGRADED_RECOVERY_JS", [
+        "node", "apps/commander/scripts/test_auth_degraded_recovery.mjs",
+    ])
     run("COMMANDER_PREPROD_DEVICE_TOOL_CONTRACT", [
         "node", "apps/commander/scripts/validate_device_tool_contract.mjs",
+    ])
+    run("COMMANDER_PREPROD_MCP_CLIENT_CONFORMANCE", [
+        "node", "apps/commander/scripts/test_customer_mcp_conformance.mjs",
+    ])
+    run("COMMANDER_PREPROD_MCP_IDENTITY_METADATA", [
+        sys.executable, "apps/identity-login/scripts/validate_mcp_oauth_metadata.py",
+    ])
+    run("COMMANDER_PREPROD_MCP_DCR_GATEWAY", [
+        sys.executable, "apps/identity-login/scripts/validate_mcp_dcr_gateway.py",
+    ])
+    run("COMMANDER_PREPROD_MCP_DCR_PROMOTION", [
+        sys.executable, "apps/identity-login/scripts/validate_mcp_dcr_promotion.py",
     ])
     checks = (
         ("COMMANDER_PREPROD_UI", "validate_prod_static.py"),
         ("COMMANDER_PREPROD_AGENT", "validate_device_installers.py"),
         ("COMMANDER_PREPROD_REENROLL", "validate_issue168_reenroll.py"),
         ("COMMANDER_PREPROD_SUPPLY_CHAIN", "validate_bootstrap_supply_chain.py"),
+        ("COMMANDER_PREPROD_BOOTSTRAP_DUAL_ORIGIN", "validate_bootstrap_dual_origin.py"),
         ("COMMANDER_PREPROD_DEV_CONFIG", "validate_dev_config.py"),
         ("COMMANDER_PREPROD_CONTRACT", "validate_prod_contracts.py"),
         ("COMMANDER_PREPROD_LIFECYCLE", "validate_device_lifecycle_races.py"),
         ("COMMANDER_PREPROD_PAIRING", "validate_pairing_supersession.py"),
         ("COMMANDER_PREPROD_PAIRING_RETENTION", "validate_pairing_retention.py"),
         ("COMMANDER_PREPROD_RETENTION", "validate_session_retention.py"),
+        ("COMMANDER_PREPROD_AUTH_DEGRADED_RECOVERY", "validate_auth_degraded_recovery.py"),
+        ("COMMANDER_PREPROD_PUBLIC_RUNTIME_BOUNDARY", "validate_public_runtime_boundary.py"),
         ("COMMANDER_PREPROD_ORIGIN", "validate_portal_origin_guard.py"),
         ("COMMANDER_PREPROD_CLAIM_REVOKE_RACE", "validate_claim_revoke_race.py"),
         ("COMMANDER_PREPROD_INVITE_CLAIM_RACE", "validate_invite_claim_race.py"),
         ("COMMANDER_PREPROD_OIDC_TX_HYGIENE", "validate_oidc_transaction_hygiene.py"),
         ("COMMANDER_PREPROD_E2E_HARNESS", "validate_e2e_harness.py"),
         ("COMMANDER_PREPROD_QUOTA_RESERVATION_TTL", "validate_quota_reservation_ttl.py"),
+        ("COMMANDER_PREPROD_TENANT_QUOTA_STORAGE_EFFICIENCY", "validate_tenant_quota_storage_efficiency.py"),
+        ("COMMANDER_PREPROD_SUPPORT_BUNDLE_V2", "validate_support_bundle_v2.py"),
+        ("COMMANDER_PREPROD_SUPPORT_PLANE", "validate_support_plane.py"),
+        ("COMMANDER_PREPROD_SUPPORT_ONECLICK", "validate_support_oneclick.py"),
+        ("COMMANDER_PREPROD_CLEAN_LINUX_LIFECYCLE", "validate_clean_linux_lifecycle.py"),
+        ("COMMANDER_PREPROD_RELEASE_TRUST", "validate_release_signature.py"),
+        ("COMMANDER_PREPROD_LOCAL_FIRST_UNIT_ECONOMICS", "validate_local_first_unit_economics.py"),
+        ("COMMANDER_PREPROD_UNLIMITED_PLAN_FASTPATH", "validate_unlimited_plan_fastpath.py"),
+        ("COMMANDER_PREPROD_LOCAL_ACTIVITY_STORE", "validate_local_activity_store.py"),
+        ("COMMANDER_PREPROD_WINDOWS_LOCAL_ACTIVITY_STORE", "validate_windows_local_activity_store.py"),
+        ("COMMANDER_PREPROD_LOCALHOST_ACTIVITY_REFRESH", "validate_localhost_activity_refresh.py"),
+        ("COMMANDER_PREPROD_LOCAL_BUDGET_BLOCKS", "validate_local_budget_blocks.py"),
+        ("COMMANDER_PREPROD_SIGNED_PRODUCT_LEASE", "validate_signed_product_lease.py"),
         ("COMMANDER_PREPROD_MCP_TOKEN_STORAGE", "validate_mcp_product_token_storage.py"),
         ("COMMANDER_PREPROD_FIRST_DEVICE_PREFLIGHT", "validate_first_device_preflight.py"),
+        ("COMMANDER_PREPROD_VERSIONED_PROD_PROMOTE", "validate_versioned_prod_promote.py"),
     )
     for label, script in checks:
         run(label, [
@@ -111,11 +143,30 @@ def main():
     runtime_asset_state_line = None
     worker_deployment_state_line = None
     worker_version_line = None
+    mcp_auto_oauth_line = None
     if args.live_readonly:
         run("COMMANDER_IDENTITY_LIVE_READONLY", [
             sys.executable,
             "apps/identity-login/scripts/validate_live_white_label.py",
         ])
+        run("COMMANDER_IDENTITY_MCP_METADATA_LIVE_READONLY", [
+            sys.executable,
+            "apps/identity-login/scripts/validate_mcp_oauth_metadata_live.py",
+            "--expect-cimd", "disabled",
+            "--expect-dcr", "enabled",
+        ])
+        mcp_auth_output = run("COMMANDER_MCP_AUTH_DISCOVERY_LIVE_READONLY", [
+            sys.executable,
+            "apps/commander/scripts/commander_mcp_auth_discovery_probe.py",
+            "--require-generic-auto",
+        ])
+        for line in mcp_auth_output.splitlines():
+            if line.startswith("COMMANDER_MCP_GENERIC_AUTO_OAUTH_ONBOARDING="):
+                mcp_auto_oauth_line = line
+                break
+        if mcp_auto_oauth_line is None:
+            raise SystemExit("COMMANDER_MCP_AUTO_OAUTH_STATE_MISSING")
+
         d1_output = run("COMMANDER_PROD_D1_LIVE_READONLY", [
             sys.executable,
             "apps/commander/scripts/commander_prod_readback.py",
@@ -209,6 +260,10 @@ def main():
         if worker_deployment_state_line is None or worker_version_line is None:
             raise SystemExit("COMMANDER_PROD_WORKER_STATE_MISSING")
 
+    if mcp_auto_oauth_line:
+        print(mcp_auto_oauth_line)
+    else:
+        print("COMMANDER_MCP_GENERIC_AUTO_OAUTH_ONBOARDING=LIVE_READBACK_REQUIRED")
     if migration_state_line:
         print(migration_state_line)
     else:

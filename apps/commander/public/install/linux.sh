@@ -2,6 +2,9 @@
 set -euo pipefail
 
 BASE_URL="${HARA_COMMANDER_URL:-https://commander.haralabs.com.br}"
+RELEASE_SIGNING_KID="commander-release-v1"
+RELEASE_SIGNING_N="pydKPlIuz-00dO2sGHCTY1Z968YbjZ_-r7qWSKRhFCyCfJfaaL53XWS-jaXxWFzhqEryeqFxuUvL-8OdCKxtG_Lo7Ac6FWS_k2EFrgQmdCPja9N78MMQd7gC8Hu68BhyqkoNa2NMpg610NWcYwTQjAz9bcyKcoc8uV5G-iX3aXSRAJYe0BKi4H9xfARD5TWE3N3DuMrNZybabsnfk-88xR5AFcXZ58WhvMuUvRp7_26cYhuHd4RLyPKNUI7WK9if8aa48UMqF49KQ64NSQHhOVfnZjjmiwfKtWOBsO_DstVYyLnVtfttmeaTZGgwuHd37XOsz0Q267CKHUORYyvTJw"
+RELEASE_SIGNING_E="AQAB"
 CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/hara-commander"
 BIN_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/hara-commander"
 USER_BIN="${HOME}/.local/bin"
@@ -12,6 +15,7 @@ CLI="$USER_BIN/hara-commander"
 UNIT="$SYSTEMD_DIR/hara-commander-agent.service"
 SERVICE="hara-commander-agent.service"
 STATUS_FILE="$BIN_DIR/runtime-status.json"
+APPROVAL_MODE_RAW="${HARA_COMMANDER_APPROVAL_MODE:-}"
 ACTION="${1:-install}"
 ACTION="${ACTION#--}"
 REENROLL=FALSE
@@ -39,6 +43,30 @@ need curl
 need python3
 need systemctl
 
+verify_release_manifest_signature() {
+  local manifest="$1" signature="$2"
+  python3 - "$manifest" "$signature" "$RELEASE_SIGNING_KID" "$RELEASE_SIGNING_N" "$RELEASE_SIGNING_E" <<'PYRELEASESIG'
+import base64,hashlib,hmac,json,sys
+manifest_path,sig_path,kid,n_b64,e_b64=sys.argv[1:6]
+def b64ud(value):
+    return base64.urlsafe_b64decode(value+"="*((4-len(value)%4)%4))
+raw=open(manifest_path,"rb").read()
+obj=json.load(open(sig_path,encoding="utf-8"))
+if obj.get("schema")!="hara.commander-release-signature.v1": raise SystemExit(2)
+if obj.get("alg")!="RS256" or obj.get("kid")!=kid: raise SystemExit(2)
+if obj.get("manifest_sha256")!=hashlib.sha256(raw).hexdigest(): raise SystemExit(3)
+sig=b64ud(str(obj.get("signature") or ""))
+n=int.from_bytes(b64ud(n_b64),"big"); e=int.from_bytes(b64ud(e_b64),"big")
+size=(n.bit_length()+7)//8
+if len(sig)!=size: raise SystemExit(4)
+em=pow(int.from_bytes(sig,"big"),e,n).to_bytes(size,"big")
+digest_info=bytes.fromhex("3031300d060960864801650304020105000420")+hashlib.sha256(raw).digest()
+padding=size-len(digest_info)-3
+expected=b"\x00\x01"+(b"\xff"*padding)+b"\x00"+digest_info
+if padding<8 or not hmac.compare_digest(em,expected): raise SystemExit(5)
+PYRELEASESIG
+}
+
 read_config_value() {
   local key="$1"
   [ -f "$CONFIG_FILE" ] || return 1
@@ -51,6 +79,24 @@ for raw in path.read_text(encoding="utf-8").splitlines():
         print(raw.split("=",1)[1]); raise SystemExit(0)
 raise SystemExit(1)
 PY
+}
+
+resolve_approval_mode() {
+  local mode="${APPROVAL_MODE_RAW:-}"
+  if [ -z "$mode" ] && [ -f "$CONFIG_FILE" ]; then
+    mode="$(read_config_value HARA_COMMANDER_APPROVAL_MODE 2>/dev/null || true)"
+  fi
+  [ -n "$mode" ] || mode="PERSISTENT_TRUSTED"
+  mode="${mode^^}"
+  case "$mode" in
+    ASK|ASK_EVERY_ACTION) printf 'ASK_EVERY_ACTION
+' ;;
+    SESSION|SESSION_TRUSTED) printf 'SESSION_TRUSTED
+' ;;
+    AUTO|ALWAYS|PERSISTENT|PERSISTENT_TRUSTED) printf 'PERSISTENT_TRUSTED
+' ;;
+    *) echo 'DEVICE_APPROVAL_MODE_INVALID' >&2; return 64 ;;
+  esac
 }
 
 read_runtime_status_value() {
@@ -98,14 +144,21 @@ PY
 
 download_agent() {
   mkdir -p "$BIN_DIR"
-  local tmp manifest expected_sha expected_version actual_sha actual_version
+  local tmp manifest signature expected_sha expected_version actual_sha actual_version
   tmp="$(mktemp "$BIN_DIR/.hara-commander-agent.XXXXXX")"
   manifest="$(mktemp "$BIN_DIR/.hara-commander-manifest.XXXXXX")"
+  signature="$(mktemp "$BIN_DIR/.hara-commander-signature.XXXXXX")"
   if ! curl -fsS --max-time 30 "$BASE_URL/agent/linux.py" -o "$tmp"; then
-    rm -f "$tmp" "$manifest"; return 1
+    rm -f "$tmp" "$manifest" "$signature"; return 1
   fi
   if ! curl -fsS --max-time 30 "$BASE_URL/release/agent-manifest.json" -o "$manifest"; then
-    rm -f "$tmp" "$manifest"; echo 'AGENT_RELEASE_MANIFEST_DOWNLOAD_FAILED' >&2; return 1
+    rm -f "$tmp" "$manifest" "$signature"; echo 'AGENT_RELEASE_MANIFEST_DOWNLOAD_FAILED' >&2; return 1
+  fi
+  if ! curl -fsS --max-time 30 "$BASE_URL/release/agent-manifest.sig.json" -o "$signature"; then
+    rm -f "$tmp" "$manifest" "$signature"; echo 'AGENT_RELEASE_SIGNATURE_DOWNLOAD_FAILED' >&2; return 1
+  fi
+  if ! verify_release_manifest_signature "$manifest" "$signature"; then
+    rm -f "$tmp" "$manifest" "$signature"; echo 'AGENT_RELEASE_SIGNATURE_INVALID' >&2; return 1
   fi
   readarray -t META < <(python3 - "$manifest" <<'PYMANIFEST'
 import json,sys
@@ -116,7 +169,7 @@ entry=next((item for item in obj.get("files",[]) if item.get("path")=="agent/lin
 if not isinstance(version,str) or not entry or not isinstance(entry.get("sha256"),str): raise SystemExit("AGENT_RELEASE_MANIFEST_INVALID")
 print(version); print(entry["sha256"].lower())
 PYMANIFEST
-  ) || { rm -f "$tmp" "$manifest"; echo 'AGENT_RELEASE_MANIFEST_INVALID' >&2; return 1; }
+  ) || { rm -f "$tmp" "$manifest" "$signature"; echo 'AGENT_RELEASE_MANIFEST_INVALID' >&2; return 1; }
   expected_version="${META[0]}"
   expected_sha="${META[1]}"
   actual_sha="$(python3 - "$tmp" <<'PYHASH'
@@ -124,14 +177,14 @@ import hashlib,sys
 print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest())
 PYHASH
 )"
-  [ "$actual_sha" = "$expected_sha" ] || { rm -f "$tmp" "$manifest"; echo 'AGENT_SHA256_MISMATCH' >&2; return 1; }
+  [ "$actual_sha" = "$expected_sha" ] || { rm -f "$tmp" "$manifest" "$signature"; echo 'AGENT_SHA256_MISMATCH' >&2; return 1; }
   chmod 700 "$tmp"
   actual_version="$(python3 "$tmp" --version 2>/dev/null || true)"
-  [ "$actual_version" = "$expected_version" ] || { rm -f "$tmp" "$manifest"; echo 'AGENT_VERSION_MANIFEST_MISMATCH' >&2; return 1; }
+  [ "$actual_version" = "$expected_version" ] || { rm -f "$tmp" "$manifest" "$signature"; echo 'AGENT_VERSION_MANIFEST_MISMATCH' >&2; return 1; }
   if ! python3 "$tmp" --self-test >/dev/null; then
-    rm -f "$tmp" "$manifest"; echo 'AGENT_UPDATE_VALIDATION_FAILED' >&2; return 1
+    rm -f "$tmp" "$manifest" "$signature"; echo 'AGENT_UPDATE_VALIDATION_FAILED' >&2; return 1
   fi
-  rm -f "$manifest"
+  rm -f "$manifest" "$signature"
   mv -f "$tmp" "$AGENT"
   chmod 700 "$AGENT"
   printf 'HARA_COMMANDER_AGENT_INTEGRITY=PASS\n'
@@ -145,7 +198,7 @@ install_cli() {
 #!/bin/sh
 set -eu
 if [ "${1:-}" != "commander" ]; then
-  echo "Usage: hara commander [start|status|stop]" >&2
+  echo "Usage: hara commander [start|status|stop|mcp|doctor|support|approval-mode]" >&2
   exit 64
 fi
 shift
@@ -157,8 +210,9 @@ EOHARA
 }
 
 status_agent() {
-  local device_id="" enrolled=FALSE active=FALSE enabled=FALSE version="unknown"
+  local device_id="" enrolled=FALSE active=FALSE enabled=FALSE version="unknown" approval_mode=""
   device_id="$(read_config_value HARA_DEVICE_ID 2>/dev/null || true)"
+  approval_mode="$(read_config_value HARA_COMMANDER_APPROVAL_MODE 2>/dev/null || true)"
   [ -n "$device_id" ] && enrolled=TRUE
   systemctl --user is-active --quiet "$SERVICE" 2>/dev/null && active=TRUE || true
   systemctl --user is-enabled --quiet "$SERVICE" 2>/dev/null && enabled=TRUE || true
@@ -167,6 +221,7 @@ status_agent() {
   printf 'HARA_COMMANDER_AGENT_ACTIVE=%s\n' "$active"
   printf 'HARA_COMMANDER_AGENT_ENABLED=%s\n' "$enabled"
   printf 'HARA_COMMANDER_AGENT_VERSION=%s\n' "$version"
+  [ -z "$approval_mode" ] || printf 'HARA_COMMANDER_APPROVAL_MODE=%s\n' "$approval_mode"
   [ -z "$device_id" ] || printf 'DEVICE_ID=%s\n' "$device_id"
   if [ -f "$AGENT" ]; then python3 "$AGENT" --session-status 2>/dev/null || true; fi
   printf 'DEVICE_TOKEN_EXPOSED=FALSE\n'
@@ -194,7 +249,7 @@ if not base or not token or not device_id:
     raise SystemExit(2)
 if action=="heartbeat":
     endpoint="/api/device/heartbeat"
-    payload={"device_id":device_id,"architecture":arch,"agent_version":"0.3.14"}
+    payload={"device_id":device_id,"architecture":arch,"agent_version":"0.3.40","approval_mode":values.get("HARA_COMMANDER_APPROVAL_MODE","ASK_EVERY_ACTION")}
 elif action=="revoke":
     endpoint="/api/device/revoke-self"
     payload={}
@@ -202,7 +257,7 @@ else:
     raise SystemExit(2)
 req=urllib.request.Request(
     base+endpoint, data=json.dumps(payload,separators=(",",":")).encode(), method="POST",
-    headers={"content-type":"application/json","accept":"application/json","user-agent":"HARA-Commander-Installer/0.3.14","authorization":"Bearer "+token},
+    headers={"content-type":"application/json","accept":"application/json","user-agent":"HARA-Commander-Installer/0.3.40","authorization":"Bearer "+token},
 )
 try:
     with opener.open(req,timeout=15) as response:
@@ -232,7 +287,7 @@ token=sys.stdin.readline().rstrip("\n")
 if not device_id or not token: raise SystemExit(2)
 req=urllib.request.Request(
     base+"/api/device/revoke-self", data=b"{}", method="POST",
-    headers={"content-type":"application/json","accept":"application/json","authorization":"Bearer "+token,"user-agent":"HARA-Commander-Installer-Rollback/0.3.14"},
+    headers={"content-type":"application/json","accept":"application/json","authorization":"Bearer "+token,"user-agent":"HARA-Commander-Installer-Rollback/0.3.40"},
 )
 with opener.open(req,timeout=15) as response:
     obj=json.loads(response.read().decode() or "{}")
@@ -276,11 +331,11 @@ device_id=values.get("HARA_DEVICE_ID","")
 arch=values.get("HARA_DEVICE_ARCH","")
 if not base or not token or not device_id:
     print("REENROLL_LOCAL_ENROLLMENT_INVALID",file=sys.stderr); raise SystemExit(12)
-payload=json.dumps({"device_id":device_id,"architecture":arch,"agent_version":"0.3.14"},separators=(",",":")).encode()
+payload=json.dumps({"device_id":device_id,"architecture":arch,"agent_version":"0.3.40"},separators=(",",":")).encode()
 req=urllib.request.Request(
     base+"/api/device/heartbeat", data=payload, method="POST",
     headers={"content-type":"application/json","accept":"application/json",
-             "user-agent":"HARA-Commander-Reenroll-Check/0.3.14","authorization":"Bearer "+token},
+             "user-agent":"HARA-Commander-Reenroll-Check/0.3.40","authorization":"Bearer "+token},
 )
 try:
     with opener.open(req,timeout=15) as response:
@@ -326,12 +381,15 @@ cleanup_failed_reenroll() {
 }
 
 preflight_agent() {
-  local manifest health persistence_ready=FALSE arch
+  local manifest signature health persistence_ready=FALSE arch
   manifest="$(mktemp)"
+  signature="$(mktemp)"
   health="$(mktemp)"
-  trap 'rm -f "$manifest" "$health"' RETURN
+  trap 'rm -f "$manifest" "$signature" "$health"' RETURN
   curl -fsS --max-time 15 "$BASE_URL/api/health" -o "$health" || { echo 'COMMANDER_HEALTH_UNREACHABLE' >&2; return 10; }
   curl -fsS --max-time 15 "$BASE_URL/release/agent-manifest.json" -o "$manifest" || { echo 'AGENT_RELEASE_MANIFEST_UNREACHABLE' >&2; return 11; }
+  curl -fsS --max-time 15 "$BASE_URL/release/agent-manifest.sig.json" -o "$signature" || { echo 'AGENT_RELEASE_SIGNATURE_UNREACHABLE' >&2; return 11; }
+  verify_release_manifest_signature "$manifest" "$signature" || { echo 'AGENT_RELEASE_SIGNATURE_INVALID' >&2; return 11; }
   systemctl --user show-environment >/dev/null 2>&1 && persistence_ready=TRUE || true
   arch="$(uname -m)"
   python3 - "$health" "$manifest" "$BASE_URL" "$arch" "$persistence_ready" <<'PYPREFLIGHT'
@@ -350,6 +408,7 @@ report={
   "commander_url":sys.argv[3],
   "commander_health":True,
   "release_manifest":True,
+  "release_signature":True,
   "stable_agent_version":version,
   "persistence":"systemd-user",
   "persistence_ready":ready,
@@ -361,6 +420,11 @@ PYPREFLIGHT
 }
 
 support_agent() {
+  if [ -f "$AGENT" ]; then
+    if python3 "$AGENT" support; then
+      return 0
+    fi
+  fi
   local active=FALSE enabled=FALSE
   systemctl --user is-active --quiet "$SERVICE" 2>/dev/null && active=TRUE || true
   systemctl --user is-enabled --quiet "$SERVICE" 2>/dev/null && enabled=TRUE || true
@@ -508,7 +572,9 @@ EOF_ALREADY
   exit 8
 fi
 
+APPROVAL_MODE="$(resolve_approval_mode)"
 printf 'HARA Commander — Linux device pairing\n'
+printf 'Approval mode: %s\n' "$APPROVAL_MODE"
 printf 'Pairing token: '
 IFS= read -r -s PAIRING_TOKEN </dev/tty
 printf '\n'
@@ -525,9 +591,10 @@ print(json.dumps({
   "device_name": sys.argv[1],
   "platform": "LINUX",
   "architecture": sys.argv[2],
-  "agent_version": "0.3.14",
+  "agent_version": "0.3.40",
+  "approval_mode": sys.argv[3],
 }, separators=(",",":")))
-' "$DEVICE_NAME" "$ARCH")"
+' "$DEVICE_NAME" "$ARCH" "$APPROVAL_MODE")"
 
 RESPONSE="$(printf '%s' "$PAYLOAD" | curl -fsS --max-time 30   -H 'content-type: application/json'   -H 'accept: application/json'   --data-binary @-   "$BASE_URL/api/device/enroll")"
 
@@ -561,6 +628,7 @@ HARA_COMMANDER_URL=$BASE_URL
 HARA_DEVICE_ID=$DEVICE_ID
 HARA_DEVICE_TOKEN=$DEVICE_TOKEN
 HARA_DEVICE_ARCH=$ARCH
+HARA_COMMANDER_APPROVAL_MODE=$APPROVAL_MODE
 EOF
 chmod 600 "$CONFIG_FILE"
 
@@ -630,9 +698,9 @@ printf 'HARA_COMMANDER_DEVICE_ENROLLMENT=PASS\n'
 printf 'HARA_COMMANDER_AGENT_SERVICE=ACTIVE_INERT_UNTIL_LOCAL_SESSION\n'
 printf 'DEVICE_ID=%s\n' "$DEVICE_ID"
 printf 'DEVICE_TOKEN_EXPOSED=FALSE\n'
-if [ -x "$USER_BIN/hara" ]; then
-  printf 'NEXT_COMMAND=hara commander start\n'
-else
-  printf 'NEXT_COMMAND=hara-commander start\n'
-fi
+printf 'HARA_COMMANDER_APPROVAL_MODE=%s\n' "$APPROVAL_MODE"
+printf 'NEXT_COMMAND=hara-commander start\n'
+printf 'STATUS_COMMAND=hara-commander status\n'
+printf 'STOP_COMMAND=hara-commander stop\n'
+printf 'LOCAL_MCP_COMMAND=hara-commander mcp\n'
 printf 'SESSION_AUTHORITY=LOCAL_OPERATOR_TERMINAL\n'

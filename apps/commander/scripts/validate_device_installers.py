@@ -26,7 +26,7 @@ def need(text: str, token: str, code: str) -> None:
     assert token in text, f"{code}:{token}"
 
 for token in ('platform": "LINUX"', "/api/device/enroll", "/agent/linux.py",
-              "systemctl --user enable --now", "chmod 600", '"agent_version": "0.3.14"',
+              "systemctl --user enable --now", "chmod 600", '"agent_version": "0.3.40"',
               "HARA_COMMANDER_AGENT_UPDATE=PASS", "HARA_COMMANDER_AGENT_UNINSTALL=PASS",
               "HARA_COMMANDER_AGENT_VERSION=", "HARA_COMMANDER_AGENT_DOCTOR=PASS",
               "/api/device/revoke-self", "SERVER_DEVICE_REVOKE=",
@@ -46,12 +46,16 @@ assert 'python3 - "$RESPONSE"' not in LINUX, "DEVICE_TOKEN_RESPONSE_EXPOSED_IN_A
 assert '--data "$PAYLOAD"' not in LINUX, "PAIRING_PAYLOAD_EXPOSED_IN_CURL_ARGV"
 assert "HARA_ROLLBACK_DEVICE_TOKEN=" not in LINUX, "DEVICE_TOKEN_EXPOSED_IN_ROLLBACK_ENV"
 assert "--data-binary @-" in LINUX, "PAIRING_PAYLOAD_STDIN_MISSING"
+assert "NEXT_COMMAND=hara-commander start" in LINUX, "LINUX_COMMANDER_START_COMMAND_MISSING"
+assert "STATUS_COMMAND=hara-commander status" in LINUX, "LINUX_COMMANDER_STATUS_COMMAND_MISSING"
+assert "STOP_COMMAND=hara-commander stop" in LINUX, "LINUX_COMMANDER_STOP_COMMAND_MISSING"
+print("COMMANDER_LINUX_UNIVERSAL_CLI=PASS")
 print("LINUX_DEVICE_INSTALLER_STATIC=PASS")
 print("LINUX_INSTALLER_SECRET_ARGV_EXPOSURE=FALSE")
 
 for token in ('platform="WINDOWS"', "/api/device/enroll", "/agent/windows.ps1",
               "ConvertFrom-SecureString", "Register-ScheduledTask", "icacls.exe",
-              'agent_version="0.3.14"', "HARA_COMMANDER_AGENT_UPDATE=PASS",
+              'agent_version="0.3.40"', "HARA_COMMANDER_AGENT_UPDATE=PASS",
               "HARA_COMMANDER_AGENT_UNINSTALL=PASS", "HARA_COMMANDER_AGENT_VERSION=",
               "HARA_COMMANDER_AGENT_DOCTOR=PASS", "/api/device/revoke-self",
               "SERVER_DEVICE_REVOKE=", "HARA_COMMANDER_AGENT_UPDATE_ROLLBACK_READY=TRUE",
@@ -88,7 +92,7 @@ print("WINDOWS_INSTALLER_REDIRECT_FAIL_CLOSED=PASS")
 print("WINDOWS_INSTALLER_DEVICE_TOKEN_MEMORY_HYGIENE=PASS")
 
 assert MANIFEST.get("schema") == "hara.commander-agent-release.v1"
-assert MANIFEST.get("agent_version") == "0.3.14"
+assert MANIFEST.get("agent_version") == "0.3.40"
 entries = {item["path"]: item for item in MANIFEST.get("files", [])}
 for rel in ("agent/linux.py", "agent/windows.ps1", "install/linux.sh", "install/windows.ps1"):
     path = PUBLIC / rel
@@ -105,6 +109,14 @@ TOOLS = ("hara.health","hara.functions.list","hara.functions.describe",
 for token in TOOLS:
     need(LINUX_AGENT, token, "LINUX_AGENT_TOOL_MISSING")
     need(WINDOWS_AGENT, token, "WINDOWS_AGENT_TOOL_MISSING")
+for token in (
+    "hara.ping","hara.device.info","hara.processes.list",
+    "hara.files.info","hara.files.list","hara.files.read",
+    "hara.files.create_directory","hara.files.write","hara.process.run",
+):
+    need(WINDOWS_AGENT, token, "WINDOWS_STARTER_TOOL_MISSING")
+need(WINDOWS_AGENT, "WINDOWS_PER_ACTION_APPROVAL_UNSUPPORTED", "WINDOWS_STARTER_FAIL_CLOSED_APPROVAL")
+need(WINDOWS_AGENT, "-EncodedCommand", "WINDOWS_STARTER_ENCODED_PROCESS_COMMAND")
 for forbidden in ("subprocess.", "os.system(", "shell=True", "paramiko", "ssh "):
     assert forbidden not in LINUX_AGENT, f"LINUX_AGENT_ARBITRARY_EXEC:{forbidden}"
 for forbidden in ("Invoke-Expression", "Start-Process", "cmd.exe", "powershell.exe -Command"):
@@ -165,8 +177,47 @@ assert windows_console.index("Remove-Item -Force -LiteralPath $SessionPath") < w
 assert windows_stop.index("Remove-Item -Force -LiteralPath $SessionPath") < windows_stop.index("Set-DeviceOffline"), "WINDOWS_STOP_OFFLINE_RACE"
 print("COMMANDER_SESSION_REVOKE_BEFORE_OFFLINE_SYNC=PASS")
 print("COMMANDER_DOCTOR_HEARTBEAT_OUTSIDE_SESSION=ABSENT")
+assert "LOCAL_OPERATOR_SESSION_UPGRADE_REQUIRED" in LINUX_AGENT, "LINUX_MUTATION_SESSION_UPGRADE_GUARD_MISSING"
+assert "APPROVAL_REQUIRED" in LINUX_AGENT and "request_local_approval" in LINUX_AGENT, "LINUX_MUTATION_APPROVAL_GATE_MISSING"
+assert "SESSION_TRUSTED" in LINUX_AGENT and "ASK_EVERY_ACTION" in LINUX_AGENT and "PERSISTENT_TRUSTED" in LINUX_AGENT, "LINUX_CONFIGURABLE_APPROVAL_MODE_MISSING"
+assert "effective_approval_mode" in LINUX_AGENT and '"approval_mode":effective_approval_mode(config)' in LINUX_AGENT, "LINUX_EFFECTIVE_APPROVAL_SYNC_MISSING"
+assert 'HARA_COMMANDER_APPROVAL_MODE' in LINUX and 'HARA_COMMANDER_APPROVAL_MODE' in WINDOWS, "INSTALLER_APPROVAL_MODE_PROPAGATION_MISSING"
+assert 'PERSISTENT_TRUSTED' in LINUX and 'PERSISTENT_TRUSTED' in WINDOWS, "INSTALLER_PERSISTENT_TRUST_DEFAULT_MISSING"
+assert "commander_doctor" in LINUX_AGENT and "commander_support" in LINUX_AGENT, "LINUX_SELF_SERVICE_DIAGNOSTICS_MISSING"
+assert 'SESSION_TRUSTED' in LINUX and 'SESSION_TRUSTED' in WINDOWS, "INSTALLER_SESSION_TRUSTED_DEFAULT_MISSING"
+assert 'local_authorization_mode' in LINUX_AGENT and 'authorization_source' in LINUX_AGENT, "LINUX_RECEIPT_AUTHORIZATION_MODE_MISSING"
+receipt_block = LINUX_AGENT.split("def write_receipt",1)[1].split("def read_receipt",1)[0]
+assert '"payload_values_persisted":False' in receipt_block, "LINUX_RECEIPT_PAYLOAD_PERSISTENCE_MARKER_MISSING"
+assert "command_preview" not in receipt_block and '"command"' not in receipt_block and "payload_json" not in receipt_block, "LINUX_RECEIPT_RAW_COMMAND_PERSISTENCE_FORBIDDEN"
+assert "result_stdout_sha256" in receipt_block and '"stdout":' not in receipt_block, "LINUX_RECEIPT_RAW_STDOUT_PERSISTENCE_FORBIDDEN"
+print("COMMANDER_LOCAL_RECEIPT_CONTENT_HISTORY=METADATA_ONLY")
+assert "FILESYSTEM_MUTATION_V1" in LINUX_AGENT, "LINUX_MUTATION_RECEIPT_CLASS_MISSING"
+print("COMMANDER_LOCAL_MUTATION_APPROVAL_GATE=PASS")
+print("COMMANDER_CONFIGURABLE_APPROVAL_MODE=PASS")
+assert "PROCESS_EXECUTION_V1" in LINUX_AGENT, "LINUX_PROCESS_RECEIPT_CLASS_MISSING"
+assert "LOCAL_SIMPLE_MCP_TOOL_NAMES" in LINUX_AGENT and "run_local_mcp_stdio" in LINUX_AGENT, "LINUX_LOCAL_MCP_STDIO_MISSING"
+assert 'LOCAL_MCP_COMMAND=hara-commander mcp' in LINUX, "LINUX_LOCAL_MCP_INSTALLER_HINT_MISSING"
+local_mcp_block = LINUX_AGENT.split("def local_simple_mcp_call",1)[1].split("def _stdio_mcp_write",1)[0]
+assert "post_json(" not in local_mcp_block, "LINUX_LOCAL_MCP_CLOUD_RELAY_FORBIDDEN"
+assert 'relay_calls_per_local_tool_call":0' in LINUX_AGENT, "LINUX_LOCAL_MCP_ZERO_RELAY_MARKER_MISSING"
+print("COMMANDER_LOCAL_MCP_STDIO=PASS")
+print("COMMANDER_LOCAL_MCP_CLOUD_RELAY=ZERO")
+assert "pty.fork()" in LINUX_AGENT and "cleanup_process_sessions" in LINUX_AGENT, "LINUX_MANAGED_PROCESS_SESSION_MISSING"
+assert "PROCESS_REVOKE" in LINUX_AGENT, "LINUX_PROCESS_REVOKE_ON_SESSION_CLOSE_MISSING"
+print("COMMANDER_LOCAL_PROCESS_EXECUTION_GATE=PASS")
+assert "hara.commander-file-preimage.v1" in LINUX_AGENT, "LINUX_PREIMAGE_METADATA_MISSING"
+assert "PREIMAGE_INTEGRITY_FAILED" in LINUX_AGENT and "ROLLBACK_VERIFY_FAILED" in LINUX_AGENT, "LINUX_ROLLBACK_INTEGRITY_GUARD_MISSING"
+assert "FILESYSTEM_ROLLBACK_V1" in LINUX_AGENT, "LINUX_ROLLBACK_RECEIPT_CLASS_MISSING"
+print("COMMANDER_REVERSIBLE_FILE_MUTATION=PASS")
+
+
+assert 'persistent=effective_approval_mode(config)=="PERSISTENT_TRUSTED"' in LINUX_AGENT and "authorized=persistent or operator_session_active()" in LINUX_AGENT, "LINUX_PERSISTENT_BACKGROUND_AUTHORITY_MISSING"
+assert '$Persistent=(Get-ApprovalMode $Cfg) -eq "PERSISTENT_TRUSTED"' in WINDOWS_AGENT, "WINDOWS_PERSISTENT_BACKGROUND_AUTHORITY_MISSING"
+assert '"source":"DEVICE_ENROLLMENT_POLICY"' in LINUX_AGENT, "LINUX_PERSISTENT_AUTHORIZATION_SOURCE_MISSING"
+assert 'if effective_approval_mode(config)!="PERSISTENT_TRUSTED" and not operator_session_active()' in LINUX_AGENT, "LINUX_EXECUTE_CALL_PERSISTENT_GATE_MISSING"
 print("COMMANDER_LOCAL_OPERATOR_SESSION_GATE=PASS")
-print("COMMANDER_BACKGROUND_DAEMON_EXECUTION_AUTHORITY=INERT")
+print("COMMANDER_BACKGROUND_DAEMON_EXECUTION_AUTHORITY=PERSISTENT_OPT_IN")
+print("COMMANDER_PERSISTENT_TRUSTED_BACKGROUND=PASS")
 print("COMMANDER_CONSOLE_SECRET_EXPOSURE=FALSE")
 
 linux_namespace = {
@@ -258,7 +309,7 @@ with tempfile.TemporaryDirectory(prefix="hara-agent-startup-") as tmp:
                     break
             time.sleep(0.1)
         assert startup, "LINUX_AGENT_STARTUP_STATUS_MISSING"
-        assert startup.get("agent_version") == "0.3.14", "LINUX_AGENT_STARTUP_VERSION_INVALID"
+        assert startup.get("agent_version") == "0.3.40", "LINUX_AGENT_STARTUP_VERSION_INVALID"
         assert startup.get("started_at_utc"), "LINUX_AGENT_STARTUP_ATTESTATION_MISSING"
         time.sleep(1.2)
         inert = json.loads(status_path.read_text(encoding="utf-8"))
@@ -273,8 +324,9 @@ with tempfile.TemporaryDirectory(prefix="hara-agent-startup-") as tmp:
             proc.kill()
             proc.wait(timeout=3)
 print("COMMANDER_AGENT_STARTUP_ATTESTATION=PASS")
-print("COMMANDER_EXACT_FIVE_TOOL_AGENT=PASS")
-print("ARBITRARY_SHELL_EXPOSED=FALSE")
+print("COMMANDER_GOVERNED_TOOL_AGENT=PASS")
+print("UNGUARDED_SHELL_TOOL_EXPOSED=FALSE")
+print("GOVERNED_PROCESS_EXECUTION=CONFIGURABLE_LOCAL_AUTHORIZATION")
 
 need(HTML, "/install/linux.sh", "PORTAL_LINUX_INSTALLER_LINK")
 need(HTML, "/install/windows.ps1", "PORTAL_WINDOWS_INSTALLER_LINK")
@@ -284,7 +336,7 @@ need(JS, "Agent \" + String(device.agent_version)", "PORTAL_AGENT_VERSION")
 print("PORTAL_DEVICE_INSTALLERS=PASS")
 print("PORTAL_DEVICE_SELECTION=PASS")
 print("PER_DEVICE_CLOUDFLARED_DEPENDENCY=FALSE")
-print("OUTBOUND_CALL_CHANNEL_FIVE_TOOL_READY=PASS")
+print("OUTBOUND_CALL_CHANNEL_GOVERNED_TOOLSET_READY=PASS")
 print("AGENT_REMOTE_SELF_REVOKE=PASS")
 print("COMMANDER_AGENT_REDIRECT_FAIL_CLOSED=PASS")
 print("AGENT_DOCTOR_REMOTE_HEALTH=PASS")

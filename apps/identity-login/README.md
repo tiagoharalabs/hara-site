@@ -92,3 +92,127 @@ Canonical aligner:
 `python3 apps/identity-login/scripts/align_login_default_redirect.py --pat-file <secure-owner-pat>`
 
 The script reads the existing policy, preserves its supported fields, changes only `defaultRedirectUri`, and reads the policy back. `validate_identity_backend.py` fails on redirect drift.
+
+## MCP OAuth metadata adapter
+
+The Commander MCP compatibility path uses a dedicated, isolated metadata
+service for RFC 8414 Authorization Server Metadata.
+
+Image:
+
+`hara-identity-oauth-metadata:v1.0.0`
+
+Build:
+
+```bash
+docker build -t hara-identity-oauth-metadata:v1.0.0 \
+  apps/identity-login/oauth-metadata
+```
+
+The service owns only:
+
+`/.well-known/oauth-authorization-server`
+
+Traefik priority is 700 so the exact well-known path is served by the adapter
+before the catch-all ZITADEL API router. It does not replace or proxy Login V2,
+OIDC, Session API, token, authorization, introspection, revocation or JWKS
+endpoints.
+
+The first stage intentionally advertises:
+
+- Authorization Code;
+- Refresh Token;
+- PKCE S256;
+- existing HARA Identity authorization/token/introspection/revocation/JWKS URLs;
+- `client_id_metadata_document_supported=false`;
+- no `registration_endpoint`.
+
+This closes RFC 8414 discovery without pretending CIMD or public DCR is already
+available.
+
+Source gate:
+
+```bash
+python3 apps/identity-login/scripts/validate_mcp_oauth_metadata.py
+```
+
+Live gate after deployment:
+
+```bash
+python3 apps/identity-login/scripts/validate_mcp_oauth_metadata_live.py \
+  --expect-cimd disabled
+```
+
+### CIMD preparation
+
+The image also packages a non-routed CIMD admission/fetch policy for the next
+slice. It is not advertised or reachable as an authorization feature yet.
+
+The prepared policy requires:
+
+- HTTPS client-id metadata URLs with a non-root path;
+- no userinfo, query string or fragment;
+- public DNS targets only;
+- DNS result validation and address pinning to reduce SSRF/rebinding exposure;
+- no redirects while fetching metadata;
+- JSON response with a 64 KiB maximum;
+- exact `client_id` self-match;
+- Authorization Code public clients (`token_endpoint_auth_method=none`);
+- redirect URIs restricted to HTTPS or HTTP loopback IP literals.
+
+CIMD must only be advertised after the authorization layer actually consumes
+this policy and the strict live gate passes.
+## MCP DCR guard
+
+Legacy MCP clients may still use OAuth Dynamic Client Registration. HARA
+Identity keeps ZITADEL DCR disabled by default, and any future public DCR
+traffic is designed to pass through a dedicated guard rather than reach the
+ZITADEL registration endpoint directly.
+
+Guard image:
+
+`hara-identity-dcr-gateway:v0.2.0`
+
+Default mode:
+
+`HARA_DCR_GATEWAY_MODE=closed`
+
+In closed mode the public registration path returns 404 and no request is sent
+to ZITADEL.
+
+The guarded mode, which is not enabled merely by deploying the service:
+
+- accepts only public OAuth clients (`token_endpoint_auth_method=none`);
+- requires Authorization Code; Refresh Token is optional;
+- accepts HTTPS redirects;
+- accepts HTTP loopback redirects for desktop/CLI MCP clients;
+- accepts native custom-scheme redirects only for native applications;
+- rejects remote plaintext HTTP and dangerous URI schemes;
+- caps request size and redirect count;
+- strips unrecognized registration metadata before forwarding;
+- rate-limits new registrations twice: per client and globally in the gateway, plus a Traefik edge limiter;
+- derives the client rate key from Cloudflare `CF-Connecting-IP`; untrusted `X-Forwarded-For` is ignored by default;
+- strips client-address forwarding headers before proxying to ZITADEL;
+- requires a registration bearer token for management GET/DELETE;
+- validates replacement metadata on management PUT.
+
+Source gate:
+
+```bash
+python3 apps/identity-login/scripts/validate_mcp_dcr_gateway.py
+```
+
+Deploying the closed guard does **not** enable ZITADEL DCR and does not add a
+`registration_endpoint` to discovery. The RFC 8414 adapter now supports a
+conditional DCR advertisement flag, but its compose default remains `false`.
+Enabling backend open DCR, switching the guard to `guarded`, and advertising the
+endpoint are one coordinated promotion transaction with automatic rollback.
+
+Promotion tooling:
+
+```bash
+python3 apps/identity-login/scripts/promote_mcp_dcr_guarded.py --self-test
+```
+
+A real promotion is intentionally explicit and must be run on the Identity host
+with `--pat-file`, `--compose-file` and `--execute`. Dry-run is the default.

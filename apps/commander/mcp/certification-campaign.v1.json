@@ -1,0 +1,45 @@
+{
+  "schema": "hara.commander.mcp-certification-campaign.v1",
+  "state": "PREPARED_NOT_STARTED",
+  "campaign_id": "HARA-MCP-CAMPAIGN-V1-20261006",
+  "certification_revision": "V1",
+  "server_url": "https://commander.haralabs.com.br/api/mcp?profile=simple",
+  "simple_profile_version": "1.1.0",
+  "bundle_commit": "c4e2a50e81c1d7487116c35b551924862f21018c",
+  "bundle_seal_commit": "8619509be1651ce62baa4c9fadb0dc6ee7efa5bc",
+  "order": [
+    "mcp-inspector",
+    "vscode",
+    "cursor",
+    "claude-code"
+  ],
+  "clients": {
+    "mcp-inspector": {
+      "state": "NOT_STARTED",
+      "evidence": null,
+      "certificate": null
+    },
+    "vscode": {
+      "state": "NOT_STARTED",
+      "evidence": null,
+      "certificate": null
+    },
+    "cursor": {
+      "state": "NOT_STARTED",
+      "evidence": null,
+      "certificate": null
+    },
+    "claude-code": {
+      "state": "NOT_STARTED",
+      "evidence": null,
+      "certificate": null
+    }
+  },
+  "campaign_rollup": null,
+  "multi_client_state": "NOT_CERTIFIED",
+  "notes": [
+    "Do not edit certification matrix after first client starts.",
+    "Do not run clients in parallel.",
+    "Do not use static bearer token in primary certification."
+  ]
+}

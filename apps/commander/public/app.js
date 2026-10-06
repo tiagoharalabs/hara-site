@@ -14,10 +14,10 @@
     signup: "Criar conta · H.A.R.A. Commander",
     dashboard: "Visão geral · H.A.R.A. Commander",
     devices: "Computadores · H.A.R.A. Commander",
-    usage: "Uso & limite · H.A.R.A. Commander",
-    plans: "Plano · H.A.R.A. Commander",
+    usage: "Uso · H.A.R.A. Commander",
+    plans: "Plano e cobrança · H.A.R.A. Commander",
     connections: "Conexões · H.A.R.A. Commander",
-    security: "Segurança · H.A.R.A. Commander",
+    security: "Configurações · H.A.R.A. Commander",
   });
   const params = new URLSearchParams(location.search);
   const root = document.documentElement;
@@ -35,16 +35,26 @@
   let retryAction = null;
   let authProviderConfigured = false;
   let sessionAuthenticated = false;
+  let sessionDegraded = false;
+  let sessionDegradedReason = "";
+  let currentRole = "";
   let skipNextWorkspaceLoad = false;
   let dashboardCache = null;
   let dashboardCacheAt = 0;
   let devicesCache = null;
   let devicesCacheAt = 0;
   let pairingExpiryTimer = null;
+  const activityCache = new Map();
+  let activityWindow = "7d";
+  const ACTIVITY_CACHE_MS = 15000;
+  const LOCAL_ACTIVITY_ORIGIN = "http://127.0.0.1:32145";
+  const LOCAL_ACTIVITY_TIMEOUT_MS = 900;
+  const LOCAL_SUPPORT_TIMEOUT_MS = 1500;
   const revokeConfirmTimers = new Map();
   let currentView = null;
   let deviceSectionTab = "devices";
   let deviceTab = "active";
+  let installApprovalMode = "PERSISTENT_TRUSTED";
 
   function currentTheme() {
     return root.dataset.theme === "dark" ? "dark" : "light";
@@ -116,7 +126,7 @@
       showToast("O HARA Identity ainda não está disponível para autenticação.");
       return;
     }
-    const target = "/auth/login?return_to=" + encodeURIComponent("/#dashboard")
+    const target = "/auth/login?return_to=" + encodeURIComponent("/#devices")
       + (signup ? "&screen_hint=signup" : "")
       + (forceLogin ? "&force_login=1" : "");
     location.assign(target);
@@ -155,6 +165,9 @@
 
   function setGuestHeader() {
     sessionAuthenticated = false;
+    sessionDegraded = false;
+    sessionDegradedReason = "";
+    currentRole = "";
     dashboardCache = null;
     dashboardCacheAt = 0;
     devicesCache = null;
@@ -166,6 +179,8 @@
 
   function setAuthenticatedHeader(payload) {
     sessionAuthenticated = true;
+    sessionDegraded = payload?.availability?.degraded === true;
+    sessionDegradedReason = String(payload?.availability?.reason || "");
     if (guestActions) guestActions.hidden = true;
     if (sessionActions) sessionActions.hidden = false;
     document.body.classList.add("session-authenticated");
@@ -257,7 +272,8 @@
   function applyIdentityFields(payload) {
     const tenantName = String(payload?.tenant?.display_name || "Seu workspace");
     const userName = String(payload?.subject?.display_name || "Conta HARA");
-    const userRole = roleLabel(payload?.subject?.role);
+    currentRole = String(payload?.subject?.role || "").trim().toUpperCase();
+    const userRole = roleLabel(currentRole);
     document.querySelectorAll("[data-tenant-name]").forEach((node) => { node.textContent = tenantName; });
     document.querySelectorAll("[data-user-name]").forEach((node) => { node.textContent = userName; });
     const subjectId = String(payload?.subject?.subject_id || "—");
@@ -278,22 +294,34 @@
     if (!payload?.entitlement || !payload?.usage) return;
     applyIdentity(payload);
     const plan = payload.entitlement.plan_name || payload.entitlement.plan_code || "—";
-    const consumed = Number(payload.usage.consumed_units || 0);
+    const planCode = String(payload.entitlement.plan_code || "").trim().toUpperCase();
+    const consumedRaw = payload.usage.consumed_units;
+    const consumed = consumedRaw == null ? 0 : Number(consumedRaw);
     const limit = payload.usage.limit == null ? null : Number(payload.usage.limit);
+    const unmetered = payload.usage.metered === false || limit == null;
+    const usageAvailable = payload.usage.available !== false;
     const remaining = payload.usage.remaining_units;
-    const percent = limit ? Math.min(100, (consumed / limit) * 100) : 0;
+    const percent = usageAvailable && !unmetered && limit ? Math.min(100, (consumed / limit) * 100) : 0;
 
     setText("landingPlan", plan);
-    setText("landingUsage", number(consumed));
-    setText("landingLimit", limit == null ? "sem limite" : "de " + number(limit));
+    setText("landingUsage", unmetered ? "Ilimitado" : (usageAvailable ? number(consumed) : "—"));
+    setText("landingLimit", unmetered ? "" : "de " + number(limit));
     setText("dashboardPlan", plan);
     const planCard = document.getElementById("planSummaryCard");
-    const isTrial = String(plan).trim().toUpperCase() === "TRIAL";
+    const isTrial = planCode === "TRIAL";
     if (planCard) planCard.classList.toggle("trial", isTrial);
-    setText("dashboardPlanDetail", isTrial ? "Plano temporário de homologação" : "Plano ativo");
-    setText("dashboardConsumed", number(consumed));
-    setText("dashboardLimit", limit == null ? "/ sem limite" : "/ " + number(limit));
-    setText("dashboardPercent", limit == null ? "Plano sem limite definido" : percent.toFixed(2).replace(".", ",") + "% utilizado");
+    setText(
+      "dashboardPlanDetail",
+      isTrial ? "Plano Free · 10.000 chamadas/mês" : (unmetered ? "Plano sem franquia mensal" : "Plano ativo"),
+    );
+    setText("dashboardConsumed", unmetered ? "Ilimitado" : (usageAvailable ? number(consumed) : "—"));
+    setText("dashboardLimit", unmetered ? "" : "/ " + number(limit));
+    setText(
+      "dashboardPercent",
+      unmetered
+        ? "Sem franquia mensal de chamadas"
+        : (usageAvailable ? percent.toFixed(2).replace(".", ",") + "% utilizado" : "Uso temporariamente indisponível"),
+    );
     const dashboardBar = document.getElementById("dashboardUsageProgress");
     if (dashboardBar) dashboardBar.style.width = (limit == null ? 0 : percent) + "%";
     const dashboardProgress = dashboardBar?.parentElement;
@@ -303,14 +331,513 @@
       usageCard.classList.toggle("usage-warning", percent >= 80 && percent < 100);
       usageCard.classList.toggle("usage-exhausted", percent >= 100);
     }
-    setText("usageConsumed", number(consumed));
-    setText("usageLimit", limit == null ? "sem limite" : "de " + number(limit));
-    setText("usageRemaining", remaining == null ? "Capacidade sem limite definido" : number(remaining) + " unidades disponíveis");
-    setText("usagePeriod", payload.usage.period_key || "—");
+    setText("usageConsumed", unmetered ? "Ilimitado" : (usageAvailable ? number(consumed) : "—"));
+    setText("usageLimit", unmetered ? "" : "de " + number(limit));
+    setText(
+      "usageRemaining",
+      unmetered
+        ? "Sem franquia mensal de chamadas"
+        : (usageAvailable ? number(remaining) + " unidades disponíveis" : "Uso temporariamente indisponível"),
+    );
+    setText("usagePeriod", unmetered ? "Sem limite" : (payload.usage.period_key || "—"));
+
+    const history = payload.transaction_history || {};
+    const historyAvailable = history.available !== false;
+    setText("usageCardTransactions", historyAvailable && history.calls_7d != null ? number(history.calls_7d) : "—");
+    setText(
+      "usageCardTransactionsDetail",
+      historyAvailable && history.calls_total != null
+        ? "Últimos 7 dias · " + number(history.calls_total) + " no histórico registrado"
+        : "Histórico temporariamente indisponível",
+    );
+    setText("usageCardCapacity", unmetered ? "Ilimitado" : (usageAvailable ? number(remaining) : "—"));
+    setText(
+      "usageCardCapacityDetail",
+      unmetered
+        ? "Sem franquia mensal"
+        : (usageAvailable ? "chamadas restantes de " + number(limit) : "Capacidade temporariamente indisponível"),
+    );
+    setText("usageCardPlan", plan);
+    setText(
+      "usageCardPlanDetail",
+      unmetered ? "Chamadas sem franquia mensal" : (isTrial ? "Free · 10.000 chamadas/mês" : "Plano ativo"),
+    );
+    setText("usageCardPeriod", unmetered ? "Sem limite" : "Mensal");
+    setText(
+      "usageCardPeriodDetail",
+      unmetered ? "Sem fechamento de franquia" : (payload.usage.period_key || "Ciclo atual"),
+    );
+
     const bar = document.getElementById("usageProgress");
-    if (bar) bar.style.width = (limit == null ? 0 : percent) + "%";
-    // Device state is hydrated independently by /api/portal/devices.
-    // Usage activity is not part of the current dashboard API contract.
+    if (bar) bar.style.width = (unmetered || !usageAvailable ? 0 : percent) + "%";
+    if (!usageAvailable) {
+      showBanner(
+        "info",
+        "Uso temporariamente indisponível",
+        "Plano, sessão e computadores continuam disponíveis. Tente atualizar o uso novamente em instantes.",
+        "Atualizar uso",
+        loadProductDashboard,
+      );
+    }
+    // Device state and operational activity are hydrated independently.
+  }
+
+  function activityDuration(ms) {
+    const value=Number(ms);
+    if (!Number.isFinite(value) || value < 0) return "—";
+    if (value < 1000) return Math.round(value) + " ms";
+    return (value/1000).toFixed(value < 10 * 1000 ? 2 : 1).replace(".",",") + " s";
+  }
+
+  function activityWhen(value) {
+    const date=new Date(String(value || ""));
+    if (!Number.isFinite(date.getTime())) return "—";
+    return new Intl.DateTimeFormat("pt-BR",{
+      day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit"
+    }).format(date);
+  }
+
+  function localActivityToPortal(payload) {
+    if (payload?.schema !== "hara.commander-local-activity.v2" || payload?.local_direct !== true) return null;
+    const events=Array.isArray(payload.events) ? payload.events : [];
+    const transactions=events.map((item)=>({
+      created_at_utc:item.at_utc || null,
+      tool_id:item.tool_id || item.function_id || "—",
+      computer:payload.computer || "Este computador",
+      state:item.state || (item.event === "PASS" ? "COMPLETED" : (item.event === "DENIED" ? "FAILED" : item.event)),
+      total_ms:item.duration_ms,
+      queue_ms:0,
+      execution_ms:item.duration_ms,
+      transport_mode:item.transport_mode || "LOCAL_AGENT",
+      agent_version:payload.agent_version || null,
+      error_code:item.error_code || null,
+      trace_id:item.receipt_sha256 || "",
+      action_summary:item.action_summary || null,
+      source:"LOCAL_SQLITE",
+    }));
+    return {
+      schema:"hara.commander-portal-activity.v2",
+      scope:"LOCAL_DEVICE",
+      source:"LOCALHOST_SQLITE",
+      detail_location:"LOCAL_DEVICE",
+      local_direct:true,
+      local_device_id:payload.device_id || null,
+      snapshot_coverage_percent:100,
+      window:payload.window || {},
+      privacy:payload.privacy || {},
+      summary:{...(payload.summary || {}),device_count:1},
+      slo:payload.slo || null,
+      diagnostics:payload.diagnostics || {top_tools:[],top_errors:[]},
+      transactions,
+    };
+  }
+
+  function mergeLocalActivityDetail(cloud,local) {
+    if (!local) return cloud;
+    if (!cloud) return local;
+    const transactions=[
+      ...(Array.isArray(local.transactions) ? local.transactions : []),
+      ...(Array.isArray(cloud.transactions) ? cloud.transactions : []),
+    ].sort((a,b)=>Date.parse(String(b.created_at_utc || ""))-Date.parse(String(a.created_at_utc || ""))).slice(0,50);
+    return {
+      ...cloud,
+      source:String(cloud.source || "CLOUD") + "+LOCALHOST_DETAIL",
+      detail_location:"LOCAL_DEVICE_WITH_CLOUD_FALLBACK",
+      local_direct:true,
+      local_device_id:local.local_device_id,
+      transactions,
+    };
+  }
+
+  async function localLoopbackPermissionState() {
+    try {
+      if (!navigator.permissions?.query) return "unknown";
+      const status=await navigator.permissions.query({name:"loopback-network"});
+      return String(status?.state || "unknown");
+    } catch (_error) {
+      return "unknown";
+    }
+  }
+
+  async function shouldAttemptLocalActivity(explicitUserRefresh=false) {
+    const state=await localLoopbackPermissionState();
+    if (state === "granted") return true;
+    if (state === "denied") return false;
+    return explicitUserRefresh;
+  }
+
+  async function fetchLocalActivityDirect(windowKey) {
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),LOCAL_ACTIVITY_TIMEOUT_MS);
+    try {
+      const url=LOCAL_ACTIVITY_ORIGIN + "/v1/activity?limit=50&window=" + encodeURIComponent(windowKey);
+      const options={
+        cache:"no-store",
+        mode:"cors",
+        credentials:"omit",
+        signal:controller.signal,
+        targetAddressSpace:"loopback",
+      };
+      const response=await fetch(new Request(url,options));
+      if (!response.ok) return null;
+      return localActivityToPortal(await response.json().catch(()=>null));
+    } catch (_error) {
+      return null;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  function supportReportPrivacySafe(report) {
+    if (!report || report.schema !== "hara.commander-support-report.v2") return false;
+    const privacy=report.privacy || {};
+    return [
+      "secret_material_exposed",
+      "customer_content_included",
+      "command_content_included",
+      "payload_content_included",
+      "result_content_included",
+    ].every((key)=>privacy[key] === false);
+  }
+
+  async function fetchLocalSupportReport() {
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),LOCAL_SUPPORT_TIMEOUT_MS);
+    try {
+      const request=new Request(LOCAL_ACTIVITY_ORIGIN + "/v1/support",{
+        cache:"no-store",
+        mode:"cors",
+        credentials:"omit",
+        signal:controller.signal,
+        targetAddressSpace:"loopback",
+      });
+      const response=await fetch(request);
+      if (!response.ok) return null;
+      const payload=await response.json().catch(()=>null);
+      return supportReportPrivacySafe(payload) ? payload : null;
+    } catch (_error) {
+      return null;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  async function submitLocalSupportReport(trigger=null) {
+    const statusNode=document.getElementById("supportReportStatus");
+    const original=trigger?.textContent || "Enviar diagnóstico";
+    if (!remotePortal || !sessionAuthenticated) {
+      if (statusNode) statusNode.textContent="Entre no Commander para enviar um diagnóstico.";
+      return;
+    }
+    if (!["OWNER","ADMIN"].includes(String(currentRole || "").toUpperCase())) {
+      if (statusNode) statusNode.textContent="Somente OWNER/ADMIN podem enviar diagnósticos ao suporte.";
+      return;
+    }
+    const allowed=await shouldAttemptLocalActivity(true);
+    if (!allowed) {
+      if (statusNode) statusNode.textContent="O navegador bloqueou o acesso ao Agent local. Use o comando Diagnóstico na lista de computadores.";
+      return;
+    }
+    if (trigger) {
+      trigger.disabled=true;
+      trigger.textContent="Coletando…";
+    }
+    try {
+      const report=await fetchLocalSupportReport();
+      if (!report) throw new Error("LOCAL_SUPPORT_UNAVAILABLE");
+      if (trigger) trigger.textContent="Enviando…";
+      const response=await fetch("/api/portal/support-reports",{
+        method:"POST",
+        cache:"no-store",
+        credentials:"same-origin",
+        headers:{"content-type":"application/json"},
+        body:JSON.stringify(report),
+      });
+      if (handlePortalAuthFailure(response,"Entre novamente para enviar o diagnóstico.")) return;
+      const payload=await response.json().catch(()=>({}));
+      if (!response.ok) throw new Error(String(payload?.code || "SUPPORT_REPORT_SUBMIT_FAILED"));
+      const expires=payload?.expires_at_utc ? new Date(payload.expires_at_utc).toLocaleDateString("pt-BR") : "30 dias";
+      if (statusNode) statusNode.textContent="Diagnóstico sanitizado enviado · retenção até " + expires + ".";
+      showToast("Diagnóstico sanitizado enviado ao suporte.");
+    } catch (error) {
+      const code=String(error?.message || "");
+      if (statusNode) {
+        statusNode.textContent=code === "LOCAL_SUPPORT_UNAVAILABLE"
+          ? "O Agent local não respondeu. Use Diagnóstico na lista de computadores como fallback."
+          : (code === "SUPPORT_REPORT_ADMIN_REQUIRED"
+            ? "Somente OWNER/ADMIN podem enviar diagnósticos."
+            : "Não foi possível enviar o diagnóstico agora. Tente novamente.");
+      }
+    } finally {
+      if (trigger?.isConnected) {
+        trigger.disabled=false;
+        trigger.textContent=original;
+      }
+    }
+  }
+
+  function activityTag(state) {
+    const value=String(state || "").toUpperCase();
+    if (value === "COMPLETED") return ["PASS","committed"];
+    if (value === "FAILED") return ["FALHA","denied"];
+    if (value === "PENDING") return ["PENDENTE","released"];
+    if (value === "EXECUTING") return ["EXECUTANDO","released"];
+    if (value === "EXPIRED") return ["EXPIRADA","denied"];
+    if (value === "CANCELLED") return ["CANCELADA","released"];
+    return [value || "—","released"];
+  }
+
+  function renderActivityBreakdown(targetId,items,labelKey,emptyTitle,emptyText) {
+    const target=document.getElementById(targetId);
+    if (!target) return;
+    target.replaceChildren();
+    if (!Array.isArray(items) || !items.length) {
+      const empty=document.createElement("div");
+      empty.className="empty-state compact";
+      const strong=document.createElement("strong");
+      strong.textContent=emptyTitle;
+      empty.append(strong,document.createTextNode(emptyText));
+      target.append(empty);
+      return;
+    }
+    const max=Math.max(...items.map((item)=>Number(item.calls || 0)),1);
+    items.forEach((item)=>{
+      const row=document.createElement("div");
+      row.className="activity-breakdown-row";
+      const label=document.createElement("span");
+      label.textContent=String(item[labelKey] || "—");
+      label.title=label.textContent;
+      const bar=document.createElement("i");
+      bar.style.width=Math.max(4,Math.round((Number(item.calls || 0)/max)*100))+"%";
+      const count=document.createElement("b");
+      count.textContent=number(item.calls || 0);
+      row.append(label,bar,count);
+      target.append(row);
+    });
+  }
+
+  function renderActivity(payload) {
+    const diagnosticsPanel=document.getElementById("internalBetaDiagnostics");
+    const localOnly=payload?.local_direct === true || String(payload?.source || "").startsWith("LOCALHOST_SQLITE");
+    if (diagnosticsPanel) diagnosticsPanel.hidden=!localOnly;
+    if (!localOnly) return;
+    const summary=payload?.summary || {};
+    setText("activityTotal",number(summary.total_calls || 0));
+    const scopeLabel=payload?.scope === "TENANT"
+      ? "Workspace inteiro"
+      : (payload?.scope === "LOCAL_DEVICE" ? "Este computador" : "Suas execuções");
+    const windowLabel=String(payload?.window?.label || "");
+    const localCoverage=Number(payload?.snapshot_coverage_percent);
+    const sourceLabel=payload?.local_direct === true
+      ? " · detalhe local"
+      : (String(payload?.source || "").startsWith("LOCAL_DEVICE") && Number.isFinite(localCoverage)
+        ? " · " + String(localCoverage).replace(".", ",") + "% local"
+        : "");
+    setText("activityScope",scopeLabel + (windowLabel ? " · " + windowLabel : "") + sourceLabel);
+    setText("activitySuccessRate",summary.success_rate_percent == null ? "—" : String(summary.success_rate_percent).replace(".",",") + "%");
+    setText("activityTerminalSummary",number(summary.completed || 0) + " PASS · " + number(summary.failed || 0) + " falhas");
+    setText("activityAvgLatency",activityDuration(summary.avg_total_ms));
+    setText("activityLatencyStages","Fila " + activityDuration(summary.avg_queue_ms) + " · Agent " + activityDuration(summary.avg_execution_ms));
+    const transports=Array.isArray(summary.transport_modes) ? summary.transport_modes : [];
+    setText("activityTransport",transports[0] || "—");
+    setText("activityDeviceCount",number(summary.device_count || 0) + " computador(es) · " + (summary.under_3s_percent == null ? "—" : String(summary.under_3s_percent).replace(".",",") + "% < 3 s"));
+    const diagnostics=payload?.diagnostics || {};
+    renderActivityBreakdown("activityTopTools",diagnostics.top_tools,"tool_id","Sem atividade","Nenhuma tool executada nesta janela.");
+    renderActivityBreakdown("activityTopErrors",diagnostics.top_errors,"error_code","Sem falhas","Nenhuma falha registrada nesta janela.");
+
+    const success=summary.availability_success_rate_percent;
+    const availability=Number(success);
+    const localAvailabilityStatus=!Number.isFinite(availability)
+      ? "INSUFFICIENT_DATA"
+      : (availability >= 99 ? "PASS" : "DEGRADED");
+    setText("activitySloStatus",localAvailabilityStatus === "PASS" ? "OK" : (localAvailabilityStatus === "DEGRADED" ? "Degradado" : "Aguardando amostra"));
+    setText(
+      "activitySloDetail",
+      success == null
+        ? "Disponibilidade local ainda sem amostra suficiente."
+        : "Disponibilidade local " + String(success).replace(".",",") + "% · duração das tools não entra no SLO.",
+    );
+
+    const ledger=document.getElementById("usageLedger");
+    if (!ledger) return;
+    const header=ledger.querySelector(".tr.head");
+    ledger.replaceChildren();
+    if (header) ledger.append(header);
+
+    const rows=Array.isArray(payload?.transactions) ? payload.transactions : [];
+    if (!rows.length) {
+      const empty=document.createElement("div");
+      empty.className="empty-state";
+      const strong=document.createElement("strong");
+      const localDetail=String(payload?.detail_location || "").startsWith("LOCAL_DEVICE");
+      strong.textContent=localDetail ? "Histórico detalhado fica no computador" : "Nenhuma transação ainda";
+      empty.append(
+        strong,
+        document.createTextNode(
+          localDetail
+            ? "Os cards acima vieram do banco local do Agent. Comandos e detalhes permanecem na máquina do usuário."
+            : "As execuções governadas aparecerão aqui sem expor payloads ou resultados.",
+        ),
+      );
+      ledger.append(empty);
+      return;
+    }
+
+    rows.forEach((item)=>{
+      const row=document.createElement("div");
+      row.className="tr activity-row";
+
+      const when=document.createElement("span");
+      when.textContent=activityWhen(item.created_at_utc);
+
+      const tool=document.createElement("span");
+      tool.className="activity-tool";
+      tool.textContent=String(item.tool_id || "—");
+      tool.title=String(item.action_summary || item.source || "");
+
+      const computer=document.createElement("span");
+      computer.textContent=String(item.computer || "—");
+      computer.title=(String(item.transport_mode || "") + (item.agent_version ? " · Agent " + item.agent_version : "")).trim();
+
+      const state=document.createElement("span");
+      const [label,klass]=activityTag(item.state);
+      state.className="tag " + klass;
+      state.textContent=label;
+      if (item.error_code) state.title=String(item.error_code);
+
+      const duration=document.createElement("span");
+      duration.textContent=activityDuration(item.total_ms);
+      duration.title="Fila " + activityDuration(item.queue_ms) + " · execução " + activityDuration(item.execution_ms);
+
+      const trace=document.createElement("span");
+      trace.className="trace-code";
+      const traceId=String(item.trace_id || "");
+      trace.textContent=traceId ? traceId.slice(-8) : "—";
+      trace.title=traceId || (item.error_code || "");
+
+      row.append(when,tool,computer,state,duration,trace);
+      ledger.append(row);
+    });
+  }
+
+  function setActivityWindow(value) {
+    const next=["24h","7d","30d"].includes(String(value)) ? String(value) : "7d";
+    activityWindow=next;
+    document.querySelectorAll("[data-activity-window]").forEach((button)=>{
+      const active=button.dataset.activityWindow === next;
+      button.classList.toggle("active",active);
+      button.setAttribute("aria-checked",String(active));
+      button.tabIndex=active ? 0 : -1;
+    });
+    loadUsageActivity(null,true);
+  }
+
+  function csvCell(value) {
+    const text=String(value == null ? "" : value);
+    return '"' + text.replaceAll('"','""') + '"';
+  }
+
+  function exportUsageActivityCsv(trigger=null) {
+    const cached=activityCache.get(activityWindow);
+    const payload=cached?.payload;
+    const rows=Array.isArray(payload?.transactions) ? payload.transactions : [];
+    if (!rows.length) {
+      showToast("Não há transações nesta janela para exportar.");
+      return;
+    }
+    const header=["horario_utc","tool","computador","estado","duracao_ms","fila_ms","execucao_ms","transporte","agent","erro","rastro"];
+    const lines=[header.map(csvCell).join(",")];
+    rows.forEach((item)=>{
+      lines.push([
+        item.created_at_utc,item.tool_id,item.computer,item.state,item.total_ms,item.queue_ms,
+        item.execution_ms,item.transport_mode,item.agent_version,item.error_code,item.trace_id
+      ].map(csvCell).join(","));
+    });
+    const blob=new Blob(["\ufeff"+lines.join("\r\n")],{type:"text/csv;charset=utf-8"});
+    const url=URL.createObjectURL(blob);
+    const anchor=document.createElement("a");
+    anchor.href=url;
+    anchor.download="hara-commander-activity-"+activityWindow+".csv";
+    document.body.append(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+    if (trigger) showToast("CSV de metadados operacionais exportado.");
+  }
+
+  async function loadUsageActivity(trigger=null, force=false) {
+    if (!remotePortal || !sessionAuthenticated) return;
+    const diagnosticsPanel=document.getElementById("internalBetaDiagnostics");
+    const cached=activityCache.get(activityWindow);
+    if (!force && cached && Date.now()-cached.at < ACTIVITY_CACHE_MS) {
+      renderActivity(cached.payload);
+      return;
+    }
+    const original=trigger?.textContent || "Atualizar";
+    if (trigger) {
+      trigger.disabled=true;
+      trigger.textContent="Atualizando…";
+    }
+    try {
+      const permissionState=await localLoopbackPermissionState();
+      if (permissionState === "denied") {
+        if (diagnosticsPanel) diagnosticsPanel.hidden=true;
+        if (trigger) showToast("Diagnóstico beta disponível somente no computador que executa o Agent local.");
+        return;
+      }
+      const payload=await fetchLocalActivityDirect(activityWindow);
+      if (!payload) {
+        if (diagnosticsPanel) diagnosticsPanel.hidden=true;
+        if (trigger) showToast("O Agent local não respondeu ao diagnóstico beta.");
+        return;
+      }
+      activityCache.set(activityWindow,{at:Date.now(),payload});
+      renderActivity(payload);
+    } finally {
+      if (trigger?.isConnected) {
+        trigger.disabled=false;
+        trigger.textContent=original;
+      }
+    }
+  }
+
+  async function loadServiceHealth(trigger=null) {
+    const pill=document.getElementById("serviceHealthPill");
+    const detail=document.getElementById("serviceHealthDetail");
+    const original=trigger?.textContent || "Atualizar status";
+    if (trigger) {
+      trigger.disabled=true;
+      trigger.textContent="Verificando…";
+    }
+    if (pill) {
+      pill.classList.remove("healthy","degraded");
+      pill.innerHTML="<i></i> Verificando";
+    }
+    try {
+      const started=performance.now();
+      const response=await fetch("/api/health",{cache:"no-store"});
+      const payload=await response.json().catch(()=>({}));
+      const latency=Math.max(0,Math.round(performance.now()-started));
+      const ok=Boolean(response.ok && payload?.ok === true && payload?.service === "hara-commander");
+      if (pill) {
+        pill.classList.toggle("healthy",ok);
+        pill.classList.toggle("degraded",!ok);
+        pill.innerHTML="<i></i> " + (ok ? "Operacional" : "Degradado");
+      }
+      if (detail) detail.textContent=(ok ? "Serviço respondeu normalmente" : "O serviço respondeu com degradação") + " · " + latency + " ms · " + new Date().toLocaleTimeString("pt-BR");
+    } catch (_error) {
+      if (pill) {
+        pill.classList.remove("healthy");
+        pill.classList.add("degraded");
+        pill.innerHTML="<i></i> Indisponível";
+      }
+      if (detail) detail.textContent="Não foi possível alcançar o serviço agora.";
+    } finally {
+      if (trigger?.isConnected) {
+        trigger.disabled=false;
+        trigger.textContent=original;
+      }
+    }
   }
 
   async function hydrateSessionHeader() {
@@ -323,6 +850,9 @@
       }
       const payload = await response.json();
       applyIdentity(payload);
+      if (payload?.availability?.degraded === true) {
+        history.replaceState(null, "", location.pathname + "#plans");
+      }
       return true;
     } catch (_error) {
       // Session chrome must never depend on quota/telemetry availability.
@@ -401,6 +931,31 @@
     if (devicesCache) renderDevices(devicesCache);
   }
 
+  function deviceApprovalLabel(mode) {
+    const value=String(mode || "").toUpperCase();
+    if (value === "PERSISTENT_TRUSTED") return { label:"Sempre permitido", className:"persistent" };
+    if (value === "SESSION_TRUSTED") return { label:"Por sessão", className:"session" };
+    if (value === "ASK_EVERY_ACTION") return { label:"Confirmação", className:"ask" };
+    return { label:"Política padrão", className:"default" };
+  }
+
+  function deviceReadiness(device) {
+    if (device?.state === "REVOKED") return { label:"Revogado", className:"revoked", detail:"Acesso revogado" };
+    if (!device?.online) return { label:"Offline", className:"offline", detail:"Sem contato recente com o Agent" };
+    const mode=String(device?.approval_mode || "").toUpperCase();
+    if (mode === "PERSISTENT_TRUSTED" || mode === "SESSION_TRUSTED") {
+      return { label:"Pronto", className:"ready", detail:"Online e autorizado para uso" };
+    }
+    return { label:"Atenção", className:"attention", detail:"Online; confirmações locais ainda podem ser exigidas" };
+  }
+
+  function deviceDiagnosticCommand(platform) {
+    if (String(platform || "").toUpperCase() !== "WINDOWS") {
+      return "hara-commander doctor && hara-commander support";
+    }
+    return "$tmp=Join-Path $env:TEMP ('hara-commander-support-'+[guid]::NewGuid().ToString('N')+'.ps1'); try { Invoke-WebRequest -Uri https://commander.haralabs.com.br/install/windows.ps1 -OutFile $tmp -UseBasicParsing -MaximumRedirection 0 -ErrorAction Stop; & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $tmp -Action doctor; & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $tmp -Action support } finally { Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue }";
+  }
+
   function renderDevices(payload) {
     const list = document.getElementById("deviceList");
     const devices = Array.isArray(payload?.devices) ? payload.devices : [];
@@ -408,7 +963,6 @@
     const revokedDevices = devices.filter((device) => device.state === "REVOKED");
     const visibleDevices = deviceTab === "history" ? revokedDevices : activeDevices;
     const onlineCount = Number(payload?.online_count || 0);
-    const selectedDevice = activeDevices.find((device) => Boolean(device.selected)) || null;
 
     setText("deviceActiveCount", number(activeDevices.length));
     setText("deviceHistoryCount", number(revokedDevices.length));
@@ -421,12 +975,18 @@
     }
     setText("landingConnections", number(onlineCount));
     setText("landingConnectionsDetail", onlineCount ? "Commander Agent online" : "Nenhum computador online");
-    if (!selectedDevice) {
-      setState("Aguardando", activeDevices.length ? "Selecione um computador" : "Conecte seu computador");
-    } else if (selectedDevice.online) {
-      setState("Pronto", String(selectedDevice.device_name || "Computador") + " está online", true);
+    setText("quickStartDeviceState",onlineCount ? (onlineCount === 1 ? "1 computador pronto" : onlineCount + " computadores prontos") : "Aguardando dispositivo online");
+    document.getElementById("quickStartDeviceStep")?.classList.toggle("done",onlineCount > 0);
+    if (onlineCount > 0) {
+      setState(
+        "Pronto",
+        onlineCount + (onlineCount === 1 ? " computador online" : " computadores online"),
+        true,
+      );
+    } else if (activeDevices.length) {
+      setState("Offline", "Nenhum computador online");
     } else {
-      setState("Offline", String(selectedDevice.device_name || "Computador") + " está sem conexão");
+      setState("Aguardando", "Conecte seu computador");
     }
 
     if (!list) return;
@@ -464,12 +1024,12 @@
       const name = document.createElement("b");
       name.textContent = String(device.device_name || "Computador");
       titleLine.append(name);
-      if (device.selected && device.state === "ACTIVE") {
-        const selectedBadge = document.createElement("span");
-        selectedBadge.className = "device-selected-badge";
-        selectedBadge.textContent = "Em uso";
-        titleLine.append(selectedBadge);
-        row.classList.add("selected");
+      if (device.state !== "REVOKED") {
+        const approvalPolicy=deviceApprovalLabel(device.approval_mode);
+        const policy=document.createElement("span");
+        policy.className="device-policy " + approvalPolicy.className;
+        policy.textContent=approvalPolicy.label;
+        titleLine.append(policy);
       }
       const meta = document.createElement("small");
       const arch = device.architecture ? " · " + String(device.architecture) : "";
@@ -477,9 +1037,11 @@
       meta.textContent = String(device.platform || "—") + arch + agentVersion + " · Último contato: " + formatDeviceSeen(device.last_seen_at_utc);
       body.append(titleLine, meta);
 
+      const readiness=deviceReadiness(device);
       const state = document.createElement("span");
-      state.className = "device-state " + (device.state === "REVOKED" ? "revoked" : device.online ? "online" : "offline");
-      state.textContent = device.state === "REVOKED" ? "Revogado" : device.online ? "Online" : "Offline";
+      state.className = "device-state " + readiness.className;
+      state.textContent = readiness.label;
+      state.title = readiness.detail;
 
       row.append(icon, body, state);
 
@@ -487,20 +1049,19 @@
         const actions = document.createElement("div");
         actions.className = "device-actions";
 
-        const select = document.createElement("button");
-        select.className = "link-button device-select";
-        select.type = "button";
-        select.disabled = Boolean(device.selected);
-        select.dataset.selectDevice = String(device.device_id);
-        select.textContent = device.selected ? "Em uso" : "Usar";
-        actions.append(select);
+        const diagnostic = document.createElement("button");
+        diagnostic.className = "link-button";
+        diagnostic.type = "button";
+        diagnostic.dataset.copyDeviceDiagnostic = String(device.platform || "LINUX");
+        diagnostic.textContent = "Diagnóstico";
+        diagnostic.title = "Copiar comando de diagnóstico sanitizado";
 
         const revoke = document.createElement("button");
         revoke.className = "link-button";
         revoke.type = "button";
         revoke.dataset.revokeDevice = String(device.device_id);
         revoke.textContent = "Revogar";
-        actions.append(revoke);
+        actions.append(diagnostic,revoke);
         row.append(actions);
       }
       list.append(row);
@@ -735,6 +1296,44 @@
     });
   }
 
+  function installCommandLinux() {
+    return "(tmp=$(mktemp) && trap 'rm -f $tmp' EXIT && curl -fsS --proto '=https' --tlsv1.2 --location --max-redirs 0 https://commander.haralabs.com.br/install/linux.sh -o $tmp && HARA_COMMANDER_APPROVAL_MODE="
+      + installApprovalMode
+      + " HARA_COMMANDER_URL=https://commander.haralabs.com.br bash $tmp)";
+  }
+
+  function installCommandWindows() {
+    return "$haraPrevUrl=$env:HARA_COMMANDER_URL; $haraPrevApproval=$env:HARA_COMMANDER_APPROVAL_MODE; $haraInstaller=Join-Path $env:TEMP ('hara-commander-install-'+[guid]::NewGuid().ToString('N')+'.ps1'); try { $env:HARA_COMMANDER_URL='https://commander.haralabs.com.br'; $env:HARA_COMMANDER_APPROVAL_MODE='"
+      + installApprovalMode
+      + "'; Invoke-WebRequest -Uri https://commander.haralabs.com.br/install/windows.ps1 -OutFile $haraInstaller -UseBasicParsing -MaximumRedirection 0 -ErrorAction Stop; & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $haraInstaller; if ($LASTEXITCODE -ne 0) { throw ('HARA_COMMANDER_INSTALL_EXIT_'+$LASTEXITCODE) } } finally { Remove-Item -LiteralPath $haraInstaller -Force -ErrorAction SilentlyContinue; $env:HARA_COMMANDER_URL=$haraPrevUrl; $env:HARA_COMMANDER_APPROVAL_MODE=$haraPrevApproval }";
+  }
+
+  function syncInstallApprovalMode() {
+    const linux = document.querySelector("[data-install-linux-code]");
+    const windows = document.querySelector("[data-install-windows-code]");
+    if (linux) linux.textContent = installCommandLinux();
+    if (windows) windows.textContent = installCommandWindows();
+    const note = document.getElementById("approvalModeNote");
+    if (note) {
+      note.textContent = installApprovalMode === "PERSISTENT_TRUSTED"
+        ? "Recomendado: o Agent fica disponível em segundo plano e executa somente operações governadas autorizadas neste computador."
+        : "Modo restritivo: alterações e comandos exigem uma sessão local para confirmação.";
+    }
+  }
+
+  function setInstallApprovalMode(mode) {
+    installApprovalMode = mode === "ask" || mode === "ASK_EVERY_ACTION"
+      ? "ASK_EVERY_ACTION"
+      : "PERSISTENT_TRUSTED";
+    document.querySelectorAll("[data-approval-choice]").forEach((button) => {
+      const active = (button.dataset.approvalChoice === "ask") === (installApprovalMode === "ASK_EVERY_ACTION");
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-checked", String(active));
+      button.tabIndex = active ? 0 : -1;
+    });
+    syncInstallApprovalMode();
+  }
+
   async function copyText(value, successMessage) {
     const text = String(value || "");
     try {
@@ -761,7 +1360,7 @@
 
   function applyScenario(name, payload) {
     if (!name) return;
-    const limit = Number(payload?.usage?.limit || payload?.entitlement?.unit_limit || 100);
+    const limit = Number(payload?.usage?.limit || payload?.entitlement?.unit_limit || 10000);
     const connections = document.querySelectorAll("#connectionList button:not([disabled])");
 
     if (name === "loading") {
@@ -872,7 +1471,7 @@
       applyScenario(scenario, payload);
     } catch (_error) {
       setState("Aguardando", "Dados da conta ainda não carregados");
-      showBanner("info", "Dados da conta não atualizados", "O login continua válido. Atualize para carregar plano e uso quando o serviço responder.", "Atualizar", loadProductDashboard);
+      showBanner("info", "Plano e uso temporariamente indisponíveis", "Sua sessão continua ativa. Atualize para consultar os dados do Commander novamente.", "Atualizar dados", loadProductDashboard);
     } finally {
       setLoading(false);
     }
@@ -883,6 +1482,7 @@
 
     const statusNode = document.getElementById("billingPlanStatus");
     const portalButton = document.querySelector("[data-billing-portal]");
+    const betaAccess = document.querySelector("[data-beta-access]");
     const planButtons = document.querySelectorAll("[data-billing-plan]");
 
     try {
@@ -893,6 +1493,20 @@
       if (!response.ok) return;
       const payload = await response.json();
       const canManage = payload?.can_manage === true;
+      const activation = payload?.activation || {};
+      const readiness = {
+        provider: activation.provider_configured === true,
+        catalog: activation.standard_catalog_active === true,
+        price: activation.standard_price_configured === true,
+        checkout: activation.standard_checkout_ready === true,
+      };
+      Object.entries(readiness).forEach(([key,ready])=>{
+        const node=document.querySelector('[data-billing-ready="' + key + '"]');
+        if (!node) return;
+        node.classList.toggle("ready",ready);
+        node.classList.toggle("pending",!ready);
+        node.setAttribute("title",ready ? "Pronto" : "Pendente");
+      });
 
       planButtons.forEach((button) => {
         const planCode = String(button.dataset.billingPlan || "").toUpperCase();
@@ -915,10 +1529,37 @@
           : (planCode === "SCALE" ? "Roadmap" : "Em preparação");
 
         const priceLabel = document.querySelector('[data-billing-price-label="' + planCode + '"]');
-        if (priceLabel && ready) {
+        const commercial = plan?.commercial_terms || {};
+        if (priceLabel && commercial.price_display) {
+          const interval = commercial.billing_interval === "month" ? "/ mês" : "assinatura";
+          priceLabel.innerHTML = commercial.price_display + " <small>" + interval + "</small>";
+        } else if (priceLabel && ready) {
           priceLabel.innerHTML = 'Preço no checkout <small>assinatura recorrente</small>';
         }
       });
+
+      if (betaAccess) {
+        const standardCurrent = payload?.connection?.plan_code === "STANDARD"
+          && ["active","trialing"].includes(String(payload?.connection?.subscription_status || "").toLowerCase());
+        betaAccess.hidden = Boolean(activation.first_checkout_ready || standardCurrent);
+        if (!betaAccess.hidden) {
+          const betaResponse=await fetch("/api/portal/beta-access",{cache:"no-store",credentials:"same-origin"});
+          if (betaResponse.ok) {
+            const betaPayload=await betaResponse.json().catch(()=>({}));
+            const state=String(betaPayload?.request?.state || "").toUpperCase();
+            if (["REQUESTED","CONTACTED"].includes(state)) {
+              betaAccess.disabled=true;
+              betaAccess.textContent="Solicitação enviada";
+            } else if (state === "APPROVED") {
+              betaAccess.disabled=true;
+              betaAccess.textContent="Acesso beta aprovado";
+            } else {
+              betaAccess.disabled=betaPayload?.can_request !== true;
+              betaAccess.textContent=betaPayload?.can_request === true ? "Solicitar acesso beta" : "Owner/Admin necessário";
+            }
+          }
+        }
+      }
 
       if (portalButton) {
         const ready = Boolean(payload?.connection?.customer_portal_ready && canManage);
@@ -931,14 +1572,48 @@
         if (payload?.connection?.subscription_present) {
           const state = String(payload?.connection?.subscription_status || "conectada").replaceAll("_", " ");
           statusNode.textContent = "Cobrança conectada. Status da assinatura: " + state + ".";
-        } else if (payload?.configured) {
-          statusNode.textContent = "Billing conectado. O checkout será liberado quando o catálogo comercial estiver ativo.";
+        } else if (activation.first_checkout_ready) {
+          statusNode.textContent = "Pro disponível por R$ 80/mês, com chamadas ilimitadas. O pagamento é concluído no checkout seguro do Stripe.";
+        } else if (!activation.provider_configured) {
+          statusNode.textContent = "Checkout automático ainda não ativado. O Standard está disponível em beta por convite.";
+        } else if (!activation.standard_catalog_active) {
+          statusNode.textContent = "Stripe conectado. Aguardando publicação do catálogo Standard.";
+        } else if (!activation.standard_price_configured) {
+          statusNode.textContent = "Preço Pro aprovado em R$ 80/mês. Aguardando o Price ID correspondente no Stripe.";
         } else {
-          statusNode.textContent = "Somente o Trial está publicado no catálogo de produção neste momento. Standard e Scale permanecem em preparação.";
+          statusNode.textContent = "Checkout Standard em preparação.";
         }
       }
     } catch (_error) {
       // Billing is additive. A billing read failure must not degrade the portal.
+    }
+  }
+
+  async function requestBetaAccess(button) {
+    if (!remotePortal || !sessionAuthenticated || !button) return;
+    const original=button.textContent || "Solicitar acesso beta";
+    button.disabled=true;
+    button.textContent="Enviando solicitação...";
+    try {
+      const response=await fetch("/api/portal/beta-access",{
+        method:"POST",
+        credentials:"same-origin",
+        headers:{"content-type":"application/json"},
+        body:"{}",
+      });
+      const payload=await response.json().catch(()=>({}));
+      if (!response.ok) throw new Error(String(payload?.code || "BETA_ACCESS_REQUEST_FAILED"));
+      button.textContent="Solicitação enviada";
+      showBanner("success","Solicitação recebida","Seu workspace entrou na fila do Pro Beta. O contato será feito usando a identidade já cadastrada.");
+    } catch (error) {
+      const code=String(error?.message || "BETA_ACCESS_REQUEST_FAILED");
+      const messages={
+        BETA_ACCESS_ADMIN_REQUIRED:"Somente OWNER ou ADMIN pode solicitar o Pro Beta para este workspace.",
+        BETA_ACCESS_PLAN_UNAVAILABLE:"O Pro Beta não está disponível para solicitação neste momento.",
+      };
+      button.disabled=false;
+      button.textContent=original;
+      showBanner("warning","Não foi possível solicitar o beta",messages[code] || "Tente novamente em alguns instantes.");
     }
   }
 
@@ -1042,7 +1717,8 @@
   function route(target, push = true) {
     const requested = publicViews.has(target) ? target : "landing";
     const protectedRoute = remotePortal && appViews.has(requested) && !sessionAuthenticated;
-    const next = protectedRoute ? "login" : requested;
+    const recoveryRoute = remotePortal && sessionAuthenticated && sessionDegraded && appViews.has(requested) && requested !== "plans";
+    const next = protectedRoute ? "login" : (recoveryRoute ? "plans" : requested);
     if (!push && currentView === next) return;
     currentView = next;
     document.title = viewTitles[next] || viewTitles.landing;
@@ -1074,9 +1750,23 @@
       showBanner("info", "Acesso protegido", "Entre com HARA Identity para acessar seu workspace.", "Entrar", () => startRemoteAuth(false));
       return;
     }
+    if (sessionDegraded) {
+      showBanner(
+        "warning",
+        "Workspace temporariamente bloqueado",
+        sessionDegradedReason === "D1_WRITE_LIMIT"
+          ? "Sua identidade está autenticada, mas o backend atingiu o limite de escrita. Plano e cobrança continuam disponíveis para regularizar o acesso."
+          : "Sua identidade está autenticada, mas o workspace está temporariamente indisponível. Plano e cobrança continuam disponíveis.",
+      );
+      if (next === "plans") {
+        loadBillingState();
+        return;
+      }
+    }
     if (skipNextWorkspaceLoad && appViews.has(next)) {
       skipNextWorkspaceLoad = false;
       if (next === "plans") loadBillingState();
+      if (next === "security") loadServiceHealth();
       return;
     }
     if (next === "devices") {
@@ -1086,11 +1776,13 @@
       loadProductDashboard();
       if (next === "dashboard") loadDevices();
       if (next === "plans") loadBillingState();
+      if (next === "security") loadServiceHealth();
     }
   }
 
   copySidebars();
   setInstallOs("linux");
+  setInstallApprovalMode("always");
 
   if (bannerAction) {
     bannerAction.addEventListener("click", () => {
@@ -1147,10 +1839,55 @@
       return;
     }
 
+    const activityWindowButton = event.target.closest("[data-activity-window]");
+    if (activityWindowButton) {
+      event.preventDefault();
+      setActivityWindow(activityWindowButton.dataset.activityWindow);
+      return;
+    }
+
+    const exportActivity = event.target.closest("[data-export-activity]");
+    if (exportActivity) {
+      event.preventDefault();
+      exportUsageActivityCsv(exportActivity);
+      return;
+    }
+
+    const refreshActivity = event.target.closest("[data-refresh-activity]");
+    if (refreshActivity) {
+      event.preventDefault();
+      loadUsageActivity(refreshActivity,true);
+      return;
+    }
+
+    const submitLocalSupport = event.target.closest("[data-submit-local-support]");
+    if (submitLocalSupport) {
+      event.preventDefault();
+      submitLocalSupportReport(submitLocalSupport);
+      return;
+    }
+
+    const refreshServiceHealth = event.target.closest("[data-refresh-service-health]");
+    if (refreshServiceHealth) {
+      event.preventDefault();
+      loadServiceHealth(refreshServiceHealth);
+      return;
+    }
+
     const refreshDevices = event.target.closest("[data-refresh-devices]");
     if (refreshDevices) {
       event.preventDefault();
       loadDevices(refreshDevices);
+      return;
+    }
+
+    const deviceDiagnostic = event.target.closest("[data-copy-device-diagnostic]");
+    if (deviceDiagnostic) {
+      event.preventDefault();
+      copyText(
+        deviceDiagnosticCommand(deviceDiagnostic.dataset.copyDeviceDiagnostic),
+        "Comando de diagnóstico copiado."
+      );
       return;
     }
 
@@ -1175,23 +1912,45 @@
       return;
     }
 
+    const approvalChoice = event.target.closest("[data-approval-choice]");
+    if (approvalChoice) {
+      event.preventDefault();
+      setInstallApprovalMode(approvalChoice.dataset.approvalChoice);
+      return;
+    }
+
+    const copyLocalMcp = event.target.closest("[data-copy-local-mcp]");
+    if (copyLocalMcp) {
+      event.preventDefault();
+      copyText("hara-commander mcp", "Comando MCP local copiado.");
+      return;
+    }
+
+    const copySimpleMcp = event.target.closest("[data-copy-simple-mcp]");
+    if (copySimpleMcp) {
+      event.preventDefault();
+      copyText(window.location.origin + "/api/mcp?profile=simple", "URL MCP copiada.");
+      return;
+    }
+
+    const copyFirstPrompt = event.target.closest("[data-copy-first-prompt]");
+    if (copyFirstPrompt) {
+      event.preventDefault();
+      copyText("Verifique se meu computador está online e mostre as informações básicas dele.", "Prompt de teste copiado.");
+      return;
+    }
+
     const copyLinux = event.target.closest("[data-copy-linux]");
     if (copyLinux) {
       event.preventDefault();
-      copyText(
-        "(tmp=$(mktemp) && trap 'rm -f $tmp' EXIT && curl -fsS --proto '=https' --tlsv1.2 --location --max-redirs 0 https://commander.haralabs.com.br/install/linux.sh -o $tmp && HARA_COMMANDER_URL=https://commander.haralabs.com.br bash $tmp)",
-        "Comando Linux copiado."
-      );
+      copyText(installCommandLinux(), "Comando Linux copiado.");
       return;
     }
 
     const copyWindows = event.target.closest("[data-copy-windows]");
     if (copyWindows) {
       event.preventDefault();
-      copyText(
-        "$haraPrevUrl=$env:HARA_COMMANDER_URL; $haraInstaller=Join-Path $env:TEMP ('hara-commander-install-'+[guid]::NewGuid().ToString('N')+'.ps1'); try { $env:HARA_COMMANDER_URL='https://commander.haralabs.com.br'; Invoke-WebRequest -Uri https://commander.haralabs.com.br/install/windows.ps1 -OutFile $haraInstaller -UseBasicParsing -MaximumRedirection 0 -ErrorAction Stop; & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $haraInstaller; if ($LASTEXITCODE -ne 0) { throw ('HARA_COMMANDER_INSTALL_EXIT_'+$LASTEXITCODE) } } finally { Remove-Item -LiteralPath $haraInstaller -Force -ErrorAction SilentlyContinue; $env:HARA_COMMANDER_URL=$haraPrevUrl }",
-        "Comando Windows copiado."
-      );
+      copyText(installCommandWindows(), "Comando Windows copiado.");
       return;
     }
 
@@ -1202,17 +1961,17 @@
       return;
     }
 
-    const selectDeviceButton = event.target.closest("[data-select-device]");
-    if (selectDeviceButton) {
-      event.preventDefault();
-      selectDevice(selectDeviceButton.dataset.selectDevice, selectDeviceButton);
-      return;
-    }
-
     const revokeDeviceButton = event.target.closest("[data-revoke-device]");
     if (revokeDeviceButton) {
       event.preventDefault();
       revokeDevice(revokeDeviceButton.dataset.revokeDevice, revokeDeviceButton);
+      return;
+    }
+
+    const betaAccess = event.target.closest("[data-beta-access]");
+    if (betaAccess) {
+      event.preventDefault();
+      if (!betaAccess.disabled) requestBetaAccess(betaAccess);
       return;
     }
 
@@ -1241,6 +2000,27 @@
       const nextOs = osChoice.dataset.osChoice === "linux" ? "windows" : "linux";
       setInstallOs(nextOs);
       document.querySelector('[data-os-choice="' + nextOs + '"]')?.focus();
+      return;
+    }
+
+    const activityWindowButton = event.target.closest?.("[data-activity-window]");
+    if (activityWindowButton && ["ArrowLeft","ArrowRight"].includes(event.key)) {
+      event.preventDefault();
+      const windows=["24h","7d","30d"];
+      const current=windows.indexOf(activityWindowButton.dataset.activityWindow);
+      const delta=event.key === "ArrowRight" ? 1 : -1;
+      const next=windows[(current+delta+windows.length)%windows.length];
+      setActivityWindow(next);
+      document.querySelector('[data-activity-window="' + next + '"]')?.focus();
+      return;
+    }
+
+    const approvalChoice = event.target.closest?.("[data-approval-choice]");
+    if (approvalChoice && ["ArrowLeft", "ArrowRight"].includes(event.key)) {
+      event.preventDefault();
+      const nextMode = approvalChoice.dataset.approvalChoice === "session" ? "ask" : "session";
+      setInstallApprovalMode(nextMode);
+      document.querySelector('[data-approval-choice="' + nextMode + '"]')?.focus();
       return;
     }
     const deviceSectionTabButton = event.target.closest?.("[data-device-section-tab]");
@@ -1274,7 +2054,7 @@
         ? "Prévia local carregada. Nenhuma credencial foi persistida."
         : "Prévia local carregada. Nenhuma credencial foi enviada.";
       showToast(label);
-      route("dashboard");
+      route("devices");
       form.reset();
     });
   });

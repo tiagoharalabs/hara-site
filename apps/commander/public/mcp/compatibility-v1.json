@@ -1,0 +1,85 @@
+{
+  "schema": "hara.commander.mcp-compatibility.v1",
+  "state": "PREPARED_NOT_CLIENT_TESTED",
+  "server": {
+    "name": "H.A.R.A. Commander",
+    "endpoint": "https://commander.haralabs.com.br/api/mcp?profile=simple",
+    "transport": "streamable-http",
+    "simple_profile_version": "1.1.0",
+    "tool_count": 24,
+    "protocol_conformance": [
+      "2025-06-18",
+      "2025-11-25",
+      "2026-07-28"
+    ],
+    "capabilities": {
+      "tools": true,
+      "resources": false,
+      "prompts": false,
+      "sampling": false
+    },
+    "auth": {
+      "protected_resource_metadata": "https://commander.haralabs.com.br/.well-known/oauth-protected-resource/api/mcp",
+      "authorization_server": "https://auth.haralabs.com.br",
+      "authorization_server_metadata": "https://auth.haralabs.com.br/.well-known/oauth-authorization-server",
+      "pkce_methods": [
+        "S256"
+      ],
+      "dynamic_client_registration": "guarded-live",
+      "client_id_metadata_document_supported": false,
+      "public_clients_only": true,
+      "client_secret_expected": false
+    }
+  },
+  "client_targets": [
+    {
+      "id": "vscode",
+      "surfaces": [
+        "desktop",
+        "agent-host"
+      ],
+      "expected_transport": "http",
+      "oauth_mode": "host-managed",
+      "pretest_state": "READY_FOR_CLIENT_SMOKE"
+    },
+    {
+      "id": "cursor",
+      "surfaces": [
+        "desktop",
+        "cli",
+        "cloud-agent"
+      ],
+      "expected_transport": "http",
+      "oauth_mode": "host-managed",
+      "pretest_state": "READY_FOR_CLIENT_SMOKE"
+    },
+    {
+      "id": "claude-code",
+      "surfaces": [
+        "terminal",
+        "desktop-remote-connector"
+      ],
+      "expected_transport": "streamable-http",
+      "oauth_mode": "native-host-flow-or-bearer-token",
+      "pretest_state": "READY_FOR_CLIENT_SMOKE"
+    },
+    {
+      "id": "mcp-inspector",
+      "surfaces": [
+        "inspector-ui"
+      ],
+      "expected_transport": "streamable-http",
+      "oauth_mode": "quick-oauth-flow",
+      "pretest_state": "READY_FOR_CLIENT_SMOKE"
+    }
+  ],
+  "certification": {
+    "tool_count": 24,
+    "protocol_conformance": [
+      "2025-06-18",
+      "2025-11-25",
+      "2026-07-28"
+    ],
+    "rule": "same cases, same evidence schema, no vendor-specific weakening"
+  }
+}

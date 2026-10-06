@@ -1,0 +1,49 @@
+{
+  "schema": "hara.commander.mcp-multiclient-certification-rollup.v1",
+  "state": "PREPARED_NOT_EXECUTED",
+  "required_certificates": [
+    {
+      "client": "mcp-inspector",
+      "purpose": "reference wire/OAuth/manual tool client"
+    },
+    {
+      "client": "vscode",
+      "purpose": "Microsoft/Agent Host ecosystem"
+    },
+    {
+      "client": "cursor",
+      "purpose": "IDE/CLI/cloud-agent ecosystem"
+    },
+    {
+      "client": "claude-code",
+      "purpose": "Anthropic coding-agent ecosystem"
+    }
+  ],
+  "certification_rule": {
+    "all_four_certificates_required": true,
+    "same_server_url": true,
+    "same_simple_profile_version": "1.1.0",
+    "exact_public_tool_count": 24,
+    "no_hara_internal_tool_names": true,
+    "generic_oauth_required": true,
+    "static_bearer_primary_path_forbidden": true,
+    "required_case_failures_allowed": 0,
+    "secret_material_in_evidence_allowed": false
+  },
+  "invalidation_triggers": [
+    "public tool added/removed/renamed",
+    "Simple MCP major/minor contract version changed",
+    "OAuth authorization server changed",
+    "registration strategy materially changed",
+    "inputSchema/outputSchema breaking change",
+    "tool annotation safety semantics changed",
+    "transport support materially changed"
+  ],
+  "non_invalidation_changes": [
+    "copy-only website changes",
+    "internal HARA implementation changes preserving public contract",
+    "server performance improvement with unchanged contract",
+    "new optional internal telemetry that records no customer content"
+  ],
+  "output_state_if_all_pass": "MULTI_CLIENT_CERTIFIED"
+}

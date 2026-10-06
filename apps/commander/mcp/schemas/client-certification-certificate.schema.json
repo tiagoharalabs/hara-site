@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://commander.haralabs.com.br/mcp/schemas/client-certification-certificate.v1.schema.json",
+  "title": "H.A.R.A. Commander MCP Client Certification Certificate V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "certificate_id",
+    "issued_at_utc",
+    "client",
+    "server",
+    "evidence_sha256",
+    "matrix_sha256",
+    "source_commit",
+    "state"
+  ],
+  "properties": {
+    "schema": {
+      "const": "hara.commander.mcp-client-certification-certificate.v1"
+    },
+    "certificate_id": {
+      "type": "string",
+      "pattern": "^HARA-MCP-CERTIFICATE-[A-Za-z0-9._-]{8,120}$"
+    },
+    "issued_at_utc": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "client": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "version",
+        "surface"
+      ],
+      "properties": {
+        "id": {
+          "enum": [
+            "vscode",
+            "cursor",
+            "claude-code",
+            "mcp-inspector"
+          ]
+        },
+        "version": {
+          "type": "string"
+        },
+        "surface": {
+          "type": "string"
+        },
+        "platform": {
+          "type": "string"
+        }
+      }
+    },
+    "server": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "url",
+        "simple_profile_version",
+        "protocol_version"
+      ],
+      "properties": {
+        "url": {
+          "const": "https://commander.haralabs.com.br/api/mcp?profile=simple"
+        },
+        "simple_profile_version": {
+          "const": "1.1.0"
+        },
+        "protocol_version": {
+          "type": "string"
+        }
+      }
+    },
+    "evidence_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "matrix_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "source_commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "state": {
+      "const": "CERTIFIED"
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 300
+      },
+      "maxItems": 20
+    }
+  }
+}

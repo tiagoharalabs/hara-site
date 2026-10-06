@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+  APPROVED_COMMERCIAL_TERMS,
   createBillingCheckout,
   stripeBillingConfigured,
   stripePlanForPrice,
@@ -15,6 +16,10 @@ const env = {
   STRIPE_PRICE_SCALE: "price_scale_fixture",
 };
 
+assert.equal(APPROVED_COMMERCIAL_TERMS.STANDARD.currency, "BRL");
+assert.equal(APPROVED_COMMERCIAL_TERMS.STANDARD.price_amount_cents, 8000);
+assert.equal(APPROVED_COMMERCIAL_TERMS.STANDARD.billing_interval, "month");
+assert.equal(APPROVED_COMMERCIAL_TERMS.STANDARD.usage_unlimited, true);
 assert.equal(stripeBillingConfigured(env), true);
 assert.equal(stripePriceForPlan(env, "STANDARD"), "price_standard_fixture");
 assert.equal(stripePlanForPrice(env, "price_scale_fixture"), "SCALE");

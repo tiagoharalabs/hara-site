@@ -5,6 +5,7 @@ import {
   beginLogin,
   finishLogin,
   logout,
+  resolveDegradedPortalSession,
   resolvePortalSession,
   runAuthRetentionMaintenance,
 } from "./auth.js";
@@ -28,10 +29,18 @@ import {
   verifyHaraIdentityCustomerMcpBearer,
 } from "./mcp-hara-identity-customer.mjs";
 import { handleCustomerMcpRequest } from "./customer-mcp.mjs";
+import { handleSimpleCustomerMcpRequest } from "./customer-mcp-simple.mjs";
 import {
   DEVICE_FUNCTION_ID,
+  DEVICE_TOOL_FUNCTION_MAP,
+  deviceFunctionForTool,
+  isDeviceFunctionAllowed,
+  isDeviceMutationTool,
+  isDeviceProcessTool,
+  isDeviceProcessMutationTool,
   canonicalDeviceToolPayload,
 } from "./device-tool-contract.mjs";
+import { chooseCustomerTargetDevice } from "./device-targeting.mjs";
 import { DeviceChannel, deviceChannelName } from "./device-channel.mjs";
 import { SecurityRateLimit } from "./security-rate-limit-do.mjs";
 import {
@@ -40,6 +49,7 @@ import {
   rateLimitClientKey,
   rateLimitSecretKey,
 } from "./security-rate-limit.mjs";
+import { signProductLease } from "./product-lease.mjs";
 export { DeviceChannel };
 export { SecurityRateLimit };
 
@@ -53,6 +63,26 @@ const DEVICE_CALL_CONTENT_REDACTION_BATCH = 64;
 const DEVICE_CALL_CONTENT_REDACTION_MAX_BATCHES = 8;
 const DEVICE_CALL_REDACTED_PREFIX = "HARA_REDACTED_SHA256:";
 const EVENT_V2_TERMINAL_FAST_PATH_WAIT_MS = 500;
+const LOCAL_BUDGET_MIN_LINUX_PATCH = 36;
+const LOCAL_BUDGET_BLOCK_UNITS = 100;
+const PRODUCT_LEASE_TTL_SECONDS = 6 * 60 * 60;
+const SLO_ALERT_PROFILE = "INTERNAL_BETA_V1";
+const SLO_ALERT_BREACH_STREAK = 2;
+const SLO_ALERT_RECOVERY_STREAK = 2;
+const SLO_ALERT_ONLINE_GRACE_SECONDS = 120;
+const DEVICE_HEARTBEAT_PERSIST_SECONDS = 120;
+const DEVICE_ONLINE_GRACE_SECONDS = 240;
+const SLO_ALERT_SNAPSHOT_GRACE_SECONDS = 180;
+const SLO_ALERT_INCIDENT_RETENTION_SECONDS = 90 * 24 * 60 * 60;
+const SLO_ALERT_ESCALATION_L1_SECONDS = 60 * 60;
+const SLO_ALERT_ESCALATION_L2_SECONDS = 4 * 60 * 60;
+const SLO_ALERT_ESCALATION_L3_SECONDS = 12 * 60 * 60;
+const SLO_ALERT_DELIVERY_BATCH = 25;
+const SLO_ALERT_DELIVERY_RETRY_SECONDS = 5 * 60;
+const SLO_ALERT_DELIVERY_RETENTION_SECONDS = 30 * 24 * 60 * 60;
+const SUPPORT_REPORT_RETENTION_SECONDS = 30 * 24 * 60 * 60;
+const SUPPORT_REPORT_RETENTION_BATCH = 500;
+const SUPPORT_REPORT_MAX_BYTES = 16 * 1024;
 const TRANSIENT_EXECUTE_OR_REPLAY = "EXECUTE_OR_REPLAY";
 const TRANSIENT_REPLAY_ONLY = "REPLAY_ONLY";
 const TRANSIENT_SAFE_PREEXEC_RELEASE_CODES = new Set([
@@ -67,11 +97,43 @@ const QUOTA_RESERVATION_TTL_SECONDS = 10 * 60;
 const PAIRING_RETENTION_SECONDS = 30 * 24 * 60 * 60;
 const PAIRING_RETENTION_BATCH = 100;
 const MCP_TOOL_GRANTS = Object.freeze({
+  "hara.devices.list": "COMMANDER_DISCOVERY",
+  "hara.capabilities": "COMMANDER_DISCOVERY",
+  "hara.usage": "COMMANDER_RECEIPT_READ",
+  "hara.activity": "COMMANDER_RECEIPT_READ",
   "hara.health": "COMMANDER_DISCOVERY",
+  "hara.ping": "COMMANDER_DISCOVERY",
+  "hara.device.info": "COMMANDER_READ_ONLY_INVOKE",
+  "hara.system.uptime": "COMMANDER_READ_ONLY_INVOKE",
+  "hara.system.resources": "COMMANDER_READ_ONLY_INVOKE",
+  "hara.workspace.inspect": "COMMANDER_READ_ONLY_INVOKE",
+  "hara.processes.list": "COMMANDER_READ_ONLY_INVOKE",
+  "hara.files.info": "COMMANDER_READ_ONLY_INVOKE",
+  "hara.files.hash": "COMMANDER_READ_ONLY_INVOKE",
+  "hara.files.diff": "COMMANDER_READ_ONLY_INVOKE",
+  "hara.files.search": "COMMANDER_READ_ONLY_INVOKE",
+  "hara.files.list": "COMMANDER_READ_ONLY_INVOKE",
+  "hara.files.read": "COMMANDER_READ_ONLY_INVOKE",
+  "hara.files.read_many": "COMMANDER_READ_ONLY_INVOKE",
+  "hara.files.create_directory": "COMMANDER_MUTATION_INVOKE",
+  "hara.files.write": "COMMANDER_MUTATION_INVOKE",
+  "hara.files.edit": "COMMANDER_MUTATION_INVOKE",
+  "hara.files.move": "COMMANDER_MUTATION_INVOKE",
+  "hara.files.copy": "COMMANDER_MUTATION_INVOKE",
+  "hara.files.delete": "COMMANDER_MUTATION_INVOKE",
+  "hara.files.preimages.list": "COMMANDER_READ_ONLY_INVOKE",
+  "hara.files.rollback": "COMMANDER_MUTATION_INVOKE",
+  "hara.process.sessions": "COMMANDER_READ_ONLY_INVOKE",
+  "hara.process.run": "COMMANDER_PROCESS_EXECUTION",
+  "hara.process.start": "COMMANDER_PROCESS_EXECUTION",
+  "hara.process.output": "COMMANDER_READ_ONLY_INVOKE",
+  "hara.process.interact": "COMMANDER_PROCESS_EXECUTION",
+  "hara.process.kill": "COMMANDER_PROCESS_EXECUTION",
   "hara.functions.list": "COMMANDER_DISCOVERY",
   "hara.functions.describe": "COMMANDER_DISCOVERY",
   "hara.functions.invoke": "COMMANDER_READ_ONLY_INVOKE",
   "hara.receipts.get": "COMMANDER_RECEIPT_READ",
+  "hara.calls.recent": "COMMANDER_RECEIPT_READ",
 });
 
 const SECURITY_HEADERS = Object.freeze({
@@ -115,6 +177,164 @@ function rateLimitedJson(code) {
 
 function monthKey(now = new Date()) {
   return now.toISOString().slice(0, 7);
+}
+
+function monthEndUtc(periodKey) {
+  const match=/^([0-9]{4})-([0-9]{2})$/.exec(String(periodKey || ""));
+  if (!match) throw new Error("PERIOD_KEY_INVALID");
+  const year=Number(match[1]);
+  const month=Number(match[2]);
+  if (month < 1 || month > 12) throw new Error("PERIOD_KEY_INVALID");
+  return new Date(Date.UTC(year, month, 1)).toISOString();
+}
+
+function localBudgetEligibleDevice(device) {
+  return String(device?.platform || "").toUpperCase() === "LINUX"
+    && semverAtLeast(device?.agent_version, LOCAL_BUDGET_MIN_LINUX_PATCH)
+    && !String(device?.tunnel_mode || "").toUpperCase().startsWith("EVENT_V2");
+}
+
+function callUsageMode(context, device, purposeFunctionId) {
+  if (!purposeFunctionId || context.period_kind === "NONE") return "UNMETERED";
+  if (context.period_kind === "CALENDAR_MONTH" && localBudgetEligibleDevice(device)) {
+    return "LOCAL_BUDGET";
+  }
+  return "CLOUD_QUOTA";
+}
+
+async function resolveCallUsageMode(env, context, device, purposeFunctionId) {
+  const preferred = callUsageMode(context, device, purposeFunctionId);
+  if (preferred !== "LOCAL_BUDGET") return preferred;
+  const periodKey = mcpPeriodKey(context);
+  const row = await env.PRODUCT_DB.prepare(
+    `SELECT budget_id
+       FROM commander_device_budget_blocks
+      WHERE tenant_id = ?
+        AND device_id = ?
+        AND period_key = ?
+        AND state = 'ACTIVE'
+        AND expires_at_utc > ?
+        AND units_issued < units_allocated
+      ORDER BY allocation_sequence ASC
+      LIMIT 1`
+  ).bind(context.tenant_id, device.device_id, periodKey, nowIso()).first();
+  return row ? "LOCAL_BUDGET" : "CLOUD_QUOTA";
+}
+
+async function localBudgetAllocatedUnits(env, tenantId, periodKey) {
+  const row = await env.PRODUCT_DB.prepare(
+    `SELECT COALESCE(SUM(units_allocated),0) AS allocated
+       FROM commander_device_budget_blocks
+      WHERE tenant_id = ?
+        AND period_key = ?`
+  ).bind(tenantId, periodKey).first().catch(() => null);
+  return Math.max(0, Number(row?.allocated || 0));
+}
+
+async function effectiveCloudQuotaLimit(env, context, periodKey) {
+  if (context.period_kind === "NONE") return null;
+  const configured = Number(context.unit_limit);
+  if (context.period_kind !== "CALENDAR_MONTH") return configured;
+  const localAllocated = await localBudgetAllocatedUnits(
+    env,
+    context.tenant_id,
+    periodKey,
+  );
+  return Math.max(configured - localAllocated, 0);
+}
+
+async function tenantFullyLocalBudgetCapable(env, tenantId) {
+  const result = await env.PRODUCT_DB.prepare(
+    `SELECT platform,agent_version,tunnel_mode
+       FROM commander_devices
+      WHERE tenant_id = ?
+        AND state = 'ACTIVE'
+        AND revoked_at_utc IS NULL`
+  ).bind(tenantId).all();
+  const rows = result.results || [];
+  return rows.length > 0 && rows.every((row) => localBudgetEligibleDevice(row));
+}
+
+async function freshLocalBudgetBaseline(
+  env,
+  tenantId,
+  periodKey,
+  meterId,
+  { createIfEligible = false } = {},
+) {
+  const existing = await env.PRODUCT_DB.prepare(
+    `SELECT tenant_id,period_key,meter_id,legacy_consumed_units,source,state,
+            established_at_utc,invalidated_at_utc,invalidation_reason
+       FROM commander_tenant_budget_baselines
+      WHERE tenant_id = ?
+        AND period_key = ?
+        AND meter_id = ?
+      LIMIT 1`
+  ).bind(tenantId, periodKey, meterId).first().catch(() => null);
+
+  const compatible = await tenantFullyLocalBudgetCapable(env, tenantId);
+  if (existing) {
+    if (existing.state === "ACTIVE" && compatible) return existing;
+    if (existing.state === "ACTIVE" && !compatible) {
+      await env.PRODUCT_DB.prepare(
+        `UPDATE commander_tenant_budget_baselines
+            SET state = 'INVALIDATED',
+                invalidated_at_utc = ?,
+                invalidation_reason = 'MIXED_OR_INCOMPATIBLE_FLEET'
+          WHERE tenant_id = ?
+            AND period_key = ?
+            AND meter_id = ?
+            AND state = 'ACTIVE'`
+      ).bind(nowIso(), tenantId, periodKey, meterId).run();
+    }
+    return null;
+  }
+
+  if (!createIfEligible || !compatible) return null;
+
+  const periodStart = periodKey + "-01T00:00:00.000Z";
+  const periodEnd = monthEndUtc(periodKey);
+  const [history, blocks] = await Promise.all([
+    env.PRODUCT_DB.prepare(
+      `SELECT COUNT(*) AS prior_calls
+         FROM commander_device_calls
+        WHERE tenant_id = ?
+          AND created_at_utc >= ?
+          AND created_at_utc < ?`
+    ).bind(tenantId, periodStart, periodEnd).first(),
+    env.PRODUCT_DB.prepare(
+      `SELECT COUNT(*) AS prior_blocks
+         FROM commander_device_budget_blocks
+        WHERE tenant_id = ?
+          AND period_key = ?`
+    ).bind(tenantId, periodKey).first(),
+  ]);
+
+  if (
+    Number(history?.prior_calls || 0) !== 0
+    || Number(blocks?.prior_blocks || 0) !== 0
+  ) {
+    return null;
+  }
+
+  const establishedAt = nowIso();
+  await env.PRODUCT_DB.prepare(
+    `INSERT OR IGNORE INTO commander_tenant_budget_baselines
+       (tenant_id,period_key,meter_id,legacy_consumed_units,source,state,
+        established_at_utc,invalidated_at_utc,invalidation_reason)
+     VALUES (?, ?, ?, 0, 'FRESH_TENANT_ZERO', 'ACTIVE', ?, NULL, NULL)`
+  ).bind(tenantId, periodKey, meterId, establishedAt).run();
+
+  return env.PRODUCT_DB.prepare(
+    `SELECT tenant_id,period_key,meter_id,legacy_consumed_units,source,state,
+            established_at_utc,invalidated_at_utc,invalidation_reason
+       FROM commander_tenant_budget_baselines
+      WHERE tenant_id = ?
+        AND period_key = ?
+        AND meter_id = ?
+        AND state = 'ACTIVE'
+      LIMIT 1`
+  ).bind(tenantId, periodKey, meterId).first();
 }
 
 function requireRuntime(env) {
@@ -170,6 +390,7 @@ async function requireMcpProductToken(request, env) {
     20,
     60,
     "MCP_AUTH_RATE_LIMITED",
+    { allowStrictUnavailableFallback: true },
   );
   if (supplied) {
     await enforceLayeredRateLimit(
@@ -179,6 +400,7 @@ async function requireMcpProductToken(request, env) {
       20,
       60,
       "MCP_AUTH_RATE_LIMITED",
+      { allowStrictUnavailableFallback: true },
     );
   }
   throw new Error("MCP_PRODUCT_ACCESS_DENIED");
@@ -192,6 +414,7 @@ async function enforceLoginInitiationRateLimit(request, env) {
     30,
     60,
     "AUTH_RATE_LIMITED",
+    { allowStrictUnavailableFallback: true },
   );
 }
 
@@ -203,6 +426,7 @@ async function enforceDeviceEnrollClientRateLimit(request, env) {
     60,
     60,
     "DEVICE_ENROLL_RATE_LIMITED",
+    { allowStrictUnavailableFallback: true },
   );
 }
 
@@ -216,6 +440,7 @@ async function enforceDeviceEnrollTokenRateLimit(body, env) {
     10,
     60,
     "DEVICE_ENROLL_RATE_LIMITED",
+    { allowStrictUnavailableFallback: true },
   );
 }
 
@@ -227,6 +452,7 @@ async function enforcePortalMutationRateLimit(env, session) {
     60,
     60,
     "PORTAL_MUTATION_RATE_LIMITED",
+    { allowStrictUnavailableFallback: true },
   );
 }
 
@@ -294,6 +520,25 @@ function cleanAgentValue(value, max = 80) {
   return text;
 }
 
+function normalizeApprovalMode(value, fallback = "ASK_EVERY_ACTION") {
+  const raw = String(value || "").trim().toUpperCase();
+  const aliases = {
+    "ASK": "ASK_EVERY_ACTION",
+    "ASK_EVERY_ACTION": "ASK_EVERY_ACTION",
+    "SESSION": "SESSION_TRUSTED",
+    "SESSION_TRUSTED": "SESSION_TRUSTED",
+    "AUTO": "PERSISTENT_TRUSTED",
+    "ALWAYS": "PERSISTENT_TRUSTED",
+    "PERSISTENT": "PERSISTENT_TRUSTED",
+    "PERSISTENT_TRUSTED": "PERSISTENT_TRUSTED",
+  };
+  const mode = raw ? aliases[raw] : fallback;
+  if (!["ASK_EVERY_ACTION","SESSION_TRUSTED","PERSISTENT_TRUSTED"].includes(mode)) {
+    throw new Error("DEVICE_APPROVAL_MODE_INVALID");
+  }
+  return mode;
+}
+
 function deviceCallRetryAfterMs(state, source = "status") {
   const normalized = String(state || "").trim().toUpperCase();
   if (normalized === "PENDING") return source === "enqueue" ? 350 : 750;
@@ -309,7 +554,7 @@ function deviceOnline(lastSeenAtUtc, tunnelMode = "OUTBOUND_RELAY", now = Date.n
   if (!Number.isFinite(seen)) return false;
   const onlineWindowMs = mode === "EVENT_V2"
     ? 7 * 60 * 60 * 1000
-    : 90_000;
+    : DEVICE_ONLINE_GRACE_SECONDS * 1000;
   return now - seen <= onlineWindowMs;
 }
 
@@ -473,19 +718,14 @@ async function dispatchTransientDeviceCall(env, body) {
   const canonicalPayload = canonicalDeviceToolPayload(toolId, body.payload);
   boundedJson(canonicalPayload, 128 * 1024, "DEVICE_CALL_PAYLOAD_INVALID");
 
-  const selection = context.selected_device;
-  if (!selection) throw new Error("DEVICE_SELECTION_REQUIRED");
-  const deviceId = cleanId(selection.device_id, 180);
-  if (requestedDeviceId && requestedDeviceId !== deviceId) {
-    throw new Error("DEVICE_NOT_SELECTED");
-  }
-  if (selection.state !== "ACTIVE" || selection.revoked_at_utc) {
-    throw new Error("DEVICE_NOT_FOUND");
-  }
-  if (!deviceOnline(selection.last_seen_at_utc, selection.tunnel_mode)) {
+  const device = await resolveCustomerTargetDevice(
+    env, context, body.computer || null, requestedDeviceId
+  );
+  const deviceId = cleanId(device.device_id, 180);
+  if (!deviceOnline(device.last_seen_at_utc, device.tunnel_mode)) {
     throw new Error("DEVICE_OFFLINE");
   }
-  if (String(selection.tunnel_mode || "") !== "EVENT_V2") {
+  if (String(device.tunnel_mode || "") !== "EVENT_V2") {
     throw new Error("DEVICE_TRANSIENT_REQUIRES_EVENT_V2");
   }
 
@@ -495,7 +735,7 @@ async function dispatchTransientDeviceCall(env, body) {
   let executionMode = TRANSIENT_EXECUTE_OR_REPLAY;
   if (toolId === "hara.functions.invoke") {
     const functionId = cleanId(canonicalPayload.function_id, 180);
-    if (functionId !== DEVICE_FUNCTION_ID) throw new Error("POLICY_DENIED");
+    if (!isDeviceFunctionAllowed(functionId)) throw new Error("POLICY_DENIED");
     quota = env.TENANT_QUOTA.getByName(context.tenant_id);
     reservation = await quota.reserve(
       requestId,
@@ -651,6 +891,83 @@ export class TenantQuota extends DurableObject {
 
         CREATE INDEX IF NOT EXISTS idx_request_period
           ON request_state(period_key, state);
+
+        CREATE INDEX IF NOT EXISTS idx_request_state_expiry
+          ON request_state(state, updated_at_utc);
+
+        CREATE TABLE IF NOT EXISTS period_usage (
+          period_key TEXT PRIMARY KEY,
+          consumed_units INTEGER NOT NULL DEFAULT 0 CHECK (consumed_units >= 0)
+        );
+
+        CREATE TABLE IF NOT EXISTS quota_meta (
+          id INTEGER PRIMARY KEY CHECK (id = 1),
+          usage_schema_version INTEGER NOT NULL DEFAULT 0
+        );
+
+        INSERT OR IGNORE INTO quota_meta (id, usage_schema_version)
+        VALUES (1, 0);
+
+        CREATE TRIGGER IF NOT EXISTS trg_request_state_usage_insert
+        AFTER INSERT ON request_state
+        WHEN NEW.state IN ('RESERVED', 'COMMITTED') AND NEW.units <> 0
+        BEGIN
+          INSERT INTO period_usage (period_key, consumed_units)
+          VALUES (NEW.period_key, NEW.units)
+          ON CONFLICT(period_key) DO UPDATE SET
+            consumed_units = consumed_units + excluded.consumed_units;
+        END;
+
+        CREATE TRIGGER IF NOT EXISTS trg_request_state_usage_update_same_period
+        AFTER UPDATE OF period_key, state, units ON request_state
+        WHEN OLD.period_key = NEW.period_key
+          AND (OLD.state <> NEW.state OR OLD.units <> NEW.units)
+        BEGIN
+          UPDATE period_usage
+             SET consumed_units = consumed_units
+               - CASE
+                   WHEN OLD.state IN ('RESERVED', 'COMMITTED') THEN OLD.units
+                   ELSE 0
+                 END
+               + CASE
+                   WHEN NEW.state IN ('RESERVED', 'COMMITTED') THEN NEW.units
+                   ELSE 0
+                 END
+           WHERE period_key = NEW.period_key;
+        END;
+
+        CREATE TRIGGER IF NOT EXISTS trg_request_state_usage_update_period
+        AFTER UPDATE OF period_key, state, units ON request_state
+        WHEN OLD.period_key <> NEW.period_key
+        BEGIN
+          UPDATE period_usage
+             SET consumed_units = consumed_units
+               - CASE
+                   WHEN OLD.state IN ('RESERVED', 'COMMITTED') THEN OLD.units
+                   ELSE 0
+                 END
+           WHERE period_key = OLD.period_key;
+
+          INSERT INTO period_usage (period_key, consumed_units)
+          VALUES (
+            NEW.period_key,
+            CASE
+              WHEN NEW.state IN ('RESERVED', 'COMMITTED') THEN NEW.units
+              ELSE 0
+            END
+          )
+          ON CONFLICT(period_key) DO UPDATE SET
+            consumed_units = consumed_units + excluded.consumed_units;
+        END;
+
+        CREATE TRIGGER IF NOT EXISTS trg_request_state_usage_delete
+        AFTER DELETE ON request_state
+        WHEN OLD.state IN ('RESERVED', 'COMMITTED') AND OLD.units <> 0
+        BEGIN
+          UPDATE period_usage
+             SET consumed_units = consumed_units - OLD.units
+           WHERE period_key = OLD.period_key;
+        END;
       `);
 
       const columns = [...this.ctx.storage.sql.exec("PRAGMA table_info(request_state)")];
@@ -658,6 +975,25 @@ export class TenantQuota extends DurableObject {
         this.ctx.storage.sql.exec(
           "ALTER TABLE request_state ADD COLUMN subject_id TEXT NOT NULL DEFAULT 'LEGACY'"
         );
+      }
+
+      const usageMeta = [...this.ctx.storage.sql.exec(
+        "SELECT usage_schema_version FROM quota_meta WHERE id = 1"
+      )][0] || { usage_schema_version: 0 };
+      if (Number(usageMeta.usage_schema_version || 0) < 1) {
+        this.ctx.storage.sql.exec(`
+          DELETE FROM period_usage;
+
+          INSERT INTO period_usage (period_key, consumed_units)
+          SELECT period_key, COALESCE(SUM(units), 0)
+            FROM request_state
+           WHERE state IN ('RESERVED', 'COMMITTED')
+           GROUP BY period_key;
+
+          UPDATE quota_meta
+             SET usage_schema_version = 1
+           WHERE id = 1;
+        `);
       }
     });
   }
@@ -679,13 +1015,12 @@ export class TenantQuota extends DurableObject {
 
   status(periodKey, limit, expireReservations = true) {
     if (expireReservations) this.expireStaleReservations();
-    const row = this.ctx.storage.sql.exec(
-      `SELECT COALESCE(SUM(units), 0) AS consumed
-         FROM request_state
-        WHERE period_key = ?
-          AND state IN ('RESERVED', 'COMMITTED')`,
+    const row = [...this.ctx.storage.sql.exec(
+      `SELECT consumed_units AS consumed
+         FROM period_usage
+        WHERE period_key = ?`,
       periodKey
-    ).one();
+    )][0] || { consumed: 0 };
 
     const consumed = Number(row.consumed || 0);
     return {
@@ -819,14 +1154,103 @@ async function entitlementForTenant(env, tenantId) {
   ).bind(tenantId).first();
 }
 
+function unlimitedProductUsage() {
+  return {
+    period_key: "UNLIMITED",
+    limit: null,
+    consumed_units: null,
+    remaining_units: null,
+    metered: false,
+  };
+}
+
+async function productUsageForPolicy(
+  env,
+  tenantId,
+  periodKind,
+  unitLimit,
+  meterId = MCP_METER_ID,
+) {
+  const kind = String(periodKind || "").trim().toUpperCase();
+  if (kind === "NONE") return { ...unlimitedProductUsage(), available: true };
+
+  const periodKey = kind === "CALENDAR_MONTH" ? monthKey() : "LIFETIME";
+  const limit = Number(unitLimit);
+  try {
+    const [freshBaseline, localBudget] = await Promise.all([
+      kind === "CALENDAR_MONTH"
+        ? freshLocalBudgetBaseline(
+            env,
+            tenantId,
+            periodKey,
+            meterId,
+            { createIfEligible: false },
+          )
+        : Promise.resolve(null),
+      env.PRODUCT_DB.prepare(
+        `SELECT COALESCE(SUM(units_allocated),0) AS allocated,
+                COALESCE(SUM(units_reported),0) AS reported
+           FROM commander_device_budget_blocks
+          WHERE tenant_id = ?
+            AND period_key = ?`
+      ).bind(tenantId, periodKey).first().catch(() => null),
+    ]);
+
+    let legacyConsumed;
+    let baselineSource;
+    if (freshBaseline) {
+      legacyConsumed = Number(freshBaseline.legacy_consumed_units || 0);
+      baselineSource = String(freshBaseline.source || "FRESH_TENANT_ZERO");
+    } else {
+      const legacy = await env.TENANT_QUOTA.getByName(tenantId).status(periodKey, limit);
+      legacyConsumed = Number(legacy?.consumed_units || 0);
+      baselineSource = "TENANT_QUOTA_LIVE";
+    }
+
+    const localAllocated = Number(localBudget?.allocated || 0);
+    const localReported = Number(localBudget?.reported || 0);
+    const consumed = legacyConsumed + localReported;
+    return {
+      period_key: periodKey,
+      limit,
+      consumed_units: consumed,
+      remaining_units: Math.max(limit - consumed, 0),
+      metered: true,
+      available: true,
+      consistency: localAllocated > 0 ? "EVENTUAL_LOCAL_BUDGET" : "CLOUD_AUTHORITATIVE",
+      cloud_legacy_consumed_units: legacyConsumed,
+      legacy_baseline_source: baselineSource,
+      local_budget_allocated_units: localAllocated,
+      local_budget_reported_units: localReported,
+      local_budget_unreported_capacity_units: Math.max(localAllocated - localReported, 0),
+    };
+  } catch (_error) {
+    // Read-only product surfaces degrade independently from execution authority.
+    // Quota reserve/commit/release paths remain fail-closed.
+    return {
+      period_key: periodKey,
+      limit,
+      consumed_units: null,
+      remaining_units: null,
+      metered: true,
+      available: false,
+      error_code: "USAGE_TEMPORARILY_UNAVAILABLE",
+    };
+  }
+}
+
 async function dashboard(env, tenantId) {
   const ent = await entitlementForTenant(env, tenantId);
   if (!ent) return null;
 
-  const quota = env.TENANT_QUOTA.getByName(tenantId);
-  const periodKey = ent.period_kind === "CALENDAR_MONTH" ? monthKey() : "LIFETIME";
   const limit = ent.period_kind === "NONE" ? null : Number(ent.unit_limit);
-  const usage = await quota.status(periodKey, limit);
+  const usage = await productUsageForPolicy(
+    env,
+    tenantId,
+    ent.period_kind,
+    ent.unit_limit,
+    ent.meter_id,
+  );
 
   return {
     schema: "hara.commander-dashboard-dev.v1",
@@ -846,6 +1270,34 @@ async function dashboard(env, tenantId) {
     },
     usage
   };
+}
+
+async function productTransactionHistory(env, tenantId, subjectId) {
+  const since7d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  try {
+    const row = await env.PRODUCT_DB.prepare(
+      `SELECT
+         COUNT(*) AS calls_total,
+         SUM(CASE WHEN created_at_utc >= ? THEN 1 ELSE 0 END) AS calls_7d
+       FROM commander_device_calls
+       WHERE tenant_id = ? AND subject_id = ?`
+    ).bind(since7d, tenantId, subjectId).first();
+    return {
+      available: true,
+      window: "7d",
+      calls_7d: Number(row?.calls_7d || 0),
+      calls_total: Number(row?.calls_total || 0),
+      detail_level: "AGGREGATE_ONLY",
+    };
+  } catch (_error) {
+    return {
+      available: false,
+      window: "7d",
+      calls_7d: null,
+      calls_total: null,
+      detail_level: "AGGREGATE_ONLY",
+    };
+  }
 }
 
 async function dashboardForSubject(env, subjectId, tenantId) {
@@ -875,10 +1327,17 @@ async function dashboardForSubject(env, subjectId, tenantId) {
   ).bind(tenantId, subjectId, subjectId).first();
 
   if (!ent) return null;
-  const quota = env.TENANT_QUOTA.getByName(tenantId);
-  const periodKey = ent.period_kind === "CALENDAR_MONTH" ? monthKey() : "LIFETIME";
   const limit = ent.period_kind === "NONE" ? null : Number(ent.unit_limit);
-  const usage = await quota.status(periodKey, limit);
+  const [usage, transactionHistory] = await Promise.all([
+    productUsageForPolicy(
+      env,
+      tenantId,
+      ent.period_kind,
+      ent.unit_limit,
+      ent.meter_id,
+    ),
+    productTransactionHistory(env, tenantId, subjectId),
+  ]);
 
   return {
     schema: "hara.commander-portal-dashboard.v1",
@@ -896,7 +1355,8 @@ async function dashboardForSubject(env, subjectId, tenantId) {
       period_kind: ent.period_kind,
       unit_limit: limit
     },
-    usage
+    usage,
+    transaction_history: transactionHistory,
   };
 }
 
@@ -908,6 +1368,303 @@ async function grantsForPlan(env, planCode) {
       ORDER BY grant_code`
   ).bind(planCode).all();
   return (result.results || []).map((row) => String(row.grant_code));
+}
+
+function productLeaseForContext(context, device, grants, now = new Date()) {
+  const issuedAt = now.toISOString();
+  const leaseEnd = new Date(now.getTime() + PRODUCT_LEASE_TTL_SECONDS * 1000);
+  const periodEnd = context.period_kind === "CALENDAR_MONTH"
+    ? new Date(monthEndUtc(monthKey(now)))
+    : null;
+  const validUntil = periodEnd && periodEnd < leaseEnd ? periodEnd : leaseEnd;
+  const usageMode = context.period_kind === "NONE"
+    ? "UNMETERED"
+    : (localBudgetEligibleDevice(device) && context.period_kind === "CALENDAR_MONTH"
+      ? "LOCAL_BUDGET"
+      : "CLOUD_QUOTA");
+  return {
+    schema: "hara.commander-device-product-lease.v1",
+    lease_id: "HARA-PRODUCT-LEASE-" + crypto.randomUUID(),
+    authority: "HARA_COMMANDER_CLOUD",
+    device_id: device.device_id,
+    tenant_id: context.tenant_id,
+    entitlement_id: context.entitlement_id,
+    plan_code: context.plan_code,
+    plan_name: context.plan_name,
+    grants: [...grants].sort(),
+    meter_id: context.meter_id,
+    period_kind: context.period_kind,
+    unit_limit: context.unit_limit,
+    usage_mode: usageMode,
+    issued_at_utc: issuedAt,
+    valid_until_utc: validUntil.toISOString(),
+  };
+}
+
+async function reconcileDeviceBudgetReport(env, device, periodKey, report) {
+  if (!report) return null;
+  if (!report || typeof report !== "object") throw new Error("LOCAL_BUDGET_REPORT_INVALID");
+  const budgetId = cleanId(report.budget_id, 180);
+  const leaseToken = cleanOpaque(report.lease_token, 512);
+  const committed = Number(report.committed_units);
+  if (!Number.isInteger(committed) || committed < 0) throw new Error("LOCAL_BUDGET_REPORT_INVALID");
+
+  const row = await env.PRODUCT_DB.prepare(
+    `SELECT budget_id,tenant_id,device_id,entitlement_id,plan_code,meter_id,period_key,
+            allocation_sequence,units_allocated,units_issued,units_reported,lease_token_hash,state,issued_at_utc,expires_at_utc
+       FROM commander_device_budget_blocks
+      WHERE budget_id = ?
+        AND tenant_id = ?
+        AND device_id = ?
+      LIMIT 1`
+  ).bind(budgetId, device.tenant_id, device.device_id).first();
+
+  if (!row || String(row.period_key) !== String(periodKey)) {
+    throw new Error("LOCAL_BUDGET_REPORT_INVALID");
+  }
+  const suppliedHash = await sha256(leaseToken);
+  if (!secretMatches(row.lease_token_hash, suppliedHash)) {
+    throw new Error("LOCAL_BUDGET_TOKEN_INVALID");
+  }
+  const allocated = Number(row.units_allocated);
+  const prior = Number(row.units_reported);
+  if (committed < prior || committed > allocated) {
+    throw new Error("LOCAL_BUDGET_REPORT_NON_MONOTONIC");
+  }
+  const nextState = committed >= allocated ? "EXHAUSTED" : "ACTIVE";
+  const reportedAt = nowIso();
+  await env.PRODUCT_DB.prepare(
+    `UPDATE commander_device_budget_blocks
+        SET units_reported = ?,
+            state = ?,
+            last_reported_at_utc = ?
+      WHERE budget_id = ?
+        AND tenant_id = ?
+        AND device_id = ?`
+  ).bind(
+    committed, nextState, reportedAt,
+    budgetId, device.tenant_id, device.device_id
+  ).run();
+
+  return {
+    ...row,
+    units_allocated: allocated,
+    units_reported: committed,
+    state: nextState,
+    lease_token: leaseToken,
+  };
+}
+
+function publicBudgetBlock(row, leaseToken) {
+  if (!row) return null;
+  return {
+    schema: "hara.commander-local-budget-block.v1",
+    budget_id: row.budget_id,
+    device_id: row.device_id,
+    tenant_id: row.tenant_id,
+    entitlement_id: row.entitlement_id,
+    plan_code: row.plan_code,
+    meter_id: row.meter_id,
+    period_key: row.period_key,
+    allocation_sequence: Number(row.allocation_sequence),
+    allocated_units: Number(row.units_allocated),
+    cloud_issued_units: Number(row.units_issued || 0),
+    committed_units: Number(row.units_reported || 0),
+    lease_token: leaseToken,
+    issued_at_utc: row.issued_at_utc,
+    expires_at_utc: row.expires_at_utc,
+    cloud_authoritative: true,
+  };
+}
+
+async function issueDeviceBudgetBlock(env, device, entitlement, report = null) {
+  const periodKey = monthKey();
+  const now = nowIso();
+  const expiresAt = monthEndUtc(periodKey);
+  const reconciled = await reconcileDeviceBudgetReport(
+    env, device, periodKey, report
+  );
+
+  if (
+    reconciled
+    && reconciled.state === "ACTIVE"
+    && reconciled.units_reported < reconciled.units_allocated
+    && String(reconciled.expires_at_utc) > now
+  ) {
+    return {
+      exhausted: false,
+      block: publicBudgetBlock(reconciled, reconciled.lease_token),
+    };
+  }
+
+  const staleActive = await env.PRODUCT_DB.prepare(
+    `SELECT budget_id
+       FROM commander_device_budget_blocks
+      WHERE tenant_id = ?
+        AND device_id = ?
+        AND period_key = ?
+        AND state = 'ACTIVE'
+      ORDER BY issued_at_utc DESC
+      LIMIT 1`
+  ).bind(device.tenant_id, device.device_id, periodKey).first();
+
+  if (staleActive && !reconciled) {
+    await env.PRODUCT_DB.prepare(
+      `UPDATE commander_device_budget_blocks
+          SET state = 'EXPIRED',
+              last_reported_at_utc = ?
+        WHERE budget_id = ?
+          AND tenant_id = ?
+          AND device_id = ?
+          AND state = 'ACTIVE'`
+    ).bind(now, staleActive.budget_id, device.tenant_id, device.device_id).run();
+  }
+
+  const totals = await env.PRODUCT_DB.prepare(
+    `SELECT COALESCE(SUM(units_allocated),0) AS allocated,
+            COUNT(*) AS block_count
+       FROM commander_device_budget_blocks
+      WHERE tenant_id = ?
+        AND period_key = ?`
+  ).bind(device.tenant_id, periodKey).first();
+
+  const limit = Number(entitlement.unit_limit);
+  const freshBaseline = await freshLocalBudgetBaseline(
+    env,
+    device.tenant_id,
+    periodKey,
+    entitlement.meter_id,
+    { createIfEligible: true },
+  );
+  let legacyConsumed;
+  let legacyBaselineSource;
+  if (freshBaseline) {
+    legacyConsumed = Number(freshBaseline.legacy_consumed_units || 0);
+    legacyBaselineSource = String(freshBaseline.source || "FRESH_TENANT_ZERO");
+  } else {
+    const legacyUsage = await env.TENANT_QUOTA
+      .getByName(device.tenant_id)
+      .status(periodKey, limit);
+    legacyConsumed = Number(legacyUsage?.consumed_units || 0);
+    legacyBaselineSource = "TENANT_QUOTA_LIVE";
+  }
+  const allocated = Number(totals?.allocated || 0);
+  const allocationSequence = Number(totals?.block_count || 0) + 1;
+  const remaining = Math.max(limit - legacyConsumed - allocated, 0);
+  if (remaining < 1) {
+    return {
+      exhausted: true,
+      block: null,
+      legacy_consumed_units: legacyConsumed,
+      legacy_baseline_source: legacyBaselineSource,
+      locally_allocated_units: allocated,
+    };
+  }
+
+  const units = Math.min(LOCAL_BUDGET_BLOCK_UNITS, remaining);
+  const budgetId = "HARA-BUDGET-" + crypto.randomUUID();
+  const leaseToken = randomToken(32);
+  const leaseTokenHash = await sha256(leaseToken);
+  const issuedAt = nowIso();
+
+  try {
+    await env.PRODUCT_DB.prepare(
+      `INSERT INTO commander_device_budget_blocks
+         (budget_id,tenant_id,device_id,entitlement_id,plan_code,meter_id,period_key,
+          allocation_sequence,units_allocated,units_issued,units_reported,lease_token_hash,state,
+          issued_at_utc,expires_at_utc,last_reported_at_utc)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, 'ACTIVE', ?, ?, NULL)`
+    ).bind(
+      budgetId,
+      device.tenant_id,
+      device.device_id,
+      entitlement.entitlement_id,
+      entitlement.plan_code,
+      entitlement.meter_id,
+      periodKey,
+      allocationSequence,
+      units,
+      leaseTokenHash,
+      issuedAt,
+      expiresAt,
+    ).run();
+  } catch (_error) {
+    throw new Error("LOCAL_BUDGET_ALLOCATION_CONFLICT");
+  }
+
+  return {
+    exhausted: false,
+    legacy_consumed_units: legacyConsumed,
+    legacy_baseline_source: legacyBaselineSource,
+    locally_allocated_units: allocated + units,
+    block: publicBudgetBlock({
+      budget_id: budgetId,
+      tenant_id: device.tenant_id,
+      device_id: device.device_id,
+      entitlement_id: entitlement.entitlement_id,
+      plan_code: entitlement.plan_code,
+      meter_id: entitlement.meter_id,
+      period_key: periodKey,
+      allocation_sequence: allocationSequence,
+      units_allocated: units,
+      units_issued: 0,
+      units_reported: 0,
+      issued_at_utc: issuedAt,
+      expires_at_utc: expiresAt,
+    }, leaseToken),
+  };
+}
+
+async function deviceProductLease(env, request, body = {}) {
+  const device = await resolveDeviceCredential(env, request);
+  const entitlement = await entitlementForTenant(env, device.tenant_id);
+  if (!entitlement) throw new Error("ENTITLEMENT_NOT_FOUND");
+  const grants = await grantsForPlan(env, entitlement.plan_code);
+  const context = {
+    tenant_id: entitlement.tenant_id,
+    entitlement_id: entitlement.entitlement_id,
+    plan_code: entitlement.plan_code,
+    plan_name: entitlement.plan_name,
+    meter_id: entitlement.meter_id,
+    period_kind: entitlement.period_kind,
+    unit_limit: entitlement.period_kind === "NONE" ? null : Number(entitlement.unit_limit),
+  };
+  const productLease = productLeaseForContext(context, device, grants);
+  let budget = null;
+
+  if (productLease.usage_mode === "LOCAL_BUDGET") {
+    try {
+      budget = await issueDeviceBudgetBlock(
+        env,
+        device,
+        context,
+        body?.budget_report || null,
+      );
+    } catch (error) {
+      productLease.usage_mode = "CLOUD_QUOTA";
+      productLease.local_budget_degraded = true;
+      productLease.local_budget_degraded_code = sanitizeErrorCode(error);
+      budget = null;
+    }
+  }
+
+  const productLeaseToken = await signProductLease(
+    env,
+    productLease,
+    new URL(request.url).origin,
+  );
+
+  return {
+    schema: "hara.commander-device-product-lease-response.v1",
+    ok: true,
+    product_lease: productLease,
+    product_lease_token: productLeaseToken,
+    product_lease_signature: {
+      alg: "RS256",
+      kid: "commander-lease-v1",
+    },
+    budget,
+  };
 }
 
 async function ensureSecondaryMcpBinding(env, {
@@ -1297,6 +2054,26 @@ async function selectedDeviceForSubject(env, tenantId, subjectId) {
   ).bind(tenantId, subjectId).first();
 }
 
+export async function resolveCustomerTargetDevice(env, context, requestedComputer = null, requestedDeviceId = null) {
+  const explicitDeviceId = requestedDeviceId ? cleanId(requestedDeviceId, 180) : null;
+  const explicitComputer = requestedComputer ? cleanDeviceName(requestedComputer) : null;
+  const result = await env.PRODUCT_DB.prepare(
+    `SELECT device_id, tenant_id, enrolled_by_subject_id, device_name, platform, architecture,
+            agent_version, tunnel_mode, state, last_seen_at_utc, revoked_at_utc
+       FROM commander_devices
+      WHERE tenant_id = ?
+        AND state = 'ACTIVE'
+        AND revoked_at_utc IS NULL
+      ORDER BY created_at_utc DESC`
+  ).bind(context.tenant_id).all();
+  return chooseCustomerTargetDevice(result.results || [], {
+    tenantId: context.tenant_id,
+    requestedComputer: explicitComputer,
+    requestedDeviceId: explicitDeviceId,
+    isOnline: (device) => deviceOnline(device.last_seen_at_utc, device.tunnel_mode),
+  });
+}
+
 async function selectDevice(env, tenantId, subjectId, deviceId) {
   const selectedAt = nowIso();
   const result = await env.PRODUCT_DB.prepare(
@@ -1403,15 +2180,11 @@ async function listDevices(env, session) {
   const result = await env.PRODUCT_DB.prepare(
     `SELECT d.device_id, d.enrolled_by_subject_id, d.device_name, d.platform, d.architecture,
             d.agent_version, d.tunnel_mode, d.state, d.created_at_utc, d.last_seen_at_utc,
-            d.revoked_at_utc,
-            CASE WHEN s.device_id = d.device_id THEN 1 ELSE 0 END AS selected
+            d.revoked_at_utc, d.approval_mode
        FROM commander_devices d
-       LEFT JOIN commander_device_selections s
-         ON s.tenant_id = d.tenant_id
-        AND s.subject_id = ?
       WHERE d.tenant_id = ?
       ORDER BY d.created_at_utc DESC`
-  ).bind(session.subject_id, session.tenant_id).all();
+  ).bind(session.tenant_id).all();
 
   const now = Date.now();
   return (result.results || []).map((row) => ({
@@ -1424,10 +2197,10 @@ async function listDevices(env, session) {
     tunnel_mode: row.tunnel_mode,
     state: row.state,
     online: row.state === "ACTIVE" && deviceOnline(row.last_seen_at_utc, row.tunnel_mode, now),
-    selected: Boolean(row.selected) && row.state === "ACTIVE" && !row.revoked_at_utc,
     created_at_utc: row.created_at_utc,
     last_seen_at_utc: row.last_seen_at_utc,
     revoked_at_utc: row.revoked_at_utc,
+    approval_mode: normalizeApprovalMode(row.approval_mode, "ASK_EVERY_ACTION"),
   }));
 }
 
@@ -1438,6 +2211,7 @@ async function enrollDevice(env, body) {
   const platform = normalizeDevicePlatform(body.platform);
   const architecture = cleanAgentValue(body.architecture, 80);
   const agentVersion = cleanAgentValue(body.agent_version, 80) || "0.1.0";
+  const approvalMode = normalizeApprovalMode(body.approval_mode, "ASK_EVERY_ACTION");
   const deviceId = "HARA-DEVICE-" + crypto.randomUUID();
   const deviceSecret = randomToken(48);
   const credentialHash = await sha256(deviceSecret);
@@ -1447,9 +2221,9 @@ async function enrollDevice(env, body) {
     `INSERT INTO commander_devices
       (device_id, pairing_id, tenant_id, enrolled_by_subject_id, device_name, platform,
        architecture, agent_version, tunnel_mode, credential_hash, state,
-       created_at_utc, last_seen_at_utc, revoked_at_utc)
+       created_at_utc, last_seen_at_utc, revoked_at_utc, approval_mode)
      SELECT ?, pairing_id, tenant_id, subject_id, ?, ?, ?, ?, 'OUTBOUND_RELAY', ?,
-            'ACTIVE', ?, ?, NULL
+            'ACTIVE', ?, ?, NULL, ?
        FROM device_pairing_tokens
       WHERE token_hash = ?
         AND consumed_at_utc IS NULL
@@ -1464,6 +2238,7 @@ async function enrollDevice(env, body) {
     credentialHash,
     createdAt,
     createdAt,
+    approvalMode,
     tokenHash,
     createdAt,
   );
@@ -1514,6 +2289,7 @@ async function enrollDevice(env, body) {
     platform,
     architecture,
     agent_version: agentVersion,
+    approval_mode: approvalMode,
     tunnel_mode: "OUTBOUND_RELAY",
     state: "ACTIVE",
     enrolled_at_utc: createdAt,
@@ -1527,7 +2303,7 @@ async function resolveDeviceCredential(env, request) {
   const device = await env.PRODUCT_DB.prepare(
     `SELECT device_id, tenant_id, enrolled_by_subject_id, device_name, platform,
             architecture, agent_version, tunnel_mode, state, created_at_utc,
-            last_seen_at_utc, revoked_at_utc
+            last_seen_at_utc, revoked_at_utc, approval_mode
        FROM commander_devices
       WHERE credential_hash = ?
       LIMIT 1`
@@ -1539,6 +2315,108 @@ async function resolveDeviceCredential(env, request) {
   return device;
 }
 
+function activitySnapshotNumber(value, max = 1_000_000_000) {
+  const num = Number(value);
+  if (!Number.isFinite(num) || num < 0) return 0;
+  return Math.min(max, Math.round(num * 10) / 10);
+}
+
+function cleanAgentActivityWindow(value, key) {
+  if (!value || typeof value !== "object") return null;
+  const summary = value.summary || {};
+  const diagnostics = value.diagnostics || {};
+  const topTools = Array.isArray(diagnostics.top_tools) ? diagnostics.top_tools.slice(0, 6) : [];
+  const topErrors = Array.isArray(diagnostics.top_errors) ? diagnostics.top_errors.slice(0, 6) : [];
+  const transports = Array.isArray(summary.transport_modes)
+    ? summary.transport_modes.slice(0, 8).map((item) => cleanAgentValue(item, 80)).filter(Boolean)
+    : [];
+  const rawSlo = value.slo && typeof value.slo === "object" ? value.slo : {};
+  const sloStatus = ["PASS","DEGRADED","INSUFFICIENT_DATA"].includes(String(rawSlo.status || ""))
+    ? String(rawSlo.status)
+    : "INSUFFICIENT_DATA";
+  const slo = {
+    profile:"INTERNAL_BETA_V1",
+    status:sloStatus,
+    evaluable:rawSlo.evaluable === true,
+    success_metric:"availability_success_rate_percent",
+    targets:{
+      min_success_rate_percent:activitySnapshotNumber(rawSlo.targets?.min_success_rate_percent ?? 99,100),
+      p50_max_ms:activitySnapshotNumber(rawSlo.targets?.p50_max_ms ?? 1000),
+      p95_max_ms:activitySnapshotNumber(rawSlo.targets?.p95_max_ms ?? 6000),
+      p99_max_ms:activitySnapshotNumber(rawSlo.targets?.p99_max_ms ?? 12000),
+      min_latency_samples:activitySnapshotNumber(rawSlo.targets?.min_latency_samples ?? 20,100000),
+    },
+    checks:{
+      success_rate:typeof rawSlo.checks?.success_rate === "boolean" ? rawSlo.checks.success_rate : null,
+      p50:typeof rawSlo.checks?.p50 === "boolean" ? rawSlo.checks.p50 : null,
+      p95:typeof rawSlo.checks?.p95 === "boolean" ? rawSlo.checks.p95 : null,
+      p99:typeof rawSlo.checks?.p99 === "boolean" ? rawSlo.checks.p99 : null,
+    },
+  };
+  return {
+    schema: "hara.commander-device-activity-window.v1",
+    window_key: key,
+    summary: {
+      total_calls: activitySnapshotNumber(summary.total_calls),
+      completed: activitySnapshotNumber(summary.completed),
+      failed: activitySnapshotNumber(summary.failed),
+      client_failed: activitySnapshotNumber(summary.client_failed),
+      policy_failed: activitySnapshotNumber(summary.policy_failed),
+      service_failed: activitySnapshotNumber(
+        summary.service_failed == null ? summary.failed : summary.service_failed
+      ),
+      pending: activitySnapshotNumber(summary.pending),
+      executing: activitySnapshotNumber(summary.executing),
+      expired: activitySnapshotNumber(summary.expired),
+      cancelled: activitySnapshotNumber(summary.cancelled),
+      success_rate_percent: summary.success_rate_percent == null ? null : activitySnapshotNumber(summary.success_rate_percent, 100),
+      availability_success_rate_percent: summary.availability_success_rate_percent == null
+        ? (summary.success_rate_percent == null ? null : activitySnapshotNumber(summary.success_rate_percent,100))
+        : activitySnapshotNumber(summary.availability_success_rate_percent,100),
+      under_3s_percent: summary.under_3s_percent == null ? null : activitySnapshotNumber(summary.under_3s_percent, 100),
+      avg_queue_ms: summary.avg_queue_ms == null ? null : activitySnapshotNumber(summary.avg_queue_ms),
+      avg_execution_ms: summary.avg_execution_ms == null ? null : activitySnapshotNumber(summary.avg_execution_ms),
+      avg_total_ms: summary.avg_total_ms == null ? null : activitySnapshotNumber(summary.avg_total_ms),
+      latency_p50_ms: summary.latency_p50_ms == null ? null : activitySnapshotNumber(summary.latency_p50_ms),
+      latency_p95_ms: summary.latency_p95_ms == null ? null : activitySnapshotNumber(summary.latency_p95_ms),
+      latency_p99_ms: summary.latency_p99_ms == null ? null : activitySnapshotNumber(summary.latency_p99_ms),
+      latency_sample_size: activitySnapshotNumber(summary.latency_sample_size,100000),
+      latency_population_size: activitySnapshotNumber(summary.latency_population_size,100000000),
+      latency_sample_capped: summary.latency_sample_capped === true,
+      transport_modes: [...new Set(transports)],
+    },
+    slo,
+    diagnostics: {
+      top_tools: topTools.map((row) => ({
+        tool_id: cleanAgentValue(row?.tool_id, 120) || "unknown",
+        calls: activitySnapshotNumber(row?.calls),
+      })),
+      top_errors: topErrors.map((row) => ({
+        error_code: cleanAgentValue(row?.error_code, 120) || "UNKNOWN",
+        calls: activitySnapshotNumber(row?.calls),
+      })),
+    },
+  };
+}
+
+function cleanAgentActivitySnapshots(value) {
+  if (!value || typeof value !== "object") return null;
+  if (value.schema !== "hara.commander-local-activity-snapshots.v1") return null;
+  const windows = {};
+  for (const key of ["24h", "7d", "30d"]) {
+    const cleaned = cleanAgentActivityWindow(value.windows?.[key], key);
+    if (cleaned) windows[key] = cleaned;
+  }
+  if (!Object.keys(windows).length) return null;
+  const raw = JSON.stringify({
+    schema: "hara.commander-device-activity-snapshots.v1",
+    windows,
+    detail_location: "LOCAL_DEVICE",
+    customer_content_synced: false,
+  });
+  return raw.length <= 32 * 1024 ? raw : null;
+}
+
 async function heartbeatDevice(env, request, body) {
   const device = await resolveDeviceCredential(env, request);
   const requestedId = body.device_id ? cleanId(body.device_id, 180) : device.device_id;
@@ -1546,18 +2424,35 @@ async function heartbeatDevice(env, request, body) {
 
   const agentVersion = cleanAgentValue(body.agent_version, 80) || device.agent_version;
   const architecture = cleanAgentValue(body.architecture, 80) || device.architecture;
+  const approvalMode = normalizeApprovalMode(body.approval_mode, normalizeApprovalMode(device.approval_mode, "ASK_EVERY_ACTION"));
   const seenAt = nowIso();
+  const persistCutoff = new Date(Date.now() - DEVICE_HEARTBEAT_PERSIST_SECONDS * 1000).toISOString();
+  const metadataChanged =
+    String(agentVersion || "") !== String(device.agent_version || "")
+    || String(architecture || "") !== String(device.architecture || "")
+    || String(approvalMode || "") !== String(device.approval_mode || "")
+    || String(device.tunnel_mode || "") !== "OUTBOUND_RELAY";
+  const persistPresence = metadataChanged
+    || !device.last_seen_at_utc
+    || String(device.last_seen_at_utc) < persistCutoff;
 
-  const heartbeat = await env.PRODUCT_DB.prepare(
-    `UPDATE commander_devices
-        SET last_seen_at_utc = ?,
-            agent_version = ?,
-            architecture = ?,
-            tunnel_mode = 'OUTBOUND_RELAY'
-      WHERE device_id = ? AND state = 'ACTIVE' AND revoked_at_utc IS NULL`
-  ).bind(seenAt, agentVersion, architecture, device.device_id).run();
-  if (!heartbeat.meta?.changes) throw new Error("DEVICE_AUTH_INVALID");
+  let persisted = false;
+  if (persistPresence) {
+    const heartbeat = await env.PRODUCT_DB.prepare(
+      `UPDATE commander_devices
+          SET last_seen_at_utc = ?,
+              agent_version = ?,
+              architecture = ?,
+              approval_mode = ?,
+              tunnel_mode = 'OUTBOUND_RELAY'
+        WHERE device_id = ? AND state = 'ACTIVE' AND revoked_at_utc IS NULL`
+    ).bind(seenAt, agentVersion, architecture, approvalMode, device.device_id).run();
+    if (!heartbeat.meta?.changes) throw new Error("DEVICE_AUTH_INVALID");
+    persisted = true;
+  }
 
+  // Detailed customer activity is local-authoritative. Older Agents may still
+  // send activity_snapshots during transition; public Commander ignores them.
   return {
     schema: "hara.commander-device-heartbeat.v1",
     ok: true,
@@ -1565,6 +2460,9 @@ async function heartbeatDevice(env, request, body) {
     state: "ACTIVE",
     server_time_utc: seenAt,
     heartbeat_after_seconds: 30,
+    presence_persisted: persisted,
+    local_activity_snapshot_accepted: false,
+    customer_activity_detail_persisted: false,
   };
 }
 
@@ -1575,14 +2473,16 @@ async function markDeviceOffline(env, request, body) {
   const seenAt = nowIso();
   const agentVersion = cleanAgentValue(body.agent_version, 80) || device.agent_version;
   const architecture = cleanAgentValue(body.architecture, 80) || device.architecture;
+  const approvalMode = normalizeApprovalMode(body.approval_mode, normalizeApprovalMode(device.approval_mode, "ASK_EVERY_ACTION"));
   const result = await env.PRODUCT_DB.prepare(
     `UPDATE commander_devices
         SET last_seen_at_utc = ?,
             agent_version = ?,
             architecture = ?,
+            approval_mode = ?,
             tunnel_mode = 'OUTBOUND_RELAY_OFFLINE'
       WHERE device_id = ? AND state = 'ACTIVE' AND revoked_at_utc IS NULL`
-  ).bind(seenAt, agentVersion, architecture, device.device_id).run();
+  ).bind(seenAt, agentVersion, architecture, approvalMode, device.device_id).run();
   if (!result.meta?.changes) throw new Error("DEVICE_AUTH_INVALID");
   return {
     schema: "hara.commander-device-offline.v1",
@@ -1785,7 +2685,8 @@ async function enqueueDeviceCall(env, body) {
     "DEVICE_CALL_PAYLOAD_INVALID",
   );
   const readExisting = () => env.PRODUCT_DB.prepare(
-    `SELECT call_id, tenant_id, subject_id, device_id, tool_id, payload_json, state, expires_at_utc
+    `SELECT call_id, tenant_id, subject_id, device_id, tool_id, payload_json, state, expires_at_utc,
+            usage_mode, usage_units, usage_period_key, usage_budget_id
        FROM commander_device_calls WHERE request_id = ? LIMIT 1`
   ).bind(requestId).first();
   const existingResponse = async (existing) => {
@@ -1812,44 +2713,52 @@ async function enqueueDeviceCall(env, body) {
       state: existing.state,
       expires_at_utc: existing.expires_at_utc,
       retry_after_ms: deviceCallRetryAfterMs(existing.state, "enqueue"),
+      usage_mode: existing.usage_mode || "CLOUD_QUOTA",
+      usage_units: Number(existing.usage_units || 0),
+      usage_period_key: existing.usage_period_key || null,
+      usage_budget_id: existing.usage_budget_id || null,
     };
   };
 
   const existing = await readExisting();
   if (existing) return await existingResponse(existing);
 
-  const selection = await selectedDeviceForSubject(
-    env, context.tenant_id, context.subject_id
+  const device = await resolveCustomerTargetDevice(
+    env, context, body.computer || null, requestedDeviceId
   );
-  if (!selection) throw new Error("DEVICE_SELECTION_REQUIRED");
-  const deviceId = cleanId(selection.device_id, 180);
-  if (requestedDeviceId && requestedDeviceId !== deviceId) {
-    throw new Error("DEVICE_NOT_SELECTED");
-  }
-
-  const device = selection;
-  if (!device || device.state !== "ACTIVE" || device.revoked_at_utc) {
-    throw new Error("DEVICE_NOT_FOUND");
-  }
+  const deviceId = cleanId(device.device_id, 180);
   if (!deviceOnline(device.last_seen_at_utc, device.tunnel_mode)) throw new Error("DEVICE_OFFLINE");
 
+  const usageFunctionId = quotaFunctionIdForTool(toolId, canonicalPayload);
+  const usageMode = await resolveCallUsageMode(env, context, device, usageFunctionId);
+  const usageUnits = usageFunctionId ? 1 : 0;
+  const usagePeriodKey = usageUnits ? mcpPeriodKey(context) : null;
   const enqueueAt = nowIso();
 
   const callId = "HARA-CALL-" + crypto.randomUUID();
   const createdAt = nowIso();
   const expiresAt = nowIso(DEVICE_CALL_TTL_SECONDS);
-  const onlineCutoff = new Date(Date.now() - 90_000).toISOString();
+  const onlineCutoff = new Date(Date.now() - DEVICE_ONLINE_GRACE_SECONDS * 1000).toISOString();
   const eventV2Cutoff = new Date(Date.now() - 7 * 60 * 60 * 1000).toISOString();
   const inserted = await env.PRODUCT_DB.prepare(
     `INSERT OR IGNORE INTO commander_device_calls
       (call_id, request_id, tenant_id, subject_id, device_id, tool_id, payload_json,
        state, created_at_utc, expires_at_utc, claimed_at_utc, completed_at_utc,
-       result_json, error_code)
-     SELECT ?, ?, ?, ?, d.device_id, ?, ?, 'PENDING', ?, ?, NULL, NULL, NULL, NULL
+       result_json, error_code, usage_mode, usage_units, usage_period_key, usage_budget_id)
+     SELECT ?, ?, ?, ?, d.device_id, ?, ?, 'PENDING', ?, ?, NULL, NULL, NULL, NULL, ?, ?, ?,
+            CASE WHEN ? = 'LOCAL_BUDGET' THEN (
+              SELECT b.budget_id
+                FROM commander_device_budget_blocks b
+               WHERE b.tenant_id = d.tenant_id
+                 AND b.device_id = d.device_id
+                 AND b.period_key = ?
+                 AND b.state = 'ACTIVE'
+                 AND b.expires_at_utc > ?
+                 AND b.units_issued + ? <= b.units_allocated
+               ORDER BY b.allocation_sequence ASC
+               LIMIT 1
+            ) ELSE NULL END
        FROM commander_devices d
-       JOIN commander_device_selections s
-         ON s.tenant_id = d.tenant_id
-        AND s.device_id = d.device_id
       WHERE d.device_id = ?
         AND d.tenant_id = ?
         AND d.state = 'ACTIVE'
@@ -1859,7 +2768,6 @@ async function enqueueDeviceCall(env, body) {
           OR
           (d.tunnel_mode NOT IN ('EVENT_V2','EVENT_V2_OFFLINE','OUTBOUND_RELAY_OFFLINE') AND d.last_seen_at_utc >= ?)
         )
-        AND s.subject_id = ?
         AND (
           SELECT COUNT(*)
             FROM commander_device_calls q INDEXED BY idx_device_calls_poll
@@ -1867,30 +2775,56 @@ async function enqueueDeviceCall(env, body) {
              AND q.tenant_id = d.tenant_id
              AND q.state IN ('PENDING','EXECUTING')
              AND q.expires_at_utc > ?
-        ) < ?`
+        ) < ?
+        AND (
+          ? <> 'LOCAL_BUDGET'
+          OR EXISTS (
+            SELECT 1
+              FROM commander_device_budget_blocks b
+             WHERE b.tenant_id = d.tenant_id
+               AND b.device_id = d.device_id
+               AND b.period_key = ?
+               AND b.state = 'ACTIVE'
+               AND b.expires_at_utc > ?
+               AND b.units_issued + ? <= b.units_allocated
+          )
+        )`
   ).bind(
     callId, requestId, context.tenant_id, context.subject_id, toolId, payloadJson,
-    createdAt, expiresAt, deviceId, context.tenant_id, eventV2Cutoff, onlineCutoff,
-    context.subject_id, createdAt, DEVICE_CALL_ACTIVE_QUEUE_LIMIT
+    createdAt, expiresAt, usageMode, usageUnits, usagePeriodKey,
+    usageMode, usagePeriodKey, createdAt, usageUnits,
+    deviceId, context.tenant_id, eventV2Cutoff, onlineCutoff,
+    createdAt, DEVICE_CALL_ACTIVE_QUEUE_LIMIT,
+    usageMode, usagePeriodKey, createdAt, usageUnits
   ).run();
 
   if (!inserted.meta?.changes) {
     const concurrent = await readExisting();
     if (concurrent) return await existingResponse(concurrent);
 
-    const currentSelection = await selectedDeviceForSubject(
-      env, context.tenant_id, context.subject_id
+    const currentDevice = await resolveCustomerTargetDevice(
+      env, context, null, deviceId
     );
-    if (!currentSelection) throw new Error("DEVICE_SELECTION_REQUIRED");
-    if (cleanId(currentSelection.device_id, 180) !== deviceId) {
-      throw new Error("DEVICE_NOT_SELECTED");
+    if (!deviceOnline(currentDevice.last_seen_at_utc, currentDevice.tunnel_mode)) {
+      throw new Error("DEVICE_OFFLINE");
     }
 
-    const currentDevice = currentSelection;
-    if (!currentDevice || currentDevice.state !== "ACTIVE" || currentDevice.revoked_at_utc) {
-      throw new Error("DEVICE_NOT_FOUND");
+    if (usageMode === "LOCAL_BUDGET") {
+      const block = await env.PRODUCT_DB.prepare(
+        `SELECT budget_id,units_allocated,units_issued
+           FROM commander_device_budget_blocks
+          WHERE tenant_id = ?
+            AND device_id = ?
+            AND period_key = ?
+            AND state = 'ACTIVE'
+            AND expires_at_utc > ?
+          ORDER BY allocation_sequence ASC
+          LIMIT 1`
+      ).bind(context.tenant_id, deviceId, usagePeriodKey, nowIso()).first();
+      if (!block || Number(block.units_issued || 0) + usageUnits > Number(block.units_allocated || 0)) {
+        throw new Error("LOCAL_BUDGET_CAPACITY_EXHAUSTED");
+      }
     }
-    if (!deviceOnline(currentDevice.last_seen_at_utc, currentDevice.tunnel_mode)) throw new Error("DEVICE_OFFLINE");
 
     const activeQueue = await env.PRODUCT_DB.prepare(
       `SELECT COUNT(*) AS active_count
@@ -1969,6 +2903,14 @@ async function enqueueDeviceCall(env, body) {
     state: responseState,
     expires_at_utc: expiresAt,
     retry_after_ms: deviceCallRetryAfterMs(responseState, "enqueue"),
+    usage_mode: usageMode,
+    usage_units: usageUnits,
+    usage_period_key: usagePeriodKey,
+    usage_budget_id: usageMode === "LOCAL_BUDGET"
+      ? await env.PRODUCT_DB.prepare(
+          `SELECT usage_budget_id FROM commander_device_calls WHERE call_id = ? LIMIT 1`
+        ).bind(callId).first().then((row) => row?.usage_budget_id || null)
+      : null,
   };
 
   if (postNotify) {
@@ -1981,13 +2923,14 @@ async function enqueueDeviceCall(env, body) {
   return response;
 }
 
-async function customerMcpRequestId(identity, toolId, args, mcpRequestId) {
+async function customerMcpRequestId(identity, toolId, args, mcpRequestId, transportRequestId) {
   const digest = await sha256(JSON.stringify({
     issuer: identity.issuer,
     subject: identity.subject,
     client_id: identity.client_id,
     tool_id: toolId,
     mcp_request_id: mcpRequestId,
+    transport_request_id: String(transportRequestId || ""),
     arguments: args || {},
   }));
   return "HARA-CUSTOMER-MCP-" + digest;
@@ -2068,7 +3011,7 @@ function projectCustomerToolResult(toolId, response) {
       projectedResult.change_intent_required = changeIntent;
     }
     if (typeof failClosed === "boolean") projectedResult.fail_closed = failClosed;
-  } else if (toolId === "hara.functions.invoke") {
+  } else if (toolId === "hara.functions.invoke" || deviceFunctionForTool(toolId) || isDeviceMutationTool(toolId) || isDeviceProcessTool(toolId) || toolId === "hara.files.preimages.list") {
     for (const key of [
       "function_id",
       "risk_class",
@@ -2081,6 +3024,9 @@ function projectCustomerToolResult(toolId, response) {
     const stderr = trimPublicText(result.stderr);
     if (stdout !== null) projectedResult.stdout = stdout;
     if (stderr) projectedResult.stderr = stderr;
+    for (const key of ["human_approval_state","local_authorization_mode","authorization_source","preimage_sha256","preimage_id","rollback_preimage_id"]) {
+      if (typeof result[key] === "string") projectedResult[key] = result[key];
+    }
   } else if (toolId === "hara.receipts.get") {
     for (const key of [
       "tool_id",
@@ -2091,6 +3037,13 @@ function projectCustomerToolResult(toolId, response) {
       "mutation_class",
       "state",
       "payload_values_persisted",
+      "human_approval_required",
+      "human_approval_state",
+      "local_authorization_mode",
+      "authorization_source",
+      "preimage_sha256",
+      "preimage_id",
+      "rollback_preimage_id",
     ]) {
       if (key in result) projectedResult[key] = result[key];
     }
@@ -2122,22 +3075,132 @@ function projectCustomerToolResult(toolId, response) {
 }
 
 function customerMcpDevicePayload(toolId, args) {
-  if (toolId === "hara.health" || toolId === "hara.functions.list") return {};
-  if (toolId === "hara.functions.describe") {
-    return { function_id: cleanId(args.function_id, 180) };
+  if (["hara.health","hara.ping","hara.device.info","hara.system.uptime","hara.system.resources","hara.functions.list"].includes(toolId)) return {};
+  if (toolId === "hara.workspace.inspect") {
+    return {path:String(args.path || ""),...(args.max_entries === undefined ? {} : {max_entries:Number(args.max_entries)})};
   }
+  if (toolId === "hara.processes.list") {
+    return args.limit === undefined ? {} : { limit: Number(args.limit) };
+  }
+  if (toolId === "hara.files.info") return { path: String(args.path || "") };
+  if (toolId === "hara.files.hash") return {path:String(args.path || "")};
+  if (toolId === "hara.files.diff") return {left:String(args.left || ""),right:String(args.right || ""),max_lines:args.max_lines===undefined ? 200 : Number(args.max_lines)};
+  if (toolId === "hara.files.search") {
+    return {
+      path:String(args.path || ""), search_type:String(args.search_type || ""), pattern:String(args.pattern || ""),
+      max_results:args.max_results === undefined ? 50 : Number(args.max_results),
+      include_hidden:args.include_hidden === true, ignore_case:args.ignore_case !== false,
+      ...(args.file_glob === undefined ? {} : {file_glob:String(args.file_glob)}),
+    };
+  }
+  if (toolId === "hara.files.list") {
+    return {
+      path:String(args.path || ""),
+      ...(args.limit === undefined ? {} : {limit:Number(args.limit)}),
+      ...(args.depth === undefined ? {} : {depth:Number(args.depth)}),
+    };
+  }
+  if (toolId === "hara.files.read") {
+    return {
+      path: String(args.path || ""),
+      ...(args.offset === undefined ? {} : {offset:Number(args.offset)}),
+      ...(args.length === undefined ? {} : {length:Number(args.length)}),
+    };
+  }
+  if (toolId === "hara.files.read_many") {
+    return {
+      paths:Array.isArray(args.paths) ? args.paths.map((v)=>String(v)) : [],
+      offset:args.offset === undefined ? 0 : Number(args.offset),
+      length:args.length === undefined ? 100 : Number(args.length),
+    };
+  }
+  if (toolId === "hara.files.preimages.list") return {limit:args.limit === undefined ? 50 : Number(args.limit),...(args.path === undefined ? {} : {path:String(args.path)})};
+  if (toolId === "hara.files.rollback") return {preimage_id:String(args.preimage_id || "")};
+  if (toolId === "hara.process.sessions") return {};
+  if (toolId === "hara.process.run") return {command:String(args.command ?? ""),...(args.cwd === undefined ? {} : {cwd:String(args.cwd)}),timeout_ms:args.timeout_ms === undefined ? 3000 : Number(args.timeout_ms),max_lines:args.max_lines === undefined ? 200 : Number(args.max_lines)};
+  if (toolId === "hara.process.start") return {command:String(args.command ?? ""),...(args.cwd === undefined ? {} : {cwd:String(args.cwd)}),timeout_ms:args.timeout_ms === undefined ? 1000 : Number(args.timeout_ms)};
+  if (toolId === "hara.process.output") return {session_id:String(args.session_id || ""),...(args.offset === undefined ? {} : {offset:Number(args.offset)}),length:args.length === undefined ? 200 : Number(args.length),timeout_ms:args.timeout_ms === undefined ? 500 : Number(args.timeout_ms)};
+  if (toolId === "hara.process.interact") return {session_id:String(args.session_id || ""),input:String(args.input ?? ""),timeout_ms:args.timeout_ms === undefined ? 1000 : Number(args.timeout_ms)};
+  if (toolId === "hara.process.kill") return {session_id:String(args.session_id || ""),force:args.force === true};
+  if (toolId === "hara.files.create_directory") return {path:String(args.path || ""),parents:args.parents !== false};
+  if (toolId === "hara.files.write") return {path:String(args.path || ""),content:String(args.content ?? ""),mode:String(args.mode || "rewrite")};
+  if (toolId === "hara.files.edit") return {path:String(args.path || ""),old_text:String(args.old_text ?? ""),new_text:String(args.new_text ?? ""),replace_all:args.replace_all === true};
+  if (toolId === "hara.files.move") return {source:String(args.source || ""),destination:String(args.destination || "")};
+  if (toolId === "hara.files.copy") return {source:String(args.source || ""),destination:String(args.destination || "")};
+  if (toolId === "hara.files.delete") return {path:String(args.path || "")};
+  if (toolId === "hara.functions.describe") return { function_id: cleanId(args.function_id, 180) };
   if (toolId === "hara.functions.invoke") {
     return {
       function_id: cleanId(args.function_id, 180),
-      arguments: {
-        argv: Array.isArray(args.argv) ? args.argv.map((value) => String(value)) : [],
-      },
+      arguments: { argv: Array.isArray(args.argv) ? args.argv.map((value) => String(value)) : [] },
     };
   }
-  if (toolId === "hara.receipts.get") {
-    return { receipt_id_or_sha256: cleanId(args.receipt_id_or_sha256, 256) };
-  }
+  if (toolId === "hara.receipts.get") return { receipt_id_or_sha256: cleanId(args.receipt_id_or_sha256, 256) };
   throw new Error("DEVICE_CALL_TOOL_DENIED");
+}
+
+function quotaFunctionIdForTool(toolId, payload) {
+  if (toolId === "hara.functions.invoke") return cleanId(payload.function_id, 180);
+  if (["hara.ping","hara.health","hara.functions.list","hara.functions.describe","hara.receipts.get"].includes(toolId)) return null;
+  const functionId=deviceFunctionForTool(toolId);
+  if (functionId) return functionId;
+  if (isDeviceMutationTool(toolId) || isDeviceProcessTool(toolId) || toolId === "hara.files.preimages.list") return "tool:"+toolId;
+  return null;
+}
+
+function legacyInvokePayload(toolId, payload) {
+  const functionId = deviceFunctionForTool(toolId);
+  if (!functionId) return null;
+  if (["device.info","device.ping","system.uptime","system.resources"].includes(functionId)) return {function_id:functionId,arguments:{argv:[]}};
+  if (functionId === "workspace.inspect") return {function_id:functionId,arguments:{argv:[payload.path,...(payload.max_entries === undefined ? [] : [String(payload.max_entries)])]}};
+  if (functionId === "process.list") return {function_id:functionId,arguments:{argv:payload.limit === undefined ? [] : [String(payload.limit)]}};
+  if (functionId === "filesystem.info") return {function_id:functionId,arguments:{argv:[payload.path]}};
+  if (functionId === "filesystem.hash") return {function_id:functionId,arguments:{argv:[payload.path]}};
+  if (functionId === "filesystem.diff") return {function_id:functionId,arguments:{argv:[payload.left,payload.right,String(payload.max_lines ?? 200)]}};
+  if (functionId === "filesystem.search") return {function_id:functionId,arguments:{argv:[
+    payload.path, payload.search_type, payload.pattern, String(payload.max_results ?? 50),
+    payload.include_hidden ? "1" : "0", payload.ignore_case === false ? "0" : "1", payload.file_glob ?? "",
+  ]}};
+  if (functionId === "filesystem.list") {
+    const argv=[payload.path];
+    if (payload.limit !== undefined || payload.depth !== undefined) argv.push(String(payload.limit ?? 100));
+    if (payload.depth !== undefined) argv.push(String(payload.depth));
+    return {function_id:functionId,arguments:{argv}};
+  }
+  if (functionId === "filesystem.read_many") return {function_id:functionId,arguments:{argv:[String(payload.offset ?? 0),String(payload.length ?? 100),...(payload.paths||[])]}};
+  if (functionId === "filesystem.read") {
+    const argv=[payload.path];
+    if (payload.offset !== undefined || payload.length !== undefined) argv.push(String(payload.offset ?? 0));
+    if (payload.length !== undefined) argv.push(String(payload.length));
+    return {function_id:functionId,arguments:{argv}};
+  }
+  return null;
+}
+
+function agentPurposeToolReady(device, toolId) {
+  const platform=String(device?.platform || "").toUpperCase();
+  if (platform === "WINDOWS") {
+    const starter=[
+      "hara.ping","hara.device.info","hara.processes.list",
+      "hara.files.info","hara.files.list","hara.files.read",
+      "hara.files.create_directory","hara.files.write","hara.process.run",
+    ];
+    return starter.includes(toolId) && semverAtLeast(device.agent_version,32);
+  }
+  if (platform !== "LINUX") return false;
+  const parts=String(device?.agent_version || "0.0.0").split(".").map((v)=>Number(v));
+  const [a=0,b=0,c=0]=parts;
+  const minPatch =
+    toolId === "hara.process.run" ? 25
+    : ["hara.system.resources","hara.workspace.inspect"].includes(toolId) ? 24
+    : ["hara.files.hash","hara.files.diff","hara.files.copy","hara.files.delete"].includes(toolId) ? 23
+    : ["hara.files.preimages.list","hara.files.rollback"].includes(toolId) ? 21
+    : isDeviceProcessTool(toolId) ? 20
+    : isDeviceMutationTool(toolId) ? 19
+    : toolId === "hara.files.read_many" ? 18
+    : toolId === "hara.files.search" ? 17
+    : 16;
+  return a > 0 || b > 3 || (b === 3 && c >= minPatch);
 }
 
 async function customerMcpWaitForCall(env, identity, call) {
@@ -2165,12 +3228,1238 @@ async function customerMcpWaitForCall(env, identity, call) {
   return status;
 }
 
+function semverAtLeast(version, wantedPatch) {
+  const parts=String(version || "0.0.0").split(".").map((v)=>Number(v));
+  const [major=0,minor=0,patch=0]=parts;
+  return major > 0 || minor > 3 || (minor === 3 && patch >= wantedPatch);
+}
+
+function capabilityToolDetail(toolId, approvalMode = "ASK_EVERY_ACTION") {
+  const id=String(toolId || "");
+  const processExecution=isDeviceProcessMutationTool(id);
+  const filesystemMutation=isDeviceMutationTool(id);
+  const mutable=processExecution || filesystemMutation;
+  const mode=normalizeApprovalMode(approvalMode, "ASK_EVERY_ACTION");
+  return {
+    tool_id:id,
+    risk_class:processExecution ? "PROCESS_EXECUTION" : (filesystemMutation ? "FILESYSTEM_MUTATION" : "READ_ONLY"),
+    local_approval_required:mutable && mode === "ASK_EVERY_ACTION",
+    local_session_authorization_sufficient:mutable && mode === "SESSION_TRUSTED",
+    persistent_device_authorization_sufficient:mutable && mode === "PERSISTENT_TRUSTED",
+    required_grant:MCP_TOOL_GRANTS[id] || null,
+    preferred_interface:id !== "hara.functions.invoke",
+  };
+}
+
+function capabilitiesForDevice(device, grants) {
+  const platform=String(device.platform || "").toUpperCase();
+  const linux=platform === "LINUX";
+  const tools=["hara.health","hara.functions.list","hara.functions.describe","hara.receipts.get"];
+  if (platform === "WINDOWS") {
+    tools.push("hara.device.info","hara.functions.invoke");
+    if (semverAtLeast(device.agent_version,32)) {
+      tools.push("hara.ping","hara.processes.list","hara.files.info","hara.files.list","hara.files.read");
+      if (grants.includes("COMMANDER_MUTATION_INVOKE")) {
+        tools.push("hara.files.create_directory","hara.files.write");
+      }
+      if (grants.includes("COMMANDER_PROCESS_EXECUTION")) {
+        tools.push("hara.process.run");
+      }
+    }
+  }
+  if (linux && semverAtLeast(device.agent_version,16)) {
+    tools.push("hara.ping","hara.device.info","hara.system.uptime","hara.processes.list","hara.files.info","hara.files.list","hara.files.read");
+  }
+  if (linux && semverAtLeast(device.agent_version,17)) tools.push("hara.files.search");
+  if (linux && semverAtLeast(device.agent_version,18)) tools.push("hara.files.read_many");
+  if (linux && semverAtLeast(device.agent_version,19) && grants.includes("COMMANDER_MUTATION_INVOKE")) {
+    tools.push("hara.files.create_directory","hara.files.write","hara.files.edit","hara.files.move");
+  }
+  if (linux && semverAtLeast(device.agent_version,20) && grants.includes("COMMANDER_PROCESS_EXECUTION")) {
+    tools.push("hara.process.sessions","hara.process.start","hara.process.output","hara.process.interact","hara.process.kill");
+  }
+  if (linux && semverAtLeast(device.agent_version,21)) {
+    tools.push("hara.files.preimages.list");
+    if (grants.includes("COMMANDER_MUTATION_INVOKE")) tools.push("hara.files.rollback");
+  }
+  if (linux && semverAtLeast(device.agent_version,23)) {
+    tools.push("hara.files.hash","hara.files.diff");
+    if (grants.includes("COMMANDER_MUTATION_INVOKE")) tools.push("hara.files.copy","hara.files.delete");
+  }
+  if (linux && semverAtLeast(device.agent_version,24)) {
+    tools.push("hara.system.resources","hara.workspace.inspect");
+  }
+  if (linux && semverAtLeast(device.agent_version,25) && grants.includes("COMMANDER_PROCESS_EXECUTION")) {
+    tools.push("hara.process.run");
+  }
+  const availableTools=[...new Set(tools)].sort();
+  const approvalMode=normalizeApprovalMode(device.approval_mode, "ASK_EVERY_ACTION");
+  return {
+    computer:device.device_name,
+    device_id:device.device_id,
+    platform:device.platform,
+    architecture:device.architecture,
+    agent_version:device.agent_version,
+    state:device.revoked_at_utc ? "REVOKED" : (device.online ? "ONLINE" : "OFFLINE"),
+    tools:availableTools,
+    tool_details:availableTools.map((toolId)=>capabilityToolDetail(toolId,approvalMode)),
+    capability_detail_schema:"hara.commander-capability-tool.v2",
+    approval_mode:approvalMode,
+    operator_session_required:approvalMode !== "PERSISTENT_TRUSTED",
+    mutation_requires_local_approval:approvalMode === "ASK_EVERY_ACTION",
+    process_execution_requires_local_approval:approvalMode === "ASK_EVERY_ACTION",
+    local_session_authorizes_governed_mutations:approvalMode === "SESSION_TRUSTED",
+    persistent_device_authorizes_governed_mutations:approvalMode === "PERSISTENT_TRUSTED",
+    process_sessions_revoked_with_operator_session:true,
+    payload_hot_path_redaction:true,
+    receipt_binding:true,
+  };
+}
+
+function resolveNamedCustomerDevice(devices, computer) {
+  const wanted=String(computer || "").trim().toLowerCase();
+  const matches=devices.filter((d)=>String(d.device_name||"").toLowerCase()===wanted);
+  if (!matches.length) throw new Error("DEVICE_NOT_FOUND");
+
+  const active=matches.filter((d)=>!d.revoked_at_utc);
+  if (active.length===1) return active[0];
+  if (active.length>1) {
+    const online=active.filter((d)=>d.online);
+    if (online.length===1) return online[0];
+    throw new Error("COMPUTER_NAME_AMBIGUOUS");
+  }
+
+  if (matches.length===1) return matches[0];
+  throw new Error("COMPUTER_NAME_AMBIGUOUS");
+}
+
+async function customerCapabilities(env, context, args) {
+  let devices=await listDevices(env,{tenant_id:context.tenant_id});
+  if (args?.computer) {
+    devices=[resolveNamedCustomerDevice(devices,args.computer)];
+  }
+  return devices.map((d)=>capabilitiesForDevice(d,context.grants));
+}
+
+async function customerUsage(env, context) {
+  const usage=await productUsageForPolicy(
+    env,
+    context.tenant_id,
+    context.period_kind,
+    context.unit_limit,
+    context.meter_id,
+  );
+  return {
+    plan_code:context.plan_code,
+    plan_name:context.plan_name,
+    entitlement_id:context.entitlement_id,
+    period_kind:context.period_kind,
+    grants:[...context.grants].sort(),
+    usage,
+  };
+}
+
+async function recentCustomerCalls(env, context, args) {
+  const limit=Math.max(1,Math.min(100,Number(args?.limit || 50)));
+  const tool=String(args?.tool || "").trim();
+  let deviceId=null;
+  if (args?.computer) {
+    const devices=await listDevices(env,{tenant_id:context.tenant_id});
+    deviceId=resolveNamedCustomerDevice(devices,args.computer).device_id;
+  }
+  const clauses=["c.tenant_id = ?","c.subject_id = ?"];
+  const binds=[context.tenant_id,context.subject_id];
+  if (deviceId) { clauses.push("c.device_id = ?"); binds.push(deviceId); }
+  if (tool) { clauses.push("c.tool_id = ?"); binds.push(cleanId(tool,120)); }
+  binds.push(limit);
+  const result=await env.PRODUCT_DB.prepare(`
+    SELECT c.call_id,c.request_id,c.device_id,c.tool_id,c.state,c.created_at_utc,c.claimed_at_utc,
+           c.completed_at_utc,c.error_code,d.device_name
+      FROM commander_device_calls c
+      JOIN commander_devices d ON d.device_id = c.device_id
+     WHERE ${clauses.join(" AND ")}
+     ORDER BY c.created_at_utc DESC
+     LIMIT ?`).bind(...binds).all();
+  return (result.results||[]).map((row)=>( {
+    call_id:row.call_id, request_id:row.request_id, computer:row.device_name, tool_id:row.tool_id,
+    state:row.state, created_at_utc:row.created_at_utc, claimed_at_utc:row.claimed_at_utc,
+    completed_at_utc:row.completed_at_utc, error_code:row.error_code || null,
+  }));
+}
+
+function portalActivitySource(requestId) {
+  const value=String(requestId || "");
+  if (value.startsWith("HARA-CUSTOMER-MCP-")) return "CUSTOMER_MCP";
+  if (value.startsWith("HARA-QA-")) return "QA";
+  if (value.startsWith("HARA-E2E-")) return "E2E";
+  if (value.startsWith("manual-")) return "MANUAL";
+  return "OTHER";
+}
+
+function elapsedMs(start,end) {
+  const a=Date.parse(String(start || ""));
+  const b=Date.parse(String(end || ""));
+  if (!Number.isFinite(a) || !Number.isFinite(b) || b < a) return null;
+  return Math.round(b-a);
+}
+
+function portalActivityWindow(value) {
+  const raw=String(value || "7d").trim().toLowerCase();
+  const windows={
+    "24h":{ key:"24h", label:"24 horas", hours:24 },
+    "7d":{ key:"7d", label:"7 dias", hours:7*24 },
+    "30d":{ key:"30d", label:"30 dias", hours:30*24 },
+  };
+  const selected=windows[raw] || windows["7d"];
+  return {
+    key:selected.key,
+    label:selected.label,
+    since_at_utc:new Date(Date.now()-(selected.hours*60*60*1000)).toISOString(),
+  };
+}
+
+function betaAccessCanManage(session) {
+  return ["OWNER","ADMIN"].includes(String(session?.role || "").toUpperCase());
+}
+
+async function portalBetaAccessStatus(env, session) {
+  const row=await env.PRODUCT_DB.prepare(
+    `SELECT plan_code,state,requested_at_utc,updated_at_utc
+       FROM commander_beta_access_requests
+      WHERE tenant_id = ? AND subject_id = ? AND plan_code = 'STANDARD'
+      LIMIT 1`
+  ).bind(session.tenant_id,session.subject_id).first();
+
+  return {
+    schema:"hara.commander-beta-access.v1",
+    plan_code:"STANDARD",
+    can_request:betaAccessCanManage(session),
+    request:row ? {
+      plan_code:String(row.plan_code || "STANDARD"),
+      state:String(row.state || "REQUESTED"),
+      requested_at_utc:row.requested_at_utc,
+      updated_at_utc:row.updated_at_utc,
+    } : null,
+  };
+}
+
+async function requestPortalBetaAccess(env, session) {
+  if (!betaAccessCanManage(session)) throw new Error("BETA_ACCESS_ADMIN_REQUIRED");
+  const plan=await env.PRODUCT_DB.prepare(
+    `SELECT plan_code,state FROM plans WHERE plan_code = 'STANDARD' LIMIT 1`
+  ).first();
+  if (!plan || String(plan.state || "").toUpperCase() !== "ACTIVE") {
+    throw new Error("BETA_ACCESS_PLAN_UNAVAILABLE");
+  }
+  const now=nowIso();
+  const requestId="HARA-BETA-"+crypto.randomUUID();
+  await env.PRODUCT_DB.prepare(
+    `INSERT INTO commander_beta_access_requests
+       (request_id,tenant_id,subject_id,plan_code,state,requested_at_utc,updated_at_utc)
+     VALUES (?, ?, ?, 'STANDARD', 'REQUESTED', ?, ?)
+     ON CONFLICT(tenant_id,subject_id,plan_code)
+     DO UPDATE SET state='REQUESTED',updated_at_utc=excluded.updated_at_utc`
+  ).bind(requestId,session.tenant_id,session.subject_id,now,now).run();
+  return await portalBetaAccessStatus(env,session);
+}
+
+
+function sloAlertTime(value) {
+  const ms=Date.parse(String(value || ""));
+  return Number.isFinite(ms) ? ms : null;
+}
+
+function sloAlertNumber(value) {
+  const num=Number(value);
+  return Number.isFinite(num) && num >= 0 ? num : null;
+}
+
+function evaluateTenantSloRows(rows, nowMs=Date.now()) {
+  const onlineCutoff=nowMs-(SLO_ALERT_ONLINE_GRACE_SECONDS*1000);
+  const snapshotCutoff=nowMs-(SLO_ALERT_SNAPSHOT_GRACE_SECONDS*1000);
+  const online=(rows || []).filter((row)=>{
+    const seen=sloAlertTime(row.last_seen_at_utc);
+    return seen != null && seen >= onlineCutoff;
+  });
+  if (!online.length) return null;
+  let pass=0, degraded=0, insufficient=0, missing=0, stale=0;
+  let completed=0, failed=0, clientFailed=0, policyFailed=0, serviceFailed=0;
+  let latestSnapshot=null;
+  const p50=[],p95=[],p99=[];
+  for (const row of online) {
+    const snapAt=sloAlertTime(row.activity_summary_at_utc);
+    if (!row.activity_summary_json) { missing+=1; continue; }
+    if (snapAt == null || snapAt < snapshotCutoff) stale+=1;
+    if (snapAt != null && (latestSnapshot == null || snapAt > latestSnapshot)) latestSnapshot=snapAt;
+    let parsed;
+    try { parsed=JSON.parse(String(row.activity_summary_json)); }
+    catch (_error) { missing+=1; continue; }
+    const selected=parsed?.windows?.["24h"] || {};
+    const summary=selected.summary || {};
+    const status=String(selected.slo?.status || "INSUFFICIENT_DATA");
+    if (status === "PASS") pass+=1;
+    else if (status === "DEGRADED") degraded+=1;
+    else insufficient+=1;
+    completed+=Number(summary.completed || 0);
+    const rowFailed=Number(summary.failed || 0);
+    failed+=rowFailed;
+    clientFailed+=Number(summary.client_failed || 0);
+    policyFailed+=Number(summary.policy_failed || 0);
+    serviceFailed+=summary.service_failed == null ? rowFailed : Number(summary.service_failed || 0);
+    for (const [target,field] of [[p50,"latency_p50_ms"],[p95,"latency_p95_ms"],[p99,"latency_p99_ms"]]) {
+      const value=sloAlertNumber(summary[field]);
+      if (value != null) target.push(value);
+    }
+  }
+  const terminal=completed+failed;
+  const availabilityTerminal=completed+serviceFailed;
+  const state=(missing || stale || degraded) ? "DEGRADED" : (pass ? "PASS" : "INSUFFICIENT_DATA");
+  return {
+    profile:SLO_ALERT_PROFILE,
+    state,
+    online_devices:online.length,
+    pass_devices:pass,
+    degraded_devices:degraded,
+    insufficient_devices:insufficient,
+    missing_snapshot_devices:missing,
+    stale_snapshot_devices:stale,
+    client_failed:clientFailed,
+    policy_failed:policyFailed,
+    service_failed:serviceFailed,
+    weighted_success_rate_percent:availabilityTerminal
+      ? Number(((completed/availabilityTerminal)*100).toFixed(3))
+      : null,
+    weighted_availability_success_rate_percent:availabilityTerminal
+      ? Number(((completed/availabilityTerminal)*100).toFixed(3))
+      : null,
+    weighted_outcome_success_rate_percent:terminal
+      ? Number(((completed/terminal)*100).toFixed(3))
+      : null,
+    worst_device_p50_ms:p50.length ? Math.max(...p50) : null,
+    worst_device_p95_ms:p95.length ? Math.max(...p95) : null,
+    worst_device_p99_ms:p99.length ? Math.max(...p99) : null,
+    last_snapshot_at_utc:latestSnapshot == null ? null : new Date(latestSnapshot).toISOString(),
+  };
+}
+
+async function portalSloStatus(env, session) {
+  if (!betaAccessCanManage(session)) throw new Error("SLO_STATUS_ADMIN_REQUIRED");
+  const state=await env.PRODUCT_DB.prepare(
+    "SELECT tenant_id,profile,state,breach_streak,recovery_streak,current_incident_id,last_evaluated_at_utc,last_snapshot_at_utc,summary_json,updated_at_utc FROM commander_slo_state WHERE tenant_id = ? LIMIT 1"
+  ).bind(session.tenant_id).first();
+  const currentRows=await env.PRODUCT_DB.prepare(
+    "SELECT device_id,device_name,agent_version,last_seen_at_utc,activity_summary_at_utc,activity_summary_json FROM commander_devices WHERE tenant_id = ? AND state='ACTIVE' AND revoked_at_utc IS NULL ORDER BY device_name"
+  ).bind(session.tenant_id).all();
+  const observed=evaluateTenantSloRows(currentRows.results || []);
+  const incidentRows=await env.PRODUCT_DB.prepare(
+    "SELECT incident_id,state,opened_at_utc,resolved_at_utc,first_breach_at_utc,last_breach_at_utc,last_seen_at_utc,summary_json,resolution_json,acknowledged_at_utc,acknowledged_by_subject_id,escalation_level,escalated_at_utc FROM commander_slo_incidents WHERE tenant_id = ? ORDER BY opened_at_utc DESC LIMIT 10"
+  ).bind(session.tenant_id).all();
+  const parse=(value)=>{ try { return value ? JSON.parse(String(value)) : null; } catch (_error) { return null; } };
+  return {
+    schema:"hara.commander-portal-slo.v1",
+    profile:SLO_ALERT_PROFILE,
+    observed,
+    state:state ? {
+      state:String(state.state),
+      breach_streak:Number(state.breach_streak || 0),
+      recovery_streak:Number(state.recovery_streak || 0),
+      current_incident_id:state.current_incident_id || null,
+      last_evaluated_at_utc:state.last_evaluated_at_utc || null,
+      last_snapshot_at_utc:state.last_snapshot_at_utc || null,
+      summary:parse(state.summary_json),
+      updated_at_utc:state.updated_at_utc || null,
+    } : null,
+    incidents:(incidentRows.results || []).map((row)=>({
+      incident_id:String(row.incident_id),
+      state:String(row.state),
+      opened_at_utc:row.opened_at_utc,
+      resolved_at_utc:row.resolved_at_utc || null,
+      first_breach_at_utc:row.first_breach_at_utc,
+      last_breach_at_utc:row.last_breach_at_utc || null,
+      last_seen_at_utc:row.last_seen_at_utc,
+      acknowledged_at_utc:row.acknowledged_at_utc || null,
+      acknowledged_by_subject_id:row.acknowledged_by_subject_id || null,
+      escalation_level:Number(row.escalation_level || 0),
+      escalated_at_utc:row.escalated_at_utc || null,
+      summary:parse(row.summary_json),
+      resolution:parse(row.resolution_json),
+    })),
+  };
+}
+
+async function portalAcknowledgeSloIncident(env, session, body) {
+  if (!betaAccessCanManage(session)) throw new Error("SLO_STATUS_ADMIN_REQUIRED");
+  const incidentId=cleanId(body?.incident_id,180);
+  if (!incidentId) throw new Error("SLO_INCIDENT_ID_REQUIRED");
+  const row=await env.PRODUCT_DB.prepare(
+    "SELECT incident_id,state,acknowledged_at_utc,escalation_level FROM commander_slo_incidents WHERE incident_id=? AND tenant_id=? LIMIT 1"
+  ).bind(incidentId,session.tenant_id).first();
+  if (!row) throw new Error("SLO_INCIDENT_NOT_FOUND");
+  if (String(row.state) !== "OPEN") throw new Error("SLO_INCIDENT_NOT_OPEN");
+  const now=nowIso();
+  await env.PRODUCT_DB.prepare(
+    "UPDATE commander_slo_incidents SET acknowledged_at_utc=COALESCE(acknowledged_at_utc,?),acknowledged_by_subject_id=COALESCE(acknowledged_by_subject_id,?),escalation_level=CASE WHEN escalation_level < 1 THEN 1 ELSE escalation_level END,updated_at_utc=? WHERE incident_id=? AND tenant_id=? AND state='OPEN'"
+  ).bind(now,session.subject_id,now,incidentId,session.tenant_id).run();
+  return await portalSloStatus(env,session);
+}
+
+async function portalEscalateSloIncident(env, session, body) {
+  if (!betaAccessCanManage(session)) throw new Error("SLO_STATUS_ADMIN_REQUIRED");
+  const incidentId=cleanId(body?.incident_id,180);
+  const level=Math.max(1,Math.min(3,Number(body?.level || 2)));
+  if (!incidentId) throw new Error("SLO_INCIDENT_ID_REQUIRED");
+  const row=await env.PRODUCT_DB.prepare(
+    "SELECT incident_id,state,escalation_level FROM commander_slo_incidents WHERE incident_id=? AND tenant_id=? LIMIT 1"
+  ).bind(incidentId,session.tenant_id).first();
+  if (!row) throw new Error("SLO_INCIDENT_NOT_FOUND");
+  if (String(row.state) !== "OPEN") throw new Error("SLO_INCIDENT_NOT_OPEN");
+  const now=nowIso();
+  await env.PRODUCT_DB.prepare(
+    "UPDATE commander_slo_incidents SET escalation_level=CASE WHEN escalation_level < ? THEN ? ELSE escalation_level END,escalated_at_utc=?,updated_at_utc=? WHERE incident_id=? AND tenant_id=? AND state='OPEN'"
+  ).bind(level,level,now,now,incidentId,session.tenant_id).run();
+  return await portalSloStatus(env,session);
+}
+
+function sloAlertDeliveryPayload(tenantId, incidentId, eventType, escalationLevel, occurredAtUtc, summary) {
+  return {
+    schema:"hara.commander-slo-alert.v1",
+    profile:SLO_ALERT_PROFILE,
+    tenant_id:String(tenantId || ""),
+    incident_id:String(incidentId || ""),
+    event_type:String(eventType || ""),
+    escalation_level:Number(escalationLevel || 0),
+    occurred_at_utc:occurredAtUtc,
+    slo:{
+      state:String(summary?.state || ""),
+      online_devices:Number(summary?.online_devices || 0),
+      pass_devices:Number(summary?.pass_devices || 0),
+      degraded_devices:Number(summary?.degraded_devices || 0),
+      insufficient_devices:Number(summary?.insufficient_devices || 0),
+      missing_snapshot_devices:Number(summary?.missing_snapshot_devices || 0),
+      stale_snapshot_devices:Number(summary?.stale_snapshot_devices || 0),
+      weighted_availability_success_rate_percent:summary?.weighted_availability_success_rate_percent ?? null,
+      worst_p50_ms:summary?.worst_p50_ms ?? null,
+      worst_p95_ms:summary?.worst_p95_ms ?? null,
+      worst_p99_ms:summary?.worst_p99_ms ?? null,
+    },
+    privacy:{
+      command_content_included:false,
+      payload_content_included:false,
+      result_content_included:false,
+      customer_content_included:false,
+      secret_material_exposed:false,
+    },
+  };
+}
+
+async function queueSloAlertDelivery(env, tenantId, incidentId, eventType, escalationLevel, occurredAtUtc, summary) {
+  const deliveryKey=[incidentId,eventType,String(escalationLevel || 0)].join(":");
+  const payload=JSON.stringify(sloAlertDeliveryPayload(
+    tenantId,incidentId,eventType,escalationLevel,occurredAtUtc,summary
+  ));
+  await env.PRODUCT_DB.prepare(
+    "INSERT OR IGNORE INTO commander_slo_alert_deliveries (delivery_id,delivery_key,tenant_id,incident_id,event_type,escalation_level,payload_json,state,attempt_count,next_attempt_at_utc,last_attempt_at_utc,delivered_at_utc,last_error_code,created_at_utc,updated_at_utc) VALUES (?, ?, ?, ?, ?, ?, ?, 'PENDING', 0, ?, NULL, NULL, NULL, ?, ?)"
+  ).bind(
+    "HARA-SLO-DEL-"+crypto.randomUUID(),deliveryKey,tenantId,incidentId,eventType,
+    Number(escalationLevel || 0),payload,occurredAtUtc,occurredAtUtc,occurredAtUtc
+  ).run();
+}
+
+async function sloAlertSignature(secret, body) {
+  const key=await crypto.subtle.importKey(
+    "raw",new TextEncoder().encode(String(secret)),{name:"HMAC",hash:"SHA-256"},false,["sign"]
+  );
+  const sig=await crypto.subtle.sign("HMAC",key,new TextEncoder().encode(body));
+  return "sha256="+Array.from(new Uint8Array(sig)).map((b)=>b.toString(16).padStart(2,"0")).join("");
+}
+
+function sloAlertDeliveryErrorCode(error) {
+  const code=String(error?.message || error || "DELIVERY_FAILED").toUpperCase().replace(/[^A-Z0-9_:-]/g,"_");
+  return code.slice(0,96) || "DELIVERY_FAILED";
+}
+
+async function deliverPendingSloAlerts(env) {
+  const endpoint=String(env.SLO_ALERT_WEBHOOK_URL || "").trim();
+  const secret=String(env.SLO_ALERT_WEBHOOK_SECRET || "").trim();
+  if (!endpoint || !secret) return;
+  let parsed;
+  try { parsed=new URL(endpoint); }
+  catch (_error) { return; }
+  if (parsed.protocol !== "https:") return;
+
+  const now=nowIso();
+  const rows=await env.PRODUCT_DB.prepare(
+    "SELECT delivery_id,event_type,payload_json,attempt_count FROM commander_slo_alert_deliveries WHERE state IN ('PENDING','RETRY') AND next_attempt_at_utc <= ? ORDER BY created_at_utc LIMIT ?"
+  ).bind(now,SLO_ALERT_DELIVERY_BATCH).all();
+
+  for (const row of rows.results || []) {
+    const body=String(row.payload_json || "{}");
+    const attemptedAt=nowIso();
+    try {
+      const signature=await sloAlertSignature(secret,body);
+      const response=await fetch(endpoint,{
+        method:"POST",
+        headers:{
+          "content-type":"application/json",
+          "user-agent":"hara-commander-slo-alert/1",
+          "x-hara-event":String(row.event_type || ""),
+          "x-hara-signature":signature,
+        },
+        body,
+      });
+      if (!response.ok) throw new Error("HTTP_"+String(response.status));
+      await env.PRODUCT_DB.prepare(
+        "UPDATE commander_slo_alert_deliveries SET state='DELIVERED',attempt_count=attempt_count+1,last_attempt_at_utc=?,delivered_at_utc=?,last_error_code=NULL,updated_at_utc=? WHERE delivery_id=? AND state IN ('PENDING','RETRY')"
+      ).bind(attemptedAt,attemptedAt,attemptedAt,row.delivery_id).run();
+    } catch (error) {
+      const next=new Date(Date.now()+(SLO_ALERT_DELIVERY_RETRY_SECONDS*1000)).toISOString();
+      await env.PRODUCT_DB.prepare(
+        "UPDATE commander_slo_alert_deliveries SET state='RETRY',attempt_count=attempt_count+1,next_attempt_at_utc=?,last_attempt_at_utc=?,last_error_code=?,updated_at_utc=? WHERE delivery_id=? AND state IN ('PENDING','RETRY')"
+      ).bind(next,attemptedAt,sloAlertDeliveryErrorCode(error),attemptedAt,row.delivery_id).run();
+    }
+  }
+
+  const cutoff=new Date(Date.now()-(SLO_ALERT_DELIVERY_RETENTION_SECONDS*1000)).toISOString();
+  await env.PRODUCT_DB.prepare(
+    "DELETE FROM commander_slo_alert_deliveries WHERE delivery_id IN (SELECT delivery_id FROM commander_slo_alert_deliveries WHERE state='DELIVERED' AND delivered_at_utc IS NOT NULL AND delivered_at_utc < ? ORDER BY delivered_at_utc LIMIT 500)"
+  ).bind(cutoff).run();
+}
+
+async function runSloAlertMaintenance(env) {
+  const now=nowIso();
+  const result=await env.PRODUCT_DB.prepare(
+    "SELECT tenant_id,device_id,device_name,agent_version,last_seen_at_utc,activity_summary_at_utc,activity_summary_json FROM commander_devices WHERE state='ACTIVE' AND revoked_at_utc IS NULL ORDER BY tenant_id,device_name"
+  ).all();
+  const byTenant=new Map();
+  for (const row of result.results || []) {
+    const tenant=String(row.tenant_id || "");
+    if (!tenant) continue;
+    if (!byTenant.has(tenant)) byTenant.set(tenant,[]);
+    byTenant.get(tenant).push(row);
+  }
+  for (const [tenantId,rows] of byTenant.entries()) {
+    const summary=evaluateTenantSloRows(rows);
+    if (!summary) continue;
+    const prior=await env.PRODUCT_DB.prepare(
+      "SELECT state,breach_streak,recovery_streak,current_incident_id FROM commander_slo_state WHERE tenant_id = ? LIMIT 1"
+    ).bind(tenantId).first();
+    let breach=0, recovery=0;
+    let incidentId=prior?.current_incident_id || null;
+    if (summary.state === "DEGRADED") {
+      breach=String(prior?.state || "") === "DEGRADED" ? Number(prior?.breach_streak || 0)+1 : 1;
+      recovery=0;
+      if (!incidentId && breach >= SLO_ALERT_BREACH_STREAK) {
+        incidentId="HARA-SLO-INC-"+crypto.randomUUID();
+        await env.PRODUCT_DB.prepare(
+          "INSERT INTO commander_slo_incidents (incident_id,tenant_id,profile,state,opened_at_utc,resolved_at_utc,first_breach_at_utc,last_breach_at_utc,last_seen_at_utc,summary_json,resolution_json,updated_at_utc) VALUES (?, ?, ?, 'OPEN', ?, NULL, ?, ?, ?, ?, NULL, ?)"
+        ).bind(incidentId,tenantId,SLO_ALERT_PROFILE,now,now,now,now,JSON.stringify(summary),now).run();
+        await queueSloAlertDelivery(env,tenantId,incidentId,"OPENED",0,now,summary);
+      } else if (incidentId) {
+        await env.PRODUCT_DB.prepare(
+          "UPDATE commander_slo_incidents SET last_breach_at_utc=?,last_seen_at_utc=?,summary_json=?,updated_at_utc=? WHERE incident_id=? AND state='OPEN'"
+        ).bind(now,now,JSON.stringify(summary),now,incidentId).run();
+      }
+    } else if (summary.state === "PASS") {
+      breach=0;
+      recovery=incidentId ? Number(prior?.recovery_streak || 0)+1 : 0;
+      if (incidentId && recovery >= SLO_ALERT_RECOVERY_STREAK) {
+        const resolution={state:"PASS",recovered_at_utc:now,recovery_streak:recovery,summary};
+        await env.PRODUCT_DB.prepare(
+          "UPDATE commander_slo_incidents SET state='RESOLVED',resolved_at_utc=?,last_seen_at_utc=?,resolution_json=?,updated_at_utc=? WHERE incident_id=? AND state='OPEN'"
+        ).bind(now,now,JSON.stringify(resolution),now,incidentId).run();
+        await queueSloAlertDelivery(env,tenantId,incidentId,"RESOLVED",0,now,summary);
+        incidentId=null;
+        recovery=0;
+      } else if (incidentId) {
+        await env.PRODUCT_DB.prepare(
+          "UPDATE commander_slo_incidents SET last_seen_at_utc=?,updated_at_utc=? WHERE incident_id=? AND state='OPEN'"
+        ).bind(now,now,incidentId).run();
+      }
+    } else {
+      breach=0;
+      recovery=0;
+    }
+    await env.PRODUCT_DB.prepare(
+      "INSERT INTO commander_slo_state (tenant_id,profile,state,breach_streak,recovery_streak,current_incident_id,last_evaluated_at_utc,last_snapshot_at_utc,summary_json,updated_at_utc) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(tenant_id) DO UPDATE SET profile=excluded.profile,state=excluded.state,breach_streak=excluded.breach_streak,recovery_streak=excluded.recovery_streak,current_incident_id=excluded.current_incident_id,last_evaluated_at_utc=excluded.last_evaluated_at_utc,last_snapshot_at_utc=excluded.last_snapshot_at_utc,summary_json=excluded.summary_json,updated_at_utc=excluded.updated_at_utc"
+    ).bind(tenantId,SLO_ALERT_PROFILE,summary.state,breach,recovery,incidentId,now,summary.last_snapshot_at_utc,JSON.stringify(summary),now).run();
+
+    if (incidentId) {
+      const open=await env.PRODUCT_DB.prepare(
+        "SELECT opened_at_utc,escalation_level FROM commander_slo_incidents WHERE incident_id=? AND tenant_id=? AND state='OPEN' LIMIT 1"
+      ).bind(incidentId,tenantId).first();
+      const openedMs=Date.parse(String(open?.opened_at_utc || ""));
+      if (Number.isFinite(openedMs)) {
+        const ageSeconds=Math.max(0,Math.floor((Date.now()-openedMs)/1000));
+        const targetLevel=ageSeconds >= SLO_ALERT_ESCALATION_L3_SECONDS
+          ? 3
+          : (ageSeconds >= SLO_ALERT_ESCALATION_L2_SECONDS
+            ? 2
+            : (ageSeconds >= SLO_ALERT_ESCALATION_L1_SECONDS ? 1 : 0));
+        if (targetLevel > Number(open?.escalation_level || 0)) {
+          await env.PRODUCT_DB.prepare(
+            "UPDATE commander_slo_incidents SET escalation_level=?,escalated_at_utc=?,updated_at_utc=? WHERE incident_id=? AND tenant_id=? AND state='OPEN' AND escalation_level < ?"
+          ).bind(targetLevel,now,now,incidentId,tenantId,targetLevel).run();
+          await queueSloAlertDelivery(env,tenantId,incidentId,"ESCALATED",targetLevel,now,summary);
+        }
+      }
+    }
+  }
+  const cutoff=new Date(Date.now()-(SLO_ALERT_INCIDENT_RETENTION_SECONDS*1000)).toISOString();
+  await env.PRODUCT_DB.prepare(
+    "DELETE FROM commander_slo_incidents WHERE incident_id IN (SELECT incident_id FROM commander_slo_incidents WHERE state='RESOLVED' AND resolved_at_utc IS NOT NULL AND resolved_at_utc < ? ORDER BY resolved_at_utc LIMIT 500)"
+  ).bind(cutoff).run();
+  await deliverPendingSloAlerts(env);
+}
+
+function supportReportTime(value) {
+  const ms=Date.parse(String(value || ""));
+  return Number.isFinite(ms) ? new Date(ms).toISOString() : null;
+}
+
+function supportReportNumber(value,max=1_000_000_000) {
+  const number=Number(value);
+  if (!Number.isFinite(number) || number < 0) return null;
+  return Math.min(max,Math.round(number*10)/10);
+}
+
+function cleanSupportReportV2(body) {
+  if (!body || typeof body !== "object" || body.schema !== "hara.commander-support-report.v2") {
+    throw new Error("SUPPORT_REPORT_SCHEMA_INVALID");
+  }
+  const privacy=body.privacy || {};
+  for (const key of [
+    "secret_material_exposed",
+    "customer_content_included",
+    "command_content_included",
+    "payload_content_included",
+    "result_content_included",
+  ]) {
+    if (privacy[key] !== false) throw new Error("SUPPORT_REPORT_PRIVACY_INVALID");
+  }
+
+  const deviceId=cleanId(body.device_id,180);
+  if (!deviceId) throw new Error("SUPPORT_REPORT_DEVICE_REQUIRED");
+  const summary=body.activity_24h?.summary || {};
+  const slo=body.activity_24h?.slo || {};
+  const topErrors=Array.isArray(body.activity_24h?.top_errors)
+    ? body.activity_24h.top_errors.slice(0,6)
+    : [];
+  const lease=body.product_lease && typeof body.product_lease === "object"
+    ? body.product_lease
+    : null;
+  const budget=body.local_budget && typeof body.local_budget === "object"
+    ? body.local_budget
+    : null;
+  const operations=body.operations_db && typeof body.operations_db === "object"
+    ? body.operations_db
+    : null;
+  const receipts=Array.isArray(body.recent_receipt_sha256)
+    ? [...new Set(body.recent_receipt_sha256
+        .map((value)=>String(value || "").toLowerCase())
+        .filter((value)=>/^[a-f0-9]{64}$/.test(value)))]
+        .slice(0,10)
+    : [];
+
+  const sanitized={
+    schema:"hara.commander-support-report.v2",
+    platform:cleanAgentValue(body.platform,40) || "UNKNOWN",
+    computer:cleanAgentValue(body.computer,160) || null,
+    device_id:deviceId,
+    agent_version:cleanAgentValue(body.agent_version,80) || null,
+    approval_mode:cleanAgentValue(body.approval_mode,80) || null,
+    operator_session_active:body.operator_session_active === true,
+    last_successful_heartbeat_at_utc:supportReportTime(body.last_successful_heartbeat_at_utc),
+    last_runtime_error_code:cleanAgentValue(body.last_runtime_error_code,120) || null,
+    last_runtime_error_at_utc:supportReportTime(body.last_runtime_error_at_utc),
+    activity_24h:{
+      summary:{
+        total_calls:supportReportNumber(summary.total_calls),
+        completed:supportReportNumber(summary.completed),
+        failed:supportReportNumber(summary.failed),
+        client_failed:supportReportNumber(summary.client_failed),
+        policy_failed:supportReportNumber(summary.policy_failed),
+        service_failed:supportReportNumber(summary.service_failed),
+        success_rate_percent:supportReportNumber(summary.success_rate_percent,100),
+        availability_success_rate_percent:supportReportNumber(summary.availability_success_rate_percent,100),
+        avg_total_ms:supportReportNumber(summary.avg_total_ms),
+        latency_p50_ms:supportReportNumber(summary.latency_p50_ms),
+        latency_p95_ms:supportReportNumber(summary.latency_p95_ms),
+        latency_p99_ms:supportReportNumber(summary.latency_p99_ms),
+        latency_sample_size:supportReportNumber(summary.latency_sample_size,100000),
+        latency_population_size:supportReportNumber(summary.latency_population_size,100000000),
+        latency_sample_capped:summary.latency_sample_capped === true,
+      },
+      slo:{
+        profile:SLO_ALERT_PROFILE,
+        status:["PASS","DEGRADED","INSUFFICIENT_DATA"].includes(String(slo.status || ""))
+          ? String(slo.status)
+          : "INSUFFICIENT_DATA",
+        evaluable:slo.evaluable === true,
+      },
+      top_errors:topErrors.map((row)=>({
+        error_code:cleanAgentValue(row?.error_code,120) || "UNKNOWN",
+        calls:supportReportNumber(row?.calls,1000000) || 0,
+      })),
+    },
+    product_lease:lease ? {
+      plan_code:cleanAgentValue(lease.plan_code,80) || null,
+      usage_mode:cleanAgentValue(lease.usage_mode,80) || null,
+      period_kind:cleanAgentValue(lease.period_kind,80) || null,
+      valid_until_utc:supportReportTime(lease.valid_until_utc),
+      signed_token_present:lease.signed_token_present === true,
+    } : null,
+    local_budget:budget ? {
+      budget_id:cleanAgentValue(budget.budget_id,180) || null,
+      state:cleanAgentValue(budget.state,40) || null,
+      allocated_units:supportReportNumber(budget.allocated_units,1000000),
+      committed_units:supportReportNumber(budget.committed_units,1000000),
+      reserved_units:supportReportNumber(budget.reserved_units,1000000),
+      remaining_units:supportReportNumber(budget.remaining_units,1000000),
+      expires_at_utc:supportReportTime(budget.expires_at_utc),
+    } : null,
+    operations_db:operations ? {
+      present:operations.present === true,
+      bytes:supportReportNumber(operations.bytes,1024*1024*1024),
+      mode:/^[0-7]{3,4}$/.test(String(operations.mode || "")) ? String(operations.mode) : null,
+    } : null,
+    recent_receipt_sha256:receipts,
+    privacy:{
+      secret_material_exposed:false,
+      customer_content_included:false,
+      command_content_included:false,
+      payload_content_included:false,
+      result_content_included:false,
+    },
+  };
+  const raw=JSON.stringify(sanitized);
+  if (new TextEncoder().encode(raw).length > SUPPORT_REPORT_MAX_BYTES) {
+    throw new Error("SUPPORT_REPORT_TOO_LARGE");
+  }
+  return sanitized;
+}
+
+async function submitPortalSupportReport(env,session,body) {
+  if (!betaAccessCanManage(session)) throw new Error("SUPPORT_REPORT_ADMIN_REQUIRED");
+  const report=cleanSupportReportV2(body);
+  const device=await env.PRODUCT_DB.prepare(
+    "SELECT device_id FROM commander_devices WHERE device_id=? AND tenant_id=? AND state='ACTIVE' AND revoked_at_utc IS NULL LIMIT 1"
+  ).bind(report.device_id,session.tenant_id).first();
+  if (!device) throw new Error("SUPPORT_REPORT_DEVICE_NOT_FOUND");
+  const now=nowIso();
+  const reportId="HARA-SUPPORT-"+crypto.randomUUID();
+  const expires=new Date(Date.now()+(SUPPORT_REPORT_RETENTION_SECONDS*1000)).toISOString();
+  const sql="INSERT INTO commander_support_reports "+
+    "(support_report_id,tenant_id,subject_id,device_id,schema_version,platform,"+
+    "agent_version,captured_at_utc,submitted_at_utc,expires_at_utc,slo_status,"+
+    "last_runtime_error_code,report_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+  await env.PRODUCT_DB.prepare(sql).bind(
+    reportId,session.tenant_id,session.subject_id,report.device_id,report.schema,
+    report.platform,report.agent_version,report.last_successful_heartbeat_at_utc,
+    now,expires,report.activity_24h?.slo?.status || null,
+    report.last_runtime_error_code,JSON.stringify(report),
+  ).run();
+  return {
+    schema:"hara.commander-support-report-receipt.v1",
+    support_report_id:reportId,
+    device_id:report.device_id,
+    submitted_at_utc:now,
+    expires_at_utc:expires,
+    report,
+  };
+}
+
+async function listPortalSupportReports(env,session,limitValue=20,deviceValue=null) {
+  if (!betaAccessCanManage(session)) throw new Error("SUPPORT_REPORT_ADMIN_REQUIRED");
+  const limit=Math.max(1,Math.min(50,Number(limitValue || 20)));
+  const deviceId=deviceValue ? cleanId(deviceValue,180) : null;
+  let result;
+  if (deviceId) {
+    const sql="SELECT support_report_id,device_id,platform,agent_version,captured_at_utc,"+
+      "submitted_at_utc,expires_at_utc,slo_status,last_runtime_error_code,report_json "+
+      "FROM commander_support_reports WHERE tenant_id=? AND device_id=? "+
+      "ORDER BY submitted_at_utc DESC LIMIT ?";
+    result=await env.PRODUCT_DB.prepare(sql).bind(session.tenant_id,deviceId,limit).all();
+  } else {
+    const sql="SELECT support_report_id,device_id,platform,agent_version,captured_at_utc,"+
+      "submitted_at_utc,expires_at_utc,slo_status,last_runtime_error_code,report_json "+
+      "FROM commander_support_reports WHERE tenant_id=? "+
+      "ORDER BY submitted_at_utc DESC LIMIT ?";
+    result=await env.PRODUCT_DB.prepare(sql).bind(session.tenant_id,limit).all();
+  }
+  return {
+    schema:"hara.commander-support-report-list.v1",
+    reports:(result.results || []).map((row)=>({
+      support_report_id:String(row.support_report_id),
+      device_id:String(row.device_id),
+      platform:String(row.platform),
+      agent_version:row.agent_version || null,
+      captured_at_utc:row.captured_at_utc || null,
+      submitted_at_utc:row.submitted_at_utc,
+      expires_at_utc:row.expires_at_utc,
+      slo_status:row.slo_status || null,
+      last_runtime_error_code:row.last_runtime_error_code || null,
+      report:(()=>{ try { return JSON.parse(String(row.report_json || "{}")); } catch (_error) { return null; } })(),
+    })),
+  };
+}
+
+async function deletePortalSupportReport(env,session,body) {
+  if (!betaAccessCanManage(session)) throw new Error("SUPPORT_REPORT_ADMIN_REQUIRED");
+  const reportId=cleanId(body?.support_report_id,180);
+  if (!reportId) throw new Error("SUPPORT_REPORT_ID_REQUIRED");
+  const existing=await env.PRODUCT_DB.prepare(
+    "SELECT support_report_id FROM commander_support_reports WHERE support_report_id=? AND tenant_id=? LIMIT 1"
+  ).bind(reportId,session.tenant_id).first();
+  if (!existing) throw new Error("SUPPORT_REPORT_NOT_FOUND");
+  await env.PRODUCT_DB.prepare(
+    "DELETE FROM commander_support_reports WHERE support_report_id=? AND tenant_id=?"
+  ).bind(reportId,session.tenant_id).run();
+  return {schema:"hara.commander-support-report-delete.v1",support_report_id:reportId,deleted:true};
+}
+
+async function cleanupExpiredSupportReports(env) {
+  const cutoff=nowIso();
+  const sql="DELETE FROM commander_support_reports WHERE support_report_id IN ("+
+    "SELECT support_report_id FROM commander_support_reports WHERE expires_at_utc < ? "+
+    "ORDER BY expires_at_utc LIMIT ?)";
+  await env.PRODUCT_DB.prepare(sql).bind(cutoff,SUPPORT_REPORT_RETENTION_BATCH).run();
+}
+
+async function portalActivityFromLocalSnapshots(env, session, window) {
+  if (!["OWNER","ADMIN"].includes(String(session.role || "").toUpperCase())) return null;
+  const result=await env.PRODUCT_DB.prepare(
+    `SELECT device_id,device_name,tunnel_mode,agent_version,
+            activity_summary_json,activity_summary_at_utc
+       FROM commander_devices
+      WHERE tenant_id = ?
+        AND state = 'ACTIVE'
+        AND revoked_at_utc IS NULL
+      ORDER BY device_name`
+  ).bind(session.tenant_id).all();
+
+  const deviceRows=result.results || [];
+  const snapshots=[];
+  for (const row of deviceRows) {
+    try {
+      const parsed=JSON.parse(String(row.activity_summary_json || ""));
+      const selected=parsed?.windows?.[window.key];
+      if (!selected?.summary) continue;
+      snapshots.push({row, selected});
+    } catch (_error) {}
+  }
+  if (!snapshots.length) return null;
+
+  const totals={
+    total_calls:0,completed:0,failed:0,client_failed:0,policy_failed:0,service_failed:0,
+    pending:0,executing:0,expired:0,cancelled:0,
+    under3_weighted:0,total_ms_weighted:0,queue_ms_weighted:0,exec_ms_weighted:0,
+    duration_weight:0,
+  };
+  const tools=new Map();
+  const errors=new Map();
+  const transports=new Set();
+  const percentileValues={p50:[],p95:[],p99:[]};
+  let latencySampleSize=0;
+  let latencyPopulationSize=0;
+  let latencySampleCapped=false;
+  let sloPass=0;
+  let sloDegraded=0;
+  let sloInsufficient=0;
+
+  for (const item of snapshots) {
+    const summary=item.selected.summary || {};
+    const total=Number(summary.total_calls || 0);
+    const completed=Number(summary.completed || 0);
+    totals.total_calls+=total;
+    totals.completed+=completed;
+    const rawFailed=Number(summary.failed || 0);
+    totals.failed+=rawFailed;
+    totals.client_failed+=Number(summary.client_failed || 0);
+    totals.policy_failed+=Number(summary.policy_failed || 0);
+    totals.service_failed+=summary.service_failed == null ? rawFailed : Number(summary.service_failed || 0);
+    totals.pending+=Number(summary.pending || 0);
+    totals.executing+=Number(summary.executing || 0);
+    totals.expired+=Number(summary.expired || 0);
+    totals.cancelled+=Number(summary.cancelled || 0);
+    if (summary.under_3s_percent != null) {
+      totals.under3_weighted+=(Number(summary.under_3s_percent || 0)/100)*completed;
+    }
+    if (total > 0) {
+      totals.duration_weight+=total;
+      if (summary.avg_total_ms != null) totals.total_ms_weighted+=Number(summary.avg_total_ms)*total;
+      if (summary.avg_queue_ms != null) totals.queue_ms_weighted+=Number(summary.avg_queue_ms)*total;
+      if (summary.avg_execution_ms != null) totals.exec_ms_weighted+=Number(summary.avg_execution_ms)*total;
+    }
+    for (const [key,field] of [["p50","latency_p50_ms"],["p95","latency_p95_ms"],["p99","latency_p99_ms"]]) {
+      if (summary[field] != null) percentileValues[key].push(Number(summary[field]));
+    }
+    latencySampleSize+=Number(summary.latency_sample_size || 0);
+    latencyPopulationSize+=Number(summary.latency_population_size || 0);
+    latencySampleCapped=latencySampleCapped || summary.latency_sample_capped === true;
+    const deviceSlo=String(item.selected.slo?.status || "INSUFFICIENT_DATA");
+    if (deviceSlo === "PASS") sloPass+=1;
+    else if (deviceSlo === "DEGRADED") sloDegraded+=1;
+    else sloInsufficient+=1;
+    for (const mode of summary.transport_modes || []) transports.add(String(mode));
+    for (const row of item.selected.diagnostics?.top_tools || []) {
+      const key=String(row.tool_id || "unknown");
+      tools.set(key,(tools.get(key)||0)+Number(row.calls || 0));
+    }
+    for (const row of item.selected.diagnostics?.top_errors || []) {
+      const key=String(row.error_code || "UNKNOWN");
+      errors.set(key,(errors.get(key)||0)+Number(row.calls || 0));
+    }
+  }
+
+  const terminal=totals.completed+totals.failed+totals.expired+totals.cancelled;
+  const availabilityTerminal=totals.completed+totals.service_failed+totals.expired+totals.cancelled;
+  const top=(map,key)=>[...map.entries()]
+    .map(([name,calls])=>({[key]:name,calls}))
+    .sort((a,b)=>b.calls-a.calls || String(a[key]).localeCompare(String(b[key])))
+    .slice(0,6);
+
+  const aggregateSloStatus=sloDegraded
+    ? "DEGRADED"
+    : (sloPass ? "PASS" : "INSUFFICIENT_DATA");
+  const payload={
+    schema:"hara.commander-portal-activity.v2",
+    scope:"TENANT",
+    source:"LOCAL_DEVICE_SNAPSHOTS",
+    detail_location:"LOCAL_DEVICE",
+    cloud_history_scanned:false,
+    snapshot_device_count:snapshots.length,
+    active_device_count:deviceRows.length,
+    snapshot_coverage_percent:deviceRows.length
+      ? Number(((snapshots.length/deviceRows.length)*100).toFixed(1))
+      : 100,
+    snapshot_updated_at_utc:snapshots
+      .map((item)=>String(item.row.activity_summary_at_utc || ""))
+      .filter(Boolean).sort().at(-1) || null,
+    window,
+    privacy:{
+      payload_values_exposed:false,
+      result_values_exposed:false,
+      request_id_exposed:false,
+      command_text_exposed:false,
+      argument_values_exposed:false,
+      historical_command_text_persisted:false,
+      detailed_history_location:"LOCAL_DEVICE",
+      customer_content_synced:false,
+      metadata_only:true,
+    },
+    diagnostics:{
+      top_tools:top(tools,"tool_id"),
+      top_errors:top(errors,"error_code"),
+    },
+    summary:{
+      total_calls:totals.total_calls,
+      completed:totals.completed,
+      failed:totals.failed,
+      client_failed:totals.client_failed,
+      policy_failed:totals.policy_failed,
+      service_failed:totals.service_failed,
+      pending:totals.pending,
+      executing:totals.executing,
+      expired:totals.expired,
+      cancelled:totals.cancelled,
+      success_rate_percent:terminal ? Number(((totals.completed/terminal)*100).toFixed(1)) : null,
+      availability_success_rate_percent:availabilityTerminal
+        ? Number(((totals.completed/availabilityTerminal)*100).toFixed(1))
+        : null,
+      under_3s_percent:totals.completed ? Number(((totals.under3_weighted/totals.completed)*100).toFixed(1)) : null,
+      avg_queue_ms:totals.duration_weight ? Number((totals.queue_ms_weighted/totals.duration_weight).toFixed(1)) : null,
+      avg_execution_ms:totals.duration_weight ? Number((totals.exec_ms_weighted/totals.duration_weight).toFixed(1)) : null,
+      avg_total_ms:totals.duration_weight ? Number((totals.total_ms_weighted/totals.duration_weight).toFixed(1)) : null,
+      latency_p50_ms:percentileValues.p50.length ? Math.max(...percentileValues.p50) : null,
+      latency_p95_ms:percentileValues.p95.length ? Math.max(...percentileValues.p95) : null,
+      latency_p99_ms:percentileValues.p99.length ? Math.max(...percentileValues.p99) : null,
+      latency_sample_size:latencySampleSize,
+      latency_population_size:latencyPopulationSize,
+      latency_sample_capped:latencySampleCapped,
+      device_count:snapshots.length,
+      transport_modes:[...transports],
+    },
+    slo:{
+      profile:"INTERNAL_BETA_V1",
+      status:aggregateSloStatus,
+      evaluable_devices:sloPass+sloDegraded,
+      pass_devices:sloPass,
+      degraded_devices:sloDegraded,
+      insufficient_devices:sloInsufficient,
+    },
+    transactions:[],
+  };
+  Object.defineProperty(payload, "_covered_device_ids", {
+    value:snapshots.map((item)=>String(item.row.device_id || "")).filter(Boolean),
+    enumerable:false,
+  });
+  return payload;
+}
+
+function mergeActivityBreakdown(localItems, cloudItems, key) {
+  const combined=new Map();
+  for (const item of [...(localItems || []), ...(cloudItems || [])]) {
+    const name=String(item?.[key] || (key === "tool_id" ? "unknown" : "UNKNOWN"));
+    combined.set(name,(combined.get(name)||0)+Number(item?.calls || 0));
+  }
+  return [...combined.entries()]
+    .map(([name,calls])=>({[key]:name,calls}))
+    .sort((a,b)=>b.calls-a.calls || String(a[key]).localeCompare(String(b[key])))
+    .slice(0,6);
+}
+
+function mergePortalActivity(local, cloud) {
+  if (!local) return cloud;
+  const a=local.summary || {};
+  const b=cloud.summary || {};
+  const localTotal=Number(a.total_calls || 0);
+  const cloudTotal=Number(b.total_calls || 0);
+  const total=localTotal+cloudTotal;
+  const completed=Number(a.completed || 0)+Number(b.completed || 0);
+  const failed=Number(a.failed || 0)+Number(b.failed || 0);
+  const clientFailed=Number(a.client_failed || 0)+Number(b.client_failed || 0);
+  const policyFailed=Number(a.policy_failed || 0)+Number(b.policy_failed || 0);
+  const serviceFailed=Number(a.service_failed == null ? a.failed : a.service_failed)
+    +Number(b.service_failed == null ? b.failed : b.service_failed);
+  const expired=Number(a.expired || 0)+Number(b.expired || 0);
+  const cancelled=Number(a.cancelled || 0)+Number(b.cancelled || 0);
+  const terminal=completed+failed+expired+cancelled;
+  const availabilityTerminal=completed+serviceFailed+expired+cancelled;
+  const weighted=(field)=>{
+    const values=[];
+    if (a[field] != null && localTotal) values.push([Number(a[field]),localTotal]);
+    if (b[field] != null && cloudTotal) values.push([Number(b[field]),cloudTotal]);
+    const weight=values.reduce((sum,item)=>sum+item[1],0);
+    return weight ? Number((values.reduce((sum,item)=>sum+(item[0]*item[1]),0)/weight).toFixed(1)) : null;
+  };
+  const under3Count=
+    (a.under_3s_percent == null ? 0 : (Number(a.under_3s_percent)/100)*Number(a.completed || 0))
+    +(b.under_3s_percent == null ? 0 : (Number(b.under_3s_percent)/100)*Number(b.completed || 0));
+  const percentileMax=(field)=>{
+    const values=[a[field],b[field]].filter((value)=>value != null).map(Number);
+    return values.length ? Math.max(...values) : null;
+  };
+  return {
+    ...cloud,
+    schema:"hara.commander-portal-activity.v2",
+    source:cloudTotal ? "LOCAL_DEVICE_SNAPSHOTS_WITH_CLOUD_FALLBACK" : "LOCAL_DEVICE_SNAPSHOTS",
+    detail_location:cloudTotal ? "LOCAL_DEVICE_WITH_CLOUD_FALLBACK" : "LOCAL_DEVICE",
+    cloud_history_scanned:Boolean(cloud.cloud_history_scanned),
+    snapshot_device_count:local.snapshot_device_count,
+    active_device_count:local.active_device_count,
+    snapshot_coverage_percent:local.snapshot_coverage_percent,
+    snapshot_updated_at_utc:local.snapshot_updated_at_utc,
+    privacy:{
+      ...cloud.privacy,
+      detailed_history_location:cloudTotal ? "LOCAL_DEVICE_AND_LEGACY_CLOUD_FALLBACK" : "LOCAL_DEVICE",
+      customer_content_synced:false,
+      metadata_only:true,
+    },
+    diagnostics:{
+      top_tools:mergeActivityBreakdown(local.diagnostics?.top_tools,cloud.diagnostics?.top_tools,"tool_id"),
+      top_errors:mergeActivityBreakdown(local.diagnostics?.top_errors,cloud.diagnostics?.top_errors,"error_code"),
+    },
+    slo:local.slo || cloud.slo || {profile:"INTERNAL_BETA_V1",status:"INSUFFICIENT_DATA"},
+    summary:{
+      total_calls:total,
+      completed,
+      failed,
+      client_failed:clientFailed,
+      policy_failed:policyFailed,
+      service_failed:serviceFailed,
+      pending:Number(a.pending || 0)+Number(b.pending || 0),
+      executing:Number(a.executing || 0)+Number(b.executing || 0),
+      expired,
+      cancelled,
+      success_rate_percent:terminal ? Number(((completed/terminal)*100).toFixed(1)) : null,
+      availability_success_rate_percent:availabilityTerminal
+        ? Number(((completed/availabilityTerminal)*100).toFixed(1))
+        : null,
+      under_3s_percent:completed ? Number(((under3Count/completed)*100).toFixed(1)) : null,
+      avg_queue_ms:weighted("avg_queue_ms"),
+      avg_execution_ms:weighted("avg_execution_ms"),
+      avg_total_ms:weighted("avg_total_ms"),
+      latency_p50_ms:percentileMax("latency_p50_ms"),
+      latency_p95_ms:percentileMax("latency_p95_ms"),
+      latency_p99_ms:percentileMax("latency_p99_ms"),
+      latency_sample_size:Number(a.latency_sample_size || 0)+Number(b.latency_sample_size || 0),
+      latency_population_size:Number(a.latency_population_size || 0)+Number(b.latency_population_size || 0),
+      latency_sample_capped:a.latency_sample_capped === true || b.latency_sample_capped === true,
+      device_count:Number(local.snapshot_device_count || 0)+Number(b.device_count || 0),
+      transport_modes:[...new Set([
+        ...(a.transport_modes || []),
+        ...(b.transport_modes || []),
+      ])],
+    },
+    transactions:cloud.transactions || [],
+  };
+}
+
+async function portalActivity(env, session, limitValue=50, windowValue="7d") {
+  const limit=Math.max(1,Math.min(100,Number(limitValue || 50)));
+  const window=portalActivityWindow(windowValue);
+  const privileged=["OWNER","ADMIN"].includes(String(session.role || "").toUpperCase());
+  const local=privileged
+    ? await portalActivityFromLocalSnapshots(env,session,window)
+    : null;
+  if (
+    local
+    && Number(local.active_device_count || 0) > 0
+    && Number(local.snapshot_device_count || 0) === Number(local.active_device_count || 0)
+  ) {
+    return local;
+  }
+  const clauses=["c.tenant_id = ?","c.created_at_utc >= ?"];
+  const binds=[session.tenant_id,window.since_at_utc];
+  if (local?._covered_device_ids?.length) {
+    const placeholders=local._covered_device_ids.map(()=>"?").join(",");
+    clauses.push(`c.device_id NOT IN (${placeholders})`);
+    binds.push(...local._covered_device_ids);
+  }
+  if (!privileged) {
+    clauses.push("c.subject_id = ?");
+    binds.push(session.subject_id);
+  }
+  const where=clauses.join(" AND ");
+
+  const summarySql=`
+    SELECT
+      COUNT(*) AS total_calls,
+      SUM(CASE WHEN c.state='COMPLETED' THEN 1 ELSE 0 END) AS completed,
+      SUM(CASE WHEN c.state='FAILED' THEN 1 ELSE 0 END) AS failed,
+      SUM(CASE WHEN c.state='PENDING' THEN 1 ELSE 0 END) AS pending,
+      SUM(CASE WHEN c.state='EXECUTING' THEN 1 ELSE 0 END) AS executing,
+      SUM(CASE WHEN c.state='EXPIRED' THEN 1 ELSE 0 END) AS expired,
+      SUM(CASE WHEN c.state='CANCELLED' THEN 1 ELSE 0 END) AS cancelled,
+      COUNT(DISTINCT c.device_id) AS device_count,
+      GROUP_CONCAT(DISTINCT d.tunnel_mode) AS transport_modes,
+      ROUND(AVG(CASE WHEN c.state='COMPLETED' AND c.claimed_at_utc IS NOT NULL
+        THEN (julianday(c.claimed_at_utc)-julianday(c.created_at_utc))*86400000 END),1) AS avg_queue_ms,
+      ROUND(AVG(CASE WHEN c.state='COMPLETED' AND c.claimed_at_utc IS NOT NULL AND c.completed_at_utc IS NOT NULL
+        THEN (julianday(c.completed_at_utc)-julianday(c.claimed_at_utc))*86400000 END),1) AS avg_exec_ms,
+      ROUND(AVG(CASE WHEN c.state='COMPLETED' AND c.completed_at_utc IS NOT NULL
+        THEN (julianday(c.completed_at_utc)-julianday(c.created_at_utc))*86400000 END),1) AS avg_total_ms,
+      SUM(CASE WHEN c.state='COMPLETED' AND c.completed_at_utc IS NOT NULL
+        AND (julianday(c.completed_at_utc)-julianday(c.created_at_utc))*86400000 < 3000 THEN 1 ELSE 0 END) AS under_3s
+    FROM commander_device_calls c
+    JOIN commander_devices d ON d.device_id=c.device_id
+    WHERE ${where}`;
+
+  const recentSql=`
+    SELECT c.call_id,c.request_id,c.tool_id,c.state,c.created_at_utc,c.claimed_at_utc,
+           c.completed_at_utc,c.error_code,d.device_name,d.tunnel_mode,d.agent_version
+      FROM commander_device_calls c
+      JOIN commander_devices d ON d.device_id=c.device_id
+     WHERE ${where}
+     ORDER BY c.created_at_utc DESC
+     LIMIT ?`;
+
+  const topToolsSql=`
+    SELECT c.tool_id,COUNT(*) AS calls
+      FROM commander_device_calls c
+     WHERE ${where}
+     GROUP BY c.tool_id
+     ORDER BY calls DESC,c.tool_id
+     LIMIT 6`;
+
+  const topErrorsSql=`
+    SELECT COALESCE(c.error_code,'UNKNOWN') AS error_code,COUNT(*) AS calls
+      FROM commander_device_calls c
+     WHERE ${where}
+       AND c.state='FAILED'
+     GROUP BY COALESCE(c.error_code,'UNKNOWN')
+     ORDER BY calls DESC,error_code
+     LIMIT 6`;
+
+  const [summaryRow,recentResult,topToolsResult,topErrorsResult]=await Promise.all([
+    env.PRODUCT_DB.prepare(summarySql).bind(...binds).first(),
+    env.PRODUCT_DB.prepare(recentSql).bind(...binds,limit).all(),
+    env.PRODUCT_DB.prepare(topToolsSql).bind(...binds).all(),
+    env.PRODUCT_DB.prepare(topErrorsSql).bind(...binds).all(),
+  ]);
+
+  const summary=summaryRow || {};
+  const total=Number(summary.total_calls || 0);
+  const completed=Number(summary.completed || 0);
+  const failed=Number(summary.failed || 0);
+  const expired=Number(summary.expired || 0);
+  const cancelled=Number(summary.cancelled || 0);
+  const terminal=completed+failed+expired+cancelled;
+  const transportModes=String(summary.transport_modes || "")
+    .split(",").map((value)=>value.trim()).filter(Boolean);
+
+  const transactions=(recentResult.results || []).map((row)=>({
+    trace_id:String(row.call_id || ""),
+    source:portalActivitySource(row.request_id),
+    tool_id:String(row.tool_id || ""),
+    computer:String(row.device_name || ""),
+    transport_mode:String(row.tunnel_mode || ""),
+    agent_version:String(row.agent_version || ""),
+    state:String(row.state || ""),
+    created_at_utc:row.created_at_utc,
+    claimed_at_utc:row.claimed_at_utc,
+    completed_at_utc:row.completed_at_utc,
+    queue_ms:elapsedMs(row.created_at_utc,row.claimed_at_utc),
+    execution_ms:elapsedMs(row.claimed_at_utc,row.completed_at_utc),
+    total_ms:elapsedMs(row.created_at_utc,row.completed_at_utc),
+    error_code:row.error_code || null,
+  }));
+
+  const cloud={
+    schema:"hara.commander-portal-activity.v1",
+    scope:privileged ? "TENANT" : "SUBJECT",
+    source:"CLOUD_CALL_HISTORY",
+    detail_location:"CLOUD_LEGACY",
+    cloud_history_scanned:true,
+    window,
+    privacy:{
+      payload_values_exposed:false,
+      result_values_exposed:false,
+      request_id_exposed:false,
+      command_text_exposed:false,
+      argument_values_exposed:false,
+      historical_command_text_persisted:false,
+      payload_hot_path_transient:true,
+      metadata_only:true,
+    },
+    diagnostics:{
+      top_tools:(topToolsResult.results || []).map((row)=>({
+        tool_id:String(row.tool_id || ""),
+        calls:Number(row.calls || 0),
+      })),
+      top_errors:(topErrorsResult.results || []).map((row)=>({
+        error_code:String(row.error_code || "UNKNOWN"),
+        calls:Number(row.calls || 0),
+      })),
+    },
+    summary:{
+      total_calls:total,
+      completed,
+      failed,
+      pending:Number(summary.pending || 0),
+      executing:Number(summary.executing || 0),
+      expired,
+      cancelled,
+      success_rate_percent:terminal ? Number(((completed/terminal)*100).toFixed(1)) : null,
+      under_3s_percent:completed ? Number(((Number(summary.under_3s || 0)/completed)*100).toFixed(1)) : null,
+      avg_queue_ms:summary.avg_queue_ms == null ? null : Number(summary.avg_queue_ms),
+      avg_execution_ms:summary.avg_exec_ms == null ? null : Number(summary.avg_exec_ms),
+      avg_total_ms:summary.avg_total_ms == null ? null : Number(summary.avg_total_ms),
+      device_count:Number(summary.device_count || 0),
+      transport_modes:transportModes,
+    },
+    transactions,
+  };
+  return mergePortalActivity(local,cloud);
+}
+
 async function executeCustomerMcpTool(
   env,
   identity,
   toolId,
   args,
   mcpRequestId,
+  transportRequestId,
 ) {
   const requiredGrant = MCP_TOOL_GRANTS[toolId];
   if (!requiredGrant) throw new Error("POLICY_DENIED");
@@ -2179,26 +4468,78 @@ async function executeCustomerMcpTool(
   if (!context.ok) throw new Error(context.code);
   if (!context.grants.includes(requiredGrant)) throw new Error("GRANT_MISSING");
 
+  if (toolId === "hara.devices.list") {
+    const devices = await listDevices(env, { tenant_id: context.tenant_id });
+    return {
+      state: "PASS", operational_authority: "HARA_SERVICES", execution_authority: "HARA_SERVICES",
+      runtime_authority_from_chatgpt: false, mutation_performed: false, customer_services_relay: false,
+      result: {
+        count: devices.length,
+        computers: devices.map((d) => ({
+          device_id: d.device_id, computer: d.device_name, platform: d.platform, architecture: d.architecture,
+          agent_version: d.agent_version, state: d.revoked_at_utc ? "REVOKED" : (d.online ? "ONLINE" : "OFFLINE"),
+          last_seen_at_utc: d.last_seen_at_utc,
+        })),
+      },
+      product: { plan_code: context.plan_code, entitlement_id: context.entitlement_id, quota: null },
+    };
+  }
+
+  if (toolId === "hara.capabilities") {
+    const capabilities=await customerCapabilities(env,context,args);
+    return {state:"PASS",operational_authority:"HARA_SERVICES",execution_authority:"HARA_SERVICES",runtime_authority_from_chatgpt:false,mutation_performed:false,customer_services_relay:false,result:{count:capabilities.length,computers:capabilities},product:{plan_code:context.plan_code,entitlement_id:context.entitlement_id,quota:null}};
+  }
+
+  if (toolId === "hara.usage") {
+    const usage=await customerUsage(env,context);
+    return {state:"PASS",operational_authority:"HARA_SERVICES",execution_authority:"HARA_SERVICES",runtime_authority_from_chatgpt:false,mutation_performed:false,customer_services_relay:false,result:usage,product:{plan_code:context.plan_code,entitlement_id:context.entitlement_id,quota:usage.usage}};
+  }
+
+  if (toolId === "hara.activity" || toolId === "hara.calls.recent") {
+    // Detailed history belongs to the local Agent store. Until the next signed
+    // Agent exposes the local-history bridge, public Commander must not rebuild
+    // or persist this information in Cloudflare.
+    throw new Error("LOCAL_DIAGNOSTICS_REQUIRE_SIGNED_AGENT_UPDATE");
+  }
+
+  const targetDevice = await resolveCustomerTargetDevice(
+    env, context, args?.computer || null, null
+  );
+  const targetDeviceId = cleanId(targetDevice.device_id, 180);
+  const targetComputer = String(targetDevice.device_name || "");
   const payload = customerMcpDevicePayload(toolId, args);
   const requestId = await customerMcpRequestId(
     identity,
     toolId,
-    payload,
+    { device_id: targetDeviceId, payload },
     mcpRequestId,
+    transportRequestId,
   );
+  if ((isDeviceMutationTool(toolId) || isDeviceProcessTool(toolId) || toolId === "hara.files.preimages.list") && !agentPurposeToolReady(targetDevice, toolId)) {
+    throw new Error("AGENT_UPGRADE_REQUIRED");
+  }
+  const purposeFunctionId = quotaFunctionIdForTool(toolId, payload);
+  const legacyPayload = legacyInvokePayload(toolId, payload);
+  const dispatchAsLegacyInvoke = Boolean(legacyPayload) && !agentPurposeToolReady(targetDevice, toolId);
+  const dispatchToolId = dispatchAsLegacyInvoke ? "hara.functions.invoke" : toolId;
+  const dispatchPayload = dispatchAsLegacyInvoke ? legacyPayload : payload;
 
+  const usageMode = await resolveCallUsageMode(env, context, targetDevice, purposeFunctionId);
   let quota = null;
   let reservation = null;
-  if (toolId === "hara.functions.invoke") {
-    const functionId = cleanId(payload.function_id, 180);
-    if (functionId !== DEVICE_FUNCTION_ID) throw new Error("POLICY_DENIED");
+  let cloudQuotaLimit = context.unit_limit;
+  if (purposeFunctionId && usageMode === "CLOUD_QUOTA") {
+    const functionId = cleanId(purposeFunctionId, 180);
+    if (!functionId.startsWith("tool:") && !isDeviceFunctionAllowed(functionId)) throw new Error("POLICY_DENIED");
+    const cloudPeriodKey = mcpPeriodKey(context);
+    cloudQuotaLimit = await effectiveCloudQuotaLimit(env, context, cloudPeriodKey);
     quota = env.TENANT_QUOTA.getByName(context.tenant_id);
     reservation = await quota.reserve(
       requestId,
       context.subject_id,
-      mcpPeriodKey(context),
+      cloudPeriodKey,
       functionId,
-      context.unit_limit,
+      cloudQuotaLimit,
     );
     if (!reservation.ok) {
       throw new Error(String(reservation.code || "QUOTA_DENIED"));
@@ -2223,6 +4564,7 @@ async function executeCustomerMcpTool(
         result: { replayed: true },
         bridge_receipt_sha256: committedReceiptSha,
         customer_services_relay: false,
+        computer: targetComputer,
         product: {
           plan_code: context.plan_code,
           entitlement_id: context.entitlement_id,
@@ -2233,6 +4575,23 @@ async function executeCustomerMcpTool(
     if (reservation.state !== "RESERVED") {
       throw new Error("CUSTOMER_MCP_QUOTA_STATE_INVALID");
     }
+  } else if (purposeFunctionId && usageMode === "LOCAL_BUDGET") {
+    reservation = {
+      ok: true,
+      state: "LOCAL_BUDGET",
+      mode: "LOCAL_BUDGET",
+      period_key: mcpPeriodKey(context),
+      units: 1,
+      cloud_quota_transaction: false,
+    };
+  } else if (purposeFunctionId && usageMode === "UNMETERED") {
+    reservation = {
+      ok: true,
+      state: "UNMETERED",
+      mode: "UNMETERED",
+      units: 0,
+      cloud_quota_transaction: false,
+    };
   }
 
   let call;
@@ -2241,12 +4600,13 @@ async function executeCustomerMcpTool(
       issuer: identity.issuer,
       subject: identity.subject,
       request_id: requestId,
-      tool_id: toolId,
-      payload,
+      tool_id: dispatchToolId,
+      device_id: targetDeviceId,
+      payload: dispatchPayload,
     });
   } catch (error) {
-    if (quota && reservation?.state === "RESERVED") {
-      await quota.release(requestId, context.subject_id, context.unit_limit)
+    if (usageMode === "CLOUD_QUOTA" && quota && reservation?.state === "RESERVED") {
+      await quota.release(requestId, context.subject_id, cloudQuotaLimit)
         .catch(() => undefined);
     }
     throw error;
@@ -2254,24 +4614,27 @@ async function executeCustomerMcpTool(
 
   const status = await customerMcpWaitForCall(env, identity, call);
   if (status.state === "FAILED") {
-    if (quota && reservation?.state === "RESERVED") {
-      await quota.release(requestId, context.subject_id, context.unit_limit);
+    if (usageMode === "CLOUD_QUOTA" && quota && reservation?.state === "RESERVED") {
+      await quota.release(requestId, context.subject_id, cloudQuotaLimit);
     }
     if (status.result && typeof status.result === "object") {
-      return projectCustomerToolResult(toolId, status.result);
+      return { ...projectCustomerToolResult(toolId, status.result), computer: targetComputer };
     }
     throw new Error(String(status.error_code || "DEVICE_EXECUTION_FAILED"));
   }
   if (status.state !== "COMPLETED") {
-    if (quota && reservation?.state === "RESERVED") {
-      await quota.release(requestId, context.subject_id, context.unit_limit);
+    if (usageMode === "CLOUD_QUOTA" && quota && reservation?.state === "RESERVED") {
+      await quota.release(requestId, context.subject_id, cloudQuotaLimit);
     }
     throw new Error("DEVICE_CALL_" + String(status.state || "FAILED"));
   }
 
-  const projected = projectCustomerToolResult(toolId, status.result || {});
+  const projected = {
+    ...projectCustomerToolResult(toolId, status.result || {}),
+    computer: targetComputer,
+  };
   let usage = null;
-  if (toolId === "hara.functions.invoke") {
+  if (purposeFunctionId && usageMode === "CLOUD_QUOTA") {
     const receiptSha = String(projected.bridge_receipt_sha256 || "");
     if (
       projected.state === "PASS"
@@ -2281,7 +4644,7 @@ async function executeCustomerMcpTool(
         requestId,
         context.subject_id,
         receiptSha,
-        context.unit_limit,
+        cloudQuotaLimit,
       );
       if (!usage.ok) {
         throw new Error(String(usage.code || "PRODUCT_USAGE_COMMIT_DENIED"));
@@ -2290,9 +4653,27 @@ async function executeCustomerMcpTool(
       usage = await quota.release(
         requestId,
         context.subject_id,
-        context.unit_limit,
+        cloudQuotaLimit,
       );
     }
+  } else if (purposeFunctionId && usageMode === "LOCAL_BUDGET") {
+    usage = {
+      ok: true,
+      state: "LOCAL_BUDGET",
+      mode: "LOCAL_BUDGET",
+      period_key: mcpPeriodKey(context),
+      units: 1,
+      cloud_quota_transaction: false,
+      local_enforced: true,
+    };
+  } else if (purposeFunctionId && usageMode === "UNMETERED") {
+    usage = {
+      ok: true,
+      state: "UNMETERED",
+      mode: "UNMETERED",
+      units: 0,
+      cloud_quota_transaction: false,
+    };
   }
 
   return {
@@ -2326,19 +4707,38 @@ async function claimNextDeviceCall(env, request) {
          ORDER BY c.created_at_utc
          LIMIT 1
       )
-      RETURNING call_id, request_id, tool_id, payload_json, expires_at_utc`
+      RETURNING call_id, request_id, tool_id, payload_json, expires_at_utc,
+                usage_mode, usage_units, usage_period_key, usage_budget_id`
   ).bind(now, device.device_id, now).all();
 
   const row = (result.results || [])[0];
   if (!row) return null;
+
+  const rawPayloadJson = String(row.payload_json || "{}");
+  const rawPayload = JSON.parse(rawPayloadJson);
+  const payloadMarker = await redactedDeviceCallContent(rawPayloadJson);
+  await env.PRODUCT_DB.prepare(
+    `UPDATE commander_device_calls
+        SET payload_json = ?
+      WHERE call_id = ?
+        AND tenant_id = ?
+        AND device_id = ?
+        AND state = 'EXECUTING'`
+  ).bind(payloadMarker, row.call_id, device.tenant_id, device.device_id).run();
 
   return {
     schema: "hara.commander-device-call-claim.v1",
     call_id: row.call_id,
     request_id: row.request_id,
     tool_id: row.tool_id,
-    payload: JSON.parse(row.payload_json || "{}"),
+    payload: rawPayload,
     expires_at_utc: row.expires_at_utc,
+    usage: {
+      mode: String(row.usage_mode || "CLOUD_QUOTA"),
+      units: Number(row.usage_units || 0),
+      period_key: row.usage_period_key || null,
+      budget_id: row.usage_budget_id || null,
+    },
   };
 }
 
@@ -2463,6 +4863,25 @@ async function deviceCallStatus(env, body) {
     }
   }
 
+  const rawResultJson = row.result_json && !isRedactedDeviceCallContent(row.result_json)
+    ? String(row.result_json)
+    : null;
+  const publicResult = rawResultJson ? JSON.parse(rawResultJson) : null;
+  let contentRedacted = isRedactedDeviceCallContent(row.payload_json)
+    || isRedactedDeviceCallContent(row.result_json);
+  if (["COMPLETED","FAILED","CANCELLED","EXPIRED"].includes(String(row.state)) && rawResultJson) {
+    const resultMarker = await redactedDeviceCallContent(rawResultJson);
+    await env.PRODUCT_DB.prepare(
+      `UPDATE commander_device_calls
+          SET result_json = ?
+        WHERE call_id = ?
+          AND tenant_id = ?
+          AND subject_id = ?
+          AND result_json = ?`
+    ).bind(resultMarker, row.call_id, context.tenant_id, context.subject_id, rawResultJson).run();
+    contentRedacted = true;
+  }
+
   return {
     schema: "hara.commander-device-call-status.v1",
     call_id: row.call_id,
@@ -2474,11 +4893,8 @@ async function deviceCallStatus(env, body) {
     expires_at_utc: row.expires_at_utc,
     claimed_at_utc: row.claimed_at_utc,
     completed_at_utc: row.completed_at_utc,
-    result: row.result_json && !isRedactedDeviceCallContent(row.result_json)
-      ? JSON.parse(row.result_json)
-      : null,
-    content_redacted: isRedactedDeviceCallContent(row.payload_json)
-      || isRedactedDeviceCallContent(row.result_json),
+    result: publicResult,
+    content_redacted: contentRedacted,
     error_code: row.error_code || null,
     retry_after_ms: deviceCallRetryAfterMs(row.state, "status"),
   };
@@ -2515,6 +4931,12 @@ export default {
         });
       }
 
+      if (url.pathname === "/api/dev/slo-maintenance" && request.method === "POST") {
+        await requireMcpProductToken(request, env);
+        await runSloAlertMaintenance(env);
+        return json({ ok:true, schema:"hara.commander-slo-maintenance.v1", environment:"DEV" });
+      }
+
       if (url.pathname === "/api/portal/auth-config" && request.method === "GET") {
         return json({ configured: authStatus(env).configured });
       }
@@ -2547,7 +4969,12 @@ export default {
           return haraIdentityCustomerMcpUnauthorized(request);
         }
 
-        return handleCustomerMcpRequest(request, {
+        const profile=String(url.searchParams.get("profile") || "full").trim().toLowerCase();
+        if (!["full","simple"].includes(profile)) {
+          return json({ ok:false, code:"MCP_PROFILE_INVALID" }, 400);
+        }
+        const handler=profile === "simple" ? handleSimpleCustomerMcpRequest : handleCustomerMcpRequest;
+        return handler(request, {
           authInfo: {
             token: "HARA_IDENTITY_VALIDATED",
             clientId: identity.client_id,
@@ -2558,12 +4985,14 @@ export default {
             tool_id,
             arguments: toolArguments,
             mcp_request_id,
+            transport_request_id,
           }) => executeCustomerMcpTool(
             env,
             identity,
             tool_id,
             toolArguments,
             mcp_request_id,
+            transport_request_id,
           ),
         });
       }
@@ -2675,6 +5104,28 @@ export default {
         return await logout(request, env);
       }
 
+      if (url.pathname.startsWith("/api/portal/")) {
+        const degradedAllowed=new Set([
+          "/api/portal/session",
+          "/api/portal/billing",
+          "/api/portal/billing/checkout",
+          "/api/portal/billing/portal",
+        ]);
+        if (!degradedAllowed.has(url.pathname)) {
+          const degradedSession=await resolveDegradedPortalSession(request,env);
+          if (degradedSession) {
+            return json({
+              ok:false,
+              authenticated:true,
+              code:"WORKSPACE_BACKEND_WRITE_LIMIT",
+              workspace_available:false,
+              billing_available:true,
+              degraded_reason:degradedSession.degraded_reason,
+            },503);
+          }
+        }
+      }
+
       if (url.pathname === "/api/portal/session" && request.method === "GET") {
         const session = await resolvePortalSession(request, env);
         if (!session) return json({ ok: false, code: "AUTH_REQUIRED" }, 401);
@@ -2688,6 +5139,12 @@ export default {
           tenant: {
             tenant_id: session.tenant_id,
             display_name: session.tenant_name
+          },
+          availability:{
+            degraded:session.degraded === true,
+            workspace_available:session.workspace_available !== false,
+            billing_available:session.billing_available !== false,
+            reason:session.degraded_reason || null,
           }
         });
       }
@@ -2724,6 +5181,7 @@ export default {
           tenant: payload.tenant,
           entitlement: payload.entitlement,
           usage: payload.usage,
+          transaction_history: payload.transaction_history,
           device_state: {
             schema: "hara.commander-device-list.v1",
             devices,
@@ -2744,6 +5202,82 @@ export default {
           role: session.role
         };
         return json(payload);
+      }
+
+      if (url.pathname === "/api/portal/activity" && request.method === "GET") {
+        return json({ ok:false, code:"INTERNAL_DIAGNOSTICS_NOT_IN_PRODUCT" },404);
+        const session = await resolvePortalSession(request, env);
+        if (!session) return json({ ok: false, code: "AUTH_REQUIRED" }, 401);
+        const limit=Number(url.searchParams.get("limit") || 50);
+        const window=url.searchParams.get("window") || "7d";
+        return json(await portalActivity(env,session,limit,window));
+      }
+
+      if (url.pathname === "/api/portal/slo" && request.method === "GET") {
+        return json({ ok:false, code:"INTERNAL_DIAGNOSTICS_NOT_IN_PRODUCT" },404);
+        const session = await resolvePortalSession(request, env);
+        if (!session) return json({ ok:false, code:"AUTH_REQUIRED" },401);
+        return json(await portalSloStatus(env,session));
+      }
+
+      if (url.pathname === "/api/portal/slo/ack" && request.method === "POST") {
+        return json({ ok:false, code:"INTERNAL_DIAGNOSTICS_NOT_IN_PRODUCT" },404);
+        requirePortalMutationOrigin(request);
+        const session = await resolvePortalSession(request, env);
+        if (!session) return json({ ok:false, code:"AUTH_REQUIRED" },401);
+        await enforcePortalMutationRateLimit(env,session);
+        const body=await request.json();
+        return json(await portalAcknowledgeSloIncident(env,session,body));
+      }
+
+      if (url.pathname === "/api/portal/slo/escalate" && request.method === "POST") {
+        return json({ ok:false, code:"INTERNAL_DIAGNOSTICS_NOT_IN_PRODUCT" },404);
+        requirePortalMutationOrigin(request);
+        const session = await resolvePortalSession(request, env);
+        if (!session) return json({ ok:false, code:"AUTH_REQUIRED" },401);
+        await enforcePortalMutationRateLimit(env,session);
+        const body=await request.json();
+        return json(await portalEscalateSloIncident(env,session,body));
+      }
+
+      if (url.pathname === "/api/portal/support-reports" && request.method === "GET") {
+        const session = await resolvePortalSession(request, env);
+        if (!session) return json({ ok:false, code:"AUTH_REQUIRED" },401);
+        const limit=Number(url.searchParams.get("limit") || 20);
+        const deviceId=url.searchParams.get("device_id");
+        return json(await listPortalSupportReports(env,session,limit,deviceId));
+      }
+
+      if (url.pathname === "/api/portal/support-reports" && request.method === "POST") {
+        requirePortalMutationOrigin(request);
+        const session = await resolvePortalSession(request, env);
+        if (!session) return json({ ok:false, code:"AUTH_REQUIRED" },401);
+        await enforcePortalMutationRateLimit(env,session);
+        const body=await request.json();
+        return json(await submitPortalSupportReport(env,session,body),201);
+      }
+
+      if (url.pathname === "/api/portal/support-reports/delete" && request.method === "POST") {
+        requirePortalMutationOrigin(request);
+        const session = await resolvePortalSession(request, env);
+        if (!session) return json({ ok:false, code:"AUTH_REQUIRED" },401);
+        await enforcePortalMutationRateLimit(env,session);
+        const body=await request.json();
+        return json(await deletePortalSupportReport(env,session,body));
+      }
+
+      if (url.pathname === "/api/portal/beta-access" && request.method === "GET") {
+        const session = await resolvePortalSession(request, env);
+        if (!session) return json({ ok:false, code:"AUTH_REQUIRED" },401);
+        return json(await portalBetaAccessStatus(env,session));
+      }
+
+      if (url.pathname === "/api/portal/beta-access" && request.method === "POST") {
+        requirePortalMutationOrigin(request);
+        const session = await resolvePortalSession(request, env);
+        if (!session) return json({ ok:false, code:"AUTH_REQUIRED" },401);
+        await enforcePortalMutationRateLimit(env,session);
+        return json(await requestPortalBetaAccess(env,session),201);
       }
 
       if (url.pathname === "/api/portal/billing" && request.method === "GET") {
@@ -2821,6 +5355,11 @@ export default {
       if (url.pathname === "/api/device/heartbeat" && request.method === "POST") {
         const body = await request.json().catch(() => ({}));
         return json(await heartbeatDevice(env, request, body));
+      }
+
+      if (url.pathname === "/api/device/product-lease" && request.method === "POST") {
+        const body = await request.json().catch(() => ({}));
+        return json(await deviceProductLease(env, request, body));
       }
 
       if (url.pathname === "/api/device/offline" && request.method === "POST") {
@@ -2914,7 +5453,7 @@ export default {
         }
 
         const functionId = cleanId(body.function_id, 180);
-        if (functionId !== DEVICE_FUNCTION_ID) {
+        if (!isDeviceFunctionAllowed(functionId)) {
           return internalJson({
             schema: "hara.commander-mcp-product-decision.v1",
             allowed: false,
@@ -2926,9 +5465,24 @@ export default {
           });
         }
         const periodKey = mcpPeriodKey(context);
-        const reservation = await env.TENANT_QUOTA
-          .getByName(context.tenant_id)
-          .reserve(requestId, context.subject_id, periodKey, functionId, context.unit_limit);
+        const reservation = context.period_kind === "NONE"
+          ? {
+              ok: true,
+              state: "UNMETERED",
+              mode: "UNMETERED",
+              period_key: periodKey,
+              units: 0,
+              cloud_quota_transaction: false,
+            }
+          : await env.TENANT_QUOTA
+              .getByName(context.tenant_id)
+              .reserve(
+                requestId,
+                context.subject_id,
+                periodKey,
+                functionId,
+                await effectiveCloudQuotaLimit(env, context, periodKey),
+              );
 
         if (!reservation.ok) {
           return internalJson({
@@ -2971,18 +5525,31 @@ export default {
           return internalJson({ ok: false, code: "INVALID_RECEIPT_SHA256" }, 400);
         }
 
-        const identity = await mcpIdentityBinding(env, body.issuer, body.subject);
-        if (!identity.ok) return internalJson({ ok: false, code: identity.code }, 403);
+        const context = await mcpProductContext(env, body.issuer, body.subject);
+        if (!context.ok) return internalJson({ ok: false, code: context.code }, 403);
 
-        const usage = await env.TENANT_QUOTA
-          .getByName(identity.tenant_id)
-          .commit(requestId, identity.subject_id, receiptSha256, null);
+        const usage = context.period_kind === "NONE"
+          ? {
+              ok: true,
+              state: "UNMETERED",
+              mode: "UNMETERED",
+              units: 0,
+              cloud_quota_transaction: false,
+            }
+          : await env.TENANT_QUOTA
+              .getByName(context.tenant_id)
+              .commit(
+                requestId,
+                context.subject_id,
+                receiptSha256,
+                await effectiveCloudQuotaLimit(env, context, mcpPeriodKey(context)),
+              );
 
         return internalJson({
           schema: "hara.commander-mcp-usage-transition.v1",
           transition: "COMMIT",
-          subject_id: identity.subject_id,
-          tenant_id: identity.tenant_id,
+          subject_id: context.subject_id,
+          tenant_id: context.tenant_id,
           request_id: requestId,
           receipt_sha256: receiptSha256,
           usage,
@@ -2992,18 +5559,30 @@ export default {
       if (url.pathname === "/api/internal/mcp/release" && request.method === "POST") {
         const body = await request.json();
         const requestId = cleanId(body.request_id, 220);
-        const identity = await mcpIdentityBinding(env, body.issuer, body.subject);
-        if (!identity.ok) return internalJson({ ok: false, code: identity.code }, 403);
+        const context = await mcpProductContext(env, body.issuer, body.subject);
+        if (!context.ok) return internalJson({ ok: false, code: context.code }, 403);
 
-        const usage = await env.TENANT_QUOTA
-          .getByName(identity.tenant_id)
-          .release(requestId, identity.subject_id, null);
+        const usage = context.period_kind === "NONE"
+          ? {
+              ok: true,
+              state: "UNMETERED",
+              mode: "UNMETERED",
+              units: 0,
+              cloud_quota_transaction: false,
+            }
+          : await env.TENANT_QUOTA
+              .getByName(context.tenant_id)
+              .release(
+                requestId,
+                context.subject_id,
+                await effectiveCloudQuotaLimit(env, context, mcpPeriodKey(context)),
+              );
 
         return internalJson({
           schema: "hara.commander-mcp-usage-transition.v1",
           transition: "RELEASE",
-          subject_id: identity.subject_id,
-          tenant_id: identity.tenant_id,
+          subject_id: context.subject_id,
+          tenant_id: context.tenant_id,
           request_id: requestId,
           usage,
         });
@@ -3083,6 +5662,17 @@ export default {
         OIDC_STATE_REPLAYED: 400,
         OIDC_STATE_EXPIRED: 400,
         OIDC_PROVIDER_ERROR: 400,
+        BETA_ACCESS_ADMIN_REQUIRED: 403,
+        BETA_ACCESS_PLAN_UNAVAILABLE: 409,
+        SLO_STATUS_ADMIN_REQUIRED: 403,
+        SUPPORT_REPORT_ADMIN_REQUIRED: 403,
+        SUPPORT_REPORT_SCHEMA_INVALID: 400,
+        SUPPORT_REPORT_PRIVACY_INVALID: 400,
+        SUPPORT_REPORT_DEVICE_REQUIRED: 400,
+        SUPPORT_REPORT_DEVICE_NOT_FOUND: 404,
+        SUPPORT_REPORT_TOO_LARGE: 413,
+        SUPPORT_REPORT_ID_REQUIRED: 400,
+        SUPPORT_REPORT_NOT_FOUND: 404,
         BILLING_NOT_CONFIGURED: 503,
         BILLING_ADMIN_REQUIRED: 403,
         BILLING_PLAN_INVALID: 400,
@@ -3152,6 +5742,7 @@ export default {
         DEVICE_CALL_ENQUEUE_CONFLICT: 409,
         DEVICE_CALL_NOT_FOUND: 404,
         GRANT_MISSING: 403,
+        LOCAL_DIAGNOSTICS_REQUIRE_SIGNED_AGENT_UPDATE: 409,
         IDEMPOTENCY_CONFLICT: 409,
       };
 
@@ -3171,5 +5762,6 @@ export default {
     requireRuntime(env);
     ctx.waitUntil(runAuthRetentionMaintenance(env));
     ctx.waitUntil(cleanupExpiredDeviceCalls(env));
+    ctx.waitUntil(cleanupExpiredSupportReports(env));
   }
 };

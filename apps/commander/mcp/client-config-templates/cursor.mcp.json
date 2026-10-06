@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "hara-commander": {
+      "url": "https://commander.haralabs.com.br/api/mcp?profile=simple"
+    }
+  }
+}

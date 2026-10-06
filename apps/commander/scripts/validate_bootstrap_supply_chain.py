@@ -19,18 +19,22 @@ LINUX_BOOTSTRAP = (
     "(tmp=$(mktemp) && trap 'rm -f $tmp' EXIT && "
     "curl -fsS --proto '=https' --tlsv1.2 --location --max-redirs 0 "
     "https://commander.haralabs.com.br/install/linux.sh -o $tmp && "
+    "HARA_COMMANDER_APPROVAL_MODE=PERSISTENT_TRUSTED "
     "HARA_COMMANDER_URL=https://commander.haralabs.com.br bash $tmp)"
 )
 WINDOWS_BOOTSTRAP = (
     "$haraPrevUrl=$env:HARA_COMMANDER_URL; "
+    "$haraPrevApproval=$env:HARA_COMMANDER_APPROVAL_MODE; "
     "$haraInstaller=Join-Path $env:TEMP ('hara-commander-install-'+[guid]::NewGuid().ToString('N')+'.ps1'); "
     "try { $env:HARA_COMMANDER_URL='https://commander.haralabs.com.br'; "
+    "$env:HARA_COMMANDER_APPROVAL_MODE='PERSISTENT_TRUSTED'; "
     "Invoke-WebRequest -Uri https://commander.haralabs.com.br/install/windows.ps1 "
     "-OutFile $haraInstaller -UseBasicParsing -MaximumRedirection 0 -ErrorAction Stop; "
     "& powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $haraInstaller; "
     "if ($LASTEXITCODE -ne 0) { throw ('HARA_COMMANDER_INSTALL_EXIT_'+$LASTEXITCODE) } "
     "} finally { Remove-Item -LiteralPath $haraInstaller -Force -ErrorAction SilentlyContinue; "
-    "$env:HARA_COMMANDER_URL=$haraPrevUrl }"
+    "$env:HARA_COMMANDER_URL=$haraPrevUrl; "
+    "$env:HARA_COMMANDER_APPROVAL_MODE=$haraPrevApproval }"
 )
 SUMS_PATH = PUBLIC / "release/SHA256SUMS"
 DRIFT = (APP / "scripts/validate_prod_runtime_drift.py").read_text(encoding="utf-8")
@@ -81,8 +85,23 @@ def main() -> int:
     need("--insecure" not in LINUX and " -k" not in LINUX, "LINUX_TLS_BYPASS_ABSENT")
     need("-SkipCertificateCheck" not in WINDOWS, "WINDOWS_TLS_BYPASS_ABSENT")
 
-    need(LINUX_BOOTSTRAP in INDEX and LINUX_BOOTSTRAP in APP_JS, "LINUX_BOOTSTRAP_UI_COPY_PARITY")
-    need(WINDOWS_BOOTSTRAP in INDEX and WINDOWS_BOOTSTRAP in APP_JS, "WINDOWS_BOOTSTRAP_UI_COPY_PARITY")
+    need(
+        LINUX_BOOTSTRAP in INDEX
+        and "function installCommandLinux()" in APP_JS
+        and 'HARA_COMMANDER_APPROVAL_MODE="' in APP_JS
+        and "+ installApprovalMode" in APP_JS
+        and " HARA_COMMANDER_URL=https://commander.haralabs.com.br bash $tmp)" in APP_JS,
+        "LINUX_BOOTSTRAP_UI_COPY_PARITY",
+    )
+    need(
+        WINDOWS_BOOTSTRAP in INDEX
+        and "function installCommandWindows()" in APP_JS
+        and "$haraPrevApproval=$env:HARA_COMMANDER_APPROVAL_MODE;" in APP_JS
+        and "$env:HARA_COMMANDER_APPROVAL_MODE='" in APP_JS
+        and "+ installApprovalMode" in APP_JS
+        and "$env:HARA_COMMANDER_APPROVAL_MODE=$haraPrevApproval" in APP_JS,
+        "WINDOWS_BOOTSTRAP_UI_COPY_PARITY",
+    )
     need("curl -fsSL https://commander.haralabs.com.br/install/linux.sh | bash" not in INDEX + APP_JS,
          "LINUX_BOOTSTRAP_REDIRECT_DEFAULT_ABSENT")
     need("irm https://commander.haralabs.com.br/install/windows.ps1 | iex" not in INDEX + APP_JS,
@@ -152,6 +171,8 @@ def main() -> int:
         "/agent/linux.py",
         "/agent/windows.ps1",
         "/release/agent-manifest.json",
+        "/release/agent-manifest.sig.json",
+        "/release/release-signing-public.jwk",
         "/release/SHA256SUMS",
     ):
         need(public_path in DRIFT, "RUNTIME_DRIFT_" + public_path.upper().replace("/", "_").replace(".", "_"))
@@ -161,7 +182,8 @@ def main() -> int:
     need("AGENT_SELF_TEST_FAILED" in WINDOWS, "WINDOWS_SELF_TEST_FAIL_CLOSED")
 
     print("COMMANDER_BOOTSTRAP_INITIAL_TRUST=WEB_ORIGIN")
-    print("COMMANDER_BOOTSTRAP_INDEPENDENT_TRUST_ANCHOR=PENDING_MATURITY")
+    print("COMMANDER_RELEASE_MANIFEST_INDEPENDENT_TRUST_ANCHOR=PASS")
+    print("COMMANDER_BOOTSTRAP_OUT_OF_BAND_TRUST=PENDING_GA_MATURITY")
     print("COMMANDER_AGENT_POST_BOOTSTRAP_INTEGRITY=PASS")
     print("COMMANDER_RELEASE_RUNTIME_ATTESTATION=READY")
     print("COMMANDER_SUPPLY_CHAIN=PASS")

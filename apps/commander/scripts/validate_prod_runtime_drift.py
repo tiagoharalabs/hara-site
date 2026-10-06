@@ -21,6 +21,8 @@ ASSETS = {
     "/agent/linux.py": PUBLIC / "agent/linux.py",
     "/agent/windows.ps1": PUBLIC / "agent/windows.ps1",
     "/release/agent-manifest.json": PUBLIC / "release/agent-manifest.json",
+    "/release/agent-manifest.sig.json": PUBLIC / "release/agent-manifest.sig.json",
+    "/release/release-signing-public.jwk": PUBLIC / "release/release-signing-public.jwk",
     "/release/SHA256SUMS": PUBLIC / "release/SHA256SUMS",
     "/assets/hara-commander-royal.webp": PUBLIC / "assets/hara-commander-royal.webp",
 }

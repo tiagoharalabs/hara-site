@@ -1,0 +1,252 @@
+{
+  "schema": "hara.commander.mcp-client-certification-matrix.v1",
+  "state": "PREPARED_NOT_EXECUTED",
+  "required_clients": [
+    "vscode",
+    "cursor",
+    "claude-code",
+    "mcp-inspector"
+  ],
+  "certification_policy": {
+    "pass_rule": "all REQUIRED cases PASS; OPTIONAL cases may be NOT_APPLICABLE with reason",
+    "same_server_url": true,
+    "same_simple_mcp_tool_surface": true,
+    "no_client_specific_tool_aliases": true,
+    "no_static_bearer_fallback_for_certification": true,
+    "mutation_cases_require_governed_approval": true,
+    "evidence_must_redact_secrets": true
+  },
+  "cases": [
+    {
+      "id": "DISC-01",
+      "phase": "discovery",
+      "level": "REQUIRED",
+      "action": "connect to canonical Simple MCP URL",
+      "expect": [
+        "resource server reachable",
+        "unauthenticated path triggers OAuth discovery"
+      ]
+    },
+    {
+      "id": "AUTH-01",
+      "phase": "auth",
+      "level": "REQUIRED",
+      "action": "discover Protected Resource Metadata and RFC8414 metadata",
+      "expect": [
+        "issuer=https://auth.haralabs.com.br",
+        "PKCE S256",
+        "registration endpoint discovered"
+      ]
+    },
+    {
+      "id": "AUTH-02",
+      "phase": "auth",
+      "level": "REQUIRED",
+      "action": "complete client registration path",
+      "expect": [
+        "public client",
+        "no client_secret",
+        "redirect accepted by HARA policy"
+      ]
+    },
+    {
+      "id": "AUTH-03",
+      "phase": "auth",
+      "level": "REQUIRED",
+      "action": "complete human authorization code + PKCE",
+      "expect": [
+        "state preserved",
+        "issuer consistent",
+        "access token accepted by resource server"
+      ]
+    },
+    {
+      "id": "AUTH-04",
+      "phase": "auth",
+      "level": "REQUIRED",
+      "action": "disconnect and reconnect without re-registering unnecessarily",
+      "expect": [
+        "client registration/token persistence behavior recorded",
+        "no duplicate client storm"
+      ]
+    },
+    {
+      "id": "AUTH-05",
+      "phase": "auth",
+      "level": "OPTIONAL",
+      "action": "exercise refresh-token path if host exposes it",
+      "expect": [
+        "refresh succeeds or host documents alternative token renewal"
+      ]
+    },
+    {
+      "id": "PROTO-01",
+      "phase": "protocol",
+      "level": "REQUIRED",
+      "action": "initialize/discover protocol",
+      "expect": [
+        "supported protocol version recorded",
+        "H.A.R.A. Commander server metadata visible"
+      ]
+    },
+    {
+      "id": "TOOLS-01",
+      "phase": "tools",
+      "level": "REQUIRED",
+      "action": "list tools",
+      "expect": [
+        "exact count=24",
+        "no hara.* public names",
+        "schemas present"
+      ]
+    },
+    {
+      "id": "TOOLS-02",
+      "phase": "tools",
+      "level": "REQUIRED",
+      "action": "inspect read_file metadata",
+      "expect": [
+        "inputSchema",
+        "outputSchema",
+        "readOnlyHint=true",
+        "securitySchemes present"
+      ]
+    },
+    {
+      "id": "READ-01",
+      "phase": "read",
+      "level": "REQUIRED",
+      "action": "call list_devices",
+      "expect": [
+        "PASS",
+        "structuredContent accepted",
+        "request/receipt correlation captured"
+      ]
+    },
+    {
+      "id": "READ-02",
+      "phase": "read",
+      "level": "REQUIRED",
+      "action": "call get_device_info on selected certification device",
+      "expect": [
+        "PASS",
+        "computer routing explicit or deterministic"
+      ]
+    },
+    {
+      "id": "READ-03",
+      "phase": "read",
+      "level": "REQUIRED",
+      "action": "call read_file on certification fixture",
+      "expect": [
+        "PASS",
+        "bounded read semantics preserved"
+      ]
+    },
+    {
+      "id": "READ-04",
+      "phase": "read",
+      "level": "REQUIRED",
+      "action": "call search on certification fixture",
+      "expect": [
+        "PASS",
+        "bounded results",
+        "no path escape"
+      ]
+    },
+    {
+      "id": "ERR-01",
+      "phase": "errors",
+      "level": "REQUIRED",
+      "action": "submit invalid read_file arguments",
+      "expect": [
+        "tool error surfaced as MCP error result",
+        "no mutation",
+        "sanitized error"
+      ]
+    },
+    {
+      "id": "MUT-01",
+      "phase": "mutation",
+      "level": "REQUIRED",
+      "action": "write_file under certification scratch path",
+      "expect": [
+        "approval/governance semantics visible to host",
+        "PASS after approval",
+        "receipt recorded"
+      ]
+    },
+    {
+      "id": "MUT-02",
+      "phase": "mutation",
+      "level": "REQUIRED",
+      "action": "edit_block under certification scratch path",
+      "expect": [
+        "idempotent semantics retained",
+        "PASS",
+        "receipt recorded"
+      ]
+    },
+    {
+      "id": "PROC-01",
+      "phase": "process",
+      "level": "REQUIRED",
+      "action": "start bounded one-shot certification process",
+      "expect": [
+        "one-shot default",
+        "PASS",
+        "output available without managed session"
+      ]
+    },
+    {
+      "id": "PROC-02",
+      "phase": "process",
+      "level": "OPTIONAL",
+      "action": "start managed interactive certification process",
+      "expect": [
+        "session id returned",
+        "read/interact/kill lifecycle works"
+      ]
+    },
+    {
+      "id": "AUDIT-01",
+      "phase": "audit",
+      "level": "REQUIRED",
+      "action": "get_recent_tool_calls after certification calls",
+      "expect": [
+        "recent certification activity visible without secret/content leakage"
+      ]
+    },
+    {
+      "id": "TRACE-01",
+      "phase": "trace",
+      "level": "REQUIRED",
+      "action": "correlate one tool call end-to-end",
+      "expect": [
+        "transport request id captured",
+        "bridge_receipt_sha256 captured",
+        "client-visible result maps to same call"
+      ]
+    },
+    {
+      "id": "CACHE-01",
+      "phase": "cache",
+      "level": "OPTIONAL",
+      "action": "refresh/reset tool cache if host supports it",
+      "expect": [
+        "same 24-tool surface after refresh"
+      ]
+    },
+    {
+      "id": "CLEAN-01",
+      "phase": "cleanup",
+      "level": "REQUIRED",
+      "action": "remove scratch artifacts and optional registered test client",
+      "expect": [
+        "no certification fixture residue",
+        "no secret residue",
+        "cleanup receipt recorded"
+      ]
+    }
+  ]
+}

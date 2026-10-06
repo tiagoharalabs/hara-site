@@ -6,6 +6,9 @@ ROOT = Path(__file__).resolve().parents[3]
 APP = ROOT / "apps" / "commander"
 CFG = json.loads((APP / "wrangler.jsonc").read_text())
 WORKER = (APP / "src/worker.js").read_text()
+CUSTOMER_MCP = (APP / "src/customer-mcp.mjs").read_text()
+SIMPLE_MCP = (APP / "src/customer-mcp-simple.mjs").read_text()
+DEVICE_TARGETING = (APP / "src/device-targeting.mjs").read_text()
 AUTH = (APP / "src/auth.js").read_text()
 HTML = (APP / "public/index.html").read_text()
 JS = (APP / "public/app.js").read_text()
@@ -15,6 +18,8 @@ WINDOWS = (APP / "public/install/windows.ps1").read_text()
 HEADERS = (APP / "public/_headers").read_text()
 READBACK = (APP / "scripts/commander_prod_readback.py").read_text()
 TRIAL_MIGRATION = (APP / "migrations/0008_trial_onboarding.sql").read_text()
+COMMERCIAL_MIGRATION = (APP / "migrations/0021_commercial_terms_20261005.sql").read_text()
+APPROVAL_MODE_MIGRATION = (APP / "migrations/0017_device_approval_mode.sql").read_text()
 
 def need(ok, code):
     if not ok:
@@ -42,8 +47,27 @@ auth_config_block = WORKER.split('if (url.pathname === "/api/portal/auth-config"
 need('return json({ configured: authStatus(env).configured });' in auth_config_block and 'provider:' not in auth_config_block and 'client_auth:' not in auth_config_block, "PUBLIC_AUTH_CONFIG_MINIMIZED")
 need('DEV_ENDPOINT_DISABLED: 404' in WORKER, "DEV_DISABLED_STATUS")
 need("auth-bootstrap-pending" in HTML, "AUTH_FIRST_PAINT")
-need("styles.css?v=20260925-neon7" in HTML, "STYLE_CACHE_KEY")
-need("app.js?v=20260925-neon1" in HTML, "SCRIPT_CACHE_KEY")
+need(
+    'data-approval-choice="always"' in HTML
+    and 'data-approval-choice="ask"' in HTML
+    and 'HARA_COMMANDER_APPROVAL_MODE=PERSISTENT_TRUSTED' in HTML
+    and 'let installApprovalMode = "PERSISTENT_TRUSTED"' in JS
+    and 'hara-commander doctor' in HTML
+    and 'setInstallApprovalMode' in JS
+    and 'installCommandLinux' in JS
+    and 'installCommandWindows' in JS,
+    "APPROVAL_MODE_ONBOARDING",
+)
+need(
+    "ADD COLUMN approval_mode TEXT NOT NULL DEFAULT 'ASK_EVERY_ACTION'" in APPROVAL_MODE_MIGRATION
+    and 'idx_commander_devices_approval_mode' in APPROVAL_MODE_MIGRATION,
+    "APPROVAL_MODE_MIGRATION",
+)
+need("styles.css?v=20261006-productusage1" in HTML, "STYLE_CACHE_KEY")
+need("app.js?v=20261006-productusage1" in HTML, "SCRIPT_CACHE_KEY")
+need('./brand/chatgpt-official.webp' in HTML and (APP / "public/brand/chatgpt-official.webp").stat().st_size > 0, "CHATGPT_BRAND_ICON")
+need('./brand/claude-official.svg' in HTML and (APP / "public/brand/claude-official.svg").stat().st_size > 0, "CLAUDE_BRAND_ICON")
+need('class="where-badge">AI</span><p><b>ChatGPT' not in HTML and 'class="where-badge">AI</span><p><b>Claude' not in HTML, "CLIENT_PLACEHOLDER_BADGES_REMOVED")
 need(
     'class="neon-toggle"' in HTML
     and 'class="neon-icon"' in HTML
@@ -102,16 +126,27 @@ need("Confirmar revogação" in JS and "data-confirm-revoke" not in HTML and "wi
 need(WORKER.count("error_code = 'DEVICE_REVOKED'") >= 2, "PORTAL_DEVICE_REVOKE_CANCELS_CALLS")
 need("function requirePortalMutationOrigin" in WORKER and 'if (!origin || origin !== expectedOrigin)' in WORKER and WORKER.count("requirePortalMutationOrigin(request);") >= 4, "PORTAL_MUTATION_ORIGIN_GUARD")
 need("fonts.googleapis.com" not in HTML and "fonts.gstatic.com" not in HTML, "EXTERNAL_FONT_DEPENDENCY_ABSENT")
-need("'TRIAL', 'Trial', 'HARA_COMMANDER_GOVERNED_INVOKE', 'CALENDAR_MONTH', 100, 'ACTIVE'" in TRIAL_MIGRATION, "TRIAL_PLAN_CANONICAL_LIMIT")
-need('100 <small>execuções / mês</small>' in HTML and '1.000 <small>invokes / período</small>' not in HTML and '10.000 <small>invokes / período</small>' not in HTML, "TRIAL_PLAN_UI_ALIGNMENT")
-need("10000" not in HTML and "10000" not in JS and "10.000" not in HTML and "1.000" not in HTML, "FALSE_QUOTA_CLAIMS_ABSENT")
+need("'TRIAL', 'Trial', 'HARA_COMMANDER_GOVERNED_INVOKE', 'CALENDAR_MONTH', 100, 'ACTIVE'" in TRIAL_MIGRATION, "TRIAL_PLAN_HISTORICAL_BASE")
+need("'TRIAL', 'Free', 'HARA_COMMANDER_GOVERNED_INVOKE', 'CALENDAR_MONTH', 10000, 'ACTIVE'" in COMMERCIAL_MIGRATION, "FREE_PLAN_CANONICAL_LIMIT")
+need("'STANDARD', 'Pro', 'HARA_COMMANDER_GOVERNED_INVOKE', 'NONE', NULL, 'ACTIVE'" in COMMERCIAL_MIGRATION, "PRO_PLAN_CANONICAL_UNLIMITED")
+need('10.000 <small>chamadas / mês</small>' in HTML and '10.000 chamadas renovadas todo mês' in HTML, "FREE_PLAN_UI_ALIGNMENT")
+need('R$ 80 <small>/ mês</small>' in HTML and 'Chamadas ilimitadas' in HTML, "PRO_PLAN_UI_ALIGNMENT")
+need('100 <small>execuções / mês</small>' not in HTML, "STALE_TRIAL_QUOTA_ABSENT")
 need(
-    'activeDevices.find((device) => Boolean(device.selected))' in JS
-    and 'setState("Offline"' in JS
-    and 'setState("Pronto"' in JS
-    and "device-selected-badge" in JS
-    and 'row.classList.add("selected")' in JS,
-    "DEVICE_SELECTION_STATE_UX",
+    'activeDevices.find((device) => Boolean(device.selected))' not in JS
+    and 'device-selected-badge' not in JS
+    and 'data-select-device' not in JS
+    and 'select.textContent = device.selected' not in JS
+    and 'setState("Offline", "Nenhum computador online")' in JS
+    and '" computadores online"' in JS,
+    "DEVICE_FLEET_STATE_UX",
+)
+need(
+    'COMPUTER_REQUIRED' in DEVICE_TARGETING
+    and 'resolveCustomerTargetDevice' in WORKER
+    and 'computer: z.string().min(1).max(120).optional()' in CUSTOMER_MCP
+    and 'JOIN commander_device_selections s' not in WORKER[WORKER.index('async function enqueueDeviceCall'):WORKER.index('async function deviceCallStatus')],
+    "DEVICE_EXPLICIT_TARGET_ROUTING",
 )
 need(
     'data-device-section-tab="devices"' in HTML
@@ -129,9 +164,41 @@ need(
     and '<span class="eyebrow"><i></i> PLANO</span>' not in HTML
     and '<span class="eyebrow"><i></i> INTEGRAÇÕES</span>' not in HTML
     and '<span class="eyebrow"><i></i> SEGURANÇA</span>' not in HTML
-    and '<h1 id="plans-title">Plano</h1>' in HTML
-    and '<h1 id="usage-title">Uso e limites</h1>' in HTML,
+    and '<h1 id="plans-title">Plano e cobrança</h1>' in HTML
+    and '<h1 id="usage-title">Uso</h1>' in HTML
+    and '<h1 id="security-title">Configurações</h1>' in HTML,
     "WORKSPACE_SINGLE_TITLE_HIERARCHY",
+)
+sidebar_block = HTML.split('<template id="sidebarTemplate">',1)[1].split('</template>',1)[0]
+need(
+    sidebar_block.count('data-app-go=') == 4
+    and 'data-app-go="devices"' in sidebar_block
+    and 'data-app-go="usage"' in sidebar_block
+    and 'data-app-go="plans"' in sidebar_block
+    and 'data-app-go="security"' in sidebar_block
+    and 'data-app-go="dashboard"' not in sidebar_block
+    and 'data-app-go="connections"' not in sidebar_block
+    and '<span>Computadores</span>' in sidebar_block
+    and '<span>Uso</span>' in sidebar_block
+    and '<span>Plano e cobrança</span>' in sidebar_block
+    and '<span>Configurações</span>' in sidebar_block,
+    "CUSTOMER_NAV_SIMPLE_FOUR_ITEMS",
+)
+need(
+    'encodeURIComponent("/#devices")' in JS
+    and 'route("devices");' in JS
+    and 'id="devices-title"' in HTML
+    and 'id="usage-title"' in HTML
+    and 'O Commander na nuvem mantém apenas o mínimo necessário' in HTML,
+    "CUSTOMER_DEFAULT_DEVICES_ROUTE",
+)
+need(
+    'device-where-panel' in HTML
+    and '<b>ChatGPT</b>' in HTML
+    and '<b>Claude</b>' in HTML
+    and '<b>Qualquer cliente MCP</b>' in HTML
+    and 'data-copy-simple-mcp' in HTML,
+    "DEVICE_WHERE_TO_USE_SURFACE",
 )
 need(
     "UX polish: single page title, larger useful content, restrained glow" in CSS
@@ -152,12 +219,28 @@ need(
     and 'data-os-choice="windows"' in HTML
     and 'data-os-panel="linux"' in HTML
     and 'data-os-panel="windows"' in HTML
-    and "Abra a sessão local" in HTML
-    and "Mantenha o console aberto enquanto usar a IA" in HTML
-    and "hara-commander start" in HTML
+    and "Sempre permitir" in HTML
+    and "Pedir confirmação" in HTML
+    and "<b>Pronto</b>" in HTML
+    and "hara-commander doctor" in HTML
+    and "Mantenha o console aberto enquanto usar a IA" not in HTML
     and 'tabindex="-1" aria-live="polite"' in HTML
     and 'function setInstallOs(os)' in JS,
     "PAIRING_ONBOARDING_ORDER",
+)
+onboarding_block = HTML.split('<div class="device-onboarding">',1)[1].split('</section>',1)[0]
+need(
+    onboarding_block.count('class="onboarding-step-no"') == 3
+    and '<span class="onboarding-step-no">01</span>' in onboarding_block
+    and '<span class="onboarding-step-no">02</span>' in onboarding_block
+    and '<span class="onboarding-step-no">03</span>' in onboarding_block
+    and '<span class="onboarding-step-no">04</span>' not in onboarding_block
+    and '<span class="onboarding-step-no">05</span>' not in onboarding_block
+    and "Instale e pronto" in onboarding_block
+    and "Sempre permitir" in onboarding_block
+    and "mantenha esse console aberto" not in onboarding_block
+    and "sessão de IA precisa ser aberta manualmente" not in onboarding_block,
+    "COMMERCIAL_ONBOARDING_THREE_STEPS",
 )
 need(
     'id="dashboardUsageProgress"' in HTML
@@ -166,7 +249,78 @@ need(
     and 'dashboardProgress.setAttribute("aria-valuenow"' in JS,
     "DASHBOARD_STATUS_SUMMARY",
 )
-need("Detalhamento em homologação" in HTML and "renderActivity(" not in JS and "activityList" not in JS, "USAGE_DETAIL_HONEST_STATE")
+need(
+    'id="internalBetaDiagnostics"' not in HTML
+    and 'DIAGNÓSTICO LOCAL · BETA' not in HTML
+    and 'id="activityTotal"' not in HTML
+    and 'id="activitySuccessRate"' not in HTML
+    and 'id="activityAvgLatency"' not in HTML
+    and 'id="activityTransport"' not in HTML
+    and 'id="sloSummaryCard"' not in HTML
+    and 'id="activityTopTools"' not in HTML
+    and 'id="activityTopErrors"' not in HTML
+    and 'id="usageLedger"' not in HTML
+    and 'data-slo-ack' not in HTML
+    and 'data-slo-escalate' not in HTML
+    and 'if (next === "usage") loadUsageActivity();' not in JS
+    and 'O Commander na nuvem mantém apenas o mínimo necessário' in HTML,
+    "USAGE_PRODUCT_BOUNDARY_NO_INTERNAL_DIAGNOSTICS",
+)
+need(
+    'id="usageCardTransactions"' in HTML
+    and 'id="usageCardCapacity"' in HTML
+    and 'id="usageCardPlan"' in HTML
+    and 'id="usageCardPeriod"' in HTML
+    and 'setText("usageCardTransactions"' in JS
+    and 'setText("usageCardCapacity"' in JS
+    and 'setText("usageCardPlan"' in JS
+    and 'setText("usageCardPeriod"' in JS,
+    "USAGE_CUSTOMER_SUMMARY_CARDS",
+)
+bootstrap_block = WORKER.split('url.pathname === "/api/portal/bootstrap"',1)[1].split('url.pathname === "/api/portal/dashboard"',1)[0]
+need(
+    'transaction_history: payload.transaction_history' in bootstrap_block,
+    "USAGE_BOOTSTRAP_TRANSACTION_HISTORY_PARITY",
+)
+need(
+    '.usage-product-grid{grid-template-columns:1.05fr 1.05fr 1.4fr 1fr;gap:18px;margin-top:24px' in CSS
+    and '.usage-product-grid .summary-card{min-height:144px' in CSS,
+    "USAGE_CUSTOMER_CARD_SPACING",
+)
+history_block = WORKER.split("async function productTransactionHistory",1)[1].split("async function dashboardForSubject",1)[0]
+need(
+    'COUNT(*) AS calls_total' in history_block
+    and 'AS calls_7d' in history_block
+    and 'WHERE tenant_id = ? AND subject_id = ?' in history_block
+    and 'detail_level: "AGGREGATE_ONLY"' in history_block
+    and 'tool_id' not in history_block
+    and 'payload_json' not in history_block
+    and 'result_json' not in history_block,
+    "USAGE_TRANSACTION_HISTORY_AGGREGATE_ONLY",
+)
+need(
+    'url.pathname === "/api/portal/activity"' in WORKER
+    and 'url.pathname === "/api/portal/slo"' in WORKER
+    and 'INTERNAL_DIAGNOSTICS_NOT_IN_PRODUCT' in WORKER,
+    "PUBLIC_DIAGNOSTIC_ROUTES_FAIL_CLOSED",
+)
+need(
+    'if (toolId === "hara.activity" || toolId === "hara.calls.recent")' in WORKER
+    and 'LOCAL_DIAGNOSTICS_REQUIRE_SIGNED_AGENT_UPDATE' in WORKER,
+    "MCP_REMOTE_HISTORY_FAIL_CLOSED",
+)
+need(
+    'CUSTOMER_MCP_SIMPLE_TOOLS' in SIMPLE_MCP
+    and '"read_file"' in SIMPLE_MCP
+    and '"write_file"' in SIMPLE_MCP
+    and '"start_process"' in SIMPLE_MCP
+    and '"read_process_output"' in SIMPLE_MCP
+    and 'args.interactive ? "hara.process.start" : "hara.process.run"' in SIMPLE_MCP
+    and 'handleSimpleCustomerMcpRequest' in WORKER
+    and 'profile === "simple"' in WORKER
+    and 'MCP_PROFILE_INVALID' in WORKER,
+    "MCP_SIMPLE_PROFILE",
+)
 need(
     'class="skip-link" href="#mainContent"' in HTML
     and '<main id="mainContent" tabindex="-1">' in HTML
@@ -177,23 +331,81 @@ need(
 )
 need(
     'class="connection-readiness"' in HTML
-    and HTML.count('class="integration-badge"') >= 2
-    and "Cinco ferramentas governadas" in HTML
-    and "Ainda não disponível" in HTML
-    and "Aguardando homologação do primeiro dispositivo real" in HTML,
+    and HTML.count('integration-badge') >= 2
+    and 'data-copy-local-mcp' in HTML
+    and 'data-copy-simple-mcp' in HTML
+    and "MCP Local" in HTML
+    and "MCP Remoto" in HTML
+    and "0 relay por operação" in HTML
+    and "24 comandos simples" in HTML
+    and "/api/mcp?profile=simple" in HTML
+    and 'copyText("hara-commander mcp"' in JS
+    and 'window.location.origin + "/api/mcp?profile=simple"' in JS
+    and "Ainda não disponível" not in HTML
+    and "Aguardando homologação do primeiro dispositivo real" not in HTML,
     "CONNECTIONS_HONEST_READINESS",
 )
 need(
-    'data-mobile-more' in HTML
-    and 'data-mobile-more-menu' in HTML
-    and "function toggleMobileMore(button)" in JS
-    and "closeMobileMoreMenus()" in JS
-    and ".workspace-mode .sidebar{position:fixed" in CSS
-    and ".side-nav>.mobile-more-toggle,.mobile-more-menu{display:none!important}" in CSS
-    and ".workspace-mode .side-nav>[data-app-go]:not(.desktop-secondary),.workspace-mode .side-nav>.mobile-more-toggle{display:flex!important" in CSS
-    and ".workspace-mode .side-nav>.desktop-secondary{display:none!important}" in CSS
-    and ".mobile-more-menu:not([hidden]){display:flex}" in CSS,
+    ".workspace-mode .sidebar{position:fixed" in CSS
+    and 'data-app-go="devices"' in sidebar_block
+    and 'data-app-go="usage"' in sidebar_block
+    and 'data-app-go="plans"' in sidebar_block
+    and 'data-app-go="security"' in sidebar_block
+    and 'data-mobile-more' not in sidebar_block
+    and 'desktop-secondary' not in sidebar_block,
     "MOBILE_NAVIGATION",
+)
+need(
+    "function deviceApprovalLabel(mode)" in JS
+    and '"PERSISTENT_TRUSTED"' in JS
+    and '"Sempre permitido"' in JS
+    and '"SESSION_TRUSTED"' in JS
+    and '"Por sessão"' in JS
+    and '"ASK_EVERY_ACTION"' in JS
+    and '"Confirmação"' in JS
+    and ".device-policy.persistent" in CSS,
+    "DEVICE_APPROVAL_POLICY_VISIBILITY",
+)
+need(
+    "function deviceReadiness(device)" in JS
+    and '"PERSISTENT_TRUSTED"' in JS
+    and '"SESSION_TRUSTED"' in JS
+    and 'label:"Pronto"' in JS
+    and 'label:"Atenção"' in JS
+    and "function deviceDiagnosticCommand(platform)" in JS
+    and "hara-commander doctor && hara-commander support" in JS
+    and "data-copy-device-diagnostic" in JS
+    and "Comando de diagnóstico copiado." in JS,
+    "DEVICE_SELF_SERVICE_SUPPORT",
+)
+need(
+    'class="panel quickstart-panel"' in HTML
+    and 'id="quickStartDeviceState"' in HTML
+    and 'data-copy-first-prompt' in HTML
+    and 'Verifique se meu computador está online e mostre as informações básicas dele.' in JS
+    and 'quickStartDeviceStep' in JS
+    and 'onlineCount > 0' in JS,
+    "DEVICE_FIRST_SUCCESS_QUICKSTART",
+)
+need(
+    'id="serviceHealthPill"' in HTML
+    and 'id="serviceHealthDetail"' in HTML
+    and 'data-refresh-service-health' in HTML
+    and "async function loadServiceHealth(trigger=null)" in JS
+    and 'fetch("/api/health"' in JS
+    and 'payload?.service === "hara-commander"' in JS
+    and '"Operacional"' in JS
+    and '"Degradado"' in JS
+    and 'next === "security"' in JS,
+    "CUSTOMER_SERVICE_HEALTH_SURFACE",
+)
+need(
+    'data-beta-access' in HTML
+    and 'Solicitar acesso beta' in HTML
+    and 'activation.first_checkout_ready || standardCurrent' in JS
+    and 'Standard está disponível em beta por convite.' in JS
+    and 'betaAccess.hidden' in JS,
+    "BETA_INVITE_FALLBACK",
 )
 need(
     "function renderDeviceLoading()" in JS
@@ -213,9 +425,8 @@ need(
     and '<a class="brand" href="https://www.haralabs.com.br/"' in HTML
     and '<div class="workspace">' not in HTML
     and "sidebar-bottom" not in HTML
-    and "side-nav-link" in HTML
-    and 'href="https://www.haralabs.com.br/support/"' in HTML
-    and HTML.count('class="nav-icon"') >= 7
+    and 'class="side-nav side-nav-simple"' in HTML
+    and HTML.count('class="nav-icon"') >= 4
     and "<span>▦</span>" not in HTML
     and "<span>▣</span>" not in HTML,
     "APPROVED_NAV_LAYOUT",
@@ -233,11 +444,30 @@ need(
     and 'html[data-theme="dark"] .theme-icon-sun{display:block}' in CSS,
     "APPROVED_HEADER_BEHAVIOR",
 )
-need('OWNER: "Proprietário"' in JS and 'data-user-role>Owner<' not in HTML and 'usage: "Uso & limite · H.A.R.A. Commander"' in JS, "PORTUGUESE_ROLE_AND_TITLE_UX")
+need('OWNER: "Proprietário"' in JS and 'data-user-role>Owner<' not in HTML and 'usage: "Uso · H.A.R.A. Commander"' in JS, "PORTUGUESE_ROLE_AND_TITLE_UX")
 need("https://www.haralabs.com.br/legal/termos/" in HTML and "https://www.haralabs.com.br/legal/privacidade/" in HTML and 'class="auth-legal"' in HTML and 'class="product-legal-links"' in HTML, "LEGAL_LINKS_READY")
 need("#dashboardInvokes" not in CSS and ".activity-list" not in CSS, "DEAD_ACTIVITY_CSS_ABSENT")
 need('class="user-chip"' not in HTML, "DUPLICATE_INTERNAL_SESSION_IDENTITY_ABSENT")
 need(".user-chip" not in CSS, "DEAD_USER_CHIP_CSS_ABSENT")
+need(
+    '<span class="plan-label">FREE</span>' in HTML
+    and '<span class="plan-label">PRO</span>' in HTML
+    and '<span class="plan-label">SCALE</span>' not in HTML
+    and 'data-billing-plan="SCALE"' not in HTML
+    and 'grid-template-columns:repeat(2,minmax(0,1fr))' in CSS,
+    "COMMERCIAL_TWO_PLAN_SURFACE",
+)
+need(
+    'id="billingReadiness"' in HTML
+    and 'data-billing-ready="provider"' in HTML
+    and 'data-billing-ready="catalog"' in HTML
+    and 'data-billing-ready="price"' in HTML
+    and 'data-billing-ready="checkout"' in HTML
+    and 'activation.standard_checkout_ready' in JS
+    and 'activation.standard_catalog_active' in JS
+    and 'activation.standard_price_configured' in JS,
+    "BILLING_READINESS_UX",
+)
 
 prod = "https://commander.haralabs.com.br"
 dev = "hara-commander-dev-v2.tiago-sartori.workers.dev"
@@ -254,6 +484,9 @@ need(not (ROOT / "public/dev/commander").exists(), "DEV_SNAPSHOT_ARCHIVE")
 need(not (APP / "seed/dev.sql").exists(), "DEV_SEED_RESIDUE")
 need("Strict-Transport-Security: max-age=31536000; includeSubDomains" in HEADERS, "STATIC_HSTS")
 need("Content-Security-Policy:" in HEADERS and "frame-ancestors 'none'" in HEADERS, "STATIC_CSP")
+need("connect-src 'self' http://127.0.0.1:32145" in HEADERS, "LOCALHOST_ACTIVITY_CSP")
+need("http://0.0.0.0" not in HEADERS and "192.168." not in HEADERS and "10.0.0.0" not in HEADERS, "LOCALHOST_ACTIVITY_CSP_NARROW")
+need("upgrade-insecure-requests" not in HEADERS, "LOCALHOST_ACTIVITY_NOT_UPGRADED")
 need("X-Content-Type-Options: nosniff" in HEADERS, "STATIC_NOSNIFF")
 need("SECURITY_HEADERS" in WORKER and '"strict-transport-security"' in WORKER, "WORKER_SECURITY_HEADERS")
 need("7403" in READBACK and "TRANSIENT_MARKERS" in READBACK, "D1_TRANSIENT_RETRY")
@@ -280,7 +513,8 @@ print("COMMANDER_PROD_PORTAL_MUTATION_ORIGIN_GUARD=PASS")
 print("COMMANDER_PROD_EXTERNAL_FONT_DEPENDENCY=ABSENT")
 print("COMMANDER_PROD_TRIAL_PLAN_UI_ALIGNMENT=PASS")
 print("COMMANDER_PROD_FALSE_QUOTA_CLAIMS=ABSENT")
-print("COMMANDER_PROD_DEVICE_SELECTION_STATE_UX=PASS")
+print("COMMANDER_PROD_DEVICE_FLEET_STATE_UX=PASS")
+print("COMMANDER_PROD_DEVICE_EXPLICIT_TARGET_ROUTING=PASS")
 print("COMMANDER_PROD_PAIRING_ONBOARDING_ORDER=PASS")
 print("COMMANDER_PROD_DASHBOARD_STATUS_SUMMARY=PASS")
 print("COMMANDER_PROD_USAGE_DETAIL_HONEST_STATE=PASS")

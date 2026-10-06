@@ -2,6 +2,16 @@ const STRIPE_API = "https://api.stripe.com/v1";
 const WEBHOOK_TOLERANCE_SECONDS = 300;
 const WEBHOOK_MAX_BYTES = 512 * 1024;
 const PAID_PLANS = Object.freeze(["STANDARD", "SCALE"]);
+export const APPROVED_COMMERCIAL_TERMS = Object.freeze({
+  STANDARD: Object.freeze({
+    public_name: "Pro",
+    currency: "BRL",
+    price_amount_cents: 8000,
+    price_display: "R$ 80",
+    billing_interval: "month",
+    usage_unlimited: true,
+  }),
+});
 const ACTIVE_SUBSCRIPTION_STATES = new Set(["active", "trialing"]);
 const SUSPENDED_SUBSCRIPTION_STATES = new Set(["incomplete", "past_due", "unpaid", "paused"]);
 const REVOKED_SUBSCRIPTION_STATES = new Set(["canceled", "incomplete_expired"]);
@@ -164,17 +174,20 @@ async function billingConnection(env, tenantId) {
 
 export async function billingStatus(env, session) {
   const prices = priceMap(env);
+  const providerConfigured = stripeBillingConfigured(env);
   const plans = {};
   for (const planCode of PAID_PLANS) {
     const plan = await activePlan(env, planCode);
     plans[planCode] = {
       plan_code: planCode,
       catalog_active: Boolean(plan),
+      price_configured: Boolean(prices[planCode]),
       checkout_ready: Boolean(
-        stripeBillingConfigured(env) && plan && prices[planCode]
+        providerConfigured && plan && prices[planCode]
       ),
       unit_limit: plan?.unit_limit == null ? null : Number(plan.unit_limit),
       period_kind: plan ? plan.period_kind : null,
+      commercial_terms: APPROVED_COMMERCIAL_TERMS[planCode] || null,
     };
   }
 
@@ -182,8 +195,18 @@ export async function billingStatus(env, session) {
   return {
     schema: "hara.commander-billing-status.v1",
     provider: "STRIPE",
-    configured: stripeBillingConfigured(env),
+    configured: providerConfigured,
     can_manage: ["OWNER", "ADMIN"].includes(String(session.role || "")),
+    activation:{
+      provider_configured:providerConfigured,
+      standard_catalog_active:Boolean(plans.STANDARD?.catalog_active),
+      standard_price_configured:Boolean(plans.STANDARD?.price_configured),
+      standard_checkout_ready:Boolean(plans.STANDARD?.checkout_ready),
+      scale_catalog_active:Boolean(plans.SCALE?.catalog_active),
+      scale_price_configured:Boolean(plans.SCALE?.price_configured),
+      scale_checkout_ready:Boolean(plans.SCALE?.checkout_ready),
+      first_checkout_ready:Boolean(plans.STANDARD?.checkout_ready),
+    },
     plans,
     connection: connection ? {
       state: connection.state,

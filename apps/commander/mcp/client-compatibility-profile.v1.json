@@ -1,0 +1,159 @@
+{
+  "schema": "hara.commander.mcp-compatibility.v1",
+  "state": "PREPARED_NOT_CLIENT_TESTED",
+  "canonical_source_commit": "ccdb642e643174484a57a34115f7b24c964e8c20",
+  "server": {
+    "name": "H.A.R.A. Commander",
+    "endpoint": "https://commander.haralabs.com.br/api/mcp?profile=simple",
+    "transport": "streamable-http",
+    "simple_profile_version": "1.1.0",
+    "tool_count": 24,
+    "protocol_conformance": [
+      "2025-06-18",
+      "2025-11-25",
+      "2026-07-28"
+    ],
+    "capabilities": {
+      "tools": true,
+      "resources": false,
+      "prompts": false,
+      "sampling": false
+    },
+    "auth": {
+      "protected_resource_metadata": "https://commander.haralabs.com.br/.well-known/oauth-protected-resource/api/mcp",
+      "authorization_server": "https://auth.haralabs.com.br",
+      "authorization_server_metadata": "https://auth.haralabs.com.br/.well-known/oauth-authorization-server",
+      "pkce_methods": [
+        "S256"
+      ],
+      "dynamic_client_registration": "guarded-live",
+      "client_id_metadata_document_supported": false,
+      "public_clients_only": true,
+      "client_secret_expected": false
+    }
+  },
+  "tool_groups": {
+    "device": [
+      "list_devices",
+      "get_config",
+      "ping",
+      "get_device_info"
+    ],
+    "filesystem": [
+      "read_file",
+      "read_multiple_files",
+      "write_file",
+      "edit_block",
+      "create_directory",
+      "list_directory",
+      "move_file",
+      "copy_file",
+      "delete_file",
+      "search",
+      "get_file_info"
+    ],
+    "process": [
+      "list_processes",
+      "start_process",
+      "read_process_output",
+      "interact_with_process",
+      "kill_process",
+      "list_sessions"
+    ],
+    "audit": [
+      "get_activity",
+      "get_usage_stats",
+      "get_recent_tool_calls"
+    ]
+  },
+  "client_targets": [
+    {
+      "id": "vscode",
+      "surfaces": [
+        "desktop",
+        "agent-host"
+      ],
+      "config_family": [
+        "portable-.mcp.json",
+        ".vscode/mcp.json"
+      ],
+      "expected_transport": "http",
+      "oauth_mode": "host-managed",
+      "registration_path": "DCR or client-provided OAuth client depending on host configuration",
+      "pretest_state": "READY_FOR_CLIENT_SMOKE"
+    },
+    {
+      "id": "cursor",
+      "surfaces": [
+        "desktop",
+        "cli",
+        "cloud-agent"
+      ],
+      "config_family": [
+        ".cursor/mcp.json",
+        "~/.cursor/mcp.json"
+      ],
+      "expected_transport": "http",
+      "oauth_mode": "host-managed",
+      "known_redirects": [
+        "http://localhost:8787/callback",
+        "https://www.cursor.com/agents/mcp/oauth/callback"
+      ],
+      "registration_path": "guarded DCR or static OAuth client",
+      "pretest_state": "READY_FOR_CLIENT_SMOKE"
+    },
+    {
+      "id": "claude-code",
+      "surfaces": [
+        "terminal",
+        "desktop-remote-connector"
+      ],
+      "config_family": [
+        "remote-mcp-url"
+      ],
+      "expected_transport": "streamable-http",
+      "oauth_mode": "native-host-flow-or-bearer-token",
+      "registration_path": "host/runtime dependent",
+      "pretest_state": "READY_FOR_CLIENT_SMOKE"
+    },
+    {
+      "id": "mcp-inspector",
+      "surfaces": [
+        "inspector-ui"
+      ],
+      "config_family": [
+        "streamable-http-url"
+      ],
+      "expected_transport": "streamable-http",
+      "oauth_mode": "quick-oauth-flow",
+      "registration_path": "guarded DCR",
+      "pretest_state": "READY_FOR_CLIENT_SMOKE"
+    }
+  ],
+  "certification": {
+    "matrix": "apps/commander/mcp/client-certification-matrix.v1.json",
+    "evidence_schema": "apps/commander/mcp/schemas/client-certification-evidence.schema.json",
+    "runner": "apps/commander/scripts/commander_mcp_client_certification.py",
+    "rule": "same cases, same evidence schema, no vendor-specific weakening"
+  },
+  "evidence_privacy": {
+    "access_token": false,
+    "refresh_token": false,
+    "registration_access_token": false,
+    "client_secret": false,
+    "command_payload_content": false,
+    "result_payload_content": false,
+    "allowed": [
+      "client name/version",
+      "protocol version",
+      "case id",
+      "tool name",
+      "HTTP status",
+      "MCP error code",
+      "request id",
+      "bridge receipt sha256",
+      "latency ms",
+      "PASS/FAIL"
+    ]
+  }
+}
