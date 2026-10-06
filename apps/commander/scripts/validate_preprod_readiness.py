@@ -64,6 +64,7 @@ def main():
         ("COMMANDER_PREPROD_AGENT", "validate_device_installers.py"),
         ("COMMANDER_PREPROD_REENROLL", "validate_issue168_reenroll.py"),
         ("COMMANDER_PREPROD_SUPPLY_CHAIN", "validate_bootstrap_supply_chain.py"),
+        ("COMMANDER_PREPROD_BOOTSTRAP_DUAL_ORIGIN", "validate_bootstrap_dual_origin.py"),
         ("COMMANDER_PREPROD_DEV_CONFIG", "validate_dev_config.py"),
         ("COMMANDER_PREPROD_CONTRACT", "validate_prod_contracts.py"),
         ("COMMANDER_PREPROD_LIFECYCLE", "validate_device_lifecycle_races.py"),
