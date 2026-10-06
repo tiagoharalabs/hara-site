@@ -1,0 +1,65 @@
+{
+  "schema": "hara.commander-openai-desktop-parity-reconciliation.v1",
+  "date": "2026-10-06",
+  "state": "CLOSED_PASS_RECONCILED",
+  "canonical_branch": "local/commander-openai-desktop-parity-20261004",
+  "preimage_head": "81e559772dddb3a159af2c6acbf6d300d8a3160d",
+  "github_preimage_exact_match": true,
+  "product_path": "ChatGPT/OpenAI -> H.A.R.A. Identity -> Commander MCP edge -> outbound H.A.R.A. Commander Agent -> target computer",
+  "laboratory_local_mcp_in_customer_remote_path": false,
+  "desktop_commander_role": "ADMIN_BOOTSTRAP_AND_ERGONOMICS_BENCHMARK_ONLY",
+  "historical_live_canary": {
+    "host": "nucleo-a",
+    "agent_closeout": "0.3.18",
+    "arbitrary_shell": "DENIED",
+    "worker_versions": [
+      "6029c2cf-3180-4491-b0b0-a4c454f81273",
+      "cd2e7d5d-4f28-4aaf-b5e1-c5d3ae8ff442",
+      "f16d60f2-06fb-4d63-ab3f-c0f46288538f",
+      "a9ea8d76-4da6-4c3d-9b33-f40e04d3f2c7",
+      "054c00d0-cba1-47e5-b782-981f062362ed"
+    ],
+    "receipts": {
+      "device_info": "3bae76bc3bd9446f57a6f1559537a60400206462317493c8e73aa1c8a8114641",
+      "public_process_list": "38ef59b1e851105ded18b3587a1b6182df7da099685c0c59da4b06734b701e0a",
+      "filesystem_search": "4a30fb4b51bebca5a2304eca47c808b9960460e59f6be216d6a11f646f0c1cda",
+      "filesystem_read_many": "bee4d9d70303855c2a227fa2c1bab0aab3bef6754a2efdb58edab8cf81eb90e6"
+    }
+  },
+  "current_source": {
+    "agent_version": "0.3.40",
+    "full_customer_mcp_tools": 37,
+    "simple_mcp_tools": 24,
+    "mutation_and_process_governance": "DELIVERED_IN_CURRENT_LINEAGE"
+  },
+  "production": {
+    "worker_version": "c8cfc1d1-592c-4d71-8788-d237e07828c6",
+    "rollback_worker": "a62fde0b-9c7d-4500-a97e-f31d9bdf9eac",
+    "runtime_assets": "CURRENT",
+    "fail_closed": "PASS",
+    "sentinela_d_agent_0340": "CLOSED_PASS",
+    "nucleo_a_agent_0340": "PENDING_SAFE_CHILD_DRAIN"
+  },
+  "mcp": {
+    "simple_profile": "1.1.0",
+    "protocol_2025_06_18": "CLOSED_PASS",
+    "protocol_2025_11_25": "CLOSED_PASS",
+    "protocol_2026_07_28": "CLOSED_PASS",
+    "chatgpt_existing_integration": "READY",
+    "generic_auto_oauth": "PENDING_IDENTITY_COMPATIBILITY_PROMOTION",
+    "dcr_gateway_source_preprod": "CLOSED_PASS",
+    "dcr_gateway_prod": "PENDING_DEPLOY"
+  },
+  "validation": {
+    "command": "python3 apps/commander/scripts/validate_preprod_readiness.py",
+    "exit_code": 0,
+    "source_preprod_ready": "PASS"
+  },
+  "successor_gates": [
+    "NUCLEO_A_AGENT_0340_SAFE_CHILD_DRAIN",
+    "WINDOWS_CURRENT_LIVE_CANARY",
+    "DCR_GUARD_EXPLICIT_PROMOTION",
+    "STRIPE_STANDARD_RUNTIME_AND_FIRST_CHECKOUT",
+    "EXTERNAL_SLO_ALERT_DESTINATION"
+  ]
+}

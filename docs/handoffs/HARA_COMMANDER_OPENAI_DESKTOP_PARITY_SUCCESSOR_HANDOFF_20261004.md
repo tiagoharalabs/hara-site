@@ -4,6 +4,15 @@ Date: 2026-10-04
 Status: LIVE_PROVEN_0_3_30_PERSISTENT_TRUSTED + SIMPLE_MCP_24 + COMMERCIAL_UX_LIVE
 Scope: ChatGPT/OpenAI customer MCP → H.A.R.A. Identity → Commander edge → outbound Agent → governed Linux execution
 
+## Current reconciliation pointer — 2026-10-06
+
+This handoff contains the historical 0.3.15–0.3.30 evolution and some recommendations that have since been delivered. Before continuing, read:
+
+- `docs/status/HARA_COMMANDER_OPENAI_DESKTOP_PARITY_RECONCILIATION_20261006.md`
+- `docs/status/HARA_COMMANDER_OPENAI_DESKTOP_PARITY_RECONCILIATION_20261006.json`
+
+Current source on this lineage is Agent 0.3.40 with 37 full customer MCP tools and 24 vendor-neutral Simple MCP tools. Mutation/process P0/P1/P2 recommendations later in this document are historical and superseded by the 2026-10-06 reconciliation and newer dated status records.
+
 ## Executive state
 
 This front proved the customer-facing path without using the laboratory-local MCP as the execution plane:
