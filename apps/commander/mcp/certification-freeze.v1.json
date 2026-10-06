@@ -3,6 +3,7 @@
   "state": "FROZEN_CANDIDATE_NOT_EXECUTED",
   "frozen_at_utc": "2026-10-06T16:00:00Z",
   "server_contract_commit": "ccdb642e643174484a57a34115f7b24c964e8c20",
+  "certification_bundle_commit": "c4e2a50e81c1d7487116c35b551924862f21018c",
   "artifacts": {
     "client-compatibility-profile.v1.json": "5ac1da274d19115fd1e7db693f948c4d148a1679df12e395da31729f569d0939",
     "client-adapter-expectations.v1.json": "f465ac4c823c680e57dfe8bf44190af7686e5b8a1a9ea66517feebdaf2a589db",

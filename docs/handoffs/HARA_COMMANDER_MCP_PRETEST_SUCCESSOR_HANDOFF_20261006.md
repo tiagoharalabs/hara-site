@@ -77,3 +77,10 @@ Failure classification is mandatory before any server change.
 CIMD remains a separate migration track. Guarded DCR is the V1 compatibility
 registration mechanism. See:
 `docs/status/HARA_COMMANDER_MCP_CIMD_MIGRATION_DECISION_20261006.md`.
+
+## Frozen certification bundle
+
+Bundle commit:
+`c4e2a50e81c1d7487116c35b551924862f21018c`
+
+Do not alter matrix/evidence/fixture artifacts after the first client run without creating a new certification revision.

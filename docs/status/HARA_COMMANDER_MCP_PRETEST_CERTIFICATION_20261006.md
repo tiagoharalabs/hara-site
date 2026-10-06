@@ -78,3 +78,8 @@ MCP_MULTICLIENT_ROLLUP=PREPARED
 MCP_PUBLIC_COMPATIBILITY_MANIFEST=PREPARED_NOT_DEPLOYED
 MCP_REAL_CLIENT_TESTS=NOT_RUN
 MCP_LOCAL_CLIENT_TESTS=NOT_RUN
+
+Certification bundle commit:
+- `c4e2a50e81c1d7487116c35b551924862f21018c`
+
+The frozen artifact hashes in `apps/commander/mcp/certification-freeze.v1.json` refer to that bundle.
