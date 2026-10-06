@@ -65,6 +65,12 @@ const EVENT_V2_TERMINAL_FAST_PATH_WAIT_MS = 500;
 const LOCAL_BUDGET_MIN_LINUX_PATCH = 36;
 const LOCAL_BUDGET_BLOCK_UNITS = 100;
 const PRODUCT_LEASE_TTL_SECONDS = 6 * 60 * 60;
+const SLO_ALERT_PROFILE = "INTERNAL_BETA_V1";
+const SLO_ALERT_BREACH_STREAK = 2;
+const SLO_ALERT_RECOVERY_STREAK = 2;
+const SLO_ALERT_ONLINE_GRACE_SECONDS = 120;
+const SLO_ALERT_SNAPSHOT_GRACE_SECONDS = 180;
+const SLO_ALERT_INCIDENT_RETENTION_SECONDS = 90 * 24 * 60 * 60;
 const TRANSIENT_EXECUTE_OR_REPLAY = "EXECUTE_OR_REPLAY";
 const TRANSIENT_REPLAY_ONLY = "REPLAY_ONLY";
 const TRANSIENT_SAFE_PREEXEC_RELEASE_CODES = new Set([
@@ -3395,6 +3401,166 @@ async function requestPortalBetaAccess(env, session) {
   return await portalBetaAccessStatus(env,session);
 }
 
+
+function sloAlertTime(value) {
+  const ms=Date.parse(String(value || ""));
+  return Number.isFinite(ms) ? ms : null;
+}
+
+function sloAlertNumber(value) {
+  const num=Number(value);
+  return Number.isFinite(num) && num >= 0 ? num : null;
+}
+
+function evaluateTenantSloRows(rows, nowMs=Date.now()) {
+  const onlineCutoff=nowMs-(SLO_ALERT_ONLINE_GRACE_SECONDS*1000);
+  const snapshotCutoff=nowMs-(SLO_ALERT_SNAPSHOT_GRACE_SECONDS*1000);
+  const online=(rows || []).filter((row)=>{
+    const seen=sloAlertTime(row.last_seen_at_utc);
+    return seen != null && seen >= onlineCutoff;
+  });
+  if (!online.length) return null;
+  let pass=0, degraded=0, insufficient=0, missing=0, stale=0, completed=0, failed=0;
+  let latestSnapshot=null;
+  const p50=[],p95=[],p99=[];
+  for (const row of online) {
+    const snapAt=sloAlertTime(row.activity_summary_at_utc);
+    if (!row.activity_summary_json) { missing+=1; continue; }
+    if (snapAt == null || snapAt < snapshotCutoff) stale+=1;
+    if (snapAt != null && (latestSnapshot == null || snapAt > latestSnapshot)) latestSnapshot=snapAt;
+    let parsed;
+    try { parsed=JSON.parse(String(row.activity_summary_json)); }
+    catch (_error) { missing+=1; continue; }
+    const selected=parsed?.windows?.["24h"] || {};
+    const summary=selected.summary || {};
+    const status=String(selected.slo?.status || "INSUFFICIENT_DATA");
+    if (status === "PASS") pass+=1;
+    else if (status === "DEGRADED") degraded+=1;
+    else insufficient+=1;
+    completed+=Number(summary.completed || 0);
+    failed+=Number(summary.failed || 0);
+    for (const [target,field] of [[p50,"latency_p50_ms"],[p95,"latency_p95_ms"],[p99,"latency_p99_ms"]]) {
+      const value=sloAlertNumber(summary[field]);
+      if (value != null) target.push(value);
+    }
+  }
+  const terminal=completed+failed;
+  const state=(missing || stale || degraded) ? "DEGRADED" : (pass ? "PASS" : "INSUFFICIENT_DATA");
+  return {
+    profile:SLO_ALERT_PROFILE,
+    state,
+    online_devices:online.length,
+    pass_devices:pass,
+    degraded_devices:degraded,
+    insufficient_devices:insufficient,
+    missing_snapshot_devices:missing,
+    stale_snapshot_devices:stale,
+    weighted_success_rate_percent:terminal ? Number(((completed/terminal)*100).toFixed(3)) : null,
+    worst_device_p50_ms:p50.length ? Math.max(...p50) : null,
+    worst_device_p95_ms:p95.length ? Math.max(...p95) : null,
+    worst_device_p99_ms:p99.length ? Math.max(...p99) : null,
+    last_snapshot_at_utc:latestSnapshot == null ? null : new Date(latestSnapshot).toISOString(),
+  };
+}
+
+async function portalSloStatus(env, session) {
+  if (!betaAccessCanManage(session)) throw new Error("SLO_STATUS_ADMIN_REQUIRED");
+  const state=await env.PRODUCT_DB.prepare(
+    "SELECT tenant_id,profile,state,breach_streak,recovery_streak,current_incident_id,last_evaluated_at_utc,last_snapshot_at_utc,summary_json,updated_at_utc FROM commander_slo_state WHERE tenant_id = ? LIMIT 1"
+  ).bind(session.tenant_id).first();
+  const incidentRows=await env.PRODUCT_DB.prepare(
+    "SELECT incident_id,state,opened_at_utc,resolved_at_utc,first_breach_at_utc,last_breach_at_utc,last_seen_at_utc,summary_json,resolution_json FROM commander_slo_incidents WHERE tenant_id = ? ORDER BY opened_at_utc DESC LIMIT 10"
+  ).bind(session.tenant_id).all();
+  const parse=(value)=>{ try { return value ? JSON.parse(String(value)) : null; } catch (_error) { return null; } };
+  return {
+    schema:"hara.commander-portal-slo.v1",
+    profile:SLO_ALERT_PROFILE,
+    state:state ? {
+      state:String(state.state),
+      breach_streak:Number(state.breach_streak || 0),
+      recovery_streak:Number(state.recovery_streak || 0),
+      current_incident_id:state.current_incident_id || null,
+      last_evaluated_at_utc:state.last_evaluated_at_utc || null,
+      last_snapshot_at_utc:state.last_snapshot_at_utc || null,
+      summary:parse(state.summary_json),
+      updated_at_utc:state.updated_at_utc || null,
+    } : null,
+    incidents:(incidentRows.results || []).map((row)=>({
+      incident_id:String(row.incident_id),
+      state:String(row.state),
+      opened_at_utc:row.opened_at_utc,
+      resolved_at_utc:row.resolved_at_utc || null,
+      first_breach_at_utc:row.first_breach_at_utc,
+      last_breach_at_utc:row.last_breach_at_utc || null,
+      last_seen_at_utc:row.last_seen_at_utc,
+      summary:parse(row.summary_json),
+      resolution:parse(row.resolution_json),
+    })),
+  };
+}
+
+async function runSloAlertMaintenance(env) {
+  const now=nowIso();
+  const result=await env.PRODUCT_DB.prepare(
+    "SELECT tenant_id,device_id,device_name,agent_version,last_seen_at_utc,activity_summary_at_utc,activity_summary_json FROM commander_devices WHERE state='ACTIVE' AND revoked_at_utc IS NULL ORDER BY tenant_id,device_name"
+  ).all();
+  const byTenant=new Map();
+  for (const row of result.results || []) {
+    const tenant=String(row.tenant_id || "");
+    if (!tenant) continue;
+    if (!byTenant.has(tenant)) byTenant.set(tenant,[]);
+    byTenant.get(tenant).push(row);
+  }
+  for (const [tenantId,rows] of byTenant.entries()) {
+    const summary=evaluateTenantSloRows(rows);
+    if (!summary) continue;
+    const prior=await env.PRODUCT_DB.prepare(
+      "SELECT state,breach_streak,recovery_streak,current_incident_id FROM commander_slo_state WHERE tenant_id = ? LIMIT 1"
+    ).bind(tenantId).first();
+    let breach=0, recovery=0;
+    let incidentId=prior?.current_incident_id || null;
+    if (summary.state === "DEGRADED") {
+      breach=String(prior?.state || "") === "DEGRADED" ? Number(prior?.breach_streak || 0)+1 : 1;
+      recovery=0;
+      if (!incidentId && breach >= SLO_ALERT_BREACH_STREAK) {
+        incidentId="HARA-SLO-INC-"+crypto.randomUUID();
+        await env.PRODUCT_DB.prepare(
+          "INSERT INTO commander_slo_incidents (incident_id,tenant_id,profile,state,opened_at_utc,resolved_at_utc,first_breach_at_utc,last_breach_at_utc,last_seen_at_utc,summary_json,resolution_json,updated_at_utc) VALUES (?, ?, ?, 'OPEN', ?, NULL, ?, ?, ?, ?, NULL, ?)"
+        ).bind(incidentId,tenantId,SLO_ALERT_PROFILE,now,now,now,now,JSON.stringify(summary),now).run();
+      } else if (incidentId) {
+        await env.PRODUCT_DB.prepare(
+          "UPDATE commander_slo_incidents SET last_breach_at_utc=?,last_seen_at_utc=?,summary_json=?,updated_at_utc=? WHERE incident_id=? AND state='OPEN'"
+        ).bind(now,now,JSON.stringify(summary),now,incidentId).run();
+      }
+    } else if (summary.state === "PASS") {
+      breach=0;
+      recovery=incidentId ? Number(prior?.recovery_streak || 0)+1 : 0;
+      if (incidentId && recovery >= SLO_ALERT_RECOVERY_STREAK) {
+        const resolution={state:"PASS",recovered_at_utc:now,recovery_streak:recovery,summary};
+        await env.PRODUCT_DB.prepare(
+          "UPDATE commander_slo_incidents SET state='RESOLVED',resolved_at_utc=?,last_seen_at_utc=?,resolution_json=?,updated_at_utc=? WHERE incident_id=? AND state='OPEN'"
+        ).bind(now,now,JSON.stringify(resolution),now,incidentId).run();
+        incidentId=null;
+        recovery=0;
+      } else if (incidentId) {
+        await env.PRODUCT_DB.prepare(
+          "UPDATE commander_slo_incidents SET last_seen_at_utc=?,updated_at_utc=? WHERE incident_id=? AND state='OPEN'"
+        ).bind(now,now,incidentId).run();
+      }
+    } else {
+      breach=0;
+      recovery=0;
+    }
+    await env.PRODUCT_DB.prepare(
+      "INSERT INTO commander_slo_state (tenant_id,profile,state,breach_streak,recovery_streak,current_incident_id,last_evaluated_at_utc,last_snapshot_at_utc,summary_json,updated_at_utc) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(tenant_id) DO UPDATE SET profile=excluded.profile,state=excluded.state,breach_streak=excluded.breach_streak,recovery_streak=excluded.recovery_streak,current_incident_id=excluded.current_incident_id,last_evaluated_at_utc=excluded.last_evaluated_at_utc,last_snapshot_at_utc=excluded.last_snapshot_at_utc,summary_json=excluded.summary_json,updated_at_utc=excluded.updated_at_utc"
+    ).bind(tenantId,SLO_ALERT_PROFILE,summary.state,breach,recovery,incidentId,now,summary.last_snapshot_at_utc,JSON.stringify(summary),now).run();
+  }
+  const cutoff=new Date(Date.now()-(SLO_ALERT_INCIDENT_RETENTION_SECONDS*1000)).toISOString();
+  await env.PRODUCT_DB.prepare(
+    "DELETE FROM commander_slo_incidents WHERE incident_id IN (SELECT incident_id FROM commander_slo_incidents WHERE state='RESOLVED' AND resolved_at_utc IS NOT NULL AND resolved_at_utc < ? ORDER BY resolved_at_utc LIMIT 500)"
+  ).bind(cutoff).run();
+}
+
 async function portalActivityFromLocalSnapshots(env, session, window) {
   if (!["OWNER","ADMIN"].includes(String(session.role || "").toUpperCase())) return null;
   const result=await env.PRODUCT_DB.prepare(
@@ -4296,6 +4462,12 @@ export default {
         });
       }
 
+      if (url.pathname === "/api/dev/slo-maintenance" && request.method === "POST") {
+        await requireMcpProductToken(request, env);
+        await runSloAlertMaintenance(env);
+        return json({ ok:true, schema:"hara.commander-slo-maintenance.v1", environment:"DEV" });
+      }
+
       if (url.pathname === "/api/portal/auth-config" && request.method === "GET") {
         return json({ configured: authStatus(env).configured });
       }
@@ -4540,6 +4712,12 @@ export default {
         const limit=Number(url.searchParams.get("limit") || 50);
         const window=url.searchParams.get("window") || "7d";
         return json(await portalActivity(env,session,limit,window));
+      }
+
+      if (url.pathname === "/api/portal/slo" && request.method === "GET") {
+        const session = await resolvePortalSession(request, env);
+        if (!session) return json({ ok:false, code:"AUTH_REQUIRED" },401);
+        return json(await portalSloStatus(env,session));
       }
 
       if (url.pathname === "/api/portal/beta-access" && request.method === "GET") {
@@ -4940,6 +5118,7 @@ export default {
         OIDC_PROVIDER_ERROR: 400,
         BETA_ACCESS_ADMIN_REQUIRED: 403,
         BETA_ACCESS_PLAN_UNAVAILABLE: 409,
+        SLO_STATUS_ADMIN_REQUIRED: 403,
         BILLING_NOT_CONFIGURED: 503,
         BILLING_ADMIN_REQUIRED: 403,
         BILLING_PLAN_INVALID: 400,
@@ -5028,5 +5207,6 @@ export default {
     requireRuntime(env);
     ctx.waitUntil(runAuthRetentionMaintenance(env));
     ctx.waitUntil(cleanupExpiredDeviceCalls(env));
+    ctx.waitUntil(runSloAlertMaintenance(env));
   }
 };
