@@ -10,6 +10,7 @@ const env={AUTH_CLIENT_SECRET:'test-recovery-secret-abcdefghijklmnopqrstuvwxyz'}
 
 assert.equal(isD1WriteLimitError(new Error("D1_ERROR: Your account has exceeded D1's free tier daily row write limit. [code: 7500]")),true);
 assert.equal(isD1WriteLimitError(new Error('some other database error')),false);
+assert.equal(isD1WriteLimitError(new Error('D1_ERROR: no such table: example: SQLITE_ERROR [code: 7500]')),false);
 
 const tx=await sealAuthRecoveryPayload(env,'OIDC_TX',{
   state:'state-1',verifier:'verifier-1',nonce:'nonce-1',return_to:'/#devices',
