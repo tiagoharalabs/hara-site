@@ -131,3 +131,41 @@ TENANT_QUOTA_O1_DEV_LIVE=CLOSED_PASS
 MULTITENANT_ISOLATION_LIVE_DEV=CLOSED_PASS
 SIGNED_LOCAL_BUDGET_O1_DEV=CLOSED_PASS
 PROD_PROMOTION=PENDING_VERSIONED_SIGNING_SECRET
+
+## PROD live proof
+
+Worker:
+- 7491e096-4e98-4978-8e09-c2b1f6ef5d0c
+- tag: tenantquota-o1-0.3.37
+- rollback: a4f72df7-b3c1-47b4-bc10-46d007aa7639
+
+Acceptance:
+- deployment readback PASS
+- PROD fail-closed suite PASS
+- public Agent release remains 0.3.37
+- signed-lease secret inherited by the promoted version
+- nucleo-a health PASS / Agent 0.3.37
+- sentinela-d health PASS / Agent 0.3.37
+- Founder usage remains UNLIMITED / metered=false / available=true
+- local budget blocks at rollout: 0
+- allocated units at rollout: 0
+- issued units at rollout: 0
+- reported units at rollout: 0
+- active fresh baselines at rollout: 0
+
+No Free customer capacity was silently allocated during promotion.
+
+The O(1) Durable Object path is now the production implementation for cloud
+quota fallback/legacy paths. Eligible Free 0.3.37 Linux devices still prefer
+signed local budget blocks; unlimited plans still bypass quota reads.
+
+## Final state
+
+TENANT_QUOTA_O1_SOURCE=CLOSED_PASS
+TENANT_QUOTA_O1_PREPROD=CLOSED_PASS
+TENANT_QUOTA_O1_DEV_LIVE=CLOSED_PASS
+TENANT_QUOTA_O1_PROD=CLOSED_PASS
+MULTITENANT_ISOLATION_LIVE_DEV=CLOSED_PASS
+SIGNED_LOCAL_BUDGET_O1_DEV=CLOSED_PASS
+PROD_ROLLBACK_READY=a4f72df7-b3c1-47b4-bc10-46d007aa7639
+FIRST_NATURAL_FREE_PROD_LOCAL_BUDGET=PENDING_NATURAL_USAGE
