@@ -617,10 +617,12 @@
     renderActivityBreakdown("activityTopTools",diagnostics.top_tools,"tool_id","Sem atividade","Nenhuma tool executada nesta janela.");
     renderActivityBreakdown("activityTopErrors",diagnostics.top_errors,"error_code","Sem falhas","Nenhuma falha registrada nesta janela.");
 
-    const localSlo=payload?.slo || {};
-    const localSloStatus=String(localSlo.status || "INSUFFICIENT_DATA");
-    setText("activitySloStatus",localSloStatus === "PASS" ? "OK" : (localSloStatus === "DEGRADED" ? "Degradado" : "Aguardando amostra"));
     const success=summary.availability_success_rate_percent;
+    const availability=Number(success);
+    const localAvailabilityStatus=!Number.isFinite(availability)
+      ? "INSUFFICIENT_DATA"
+      : (availability >= 99 ? "PASS" : "DEGRADED");
+    setText("activitySloStatus",localAvailabilityStatus === "PASS" ? "OK" : (localAvailabilityStatus === "DEGRADED" ? "Degradado" : "Aguardando amostra"));
     setText(
       "activitySloDetail",
       success == null
