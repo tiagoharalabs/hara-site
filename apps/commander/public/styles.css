@@ -1187,3 +1187,7 @@ html[data-neon="off"] .brand-copy em{
 
 .onboarding-choice-row{display:grid;grid-template-columns:1fr 1.45fr;gap:12px;width:100%}.choice-label{display:block;margin-bottom:5px;color:#78909f;font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:.04em}.onboarding-ready{padding-left:52px}.onboarding-ready>div{display:grid;gap:3px}.onboarding-ready b{color:#168162}
 @media(max-width:760px){.onboarding-choice-row{grid-template-columns:1fr}.onboarding-ready{padding-left:0}}
+
+.internal-beta-diagnostics{margin-top:14px}
+.internal-beta-banner{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 10px;padding:9px 12px;border:1px dashed rgba(246,190,43,.45);border-radius:10px;background:rgba(246,190,43,.07);font-size:11px}
+.internal-beta-banner strong{letter-spacing:.08em;color:#f6be2b}.internal-beta-banner span{color:var(--muted)}
