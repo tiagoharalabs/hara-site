@@ -48,7 +48,7 @@ need("data-slo-ack" in HTML and "data-slo-escalate" in HTML, "UI_ACTIONS")
 need('mutateSloIncident("ack")' in APP_JS, "UI_ACK_WIRED")
 need('mutateSloIncident("escalate",next)' in APP_JS, "UI_ESCALATE_WIRED")
 need("acknowledged_at_utc" in APP_JS and "escalation_level" in APP_JS, "UI_STATE")
-need("app.js?v=20261006-slosem1" in HTML, "CACHE_KEY")
+need("app.js?v=20261006-authrecovery1" in HTML, "CACHE_KEY")
 
 with tempfile.NamedTemporaryFile(suffix=".db") as tmp:
     db = sqlite3.connect(tmp.name)

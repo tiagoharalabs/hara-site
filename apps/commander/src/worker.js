@@ -5,6 +5,7 @@ import {
   beginLogin,
   finishLogin,
   logout,
+  resolveDegradedPortalSession,
   resolvePortalSession,
   runAuthRetentionMaintenance,
 } from "./auth.js";
@@ -4966,6 +4967,28 @@ export default {
         return await logout(request, env);
       }
 
+      if (url.pathname.startsWith("/api/portal/")) {
+        const degradedAllowed=new Set([
+          "/api/portal/session",
+          "/api/portal/billing",
+          "/api/portal/billing/checkout",
+          "/api/portal/billing/portal",
+        ]);
+        if (!degradedAllowed.has(url.pathname)) {
+          const degradedSession=await resolveDegradedPortalSession(request,env);
+          if (degradedSession) {
+            return json({
+              ok:false,
+              authenticated:true,
+              code:"WORKSPACE_BACKEND_WRITE_LIMIT",
+              workspace_available:false,
+              billing_available:true,
+              degraded_reason:degradedSession.degraded_reason,
+            },503);
+          }
+        }
+      }
+
       if (url.pathname === "/api/portal/session" && request.method === "GET") {
         const session = await resolvePortalSession(request, env);
         if (!session) return json({ ok: false, code: "AUTH_REQUIRED" }, 401);
@@ -4979,6 +5002,12 @@ export default {
           tenant: {
             tenant_id: session.tenant_id,
             display_name: session.tenant_name
+          },
+          availability:{
+            degraded:session.degraded === true,
+            workspace_available:session.workspace_available !== false,
+            billing_available:session.billing_available !== false,
+            reason:session.degraded_reason || null,
           }
         });
       }

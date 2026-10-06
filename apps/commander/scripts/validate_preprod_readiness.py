@@ -56,6 +56,9 @@ def main():
     run("COMMANDER_PREPROD_AUTH_JS", [
         "node", "--check", "apps/commander/src/auth.js",
     ])
+    run("COMMANDER_PREPROD_AUTH_DEGRADED_RECOVERY_JS", [
+        "node", "apps/commander/scripts/test_auth_degraded_recovery.mjs",
+    ])
     run("COMMANDER_PREPROD_DEVICE_TOOL_CONTRACT", [
         "node", "apps/commander/scripts/validate_device_tool_contract.mjs",
     ])
@@ -70,6 +73,7 @@ def main():
         ("COMMANDER_PREPROD_PAIRING", "validate_pairing_supersession.py"),
         ("COMMANDER_PREPROD_PAIRING_RETENTION", "validate_pairing_retention.py"),
         ("COMMANDER_PREPROD_RETENTION", "validate_session_retention.py"),
+        ("COMMANDER_PREPROD_AUTH_DEGRADED_RECOVERY", "validate_auth_degraded_recovery.py"),
         ("COMMANDER_PREPROD_ORIGIN", "validate_portal_origin_guard.py"),
         ("COMMANDER_PREPROD_CLAIM_REVOKE_RACE", "validate_claim_revoke_race.py"),
         ("COMMANDER_PREPROD_INVITE_CLAIM_RACE", "validate_invite_claim_race.py"),
