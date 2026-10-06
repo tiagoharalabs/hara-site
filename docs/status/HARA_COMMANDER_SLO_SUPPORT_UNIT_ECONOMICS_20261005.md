@@ -210,3 +210,27 @@ SUPPORT_BUNDLE_V2_LINUX_PROD=CLOSED_PASS
 LOCAL_FIRST_UNIT_ECONOMICS=CLOSED_PASS
 LIVE_USD_COST=PENDING_READ_ONLY_ANALYTICS
 PROD_ROLLBACK_READY=7491e096-4e98-4978-8e09-c2b1f6ef5d0c
+
+## Current SLO follow-up
+
+A later natural-traffic readback after both Linux Agents remained on 0.3.38
+moved sentinela-d beyond the minimum sample threshold.
+
+Current 24h fleet checkpoint:
+- fleet_state PASS
+- online devices 2
+- evaluable devices 2
+- PASS devices 2
+- degraded devices 0
+- insufficient-data devices 0
+- missing snapshots 0
+- stale snapshots 0
+- weighted success rate 99.263%
+- worst-device p50 700 ms
+- worst-device p95 5,749 ms
+- worst-device p99 10,413 ms
+
+This supersedes only the sample-sufficiency state of the earlier acceptance
+checkpoint; the earlier measurements remain valid evidence of rollout behavior.
+
+INTERNAL_BETA_SLO_CURRENT=PASS_2_OF_2
