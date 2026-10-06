@@ -35,6 +35,7 @@
   let retryAction = null;
   let authProviderConfigured = false;
   let sessionAuthenticated = false;
+  let currentRole = "";
   let skipNextWorkspaceLoad = false;
   let dashboardCache = null;
   let dashboardCacheAt = 0;
@@ -161,6 +162,7 @@
 
   function setGuestHeader() {
     sessionAuthenticated = false;
+    currentRole = "";
     dashboardCache = null;
     dashboardCacheAt = 0;
     devicesCache = null;
@@ -263,7 +265,8 @@
   function applyIdentityFields(payload) {
     const tenantName = String(payload?.tenant?.display_name || "Seu workspace");
     const userName = String(payload?.subject?.display_name || "Conta HARA");
-    const userRole = roleLabel(payload?.subject?.role);
+    currentRole = String(payload?.subject?.role || "").trim().toUpperCase();
+    const userRole = roleLabel(currentRole);
     document.querySelectorAll("[data-tenant-name]").forEach((node) => { node.textContent = tenantName; });
     document.querySelectorAll("[data-user-name]").forEach((node) => { node.textContent = userName; });
     const subjectId = String(payload?.subject?.subject_id || "—");
@@ -574,6 +577,73 @@
       row.append(when,tool,computer,state,duration,trace);
       ledger.append(row);
     });
+  }
+
+  function renderSloStatus(payload) {
+    const card=document.getElementById("sloSummaryCard");
+    if (!card) return;
+    const allowed=["OWNER","ADMIN"].includes(currentRole);
+    card.hidden=!allowed;
+    if (!allowed) return;
+
+    const persisted=payload?.state;
+    const observed=payload?.observed;
+    const current=persisted || observed;
+    const status=String(observed?.state || persisted?.state || "INSUFFICIENT_DATA");
+    const incidentId=String(persisted?.current_incident_id || "");
+    const summary=observed || persisted?.summary || {};
+    const p95=summary.worst_device_p95_ms;
+    const success=summary.weighted_success_rate_percent;
+
+    if (!current) {
+      setText("activitySloStatus","Aguardando");
+      setText("activitySloDetail","A primeira avaliação do cron ainda não foi registrada.");
+      return;
+    }
+    if (status === "PASS") {
+      setText("activitySloStatus","Dentro do SLO");
+      setText(
+        "activitySloDetail",
+        (success == null ? "" : String(success).replace(".",",")+"% sucesso · ")
+        +(p95 == null ? "p95 sem amostra" : "p95 "+activityDuration(p95)),
+      );
+      return;
+    }
+    if (status === "DEGRADED") {
+      setText("activitySloStatus","Degradado");
+      setText(
+        "activitySloDetail",
+        incidentId
+          ? "Incidente "+incidentId.slice(-8)+" aberto · streak "+number(current.breach_streak || 0)
+          : "Degradação observada · aguardando confirmação da histerese",
+      );
+      return;
+    }
+    setText("activitySloStatus","Pouca evidência");
+    setText("activitySloDetail","Amostra insuficiente para avaliar o SLO interno.");
+  }
+
+  async function loadSloStatus() {
+    const card=document.getElementById("sloSummaryCard");
+    if (!remotePortal || !sessionAuthenticated || !["OWNER","ADMIN"].includes(currentRole)) {
+      if (card) card.hidden=true;
+      return;
+    }
+    if (card) card.hidden=false;
+    try {
+      const response=await fetch("/api/portal/slo",{cache:"no-store",credentials:"same-origin"});
+      if (handlePortalAuthFailure(response,"Entre novamente para consultar o estado operacional.")) return;
+      if (response.status === 403) {
+        if (card) card.hidden=true;
+        return;
+      }
+      const payload=await response.json().catch(()=>({}));
+      if (!response.ok) throw new Error(String(payload?.code || "SLO_STATUS_LOAD_FAILED"));
+      renderSloStatus(payload);
+    } catch (_error) {
+      setText("activitySloStatus","Indisponível");
+      setText("activitySloDetail","O estado de SLO não pôde ser consultado agora.");
+    }
   }
 
   function setActivityWindow(value) {
@@ -1304,6 +1374,7 @@
     ) {
       applyDashboard(dashboardCache);
       applyScenario(scenario, dashboardCache);
+      if (currentView === "usage") loadSloStatus();
       return;
     }
 
@@ -1349,6 +1420,7 @@
       }
       applyDashboard(payload);
       applyScenario(scenario, payload);
+      if (currentView === "usage") loadSloStatus();
     } catch (_error) {
       setState("Aguardando", "Dados da conta ainda não carregados");
       showBanner("info", "Plano e uso temporariamente indisponíveis", "Sua sessão continua ativa. Atualize para consultar os dados do Commander novamente.", "Atualizar dados", loadProductDashboard);
@@ -1725,6 +1797,7 @@
     if (refreshActivity) {
       event.preventDefault();
       loadUsageActivity(refreshActivity,true);
+      loadSloStatus();
       return;
     }
 

@@ -48,6 +48,8 @@ def main() -> int:
            "/api/portal/dashboard", 401, "AUTH_REQUIRED")
     expect("COMMANDER_PROD_FAIL_CLOSED_DEVICES",
            "/api/portal/devices", 401, "AUTH_REQUIRED")
+    expect("COMMANDER_PROD_FAIL_CLOSED_SLO",
+           "/api/portal/slo", 401, "AUTH_REQUIRED")
 
     same_origin = {
         "Origin": ORIGIN,

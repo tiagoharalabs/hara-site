@@ -7,6 +7,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[3]
 APP = ROOT / "apps" / "commander"
 WORKER = (APP / "src" / "worker.js").read_text(encoding="utf-8")
+APP_JS = (APP / "public" / "app.js").read_text(encoding="utf-8")
+HTML = (APP / "public" / "index.html").read_text(encoding="utf-8")
 MIG = (APP / "migrations" / "0026_slo_incidents.sql").read_text(encoding="utf-8")
 
 
@@ -37,6 +39,13 @@ need('url.pathname === "/api/portal/slo"' in WORKER, "PORTAL_ROUTE")
 need('SLO_STATUS_ADMIN_REQUIRED' in WORKER, "PORTAL_ADMIN_GATE")
 need('url.pathname === "/api/dev/slo-maintenance"' in WORKER, "DEV_CANARY_ROUTE")
 need("await requireMcpProductToken(request, env);" in WORKER, "DEV_CANARY_AUTH")
+need('id="sloSummaryCard"' in HTML and 'id="activitySloStatus"' in HTML, "PORTAL_CARD")
+need('fetch("/api/portal/slo"' in APP_JS, "PORTAL_FETCH")
+need('["OWNER","ADMIN"].includes(currentRole)' in APP_JS, "PORTAL_ROLE_GATE")
+need('"Dentro do SLO"' in APP_JS and '"Degradado"' in APP_JS, "PORTAL_STATES")
+need("const observed=payload?.observed" in APP_JS and "observed?.state" in APP_JS, "PORTAL_LIVE_OBSERVED")
+need("observed," in WORKER, "PORTAL_OBSERVED_PAYLOAD")
+need("loadSloStatus();" in APP_JS, "PORTAL_REFRESH")
 need("payload_json" not in MIG.lower() and "result_json" not in MIG.lower(), "NO_CUSTOMER_CONTENT_SCHEMA")
 
 # Migration smoke test.

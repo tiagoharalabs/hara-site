@@ -3468,6 +3468,10 @@ async function portalSloStatus(env, session) {
   const state=await env.PRODUCT_DB.prepare(
     "SELECT tenant_id,profile,state,breach_streak,recovery_streak,current_incident_id,last_evaluated_at_utc,last_snapshot_at_utc,summary_json,updated_at_utc FROM commander_slo_state WHERE tenant_id = ? LIMIT 1"
   ).bind(session.tenant_id).first();
+  const currentRows=await env.PRODUCT_DB.prepare(
+    "SELECT device_id,device_name,agent_version,last_seen_at_utc,activity_summary_at_utc,activity_summary_json FROM commander_devices WHERE tenant_id = ? AND state='ACTIVE' AND revoked_at_utc IS NULL ORDER BY device_name"
+  ).bind(session.tenant_id).all();
+  const observed=evaluateTenantSloRows(currentRows.results || []);
   const incidentRows=await env.PRODUCT_DB.prepare(
     "SELECT incident_id,state,opened_at_utc,resolved_at_utc,first_breach_at_utc,last_breach_at_utc,last_seen_at_utc,summary_json,resolution_json FROM commander_slo_incidents WHERE tenant_id = ? ORDER BY opened_at_utc DESC LIMIT 10"
   ).bind(session.tenant_id).all();
@@ -3475,6 +3479,7 @@ async function portalSloStatus(env, session) {
   return {
     schema:"hara.commander-portal-slo.v1",
     profile:SLO_ALERT_PROFILE,
+    observed,
     state:state ? {
       state:String(state.state),
       breach_streak:Number(state.breach_streak || 0),

@@ -64,7 +64,7 @@ need(
     "APPROVAL_MODE_MIGRATION",
 )
 need("styles.css?v=20260925-neon7" in HTML, "STYLE_CACHE_KEY")
-need("app.js?v=20261005-localdirect1" in HTML, "SCRIPT_CACHE_KEY")
+need("app.js?v=20261005-sloincident1" in HTML, "SCRIPT_CACHE_KEY")
 need(
     'class="neon-toggle"' in HTML
     and 'class="neon-icon"' in HTML
