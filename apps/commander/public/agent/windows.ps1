@@ -7,8 +7,8 @@ $SessionPath = Join-Path $Root "operator-session.json"
 $ConsoleEvents = Join-Path $Root "console-events.jsonl"
 $OperationsDb = Join-Path $Root "operations.sqlite3"
 $SessionMaxHours = 12
-$AgentVersion = "0.3.40"
-$SloProfile = "INTERNAL_BETA_V1"
+$AgentVersion = "0.3.41"
+$SloProfile = "INTERNAL_BETA_AVAILABILITY_V2"
 $SloMinSuccessPercent = 99.0
 $SloP50MaxMs = 1000
 $SloP95MaxMs = 6000
@@ -339,31 +339,22 @@ function Get-SloFailureClass([string]$ErrorCode) {
 }
 
 function Get-InternalSlo($Summary) {
-  $sample=[int64]$(if ($null -ne $Summary.latency_sample_size) {$Summary.latency_sample_size} else {0})
+  # Availability is service health. Tool execution duration is local diagnostics only.
   $terminal=[int64]$Summary.completed+[int64]$Summary.service_failed
   $success=$Summary.availability_success_rate_percent
-  $checks=[ordered]@{
-    success_rate=$(if ($null -eq $success) {$null} else {[double]$success -ge $SloMinSuccessPercent})
-    p50=$(if ($null -eq $Summary.latency_p50_ms) {$null} else {[double]$Summary.latency_p50_ms -le $SloP50MaxMs})
-    p95=$(if ($null -eq $Summary.latency_p95_ms) {$null} else {[double]$Summary.latency_p95_ms -le $SloP95MaxMs})
-    p99=$(if ($null -eq $Summary.latency_p99_ms) {$null} else {[double]$Summary.latency_p99_ms -le $SloP99MaxMs})
-  }
-  $evaluable=($sample -ge $SloMinLatencySamples -and $terminal -ge $SloMinLatencySamples)
-  $allPass=$true
-  foreach($value in $checks.Values){ if($value -ne $true){$allPass=$false} }
+  $availabilityCheck=$(if ($null -eq $success) {$null} else {[double]$success -ge $SloMinSuccessPercent})
+  $evaluable=($terminal -ge $SloMinLatencySamples)
   return [ordered]@{
     profile=$SloProfile
-    status=$(if(-not $evaluable){"INSUFFICIENT_DATA"}elseif($allPass){"PASS"}else{"DEGRADED"})
+    status=$(if(-not $evaluable){"INSUFFICIENT_DATA"}elseif($availabilityCheck -eq $true){"PASS"}else{"DEGRADED"})
     evaluable=$evaluable
     success_metric="availability_success_rate_percent"
     targets=[ordered]@{
       min_success_rate_percent=$SloMinSuccessPercent
-      p50_max_ms=$SloP50MaxMs
-      p95_max_ms=$SloP95MaxMs
-      p99_max_ms=$SloP99MaxMs
-      min_latency_samples=$SloMinLatencySamples
+      min_terminal_samples=$SloMinLatencySamples
     }
-    checks=$checks
+    checks=[ordered]@{availability_success_rate=$availabilityCheck}
+    duration_metrics_diagnostic_only=$true
   }
 }
 
@@ -481,6 +472,36 @@ LIMIT ?
       top_tools=@($tools | ForEach-Object {@{tool_id=[string]$_['tool_id'];calls=[int64]$_['calls']}})
       top_errors=@($errors | ForEach-Object {@{error_code=[string]$_['error_code'];calls=[int64]$_['calls']}})
     }
+  }
+}
+
+function Get-LocalRecentEvents([string]$Window="7d",[int]$Limit=50,[string]$Tool="") {
+  Initialize-LocalActivityStore
+  $hours=switch ($Window) { "24h" {24}; "30d" {720}; default {168} }
+  if (@("24h","7d","30d") -notcontains $Window) { $Window="7d"; $hours=168 }
+  $Limit=[Math]::Max(1,[Math]::Min(100,$Limit))
+  $since=[DateTime]::UtcNow.AddHours(-$hours).ToString("o")
+  if ($Tool) {
+    $rows=@(Invoke-LocalDbQuery @"
+SELECT at_utc,event,state,tool_id,function_id,error_code,receipt_sha256,duration_ms,transport_mode
+FROM activity_events
+WHERE at_utc >= ? AND event IN ('PASS','DENIED') AND tool_id = ?
+ORDER BY rowid DESC LIMIT ?
+"@ @($since,$Tool,$Limit))
+  } else {
+    $rows=@(Invoke-LocalDbQuery @"
+SELECT at_utc,event,state,tool_id,function_id,error_code,receipt_sha256,duration_ms,transport_mode
+FROM activity_events
+WHERE at_utc >= ? AND event IN ('PASS','DENIED')
+ORDER BY rowid DESC LIMIT ?
+"@ @($since,$Limit))
+  }
+  return [ordered]@{
+    source="LOCAL_SQLITE"
+    detail_location="LOCAL_DEVICE"
+    cloud_history_persisted=$false
+    window=[ordered]@{key=$Window;since_at_utc=$since}
+    events=$rows
   }
 }
 
@@ -944,6 +965,19 @@ function Invoke-Tool($Cfg,$Call) {
     $run=Invoke-WindowsOneShotProcess $Cfg ([string]$payload.command) $cwd $timeout $maxLines
     $exit=if ($null -ne $run.exit_code) {[int]$run.exit_code} else {0}
     $result=New-DirectResult "process.run" "PROCESS_EXECUTION" $run $exit
+  } elseif ($tool -eq "hara.activity.local") {
+    $window=if ($payload.window) {[string]$payload.window} else {"7d"}
+    $limit=if ($null -ne $payload.limit) {[int]$payload.limit} else {50}
+    if (@("24h","7d","30d") -notcontains $window -or $limit -lt 1 -or $limit -gt 100) { throw "FUNCTION_ARGUMENTS_DENIED" }
+    $snap=Get-LocalActivityWindow $window
+    $data=[ordered]@{source="LOCAL_SQLITE";detail_location="LOCAL_DEVICE";cloud_history_persisted=$false;window=$snap.window;summary=$snap.summary;slo=$snap.slo;diagnostics=$snap.diagnostics}
+    $result=New-DirectResult "activity.local" "READ_ONLY" $data
+  } elseif ($tool -eq "hara.calls.recent.local") {
+    $window=if ($payload.window) {[string]$payload.window} else {"7d"}
+    $limit=if ($null -ne $payload.limit) {[int]$payload.limit} else {50}
+    $toolFilter=if ($payload.tool) {[string]$payload.tool} else {""}
+    if (@("24h","7d","30d") -notcontains $window -or $limit -lt 1 -or $limit -gt 100) { throw "FUNCTION_ARGUMENTS_DENIED" }
+    $result=New-DirectResult "calls.recent.local" "READ_ONLY" (Get-LocalRecentEvents $window $limit $toolFilter)
   } elseif ($tool -eq "hara.health") {
     $result=@{
       services_bridge_state="PASS"; hara_services_state="PASS"
@@ -1166,7 +1200,6 @@ while ($true) {
         architecture=[string]$Cfg.architecture
         agent_version=$AgentVersion
         approval_mode=(Get-ApprovalMode $Cfg)
-        activity_snapshots=(Get-LocalActivityHeartbeatSnapshot)
       } 20 | Out-Null
       $LastHeartbeat=Get-Date
       $LastErrorCode=$null

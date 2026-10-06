@@ -24,7 +24,7 @@ from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-AGENT_VERSION = "0.3.40"
+AGENT_VERSION = "0.3.41"
 CONFIG_FILE = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home()/".config"))) / "hara-commander/device.env"
 DATA_DIR = Path(os.environ.get("XDG_DATA_HOME", str(Path.home()/".local/share"))) / "hara-commander"
 RECEIPT_DIR = DATA_DIR / "receipts"
@@ -42,7 +42,7 @@ APPROVAL_DIR = DATA_DIR / "approvals"
 PREIMAGE_DIR = DATA_DIR / "preimages"
 SESSION_MAX_SECONDS = 12 * 60 * 60
 PRODUCT_LEASE_REFRESH_SECONDS = 4 * 60 * 60
-SLO_PROFILE = "INTERNAL_BETA_V1"
+SLO_PROFILE = "INTERNAL_BETA_AVAILABILITY_V2"
 SLO_MIN_SUCCESS_PERCENT = 99.0
 SLO_P50_MAX_MS = 1000
 SLO_P95_MAX_MS = 6000
@@ -378,17 +378,15 @@ def _slo_failure_class(error_code):
     return "SERVICE"
 
 def _internal_slo(summary):
-    sample=int(summary.get("latency_sample_size") or 0)
+    # Product health is availability, not user workload duration. A 20s process.run
+    # can be perfectly healthy service behavior and must not degrade the SLO.
     terminal=int(summary.get("completed") or 0)+int(summary.get("service_failed") or 0)
     success=summary.get("availability_success_rate_percent")
     checks={
-        "success_rate":None if success is None else float(success)>=SLO_MIN_SUCCESS_PERCENT,
-        "p50":None if summary.get("latency_p50_ms") is None else float(summary["latency_p50_ms"])<=SLO_P50_MAX_MS,
-        "p95":None if summary.get("latency_p95_ms") is None else float(summary["latency_p95_ms"])<=SLO_P95_MAX_MS,
-        "p99":None if summary.get("latency_p99_ms") is None else float(summary["latency_p99_ms"])<=SLO_P99_MAX_MS,
+        "availability_success_rate":None if success is None else float(success)>=SLO_MIN_SUCCESS_PERCENT,
     }
-    evaluable=sample>=SLO_MIN_LATENCY_SAMPLES and terminal>=SLO_MIN_LATENCY_SAMPLES
-    status="INSUFFICIENT_DATA" if not evaluable else ("PASS" if all(v is True for v in checks.values()) else "DEGRADED")
+    evaluable=terminal>=SLO_MIN_LATENCY_SAMPLES
+    status="INSUFFICIENT_DATA" if not evaluable else ("PASS" if checks["availability_success_rate"] is True else "DEGRADED")
     return {
         "profile":SLO_PROFILE,
         "status":status,
@@ -396,12 +394,10 @@ def _internal_slo(summary):
         "success_metric":"availability_success_rate_percent",
         "targets":{
             "min_success_rate_percent":SLO_MIN_SUCCESS_PERCENT,
-            "p50_max_ms":SLO_P50_MAX_MS,
-            "p95_max_ms":SLO_P95_MAX_MS,
-            "p99_max_ms":SLO_P99_MAX_MS,
-            "min_latency_samples":SLO_MIN_LATENCY_SAMPLES,
+            "min_terminal_samples":SLO_MIN_LATENCY_SAMPLES,
         },
         "checks":checks,
+        "duration_metrics_diagnostic_only":True,
     }
 
 def local_activity_snapshot(window="7d",limit=50,include_events=True):
@@ -2156,6 +2152,27 @@ def execute_tool(config, call):
         if payload: raise ValueError("TOOL_PAYLOAD_MUST_BE_EMPTY")
         data=process_sessions()
         result={"function_id":"process.sessions","risk_class":"READ_ONLY","process_exit_code":0,"stdout":json.dumps(data,sort_keys=True,separators=(",",":"),ensure_ascii=False),"domain_success_inferred":False}
+    elif tool=="hara.activity.local":
+        if any(k not in ("window","limit") for k in payload): raise ValueError("FUNCTION_ARGUMENTS_DENIED")
+        window=str(payload.get("window","7d")); limit=int(payload.get("limit",50))
+        if window not in {"24h","7d","30d"} or not 1<=limit<=100: raise ValueError("FUNCTION_ARGUMENTS_DENIED")
+        snap=local_activity_snapshot(window,limit=limit,include_events=False)
+        data={
+            "source":"LOCAL_SQLITE","detail_location":"LOCAL_DEVICE","cloud_history_persisted":False,
+            "window":snap.get("window") or {},"summary":snap.get("summary") or {},
+            "slo":snap.get("slo") or {},"diagnostics":snap.get("diagnostics") or {},
+        }
+        result={"function_id":"activity.local","risk_class":"READ_ONLY","process_exit_code":0,"stdout":json.dumps(data,sort_keys=True,separators=(",",":"),ensure_ascii=False),"domain_success_inferred":False}
+    elif tool=="hara.calls.recent.local":
+        if any(k not in ("window","tool","limit") for k in payload): raise ValueError("FUNCTION_ARGUMENTS_DENIED")
+        window=str(payload.get("window","7d")); limit=int(payload.get("limit",50)); tool_filter=payload.get("tool")
+        if window not in {"24h","7d","30d"} or not 1<=limit<=100: raise ValueError("FUNCTION_ARGUMENTS_DENIED")
+        local=_local_recent_events(limit,tool_filter,window)
+        safe_events=[]
+        for item in local.get("events") or []:
+            safe_events.append({k:item.get(k) for k in ("at_utc","event","state","tool_id","function_id","error_code","receipt_sha256","duration_ms","transport_mode")})
+        data={"source":"LOCAL_SQLITE","detail_location":"LOCAL_DEVICE","cloud_history_persisted":False,"events":safe_events,"window":local.get("window") or {}}
+        result={"function_id":"calls.recent.local","risk_class":"READ_ONLY","process_exit_code":0,"stdout":json.dumps(data,sort_keys=True,separators=(",",":"),ensure_ascii=False),"domain_success_inferred":False}
     elif tool=="hara.process.run":
         if "command" not in payload or any(k not in ("command","cwd","timeout_ms","max_lines") for k in payload): raise ValueError("FUNCTION_ARGUMENTS_DENIED")
         data=process_run(str(payload["command"]),payload.get("cwd"),int(payload.get("timeout_ms",3000)),int(payload.get("max_lines",200)))
@@ -2836,7 +2853,6 @@ def main():
                 post_json(config["HARA_COMMANDER_URL"]+"/api/device/heartbeat",config["HARA_DEVICE_TOKEN"],{
                     "device_id":config["HARA_DEVICE_ID"],"architecture":config["HARA_DEVICE_ARCH"],"agent_version":AGENT_VERSION,
                     "approval_mode":effective_approval_mode(config),
-                    "activity_snapshots":local_activity_heartbeat_snapshot(),
                 })
                 last_heartbeat=now
                 last_error_code=None

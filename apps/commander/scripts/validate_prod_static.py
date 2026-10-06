@@ -15,6 +15,8 @@ JS = (APP / "public/app.js").read_text()
 CSS = (APP / "public/styles.css").read_text()
 LINUX = (APP / "public/install/linux.sh").read_text()
 WINDOWS = (APP / "public/install/windows.ps1").read_text()
+AGENT_LINUX = (APP / "public/agent/linux.py").read_text()
+AGENT_WINDOWS = (APP / "public/agent/windows.ps1").read_text()
 HEADERS = (APP / "public/_headers").read_text()
 READBACK = (APP / "scripts/commander_prod_readback.py").read_text()
 TRIAL_MIGRATION = (APP / "migrations/0008_trial_onboarding.sql").read_text()
@@ -63,8 +65,8 @@ need(
     and 'idx_commander_devices_approval_mode' in APPROVAL_MODE_MIGRATION,
     "APPROVAL_MODE_MIGRATION",
 )
-need("styles.css?v=20261006-clientbrands1" in HTML, "STYLE_CACHE_KEY")
-need("app.js?v=20261006-authrecovery1" in HTML, "SCRIPT_CACHE_KEY")
+need("styles.css?v=20261006-productboundary1" in HTML, "STYLE_CACHE_KEY")
+need("app.js?v=20261006-productboundary1" in HTML, "SCRIPT_CACHE_KEY")
 need('./brand/chatgpt-official.webp' in HTML and (APP / "public/brand/chatgpt-official.webp").stat().st_size > 0, "CHATGPT_BRAND_ICON")
 need('./brand/claude-official.svg' in HTML and (APP / "public/brand/claude-official.svg").stat().st_size > 0, "CLAUDE_BRAND_ICON")
 need('class="where-badge">AI</span><p><b>ChatGPT' not in HTML and 'class="where-badge">AI</span><p><b>Claude' not in HTML, "CLIENT_PLACEHOLDER_BADGES_REMOVED")
@@ -248,9 +250,11 @@ need(
     and 'dashboardProgress.setAttribute("aria-valuenow"' in JS,
     "DASHBOARD_STATUS_SUMMARY",
 )
-activity_block = WORKER.split("async function portalActivity", 1)[1].split("async function executeCustomerMcpTool", 1)[0]
 need(
-    'url.pathname === "/api/portal/activity"' in WORKER
+    'id="internalBetaDiagnostics"' in HTML
+    and 'DIAGNÓSTICO LOCAL · BETA' in HTML
+    and 'Somente para desenvolvimento' in HTML
+    and 'removido da versão final' in HTML
     and 'id="activityTotal"' in HTML
     and 'id="activitySuccessRate"' in HTML
     and 'id="activityAvgLatency"' in HTML
@@ -262,19 +266,23 @@ need(
     and 'data-activity-window="7d"' in HTML
     and 'data-activity-window="30d"' in HTML
     and 'function setActivityWindow(value)' in JS
-    and 'window="+encodeURIComponent(activityWindow)' in JS
+    and 'LOCAL_ACTIVITY_ORIGIN + "/v1/activity' in JS
     and 'id="activityTopTools"' in HTML
     and 'id="activityTopErrors"' in HTML
     and 'data-export-activity' in HTML
-    and 'function exportUsageActivityCsv(trigger=null)' in JS,
-    "USAGE_ACTIVITY_SURFACE",
+    and 'function exportUsageActivityCsv(trigger=null)' in JS
+    and '"/api/portal/activity?limit=50' not in JS
+    and 'fetch("/api/portal/slo"' not in JS,
+    "USAGE_LOCAL_BETA_DIAGNOSTICS_SURFACE",
 )
 need(
     '"hara.activity"' in CUSTOMER_MCP
     and 'H.A.R.A. Operational Activity' in CUSTOMER_MCP
-    and '"hara.activity": "COMMANDER_RECEIPT_READ"' in WORKER
-    and 'if (toolId === "hara.activity")' in WORKER,
-    "MCP_ACTIVITY_SURFACE",
+    and '"hara.activity.local"' in SIMPLE_MCP
+    and '"hara.calls.recent.local"' in SIMPLE_MCP
+    and 'if (toolId === "hara.activity") toolId = "hara.activity.local";' in WORKER
+    and 'if (toolId === "hara.calls.recent") toolId = "hara.calls.recent.local";' in WORKER,
+    "MCP_ACTIVITY_LOCAL_ROUTING",
 )
 need(
     'CUSTOMER_MCP_SIMPLE_TOOLS' in SIMPLE_MCP
@@ -289,18 +297,11 @@ need(
     "MCP_SIMPLE_PROFILE",
 )
 need(
-    "c.tenant_id = ?" in activity_block
-    and "c.subject_id = ?" in activity_block
-    and "payload_json" not in activity_block
-    and "result_json" not in activity_block
-    and "payload_values_exposed:false" in activity_block
-    and "result_values_exposed:false" in activity_block
-    and "request_id_exposed:false" in activity_block
-    and "command_text_exposed:false" in activity_block
-    and "argument_values_exposed:false" in activity_block
-    and "historical_command_text_persisted:false" in activity_block
-    and "payload_hot_path_transient:true" in activity_block,
-    "USAGE_ACTIVITY_PRIVACY_SCOPE",
+    'customer_activity_detail_persisted: false' in WORKER
+    and 'activity_summary_json' not in WORKER.split("async function heartbeatDevice",1)[1].split("async function markDeviceOffline",1)[0]
+    and 'activity_snapshots' not in AGENT_LINUX[AGENT_LINUX.index('if now-last_heartbeat>=30:'):AGENT_LINUX.index('if now-last_product_lease',AGENT_LINUX.index('if now-last_heartbeat>=30:'))]
+    and 'activity_snapshots' not in AGENT_WINDOWS[AGENT_WINDOWS.index('if (((Get-Date)-$LastHeartbeat).TotalSeconds -ge 30)'):AGENT_WINDOWS.index('try {',AGENT_WINDOWS.index('if (((Get-Date)-$LastHeartbeat).TotalSeconds -ge 30)'))],
+    "USAGE_ACTIVITY_LOCAL_AUTHORITY_NO_CLOUD_SYNC",
 )
 activity_csv = JS.split("function exportUsageActivityCsv",1)[1].split("async function loadUsageActivity",1)[0]
 need(
@@ -312,7 +313,7 @@ need(
     and '"request_id"' not in activity_csv
     and "item.tool_id" in activity_csv
     and "item.trace_id" in activity_csv,
-    "USAGE_ACTIVITY_CSV_METADATA_ONLY",
+    "USAGE_LOCAL_ACTIVITY_CSV_METADATA_ONLY",
 )
 need(
     'class="skip-link" href="#mainContent"' in HTML

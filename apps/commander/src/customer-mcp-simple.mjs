@@ -187,11 +187,13 @@ export function createSimpleCustomerMcpServer({ executeTool }) {
       title: "Get Activity",
       description: "Get privacy-safe operational activity and recent call metadata.",
       inputSchema: z.object({
+        computer,
         window: z.enum(["24h", "7d", "30d"]).optional(),
         limit: z.number().int().min(1).max(100).optional(),
       }).strict(),
     }),
-    call("hara.activity", (args) => ({
+    call("hara.activity.local", (args) => ({
+      ...deviceArgs(args),
       ...(args.window ? { window: args.window } : {}),
       ...(args.limit !== undefined ? { limit: args.limit } : {}),
     })),
@@ -577,7 +579,7 @@ export function createSimpleCustomerMcpServer({ executeTool }) {
         limit: z.number().int().min(1).max(100).optional(),
       }).strict(),
     }),
-    call("hara.calls.recent", (args) => ({
+    call("hara.calls.recent.local", (args) => ({
       ...deviceArgs(args),
       ...(args.tool ? { tool: args.tool } : {}),
       ...(args.limit !== undefined ? { limit: args.limit } : {}),

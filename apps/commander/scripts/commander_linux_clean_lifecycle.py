@@ -228,7 +228,7 @@ def self_test() -> None:
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
     entry = next(item for item in manifest["files"] if item["path"] == "agent/linux.py")
     assert hashlib.sha256(AGENT.read_bytes()).hexdigest() == entry["sha256"]
-    assert manifest["agent_version"] == "0.3.40"
+    assert manifest["agent_version"] == "0.3.41"
     print("COMMANDER_CLEAN_LINUX_HARNESS_SELFTEST=PASS")
 
 

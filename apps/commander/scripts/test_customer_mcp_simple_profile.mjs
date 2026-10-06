@@ -112,10 +112,19 @@ assert.equal(calls.at(-1).tool_id,"hara.files.search");
 assert.equal(calls.at(-1).arguments.search_type,"content");
 
 await rpc(8,"tools/call",{
+  name:"get_activity",
+  arguments:{computer:"nucleo-a",window:"24h",limit:10},
+});
+assert.equal(calls.at(-1).tool_id,"hara.activity.local");
+assert.equal(calls.at(-1).arguments.computer,"nucleo-a");
+assert.equal(calls.at(-1).arguments.window,"24h");
+assert.equal(calls.at(-1).arguments.limit,10);
+
+await rpc(9,"tools/call",{
   name:"get_recent_tool_calls",
   arguments:{computer:"nucleo-a",limit:20},
 });
-assert.equal(calls.at(-1).tool_id,"hara.calls.recent");
+assert.equal(calls.at(-1).tool_id,"hara.calls.recent.local");
 assert.equal(calls.at(-1).arguments.limit,20);
 
 for (const tool of tools) {
