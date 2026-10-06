@@ -35,6 +35,8 @@
   let retryAction = null;
   let authProviderConfigured = false;
   let sessionAuthenticated = false;
+  let sessionDegraded = false;
+  let sessionDegradedReason = "";
   let currentRole = "";
   let skipNextWorkspaceLoad = false;
   let dashboardCache = null;
@@ -164,6 +166,8 @@
 
   function setGuestHeader() {
     sessionAuthenticated = false;
+    sessionDegraded = false;
+    sessionDegradedReason = "";
     currentRole = "";
     dashboardCache = null;
     dashboardCacheAt = 0;
@@ -176,6 +180,8 @@
 
   function setAuthenticatedHeader(payload) {
     sessionAuthenticated = true;
+    sessionDegraded = payload?.availability?.degraded === true;
+    sessionDegradedReason = String(payload?.availability?.reason || "");
     if (guestActions) guestActions.hidden = true;
     if (sessionActions) sessionActions.hidden = false;
     document.body.classList.add("session-authenticated");
@@ -929,6 +935,9 @@
       }
       const payload = await response.json();
       applyIdentity(payload);
+      if (payload?.availability?.degraded === true) {
+        history.replaceState(null, "", location.pathname + "#plans");
+      }
       return true;
     } catch (_error) {
       // Session chrome must never depend on quota/telemetry availability.
@@ -1795,7 +1804,8 @@
   function route(target, push = true) {
     const requested = publicViews.has(target) ? target : "landing";
     const protectedRoute = remotePortal && appViews.has(requested) && !sessionAuthenticated;
-    const next = protectedRoute ? "login" : requested;
+    const recoveryRoute = remotePortal && sessionAuthenticated && sessionDegraded && appViews.has(requested) && requested !== "plans";
+    const next = protectedRoute ? "login" : (recoveryRoute ? "plans" : requested);
     if (!push && currentView === next) return;
     currentView = next;
     document.title = viewTitles[next] || viewTitles.landing;
@@ -1826,6 +1836,19 @@
     if (protectedRoute) {
       showBanner("info", "Acesso protegido", "Entre com HARA Identity para acessar seu workspace.", "Entrar", () => startRemoteAuth(false));
       return;
+    }
+    if (sessionDegraded) {
+      showBanner(
+        "warning",
+        "Workspace temporariamente bloqueado",
+        sessionDegradedReason === "D1_WRITE_LIMIT"
+          ? "Sua identidade está autenticada, mas o backend atingiu o limite de escrita. Plano e cobrança continuam disponíveis para regularizar o acesso."
+          : "Sua identidade está autenticada, mas o workspace está temporariamente indisponível. Plano e cobrança continuam disponíveis.",
+      );
+      if (next === "plans") {
+        loadBillingState();
+        return;
+      }
     }
     if (skipNextWorkspaceLoad && appViews.has(next)) {
       skipNextWorkspaceLoad = false;

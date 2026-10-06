@@ -64,7 +64,7 @@ need(
     "APPROVAL_MODE_MIGRATION",
 )
 need("styles.css?v=20261006-clientbrands1" in HTML, "STYLE_CACHE_KEY")
-need("app.js?v=20261006-slosem1" in HTML, "SCRIPT_CACHE_KEY")
+need("app.js?v=20261006-authrecovery1" in HTML, "SCRIPT_CACHE_KEY")
 need('./brand/chatgpt-official.webp' in HTML and (APP / "public/brand/chatgpt-official.webp").stat().st_size > 0, "CHATGPT_BRAND_ICON")
 need('./brand/claude-official.svg' in HTML and (APP / "public/brand/claude-official.svg").stat().st_size > 0, "CLAUDE_BRAND_ICON")
 need('class="where-badge">AI</span><p><b>ChatGPT' not in HTML and 'class="where-badge">AI</span><p><b>Claude' not in HTML, "CLIENT_PLACEHOLDER_BADGES_REMOVED")

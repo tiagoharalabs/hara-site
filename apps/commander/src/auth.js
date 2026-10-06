@@ -21,7 +21,9 @@ const AUTH_SECURITY_HEADERS = Object.freeze({
 const SESSION_COOKIE = "hara_commander_session";
 const TX_COOKIE = "hara_commander_oidc_tx";
 const SESSION_SECONDS = 8 * 60 * 60;
+const DEGRADED_SESSION_SECONDS = 30 * 60;
 const TX_SECONDS = 10 * 60;
+const RECOVERY_COOKIE_PREFIX = "v1.";
 const TX_RETENTION_BATCH = 100;
 const SESSION_TOUCH_SECONDS = 30 * 60;
 const SESSION_RETENTION_SECONDS = 30 * 24 * 60 * 60;
@@ -29,6 +31,79 @@ const SESSION_RETENTION_BATCH = 100;
 
 function nowIso(offsetSeconds = 0) {
   return new Date(Date.now() + offsetSeconds * 1000).toISOString();
+}
+
+function b64urlEncode(bytes) {
+  let binary="";
+  const view=bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  for (const byte of view) binary+=String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/g,"");
+}
+
+function b64urlDecode(value) {
+  const text=String(value || "");
+  const padded=text.replace(/-/g,"+").replace(/_/g,"/")+"===".slice((text.length+3)%4);
+  const binary=atob(padded);
+  const out=new Uint8Array(binary.length);
+  for (let i=0;i<binary.length;i+=1) out[i]=binary.charCodeAt(i);
+  return out;
+}
+
+function recoverySecret(env) {
+  const secret=String(env.AUTH_SESSION_RECOVERY_SECRET || env.AUTH_CLIENT_SECRET || "").trim();
+  if (secret.length < 16) throw new Error("AUTH_RECOVERY_SECRET_NOT_CONFIGURED");
+  return secret;
+}
+
+async function recoveryKey(env,purpose) {
+  const encoder=new TextEncoder();
+  const material=await crypto.subtle.digest(
+    "SHA-256",
+    encoder.encode("HARA_COMMANDER_AUTH_RECOVERY_V1\n"+String(purpose)+"\n"+recoverySecret(env)),
+  );
+  return crypto.subtle.importKey("raw",material,{name:"AES-GCM"},false,["encrypt","decrypt"]);
+}
+
+export async function sealAuthRecoveryPayload(env,purpose,payload) {
+  const encoder=new TextEncoder();
+  const iv=crypto.getRandomValues(new Uint8Array(12));
+  const key=await recoveryKey(env,purpose);
+  const plaintext=encoder.encode(JSON.stringify(payload));
+  const ciphertext=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,plaintext);
+  return RECOVERY_COOKIE_PREFIX+b64urlEncode(iv)+"."+b64urlEncode(ciphertext);
+}
+
+export async function openAuthRecoveryPayload(env,purpose,token) {
+  const text=String(token || "");
+  if (!text.startsWith(RECOVERY_COOKIE_PREFIX)) return null;
+  const parts=text.split(".");
+  if (parts.length !== 3 || parts[0] !== "v1") return null;
+  try {
+    const iv=b64urlDecode(parts[1]);
+    const ciphertext=b64urlDecode(parts[2]);
+    if (iv.length !== 12 || ciphertext.length < 17) return null;
+    const key=await recoveryKey(env,purpose);
+    const plaintext=await crypto.subtle.decrypt({name:"AES-GCM",iv},key,ciphertext);
+    const payload=JSON.parse(new TextDecoder().decode(plaintext));
+    if (!payload || typeof payload !== "object") return null;
+    return payload;
+  } catch (_error) {
+    return null;
+  }
+}
+
+export function isD1WriteLimitError(error) {
+  const text=String(error?.message || error || "").toLowerCase();
+  return text.includes("d1") && (
+    text.includes("daily row write limit")
+    || text.includes("free tier daily row write limit")
+    || text.includes("code: 7500")
+    || text.includes("[code: 7500]")
+  );
+}
+
+function degradedSessionLocation() {
+  return "/?workspace=degraded&reason=D1_WRITE_LIMIT#plans";
 }
 
 export function cookieValue(request, name) {
@@ -192,19 +267,32 @@ export async function beginLogin(request, env) {
   const stateHash = await sha256(state);
   const bindingHash = await sha256(browserBinding);
 
-  await env.PRODUCT_DB.prepare(
-    `INSERT INTO oidc_transactions
-      (state_hash, browser_binding_hash, code_verifier, nonce, return_to, created_at_utc, expires_at_utc, consumed_at_utc)
-     VALUES (?, ?, ?, ?, ?, ?, ?, NULL)`
-  ).bind(
-    stateHash,
-    bindingHash,
-    verifier,
-    nonce,
-    returnTo,
-    nowIso(),
-    nowIso(TX_SECONDS),
-  ).run();
+  let txCookie=browserBinding;
+  try {
+    await env.PRODUCT_DB.prepare(
+      `INSERT INTO oidc_transactions
+        (state_hash, browser_binding_hash, code_verifier, nonce, return_to, created_at_utc, expires_at_utc, consumed_at_utc)
+       VALUES (?, ?, ?, ?, ?, ?, ?, NULL)`
+    ).bind(
+      stateHash,
+      bindingHash,
+      verifier,
+      nonce,
+      returnTo,
+      nowIso(),
+      nowIso(TX_SECONDS),
+    ).run();
+  } catch (error) {
+    if (!isD1WriteLimitError(error)) throw error;
+    txCookie=await sealAuthRecoveryPayload(env,"OIDC_TX",{
+      state,
+      verifier,
+      nonce,
+      return_to:returnTo,
+      exp:Math.floor(Date.now()/1000)+TX_SECONDS,
+      mode:"D1_WRITE_LIMIT",
+    });
+  }
 
   const authorize = new URL(metadata.authorization_endpoint);
   authorize.searchParams.set("response_type", "code");
@@ -231,7 +319,7 @@ export async function beginLogin(request, env) {
     headers: {
       ...AUTH_SECURITY_HEADERS,
       location: authorize.toString(),
-      "set-cookie": setCookie(TX_COOKIE, browserBinding, { maxAge: TX_SECONDS, path: "/auth" }),
+      "set-cookie": setCookie(TX_COOKIE, txCookie, { maxAge: TX_SECONDS, path: "/auth" }),
       "cache-control": "no-store",
     },
   });
@@ -307,7 +395,11 @@ async function resolveOrClaimIdentity(env, claims) {
 
   if (user) {
     if (user.state !== "ACTIVE") throw new Error("IDENTITY_INACTIVE");
-    await ensurePrimaryIdentityBinding(env, user.subject_id, issuer, subject);
+    try {
+      await ensurePrimaryIdentityBinding(env, user.subject_id, issuer, subject);
+    } catch (error) {
+      if (!isD1WriteLimitError(error)) throw error;
+    }
     return user;
   }
 
@@ -410,26 +502,45 @@ export async function finishLogin(request, env) {
   const browserBinding = cookieValue(request, TX_COOKIE);
   if (!code || !state || !browserBinding) throw new Error("OIDC_CALLBACK_INVALID");
 
-  const stateHash = await sha256(state);
-  const bindingHash = await sha256(browserBinding);
-  const tx = await env.PRODUCT_DB.prepare(
-    `SELECT state_hash, browser_binding_hash, code_verifier, nonce, return_to, expires_at_utc, consumed_at_utc
-       FROM oidc_transactions
-      WHERE state_hash = ?
-      LIMIT 1`
-  ).bind(stateHash).first();
+  let tx;
+  let recoveryTx=false;
+  if (String(browserBinding).startsWith(RECOVERY_COOKIE_PREFIX)) {
+    const recovered=await openAuthRecoveryPayload(env,"OIDC_TX",browserBinding);
+    if (!recovered || recovered.state !== state) throw new Error("OIDC_STATE_INVALID");
+    if (Number(recovered.exp || 0) <= Math.floor(Date.now()/1000)) throw new Error("OIDC_STATE_EXPIRED");
+    tx={
+      code_verifier:String(recovered.verifier || ""),
+      nonce:String(recovered.nonce || ""),
+      return_to:safeReturnTo(recovered.return_to),
+    };
+    if (!tx.code_verifier || !tx.nonce) throw new Error("OIDC_STATE_INVALID");
+    recoveryTx=true;
+  } else {
+    const stateHash = await sha256(state);
+    const bindingHash = await sha256(browserBinding);
+    tx = await env.PRODUCT_DB.prepare(
+      `SELECT state_hash, browser_binding_hash, code_verifier, nonce, return_to, expires_at_utc, consumed_at_utc
+         FROM oidc_transactions
+        WHERE state_hash = ?
+        LIMIT 1`
+    ).bind(stateHash).first();
 
-  if (!tx || tx.browser_binding_hash !== bindingHash) throw new Error("OIDC_STATE_INVALID");
-  if (tx.consumed_at_utc) throw new Error("OIDC_STATE_REPLAYED");
-  if (tx.expires_at_utc <= nowIso()) throw new Error("OIDC_STATE_EXPIRED");
+    if (!tx || tx.browser_binding_hash !== bindingHash) throw new Error("OIDC_STATE_INVALID");
+    if (tx.consumed_at_utc) throw new Error("OIDC_STATE_REPLAYED");
+    if (tx.expires_at_utc <= nowIso()) throw new Error("OIDC_STATE_EXPIRED");
 
-  const consumed = await env.PRODUCT_DB.prepare(
-    `UPDATE oidc_transactions
-        SET consumed_at_utc = ?
-      WHERE state_hash = ? AND consumed_at_utc IS NULL`
-  ).bind(nowIso(), stateHash).run();
-
-  if (!consumed.meta?.changes) throw new Error("OIDC_STATE_REPLAYED");
+    try {
+      const consumed = await env.PRODUCT_DB.prepare(
+        `UPDATE oidc_transactions
+            SET consumed_at_utc = ?
+          WHERE state_hash = ? AND consumed_at_utc IS NULL`
+      ).bind(nowIso(), stateHash).run();
+      if (!consumed.meta?.changes) throw new Error("OIDC_STATE_REPLAYED");
+    } catch (error) {
+      if (!isD1WriteLimitError(error)) throw error;
+      recoveryTx=true;
+    }
+  }
 
   const metadata = await oidcDiscovery(config.issuer);
   const redirectUri = url.origin + "/auth/callback";
@@ -464,26 +575,78 @@ export async function finishLogin(request, env) {
   const createdAt = nowIso();
   const expiresAt = nowIso(SESSION_SECONDS);
 
-  await env.PRODUCT_DB.prepare(
-    `INSERT INTO portal_sessions
-      (session_hash, subject_id, created_at_utc, expires_at_utc, last_seen_at_utc, revoked_at_utc)
-     VALUES (?, ?, ?, ?, ?, NULL)`
-  ).bind(sessionHash, user.subject_id, createdAt, expiresAt, createdAt).run();
+  let sessionCookie=sessionToken;
+  let sessionMaxAge=SESSION_SECONDS;
+  let location=safeReturnTo(tx.return_to);
+  try {
+    await env.PRODUCT_DB.prepare(
+      `INSERT INTO portal_sessions
+        (session_hash, subject_id, created_at_utc, expires_at_utc, last_seen_at_utc, revoked_at_utc)
+       VALUES (?, ?, ?, ?, ?, NULL)`
+    ).bind(sessionHash, user.subject_id, createdAt, expiresAt, createdAt).run();
+  } catch (error) {
+    if (!isD1WriteLimitError(error)) throw error;
+    const tenant=await env.PRODUCT_DB.prepare(
+      `SELECT display_name,state FROM tenants WHERE tenant_id = ? LIMIT 1`
+    ).bind(user.tenant_id).first().catch(()=>null);
+    if (tenant?.state && tenant.state !== "ACTIVE") throw new Error("IDENTITY_INACTIVE");
+    sessionCookie=await sealAuthRecoveryPayload(env,"PORTAL_SESSION",{
+      subject_id:user.subject_id,
+      tenant_id:user.tenant_id,
+      email:user.email || null,
+      display_name:user.display_name || user.email || "Conta HARA",
+      role:user.role || "MEMBER",
+      tenant_name:tenant?.display_name || "Seu workspace",
+      exp:Math.floor(Date.now()/1000)+DEGRADED_SESSION_SECONDS,
+      degraded:true,
+      workspace_available:false,
+      billing_available:true,
+      degraded_reason:"D1_WRITE_LIMIT",
+      recovery_tx:recoveryTx,
+    });
+    sessionMaxAge=DEGRADED_SESSION_SECONDS;
+    location=degradedSessionLocation();
+  }
 
   const headers = new Headers({
     ...AUTH_SECURITY_HEADERS,
-    location: safeReturnTo(tx.return_to),
+    location,
     "cache-control": "no-store",
   });
-  headers.append("set-cookie", setCookie(SESSION_COOKIE, sessionToken, { maxAge: SESSION_SECONDS, path: "/" }));
+  headers.append("set-cookie", setCookie(SESSION_COOKIE, sessionCookie, { maxAge: sessionMaxAge, path: "/" }));
   headers.append("set-cookie", clearCookie(TX_COOKIE, "/auth"));
 
   return new Response(null, { status: 302, headers });
 }
 
+export async function resolveDegradedPortalSession(request, env) {
+  const token=cookieValue(request,SESSION_COOKIE);
+  if (!token || !String(token).startsWith(RECOVERY_COOKIE_PREFIX)) return null;
+  const recovered=await openAuthRecoveryPayload(env,"PORTAL_SESSION",token);
+  if (!recovered || Number(recovered.exp || 0) <= Math.floor(Date.now()/1000)) return null;
+  if (!recovered.subject_id || !recovered.tenant_id) return null;
+  return {
+    subject_id:String(recovered.subject_id),
+    tenant_id:String(recovered.tenant_id),
+    email:recovered.email || null,
+    display_name:String(recovered.display_name || "Conta HARA"),
+    role:String(recovered.role || "MEMBER"),
+    tenant_name:String(recovered.tenant_name || "Seu workspace"),
+    user_state:"ACTIVE",
+    tenant_state:"ACTIVE",
+    degraded:true,
+    workspace_available:false,
+    billing_available:true,
+    degraded_reason:String(recovered.degraded_reason || "BACKEND_WRITE_UNAVAILABLE"),
+  };
+}
+
 export async function resolvePortalSession(request, env) {
   const token = cookieValue(request, SESSION_COOKIE);
   if (!token) return null;
+  if (String(token).startsWith(RECOVERY_COOKIE_PREFIX)) {
+    return resolveDegradedPortalSession(request,env);
+  }
   const hash = await sha256(token);
 
   const session = await env.PRODUCT_DB.prepare(
@@ -527,11 +690,11 @@ export async function resolvePortalSession(request, env) {
 
 export async function logout(request, env) {
   const token = cookieValue(request, SESSION_COOKIE);
-  if (token) {
+  if (token && !String(token).startsWith(RECOVERY_COOKIE_PREFIX)) {
     const hash = await sha256(token);
     await env.PRODUCT_DB.prepare(
       `UPDATE portal_sessions SET revoked_at_utc = ? WHERE session_hash = ? AND revoked_at_utc IS NULL`
-    ).bind(nowIso(), hash).run();
+    ).bind(nowIso(), hash).run().catch((error)=>{ if (!isD1WriteLimitError(error)) throw error; });
   }
 
   return new Response(null, {
