@@ -103,5 +103,46 @@ PROD_CRON_TRIGGER_SYNC=CLOSED_PASS
 SLO_ACK_ESCALATION_SOURCE=CLOSED_PASS
 SLO_ACK_ESCALATION_PREPROD=CLOSED_PASS
 SLO_ACK_ESCALATION_DEV_LIVE=CLOSED_PASS
-SLO_ACK_ESCALATION_PROD=PENDING_PROMOTION
+SLO_ACK_ESCALATION_PROD=CLOSED_PASS
+PROD_WORKER=f21917b0-b02e-46f4-aad6-fb0f333643ca
+PROD_ROLLBACK=2975e2e4-f544-459e-8c91-b78a8aa1e1c7
+VERSIONED_PROMOTION_HELPER_LIVE=CLOSED_PASS
+PROD_CRON_TRIGGER_SYNC=CLOSED_PASS
+NATURAL_CRON_STATE_ROW=CLOSED_PASS
+
+## PROD live proof
+
+Migration 0027:
+- no pending migrations after rollout
+- acknowledgement/escalation columns present
+
+Versioned promotion helper:
+- target secret guard PASS
+- rollback-current guard PASS
+- Worker deployment PASS
+- triggers deployment PASS
+- exact-version readback PASS
+
+Fail-closed:
+- ack without session -> 401 AUTH_REQUIRED
+- ack cross-origin -> 403 PORTAL_ORIGIN_DENIED
+- escalate without session -> 401 AUTH_REQUIRED
+- escalate cross-origin -> 403 PORTAL_ORIGIN_DENIED
+
+First natural cron evaluation after trigger synchronization:
+- profile INTERNAL_BETA_V1
+- state DEGRADED
+- breach_streak 1
+- recovery_streak 0
+- incident not opened yet
+- weighted success 98.728%
+- worst p50 634 ms
+- worst p95 3,875 ms
+- worst p99 10,323 ms
+- hysteresis correctly prevented incident opening on a single degraded sample
+
+This natural degraded sample is operational evidence, not a contractual SLA breach.
+If the next natural evaluation remains degraded, the existing 2-breach rule will
+open an incident and the new acknowledgement/escalation workflow becomes active.
+
 EXTERNAL_NOTIFICATION_TRANSPORT=PENDING_EXTERNAL_DESTINATION

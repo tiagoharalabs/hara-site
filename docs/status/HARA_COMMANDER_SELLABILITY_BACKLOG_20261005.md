@@ -25,7 +25,7 @@ Baseline at creation: `53d53c3b33028712d70ecfb3b18aef9858205210`
 
 | Gate | Current truth | Next proof / delivery |
 | --- | --- | --- |
-| SLO | INTERNAL_BETA_V1 live; fleet 2/2 PASS. Persistent incidents + 2-breach/2-recovery hysteresis are live. DEV ack/escalation L1/L2/L3 PASS; versioned release helper now synchronizes cron triggers explicitly | Promote ack/escalation to PROD, observe first natural cron row after trigger sync, then add external notification transport; thresholds remain internal, not contractual SLA |
+| SLO | INTERNAL_BETA_V1 live. Persistent incidents + 2-breach/2-recovery hysteresis + ack/escalation L1/L2/L3 are live in PROD. Versioned promotion now enforces trigger sync. First natural cron row observed DEGRADED/breach_streak=1 with no premature incident | Observe next natural evaluations and first real incident/ack path, then add external notification transport; thresholds remain internal, not contractual SLA |
 | Cost model | Local-first unit economics CLOSED_PASS: full Free 10k old quota plane 20,000 RPCs vs <=100 block allocations (99.5% reduction); 100-user and 1,000-user rungs modeled. USD intentionally unclaimed | Obtain read-only Cloudflare Analytics and measure Worker CPU, DO requests/duration, D1 rows/egress on 100 -> 1,000 user campaign |
 | Support bundle | support-report.v2 live on Linux 0.3.38: version/health/error class, 24h SLO, lease/budget metadata, DB size/mode, receipt hashes; explicit no command/payload/result/secret flags | Add support-plane ingestion/attachment workflow and retention policy; preserve v1 pre-install fallback |
 | Clean Linux acceptance | Linux live proven on existing hosts | Fresh VM install/update/uninstall/re-enroll acceptance with no developer state present |
