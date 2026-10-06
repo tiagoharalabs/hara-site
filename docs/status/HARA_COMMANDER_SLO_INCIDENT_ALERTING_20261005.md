@@ -117,3 +117,35 @@ PASS:
 5. apply migration to PROD;
 6. deploy PROD and let cron evaluate natural snapshots;
 7. external notification delivery remains a later transport concern.
+
+## DEV live proof
+
+Migration:
+- 0026_slo_incidents.sql applied to DEV
+
+Worker:
+- 24eb40e9-ad74-41de-bb0e-df0451aaf5a8
+- rollback: 398b55e0-1c1b-4935-8179-d8591d37c7d6
+
+Disposable live canary:
+- first DEGRADED evaluation -> breach_streak=1 / no incident
+- second DEGRADED evaluation -> OPEN incident
+- first PASS evaluation -> recovery_streak=1 / incident remains OPEN
+- second PASS evaluation -> RESOLVED / current_incident_id cleared
+- fixture cleanup PASS
+
+Markers:
+- COMMANDER_SLO_INCIDENT_DEV_FIRST_BREACH=PASS
+- COMMANDER_SLO_INCIDENT_DEV_OPEN=PASS
+- COMMANDER_SLO_INCIDENT_DEV_FIRST_RECOVERY=PASS
+- COMMANDER_SLO_INCIDENT_DEV_RESOLVED=PASS
+- COMMANDER_SLO_INCIDENT_DEV=PASS
+- COMMANDER_SLO_INCIDENT_DEV_CLEANUP=PASS
+
+## Current state
+
+SLO_INCIDENT_SOURCE=CLOSED_PASS
+SLO_INCIDENT_PREPROD=CLOSED_PASS
+SLO_INCIDENT_DEV_LIVE=CLOSED_PASS
+PROD_PROMOTION=READY
+EXTERNAL_ALERT_DELIVERY=PENDING_TRANSPORT
