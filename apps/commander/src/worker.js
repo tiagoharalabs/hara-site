@@ -2300,6 +2300,7 @@ function cleanAgentActivityWindow(value, key) {
     profile:"INTERNAL_BETA_V1",
     status:sloStatus,
     evaluable:rawSlo.evaluable === true,
+    success_metric:"availability_success_rate_percent",
     targets:{
       min_success_rate_percent:activitySnapshotNumber(rawSlo.targets?.min_success_rate_percent ?? 99,100),
       p50_max_ms:activitySnapshotNumber(rawSlo.targets?.p50_max_ms ?? 1000),
@@ -2321,11 +2322,19 @@ function cleanAgentActivityWindow(value, key) {
       total_calls: activitySnapshotNumber(summary.total_calls),
       completed: activitySnapshotNumber(summary.completed),
       failed: activitySnapshotNumber(summary.failed),
+      client_failed: activitySnapshotNumber(summary.client_failed),
+      policy_failed: activitySnapshotNumber(summary.policy_failed),
+      service_failed: activitySnapshotNumber(
+        summary.service_failed == null ? summary.failed : summary.service_failed
+      ),
       pending: activitySnapshotNumber(summary.pending),
       executing: activitySnapshotNumber(summary.executing),
       expired: activitySnapshotNumber(summary.expired),
       cancelled: activitySnapshotNumber(summary.cancelled),
       success_rate_percent: summary.success_rate_percent == null ? null : activitySnapshotNumber(summary.success_rate_percent, 100),
+      availability_success_rate_percent: summary.availability_success_rate_percent == null
+        ? (summary.success_rate_percent == null ? null : activitySnapshotNumber(summary.success_rate_percent,100))
+        : activitySnapshotNumber(summary.availability_success_rate_percent,100),
       under_3s_percent: summary.under_3s_percent == null ? null : activitySnapshotNumber(summary.under_3s_percent, 100),
       avg_queue_ms: summary.avg_queue_ms == null ? null : activitySnapshotNumber(summary.avg_queue_ms),
       avg_execution_ms: summary.avg_execution_ms == null ? null : activitySnapshotNumber(summary.avg_execution_ms),
@@ -3426,7 +3435,8 @@ function evaluateTenantSloRows(rows, nowMs=Date.now()) {
     return seen != null && seen >= onlineCutoff;
   });
   if (!online.length) return null;
-  let pass=0, degraded=0, insufficient=0, missing=0, stale=0, completed=0, failed=0;
+  let pass=0, degraded=0, insufficient=0, missing=0, stale=0;
+  let completed=0, failed=0, clientFailed=0, policyFailed=0, serviceFailed=0;
   let latestSnapshot=null;
   const p50=[],p95=[],p99=[];
   for (const row of online) {
@@ -3444,13 +3454,18 @@ function evaluateTenantSloRows(rows, nowMs=Date.now()) {
     else if (status === "DEGRADED") degraded+=1;
     else insufficient+=1;
     completed+=Number(summary.completed || 0);
-    failed+=Number(summary.failed || 0);
+    const rowFailed=Number(summary.failed || 0);
+    failed+=rowFailed;
+    clientFailed+=Number(summary.client_failed || 0);
+    policyFailed+=Number(summary.policy_failed || 0);
+    serviceFailed+=summary.service_failed == null ? rowFailed : Number(summary.service_failed || 0);
     for (const [target,field] of [[p50,"latency_p50_ms"],[p95,"latency_p95_ms"],[p99,"latency_p99_ms"]]) {
       const value=sloAlertNumber(summary[field]);
       if (value != null) target.push(value);
     }
   }
   const terminal=completed+failed;
+  const availabilityTerminal=completed+serviceFailed;
   const state=(missing || stale || degraded) ? "DEGRADED" : (pass ? "PASS" : "INSUFFICIENT_DATA");
   return {
     profile:SLO_ALERT_PROFILE,
@@ -3461,7 +3476,18 @@ function evaluateTenantSloRows(rows, nowMs=Date.now()) {
     insufficient_devices:insufficient,
     missing_snapshot_devices:missing,
     stale_snapshot_devices:stale,
-    weighted_success_rate_percent:terminal ? Number(((completed/terminal)*100).toFixed(3)) : null,
+    client_failed:clientFailed,
+    policy_failed:policyFailed,
+    service_failed:serviceFailed,
+    weighted_success_rate_percent:availabilityTerminal
+      ? Number(((completed/availabilityTerminal)*100).toFixed(3))
+      : null,
+    weighted_availability_success_rate_percent:availabilityTerminal
+      ? Number(((completed/availabilityTerminal)*100).toFixed(3))
+      : null,
+    weighted_outcome_success_rate_percent:terminal
+      ? Number(((completed/terminal)*100).toFixed(3))
+      : null,
     worst_device_p50_ms:p50.length ? Math.max(...p50) : null,
     worst_device_p95_ms:p95.length ? Math.max(...p95) : null,
     worst_device_p99_ms:p99.length ? Math.max(...p99) : null,
@@ -3694,7 +3720,11 @@ function cleanSupportReportV2(body) {
         total_calls:supportReportNumber(summary.total_calls),
         completed:supportReportNumber(summary.completed),
         failed:supportReportNumber(summary.failed),
+        client_failed:supportReportNumber(summary.client_failed),
+        policy_failed:supportReportNumber(summary.policy_failed),
+        service_failed:supportReportNumber(summary.service_failed),
         success_rate_percent:supportReportNumber(summary.success_rate_percent,100),
+        availability_success_rate_percent:supportReportNumber(summary.availability_success_rate_percent,100),
         avg_total_ms:supportReportNumber(summary.avg_total_ms),
         latency_p50_ms:supportReportNumber(summary.latency_p50_ms),
         latency_p95_ms:supportReportNumber(summary.latency_p95_ms),
@@ -3864,7 +3894,8 @@ async function portalActivityFromLocalSnapshots(env, session, window) {
   if (!snapshots.length) return null;
 
   const totals={
-    total_calls:0,completed:0,failed:0,pending:0,executing:0,expired:0,cancelled:0,
+    total_calls:0,completed:0,failed:0,client_failed:0,policy_failed:0,service_failed:0,
+    pending:0,executing:0,expired:0,cancelled:0,
     under3_weighted:0,total_ms_weighted:0,queue_ms_weighted:0,exec_ms_weighted:0,
     duration_weight:0,
   };
@@ -3885,7 +3916,11 @@ async function portalActivityFromLocalSnapshots(env, session, window) {
     const completed=Number(summary.completed || 0);
     totals.total_calls+=total;
     totals.completed+=completed;
-    totals.failed+=Number(summary.failed || 0);
+    const rawFailed=Number(summary.failed || 0);
+    totals.failed+=rawFailed;
+    totals.client_failed+=Number(summary.client_failed || 0);
+    totals.policy_failed+=Number(summary.policy_failed || 0);
+    totals.service_failed+=summary.service_failed == null ? rawFailed : Number(summary.service_failed || 0);
     totals.pending+=Number(summary.pending || 0);
     totals.executing+=Number(summary.executing || 0);
     totals.expired+=Number(summary.expired || 0);
@@ -3921,6 +3956,7 @@ async function portalActivityFromLocalSnapshots(env, session, window) {
   }
 
   const terminal=totals.completed+totals.failed+totals.expired+totals.cancelled;
+  const availabilityTerminal=totals.completed+totals.service_failed+totals.expired+totals.cancelled;
   const top=(map,key)=>[...map.entries()]
     .map(([name,calls])=>({[key]:name,calls}))
     .sort((a,b)=>b.calls-a.calls || String(a[key]).localeCompare(String(b[key])))
@@ -3963,11 +3999,17 @@ async function portalActivityFromLocalSnapshots(env, session, window) {
       total_calls:totals.total_calls,
       completed:totals.completed,
       failed:totals.failed,
+      client_failed:totals.client_failed,
+      policy_failed:totals.policy_failed,
+      service_failed:totals.service_failed,
       pending:totals.pending,
       executing:totals.executing,
       expired:totals.expired,
       cancelled:totals.cancelled,
       success_rate_percent:terminal ? Number(((totals.completed/terminal)*100).toFixed(1)) : null,
+      availability_success_rate_percent:availabilityTerminal
+        ? Number(((totals.completed/availabilityTerminal)*100).toFixed(1))
+        : null,
       under_3s_percent:totals.completed ? Number(((totals.under3_weighted/totals.completed)*100).toFixed(1)) : null,
       avg_queue_ms:totals.duration_weight ? Number((totals.queue_ms_weighted/totals.duration_weight).toFixed(1)) : null,
       avg_execution_ms:totals.duration_weight ? Number((totals.exec_ms_weighted/totals.duration_weight).toFixed(1)) : null,
@@ -4019,9 +4061,14 @@ function mergePortalActivity(local, cloud) {
   const total=localTotal+cloudTotal;
   const completed=Number(a.completed || 0)+Number(b.completed || 0);
   const failed=Number(a.failed || 0)+Number(b.failed || 0);
+  const clientFailed=Number(a.client_failed || 0)+Number(b.client_failed || 0);
+  const policyFailed=Number(a.policy_failed || 0)+Number(b.policy_failed || 0);
+  const serviceFailed=Number(a.service_failed == null ? a.failed : a.service_failed)
+    +Number(b.service_failed == null ? b.failed : b.service_failed);
   const expired=Number(a.expired || 0)+Number(b.expired || 0);
   const cancelled=Number(a.cancelled || 0)+Number(b.cancelled || 0);
   const terminal=completed+failed+expired+cancelled;
+  const availabilityTerminal=completed+serviceFailed+expired+cancelled;
   const weighted=(field)=>{
     const values=[];
     if (a[field] != null && localTotal) values.push([Number(a[field]),localTotal]);
@@ -4061,11 +4108,17 @@ function mergePortalActivity(local, cloud) {
       total_calls:total,
       completed,
       failed,
+      client_failed:clientFailed,
+      policy_failed:policyFailed,
+      service_failed:serviceFailed,
       pending:Number(a.pending || 0)+Number(b.pending || 0),
       executing:Number(a.executing || 0)+Number(b.executing || 0),
       expired,
       cancelled,
       success_rate_percent:terminal ? Number(((completed/terminal)*100).toFixed(1)) : null,
+      availability_success_rate_percent:availabilityTerminal
+        ? Number(((completed/availabilityTerminal)*100).toFixed(1))
+        : null,
       under_3s_percent:completed ? Number(((under3Count/completed)*100).toFixed(1)) : null,
       avg_queue_ms:weighted("avg_queue_ms"),
       avg_execution_ms:weighted("avg_execution_ms"),

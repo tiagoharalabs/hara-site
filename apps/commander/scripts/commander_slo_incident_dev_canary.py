@@ -55,7 +55,7 @@ def enroll(pairing_token: str, name: str) -> str:
         "device_name": name,
         "platform": "LINUX",
         "architecture": "x86_64",
-        "agent_version": "0.3.39",
+        "agent_version": "0.3.40",
         "approval_mode": "PERSISTENT_TRUSTED",
     }, separators=(",", ":")).encode()
     req = urllib.request.Request(

@@ -78,6 +78,7 @@ def main():
         ("COMMANDER_PREPROD_QUOTA_RESERVATION_TTL", "validate_quota_reservation_ttl.py"),
         ("COMMANDER_PREPROD_TENANT_QUOTA_STORAGE_EFFICIENCY", "validate_tenant_quota_storage_efficiency.py"),
         ("COMMANDER_PREPROD_OPERATIONAL_SLO", "validate_operational_slo.py"),
+        ("COMMANDER_PREPROD_SLO_FAILURE_SEMANTICS", "validate_slo_failure_semantics.py"),
         ("COMMANDER_PREPROD_SLO_INCIDENT_STATE", "validate_slo_incident_state.py"),
         ("COMMANDER_PREPROD_SLO_INCIDENT_ACTIONS", "validate_slo_incident_actions.py"),
         ("COMMANDER_PREPROD_SUPPORT_BUNDLE_V2", "validate_support_bundle_v2.py"),

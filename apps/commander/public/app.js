@@ -711,7 +711,7 @@
       setText("activitySloStatus","Dentro do SLO");
       setText(
         "activitySloDetail",
-        (success == null ? "" : String(success).replace(".",",")+"% sucesso · ")
+        (success == null ? "" : String(success).replace(".",",")+"% disponibilidade · ")
         +(p95 == null ? "p95 sem amostra" : "p95 "+activityDuration(p95)),
       );
       return;

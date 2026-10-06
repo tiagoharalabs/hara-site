@@ -32,6 +32,9 @@ def summarize(rows: list[dict], window: str, now: datetime | None = None) -> dic
     devices = []
     total_completed = 0
     total_failed = 0
+    total_client_failed = 0
+    total_policy_failed = 0
+    total_service_failed = 0
     evaluable = 0
     passed = 0
     degraded = 0
@@ -65,8 +68,14 @@ def summarize(rows: list[dict], window: str, now: datetime | None = None) -> dic
         summary = payload.get("summary") or {}
         slo = payload.get("slo") or {}
         status = str(slo.get("status") or "INSUFFICIENT_DATA")
-        total_completed += int(summary.get("completed") or 0)
-        total_failed += int(summary.get("failed") or 0)
+        completed = int(summary.get("completed") or 0)
+        failed = int(summary.get("failed") or 0)
+        service_failed = int(summary.get("service_failed") if summary.get("service_failed") is not None else failed)
+        total_completed += completed
+        total_failed += failed
+        total_client_failed += int(summary.get("client_failed") or 0)
+        total_policy_failed += int(summary.get("policy_failed") or 0)
+        total_service_failed += service_failed
         if status == "PASS":
             evaluable += 1
             passed += 1
@@ -86,6 +95,13 @@ def summarize(rows: list[dict], window: str, now: datetime | None = None) -> dic
             "snapshot_at_utc": row.get("activity_summary_at_utc"),
             "slo_status": status,
             "success_rate_percent": summary.get("success_rate_percent"),
+            "availability_success_rate_percent": summary.get(
+                "availability_success_rate_percent",
+                summary.get("success_rate_percent"),
+            ),
+            "client_failed": summary.get("client_failed", 0),
+            "policy_failed": summary.get("policy_failed", 0),
+            "service_failed": service_failed,
             "p50_ms": summary.get("latency_p50_ms"),
             "p95_ms": summary.get("latency_p95_ms"),
             "p99_ms": summary.get("latency_p99_ms"),
@@ -93,7 +109,13 @@ def summarize(rows: list[dict], window: str, now: datetime | None = None) -> dic
         })
 
     terminal = total_completed + total_failed
-    weighted_success = round(total_completed * 100 / terminal, 3) if terminal else None
+    availability_terminal = total_completed + total_service_failed
+    weighted_outcome = round(total_completed * 100 / terminal, 3) if terminal else None
+    weighted_availability = (
+        round(total_completed * 100 / availability_terminal, 3)
+        if availability_terminal
+        else None
+    )
     if missing_snapshot or stale_snapshot:
         fleet_state = "DEGRADED"
     elif degraded:
@@ -116,7 +138,12 @@ def summarize(rows: list[dict], window: str, now: datetime | None = None) -> dic
         "insufficient_devices": insufficient,
         "missing_snapshot_devices": missing_snapshot,
         "stale_snapshot_devices": stale_snapshot,
-        "weighted_success_rate_percent": weighted_success,
+        "client_failed": total_client_failed,
+        "policy_failed": total_policy_failed,
+        "service_failed": total_service_failed,
+        "weighted_success_rate_percent": weighted_availability,
+        "weighted_availability_success_rate_percent": weighted_availability,
+        "weighted_outcome_success_rate_percent": weighted_outcome,
         "worst_device_p50_ms": max(percentiles["p50"]) if percentiles["p50"] else None,
         "worst_device_p95_ms": max(percentiles["p95"]) if percentiles["p95"] else None,
         "worst_device_p99_ms": max(percentiles["p99"]) if percentiles["p99"] else None,
@@ -133,7 +160,11 @@ def self_test() -> None:
                 "summary": {
                     "completed": 99,
                     "failed": 1,
+                    "client_failed": 1,
+                    "policy_failed": 0,
+                    "service_failed": 0,
                     "success_rate_percent": 99.0,
+                    "availability_success_rate_percent": 100.0,
                     "latency_p50_ms": 700,
                     "latency_p95_ms": 5000,
                     "latency_p99_ms": 10000,
@@ -150,7 +181,11 @@ def self_test() -> None:
                 "summary": {
                     "completed": 5,
                     "failed": 0,
+                    "client_failed": 0,
+                    "policy_failed": 0,
+                    "service_failed": 0,
                     "success_rate_percent": 100.0,
+                    "availability_success_rate_percent": 100.0,
                     "latency_p50_ms": 300,
                     "latency_p95_ms": 500,
                     "latency_p99_ms": 500,
@@ -162,13 +197,13 @@ def self_test() -> None:
     }
     rows = [
         {
-            "device_name": "A", "platform": "LINUX", "agent_version": "0.3.39",
+            "device_name": "A", "platform": "LINUX", "agent_version": "0.3.40",
             "last_seen_at_utc": (now - timedelta(seconds=10)).isoformat(),
             "activity_summary_at_utc": (now - timedelta(seconds=10)).isoformat(),
             "activity_summary_json": json.dumps(good),
         },
         {
-            "device_name": "B", "platform": "LINUX", "agent_version": "0.3.39",
+            "device_name": "B", "platform": "LINUX", "agent_version": "0.3.40",
             "last_seen_at_utc": (now - timedelta(seconds=10)).isoformat(),
             "activity_summary_at_utc": (now - timedelta(seconds=10)).isoformat(),
             "activity_summary_json": json.dumps(sparse),
@@ -179,7 +214,11 @@ def self_test() -> None:
     assert out["online_devices"] == 2
     assert out["evaluable_devices"] == 1
     assert out["insufficient_devices"] == 1
-    assert out["weighted_success_rate_percent"] == 99.048
+    assert out["weighted_success_rate_percent"] == 100.0
+    assert out["weighted_availability_success_rate_percent"] == 100.0
+    assert out["weighted_outcome_success_rate_percent"] == 99.048
+    assert out["client_failed"] == 1
+    assert out["service_failed"] == 0
     assert out["worst_device_p95_ms"] == 5000.0
     print("COMMANDER_OPERATIONAL_SLO_SELFTEST=PASS")
 

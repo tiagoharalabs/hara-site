@@ -86,7 +86,7 @@ def support_body(device_id: str, *, privacy_ok: bool = True) -> dict:
         "platform": "LINUX",
         "computer": "support-canary",
         "device_id": device_id,
-        "agent_version": "0.3.39",
+        "agent_version": "0.3.40",
         "approval_mode": "PERSISTENT_TRUSTED",
         "operator_session_active": False,
         "last_successful_heartbeat_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -194,8 +194,8 @@ INSERT INTO commander_devices
 (device_id,pairing_id,tenant_id,enrolled_by_subject_id,device_name,platform,architecture,
  agent_version,tunnel_mode,credential_hash,state,created_at_utc,last_seen_at_utc,revoked_at_utc,approval_mode)
 VALUES
-({q(da)},{q(pa)},{q(ta)},{q(ua)},'support-a','LINUX','x86_64','0.3.39','OUTBOUND_RELAY',{q('cred-'+da)},'ACTIVE',{q(now_iso)},{q(now_iso)},NULL,'PERSISTENT_TRUSTED'),
-({q(db)},{q(pb)},{q(tb)},{q(ub)},'support-b','LINUX','x86_64','0.3.39','OUTBOUND_RELAY',{q('cred-'+db)},'ACTIVE',{q(now_iso)},{q(now_iso)},NULL,'PERSISTENT_TRUSTED');
+({q(da)},{q(pa)},{q(ta)},{q(ua)},'support-a','LINUX','x86_64','0.3.40','OUTBOUND_RELAY',{q('cred-'+da)},'ACTIVE',{q(now_iso)},{q(now_iso)},NULL,'PERSISTENT_TRUSTED'),
+({q(db)},{q(pb)},{q(tb)},{q(ub)},'support-b','LINUX','x86_64','0.3.40','OUTBOUND_RELAY',{q('cred-'+db)},'ACTIVE',{q(now_iso)},{q(now_iso)},NULL,'PERSISTENT_TRUSTED');
 """
     cleanup = f"""
 DELETE FROM commander_support_reports WHERE tenant_id IN ({q(ta)},{q(tb)});

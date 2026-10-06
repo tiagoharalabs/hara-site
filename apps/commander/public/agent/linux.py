@@ -24,7 +24,7 @@ from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-AGENT_VERSION = "0.3.39"
+AGENT_VERSION = "0.3.40"
 CONFIG_FILE = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home()/".config"))) / "hara-commander/device.env"
 DATA_DIR = Path(os.environ.get("XDG_DATA_HOME", str(Path.home()/".local/share"))) / "hara-commander"
 RECEIPT_DIR = DATA_DIR / "receipts"
@@ -359,10 +359,28 @@ def _nearest_rank_percentile(values,percent):
     rank=max(1,(len(ordered)*int(percent)+99)//100)
     return ordered[min(len(ordered)-1,rank-1)]
 
+SLO_POLICY_FAILURE_CODES={
+    "HTTP_401","HTTP_403","HTTP_409","HTTP_429",
+    "LOCAL_OPERATOR_APPROVAL_DENIED","APPROVAL_TIMEOUT",
+}
+SLO_CLIENT_FAILURE_CODES={
+    "HTTP_400","HTTP_404","HTTP_405","HTTP_410","HTTP_422",
+    "FILENOTFOUNDERROR","FILEEXISTSERROR","ISADIRECTORYERROR","NOTADIRECTORYERROR",
+    "EDIT_MATCH_AMBIGUOUS","PROCESS_SESSION_EXITED","PROCESS_SESSION_NOT_FOUND",
+}
+
+def _slo_failure_class(error_code):
+    code=str(error_code or "UNKNOWN").strip().upper()
+    if code in SLO_POLICY_FAILURE_CODES:
+        return "POLICY"
+    if code in SLO_CLIENT_FAILURE_CODES:
+        return "CLIENT_ACTION"
+    return "SERVICE"
+
 def _internal_slo(summary):
     sample=int(summary.get("latency_sample_size") or 0)
-    terminal=int(summary.get("completed") or 0)+int(summary.get("failed") or 0)
-    success=summary.get("success_rate_percent")
+    terminal=int(summary.get("completed") or 0)+int(summary.get("service_failed") or 0)
+    success=summary.get("availability_success_rate_percent")
     checks={
         "success_rate":None if success is None else float(success)>=SLO_MIN_SUCCESS_PERCENT,
         "p50":None if summary.get("latency_p50_ms") is None else float(summary["latency_p50_ms"])<=SLO_P50_MAX_MS,
@@ -375,6 +393,7 @@ def _internal_slo(summary):
         "profile":SLO_PROFILE,
         "status":status,
         "evaluable":evaluable,
+        "success_metric":"availability_success_rate_percent",
         "targets":{
             "min_success_rate_percent":SLO_MIN_SUCCESS_PERCENT,
             "p50_max_ms":SLO_P50_MAX_MS,
@@ -413,15 +432,15 @@ def local_activity_snapshot(window="7d",limit=50,include_events=True):
                     LIMIT 6""",
                 (since,),
             ).fetchall()
-            errors=conn.execute(
+            failure_rows=conn.execute(
                 """SELECT COALESCE(error_code,'UNKNOWN') AS error_code,COUNT(*) AS calls
                      FROM activity_events
                     WHERE at_utc >= ? AND event='DENIED'
                     GROUP BY COALESCE(error_code,'UNKNOWN')
-                    ORDER BY calls DESC,error_code
-                    LIMIT 6""",
+                    ORDER BY calls DESC,error_code""",
                 (since,),
             ).fetchall()
+            errors=failure_rows[:6]
             transports=conn.execute(
                 """SELECT DISTINCT COALESCE(transport_mode,'LOCAL_AGENT') AS transport_mode
                      FROM activity_events
@@ -451,11 +470,19 @@ def local_activity_snapshot(window="7d",limit=50,include_events=True):
                     (since,limit),
                 ).fetchall()
     except Exception:
-        row=None; tools=[]; errors=[]; transports=[]; duration_rows=[]; events=[]
+        row=None; tools=[]; failure_rows=[]; errors=[]; transports=[]; duration_rows=[]; events=[]
     total=int((row["total_calls"] if row else 0) or 0)
     completed=int((row["completed"] if row else 0) or 0)
     failed=int((row["failed"] if row else 0) or 0)
+    failure_classes={"CLIENT_ACTION":0,"POLICY":0,"SERVICE":0}
+    for item in failure_rows:
+        klass=_slo_failure_class(item["error_code"])
+        failure_classes[klass]+=int(item["calls"] or 0)
+    client_failed=failure_classes["CLIENT_ACTION"]
+    policy_failed=failure_classes["POLICY"]
+    service_failed=failure_classes["SERVICE"]
     terminal=completed+failed
+    availability_terminal=completed+service_failed
     under3=int((row["under_3s"] if row else 0) or 0)
     duration_population=int((row["duration_population"] if row else 0) or 0)
     durations=[int(x["duration_ms"]) for x in duration_rows if x["duration_ms"] is not None]
@@ -466,11 +493,15 @@ def local_activity_snapshot(window="7d",limit=50,include_events=True):
         "total_calls":total,
         "completed":completed,
         "failed":failed,
+        "client_failed":client_failed,
+        "policy_failed":policy_failed,
+        "service_failed":service_failed,
         "pending":0,
         "executing":0,
         "expired":0,
         "cancelled":0,
         "success_rate_percent":round((completed/terminal)*100,1) if terminal else None,
+        "availability_success_rate_percent":round((completed/availability_terminal)*100,1) if availability_terminal else None,
         "under_3s_percent":round((under3/completed)*100,1) if completed else None,
         "avg_queue_ms":0.0 if total else None,
         "avg_execution_ms":float(row["avg_total_ms"]) if row and row["avg_total_ms"] is not None else None,

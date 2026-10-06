@@ -7,7 +7,7 @@ $SessionPath = Join-Path $Root "operator-session.json"
 $ConsoleEvents = Join-Path $Root "console-events.jsonl"
 $OperationsDb = Join-Path $Root "operations.sqlite3"
 $SessionMaxHours = 12
-$AgentVersion = "0.3.39"
+$AgentVersion = "0.3.40"
 $SloProfile = "INTERNAL_BETA_V1"
 $SloMinSuccessPercent = 99.0
 $SloP50MaxMs = 1000
@@ -325,10 +325,23 @@ function Get-NearestRankPercentile($Values,[int]$Percent) {
   return [int64]$items[[Math]::Min($items.Count-1,$rank-1)]
 }
 
+function Get-SloFailureClass([string]$ErrorCode) {
+  $code=([string]$ErrorCode).Trim().ToUpperInvariant()
+  $policy=@("HTTP_401","HTTP_403","HTTP_409","HTTP_429","LOCAL_OPERATOR_APPROVAL_DENIED","APPROVAL_TIMEOUT")
+  $client=@(
+    "HTTP_400","HTTP_404","HTTP_405","HTTP_410","HTTP_422",
+    "FILENOTFOUNDERROR","FILEEXISTSERROR","ISADIRECTORYERROR","NOTADIRECTORYERROR",
+    "EDIT_MATCH_AMBIGUOUS","PROCESS_SESSION_EXITED","PROCESS_SESSION_NOT_FOUND"
+  )
+  if ($policy -contains $code) { return "POLICY" }
+  if ($client -contains $code) { return "CLIENT_ACTION" }
+  return "SERVICE"
+}
+
 function Get-InternalSlo($Summary) {
   $sample=[int64]$(if ($null -ne $Summary.latency_sample_size) {$Summary.latency_sample_size} else {0})
-  $terminal=[int64]$Summary.completed+[int64]$Summary.failed
-  $success=$Summary.success_rate_percent
+  $terminal=[int64]$Summary.completed+[int64]$Summary.service_failed
+  $success=$Summary.availability_success_rate_percent
   $checks=[ordered]@{
     success_rate=$(if ($null -eq $success) {$null} else {[double]$success -ge $SloMinSuccessPercent})
     p50=$(if ($null -eq $Summary.latency_p50_ms) {$null} else {[double]$Summary.latency_p50_ms -le $SloP50MaxMs})
@@ -342,6 +355,7 @@ function Get-InternalSlo($Summary) {
     profile=$SloProfile
     status=$(if(-not $evaluable){"INSUFFICIENT_DATA"}elseif($allPass){"PASS"}else{"DEGRADED"})
     evaluable=$evaluable
+    success_metric="availability_success_rate_percent"
     targets=[ordered]@{
       min_success_rate_percent=$SloMinSuccessPercent
       p50_max_ms=$SloP50MaxMs
@@ -378,13 +392,14 @@ WHERE at_utc >= ? AND event IN ('PASS','DENIED')
 GROUP BY COALESCE(tool_id,'unknown')
 ORDER BY calls DESC,tool_id LIMIT 6
 "@ @($since))
-  $errors=@(Invoke-LocalDbQuery @"
+  $failureRows=@(Invoke-LocalDbQuery @"
 SELECT COALESCE(error_code,'UNKNOWN') AS error_code,COUNT(*) AS calls
 FROM activity_events
 WHERE at_utc >= ? AND event='DENIED'
 GROUP BY COALESCE(error_code,'UNKNOWN')
-ORDER BY calls DESC,error_code LIMIT 6
+ORDER BY calls DESC,error_code
 "@ @($since))
+  $errors=@($failureRows | Select-Object -First 6)
   $transports=@(Invoke-LocalDbQuery @"
 SELECT DISTINCT COALESCE(transport_mode,'OUTBOUND_RELAY') AS transport_mode
 FROM activity_events
@@ -402,20 +417,35 @@ LIMIT ?
   $total=if ($row -and $null -ne $row["total_calls"]) {[int64]$row["total_calls"]} else {0}
   $completed=if ($row -and $null -ne $row["completed"]) {[int64]$row["completed"]} else {0}
   $failed=if ($row -and $null -ne $row["failed"]) {[int64]$row["failed"]} else {0}
+  [int64]$clientFailed=0
+  [int64]$policyFailed=0
+  [int64]$serviceFailed=0
+  foreach($failure in $failureRows) {
+    $calls=[int64]$failure['calls']
+    $class=Get-SloFailureClass ([string]$failure['error_code'])
+    if ($class -eq "CLIENT_ACTION") { $clientFailed+=$calls }
+    elseif ($class -eq "POLICY") { $policyFailed+=$calls }
+    else { $serviceFailed+=$calls }
+  }
   $under3=if ($row -and $null -ne $row["under_3s"]) {[int64]$row["under_3s"]} else {0}
   $avg=if ($row -and $null -ne $row["avg_total_ms"]) {[double]$row["avg_total_ms"]} else {$null}
   $durationPopulation=if ($row -and $null -ne $row["duration_population"]) {[int64]$row["duration_population"]} else {0}
   $terminal=$completed+$failed
+  $availabilityTerminal=$completed+$serviceFailed
   $durations=@($durationRows | ForEach-Object {[int64]$_['duration_ms']})
   $summary=[ordered]@{
     total_calls=$total
     completed=$completed
     failed=$failed
+    client_failed=$clientFailed
+    policy_failed=$policyFailed
+    service_failed=$serviceFailed
     pending=0
     executing=0
     expired=0
     cancelled=0
     success_rate_percent=$(if ($terminal) {[Math]::Round(($completed/$terminal)*100,1)} else {$null})
+    availability_success_rate_percent=$(if ($availabilityTerminal) {[Math]::Round(($completed/$availabilityTerminal)*100,1)} else {$null})
     under_3s_percent=$(if ($completed) {[Math]::Round(($under3/$completed)*100,1)} else {$null})
     avg_queue_ms=$(if ($total) {0.0} else {$null})
     avg_execution_ms=$avg
