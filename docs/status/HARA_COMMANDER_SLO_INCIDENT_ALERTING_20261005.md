@@ -149,3 +149,21 @@ SLO_INCIDENT_PREPROD=CLOSED_PASS
 SLO_INCIDENT_DEV_LIVE=CLOSED_PASS
 PROD_PROMOTION=READY
 EXTERNAL_ALERT_DELIVERY=PENDING_TRANSPORT
+
+## Portal UI DEV proof
+
+DEV Worker:
+- 2a253fb2-272c-4449-89f9-1d6beabd5d32
+- rollback: 24eb40e9-ad74-41de-bb0e-df0451aaf5a8
+
+PASS:
+- cache key 20261005-sloincident1
+- SLO summary card served
+- /api/portal/slo fetch wired
+- OWNER/ADMIN visibility gate
+- live observed SLO payload
+- unauthenticated SLO request -> 401 AUTH_REQUIRED
+- incident hysteresis canary remained PASS after UI delta
+
+The portal reads current observed SLO immediately from bounded device snapshots.
+Persisted cron state is used for breach/recovery streaks and incident history.
