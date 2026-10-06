@@ -35,6 +35,29 @@ const SECURITY_SCHEMES = Object.freeze([
   { type: "oauth2", scopes: ["openid"] },
 ]);
 
+const SIMPLE_SERVER_INSTRUCTIONS = [
+  "H.A.R.A. Commander exposes a client-neutral remote-computer tool surface.",
+  "Prefer read-only inspection tools before mutation.",
+  "The optional computer field selects an enrolled computer; omit it when the current/default selection is sufficient.",
+  "Use start_process for bounded commands; set interactive=true only when a managed session is required, then use read_process_output, interact_with_process, and kill_process.",
+  "Mutating operations remain subject to H.A.R.A. governance and may require user approval.",
+  "Do not assume a specific model vendor or client implementation.",
+].join(" ");
+
+const COMMANDER_RESULT_SCHEMA = z.object({
+  state: z.string().optional(),
+  operational_authority: z.string().optional(),
+  execution_authority: z.string().optional(),
+  runtime_authority_from_chatgpt: z.boolean().optional(),
+  mutation_performed: z.boolean().optional(),
+  customer_services_relay: z.boolean().optional(),
+  result: z.unknown().optional(),
+  blocker: z.unknown().optional(),
+  computer: z.string().optional(),
+  bridge_receipt_sha256: z.string().optional(),
+  product: z.unknown().optional(),
+}).passthrough();
+
 function publicToolResult(value) {
   const result = value && typeof value === "object" ? value : {};
   return {
@@ -60,6 +83,7 @@ function toolConfig({
   title,
   description,
   inputSchema,
+  outputSchema = COMMANDER_RESULT_SCHEMA,
   openWorldHint = false,
   readOnlyHint = true,
   destructiveHint = false,
@@ -69,6 +93,7 @@ function toolConfig({
     title,
     description,
     inputSchema,
+    outputSchema,
     annotations: { readOnlyHint, destructiveHint, idempotentHint, openWorldHint },
     _meta: { securitySchemes: SECURITY_SCHEMES },
   };
@@ -83,7 +108,16 @@ export function createSimpleCustomerMcpServer({ executeTool }) {
 
   const server = new McpServer({
     name: "H.A.R.A. Commander Simple",
-    version: "1.0.0",
+    title: "H.A.R.A. Commander",
+    version: "1.1.0",
+    websiteUrl: "https://commander.haralabs.com.br",
+    description: "Governed, client-neutral remote computer access through MCP.",
+    icons: [{
+      src: "https://commander.haralabs.com.br/assets/hara-commander-royal.webp",
+      mimeType: "image/webp",
+    }],
+  }, {
+    instructions: SIMPLE_SERVER_INSTRUCTIONS,
   });
 
   const call = (internalTool, mapArgs = (args) => args || {}) => async (args, ctx) => {
@@ -111,7 +145,11 @@ export function createSimpleCustomerMcpServer({ executeTool }) {
     }
   };
 
-  const computer = z.string().min(1).max(120).optional();
+  const computer = z.string()
+    .min(1)
+    .max(120)
+    .describe("Optional enrolled computer name. Omit to use the current/default computer selection when applicable.")
+    .optional();
 
   server.registerTool(
     "list_devices",

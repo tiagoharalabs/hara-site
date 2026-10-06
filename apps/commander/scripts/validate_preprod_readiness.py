@@ -59,6 +59,9 @@ def main():
     run("COMMANDER_PREPROD_DEVICE_TOOL_CONTRACT", [
         "node", "apps/commander/scripts/validate_device_tool_contract.mjs",
     ])
+    run("COMMANDER_PREPROD_MCP_CLIENT_CONFORMANCE", [
+        "node", "apps/commander/scripts/test_customer_mcp_conformance.mjs",
+    ])
     checks = (
         ("COMMANDER_PREPROD_UI", "validate_prod_static.py"),
         ("COMMANDER_PREPROD_AGENT", "validate_device_installers.py"),
@@ -131,11 +134,23 @@ def main():
     runtime_asset_state_line = None
     worker_deployment_state_line = None
     worker_version_line = None
+    mcp_auto_oauth_line = None
     if args.live_readonly:
         run("COMMANDER_IDENTITY_LIVE_READONLY", [
             sys.executable,
             "apps/identity-login/scripts/validate_live_white_label.py",
         ])
+        mcp_auth_output = run("COMMANDER_MCP_AUTH_DISCOVERY_LIVE_READONLY", [
+            sys.executable,
+            "apps/commander/scripts/commander_mcp_auth_discovery_probe.py",
+        ])
+        for line in mcp_auth_output.splitlines():
+            if line.startswith("COMMANDER_MCP_GENERIC_AUTO_OAUTH_ONBOARDING="):
+                mcp_auto_oauth_line = line
+                break
+        if mcp_auto_oauth_line is None:
+            raise SystemExit("COMMANDER_MCP_AUTO_OAUTH_STATE_MISSING")
+
         d1_output = run("COMMANDER_PROD_D1_LIVE_READONLY", [
             sys.executable,
             "apps/commander/scripts/commander_prod_readback.py",
@@ -229,6 +244,10 @@ def main():
         if worker_deployment_state_line is None or worker_version_line is None:
             raise SystemExit("COMMANDER_PROD_WORKER_STATE_MISSING")
 
+    if mcp_auto_oauth_line:
+        print(mcp_auto_oauth_line)
+    else:
+        print("COMMANDER_MCP_GENERIC_AUTO_OAUTH_ONBOARDING=LIVE_READBACK_REQUIRED")
     if migration_state_line:
         print(migration_state_line)
     else:

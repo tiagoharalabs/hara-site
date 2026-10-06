@@ -1,8 +1,16 @@
 import assert from "node:assert/strict";
+import nodeCrypto from "node:crypto";
 import {
   CUSTOMER_MCP_SIMPLE_TOOLS,
   handleSimpleCustomerMcpRequest,
 } from "../src/customer-mcp-simple.mjs";
+
+if (!globalThis.crypto) {
+  Object.defineProperty(globalThis, "crypto", {
+    value: nodeCrypto.webcrypto,
+    configurable: true,
+  });
+}
 
 const endpoint="https://mcp.haralabs.com.br/mcp?profile=simple";
 const calls=[];
