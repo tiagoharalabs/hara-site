@@ -5181,6 +5181,7 @@ export default {
           tenant: payload.tenant,
           entitlement: payload.entitlement,
           usage: payload.usage,
+          transaction_history: payload.transaction_history,
           device_state: {
             schema: "hara.commander-device-list.v1",
             devices,
