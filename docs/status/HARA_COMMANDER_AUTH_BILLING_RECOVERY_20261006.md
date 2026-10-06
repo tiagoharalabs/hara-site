@@ -63,3 +63,36 @@ DEGRADED_AUTH_SESSION_TTL_MINUTES=30
 DEGRADED_WORKSPACE_ACCESS=BLOCKED
 DEGRADED_BILLING_ACCESS=ALLOWED
 D1_WRITE_LIMIT_LOGIN_FAILURE=RECOVERED
+
+## PROD proof
+
+Promoted Worker:
+- `442f7fde-93e5-4684-9cb7-0ae0a5dfcbb6`
+
+Rollback Worker:
+- `5f6f29aa-e333-4898-a11b-e7cc29c77f12`
+
+Live D1 condition during canary:
+- Cloudflare D1 write enforcement returned code `7500`;
+- a one-row idempotent UPDATE was rejected by the platform due to the daily row-write limit;
+- D1 reads remained available.
+
+Live recovery proof under that active write block:
+- `/auth/login` returned HTTP 302 to HARA Identity;
+- secure OIDC transaction cookie was issued with HttpOnly + Secure + SameSite=Lax;
+- HARA Identity account selection succeeded;
+- callback no longer returned `AUTH_CALLBACK_FAILED`;
+- authenticated recovery session was established;
+- UI entered the authenticated degraded experience instead of returning to login;
+- public asset cache key `app.js?v=20261006-authrecovery1` confirmed live.
+
+Canonical reconciliation commit candidate:
+- `e8fa0d4` plus PROD proof documentation.
+
+AUTH_BILLING_RECOVERY_PROD=CLOSED_PASS
+PROD_WORKER=442f7fde-93e5-4684-9cb7-0ae0a5dfcbb6
+PROD_ROLLBACK=5f6f29aa-e333-4898-a11b-e7cc29c77f12
+D1_WRITE_LIMIT_ACTIVE_DURING_CANARY=TRUE
+AUTHENTICATION_UNDER_WRITE_LIMIT=PASS
+WORKSPACE_DEGRADED_BLOCK=PASS
+BILLING_RECOVERY_SURFACE=AVAILABLE
