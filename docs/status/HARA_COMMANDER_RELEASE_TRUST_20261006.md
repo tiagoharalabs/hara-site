@@ -103,3 +103,49 @@ signature over exact downloaded manifest bytes. No enrollment or local product
 state was changed.
 
 RELEASE_MANIFEST_TRUST_DEV=CLOSED_PASS
+
+## PROD live proof
+
+Worker:
+- fd38aade-3da4-4126-9bde-d4c960d48075
+- rollback: 996e1bbd-dd48-4a53-96c4-5a058da0bb1c
+
+Promotion:
+- version preflight PASS
+- required version secrets PASS
+- trigger sync required and applied
+- Worker promotion PASS
+- exact-version readback PASS
+- full PROD fail-closed suite PASS
+
+Runtime drift:
+- public runtime health PASS
+- auth configured PASS
+- runtime assets CURRENT
+- agent-manifest.json CURRENT
+- agent-manifest.sig.json CURRENT
+- release-signing-public.jwk CURRENT
+- SHA256SUMS CURRENT
+- Linux/Windows installers and Agents CURRENT
+
+Real Linux PROD preflight on nucleo-a:
+- platform LINUX
+- release_manifest=true
+- release_signature=true
+- stable_agent_version=0.3.38
+- persistence_ready=true
+- mutation_performed=false
+
+The production installer now fails closed if the detached manifest signature is
+missing or invalid before it accepts manifest contents, artifact SHA/version or
+Agent self-test.
+
+## Final state
+
+RELEASE_MANIFEST_INDEPENDENT_TRUST_ANCHOR=CLOSED_PASS
+RELEASE_MANIFEST_TRUST_DEV=CLOSED_PASS
+RELEASE_MANIFEST_TRUST_PROD=CLOSED_PASS
+PROD_RUNTIME_SIGNED_RELEASE_DRIFT=CLOSED_PASS
+INITIAL_BOOTSTRAP_TRUST=HTTPS_WEB_ORIGIN
+OUT_OF_BAND_BOOTSTRAP_TRUST=PENDING_GA_MATURITY
+PROD_ROLLBACK_READY=996e1bbd-dd48-4a53-96c4-5a058da0bb1c

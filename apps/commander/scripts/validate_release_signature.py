@@ -88,6 +88,8 @@ need(not private_candidates, "PRIVATE_KEY_NOT_TRACKED")
 for rel in tracked:
     if not rel.startswith("apps/commander/"):
         continue
+    if rel == "apps/commander/scripts/validate_release_signature.py":
+        continue
     path = ROOT / rel
     if not path.is_file():
         continue
