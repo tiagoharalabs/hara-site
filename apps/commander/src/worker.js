@@ -70,6 +70,8 @@ const SLO_ALERT_PROFILE = "INTERNAL_BETA_V1";
 const SLO_ALERT_BREACH_STREAK = 2;
 const SLO_ALERT_RECOVERY_STREAK = 2;
 const SLO_ALERT_ONLINE_GRACE_SECONDS = 120;
+const DEVICE_HEARTBEAT_PERSIST_SECONDS = 120;
+const DEVICE_ONLINE_GRACE_SECONDS = 240;
 const SLO_ALERT_SNAPSHOT_GRACE_SECONDS = 180;
 const SLO_ALERT_INCIDENT_RETENTION_SECONDS = 90 * 24 * 60 * 60;
 const SLO_ALERT_ESCALATION_L1_SECONDS = 60 * 60;
@@ -549,7 +551,7 @@ function deviceOnline(lastSeenAtUtc, tunnelMode = "OUTBOUND_RELAY", now = Date.n
   if (!Number.isFinite(seen)) return false;
   const onlineWindowMs = mode === "EVENT_V2"
     ? 7 * 60 * 60 * 1000
-    : 90_000;
+    : DEVICE_ONLINE_GRACE_SECONDS * 1000;
   return now - seen <= onlineWindowMs;
 }
 
@@ -2278,108 +2280,6 @@ async function resolveDeviceCredential(env, request) {
   return device;
 }
 
-function activitySnapshotNumber(value, max = 1_000_000_000) {
-  const num = Number(value);
-  if (!Number.isFinite(num) || num < 0) return 0;
-  return Math.min(max, Math.round(num * 10) / 10);
-}
-
-function cleanAgentActivityWindow(value, key) {
-  if (!value || typeof value !== "object") return null;
-  const summary = value.summary || {};
-  const diagnostics = value.diagnostics || {};
-  const topTools = Array.isArray(diagnostics.top_tools) ? diagnostics.top_tools.slice(0, 6) : [];
-  const topErrors = Array.isArray(diagnostics.top_errors) ? diagnostics.top_errors.slice(0, 6) : [];
-  const transports = Array.isArray(summary.transport_modes)
-    ? summary.transport_modes.slice(0, 8).map((item) => cleanAgentValue(item, 80)).filter(Boolean)
-    : [];
-  const rawSlo = value.slo && typeof value.slo === "object" ? value.slo : {};
-  const sloStatus = ["PASS","DEGRADED","INSUFFICIENT_DATA"].includes(String(rawSlo.status || ""))
-    ? String(rawSlo.status)
-    : "INSUFFICIENT_DATA";
-  const slo = {
-    profile:"INTERNAL_BETA_V1",
-    status:sloStatus,
-    evaluable:rawSlo.evaluable === true,
-    success_metric:"availability_success_rate_percent",
-    targets:{
-      min_success_rate_percent:activitySnapshotNumber(rawSlo.targets?.min_success_rate_percent ?? 99,100),
-      p50_max_ms:activitySnapshotNumber(rawSlo.targets?.p50_max_ms ?? 1000),
-      p95_max_ms:activitySnapshotNumber(rawSlo.targets?.p95_max_ms ?? 6000),
-      p99_max_ms:activitySnapshotNumber(rawSlo.targets?.p99_max_ms ?? 12000),
-      min_latency_samples:activitySnapshotNumber(rawSlo.targets?.min_latency_samples ?? 20,100000),
-    },
-    checks:{
-      success_rate:typeof rawSlo.checks?.success_rate === "boolean" ? rawSlo.checks.success_rate : null,
-      p50:typeof rawSlo.checks?.p50 === "boolean" ? rawSlo.checks.p50 : null,
-      p95:typeof rawSlo.checks?.p95 === "boolean" ? rawSlo.checks.p95 : null,
-      p99:typeof rawSlo.checks?.p99 === "boolean" ? rawSlo.checks.p99 : null,
-    },
-  };
-  return {
-    schema: "hara.commander-device-activity-window.v1",
-    window_key: key,
-    summary: {
-      total_calls: activitySnapshotNumber(summary.total_calls),
-      completed: activitySnapshotNumber(summary.completed),
-      failed: activitySnapshotNumber(summary.failed),
-      client_failed: activitySnapshotNumber(summary.client_failed),
-      policy_failed: activitySnapshotNumber(summary.policy_failed),
-      service_failed: activitySnapshotNumber(
-        summary.service_failed == null ? summary.failed : summary.service_failed
-      ),
-      pending: activitySnapshotNumber(summary.pending),
-      executing: activitySnapshotNumber(summary.executing),
-      expired: activitySnapshotNumber(summary.expired),
-      cancelled: activitySnapshotNumber(summary.cancelled),
-      success_rate_percent: summary.success_rate_percent == null ? null : activitySnapshotNumber(summary.success_rate_percent, 100),
-      availability_success_rate_percent: summary.availability_success_rate_percent == null
-        ? (summary.success_rate_percent == null ? null : activitySnapshotNumber(summary.success_rate_percent,100))
-        : activitySnapshotNumber(summary.availability_success_rate_percent,100),
-      under_3s_percent: summary.under_3s_percent == null ? null : activitySnapshotNumber(summary.under_3s_percent, 100),
-      avg_queue_ms: summary.avg_queue_ms == null ? null : activitySnapshotNumber(summary.avg_queue_ms),
-      avg_execution_ms: summary.avg_execution_ms == null ? null : activitySnapshotNumber(summary.avg_execution_ms),
-      avg_total_ms: summary.avg_total_ms == null ? null : activitySnapshotNumber(summary.avg_total_ms),
-      latency_p50_ms: summary.latency_p50_ms == null ? null : activitySnapshotNumber(summary.latency_p50_ms),
-      latency_p95_ms: summary.latency_p95_ms == null ? null : activitySnapshotNumber(summary.latency_p95_ms),
-      latency_p99_ms: summary.latency_p99_ms == null ? null : activitySnapshotNumber(summary.latency_p99_ms),
-      latency_sample_size: activitySnapshotNumber(summary.latency_sample_size,100000),
-      latency_population_size: activitySnapshotNumber(summary.latency_population_size,100000000),
-      latency_sample_capped: summary.latency_sample_capped === true,
-      transport_modes: [...new Set(transports)],
-    },
-    slo,
-    diagnostics: {
-      top_tools: topTools.map((row) => ({
-        tool_id: cleanAgentValue(row?.tool_id, 120) || "unknown",
-        calls: activitySnapshotNumber(row?.calls),
-      })),
-      top_errors: topErrors.map((row) => ({
-        error_code: cleanAgentValue(row?.error_code, 120) || "UNKNOWN",
-        calls: activitySnapshotNumber(row?.calls),
-      })),
-    },
-  };
-}
-
-function cleanAgentActivitySnapshots(value) {
-  if (!value || typeof value !== "object") return null;
-  if (value.schema !== "hara.commander-local-activity-snapshots.v1") return null;
-  const windows = {};
-  for (const key of ["24h", "7d", "30d"]) {
-    const cleaned = cleanAgentActivityWindow(value.windows?.[key], key);
-    if (cleaned) windows[key] = cleaned;
-  }
-  if (!Object.keys(windows).length) return null;
-  const raw = JSON.stringify({
-    schema: "hara.commander-device-activity-snapshots.v1",
-    windows,
-    detail_location: "LOCAL_DEVICE",
-    customer_content_synced: false,
-  });
-  return raw.length <= 32 * 1024 ? raw : null;
-}
-
 async function heartbeatDevice(env, request, body) {
   const device = await resolveDeviceCredential(env, request);
   const requestedId = body.device_id ? cleanId(body.device_id, 180) : device.device_id;
@@ -2388,26 +2288,31 @@ async function heartbeatDevice(env, request, body) {
   const agentVersion = cleanAgentValue(body.agent_version, 80) || device.agent_version;
   const architecture = cleanAgentValue(body.architecture, 80) || device.architecture;
   const approvalMode = normalizeApprovalMode(body.approval_mode, normalizeApprovalMode(device.approval_mode, "ASK_EVERY_ACTION"));
-  const activitySummaryJson = cleanAgentActivitySnapshots(body.activity_snapshots);
   const seenAt = nowIso();
+  const persistCutoff = new Date(Date.now() - DEVICE_HEARTBEAT_PERSIST_SECONDS * 1000).toISOString();
+  const metadataChanged =
+    String(agentVersion || "") !== String(device.agent_version || "")
+    || String(architecture || "") !== String(device.architecture || "")
+    || String(approvalMode || "") !== String(device.approval_mode || "")
+    || String(device.tunnel_mode || "") !== "OUTBOUND_RELAY";
+  const persistPresence = metadataChanged
+    || !device.last_seen_at_utc
+    || String(device.last_seen_at_utc) < persistCutoff;
 
-  const heartbeat = await env.PRODUCT_DB.prepare(
-    `UPDATE commander_devices
-        SET last_seen_at_utc = ?,
-            agent_version = ?,
-            architecture = ?,
-            approval_mode = ?,
-            tunnel_mode = 'OUTBOUND_RELAY',
-            activity_summary_json = CASE WHEN ? IS NULL THEN activity_summary_json ELSE ? END,
-            activity_summary_at_utc = CASE WHEN ? IS NULL THEN activity_summary_at_utc ELSE ? END
-      WHERE device_id = ? AND state = 'ACTIVE' AND revoked_at_utc IS NULL`
-  ).bind(
-    seenAt, agentVersion, architecture, approvalMode,
-    activitySummaryJson, activitySummaryJson,
-    activitySummaryJson, seenAt,
-    device.device_id
-  ).run();
-  if (!heartbeat.meta?.changes) throw new Error("DEVICE_AUTH_INVALID");
+  let persisted = false;
+  if (persistPresence) {
+    const heartbeat = await env.PRODUCT_DB.prepare(
+      `UPDATE commander_devices
+          SET last_seen_at_utc = ?,
+              agent_version = ?,
+              architecture = ?,
+              approval_mode = ?,
+              tunnel_mode = 'OUTBOUND_RELAY'
+        WHERE device_id = ? AND state = 'ACTIVE' AND revoked_at_utc IS NULL`
+    ).bind(seenAt, agentVersion, architecture, approvalMode, device.device_id).run();
+    if (!heartbeat.meta?.changes) throw new Error("DEVICE_AUTH_INVALID");
+    persisted = true;
+  }
 
   return {
     schema: "hara.commander-device-heartbeat.v1",
@@ -2416,7 +2321,9 @@ async function heartbeatDevice(env, request, body) {
     state: "ACTIVE",
     server_time_utc: seenAt,
     heartbeat_after_seconds: 30,
-    local_activity_snapshot_accepted: Boolean(activitySummaryJson),
+    presence_persisted: persisted,
+    local_activity_snapshot_accepted: false,
+    customer_activity_detail_persisted: false,
   };
 }
 
@@ -4340,29 +4247,11 @@ async function executeCustomerMcpTool(
     return {state:"PASS",operational_authority:"HARA_SERVICES",execution_authority:"HARA_SERVICES",runtime_authority_from_chatgpt:false,mutation_performed:false,customer_services_relay:false,result:usage,product:{plan_code:context.plan_code,entitlement_id:context.entitlement_id,quota:usage.usage}};
   }
 
-  if (toolId === "hara.activity") {
-    const activity=await portalActivity(
-      env,
-      {tenant_id:context.tenant_id,subject_id:context.subject_id,role:"MEMBER"},
-      args?.limit || 50,
-      args?.window || "7d",
-    );
-    return {
-      state:"PASS", operational_authority:"HARA_SERVICES", execution_authority:"HARA_SERVICES",
-      runtime_authority_from_chatgpt:false, mutation_performed:false, customer_services_relay:false,
-      result:activity,
-      product:{plan_code:context.plan_code,entitlement_id:context.entitlement_id,quota:null},
-    };
-  }
-
-  if (toolId === "hara.calls.recent") {
-    const calls = await recentCustomerCalls(env, context, args);
-    return {
-      state:"PASS", operational_authority:"HARA_SERVICES", execution_authority:"HARA_SERVICES",
-      runtime_authority_from_chatgpt:false, mutation_performed:false, customer_services_relay:false,
-      result:{count:calls.length,calls},
-      product:{plan_code:context.plan_code,entitlement_id:context.entitlement_id,quota:null},
-    };
+  if (toolId === "hara.activity" || toolId === "hara.calls.recent") {
+    // Detailed execution history is local-authoritative. The public Commander
+    // cloud endpoint must never serve it from D1. These tools resume through
+    // the Agent-local path once the signed local-activity release is active.
+    throw new Error("AGENT_UPGRADE_REQUIRED");
   }
 
   const targetDevice = await resolveCustomerTargetDevice(
@@ -5067,6 +4956,7 @@ export default {
       }
 
       if (url.pathname === "/api/portal/activity" && request.method === "GET") {
+        return json({ ok:false, code:"INTERNAL_DIAGNOSTICS_NOT_IN_PRODUCT" },404);
         const session = await resolvePortalSession(request, env);
         if (!session) return json({ ok: false, code: "AUTH_REQUIRED" }, 401);
         const limit=Number(url.searchParams.get("limit") || 50);
@@ -5075,12 +4965,14 @@ export default {
       }
 
       if (url.pathname === "/api/portal/slo" && request.method === "GET") {
+        return json({ ok:false, code:"INTERNAL_DIAGNOSTICS_NOT_IN_PRODUCT" },404);
         const session = await resolvePortalSession(request, env);
         if (!session) return json({ ok:false, code:"AUTH_REQUIRED" },401);
         return json(await portalSloStatus(env,session));
       }
 
       if (url.pathname === "/api/portal/slo/ack" && request.method === "POST") {
+        return json({ ok:false, code:"INTERNAL_DIAGNOSTICS_NOT_IN_PRODUCT" },404);
         requirePortalMutationOrigin(request);
         const session = await resolvePortalSession(request, env);
         if (!session) return json({ ok:false, code:"AUTH_REQUIRED" },401);
@@ -5090,6 +4982,7 @@ export default {
       }
 
       if (url.pathname === "/api/portal/slo/escalate" && request.method === "POST") {
+        return json({ ok:false, code:"INTERNAL_DIAGNOSTICS_NOT_IN_PRODUCT" },404);
         requirePortalMutationOrigin(request);
         const session = await resolvePortalSession(request, env);
         if (!session) return json({ ok:false, code:"AUTH_REQUIRED" },401);
@@ -5619,7 +5512,6 @@ export default {
     requireRuntime(env);
     ctx.waitUntil(runAuthRetentionMaintenance(env));
     ctx.waitUntil(cleanupExpiredDeviceCalls(env));
-    ctx.waitUntil(runSloAlertMaintenance(env));
     ctx.waitUntil(cleanupExpiredSupportReports(env));
   }
 };

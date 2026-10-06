@@ -23,32 +23,20 @@ def need(ok: bool, code: str) -> None:
     print("COMMANDER_LOCAL_ACTIVITY_" + code + "=PASS")
 
 
-# Cloud schema only stores a bounded aggregate snapshot.
+# Legacy cloud columns may still exist until the explicit purge runs, but the
+# public product must not ingest, render, or schedule activity/SLO diagnostics.
 db = sqlite3.connect(":memory:")
 db.execute("CREATE TABLE commander_devices (device_id TEXT PRIMARY KEY)")
 db.executescript(MIGRATION)
 columns = {row[1] for row in db.execute("PRAGMA table_info(commander_devices)")}
-need({"activity_summary_json", "activity_summary_at_utc"}.issubset(columns), "CLOUD_SNAPSHOT_COLUMNS")
+need({"activity_summary_json", "activity_summary_at_utc"}.issubset(columns), "LEGACY_CLOUD_COLUMNS_KNOWN")
 need("payload_json" not in MIGRATION and "result_json" not in MIGRATION, "CLOUD_RAW_CONTENT_ABSENT")
-
-# Worker sanitizes heartbeat snapshots and prefers them only for privileged portal activity.
-need("cleanAgentActivitySnapshots" in WORKER, "HEARTBEAT_SANITIZER")
-need('raw.length <= 32 * 1024' in WORKER, "SNAPSHOT_SIZE_BOUND")
-need("portalActivityFromLocalSnapshots" in WORKER, "PORTAL_LOCAL_SNAPSHOT_PATH")
-local_block = WORKER.split("async function portalActivityFromLocalSnapshots", 1)[1].split(
-    "async function portalActivity(env", 1
-)[0]
-need("commander_device_calls" not in local_block, "PORTAL_LOCAL_PATH_NO_CALL_SCAN")
-need('cloud_history_scanned:false' in local_block, "PORTAL_NO_HISTORY_SCAN_MARKER")
-need('detail_location:"LOCAL_DEVICE"' in local_block, "PORTAL_DETAIL_LOCATION")
-need('["OWNER","ADMIN"]' in local_block, "PORTAL_PRIVILEGED_SCOPE")
-need("const summarySql=" in WORKER, "CLOUD_FALLBACK_PRESERVED")
-need("mergePortalActivity" in WORKER, "HYBRID_MERGE")
-need("c.device_id NOT IN" in WORKER, "HYBRID_CLOUD_EXCLUDES_LOCAL_DEVICES")
-need("snapshot_coverage_percent" in WORKER, "SNAPSHOT_COVERAGE")
-need("snapshot_device_count" in WORKER and "active_device_count" in WORKER, "FULL_COVERAGE_GATE")
-need("% local" in PORTAL, "PORTAL_COVERAGE_COPY")
-need("Histórico detalhado fica no computador" in PORTAL, "PORTAL_LOCAL_DETAIL_COPY")
+heartbeat = WORKER.split("async function heartbeatDevice",1)[1].split("async function markDeviceOffline",1)[0]
+need("cleanAgentActivitySnapshots" not in WORKER, "NO_HEARTBEAT_SANITIZER_NEEDED")
+need("activity_summary_json" not in heartbeat and "activity_summary_at_utc" not in heartbeat, "NO_CLOUD_ACTIVITY_WRITE")
+need("customer_activity_detail_persisted: false" in heartbeat, "CLOUD_DETAIL_FALSE")
+need('INTERNAL_DIAGNOSTICS_NOT_IN_PRODUCT' in WORKER, "PUBLIC_DIAGNOSTIC_ROUTES_DISABLED")
+need('id="activityTotal"' not in (APP / "public" / "index.html").read_text(encoding="utf-8"), "PUBLIC_ACTIVITY_UI_ABSENT")
 
 # Exercise Linux local SQLite store in an isolated XDG-like root.
 ns = runpy.run_path(str(AGENT))

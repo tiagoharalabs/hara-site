@@ -64,7 +64,7 @@ need(
     "APPROVAL_MODE_MIGRATION",
 )
 need("styles.css?v=20261006-clientbrands1" in HTML, "STYLE_CACHE_KEY")
-need("app.js?v=20261006-authrecovery1" in HTML, "SCRIPT_CACHE_KEY")
+need("app.js?v=20261006-productboundary1" in HTML, "SCRIPT_CACHE_KEY")
 need('./brand/chatgpt-official.webp' in HTML and (APP / "public/brand/chatgpt-official.webp").stat().st_size > 0, "CHATGPT_BRAND_ICON")
 need('./brand/claude-official.svg' in HTML and (APP / "public/brand/claude-official.svg").stat().st_size > 0, "CLAUDE_BRAND_ICON")
 need('class="where-badge">AI</span><p><b>ChatGPT' not in HTML and 'class="where-badge">AI</span><p><b>Claude' not in HTML, "CLIENT_PLACEHOLDER_BADGES_REMOVED")
@@ -188,7 +188,8 @@ need(
     'encodeURIComponent("/#devices")' in JS
     and 'route("devices");' in JS
     and 'id="devices-title"' in HTML
-    and 'id="activityTotal"' in HTML,
+    and 'id="usage-title"' in HTML
+    and 'O Commander na nuvem mantém apenas o mínimo necessário' in HTML,
     "CUSTOMER_DEFAULT_DEVICES_ROUTE",
 )
 need(
@@ -248,33 +249,25 @@ need(
     and 'dashboardProgress.setAttribute("aria-valuenow"' in JS,
     "DASHBOARD_STATUS_SUMMARY",
 )
-activity_block = WORKER.split("async function portalActivity", 1)[1].split("async function executeCustomerMcpTool", 1)[0]
 need(
-    'url.pathname === "/api/portal/activity"' in WORKER
-    and 'id="activityTotal"' in HTML
-    and 'id="activitySuccessRate"' in HTML
-    and 'id="activityAvgLatency"' in HTML
-    and 'id="activityTransport"' in HTML
-    and 'function renderActivity(payload)' in JS
-    and 'function loadUsageActivity(' in JS
-    and 'data-refresh-activity' in HTML
-    and 'data-activity-window="24h"' in HTML
-    and 'data-activity-window="7d"' in HTML
-    and 'data-activity-window="30d"' in HTML
-    and 'function setActivityWindow(value)' in JS
-    and 'window="+encodeURIComponent(activityWindow)' in JS
-    and 'id="activityTopTools"' in HTML
-    and 'id="activityTopErrors"' in HTML
-    and 'data-export-activity' in HTML
-    and 'function exportUsageActivityCsv(trigger=null)' in JS,
-    "USAGE_ACTIVITY_SURFACE",
+    'id="activityTotal"' not in HTML
+    and 'id="activitySuccessRate"' not in HTML
+    and 'id="activityAvgLatency"' not in HTML
+    and 'id="activityTransport"' not in HTML
+    and 'id="sloSummaryCard"' not in HTML
+    and 'id="activityTopTools"' not in HTML
+    and 'id="activityTopErrors"' not in HTML
+    and 'id="usageLedger"' not in HTML
+    and 'data-slo-ack' not in HTML
+    and 'data-slo-escalate' not in HTML
+    and 'if (next === "usage") loadUsageActivity();' not in JS
+    and 'O Commander na nuvem mantém apenas o mínimo necessário' in HTML,
+    "USAGE_PRODUCT_BOUNDARY_NO_INTERNAL_DIAGNOSTICS",
 )
 need(
-    '"hara.activity"' in CUSTOMER_MCP
-    and 'H.A.R.A. Operational Activity' in CUSTOMER_MCP
-    and '"hara.activity": "COMMANDER_RECEIPT_READ"' in WORKER
-    and 'if (toolId === "hara.activity")' in WORKER,
-    "MCP_ACTIVITY_SURFACE",
+    'if (toolId === "hara.activity" || toolId === "hara.calls.recent")' in WORKER
+    and 'throw new Error("AGENT_UPGRADE_REQUIRED")' in WORKER,
+    "MCP_ACTIVITY_CLOUD_FAIL_CLOSED",
 )
 need(
     'CUSTOMER_MCP_SIMPLE_TOOLS' in SIMPLE_MCP
@@ -289,18 +282,9 @@ need(
     "MCP_SIMPLE_PROFILE",
 )
 need(
-    "c.tenant_id = ?" in activity_block
-    and "c.subject_id = ?" in activity_block
-    and "payload_json" not in activity_block
-    and "result_json" not in activity_block
-    and "payload_values_exposed:false" in activity_block
-    and "result_values_exposed:false" in activity_block
-    and "request_id_exposed:false" in activity_block
-    and "command_text_exposed:false" in activity_block
-    and "argument_values_exposed:false" in activity_block
-    and "historical_command_text_persisted:false" in activity_block
-    and "payload_hot_path_transient:true" in activity_block,
-    "USAGE_ACTIVITY_PRIVACY_SCOPE",
+    'INTERNAL_DIAGNOSTICS_NOT_IN_PRODUCT' in WORKER
+    and 'activity_summary_json = CASE' not in WORKER.split("async function heartbeatDevice",1)[1].split("async function markDeviceOffline",1)[0],
+    "USAGE_ACTIVITY_CLOUD_DISABLED",
 )
 activity_csv = JS.split("function exportUsageActivityCsv",1)[1].split("async function loadUsageActivity",1)[0]
 need(
