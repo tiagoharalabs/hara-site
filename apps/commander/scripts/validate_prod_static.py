@@ -277,6 +277,16 @@ need(
     and 'setText("usageCardPeriod"' in JS,
     "USAGE_CUSTOMER_SUMMARY_CARDS",
 )
+bootstrap_block = WORKER.split('url.pathname === "/api/portal/bootstrap"',1)[1].split('url.pathname === "/api/portal/dashboard"',1)[0]
+need(
+    'transaction_history: payload.transaction_history' in bootstrap_block,
+    "USAGE_BOOTSTRAP_TRANSACTION_HISTORY_PARITY",
+)
+need(
+    '.usage-product-grid{grid-template-columns:1.05fr 1.05fr 1.4fr 1fr;gap:18px;margin-top:24px' in CSS
+    and '.usage-product-grid .summary-card{min-height:144px' in CSS,
+    "USAGE_CUSTOMER_CARD_SPACING",
+)
 history_block = WORKER.split("async function productTransactionHistory",1)[1].split("async function dashboardForSubject",1)[0]
 need(
     'COUNT(*) AS calls_total' in history_block
