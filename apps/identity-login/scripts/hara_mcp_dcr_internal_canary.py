@@ -203,7 +203,11 @@ def internal_canary() -> str:
 
 def main() -> int:
     ap=argparse.ArgumentParser()
-    ap.add_argument("--pat-file",type=pathlib.Path,required=True)
+    ap.add_argument(
+        "--pat-file",
+        type=pathlib.Path,
+        default=pathlib.Path("/srv/hara/identity/secrets") / "identity-owner.pat",
+    )
     args=ap.parse_args()
     token=args.pat_file.read_text(encoding="utf-8").strip()
     if not token:
