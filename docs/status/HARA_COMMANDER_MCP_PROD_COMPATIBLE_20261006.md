@@ -138,3 +138,43 @@ After upload, the canonical versioned-promotion helper must first be run without
 4. trigger synchronization will be required if/when promotion is executed.
 
 Actual traffic promotion remains a separate explicit gate.
+
+## PROD candidate version upload — authorized first write
+
+Authorized on 2026-10-07.
+
+A PROD Worker Version was uploaded with no traffic promotion:
+
+- Version ID: `91a870b7-e84a-4f70-95df-d3be1367f190`
+- tag: `mcp-runtime-prod-compatible-20261007`
+- message: `MCP runtime fixes on PROD source 6dc6d28; runtime 10d48fa; qualified db6b738`
+- upload source: version_upload
+- compatibility date: 2026-09-21
+
+Candidate Version bindings/readback:
+
+- PROD D1 binding preserved
+- TenantQuota / SecurityRateLimit bindings preserved
+- PROD environment and public MCP resource vars preserved
+- required secrets present
+- candidate carries the same expected six secret bindings as current PROD
+
+Canonical versioned-promotion preflight, **without** `--execute`:
+
+- `COMMANDER_VERSIONED_PROMOTE_PREFLIGHT=PASS`
+- target = `91a870b7-e84a-4f70-95df-d3be1367f190`
+- rollback = `fa4217f6-cc99-4395-8fe3-e0abb4e67950`
+- required secrets = PASS
+- trigger sync = REQUIRED if promotion is later executed
+- `COMMANDER_VERSIONED_PROMOTE_EXECUTE=NO`
+
+Traffic readback after upload:
+
+- deployment remains `f596f36e-74fb-467d-95a8-53d1d8691731`
+- `fa4217f6-cc99-4395-8fe3-e0abb4e67950` remains at **100%**
+- candidate receives **0%** traffic
+- routes/triggers were not changed
+
+Therefore the first PROD write is complete and bounded. The next gate is the
+separate `commander_versioned_prod_promote.py --execute` operation, which would
+move traffic to the candidate and synchronize triggers.
