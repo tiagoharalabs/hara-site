@@ -304,10 +304,17 @@ need(
     and 'INTERNAL_DIAGNOSTICS_NOT_IN_PRODUCT' in WORKER,
     "PUBLIC_DIAGNOSTIC_ROUTES_FAIL_CLOSED",
 )
+recent_calls_block=WORKER.split("async function recentCustomerCalls",1)[1].split("function portalActivitySource",1)[0]
 need(
-    'if (toolId === "hara.activity" || toolId === "hara.calls.recent")' in WORKER
-    and 'LOCAL_DIAGNOSTICS_REQUIRE_SIGNED_AGENT_UPDATE' in WORKER,
-    "MCP_REMOTE_HISTORY_FAIL_CLOSED",
+    'if (toolId === "hara.activity")' in WORKER
+    and 'const activity=await portalActivity(' in WORKER
+    and 'if (toolId === "hara.calls.recent")' in WORKER
+    and 'const calls = await recentCustomerCalls(env, context, args);' in WORKER
+    and 'payload_json' not in recent_calls_block
+    and 'result_json' not in recent_calls_block
+    and 'command_json' not in recent_calls_block
+    and 'argv' not in recent_calls_block,
+    "MCP_REMOTE_HISTORY_METADATA_ONLY",
 )
 need(
     'CUSTOMER_MCP_SIMPLE_TOOLS' in SIMPLE_MCP

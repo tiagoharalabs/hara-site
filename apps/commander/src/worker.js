@@ -4383,11 +4383,29 @@ async function executeCustomerMcpTool(
     return {state:"PASS",operational_authority:"HARA_SERVICES",execution_authority:"HARA_SERVICES",runtime_authority_from_chatgpt:false,mutation_performed:false,customer_services_relay:false,result:usage,product:{plan_code:context.plan_code,entitlement_id:context.entitlement_id,quota:usage.usage}};
   }
 
-  if (toolId === "hara.activity" || toolId === "hara.calls.recent") {
-    // Detailed history belongs to the local Agent store. Until the next signed
-    // Agent exposes the local-history bridge, public Commander must not rebuild
-    // or persist this information in Cloudflare.
-    throw new Error("LOCAL_DIAGNOSTICS_REQUIRE_SIGNED_AGENT_UPDATE");
+  if (toolId === "hara.activity") {
+    const activity=await portalActivity(
+      env,
+      {tenant_id:context.tenant_id,subject_id:context.subject_id,role:"MEMBER"},
+      args?.limit || 50,
+      args?.window || "7d",
+    );
+    return {
+      state:"PASS", operational_authority:"HARA_SERVICES", execution_authority:"HARA_SERVICES",
+      runtime_authority_from_chatgpt:false, mutation_performed:false, customer_services_relay:false,
+      result:activity,
+      product:{plan_code:context.plan_code,entitlement_id:context.entitlement_id,quota:null},
+    };
+  }
+
+  if (toolId === "hara.calls.recent") {
+    const calls = await recentCustomerCalls(env, context, args);
+    return {
+      state:"PASS", operational_authority:"HARA_SERVICES", execution_authority:"HARA_SERVICES",
+      runtime_authority_from_chatgpt:false, mutation_performed:false, customer_services_relay:false,
+      result:{count:calls.length,calls},
+      product:{plan_code:context.plan_code,entitlement_id:context.entitlement_id,quota:null},
+    };
   }
 
   const targetDevice = await resolveCustomerTargetDevice(

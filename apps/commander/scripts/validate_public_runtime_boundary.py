@@ -25,7 +25,15 @@ need("activity_summary_json" not in heartbeat and "activity_summary_at_utc" not 
 need("DEVICE_HEARTBEAT_PERSIST_SECONDS = 120" in WORKER,"HEARTBEAT_WRITE_THROTTLE")
 need("DEVICE_ONLINE_GRACE_SECONDS = 240" in WORKER,"ONLINE_GRACE")
 need("customer_activity_detail_persisted: false" in heartbeat,"PRIVACY_ATTESTATION")
-need("LOCAL_DIAGNOSTICS_REQUIRE_SIGNED_AGENT_UPDATE" in WORKER,"REMOTE_HISTORY_DISABLED_PENDING_SIGNED_AGENT")
+recent_calls=WORKER.split("async function recentCustomerCalls",1)[1].split("function portalActivitySource",1)[0]
+need(
+    'payload_json' not in recent_calls
+    and 'result_json' not in recent_calls
+    and 'command_json' not in recent_calls
+    and 'argv' not in recent_calls
+    and 'if (toolId === "hara.calls.recent")' in WORKER,
+    "REMOTE_HISTORY_METADATA_ONLY",
+)
 need('id="internalBetaDiagnostics"' not in HTML and "DIAGNÓSTICO LOCAL · BETA" not in HTML,"NO_PUBLIC_BETA_DIAGNOSTICS")
 need("removido da versão final" not in HTML,"NO_PUBLIC_INTERNAL_REMOVAL_COPY")
 need('if (next === "usage") loadUsageActivity();' not in JS,"NO_PUBLIC_USAGE_ACTIVITY_LOAD")

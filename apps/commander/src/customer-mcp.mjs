@@ -61,10 +61,31 @@ function publicToolResult(value) {
   };
 }
 
-function publicToolError(error) {
+function publicToolError(error, args = undefined) {
   const code = String(error?.message || "COMMANDER_MCP_TOOL_FAILED")
     .replace(/[^A-Z0-9_:-]/gi, "_")
     .slice(0, 160);
+
+  if (code === "DEVICE_OFFLINE") {
+    const result = {
+      state: "UNAVAILABLE",
+      runtime_authority_from_chatgpt: false,
+      mutation_performed: false,
+      customer_services_relay: false,
+      blocker: {
+        code: "DEVICE_OFFLINE",
+        category: "DEVICE_AVAILABILITY",
+        retryable: true,
+      },
+      result: {
+        available: false,
+        device_state: "OFFLINE",
+      },
+    };
+    if (args?.computer) result.computer = String(args.computer).slice(0, 120);
+    return publicToolResult(result);
+  }
+
   return {
     isError: true,
     content: [
@@ -133,7 +154,7 @@ export function createCustomerMcpServer({ executeTool }) {
       });
       return publicToolResult(value);
     } catch (error) {
-      return publicToolError(error);
+      return publicToolError(error, args);
     }
   };
 

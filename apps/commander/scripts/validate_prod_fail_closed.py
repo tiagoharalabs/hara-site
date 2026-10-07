@@ -48,8 +48,10 @@ def main() -> int:
            "/api/portal/dashboard", 401, "AUTH_REQUIRED")
     expect("COMMANDER_PROD_FAIL_CLOSED_DEVICES",
            "/api/portal/devices", 401, "AUTH_REQUIRED")
-    expect("COMMANDER_PROD_FAIL_CLOSED_SLO",
-           "/api/portal/slo", 401, "AUTH_REQUIRED")
+    expect("COMMANDER_PROD_FAIL_CLOSED_ACTIVITY_NOT_IN_PRODUCT",
+           "/api/portal/activity", 404, "INTERNAL_DIAGNOSTICS_NOT_IN_PRODUCT")
+    expect("COMMANDER_PROD_FAIL_CLOSED_SLO_NOT_IN_PRODUCT",
+           "/api/portal/slo", 404, "INTERNAL_DIAGNOSTICS_NOT_IN_PRODUCT")
 
     same_origin = {
         "Origin": ORIGIN,
@@ -82,13 +84,13 @@ def main() -> int:
         ("SLO_ESCALATE","/api/portal/slo/escalate"),
     ):
         expect(
-            f"COMMANDER_PROD_FAIL_CLOSED_{label}_NO_SESSION",
-            path,401,"AUTH_REQUIRED",
+            f"COMMANDER_PROD_FAIL_CLOSED_{label}_NOT_IN_PRODUCT",
+            path,404,"INTERNAL_DIAGNOSTICS_NOT_IN_PRODUCT",
             method="POST",headers=same_origin,payload={"incident_id":"HARA-SLO-INC-TEST"},
         )
         expect(
-            f"COMMANDER_PROD_FAIL_CLOSED_{label}_CROSS_ORIGIN",
-            path,403,"PORTAL_ORIGIN_DENIED",
+            f"COMMANDER_PROD_FAIL_CLOSED_{label}_CROSS_ORIGIN_NOT_IN_PRODUCT",
+            path,404,"INTERNAL_DIAGNOSTICS_NOT_IN_PRODUCT",
             method="POST",
             headers={"Origin":"https://evil.example","Sec-Fetch-Site":"cross-site"},
             payload={"incident_id":"HARA-SLO-INC-TEST"},

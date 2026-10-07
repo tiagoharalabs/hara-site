@@ -10,6 +10,9 @@ const calls = [];
 
 async function executeTool(request) {
   calls.push(request);
+  if (request.arguments?.computer === "__offline__") {
+    throw new Error("DEVICE_OFFLINE");
+  }
   return {
     state: "PASS",
     operational_authority: "HARA_COMMANDER",
@@ -159,12 +162,22 @@ assert.equal(calls.at(-1).tool_id, "hara.activity");
 assert.equal(calls.at(-1).arguments.window, "7d");
 assert.equal(calls.at(-1).arguments.limit, 25);
 
+const offlineHealth = await rpc(44, "tools/call", {
+  name: "hara.health",
+  arguments: { computer: "__offline__" },
+});
+assert.equal(offlineHealth.result?.isError, undefined);
+assert.equal(offlineHealth.result?.structuredContent?.state, "UNAVAILABLE");
+assert.equal(offlineHealth.result?.structuredContent?.blocker?.code, "DEVICE_OFFLINE");
+assert.equal(offlineHealth.result?.structuredContent?.blocker?.retryable, true);
+assert.equal(offlineHealth.result?.structuredContent?.computer, "__offline__");
+
 const deniedUnknown = await rpc(5, "tools/call", {
   name: "shell.run",
   arguments: {},
 });
 assert.ok(deniedUnknown.error);
-assert.equal(calls.length, 6);
+assert.equal(calls.length, 7);
 
 const badHost = await handleCustomerMcpRequest(
   new Request("https://evil.example/mcp", {

@@ -9,6 +9,9 @@ const calls=[];
 
 async function executeTool(request) {
   calls.push(request);
+  if (request.arguments?.computer === "__offline__") {
+    throw new Error("DEVICE_OFFLINE");
+  }
   return {
     state:"PASS",
     operational_authority:"HARA_COMMANDER",
@@ -109,6 +112,16 @@ await rpc(8,"tools/call",{
 });
 assert.equal(calls.at(-1).tool_id,"hara.calls.recent");
 assert.equal(calls.at(-1).arguments.limit,20);
+
+const offlinePing = await rpc(9,"tools/call",{
+  name:"ping",
+  arguments:{computer:"__offline__"},
+});
+assert.equal(offlinePing.result?.isError,undefined);
+assert.equal(offlinePing.result?.structuredContent?.state,"UNAVAILABLE");
+assert.equal(offlinePing.result?.structuredContent?.blocker?.code,"DEVICE_OFFLINE");
+assert.equal(offlinePing.result?.structuredContent?.blocker?.retryable,true);
+assert.equal(offlinePing.result?.structuredContent?.computer,"__offline__");
 
 for (const tool of tools) {
   assert.deepEqual(tool._meta?.securitySchemes,[{type:"oauth2",scopes:["openid"]}]);
