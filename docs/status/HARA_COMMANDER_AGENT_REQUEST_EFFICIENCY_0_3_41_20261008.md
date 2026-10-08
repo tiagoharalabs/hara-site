@@ -268,3 +268,26 @@ The Agent self-test now covers the sequence:
 Marker:
 
 `COMMANDER_PROCESS_INTERACT_FOLLOWUP=PASS`
+
+## Installed idle-cadence runtime proof
+
+The running nucleo-a 0.3.41 canary process was observed locally with a bounded
+25-second socket-connect trace.
+
+Distinct outbound HTTPS request connection cycles were observed at approximately:
+
+- 17:13:11.69 BRT
+- 17:13:21.98 BRT
+
+Interval: approximately 10.3 seconds.
+
+Multiple `connect()` syscalls at the same timestamp were resolver /
+Happy-Eyeballs address attempts for the same HTTPS request (IPv4/IPv6 candidate
+addresses), not independent Agent polling cycles.
+
+This is consistent with the configured 10-second idle poll cadence and is
+materially different from the 0.3.40 two-second always-hot loop.
+
+Marker:
+
+`COMMANDER_AGENT_0_3_41_IDLE_CADENCE_RUNTIME=PASS`
