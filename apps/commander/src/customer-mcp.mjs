@@ -651,7 +651,7 @@ export function createCustomerMcpServer({ executeTool }) {
     "hara.process.output",
     toolConfig({
       title: "Read Process Output",
-      description: "Read bounded output from a process session managed by H.A.R.A. Commander.",
+      description: "Read subsequent bounded output from a process session managed by H.A.R.A. Commander. Use after hara.process.interact when the immediate response contains only terminal echo.",
       inputSchema: z.object({
         computer: z.string().min(1).max(120).optional(),
         session_id: z.string().min(1).max(180),
@@ -667,7 +667,7 @@ export function createCustomerMcpServer({ executeTool }) {
     "hara.process.interact",
     toolConfig({
       title: "Interact With Process",
-      description: "Send bounded input to an existing H.A.R.A. Commander PTY process. Requires local human approval for every interaction.",
+      description: "Send bounded input to an existing H.A.R.A. Commander PTY process. The immediate response may contain only terminal echo; use hara.process.output for subsequent program output. Requires local human approval for every interaction.",
       inputSchema: z.object({
         computer: z.string().min(1).max(120).optional(),
         session_id: z.string().min(1).max(180),

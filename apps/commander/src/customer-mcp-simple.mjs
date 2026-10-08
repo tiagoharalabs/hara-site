@@ -543,7 +543,7 @@ export function createSimpleCustomerMcpServer({ executeTool }) {
     "read_process_output",
     toolConfig({
       title: "Read Process Output",
-      description: "Read output from a managed interactive process session.",
+      description: "Read subsequent output from a managed process session. Use after interact_with_process when the immediate response contains only terminal echo.",
       inputSchema: z.object({
         computer,
         session_id: z.string().min(1).max(180),
@@ -565,7 +565,7 @@ export function createSimpleCustomerMcpServer({ executeTool }) {
     "interact_with_process",
     toolConfig({
       title: "Interact With Process",
-      description: "Send input to a managed interactive process session.",
+      description: "Send input to a managed process session. The immediate response may contain only PTY echo; use read_process_output for subsequent program output.",
       inputSchema: z.object({
         computer,
         session_id: z.string().min(1).max(180),

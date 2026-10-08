@@ -193,3 +193,78 @@ Current target sequence after capacity is available:
 `COMMANDER_RELEASE_TRUST_0_3_41=PASS`
 
 `COMMANDER_0_3_41_LIVE_CANARY=PENDING_CLOUDFLARE_CAPACITY`
+
+## Installed nucleo-a canary
+
+The 0.3.41 Linux candidate was installed only on `nucleo-a` after:
+
+- candidate self-test PASS;
+- exact 0.3.40 Agent backup;
+- service restart rollback guard;
+- active-service readback.
+
+Observed:
+
+- before: 0.3.40
+- after: 0.3.41
+- systemd user service: active
+- 0.3.40 rollback copy preserved locally
+
+The other H.A.R.A. lab canary Agents remain disabled.
+
+## Full local MCP installed canary
+
+The installed `~/.local/bin/hara-commander mcp` on nucleo-a was exercised
+through a 33-check functional suite.
+
+PASS:
+
+- initialize / tool count / config
+- zero-relay usage mode
+- list devices / ping / device info
+- create / write / read / edit
+- copy / move / list
+- file info / multi-read
+- filename and content search
+- process list
+- one-shot process
+- non-zero process exit propagation
+- interactive process start
+- interact + follow-up output
+- long-request managed-session auto-route
+- kill / session list
+- structured missing-file handling
+- structured missing-parent handling
+- structured conflict handling
+- governed delete
+- metadata-only activity
+- metadata-only recent calls
+
+Result:
+
+`COMMANDER_LOCAL_MCP_FULL_CANARY_33_OF_33=PASS`
+
+The canary is now versioned as:
+
+`apps/commander/scripts/commander_local_mcp_full_canary.py`
+
+Its execution path is explicit; it mutates scratch state only when run with
+`--execute`.
+
+## PTY interaction semantics
+
+A real interactive test showed that PTY input echo can arrive before the
+program's response.
+
+The MCP descriptions now explicitly tell clients that
+`interact_with_process` / `hara.process.interact` may return only immediate
+terminal echo and that `read_process_output` / `hara.process.output` is the
+follow-up authority for subsequent program output.
+
+The Agent self-test now covers the sequence:
+
+`process.start -> process.interact -> process.output -> terminal exit`
+
+Marker:
+
+`COMMANDER_PROCESS_INTERACT_FOLLOWUP=PASS`
