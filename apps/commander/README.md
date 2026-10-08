@@ -4,6 +4,22 @@ Canonical standalone product-plane Worker for:
 
 `https://commander.haralabs.com.br`
 
+## Customer data-plane target — LOCAL_TUNNEL
+
+Canonical architecture candidate:
+
+`docs/architecture/HARA_COMMANDER_LOCAL_TUNNEL_CONTROL_PLANE_V1_20261008.md`
+
+Target customer path:
+
+`OpenAI Secure MCP Tunnel -> hara-commander mcp -> customer machine`
+
+H.A.R.A. Cloud remains the control plane for Identity, device registration, plan/billing, revocation, release/update, one-time authorization codes and signed product leases. In `LOCAL_TUNNEL`, per-tool traffic must not traverse the H.A.R.A. Worker.
+
+The existing remote/V1 relay remains a migration fallback only. A device marked `LOCAL_TUNNEL` must not silently fall back to cloud relay.
+
+**Release status:** source-qualified candidate only. Do not claim PROD cutover until migration 0029, signed Agent release and real OpenAI tunnel canary are complete.
+
 ## Production boundaries
 
 - Cloudflare Worker: `hara-commander`.

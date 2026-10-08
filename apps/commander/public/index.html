@@ -290,6 +290,11 @@
               <div class="device-list" id="deviceList" role="tabpanel" aria-live="polite">
                 <div class="empty-state"><strong>Nenhum dispositivo ativo</strong>Conecte um novo dispositivo para começar.</div>
               </div>
+              <div class="pairing-panel pairing-inline" id="deviceAuthorizationPanel" tabindex="-1" aria-live="polite" hidden>
+                <div class="pairing-inline-head"><strong>Autorização local por 6 horas</strong><span id="deviceAuthorizationExpiry">Código válido por 10 minutos</span></div>
+                <p>Na máquina selecionada, execute <code>hara-commander authorize</code> e informe este código quando solicitado. O código é one-time e vinculado ao dispositivo.</p>
+                <div class="pairing-token"><code id="deviceAuthorizationToken">—</code><button class="btn btn-secondary small" type="button" data-copy-device-authorization>Copiar código</button></div>
+              </div>
             </article>
           </div>
 
@@ -297,17 +302,17 @@
             <div class="panel-head"><div><span>COMECE AGORA</span><h2>Do zero ao primeiro comando em 3 passos</h2></div></div>
             <div class="quickstart-steps">
               <div id="quickStartDeviceStep"><span>1</span><p><b>Conecte um computador</b><small id="quickStartDeviceState">Aguardando dispositivo online</small></p></div>
-              <div><span>2</span><p><b>Conecte seu cliente MCP</b><small>Use o endpoint remoto no ChatGPT, Claude, Cursor ou outro cliente.</small></p><button class="link-button" type="button" data-copy-simple-mcp>Copiar endpoint</button></div>
-              <div><span>3</span><p><b>Faça um teste read-only</b><small>Confirme que o computador responde antes de começar a trabalhar.</small></p><button class="link-button" type="button" data-copy-first-prompt>Copiar prompt</button></div>
+              <div><span>2</span><p><b>Configure o túnel OpenAI</b><small>Na máquina, rode <code>hara-commander tunnel configure</code>. O túnel liga a OpenAI diretamente ao MCP local sem passar cada comando pela H.A.R.A. Cloud.</small></p></div>
+              <div><span>3</span><p><b>Autorize por 6 horas</b><small>Na lista de computadores, gere o código de autorização e confirme localmente com <code>hara-commander authorize</code>.</small></p></div>
             </div>
           </article>
 
           <article class="panel device-where-panel">
             <div class="panel-head"><div><span>ONDE USAR</span><h2>Conecte ao cliente que preferir</h2></div></div>
             <div class="device-where-list">
-              <div><span class="where-badge where-badge-brand" title="ChatGPT — OpenAI"><img src="./brand/chatgpt-official.webp" alt="" aria-hidden="true" /></span><p><b>ChatGPT</b><small>Use o H.A.R.A. Commander diretamente no ChatGPT.</small></p><span class="where-state">Disponível</span></div>
-              <div><span class="where-badge where-badge-brand" title="Claude — Anthropic"><img src="./brand/claude-official.svg" alt="" aria-hidden="true" /></span><p><b>Claude</b><small>Use o mesmo endpoint MCP remoto.</small></p><span class="where-state">MCP</span></div>
-              <div><span class="where-badge">MCP</span><p><b>Qualquer cliente MCP</b><small>Cursor, VS Code, Codex, agentes próprios ou outro cliente compatível.</small></p><button class="link-button" type="button" data-copy-simple-mcp>Copiar endpoint</button></div>
+              <div><span class="where-badge where-badge-brand" title="ChatGPT — OpenAI"><img src="./brand/chatgpt-official.webp" alt="" aria-hidden="true" /></span><p><b>ChatGPT</b><small>Use o OpenAI Secure MCP Tunnel para chegar diretamente ao MCP local do Commander.</small></p><span class="where-state">Tunnel</span></div>
+              <div><span class="where-badge where-badge-brand" title="Claude — Anthropic"><img src="./brand/claude-official.svg" alt="" aria-hidden="true" /></span><p><b>Codex / IDE local</b><small>Conecte diretamente a <code>hara-commander mcp</code> por stdio, sem relay H.A.R.A.</small></p><span class="where-state">Local</span></div>
+              <div><span class="where-badge">MCP</span><p><b>Qualquer cliente MCP local</b><small>Use o servidor local <code>hara-commander mcp</code>. O MCP remoto H.A.R.A. permanece apenas como fallback legado durante a migração.</small></p><button class="link-button" type="button" data-copy-local-mcp>Copiar comando local</button></div>
             </div>
           </article>
 
@@ -318,7 +323,7 @@
                   <div><span>NOVO DISPOSITIVO</span><h2>Conectar ao Commander</h2></div>
                   <span class="status-pill"><i></i> Pronto para instalar</span>
                 </div>
-                <p>Gere um código temporário e instale o Agent. No modo recomendado, o computador fica pronto em segundo plano assim que a instalação termina. A conexão é somente de saída.</p>
+                <p>Gere um código temporário e instale o Agent. Depois do pareamento, configure o OpenAI Secure MCP Tunnel e autorize a máquina por 6 horas. A execução de tools fica local; a H.A.R.A. Cloud permanece apenas como control plane.</p>
 
                 <div class="onboarding-step">
                   <span class="onboarding-step-no">01</span>

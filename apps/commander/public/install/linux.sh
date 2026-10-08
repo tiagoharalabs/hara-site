@@ -12,10 +12,16 @@ SYSTEMD_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
 CONFIG_FILE="$CONFIG_DIR/device.env"
 AGENT="$BIN_DIR/hara-commander-agent"
 CLI="$USER_BIN/hara-commander"
+TUNNEL_CLIENT="$BIN_DIR/tunnel-client"
+TUNNEL_CLIENT_VERSION="0.0.15"
+TUNNEL_CLIENT_BASE_URL="https://persistent.oaistatic.com/tunnel-client/v0.0.15"
+TUNNEL_CLIENT_SHA256_AMD64="8c836dc5d68d68b663d9a5c5b28ff9fa780d9f7a3fffb1c306880b8f32fab5f1"
+TUNNEL_CLIENT_SHA256_ARM64="c51bfd883fc22e3445494a03c0179875176564bde470661b308fd83af5d01abb"
 UNIT="$SYSTEMD_DIR/hara-commander-agent.service"
 SERVICE="hara-commander-agent.service"
 STATUS_FILE="$BIN_DIR/runtime-status.json"
 APPROVAL_MODE_RAW="${HARA_COMMANDER_APPROVAL_MODE:-}"
+TRANSPORT_MODE_RAW="${HARA_COMMANDER_TRANSPORT_MODE:-}"
 ACTION="${1:-install}"
 ACTION="${ACTION#--}"
 REENROLL=FALSE
@@ -188,6 +194,68 @@ PYHASH
   mv -f "$tmp" "$AGENT"
   chmod 700 "$AGENT"
   printf 'HARA_COMMANDER_AGENT_INTEGRITY=PASS\n'
+}
+
+install_tunnel_client() {
+  local arch asset expected tmp
+  case "$(uname -m)" in
+    x86_64|amd64)
+      arch="amd64"
+      expected="$TUNNEL_CLIENT_SHA256_AMD64"
+      ;;
+    aarch64|arm64)
+      arch="arm64"
+      expected="$TUNNEL_CLIENT_SHA256_ARM64"
+      ;;
+    *)
+      echo "OPENAI_TUNNEL_CLIENT_ARCH_UNSUPPORTED" >&2
+      return 31
+      ;;
+  esac
+  asset="tunnel-client-v${TUNNEL_CLIENT_VERSION}-linux-${arch}.zip"
+  tmp="$(mktemp "$BIN_DIR/.tunnel-client.XXXXXX.zip")"
+  python3 - "$TUNNEL_CLIENT_BASE_URL/$asset" "$tmp" "$expected" "$TUNNEL_CLIENT" <<'PYTC'
+import hashlib,io,os,pathlib,sys,urllib.error,urllib.request,zipfile
+url,dest,expected,target=sys.argv[1:5]
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+req=urllib.request.Request(url,headers={"accept":"application/zip","user-agent":"HARA-Commander-Installer-Tunnel/1"})
+try:
+    with urllib.request.build_opener(NoRedirect).open(req,timeout=45) as response:
+        if response.status != 200:
+            raise SystemExit("OPENAI_TUNNEL_CLIENT_DOWNLOAD_HTTP")
+        raw=response.read(80*1024*1024+1)
+except Exception as exc:
+    raise SystemExit("OPENAI_TUNNEL_CLIENT_DOWNLOAD_FAILED") from exc
+if len(raw)>80*1024*1024:
+    raise SystemExit("OPENAI_TUNNEL_CLIENT_DOWNLOAD_TOO_LARGE")
+if hashlib.sha256(raw).hexdigest()!=expected:
+    raise SystemExit("OPENAI_TUNNEL_CLIENT_SHA256_MISMATCH")
+pathlib.Path(dest).write_bytes(raw)
+with zipfile.ZipFile(io.BytesIO(raw)) as z:
+    names=z.namelist()
+    if names.count("tunnel-client") != 1:
+        raise SystemExit("OPENAI_TUNNEL_CLIENT_ARCHIVE_INVALID")
+    info=z.getinfo("tunnel-client")
+    if info.file_size<1024*1024 or info.file_size>80*1024*1024:
+        raise SystemExit("OPENAI_TUNNEL_CLIENT_BINARY_SIZE_INVALID")
+    binary=z.read(info)
+t=pathlib.Path(target)
+t.parent.mkdir(parents=True,exist_ok=True)
+tmp_target=t.with_suffix(".tmp")
+tmp_target.write_bytes(binary)
+os.chmod(tmp_target,0o700)
+tmp_target.replace(t)
+os.chmod(t,0o700)
+PYTC
+  rm -f "$tmp"
+  if ! "$TUNNEL_CLIENT" --version 2>/dev/null | grep -F "$TUNNEL_CLIENT_VERSION" >/dev/null; then
+    echo "OPENAI_TUNNEL_CLIENT_VERSION_INVALID" >&2
+    return 32
+  fi
+  printf 'HARA_COMMANDER_OPENAI_TUNNEL_CLIENT_VERSION=%s\n' "$TUNNEL_CLIENT_VERSION"
+  printf 'HARA_COMMANDER_OPENAI_TUNNEL_CLIENT_INTEGRITY=PASS\n'
 }
 
 install_cli() {
@@ -459,6 +527,7 @@ report={
   "device_id":values.get("HARA_DEVICE_ID"),
   "architecture":values.get("HARA_DEVICE_ARCH") or platform.machine(),
   "commander_url":values.get("HARA_COMMANDER_URL"),
+  "transport_mode":values.get("HARA_COMMANDER_TRANSPORT_MODE") or "OUTBOUND_RELAY",
   "agent_version":version,
   "agent_sha256":agent_sha,
   "config_present":config_path.is_file(),
@@ -483,6 +552,14 @@ doctor_agent() {
   systemctl --user is-enabled --quiet "$SERVICE" || { echo 'AGENT_SERVICE_NOT_ENABLED' >&2; return 7; }
   systemctl --user is-active --quiet "$SERVICE" || { echo 'AGENT_SERVICE_NOT_ACTIVE' >&2; return 7; }
   python3 "$AGENT" --self-test >/dev/null || { echo 'AGENT_SELF_TEST_FAILED' >&2; return 8; }
+  local transport
+  transport="$(read_config_value HARA_COMMANDER_TRANSPORT_MODE 2>/dev/null || true)"
+  if [ "$transport" = "LOCAL_TUNNEL" ]; then
+    python3 "$AGENT" doctor || return $?
+    printf 'COMMANDER_REMOTE_HEALTH=CONTROL_PLANE_OPTIONAL\n'
+    status_agent
+    return 0
+  fi
   preflight_agent >/dev/null || { echo 'COMMANDER_REMOTE_HEALTH=FAIL' >&2; return 9; }
   printf 'HARA_COMMANDER_AGENT_DOCTOR=PASS\n'
   printf 'COMMANDER_REMOTE_HEALTH=PASS\n'
@@ -505,6 +582,7 @@ case "$ACTION" in
     configured_url="$(read_config_value HARA_COMMANDER_URL 2>/dev/null || true)"
     [ -z "$configured_url" ] || BASE_URL="${configured_url%/}"
     previous_started="$(read_runtime_status_value started_at_utc 2>/dev/null || true)"
+    install_tunnel_client
     backup="$AGENT.rollback"
     rm -f "$backup"
     [ ! -f "$AGENT" ] || cp -p "$AGENT" "$backup"
@@ -535,7 +613,10 @@ case "$ACTION" in
     revoke_state=PENDING
     if [ -f "$CONFIG_FILE" ] && remote_device_action revoke; then revoke_state=PASS; fi
     systemctl --user disable --now "$SERVICE" >/dev/null 2>&1 || true
-    rm -f "$UNIT"
+    systemctl --user disable --now hara-commander-openai-tunnel.service >/dev/null 2>&1 || true
+    rm -f "$UNIT" "$SYSTEMD_DIR/hara-commander-openai-tunnel.service"
+    rm -f "${XDG_CONFIG_HOME:-$HOME/.config}/tunnel-client/hara-commander.yaml"
+    rmdir "${XDG_CONFIG_HOME:-$HOME/.config}/tunnel-client" >/dev/null 2>&1 || true
     systemctl --user daemon-reload >/dev/null 2>&1 || true
     rm -f "$CLI"
     rm -rf "$BIN_DIR" "$CONFIG_DIR"
@@ -621,14 +702,31 @@ else
   trap cleanup_failed_install EXIT
 fi
 
+if [ -n "$TRANSPORT_MODE_RAW" ]; then
+  case "$(printf '%s' "$TRANSPORT_MODE_RAW" | tr '[:lower:]' '[:upper:]' | tr '-' '_')" in
+    LOCAL_TUNNEL|TUNNEL|LOCAL) TRANSPORT_MODE="LOCAL_TUNNEL" ;;
+    OUTBOUND_RELAY|RELAY|LEGACY) TRANSPORT_MODE="OUTBOUND_RELAY" ;;
+    *) echo 'DEVICE_TRANSPORT_MODE_INVALID' >&2; exit 64 ;;
+  esac
+elif [ "$REENROLL" = TRUE ]; then
+  TRANSPORT_MODE="$(read_config_value HARA_COMMANDER_TRANSPORT_MODE 2>/dev/null || true)"
+  [ -n "$TRANSPORT_MODE" ] || TRANSPORT_MODE="OUTBOUND_RELAY"
+else
+  TRANSPORT_MODE="LOCAL_TUNNEL"
+fi
+
 umask 077
 mkdir -p "$CONFIG_DIR" "$BIN_DIR" "$SYSTEMD_DIR"
+if [ "$TRANSPORT_MODE" = "LOCAL_TUNNEL" ]; then
+  install_tunnel_client
+fi
 cat >"$CONFIG_FILE" <<EOF
 HARA_COMMANDER_URL=$BASE_URL
 HARA_DEVICE_ID=$DEVICE_ID
 HARA_DEVICE_TOKEN=$DEVICE_TOKEN
 HARA_DEVICE_ARCH=$ARCH
 HARA_COMMANDER_APPROVAL_MODE=$APPROVAL_MODE
+HARA_COMMANDER_TRANSPORT_MODE=$TRANSPORT_MODE
 EOF
 chmod 600 "$CONFIG_FILE"
 
@@ -695,12 +793,14 @@ INSTALL_ENROLLED=FALSE
 trap - EXIT
 unset DEVICE_TOKEN
 printf 'HARA_COMMANDER_DEVICE_ENROLLMENT=PASS\n'
-printf 'HARA_COMMANDER_AGENT_SERVICE=ACTIVE_INERT_UNTIL_LOCAL_SESSION\n'
+printf 'HARA_COMMANDER_AGENT_SERVICE=ACTIVE_LOCAL_CONTROL_PLANE\n'
 printf 'DEVICE_ID=%s\n' "$DEVICE_ID"
 printf 'DEVICE_TOKEN_EXPOSED=FALSE\n'
 printf 'HARA_COMMANDER_APPROVAL_MODE=%s\n' "$APPROVAL_MODE"
-printf 'NEXT_COMMAND=hara-commander start\n'
+printf 'HARA_COMMANDER_TRANSPORT_MODE=%s\n' "$TRANSPORT_MODE"
+printf 'NEXT_COMMAND=hara-commander tunnel configure\n'
 printf 'STATUS_COMMAND=hara-commander status\n'
 printf 'STOP_COMMAND=hara-commander stop\n'
 printf 'LOCAL_MCP_COMMAND=hara-commander mcp\n'
+printf 'AUTHORIZATION_COMMAND=hara-commander authorize\n'
 printf 'SESSION_AUTHORITY=LOCAL_OPERATOR_TERMINAL\n'

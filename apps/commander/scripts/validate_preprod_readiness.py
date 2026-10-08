@@ -89,6 +89,8 @@ def main():
         ("COMMANDER_PREPROD_CLEAN_LINUX_LIFECYCLE", "validate_clean_linux_lifecycle.py"),
         ("COMMANDER_PREPROD_RELEASE_TRUST", "validate_release_signature.py"),
         ("COMMANDER_PREPROD_LOCAL_FIRST_UNIT_ECONOMICS", "validate_local_first_unit_economics.py"),
+        ("COMMANDER_PREPROD_LOCAL_TUNNEL_CONTROL_PLANE", "validate_local_tunnel_control_plane.py"),
+        ("COMMANDER_PREPROD_LOCAL_TUNNEL_UNIT_ECONOMICS", "validate_local_tunnel_unit_economics.py"),
         ("COMMANDER_PREPROD_UNLIMITED_PLAN_FASTPATH", "validate_unlimited_plan_fastpath.py"),
         ("COMMANDER_PREPROD_LOCAL_ACTIVITY_STORE", "validate_local_activity_store.py"),
         ("COMMANDER_PREPROD_WINDOWS_LOCAL_ACTIVITY_STORE", "validate_windows_local_activity_store.py"),
@@ -107,10 +109,17 @@ def main():
         ])
 
     migration = ROOT / "apps/commander/migrations/0009_pairing_supersession.sql"
+    local_tunnel_migration = ROOT / "apps/commander/migrations/0029_local_tunnel_authorization.sql"
     worker = (ROOT / "apps/commander/src/worker.js").read_text(encoding="utf-8")
     wrangler = (ROOT / "apps/commander/wrangler.jsonc").read_text(encoding="utf-8")
     assert migration.is_file(), "PAIRING_MIGRATION_0009_MISSING"
     assert "superseded_at_utc" in worker, "WORKER_PAIRING_COLUMN_MISSING"
+    if "LOCAL_TUNNEL" in worker:
+        assert local_tunnel_migration.is_file(), "LOCAL_TUNNEL_MIGRATION_0029_MISSING"
+        migration_text = local_tunnel_migration.read_text(encoding="utf-8")
+        for token in ("local_authorized_until_utc","commander_device_authorization_codes","commander_device_usage_totals","commander_device_usage_daily"):
+            assert token in migration_text, "LOCAL_TUNNEL_MIGRATION_0029_INCOMPLETE:" + token
+        print("COMMANDER_PREPROD_LOCAL_TUNNEL_MIGRATION_BEFORE_WORKER=PASS")
     assert '"workers_dev": false' in wrangler, "WORKERS_DEV_NOT_DISABLED"
     assert '"preview_urls": false' in wrangler, "PREVIEW_URLS_NOT_DISABLED"
     print("COMMANDER_PREPROD_DEPLOY_ORDER_CONTRACT=PASS")

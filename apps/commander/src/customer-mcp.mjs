@@ -78,6 +78,13 @@ function operationalToolError(code, args = undefined) {
     return publicToolResult(value);
   };
 
+  if (code === "DEVICE_LOCAL_TUNNEL_DIRECT_PATH_REQUIRED") {
+    return build("DIRECT_PATH_REQUIRED", "TRANSPORT_SELECTION", false, {
+      remote_relay_required: false,
+      recommended_transport: "LOCAL_TUNNEL",
+      recommended_command: "hara-commander mcp",
+    });
+  }
   if (code === "DEVICE_OFFLINE") {
     return build("UNAVAILABLE", "DEVICE_AVAILABILITY", true, { available: false, device_state: "OFFLINE" });
   }

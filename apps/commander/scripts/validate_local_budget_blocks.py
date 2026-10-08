@@ -255,8 +255,14 @@ with tempfile.TemporaryDirectory(prefix="hara-local-budget-") as td:
         assert url.endswith("/api/device/product-lease")
         assert token=="token-local"
         cloud_calls.append(payload)
+        usage_report=payload.get("usage_report") or {}
+        assert usage_report.get("schema")=="hara.commander-local-usage-report.v1"
+        assert usage_report.get("metadata_only") is True
+        assert usage_report.get("customer_content_included") is False
+        assert isinstance(usage_report.get("lifetime_units"),int)
+        assert isinstance(usage_report.get("daily"),list)
         if len(cloud_calls)==1:
-            assert payload=={}
+            assert "budget_report" not in payload
             return response("B1","tok1",3)
         report=payload.get("budget_report") or {}
         assert report.get("budget_id")=="B1"

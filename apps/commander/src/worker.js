@@ -66,6 +66,7 @@ const EVENT_V2_TERMINAL_FAST_PATH_WAIT_MS = 500;
 const LOCAL_BUDGET_MIN_LINUX_PATCH = 36;
 const LOCAL_BUDGET_BLOCK_UNITS = 100;
 const PRODUCT_LEASE_TTL_SECONDS = 6 * 60 * 60;
+const DEVICE_AUTHORIZATION_CODE_TTL_SECONDS = 10 * 60;
 const SLO_ALERT_PROFILE = "INTERNAL_BETA_V1";
 const SLO_ALERT_BREACH_STREAK = 2;
 const SLO_ALERT_RECOVERY_STREAK = 2;
@@ -545,6 +546,7 @@ function deviceCallRetryAfterMs(state, source = "status") {
 
 function deviceOnline(lastSeenAtUtc, tunnelMode = "OUTBOUND_RELAY", now = Date.now()) {
   const mode = String(tunnelMode || "");
+  if (mode === "LOCAL_TUNNEL") return false;
   if (mode === "EVENT_V2_OFFLINE" || mode === "OUTBOUND_RELAY_OFFLINE") return false;
   if (!lastSeenAtUtc) return false;
   const seen = Date.parse(String(lastSeenAtUtc));
@@ -719,6 +721,9 @@ async function dispatchTransientDeviceCall(env, body) {
     env, context, body.computer || null, requestedDeviceId
   );
   const deviceId = cleanId(device.device_id, 180);
+  if (String(device.tunnel_mode || "") === "LOCAL_TUNNEL") {
+    throw new Error("DEVICE_LOCAL_TUNNEL_DIRECT_PATH_REQUIRED");
+  }
   if (!deviceOnline(device.last_seen_at_utc, device.tunnel_mode)) {
     throw new Error("DEVICE_OFFLINE");
   }
@@ -1272,18 +1277,30 @@ async function dashboard(env, tenantId) {
 async function productTransactionHistory(env, tenantId, subjectId) {
   const since7d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   try {
-    const row = await env.PRODUCT_DB.prepare(
-      `SELECT
-         COUNT(*) AS calls_total,
-         SUM(CASE WHEN created_at_utc >= ? THEN 1 ELSE 0 END) AS calls_7d
-       FROM commander_device_calls
-       WHERE tenant_id = ? AND subject_id = ?`
-    ).bind(since7d, tenantId, subjectId).first();
+    const sinceDay = since7d.slice(0,10);
+    const [row, localTotal, local7d] = await Promise.all([
+      env.PRODUCT_DB.prepare(
+        `SELECT COUNT(*) AS calls_total,
+                SUM(CASE WHEN created_at_utc >= ? THEN 1 ELSE 0 END) AS calls_7d
+           FROM commander_device_calls
+          WHERE tenant_id = ? AND subject_id = ?`
+      ).bind(since7d, tenantId, subjectId).first(),
+      env.PRODUCT_DB.prepare(
+        `SELECT COALESCE(SUM(lifetime_units),0) AS units
+           FROM commander_device_usage_totals
+          WHERE tenant_id=? AND subject_id=?`
+      ).bind(tenantId, subjectId).first(),
+      env.PRODUCT_DB.prepare(
+        `SELECT COALESCE(SUM(units),0) AS units
+           FROM commander_device_usage_daily
+          WHERE tenant_id=? AND subject_id=? AND day_key>=?`
+      ).bind(tenantId, subjectId, sinceDay).first(),
+    ]);
     return {
       available: true,
       window: "7d",
-      calls_7d: Number(row?.calls_7d || 0),
-      calls_total: Number(row?.calls_total || 0),
+      calls_7d: Number(row?.calls_7d || 0) + Number(local7d?.units || 0),
+      calls_total: Number(row?.calls_total || 0) + Number(localTotal?.units || 0),
       detail_level: "AGGREGATE_ONLY",
     };
   } catch (_error) {
@@ -1612,8 +1629,62 @@ async function issueDeviceBudgetBlock(env, device, entitlement, report = null) {
   };
 }
 
+async function reconcileLocalUsageReport(env, device, report) {
+  if (!report) return { accepted: false };
+  if (report.schema !== "hara.commander-local-usage-report.v1") {
+    throw new Error("LOCAL_USAGE_REPORT_INVALID");
+  }
+  const lifetime = Number(report.lifetime_units);
+  if (!Number.isSafeInteger(lifetime) || lifetime < 0 || lifetime > 1_000_000_000_000) {
+    throw new Error("LOCAL_USAGE_REPORT_INVALID");
+  }
+  const daily = Array.isArray(report.daily) ? report.daily : [];
+  if (daily.length > 14) throw new Error("LOCAL_USAGE_REPORT_INVALID");
+  const updatedAt = nowIso();
+  const statements = [
+    env.PRODUCT_DB.prepare(
+      `INSERT INTO commander_device_usage_totals
+         (device_id,tenant_id,subject_id,lifetime_units,updated_at_utc)
+       VALUES (?,?,?,?,?)
+       ON CONFLICT(device_id) DO UPDATE SET
+         lifetime_units=MAX(commander_device_usage_totals.lifetime_units,excluded.lifetime_units),
+         updated_at_utc=excluded.updated_at_utc`
+    ).bind(
+      device.device_id, device.tenant_id, device.enrolled_by_subject_id,
+      lifetime, updatedAt,
+    ),
+  ];
+  for (const item of daily) {
+    const dayKey = String(item?.day_key || "");
+    const units = Number(item?.units);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dayKey) || !Number.isSafeInteger(units) || units < 0 || units > 100_000_000) {
+      throw new Error("LOCAL_USAGE_REPORT_INVALID");
+    }
+    statements.push(
+      env.PRODUCT_DB.prepare(
+        `INSERT INTO commander_device_usage_daily
+           (device_id,day_key,tenant_id,subject_id,units,updated_at_utc)
+         VALUES (?,?,?,?,?,?)
+         ON CONFLICT(device_id,day_key) DO UPDATE SET
+           units=MAX(commander_device_usage_daily.units,excluded.units),
+           updated_at_utc=excluded.updated_at_utc`
+      ).bind(
+        device.device_id, dayKey, device.tenant_id,
+        device.enrolled_by_subject_id, units, updatedAt,
+      )
+    );
+  }
+  await env.PRODUCT_DB.batch(statements);
+  return { accepted: true, lifetime_units: lifetime, daily_buckets: daily.length };
+}
+
 async function deviceProductLease(env, request, body = {}) {
   const device = await resolveDeviceCredential(env, request);
+  const requestedTransport = String(body?.transport_mode || "OUTBOUND_RELAY").trim().toUpperCase();
+  const localTunnel = requestedTransport === "LOCAL_TUNNEL";
+  if (!["OUTBOUND_RELAY","LOCAL_TUNNEL"].includes(requestedTransport)) {
+    throw new Error("DEVICE_TRANSPORT_MODE_INVALID");
+  }
   const entitlement = await entitlementForTenant(env, device.tenant_id);
   if (!entitlement) throw new Error("ENTITLEMENT_NOT_FOUND");
   const grants = await grantsForPlan(env, entitlement.plan_code);
@@ -1627,8 +1698,22 @@ async function deviceProductLease(env, request, body = {}) {
     unit_limit: entitlement.period_kind === "NONE" ? null : Number(entitlement.unit_limit),
   };
   const productLease = productLeaseForContext(context, device, grants);
-  let budget = null;
+  productLease.transport_mode = requestedTransport;
+  productLease.manual_reauthorization_required = localTunnel;
+  const origin = new URL(request.url).origin;
+  let validatedAuthorization = null;
 
+  if (localTunnel) {
+    // Validation is read-only. No quota/budget/device mutation is allowed before
+    // both the device-bound one-time code and signing authority are proven.
+    validatedAuthorization = await validateDeviceAuthorizationCode(
+      env, device, body?.authorization_code,
+    );
+    await signProductLease(env, productLease, origin);
+    await consumeValidatedDeviceAuthorizationCode(env, device, validatedAuthorization);
+  }
+
+  let budget = null;
   if (productLease.usage_mode === "LOCAL_BUDGET") {
     try {
       budget = await issueDeviceBudgetBlock(
@@ -1645,11 +1730,24 @@ async function deviceProductLease(env, request, body = {}) {
     }
   }
 
-  const productLeaseToken = await signProductLease(
-    env,
-    productLease,
-    new URL(request.url).origin,
-  );
+  const productLeaseToken = await signProductLease(env, productLease, origin);
+
+  if (localTunnel) {
+    const activatedAt = nowIso();
+    await env.PRODUCT_DB.prepare(
+      `UPDATE commander_devices
+          SET tunnel_mode='LOCAL_TUNNEL',
+              local_authorized_until_utc=?,
+              last_seen_at_utc=?
+        WHERE device_id=? AND tenant_id=? AND state='ACTIVE' AND revoked_at_utc IS NULL`
+    ).bind(
+      productLease.valid_until_utc, activatedAt, device.device_id, device.tenant_id,
+    ).run();
+    // Aggregate usage is not authorization-critical and may catch up on the next
+    // six-hour cycle. Never strand a consumed code because telemetry was stale.
+    await reconcileLocalUsageReport(env, device, body?.usage_report || null)
+      .catch(() => ({ accepted:false }));
+  }
 
   return {
     schema: "hara.commander-device-product-lease-response.v1",
@@ -2173,11 +2271,104 @@ async function createDevicePairing(env, session) {
   };
 }
 
+async function createDeviceAuthorizationCode(env, session, body = {}) {
+  if (String(session?.role || "").toUpperCase() !== "OWNER") {
+    throw new Error("DEVICE_AUTHORIZATION_FORBIDDEN");
+  }
+  const deviceId = cleanId(body.device_id, 180);
+  const device = await env.PRODUCT_DB.prepare(
+    `SELECT device_id,tenant_id,platform,state,revoked_at_utc
+       FROM commander_devices
+      WHERE device_id = ? AND tenant_id = ?
+      LIMIT 1`
+  ).bind(deviceId, session.tenant_id).first();
+  if (!device || device.state !== "ACTIVE" || device.revoked_at_utc) {
+    throw new Error("DEVICE_NOT_FOUND");
+  }
+  if (String(device.platform || "").toUpperCase() !== "LINUX") {
+    throw new Error("LOCAL_TUNNEL_PLATFORM_PENDING");
+  }
+  const token = randomToken(32);
+  const tokenHash = await sha256(token);
+  const authorizationId = "HARA-AUTH-" + crypto.randomUUID();
+  const createdAt = nowIso();
+  const expiresAt = nowIso(DEVICE_AUTHORIZATION_CODE_TTL_SECONDS);
+  const supersede = env.PRODUCT_DB.prepare(
+    `UPDATE commander_device_authorization_codes
+        SET state='SUPERSEDED', superseded_at_utc=?
+      WHERE tenant_id=? AND device_id=? AND state='PENDING'`
+  ).bind(createdAt, session.tenant_id, deviceId);
+  const insert = env.PRODUCT_DB.prepare(
+    `INSERT INTO commander_device_authorization_codes
+      (authorization_id,token_hash,tenant_id,subject_id,device_id,state,
+       created_at_utc,expires_at_utc,consumed_at_utc,superseded_at_utc)
+     VALUES (?,?,?,?,?,'PENDING',?,?,NULL,NULL)`
+  ).bind(
+    authorizationId, tokenHash, session.tenant_id, session.subject_id,
+    deviceId, createdAt, expiresAt,
+  );
+  await env.PRODUCT_DB.batch([supersede, insert]);
+  return {
+    schema:"hara.commander-device-authorization-code.v1",
+    authorization_id:authorizationId,
+    authorization_code:token,
+    device_id:deviceId,
+    expires_at_utc:expiresAt,
+    lease_validity_seconds:PRODUCT_LEASE_TTL_SECONDS,
+    one_time:true,
+  };
+}
+
+async function validateDeviceAuthorizationCode(env, device, suppliedCode) {
+  const token = cleanOpaque(suppliedCode, 512);
+  const tokenHash = await sha256(token);
+  const at = nowIso();
+  const row = await env.PRODUCT_DB.prepare(
+    `SELECT authorization_id,token_hash
+       FROM commander_device_authorization_codes
+      WHERE token_hash=?
+        AND tenant_id=?
+        AND device_id=?
+        AND state='PENDING'
+        AND expires_at_utc>?
+      LIMIT 1`
+  ).bind(tokenHash, device.tenant_id, device.device_id, at).first();
+  if (!row) throw new Error("DEVICE_AUTHORIZATION_CODE_INVALID");
+  return {
+    authorization_id:String(row.authorization_id),
+    token_hash:String(row.token_hash),
+  };
+}
+
+async function consumeValidatedDeviceAuthorizationCode(env, device, validated) {
+  const consumedAt = nowIso();
+  const result = await env.PRODUCT_DB.prepare(
+    `UPDATE commander_device_authorization_codes
+        SET state='CONSUMED', consumed_at_utc=?
+      WHERE authorization_id=?
+        AND token_hash=?
+        AND tenant_id=?
+        AND device_id=?
+        AND state='PENDING'
+        AND expires_at_utc>?`
+  ).bind(
+    consumedAt,
+    validated.authorization_id,
+    validated.token_hash,
+    device.tenant_id,
+    device.device_id,
+    consumedAt,
+  ).run();
+  if (!result.meta?.changes) throw new Error("DEVICE_AUTHORIZATION_CODE_ALREADY_USED");
+  return consumedAt;
+}
+
+
 async function listDevices(env, session) {
   const result = await env.PRODUCT_DB.prepare(
     `SELECT d.device_id, d.enrolled_by_subject_id, d.device_name, d.platform, d.architecture,
             d.agent_version, d.tunnel_mode, d.state, d.created_at_utc, d.last_seen_at_utc,
-            d.revoked_at_utc, d.approval_mode
+            d.revoked_at_utc, d.approval_mode, d.local_authorized_until_utc
        FROM commander_devices d
       WHERE d.tenant_id = ?
       ORDER BY d.created_at_utc DESC`
@@ -2198,6 +2389,8 @@ async function listDevices(env, session) {
     last_seen_at_utc: row.last_seen_at_utc,
     revoked_at_utc: row.revoked_at_utc,
     approval_mode: normalizeApprovalMode(row.approval_mode, "ASK_EVERY_ACTION"),
+    local_authorized_until_utc: row.local_authorized_until_utc || null,
+    authorization_active: Boolean(row.local_authorized_until_utc && Date.parse(row.local_authorized_until_utc) > now),
   }));
 }
 
@@ -2724,6 +2917,7 @@ async function enqueueDeviceCall(env, body) {
     env, context, body.computer || null, requestedDeviceId
   );
   const deviceId = cleanId(device.device_id, 180);
+  if (String(device.tunnel_mode || "") === "LOCAL_TUNNEL") throw new Error("DEVICE_LOCAL_TUNNEL_DIRECT_PATH_REQUIRED");
   if (!deviceOnline(device.last_seen_at_utc, device.tunnel_mode)) throw new Error("DEVICE_OFFLINE");
 
   const usageFunctionId = quotaFunctionIdForTool(toolId, canonicalPayload);
@@ -5218,6 +5412,7 @@ export default {
           devices,
           active_count: devices.filter((device) => device.state === "ACTIVE").length,
           online_count: devices.filter((device) => device.online).length,
+          authorized_count: devices.filter((device) => device.authorization_active).length,
         });
       }
 
@@ -5227,6 +5422,15 @@ export default {
         if (!session) return json({ ok: false, code: "AUTH_REQUIRED" }, 401);
         await enforcePortalMutationRateLimit(env, session);
         return json(await createDevicePairing(env, session), 201);
+      }
+
+      if (url.pathname === "/api/portal/devices/authorization-code" && request.method === "POST") {
+        requirePortalMutationOrigin(request);
+        const session = await resolvePortalSession(request, env);
+        if (!session) return json({ ok: false, code: "AUTH_REQUIRED" }, 401);
+        await enforcePortalMutationRateLimit(env, session);
+        const body = await request.json();
+        return json(await createDeviceAuthorizationCode(env, session, body), 201);
       }
 
       if (url.pathname === "/api/portal/devices/revoke" && request.method === "POST") {
@@ -5608,6 +5812,13 @@ export default {
         DEVICE_PAIRING_CREATE_FAILED: 503,
         DEVICE_AUTH_REQUIRED: 401,
         DEVICE_AUTH_INVALID: 401,
+        DEVICE_TRANSPORT_MODE_INVALID: 400,
+        DEVICE_AUTHORIZATION_FORBIDDEN: 403,
+        DEVICE_AUTHORIZATION_CODE_INVALID: 403,
+        DEVICE_AUTHORIZATION_CODE_ALREADY_USED: 409,
+        LOCAL_TUNNEL_PLATFORM_PENDING: 409,
+        LOCAL_USAGE_REPORT_INVALID: 400,
+        DEVICE_LOCAL_TUNNEL_DIRECT_PATH_REQUIRED: 409,
         DEVICE_EVENT_V2_DISABLED: 404,
         DEVICE_EVENT_V2_BINDING_MISSING: 503,
         DEVICE_TRANSIENT_RPC_DISABLED: 404,

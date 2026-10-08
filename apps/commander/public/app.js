@@ -941,6 +941,10 @@
 
   function deviceReadiness(device) {
     if (device?.state === "REVOKED") return { label:"Revogado", className:"revoked", detail:"Acesso revogado" };
+    if (String(device?.tunnel_mode || "").toUpperCase() === "LOCAL_TUNNEL") {
+      if (device?.authorization_active) return { label:"Autorizado", className:"ready", detail:"Lease H.A.R.A. válida; execução direta pelo túnel OpenAI" };
+      return { label:"Reautorizar", className:"attention", detail:"A lease local expirou ou ainda não foi emitida" };
+    }
     if (!device?.online) return { label:"Offline", className:"offline", detail:"Sem contato recente com o Agent" };
     const mode=String(device?.approval_mode || "").toUpperCase();
     if (mode === "PERSISTENT_TRUSTED" || mode === "SESSION_TRUSTED") {
@@ -963,28 +967,29 @@
     const revokedDevices = devices.filter((device) => device.state === "REVOKED");
     const visibleDevices = deviceTab === "history" ? revokedDevices : activeDevices;
     const onlineCount = Number(payload?.online_count || 0);
+    const readyCount = activeDevices.filter((device) => device.online || device.authorization_active).length;
 
     setText("deviceActiveCount", number(activeDevices.length));
     setText("deviceHistoryCount", number(revokedDevices.length));
-    setText("dashboardConnections", number(onlineCount) + " online");
+    setText("dashboardConnections", number(readyCount) + " pronto" + (readyCount === 1 ? "" : "s"));
     setText("dashboardConnectionsDetail", activeDevices.length ? activeDevices.length + (activeDevices.length === 1 ? " computador ativo" : " computadores ativos") : "Instale o Commander Agent");
     const devicesCard = document.getElementById("dashboardDevicesCard");
     if (devicesCard) {
-      devicesCard.classList.toggle("state-ready", onlineCount > 0);
-      devicesCard.classList.toggle("state-waiting", onlineCount === 0);
+      devicesCard.classList.toggle("state-ready", readyCount > 0);
+      devicesCard.classList.toggle("state-waiting", readyCount === 0);
     }
-    setText("landingConnections", number(onlineCount));
-    setText("landingConnectionsDetail", onlineCount ? "Commander Agent online" : "Nenhum computador online");
-    setText("quickStartDeviceState",onlineCount ? (onlineCount === 1 ? "1 computador pronto" : onlineCount + " computadores prontos") : "Aguardando dispositivo online");
-    document.getElementById("quickStartDeviceStep")?.classList.toggle("done",onlineCount > 0);
-    if (onlineCount > 0) {
+    setText("landingConnections", number(readyCount));
+    setText("landingConnectionsDetail", readyCount ? "Commander pronto" : "Nenhum computador autorizado");
+    setText("quickStartDeviceState",readyCount ? (readyCount === 1 ? "1 computador pronto" : readyCount + " computadores prontos") : "Aguardando autorização local");
+    document.getElementById("quickStartDeviceStep")?.classList.toggle("done",readyCount > 0);
+    if (readyCount > 0) {
       setState(
         "Pronto",
-        onlineCount + (onlineCount === 1 ? " computador online" : " computadores online"),
+        readyCount + (readyCount === 1 ? " computador autorizado" : " computadores autorizados"),
         true,
       );
     } else if (activeDevices.length) {
-      setState("Offline", "Nenhum computador online");
+      setState("Aguardando", "Computadores precisam de autorização local");
     } else {
       setState("Aguardando", "Conecte seu computador");
     }
@@ -1034,7 +1039,9 @@
       const meta = document.createElement("small");
       const arch = device.architecture ? " · " + String(device.architecture) : "";
       const agentVersion = device.agent_version ? " · Agent " + String(device.agent_version) : "";
-      meta.textContent = String(device.platform || "—") + arch + agentVersion + " · Último contato: " + formatDeviceSeen(device.last_seen_at_utc);
+      const authUntil = device.local_authorized_until_utc ? " · Autorizado até: " + formatDeviceSeen(device.local_authorized_until_utc) : "";
+      const transport = String(device.tunnel_mode || "").toUpperCase() === "LOCAL_TUNNEL" ? " · OpenAI Tunnel" : " · Último contato: " + formatDeviceSeen(device.last_seen_at_utc);
+      meta.textContent = String(device.platform || "—") + arch + agentVersion + transport + authUntil;
       body.append(titleLine, meta);
 
       const readiness=deviceReadiness(device);
@@ -1049,6 +1056,14 @@
         const actions = document.createElement("div");
         actions.className = "device-actions";
 
+        const authorize = document.createElement("button");
+        authorize.className = "link-button";
+        authorize.type = "button";
+        authorize.dataset.authorizeDevice = String(device.device_id);
+        authorize.textContent = device.authorization_active ? "Renovar 6h" : "Autorizar 6h";
+        authorize.title = "Gerar código one-time para lease local de 6 horas";
+        authorize.hidden = String(device.platform || "").toUpperCase() === "WINDOWS";
+
         const diagnostic = document.createElement("button");
         diagnostic.className = "link-button";
         diagnostic.type = "button";
@@ -1061,7 +1076,7 @@
         revoke.type = "button";
         revoke.dataset.revokeDevice = String(device.device_id);
         revoke.textContent = "Revogar";
-        actions.append(diagnostic,revoke);
+        actions.append(authorize,diagnostic,revoke);
         row.append(actions);
       }
       list.append(row);
@@ -1242,6 +1257,31 @@
     trigger.classList.remove("confirm-danger");
     trigger.textContent = "Revogar";
     trigger.setAttribute("aria-label", "Revogar computador");
+  }
+
+  async function authorizeDeviceForLocalTunnel(deviceId, trigger = null) {
+    const button = trigger;
+    if (button) button.disabled = true;
+    try {
+      const response = await fetch("/api/portal/devices/authorization-code", {
+        method:"POST",
+        credentials:"same-origin",
+        headers:{"content-type":"application/json"},
+        body:JSON.stringify({device_id:deviceId}),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (handlePortalAuthFailure(response,"Entre novamente para autorizar este computador.")) return;
+      if (!response.ok) throw new Error(String(payload?.code || "DEVICE_AUTHORIZATION_CREATE_FAILED"));
+      setText("deviceAuthorizationToken",String(payload.authorization_code || "—"));
+      setText("deviceAuthorizationExpiry","Código válido por 10 minutos · lease válida por 6 horas");
+      const panel=document.getElementById("deviceAuthorizationPanel");
+      if (panel) { panel.hidden=false; panel.focus({preventScroll:false}); panel.scrollIntoView({behavior:"smooth",block:"nearest"}); }
+      showToast("Código de autorização gerado. Execute hara-commander authorize na máquina.");
+    } catch (_error) {
+      showToast("Não foi possível gerar a autorização local agora.");
+    } finally {
+      if (button) button.disabled = false;
+    }
   }
 
   async function revokeDevice(deviceId, trigger = null) {
@@ -1954,10 +1994,24 @@
       return;
     }
 
+    const copyDeviceAuthorization = event.target.closest("[data-copy-device-authorization]");
+    if (copyDeviceAuthorization) {
+      event.preventDefault();
+      copyText(document.getElementById("deviceAuthorizationToken")?.textContent || "", "Código de autorização copiado.");
+      return;
+    }
+
     const copyPairing = event.target.closest("[data-copy-pairing]");
     if (copyPairing) {
       event.preventDefault();
       copyText(document.getElementById("pairingToken")?.textContent || "", "Código de pareamento copiado.");
+      return;
+    }
+
+    const authorizeDeviceButton = event.target.closest("[data-authorize-device]");
+    if (authorizeDeviceButton) {
+      event.preventDefault();
+      authorizeDeviceForLocalTunnel(authorizeDeviceButton.dataset.authorizeDevice, authorizeDeviceButton);
       return;
     }
 

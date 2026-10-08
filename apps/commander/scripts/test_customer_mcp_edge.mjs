@@ -22,6 +22,7 @@ async function executeTool(request) {
   if (request.arguments?.computer === "__exists__") throw new Error("DESTINATION_EXISTS");
   if (request.arguments?.computer === "__ambiguous__") throw new Error("COMPUTER_NAME_AMBIGUOUS");
   if (request.arguments?.computer === "__denied__") throw new Error("POLICY_DENIED");
+  if (request.arguments?.computer === "__local_tunnel__") throw new Error("DEVICE_LOCAL_TUNNEL_DIRECT_PATH_REQUIRED");
   return {
     state: "PASS",
     operational_authority: "HARA_COMMANDER",
@@ -227,6 +228,13 @@ assert.equal(conflict.result?.structuredContent?.state, "CONFLICT");
 const ambiguous = await rpc(87, "tools/call", { name: "hara.ping", arguments: { computer: "__ambiguous__" } });
 assert.equal(ambiguous.result?.structuredContent?.state, "NEEDS_INPUT");
 assert.equal(ambiguous.result?.structuredContent?.result?.selection_required, true);
+
+const localTunnel = await rpc(89, "tools/call", { name: "hara.ping", arguments: { computer: "__local_tunnel__" } });
+assert.equal(localTunnel.result?.isError, undefined);
+assert.equal(localTunnel.result?.structuredContent?.state, "DIRECT_PATH_REQUIRED");
+assert.equal(localTunnel.result?.structuredContent?.blocker?.retryable, false);
+assert.equal(localTunnel.result?.structuredContent?.result?.recommended_transport, "LOCAL_TUNNEL");
+assert.equal(localTunnel.result?.structuredContent?.result?.remote_relay_required, false);
 
 const denied = await rpc(88, "tools/call", { name: "hara.ping", arguments: { computer: "__denied__" } });
 assert.equal(denied.result?.isError, true);

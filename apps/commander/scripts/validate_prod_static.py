@@ -137,8 +137,10 @@ need(
     and 'device-selected-badge' not in JS
     and 'data-select-device' not in JS
     and 'select.textContent = device.selected' not in JS
-    and 'setState("Offline", "Nenhum computador online")' in JS
-    and '" computadores online"' in JS,
+    and 'Computadores precisam de autorização local' in JS
+    and 'computadores autorizados' in JS
+    and 'data-authorize-device' in JS
+    and 'authorization_active' in JS,
     "DEVICE_FLEET_STATE_UX",
 )
 need(
@@ -195,9 +197,10 @@ need(
 need(
     'device-where-panel' in HTML
     and '<b>ChatGPT</b>' in HTML
-    and '<b>Claude</b>' in HTML
-    and '<b>Qualquer cliente MCP</b>' in HTML
-    and 'data-copy-simple-mcp' in HTML,
+    and 'OpenAI Secure MCP Tunnel' in HTML
+    and '<b>Codex / IDE local</b>' in HTML
+    and '<b>Qualquer cliente MCP local</b>' in HTML
+    and 'data-copy-local-mcp' in HTML,
     "DEVICE_WHERE_TO_USE_SURFACE",
 )
 need(
@@ -399,10 +402,12 @@ need(
 need(
     'class="panel quickstart-panel"' in HTML
     and 'id="quickStartDeviceState"' in HTML
-    and 'data-copy-first-prompt' in HTML
-    and 'Verifique se meu computador está online e mostre as informações básicas dele.' in JS
+    and 'Configure o túnel OpenAI' in HTML
+    and 'hara-commander tunnel configure' in HTML
+    and 'Autorize por 6 horas' in HTML
+    and 'hara-commander authorize' in HTML
     and 'quickStartDeviceStep' in JS
-    and 'onlineCount > 0' in JS,
+    and 'readyCount > 0' in JS,
     "DEVICE_FIRST_SUCCESS_QUICKSTART",
 )
 need(

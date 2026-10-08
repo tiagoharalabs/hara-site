@@ -3,6 +3,8 @@ import base64
 import hashlib
 import hmac
 import json
+import getpass
+import subprocess
 import fnmatch
 import difflib
 import shutil
@@ -11,6 +13,7 @@ import platform
 import pty
 import re
 import select
+import shlex
 import signal
 import sqlite3
 import sys
@@ -20,11 +23,11 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-AGENT_VERSION = "0.3.42"
+AGENT_VERSION = "0.3.43"
 CONFIG_FILE = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home()/".config"))) / "hara-commander/device.env"
 DATA_DIR = Path(os.environ.get("XDG_DATA_HOME", str(Path.home()/".local/share"))) / "hara-commander"
 RECEIPT_DIR = DATA_DIR / "receipts"
@@ -42,6 +45,10 @@ APPROVAL_DIR = DATA_DIR / "approvals"
 PREIMAGE_DIR = DATA_DIR / "preimages"
 SESSION_MAX_SECONDS = 12 * 60 * 60
 PRODUCT_LEASE_REFRESH_SECONDS = 4 * 60 * 60
+TRANSPORT_MODES = {"OUTBOUND_RELAY","LOCAL_TUNNEL"}
+TUNNEL_PROFILE = "hara-commander"
+TUNNEL_ENV_FILE = CONFIG_FILE.parent / "openai-tunnel.env"
+TUNNEL_UNIT_FILE = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home()/".config"))) / "systemd/user/hara-commander-openai-tunnel.service"
 HEARTBEAT_SECONDS = 60
 CALL_POLL_HOT_SECONDS = 2
 CALL_POLL_IDLE_SECONDS = 10
@@ -748,11 +755,90 @@ def _store_product_lease_response(config,payload):
         conn.commit()
     return lease
 
-def refresh_product_lease(config):
+def _local_usage_baseline(conn,config):
+    device_id=str(config.get("HARA_DEVICE_ID") or "")
+    if not device_id:
+        raise ValueError("DEVICE_CONFIG_INVALID")
+    stored=conn.execute(
+        "SELECT meta_value FROM local_store_meta WHERE meta_key='local_usage_device_id'"
+    ).fetchone()
+    baseline=conn.execute(
+        "SELECT meta_value FROM local_store_meta WHERE meta_key='local_usage_baseline_event_id'"
+    ).fetchone()
+    stored_device=str(stored["meta_value"] if stored else "")
+    if not stored_device:
+        # First adoption of aggregate sync: include existing LOCAL_MCP history for
+        # this enrolled device. Local MCP was zero-relay and therefore was not
+        # represented in commander_device_calls.
+        baseline_event_id=0
+    elif stored_device != device_id:
+        # Re-enrollment creates a new device identity while preserving the local
+        # SQLite store. Do not reattribute historical calls to the new device.
+        row=conn.execute("SELECT COALESCE(MAX(event_id),0) AS event_id FROM activity_events").fetchone()
+        baseline_event_id=int((row["event_id"] if row else 0) or 0)
+    else:
+        try:
+            baseline_event_id=int((baseline["meta_value"] if baseline else "0") or 0)
+        except Exception:
+            baseline_event_id=0
+    if stored_device != device_id or not baseline:
+        conn.execute(
+            "INSERT INTO local_store_meta(meta_key,meta_value) VALUES('local_usage_device_id',?) "
+            "ON CONFLICT(meta_key) DO UPDATE SET meta_value=excluded.meta_value",
+            (device_id,),
+        )
+        conn.execute(
+            "INSERT INTO local_store_meta(meta_key,meta_value) VALUES('local_usage_baseline_event_id',?) "
+            "ON CONFLICT(meta_key) DO UPDATE SET meta_value=excluded.meta_value",
+            (str(baseline_event_id),),
+        )
+        conn.commit()
+    return baseline_event_id
+
+def local_usage_report(config):
+    with _ops_connect() as conn:
+        baseline_event_id=_local_usage_baseline(conn,config)
+        lifetime=conn.execute(
+            """SELECT COUNT(*) AS units
+                 FROM activity_events
+                WHERE event_id > ?
+                  AND tool_id IS NOT NULL
+                  AND transport_mode='LOCAL_MCP'
+                  AND event IN ('PASS','OPERATIONAL','DENIED')""",
+            (baseline_event_id,),
+        ).fetchone()
+        rows=conn.execute(
+            """SELECT substr(at_utc,1,10) AS day_key,COUNT(*) AS units
+                 FROM activity_events
+                WHERE event_id > ?
+                  AND tool_id IS NOT NULL
+                  AND transport_mode='LOCAL_MCP'
+                  AND event IN ('PASS','OPERATIONAL','DENIED')
+                  AND at_utc >= ?
+                GROUP BY substr(at_utc,1,10)
+                ORDER BY day_key""",
+            (
+                baseline_event_id,
+                (datetime.now(timezone.utc)-timedelta(days=13)).date().isoformat(),
+            ),
+        ).fetchall()
+    return {
+        "schema":"hara.commander-local-usage-report.v1",
+        "lifetime_units":int((lifetime["units"] if lifetime else 0) or 0),
+        "daily":[{"day_key":str(row["day_key"]),"units":int(row["units"] or 0)} for row in rows],
+        "metadata_only":True,
+        "customer_content_included":False,
+    }
+
+def refresh_product_lease(config,authorization_code=None,requested_transport=None):
     report=_local_budget_report()
-    body={}
+    body={"usage_report":local_usage_report(config)}
     if report:
         body["budget_report"]=report
+    if authorization_code:
+        body["authorization_code"]=str(authorization_code)
+    if requested_transport:
+        body["transport_mode"]=str(requested_transport)
     payload=post_json(
         config["HARA_COMMANDER_URL"]+"/api/device/product-lease",
         config["HARA_DEVICE_TOKEN"],
@@ -859,7 +945,7 @@ def local_budget_reserve(config,call):
                         "existing":False,
                     }
 
-        if attempt==0:
+        if attempt==0 and transport_mode(config)!="LOCAL_TUNNEL":
             refresh_product_lease(config)
 
     if missing_lease:
@@ -1593,7 +1679,8 @@ def start_operator_console():
         if effective_approval_mode(config)!="PERSISTENT_TRUSTED":
             killed=cleanup_process_sessions()
             if killed: append_console_event("PROCESS_REVOKE",state="KILLED",action_summary=f"managed_processes={killed}")
-            mark_device_offline(config)
+            if transport_mode(config)!="LOCAL_TUNNEL":
+                mark_device_offline(config)
         append_console_event("SESSION_CLOSE", state="REVOKED")
         print("HARA_COMMANDER_SESSION=INACTIVE")
 
@@ -1610,7 +1697,7 @@ def stop_operator_session():
     SESSION_FILE.unlink(missing_ok=True)
     try:
         config = load_config()
-        if effective_approval_mode(config)!="PERSISTENT_TRUSTED":
+        if effective_approval_mode(config)!="PERSISTENT_TRUSTED" and transport_mode(config)!="LOCAL_TUNNEL":
             mark_device_offline(config)
     except Exception as exc:
         append_console_event("OFFLINE_SYNC_ERROR", state="FAILED", error_code=safe_error_code(exc))
@@ -1631,6 +1718,9 @@ def load_config():
     mode=str(data.get("HARA_COMMANDER_APPROVAL_MODE") or "ASK_EVERY_ACTION").upper()
     if mode not in APPROVAL_MODES: raise RuntimeError("DEVICE_APPROVAL_MODE_INVALID")
     data["HARA_COMMANDER_APPROVAL_MODE"]=mode
+    transport=str(data.get("HARA_COMMANDER_TRANSPORT_MODE") or "OUTBOUND_RELAY").upper()
+    if transport not in TRANSPORT_MODES: raise RuntimeError("DEVICE_TRANSPORT_MODE_INVALID")
+    data["HARA_COMMANDER_TRANSPORT_MODE"]=transport
     return data
 def set_approval_mode(value):
     raw=str(value or "").strip().lower()
@@ -1645,6 +1735,27 @@ def set_approval_mode(value):
     os.chmod(tmp,0o600); tmp.replace(CONFIG_FILE); os.chmod(CONFIG_FILE,0o600)
     print("HARA_COMMANDER_APPROVAL_MODE="+mode)
     if operator_session_active(): print("SESSION_RESTART_REQUIRED=TRUE")
+
+def _set_config_value(key,value):
+    lines=CONFIG_FILE.read_text(encoding="utf-8").splitlines()
+    lines=[line for line in lines if not line.startswith(str(key)+"=")]
+    lines.append(str(key)+"="+str(value))
+    tmp=CONFIG_FILE.with_suffix(".tmp")
+    tmp.write_text("\n".join(lines)+"\n",encoding="utf-8")
+    os.chmod(tmp,0o600); tmp.replace(CONFIG_FILE); os.chmod(CONFIG_FILE,0o600)
+
+def set_transport_mode(value):
+    aliases={"local":"LOCAL_TUNNEL","tunnel":"LOCAL_TUNNEL","local-tunnel":"LOCAL_TUNNEL","relay":"OUTBOUND_RELAY","legacy":"OUTBOUND_RELAY"}
+    mode=aliases.get(str(value or "").strip().lower(),str(value or "").strip().upper())
+    if mode not in TRANSPORT_MODES: raise RuntimeError("DEVICE_TRANSPORT_MODE_INVALID")
+    _set_config_value("HARA_COMMANDER_TRANSPORT_MODE",mode)
+    print("HARA_COMMANDER_TRANSPORT_MODE="+mode)
+    subprocess.run(["systemctl","--user","restart","hara-commander-agent.service"],check=False)
+    print("AGENT_RESTART_REQUESTED=TRUE")
+
+def transport_mode(config=None):
+    if config is None: config=load_config()
+    return str(config.get("HARA_COMMANDER_TRANSPORT_MODE") or "OUTBOUND_RELAY").upper()
 
 def effective_approval_mode(config=None):
     if config is None:
@@ -2599,17 +2710,55 @@ def _local_simple_map(config,name,args):
     if name=="list_sessions": return "hara.process.sessions",{}
     raise ValueError("LOCAL_MCP_TOOL_INVALID")
 
+def require_local_product_authority(config):
+    if transport_mode(config)!="LOCAL_TUNNEL":
+        return None
+    with _ops_connect() as conn:
+        lease=_active_verified_product_lease(conn,config)
+    if not lease:
+        raise ValueError("PRODUCT_LEASE_REQUIRED")
+    if str(lease.get("transport_mode") or "")!="LOCAL_TUNNEL":
+        raise ValueError("PRODUCT_LEASE_TRANSPORT_MISMATCH")
+    return lease
+
+def local_tunnel_usage(config,lease,request_id):
+    if not lease: return None
+    mode=str(lease.get("usage_mode") or "")
+    if mode=="UNMETERED": return None
+    if mode!="LOCAL_BUDGET":
+        raise ValueError("LOCAL_TUNNEL_USAGE_MODE_UNSUPPORTED")
+    with _ops_connect() as conn:
+        rows=conn.execute(
+            """SELECT budget_id,period_key,allocated_units,expires_at_utc
+                 FROM local_budget_blocks
+                WHERE tenant_id=? AND device_id=? AND entitlement_id=?
+                  AND plan_code=? AND meter_id=? AND state='ACTIVE'
+                  AND expires_at_utc>?
+                ORDER BY issued_at_utc ASC""",
+            (
+                str(lease.get("tenant_id") or ""),str(lease.get("device_id") or ""),
+                str(lease.get("entitlement_id") or ""),str(lease.get("plan_code") or ""),
+                str(lease.get("meter_id") or ""),utcnow(),
+            ),
+        ).fetchall()
+        for row in rows:
+            committed,reserved=_budget_counts(conn,row["budget_id"])
+            if int(row["allocated_units"])-committed-reserved>=1:
+                return {"mode":"LOCAL_BUDGET","units":1,"period_key":str(row["period_key"]),"budget_id":str(row["budget_id"])}
+    raise ValueError("LOCAL_BUDGET_EXHAUSTED")
+
 def local_simple_mcp_call(config,name,args):
     if name not in LOCAL_SIMPLE_MCP_TOOL_NAMES:
         raise ValueError("LOCAL_MCP_TOOL_INVALID")
     _local_simple_device_guard(config,args or {})
+    lease=require_local_product_authority(config)
     if name=="list_devices":
         authorized=effective_approval_mode(config)=="PERSISTENT_TRUSTED" or operator_session_active()
-        return {"devices":[{"computer":platform.node(),"device_id":config.get("HARA_DEVICE_ID"),"agent_version":AGENT_VERSION,"state":"ONLINE" if authorized else "LOCAL_SESSION_REQUIRED","transport":"LOCAL_STDIO"}]}
+        return {"devices":[{"computer":platform.node(),"device_id":config.get("HARA_DEVICE_ID"),"agent_version":AGENT_VERSION,"state":"ONLINE" if authorized else "LOCAL_SESSION_REQUIRED","transport":"LOCAL_STDIO","product_transport_mode":transport_mode(config)}]}
     if name=="get_config":
-        return {"computer":platform.node(),"device_id":config.get("HARA_DEVICE_ID"),"agent_version":AGENT_VERSION,"approval_mode":effective_approval_mode(config),"transport":"LOCAL_STDIO","tools":list(LOCAL_SIMPLE_MCP_TOOL_NAMES)}
+        return {"computer":platform.node(),"device_id":config.get("HARA_DEVICE_ID"),"agent_version":AGENT_VERSION,"approval_mode":effective_approval_mode(config),"transport":"LOCAL_STDIO","product_transport_mode":transport_mode(config),"tools":list(LOCAL_SIMPLE_MCP_TOOL_NAMES)}
     if name=="get_usage_stats":
-        return {"mode":"LOCAL_MCP","relay_calls_per_local_tool_call":0,"cloud_quota_consumed_by_local_tool_call":False,"metadata_only":True}
+        return {"mode":"LOCAL_TUNNEL" if transport_mode(config)=="LOCAL_TUNNEL" else "LOCAL_MCP","relay_calls_per_local_tool_call":0,"cloud_quota_consumed_by_local_tool_call":False,"metadata_only":True}
     if name=="get_activity":
         return _local_recent_events((args or {}).get("limit",50),window=(args or {}).get("window","7d"))
     if name=="get_recent_tool_calls":
@@ -2618,21 +2767,33 @@ def local_simple_mcp_call(config,name,args):
         raise ValueError("LOCAL_OPERATOR_SESSION_REQUIRED")
     tool_id,payload=_local_simple_map(config,name,args or {})
     started=time.monotonic()
+    request_id="HARA-LOCAL-MCP-"+uuid.uuid4().hex
     call={
         "call_id":"HARA-LOCAL-MCP-"+uuid.uuid4().hex,
-        "request_id":"HARA-LOCAL-MCP-"+uuid.uuid4().hex,
+        "request_id":request_id,
         "tool_id":tool_id,
         "payload":payload,
         "_transport":"LOCAL_MCP",
     }
+    usage=local_tunnel_usage(config,lease,request_id)
+    if usage: call["usage"]=usage
+    budget_reservation=None
+    budget_committed=False
     append_console_event("RECEIVED",call,state="PENDING")
     if _is_mutation_tool(tool_id):
         call["_local_approval"]=request_local_approval(call)
     append_console_event("EXECUTING",call,state="EXECUTING")
     try:
+        budget_reservation=local_budget_reserve(config,call)
         result=execute_tool(config,call)
+        if budget_reservation:
+            local_budget_commit(call.get("request_id"))
+            budget_committed=True
     except Exception as exc:
         code=safe_error_code(exc)
+        if budget_reservation and not budget_committed:
+            try: local_budget_release(call.get("request_id"))
+            except Exception: pass
         operational = local_mcp_operational_error(code,name,args) is not None
         append_console_event(
             "OPERATIONAL" if operational else "DENIED",
@@ -2661,6 +2822,8 @@ def local_mcp_operational_error(code,name,args):
         if isinstance(args,dict) and args.get("computer"):
             value["computer"]=str(args.get("computer"))[:120]
         return value
+    if code in {"PRODUCT_LEASE_REQUIRED","PRODUCT_LEASE_EXPIRED","PRODUCT_LEASE_TRANSPORT_MISMATCH"}:
+        return build("AUTHORIZATION_EXPIRED","PRODUCT_AUTHORIZATION",False,{"reauthorize_url":"https://commander.haralabs.com.br/#devices","lease_required":True})
     if code=="DEVICE_OFFLINE":
         return build("UNAVAILABLE","DEVICE_AVAILABILITY",True,{"available":False,"device_state":"OFFLINE"})
     if code in {"DEVICE_BUSY","CHANNEL_TRANSIENT_BUSY"}:
@@ -2741,28 +2904,55 @@ def run_local_mcp_stdio():
 def commander_doctor():
     config=load_config()
     mode=effective_approval_mode(config)
+    transport=transport_mode(config)
     runtime={}
     try:
         if STATUS_FILE.is_file(): runtime=json.loads(STATUS_FILE.read_text(encoding="utf-8"))
     except Exception:
         runtime={}
-    health_ok=False
+
+    cloud_health=False
     try:
         req=urllib.request.Request(config["HARA_COMMANDER_URL"]+"/api/health",method="GET",headers={"accept":"application/json","user-agent":"HARA-Commander-Doctor/"+AGENT_VERSION})
-        with NO_REDIRECT_OPENER.open(req,timeout=10) as response:
+        with NO_REDIRECT_OPENER.open(req,timeout=5) as response:
             obj=json.loads(response.read().decode() or "{}")
-            health_ok=response.status==200 and obj.get("ok") is True and obj.get("service")=="hara-commander"
+            cloud_health=response.status==200 and obj.get("ok") is True and obj.get("service")=="hara-commander"
     except Exception:
-        health_ok=False
-    print("HARA_COMMANDER_DOCTOR="+("PASS" if health_ok else "DEGRADED"))
+        cloud_health=False
+
+    if transport=="LOCAL_TUNNEL":
+        lease_ok=False
+        lease_until=""
+        try:
+            with _ops_connect() as conn:
+                lease=_active_verified_product_lease(conn,config)
+            lease_ok=bool(lease and str(lease.get("transport_mode") or "")=="LOCAL_TUNNEL")
+            lease_until=str((lease or {}).get("valid_until_utc") or "")
+        except Exception:
+            lease_ok=False
+        tunnel_rc,_=_openai_tunnel_doctor(capture=True)
+        tunnel_ok=tunnel_rc==0
+        overall=lease_ok and tunnel_ok
+        print("HARA_COMMANDER_DOCTOR="+("PASS" if overall else "DEGRADED"))
+        print("HARA_COMMANDER_AGENT_VERSION="+AGENT_VERSION)
+        print("HARA_COMMANDER_TRANSPORT_MODE=LOCAL_TUNNEL")
+        print("HARA_COMMANDER_LOCAL_AUTHORIZATION="+("PASS" if lease_ok else "EXPIRED"))
+        print("HARA_COMMANDER_LOCAL_AUTHORIZATION_UNTIL_UTC="+lease_until)
+        print("HARA_COMMANDER_OPENAI_TUNNEL="+("PASS" if tunnel_ok else "FAIL"))
+        print("HARA_COMMANDER_CONTROL_PLANE_HEALTH="+("PASS" if cloud_health else "DEGRADED_OPTIONAL"))
+        print("HARA_COMMANDER_TOOL_DATA_PLANE=LOCAL_DIRECT")
+        print("SECRET_MATERIAL_EXPOSED=FALSE")
+        return 0 if overall else 2
+
+    print("HARA_COMMANDER_DOCTOR="+("PASS" if cloud_health else "DEGRADED"))
     print("HARA_COMMANDER_AGENT_VERSION="+AGENT_VERSION)
     print("HARA_COMMANDER_APPROVAL_MODE="+mode)
     print("HARA_COMMANDER_BACKGROUND_AUTHORIZED="+("TRUE" if mode=="PERSISTENT_TRUSTED" else "FALSE"))
     print("HARA_COMMANDER_SESSION="+("ACTIVE" if operator_session_active() else "INACTIVE"))
-    print("HARA_COMMANDER_REMOTE_HEALTH="+("PASS" if health_ok else "FAIL"))
+    print("HARA_COMMANDER_REMOTE_HEALTH="+("PASS" if cloud_health else "FAIL"))
     print("HARA_COMMANDER_LAST_HEARTBEAT_UTC="+str(runtime.get("last_successful_heartbeat_at_utc") or ""))
     print("SECRET_MATERIAL_EXPOSED=FALSE")
-    return 0 if health_ok else 2
+    return 0 if cloud_health else 2
 
 def build_support_report():
     config=load_config()
@@ -2842,6 +3032,7 @@ def build_support_report():
         "device_id":config.get("HARA_DEVICE_ID"),
         "agent_version":AGENT_VERSION,
         "approval_mode":effective_approval_mode(config),
+        "product_transport_mode":transport_mode(config),
         "operator_session_active":operator_session_active(),
         "last_successful_heartbeat_at_utc":runtime.get("last_successful_heartbeat_at_utc"),
         "last_runtime_error_code":runtime.get("last_runtime_error_code"),
@@ -2870,6 +3061,99 @@ def commander_support():
     print(json.dumps(report,sort_keys=True,separators=(",",":"),ensure_ascii=False))
     return 0
 
+def authorize_local_tunnel():
+    config=load_config()
+    code=getpass.getpass("Código de autorização do Commander: ").strip()
+    if not code: raise RuntimeError("DEVICE_AUTHORIZATION_CODE_REQUIRED")
+    payload=refresh_product_lease(config,authorization_code=code,requested_transport="LOCAL_TUNNEL")
+    lease=payload.get("product_lease") or {}
+    _set_config_value("HARA_COMMANDER_TRANSPORT_MODE","LOCAL_TUNNEL")
+    print("HARA_COMMANDER_LOCAL_TUNNEL_AUTHORIZED=PASS")
+    print("AUTHORIZATION_VALID_UNTIL_UTC="+str(lease.get("valid_until_utc") or ""))
+    subprocess.run(["systemctl","--user","restart","hara-commander-agent.service"],check=False)
+    print("AGENT_RESTART_REQUESTED=TRUE")
+    return 0
+
+def _tunnel_client_binary():
+    bundled=DATA_DIR/"tunnel-client"
+    if bundled.is_file() and os.access(bundled,os.X_OK):
+        return str(bundled)
+    return shutil.which("tunnel-client")
+
+def _tunnel_runtime_env():
+    env=os.environ.copy()
+    if TUNNEL_ENV_FILE.is_file():
+        mode=stat.S_IMODE(TUNNEL_ENV_FILE.stat().st_mode)
+        if mode & 0o077:
+            raise RuntimeError("OPENAI_TUNNEL_ENV_PERMISSIONS_INVALID")
+        for raw in TUNNEL_ENV_FILE.read_text(encoding="utf-8").splitlines():
+            if raw.startswith("CONTROL_PLANE_API_KEY="):
+                value=raw.split("=",1)[1].strip()
+                if not re.fullmatch(r"[A-Za-z0-9_.-]{20,512}",value):
+                    raise RuntimeError("OPENAI_TUNNEL_API_KEY_INVALID")
+                env["CONTROL_PLANE_API_KEY"]=value
+                break
+    if not env.get("CONTROL_PLANE_API_KEY"):
+        raise RuntimeError("OPENAI_TUNNEL_API_KEY_MISSING")
+    return env
+
+def _openai_tunnel_doctor(capture=False):
+    binary=_tunnel_client_binary()
+    if not binary:
+        return 12,None
+    try:
+        env=_tunnel_runtime_env()
+    except Exception:
+        return 13,None
+    kwargs={"env":env,"check":False,"timeout":30}
+    if capture:
+        kwargs.update({"stdout":subprocess.PIPE,"stderr":subprocess.STDOUT,"text":True})
+    result=subprocess.run([binary,"doctor","--profile",TUNNEL_PROFILE,"--explain"],**kwargs)
+    return int(result.returncode),getattr(result,"stdout",None)
+
+def configure_openai_tunnel():
+    binary=_tunnel_client_binary()
+    if not binary:
+        print("HARA_COMMANDER_TUNNEL_CLIENT=MISSING")
+        print("OPENAI_TUNNEL_DOCS=https://developers.openai.com/api/docs/guides/secure-mcp-tunnels")
+        return 12
+    tunnel_id=input("OpenAI tunnel_id: ").strip()
+    api_key=getpass.getpass("OpenAI tunnel runtime API key: ").strip()
+    if not re.fullmatch(r"tunnel_[A-Za-z0-9_-]{16,180}",tunnel_id):
+        raise RuntimeError("OPENAI_TUNNEL_ID_INVALID")
+    if not re.fullmatch(r"[A-Za-z0-9_.-]{20,512}",api_key):
+        raise RuntimeError("OPENAI_TUNNEL_API_KEY_INVALID")
+    if any(ch.isspace() for ch in binary): raise RuntimeError("OPENAI_TUNNEL_BINARY_PATH_UNSAFE")
+    TUNNEL_ENV_FILE.parent.mkdir(parents=True,exist_ok=True,mode=0o700)
+    TUNNEL_ENV_FILE.write_text("CONTROL_PLANE_API_KEY="+api_key+"\n",encoding="utf-8")
+    os.chmod(TUNNEL_ENV_FILE,0o600)
+    env=os.environ.copy(); env["CONTROL_PLANE_API_KEY"]=api_key
+    mcp_command=shlex.quote(str(Path.home()/".local/bin/hara-commander"))+" mcp"
+    subprocess.run([
+        binary,"init","--sample","sample_mcp_stdio_local",
+        "--profile",TUNNEL_PROFILE,"--tunnel-id",tunnel_id,
+        "--health-listen-addr","127.0.0.1:0",
+        "--mcp-command",mcp_command,
+    ],env=env,check=True)
+    TUNNEL_UNIT_FILE.parent.mkdir(parents=True,exist_ok=True)
+    TUNNEL_UNIT_FILE.write_text(
+        "[Unit]\nDescription=H.A.R.A. Commander OpenAI Secure MCP Tunnel\nAfter=network-online.target\n\n"
+        "[Service]\nType=simple\nEnvironmentFile=%h/.config/hara-commander/openai-tunnel.env\n"
+        f"ExecStart={binary} run --profile {TUNNEL_PROFILE}\nRestart=on-failure\nRestartSec=15\n\n"
+        "[Install]\nWantedBy=default.target\n",encoding="utf-8")
+    _set_config_value("HARA_COMMANDER_TRANSPORT_MODE","LOCAL_TUNNEL")
+    subprocess.run(["systemctl","--user","restart","hara-commander-agent.service"],check=False)
+    subprocess.run(["systemctl","--user","daemon-reload"],check=False)
+    subprocess.run(["systemctl","--user","enable","--now","hara-commander-openai-tunnel.service"],check=False)
+    print("HARA_COMMANDER_OPENAI_TUNNEL_CONFIGURED=PASS")
+    print("HARA_COMMANDER_TRANSPORT_MODE=LOCAL_TUNNEL")
+    print("NEXT_STEP=Generate a 6-hour authorization code in commander.haralabs.com.br and run hara-commander authorize")
+    return 0
+
+def openai_tunnel_status():
+    rc,_=_openai_tunnel_doctor(capture=False)
+    return rc
+
 def main():
     if "--version" in sys.argv:
         print(AGENT_VERSION); return
@@ -2881,6 +3165,18 @@ def main():
         raise SystemExit(commander_doctor())
     if len(sys.argv)>1 and sys.argv[1]=="support":
         raise SystemExit(commander_support())
+    if len(sys.argv)>1 and sys.argv[1]=="authorize":
+        raise SystemExit(authorize_local_tunnel())
+    if len(sys.argv)>1 and sys.argv[1]=="transport-mode":
+        if len(sys.argv)==2:
+            print("HARA_COMMANDER_TRANSPORT_MODE="+transport_mode()); return
+        if len(sys.argv)==3:
+            set_transport_mode(sys.argv[2]); return
+        raise SystemExit(64)
+    if len(sys.argv)>2 and sys.argv[1]=="tunnel" and sys.argv[2]=="configure":
+        raise SystemExit(configure_openai_tunnel())
+    if len(sys.argv)>2 and sys.argv[1]=="tunnel" and sys.argv[2]=="status":
+        raise SystemExit(openai_tunnel_status())
     if "--session-start" in sys.argv or (len(sys.argv)>1 and sys.argv[1]=="start"):
         start_operator_console(); return
     if len(sys.argv)>1 and sys.argv[1]=="approval-mode":
@@ -2894,17 +3190,21 @@ def main():
     if "--session-stop" in sys.argv or (len(sys.argv)>1 and sys.argv[1]=="stop"):
         stop_operator_session(); return
     if len(sys.argv) > 1 and sys.argv[1] in {"help", "--help", "-h"}:
-        print("Usage: hara-commander [start|status|stop|mcp|doctor|support|approval-mode [ask|session|always]|help]")
+        print("Usage: hara-commander [start|status|stop|mcp|authorize|tunnel configure|tunnel status|doctor|support|transport-mode [local-tunnel|relay]|approval-mode [ask|session|always]|help]")
         return
     if len(sys.argv) > 1:
         print("HARA_COMMANDER_UNKNOWN_COMMAND=" + str(sys.argv[1]), file=sys.stderr)
-        print("Usage: hara-commander [start|status|stop|mcp|doctor|support|approval-mode [ask|session|always]|help]", file=sys.stderr)
+        print("Usage: hara-commander [start|status|stop|mcp|authorize|tunnel configure|tunnel status|doctor|support|transport-mode [local-tunnel|relay]|approval-mode [ask|session|always]|help]", file=sys.stderr)
         raise SystemExit(64)
     config=load_config()
     RECEIPT_DIR.mkdir(parents=True,exist_ok=True,mode=0o700)
     local_portal_server=start_local_portal_server(config)
     if not try_write_runtime_status(started_at=utcnow(), error_code=None, error_at=None):
         raise RuntimeError("RUNTIME_STATUS_STARTUP_WRITE_FAILED")
+    if transport_mode(config)=="LOCAL_TUNNEL":
+        append_console_event("AGENT_LOCAL_TUNNEL",state="CONTROL_ONLY",action_summary="cloud_polling=disabled")
+        while True:
+            time.sleep(60)
     last_heartbeat=0.0
     last_product_lease=0.0
     poll_hot_until=time.monotonic()+CALL_POLL_STARTUP_HOT_SECONDS

@@ -28,8 +28,8 @@ def ps_int(name: str) -> int:
         raise SystemExit(f"COMMANDER_AGENT_REQUEST_EFFICIENCY_{name}=MISSING")
     return int(m.group(1))
 
-need('AGENT_VERSION = "0.3.42"' in LINUX, "LINUX_VERSION")
-need('$AgentVersion = "0.3.42"' in WINDOWS, "WINDOWS_VERSION")
+need('AGENT_VERSION = "0.3.43"' in LINUX, "LINUX_VERSION")
+need('$AgentVersion = "0.3.43"' in WINDOWS, "WINDOWS_VERSION")
 
 hb = py_int("HEARTBEAT_SECONDS")
 hot = py_int("CALL_POLL_HOT_SECONDS")
