@@ -446,12 +446,12 @@ export function createSimpleCustomerMcpServer({ executeTool }) {
     "start_process",
     toolConfig({
       title: "Start Process",
-      description: "Run a command. By default waits for bounded completion in one request; set interactive=true to keep a managed session open.",
+      description: "Run a command. By default waits for bounded completion. Set interactive=true for a managed session; requests above 10 seconds are automatically routed to a managed session.",
       inputSchema: z.object({
         computer,
         command: z.string().min(1).max(4096),
         cwd: z.string().min(1).max(4096).optional(),
-        timeout_ms: z.number().int().min(100).max(10000).optional(),
+        timeout_ms: z.number().int().min(100).max(30000).optional(),
         max_lines: z.number().int().min(1).max(500).optional(),
         interactive: z.boolean().optional(),
       }).strict(),
@@ -461,14 +461,19 @@ export function createSimpleCustomerMcpServer({ executeTool }) {
       idempotentHint: false,
     }),
     call(
-      (args) => args.interactive ? "hara.process.start" : "hara.process.run",
-      (args) => ({
-        ...deviceArgs(args),
-        command: args.command,
-        ...(args.cwd ? { cwd: args.cwd } : {}),
-        timeout_ms: args.timeout_ms ?? (args.interactive ? 1000 : 3000),
-        ...(!args.interactive ? { max_lines: args.max_lines ?? 200 } : {}),
-      }),
+      (args) => (args.interactive || Number(args.timeout_ms || 0) > 10000) ? "hara.process.start" : "hara.process.run",
+      (args) => {
+        const managed = Boolean(args.interactive || Number(args.timeout_ms || 0) > 10000);
+        return {
+          ...deviceArgs(args),
+          command: args.command,
+          ...(args.cwd ? { cwd: args.cwd } : {}),
+          timeout_ms: managed
+            ? Math.min(Number(args.timeout_ms ?? 1000), 3000)
+            : Number(args.timeout_ms ?? 3000),
+          ...(!managed ? { max_lines: args.max_lines ?? 200 } : {}),
+        };
+      },
     ),
   );
 

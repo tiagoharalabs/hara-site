@@ -322,7 +322,8 @@ need(
     and '"write_file"' in SIMPLE_MCP
     and '"start_process"' in SIMPLE_MCP
     and '"read_process_output"' in SIMPLE_MCP
-    and 'args.interactive ? "hara.process.start" : "hara.process.run"' in SIMPLE_MCP
+    and '(args.interactive || Number(args.timeout_ms || 0) > 10000) ? "hara.process.start" : "hara.process.run"' in SIMPLE_MCP
+    and 'max(30000)' in SIMPLE_MCP
     and 'handleSimpleCustomerMcpRequest' in WORKER
     and 'profile === "simple"' in WORKER
     and 'MCP_PROFILE_INVALID' in WORKER,

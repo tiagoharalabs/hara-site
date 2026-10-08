@@ -532,12 +532,12 @@ export function createCustomerMcpServer({ executeTool }) {
     "hara.process.run",
     toolConfig({
       title: "Run Governed Command",
-      description: "Run one bounded shell command to completion on a governed computer. Requires local human approval, kills the process if the timeout is exceeded, returns bounded output, and does not leave a managed session behind.",
+      description: "Run one bounded shell command to completion. One-shot execution is capped at 10 seconds; for longer work use hara.process.start plus hara.process.output. Requests above 10 seconds return structured managed-session guidance instead of a schema error.",
       inputSchema: z.object({
         computer: z.string().min(1).max(120).optional(),
         command: z.string().min(1).max(4096),
         cwd: z.string().min(1).max(4096).optional(),
-        timeout_ms: z.number().int().min(100).max(10000).optional(),
+        timeout_ms: z.number().int().min(100).max(30000).optional(),
         max_lines: z.number().int().min(1).max(500).optional(),
       }).strict(),
       readOnlyHint: false,
@@ -545,7 +545,30 @@ export function createCustomerMcpServer({ executeTool }) {
       idempotentHint: false,
       openWorldHint: true,
     }),
-    call("hara.process.run"),
+    async (args, ctx) => {
+      if (Number(args?.timeout_ms || 0) > 10000) {
+        const result = {
+          state: "REQUIRES_MANAGED_SESSION",
+          runtime_authority_from_chatgpt: false,
+          mutation_performed: false,
+          customer_services_relay: false,
+          blocker: {
+            code: "PROCESS_RUN_TIMEOUT_EXCEEDS_ONESHOT_LIMIT",
+            category: "PROCESS_EXECUTION_MODE",
+            retryable: true,
+          },
+          result: {
+            requested_timeout_ms: Number(args.timeout_ms),
+            one_shot_max_timeout_ms: 10000,
+            recommended_tool: "hara.process.start",
+            follow_up_tool: "hara.process.output",
+          },
+        };
+        if (args?.computer) result.computer = String(args.computer).slice(0, 120);
+        return publicToolResult(result);
+      }
+      return call("hara.process.run")(args, ctx);
+    },
   );
 
   server.registerTool(

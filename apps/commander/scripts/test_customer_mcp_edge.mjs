@@ -153,6 +153,19 @@ assert.equal(runCall.result?.isError, undefined);
 assert.equal(calls.at(-1).tool_id, "hara.process.run");
 assert.equal(calls.at(-1).arguments.timeout_ms, 500);
 
+const longRunCall = await rpc(431, "tools/call", {
+  name: "hara.process.run",
+  arguments: { computer: "nucleo-a", command: "sleep 12", timeout_ms: 20000, max_lines: 20 },
+});
+assert.equal(longRunCall.result?.isError, undefined);
+assert.equal(longRunCall.result?.structuredContent?.state, "REQUIRES_MANAGED_SESSION");
+assert.equal(longRunCall.result?.structuredContent?.blocker?.code, "PROCESS_RUN_TIMEOUT_EXCEEDS_ONESHOT_LIMIT");
+assert.equal(longRunCall.result?.structuredContent?.blocker?.retryable, true);
+assert.equal(longRunCall.result?.structuredContent?.result?.one_shot_max_timeout_ms, 10000);
+assert.equal(longRunCall.result?.structuredContent?.result?.recommended_tool, "hara.process.start");
+assert.equal(longRunCall.result?.structuredContent?.result?.follow_up_tool, "hara.process.output");
+assert.equal(calls.at(-1).arguments.timeout_ms, 500);
+
 const activityCall = await rpc(44, "tools/call", {
   name: "hara.activity",
   arguments: { window: "7d", limit: 25 },

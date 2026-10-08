@@ -99,6 +99,15 @@ assert.equal(calls.at(-1).tool_id,"hara.process.start");
 assert.equal(calls.at(-1).arguments.timeout_ms,1000);
 assert.ok(!("max_lines" in calls.at(-1).arguments));
 
+const longProcess = await rpc(60,"tools/call",{
+  name:"start_process",
+  arguments:{computer:"nucleo-a",command:"sleep 12",timeout_ms:20000},
+});
+assert.equal(longProcess.result?.isError,undefined);
+assert.equal(calls.at(-1).tool_id,"hara.process.start");
+assert.equal(calls.at(-1).arguments.timeout_ms,3000);
+assert.ok(!("max_lines" in calls.at(-1).arguments));
+
 await rpc(7,"tools/call",{
   name:"search",
   arguments:{computer:"nucleo-a",path:"/srv/project",pattern:"TODO",search_type:"content"},
