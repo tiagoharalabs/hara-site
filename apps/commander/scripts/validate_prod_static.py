@@ -272,6 +272,10 @@ need(
     and 'id="usageCardPlan"' in HTML
     and 'id="usageCardPeriod"' in HTML
     and 'setText("usageCardTransactions"' in JS
+    and 'Execuções governadas (7 dias)' in HTML
+    and 'não representa requests HTTP da infraestrutura' in HTML
+    and 'heartbeat, polling do Agent, health checks' in HTML
+    and 'execuções no histórico total registrado' in JS
     and 'setText("usageCardCapacity"' in JS
     and 'setText("usageCardPlan"' in JS
     and 'setText("usageCardPeriod"' in JS,

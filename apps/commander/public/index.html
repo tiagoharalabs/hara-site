@@ -386,7 +386,7 @@
 
           <div class="quota-hero">
             <div>
-              <span>Limite do período</span>
+              <span>Franquia de execuções do plano</span>
               <strong><span id="usageConsumed">—</span> <em id="usageLimit"></em></strong>
               <div class="progress"><i id="usageProgress" style="width:0%"></i></div>
               <small id="usageRemaining">Carregando capacidade do plano</small>
@@ -400,9 +400,9 @@
 
           <div class="summary-grid usage-product-grid" aria-label="Resumo do uso">
             <article class="summary-card usage-history-card">
-              <span>Transações</span>
+              <span>Execuções governadas (7 dias)</span>
               <strong id="usageCardTransactions">—</strong>
-              <small id="usageCardTransactionsDetail">Últimos 7 dias</small>
+              <small id="usageCardTransactionsDetail">Histórico total registrado</small>
             </article>
             <article class="summary-card">
               <span>Capacidade do plano</span>
@@ -421,7 +421,7 @@
             </article>
           </div>
 
-          <p class="activity-privacy-note">O Commander na nuvem mantém apenas o mínimo necessário para conta, plano, presença e operação da ponte MCP. Diagnósticos técnicos e histórico detalhado permanecem no Agent local.</p>
+          <p class="activity-privacy-note"><b>O que este contador mede:</b> execuções governadas do Commander atribuídas à conta/plano. Ele não representa requests HTTP da infraestrutura e não inclui heartbeat, polling do Agent, health checks, carregamento do portal ou outras requisições da Cloudflare. O Commander na nuvem mantém apenas o mínimo necessário para conta, plano, presença e operação da ponte MCP; diagnósticos técnicos e histórico detalhado permanecem no Agent local.</p>
         </div>
       </div>
     </section>

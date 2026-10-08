@@ -319,7 +319,7 @@
     setText(
       "dashboardPercent",
       unmetered
-        ? "Sem franquia mensal de chamadas"
+        ? "Sem franquia mensal de execuções governadas"
         : (usageAvailable ? percent.toFixed(2).replace(".", ",") + "% utilizado" : "Uso temporariamente indisponível"),
     );
     const dashboardBar = document.getElementById("dashboardUsageProgress");
@@ -336,8 +336,8 @@
     setText(
       "usageRemaining",
       unmetered
-        ? "Sem franquia mensal de chamadas"
-        : (usageAvailable ? number(remaining) + " unidades disponíveis" : "Uso temporariamente indisponível"),
+        ? "Sem franquia mensal de execuções governadas"
+        : (usageAvailable ? number(remaining) + " execuções disponíveis" : "Uso temporariamente indisponível"),
     );
     setText("usagePeriod", unmetered ? "Sem limite" : (payload.usage.period_key || "—"));
 
@@ -347,20 +347,20 @@
     setText(
       "usageCardTransactionsDetail",
       historyAvailable && history.calls_total != null
-        ? "Últimos 7 dias · " + number(history.calls_total) + " no histórico registrado"
+        ? number(history.calls_total) + " execuções no histórico total registrado"
         : "Histórico temporariamente indisponível",
     );
     setText("usageCardCapacity", unmetered ? "Ilimitado" : (usageAvailable ? number(remaining) : "—"));
     setText(
       "usageCardCapacityDetail",
       unmetered
-        ? "Sem franquia mensal"
-        : (usageAvailable ? "chamadas restantes de " + number(limit) : "Capacidade temporariamente indisponível"),
+        ? "Sem franquia mensal de execuções"
+        : (usageAvailable ? "execuções restantes de " + number(limit) : "Capacidade temporariamente indisponível"),
     );
     setText("usageCardPlan", plan);
     setText(
       "usageCardPlanDetail",
-      unmetered ? "Chamadas sem franquia mensal" : (isTrial ? "Free · 10.000 chamadas/mês" : "Plano ativo"),
+      unmetered ? "Execuções governadas sem franquia mensal" : (isTrial ? "Free · 10.000 execuções governadas/mês" : "Plano ativo"),
     );
     setText("usageCardPeriod", unmetered ? "Sem limite" : "Mensal");
     setText(
