@@ -142,7 +142,7 @@ def verify_public_guarded() -> None:
             "application_type":"web",
             "redirect_uris":["http://example.invalid/callback"],
             "response_types":["code"],
-            "grant_types":["authorization_code"],
+            "grant_types":["authorization_code","refresh_token"],
             "token_endpoint_auth_method":"none",
         },
     )
@@ -162,7 +162,7 @@ def verify_public_closed() -> None:
             "application_type":"native",
             "redirect_uris":["http://127.0.0.1:6276/oauth/callback"],
             "response_types":["code"],
-            "grant_types":["authorization_code"],
+            "grant_types":["authorization_code","refresh_token"],
             "token_endpoint_auth_method":"none",
         },
     )
