@@ -77,7 +77,7 @@ function operationalToolError(code, args = undefined) {
   }
 
   const filesystemNotFound = new Set([
-    "FILENOTFOUNDERROR", "FILE_NOT_FOUND", "PARENT_DIRECTORY_NOT_FOUND",
+    "FILENOTFOUNDERROR", "FILE_NOT_FOUND", "PARENT_DIRECTORY_NOT_FOUND", "FILESYSTEM_PARENT_NOT_FOUND",
     "PREIMAGE_NOT_FOUND", "RECEIPT_NOT_FOUND", "EDIT_MATCH_NOT_FOUND",
   ]);
   if (filesystemNotFound.has(code)) {
@@ -86,7 +86,7 @@ function operationalToolError(code, args = undefined) {
       : code === "EDIT_MATCH_NOT_FOUND" ? "EDIT_MATCH"
       : "FILESYSTEM_STATE";
     const result = { exists: false };
-    if (code === "PARENT_DIRECTORY_NOT_FOUND") result.recommended_tool = "hara.files.create_directory";
+    if (["PARENT_DIRECTORY_NOT_FOUND", "FILESYSTEM_PARENT_NOT_FOUND"].includes(code)) result.recommended_tool = "hara.files.create_directory";
     if (code === "PREIMAGE_NOT_FOUND") result.recommended_tool = "hara.files.preimages.list";
     return build("NOT_FOUND", category, false, result);
   }
@@ -98,14 +98,14 @@ function operationalToolError(code, args = undefined) {
   if (code === "PROCESS_SESSION_EXITED") {
     return build("TERMINAL", "PROCESS_STATE", false, { session_state: "EXITED" });
   }
-  if (["DESTINATION_EXISTS", "PATH_EXISTS_NOT_DIRECTORY"].includes(code)) {
+  if (["DESTINATION_EXISTS", "PATH_EXISTS_NOT_DIRECTORY", "FILESYSTEM_PATH_EXISTS"].includes(code)) {
     return build("CONFLICT", "FILESYSTEM_STATE", false, { conflict: true });
   }
   if (code === "EDIT_MATCH_AMBIGUOUS") {
     return build("NEEDS_INPUT", "EDIT_MATCH", false, { selection_required: true });
   }
   if ([
-    "PATH_NOT_FILE", "PATH_NOT_DIRECTORY", "SOURCE_NOT_FILE",
+    "PATH_NOT_FILE", "PATH_NOT_DIRECTORY", "FILESYSTEM_NOT_DIRECTORY", "SOURCE_NOT_FILE",
     "DELETE_TARGET_NOT_FILE", "ROLLBACK_TARGET_NOT_FILE", "PROCESS_CWD_INVALID",
   ].includes(code)) {
     return build("INVALID_TARGET", "FILESYSTEM_STATE", false, { valid_target: false });

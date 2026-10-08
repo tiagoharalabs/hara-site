@@ -12,6 +12,9 @@ async function executeTool(request) {
   if (request.arguments?.computer === "__offline__") throw new Error("DEVICE_OFFLINE");
   if (request.arguments?.computer === "__missing__") throw new Error("FILENOTFOUNDERROR");
   if (request.arguments?.computer === "__parent_missing__") throw new Error("PARENT_DIRECTORY_NOT_FOUND");
+  if (request.arguments?.computer === "__winparent__") throw new Error("FILESYSTEM_PARENT_NOT_FOUND");
+  if (request.arguments?.computer === "__winexists__") throw new Error("FILESYSTEM_PATH_EXISTS");
+  if (request.arguments?.computer === "__windir__") throw new Error("FILESYSTEM_NOT_DIRECTORY");
   if (request.arguments?.computer === "__session_missing__") throw new Error("PROCESS_SESSION_NOT_FOUND");
   if (request.arguments?.computer === "__busy__") throw new Error("DEVICE_BUSY");
   if (request.arguments?.computer === "__timeout__") throw new Error("DEVICE_CALL_TIMEOUT");
@@ -182,6 +185,14 @@ assert.equal(timeout.result?.structuredContent?.blocker?.retryable,true);
 
 const conflict = await rpc(96,"tools/call",{name:"copy_file",arguments:{computer:"__exists__",source:"/tmp/a",destination:"/tmp/b"}});
 assert.equal(conflict.result?.structuredContent?.state,"CONFLICT");
+
+const winParent = await rpc(961,"tools/call",{name:"write_file",arguments:{computer:"__winparent__",path:"C:/missing/file",content:"x",mode:"rewrite"}});
+assert.equal(winParent.result?.structuredContent?.state,"NOT_FOUND");
+assert.equal(winParent.result?.structuredContent?.result?.recommended_tool,"hara.files.create_directory");
+const winExists = await rpc(962,"tools/call",{name:"create_directory",arguments:{computer:"__winexists__",path:"C:/exists"}});
+assert.equal(winExists.result?.structuredContent?.state,"CONFLICT");
+const winDir = await rpc(963,"tools/call",{name:"list_directory",arguments:{computer:"__windir__",path:"C:/file"}});
+assert.equal(winDir.result?.structuredContent?.state,"INVALID_TARGET");
 
 const ambiguous = await rpc(97,"tools/call",{name:"ping",arguments:{computer:"__ambiguous__"}});
 assert.equal(ambiguous.result?.structuredContent?.state,"NEEDS_INPUT");

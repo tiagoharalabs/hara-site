@@ -13,6 +13,9 @@ async function executeTool(request) {
   if (request.arguments?.computer === "__offline__") throw new Error("DEVICE_OFFLINE");
   if (request.arguments?.computer === "__missing__") throw new Error("FILENOTFOUNDERROR");
   if (request.arguments?.computer === "__parent_missing__") throw new Error("PARENT_DIRECTORY_NOT_FOUND");
+  if (request.arguments?.computer === "__winparent__") throw new Error("FILESYSTEM_PARENT_NOT_FOUND");
+  if (request.arguments?.computer === "__winexists__") throw new Error("FILESYSTEM_PATH_EXISTS");
+  if (request.arguments?.computer === "__windir__") throw new Error("FILESYSTEM_NOT_DIRECTORY");
   if (request.arguments?.computer === "__session_missing__") throw new Error("PROCESS_SESSION_NOT_FOUND");
   if (request.arguments?.computer === "__busy__") throw new Error("DEVICE_BUSY");
   if (request.arguments?.computer === "__timeout__") throw new Error("DEVICE_CALL_TIMEOUT");

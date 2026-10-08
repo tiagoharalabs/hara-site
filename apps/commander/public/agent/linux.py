@@ -24,7 +24,7 @@ from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-AGENT_VERSION = "0.3.40"
+AGENT_VERSION = "0.3.41"
 CONFIG_FILE = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home()/".config"))) / "hara-commander/device.env"
 DATA_DIR = Path(os.environ.get("XDG_DATA_HOME", str(Path.home()/".local/share"))) / "hara-commander"
 RECEIPT_DIR = DATA_DIR / "receipts"
@@ -42,6 +42,11 @@ APPROVAL_DIR = DATA_DIR / "approvals"
 PREIMAGE_DIR = DATA_DIR / "preimages"
 SESSION_MAX_SECONDS = 12 * 60 * 60
 PRODUCT_LEASE_REFRESH_SECONDS = 4 * 60 * 60
+HEARTBEAT_SECONDS = 60
+CALL_POLL_HOT_SECONDS = 2
+CALL_POLL_IDLE_SECONDS = 10
+CALL_POLL_HOT_WINDOW_SECONDS = 120
+CALL_POLL_STARTUP_HOT_SECONDS = 30
 SLO_PROFILE = "INTERNAL_BETA_V1"
 SLO_MIN_SUCCESS_PERCENT = 99.0
 SLO_P50_MAX_MS = 1000
@@ -2159,23 +2164,23 @@ def execute_tool(config, call):
     elif tool=="hara.process.run":
         if "command" not in payload or any(k not in ("command","cwd","timeout_ms","max_lines") for k in payload): raise ValueError("FUNCTION_ARGUMENTS_DENIED")
         data=process_run(str(payload["command"]),payload.get("cwd"),int(payload.get("timeout_ms",3000)),int(payload.get("max_lines",200)))
-        result={"function_id":"process.run","risk_class":"PROCESS_EXECUTION","process_exit_code":data.get("exit_code") if isinstance(data.get("exit_code"),int) else 0,"stdout":json.dumps(data,sort_keys=True,separators=(",",":"),ensure_ascii=False),"domain_success_inferred":False}
+        result={"function_id":"process.run","risk_class":"PROCESS_EXECUTION","process_exit_code":data.get("exit_code") if isinstance(data.get("exit_code"),int) else None,"stdout":json.dumps(data,sort_keys=True,separators=(",",":"),ensure_ascii=False),"domain_success_inferred":False}
     elif tool=="hara.process.start":
         if "command" not in payload or any(k not in ("command","cwd","timeout_ms") for k in payload): raise ValueError("FUNCTION_ARGUMENTS_DENIED")
         data=process_start(str(payload["command"]),payload.get("cwd"),int(payload.get("timeout_ms",1000)))
-        result={"function_id":"process.start","risk_class":"PROCESS_EXECUTION","process_exit_code":0,"stdout":json.dumps(data,sort_keys=True,separators=(",",":"),ensure_ascii=False),"domain_success_inferred":False}
+        result={"function_id":"process.start","risk_class":"PROCESS_EXECUTION","process_exit_code":data.get("exit_code") if isinstance(data.get("exit_code"),int) else None,"stdout":json.dumps(data,sort_keys=True,separators=(",",":"),ensure_ascii=False),"domain_success_inferred":False}
     elif tool=="hara.process.output":
         if "session_id" not in payload or any(k not in ("session_id","offset","length","timeout_ms") for k in payload): raise ValueError("FUNCTION_ARGUMENTS_DENIED")
         data=_process_output_payload(_process_get(str(payload["session_id"])),payload.get("offset"),int(payload.get("length",200)),int(payload.get("timeout_ms",500)))
-        result={"function_id":"process.output","risk_class":"READ_ONLY","process_exit_code":0,"stdout":json.dumps(data,sort_keys=True,separators=(",",":"),ensure_ascii=False),"domain_success_inferred":False}
+        result={"function_id":"process.output","risk_class":"READ_ONLY","process_exit_code":data.get("exit_code") if isinstance(data.get("exit_code"),int) else None,"stdout":json.dumps(data,sort_keys=True,separators=(",",":"),ensure_ascii=False),"domain_success_inferred":False}
     elif tool=="hara.process.interact":
         if not {"session_id","input"}.issubset(payload) or any(k not in ("session_id","input","timeout_ms") for k in payload): raise ValueError("FUNCTION_ARGUMENTS_DENIED")
         data=process_interact(str(payload["session_id"]),str(payload["input"]),int(payload.get("timeout_ms",1000)))
-        result={"function_id":"process.interact","risk_class":"PROCESS_EXECUTION","process_exit_code":0,"stdout":json.dumps(data,sort_keys=True,separators=(",",":"),ensure_ascii=False),"domain_success_inferred":False}
+        result={"function_id":"process.interact","risk_class":"PROCESS_EXECUTION","process_exit_code":data.get("exit_code") if isinstance(data.get("exit_code"),int) else None,"stdout":json.dumps(data,sort_keys=True,separators=(",",":"),ensure_ascii=False),"domain_success_inferred":False}
     elif tool=="hara.process.kill":
         if "session_id" not in payload or any(k not in ("session_id","force") for k in payload): raise ValueError("FUNCTION_ARGUMENTS_DENIED")
         data=process_kill(str(payload["session_id"]),bool(payload.get("force",False)))
-        result={"function_id":"process.kill","risk_class":"PROCESS_EXECUTION","process_exit_code":0,"stdout":json.dumps(data,sort_keys=True,separators=(",",":"),ensure_ascii=False),"domain_success_inferred":False}
+        result={"function_id":"process.kill","risk_class":"PROCESS_EXECUTION","process_exit_code":data.get("exit_code") if isinstance(data.get("exit_code"),int) else None,"stdout":json.dumps(data,sort_keys=True,separators=(",",":"),ensure_ascii=False),"domain_success_inferred":False}
     elif tool=="hara.files.create_directory":
         if set(payload)-{"path","parents"} or "path" not in payload: raise ValueError("FUNCTION_ARGUMENTS_DENIED")
         data=filesystem_create_directory(str(payload["path"]),payload.get("parents",True))
@@ -2337,6 +2342,9 @@ def self_test():
         assert run_data["run_id"] not in PROCESS_SESSIONS
         timeout_run=execute_tool(cfg,{**base,"call_id":"selftest-run-timeout","request_id":"selftest-run-timeout","tool_id":"hara.process.run","payload":{"command":"sleep 2","timeout_ms":100,"max_lines":20},"_local_approval":{"state":"APPROVED"}})
         timeout_data=json.loads(timeout_run["result"]["stdout"]); assert timeout_data["timed_out"] is True and timeout_data["session_retained"] is False
+        failed_proc=execute_tool(cfg,{**base,"call_id":"selftest-proc-exit7","request_id":"selftest-proc-exit7","tool_id":"hara.process.start","payload":{"command":"exit 7","timeout_ms":500},"_local_approval":{"state":"APPROVED"}})
+        failed_data=json.loads(failed_proc["result"]["stdout"]); assert failed_data["state"]=="EXITED" and failed_data["exit_code"]==7 and failed_proc["result"]["process_exit_code"]==7
+        PROCESS_SESSIONS.pop(failed_data["session_id"],None)
         proc_call={**base,"call_id":"selftest-proc","request_id":"selftest-004g","tool_id":"hara.process.start","payload":{"command":"printf 'hello\n'","timeout_ms":300},"_local_approval":{"state":"APPROVED"}}
         proc=execute_tool(cfg,proc_call); proc_data=json.loads(proc["result"]["stdout"]); sid=proc_data["session_id"]
         assert proc["mutation_performed"] is True and sid.startswith("HARA-PROC-")
@@ -2346,8 +2354,9 @@ def self_test():
         assert "hello" in observed
         proc_receipt=read_receipt(proc["bridge_receipt_sha256"]); assert proc_receipt["mutation_class"]=="PROCESS_EXECUTION_V1"
         assert "secret=<redacted>" in _redact_command_preview("echo secret=abc123")
-        longp=process_start("sleep 30",None,100)
-        longsid=longp["session_id"]; assert _process_get(longsid).get("exit_code") is None
+        long_call=execute_tool(cfg,{**base,"call_id":"selftest-long-proc","request_id":"selftest-long-proc","tool_id":"hara.process.start","payload":{"command":"sleep 30","timeout_ms":100},"_local_approval":{"state":"APPROVED"}})
+        longp=json.loads(long_call["result"]["stdout"]); longsid=longp["session_id"]
+        assert _process_get(longsid).get("exit_code") is None and long_call["result"]["process_exit_code"] is None
         assert cleanup_process_sessions() >= 1
         _drain_process(_process_get(longsid),100)
         sha=inv["bridge_receipt_sha256"]
@@ -2422,9 +2431,30 @@ def self_test():
     assert mapped_interactive=="hara.process.start"
     local_usage=local_simple_mcp_call({"HARA_DEVICE_ID":"selftest"},"get_usage_stats",{})
     assert local_usage["relay_calls_per_local_tool_call"]==0
+    schemas={tool["name"]:tool["inputSchema"]["properties"] for tool in local_simple_mcp_tools()}
+    assert schemas["read_file"]["offset"]["maximum"]==1000000 and schemas["read_file"]["length"]["maximum"]==400
+    assert schemas["read_multiple_files"]["length"]["maximum"]==100
+    assert schemas["write_file"]["content"]["maxLength"]==65536
+    assert schemas["edit_block"]["old_string"]["maxLength"]==32768 and schemas["edit_block"]["new_string"]["maxLength"]==32768
+    assert schemas["list_directory"]["depth"]["maximum"]==5 and schemas["list_directory"]["limit"]["maximum"]==200
+    assert schemas["search"]["pattern"]["maxLength"]==256 and schemas["search"]["max_results"]["maximum"]==100 and schemas["search"]["file_glob"]["maxLength"]==180
+    assert schemas["list_processes"]["limit"]["maximum"]==200
+    assert schemas["read_process_output"]["session_id"]["maxLength"]==180 and schemas["read_process_output"]["timeout_ms"]["maximum"]==3000
+    assert schemas["interact_with_process"]["input"]["maxLength"]==4096 and schemas["interact_with_process"]["timeout_ms"]["maximum"]==3000
+    long_tool,long_payload=_local_simple_map({"HARA_DEVICE_ID":"selftest"},"start_process",{"command":"sleep 12","timeout_ms":20000})
+    assert long_tool=="hara.process.start" and long_payload["timeout_ms"]==3000 and "max_lines" not in long_payload
+    missing_state=local_mcp_operational_error("FILENOTFOUNDERROR","get_file_info",{"path":"/tmp/missing"})
+    assert missing_state["state"]=="NOT_FOUND" and missing_state["blocker"]["retryable"] is False
+    session_state=local_mcp_operational_error("PROCESS_SESSION_NOT_FOUND","read_process_output",{"session_id":"missing"})
+    assert session_state["result"]["recommended_tool"]=="list_sessions"
+    assert local_mcp_operational_error("POLICY_DENIED","ping",{}) is None
     print("COMMANDER_LOCAL_MCP_TOOL_COUNT=24")
     print("COMMANDER_LOCAL_MCP_RELAY_CALLS_PER_LOCAL_TOOL=0")
     print("COMMANDER_LOCAL_MCP_PROCESS_ONE_SHOT_DEFAULT=PASS")
+    print("COMMANDER_LOCAL_MCP_DOWNSTREAM_BOUNDS=PASS")
+    print("COMMANDER_LOCAL_MCP_OPERATIONAL_ERRORS=PASS")
+    print("COMMANDER_LOCAL_MCP_LONG_PROCESS_AUTOROUTE=PASS")
+    print("COMMANDER_PROCESS_EXIT_CODE_PROPAGATION=PASS")
     print("COMMANDER_LINUX_OPERATOR_SESSION_GATE=PASS")
     print("COMMANDER_LOCAL_MUTATION_APPROVAL=PASS")
     print("COMMANDER_PERSISTENT_TRUSTED_NO_SESSION=PASS")
@@ -2462,22 +2492,22 @@ def local_simple_mcp_tools():
         ("get_activity","Get Activity","Get privacy-safe local Commander event metadata.",_mcp_schema({"limit":{"type":"integer","minimum":1,"maximum":100},"window":{"type":"string","enum":["24h","7d","30d"]}})),
         ("ping","Ping","Check the local Commander Agent.",_mcp_schema({"computer":computer})),
         ("get_device_info","Get Device Info","Get local device and Agent information.",_mcp_schema({"computer":computer})),
-        ("read_file","Read File","Read a text file.",_mcp_schema({"computer":computer,"path":path,"offset":{"type":"integer","minimum":0},"length":{"type":"integer","minimum":1,"maximum":5000}},["path"])),
-        ("read_multiple_files","Read Multiple Files","Read multiple text files in one call.",_mcp_schema({"computer":computer,"paths":{"type":"array","items":path,"minItems":1,"maxItems":10},"offset":{"type":"integer","minimum":0},"length":{"type":"integer","minimum":1,"maximum":5000}},["paths"])),
-        ("write_file","Write File","Write or append text to a file.",_mcp_schema({"computer":computer,"path":path,"content":{"type":"string"},"mode":{"type":"string","enum":["rewrite","append"]}},["path","content"])),
-        ("edit_block","Edit Block","Apply a focused text replacement.",_mcp_schema({"computer":computer,"path":path,"old_string":{"type":"string","minLength":1},"new_string":{"type":"string"},"replace_all":boolean},["path","old_string","new_string"])),
+        ("read_file","Read File","Read a text file.",_mcp_schema({"computer":computer,"path":path,"offset":{"type":"integer","minimum":0,"maximum":1000000},"length":{"type":"integer","minimum":1,"maximum":400}},["path"])),
+        ("read_multiple_files","Read Multiple Files","Read multiple text files in one call.",_mcp_schema({"computer":computer,"paths":{"type":"array","items":path,"minItems":1,"maxItems":10},"offset":{"type":"integer","minimum":0,"maximum":1000000},"length":{"type":"integer","minimum":1,"maximum":100}},["paths"])),
+        ("write_file","Write File","Write or append text to a file.",_mcp_schema({"computer":computer,"path":path,"content":{"type":"string","maxLength":65536},"mode":{"type":"string","enum":["rewrite","append"]}},["path","content"])),
+        ("edit_block","Edit Block","Apply a focused text replacement.",_mcp_schema({"computer":computer,"path":path,"old_string":{"type":"string","minLength":1,"maxLength":32768},"new_string":{"type":"string","maxLength":32768},"replace_all":boolean},["path","old_string","new_string"])),
         ("create_directory","Create Directory","Create a directory.",_mcp_schema({"computer":computer,"path":path,"parents":boolean},["path"])),
-        ("list_directory","List Directory","List directory contents.",_mcp_schema({"computer":computer,"path":path,"depth":{"type":"integer","minimum":1,"maximum":8},"limit":{"type":"integer","minimum":1,"maximum":1000}},["path"])),
+        ("list_directory","List Directory","List directory contents.",_mcp_schema({"computer":computer,"path":path,"depth":{"type":"integer","minimum":1,"maximum":5},"limit":{"type":"integer","minimum":1,"maximum":200}},["path"])),
         ("move_file","Move File","Move or rename a file or directory.",_mcp_schema({"computer":computer,"source":path,"destination":path},["source","destination"])),
         ("copy_file","Copy File","Copy a file or directory.",_mcp_schema({"computer":computer,"source":path,"destination":path},["source","destination"])),
         ("delete_file","Delete File","Delete a file with reversible preimage protection.",_mcp_schema({"computer":computer,"path":path},["path"])),
-        ("search","Search","Search file names or text content.",_mcp_schema({"computer":computer,"path":path,"pattern":{"type":"string","minLength":1},"search_type":{"type":"string","enum":["files","content"]},"max_results":{"type":"integer","minimum":1,"maximum":500},"include_hidden":boolean,"ignore_case":boolean,"file_glob":string},["path","pattern"])),
+        ("search","Search","Search file names or text content.",_mcp_schema({"computer":computer,"path":path,"pattern":{"type":"string","minLength":1,"maxLength":256},"search_type":{"type":"string","enum":["files","content"]},"max_results":{"type":"integer","minimum":1,"maximum":100},"include_hidden":boolean,"ignore_case":boolean,"file_glob":{"type":"string","maxLength":180}},["path","pattern"])),
         ("get_file_info","Get File Info","Get file metadata.",_mcp_schema({"computer":computer,"path":path},["path"])),
-        ("list_processes","List Processes","List running processes.",_mcp_schema({"computer":computer,"limit":{"type":"integer","minimum":1,"maximum":500}})),
-        ("start_process","Start Process","Run a command. Defaults to bounded one-shot execution; interactive=true keeps a managed session.",_mcp_schema({"computer":computer,"command":{"type":"string","minLength":1,"maxLength":4096},"cwd":path,"timeout_ms":{"type":"integer","minimum":100,"maximum":10000},"max_lines":{"type":"integer","minimum":1,"maximum":500},"interactive":boolean},["command"])),
-        ("read_process_output","Read Process Output","Read a managed process session.",_mcp_schema({"computer":computer,"session_id":{"type":"string","minLength":1},"offset":{"type":"integer","minimum":0},"length":{"type":"integer","minimum":1,"maximum":500},"timeout_ms":{"type":"integer","minimum":0,"maximum":10000}},["session_id"])),
-        ("interact_with_process","Interact With Process","Send input to a managed process session.",_mcp_schema({"computer":computer,"session_id":{"type":"string","minLength":1},"input":{"type":"string"},"timeout_ms":{"type":"integer","minimum":0,"maximum":10000}},["session_id","input"])),
-        ("kill_process","Kill Process","Terminate a managed process session.",_mcp_schema({"computer":computer,"session_id":{"type":"string","minLength":1},"force":boolean},["session_id"])),
+        ("list_processes","List Processes","List running processes.",_mcp_schema({"computer":computer,"limit":{"type":"integer","minimum":1,"maximum":200}})),
+        ("start_process","Start Process","Run a command. Defaults to bounded one-shot execution; interactive=true keeps a managed session. Requests above 10 seconds are automatically routed to a managed session.",_mcp_schema({"computer":computer,"command":{"type":"string","minLength":1,"maxLength":4096},"cwd":path,"timeout_ms":{"type":"integer","minimum":100,"maximum":30000},"max_lines":{"type":"integer","minimum":1,"maximum":500},"interactive":boolean},["command"])),
+        ("read_process_output","Read Process Output","Read a managed process session.",_mcp_schema({"computer":computer,"session_id":{"type":"string","minLength":1,"maxLength":180},"offset":{"type":"integer","minimum":0,"maximum":1000000},"length":{"type":"integer","minimum":1,"maximum":500},"timeout_ms":{"type":"integer","minimum":0,"maximum":3000}},["session_id"])),
+        ("interact_with_process","Interact With Process","Send input to a managed process session.",_mcp_schema({"computer":computer,"session_id":{"type":"string","minLength":1,"maxLength":180},"input":{"type":"string","maxLength":4096},"timeout_ms":{"type":"integer","minimum":0,"maximum":3000}},["session_id","input"])),
+        ("kill_process","Kill Process","Terminate a managed process session.",_mcp_schema({"computer":computer,"session_id":{"type":"string","minLength":1,"maxLength":180},"force":boolean},["session_id"])),
         ("list_sessions","List Sessions","List managed process sessions.",_mcp_schema({"computer":computer})),
         ("get_recent_tool_calls","Get Recent Tool Calls","Get privacy-safe local call metadata.",_mcp_schema({"computer":computer,"tool":{"type":"string"},"limit":{"type":"integer","minimum":1,"maximum":100}})),
     ]
@@ -2544,11 +2574,12 @@ def _local_simple_map(config,name,args):
     if name=="list_processes":
         return "hara.processes.list",({"limit":int(args["limit"])} if "limit" in args else {})
     if name=="start_process":
-        interactive=bool(args.get("interactive",False))
-        payload={"command":str(args["command"]),"timeout_ms":int(args.get("timeout_ms",1000 if interactive else 3000))}
+        requested_timeout=int(args.get("timeout_ms",3000))
+        managed=bool(args.get("interactive",False)) or requested_timeout>10000
+        payload={"command":str(args["command"]),"timeout_ms":min(requested_timeout,3000) if managed else requested_timeout}
         if args.get("cwd"): payload["cwd"]=str(args["cwd"])
-        if not interactive: payload["max_lines"]=int(args.get("max_lines",200))
-        return ("hara.process.start" if interactive else "hara.process.run"),payload
+        if not managed: payload["max_lines"]=int(args.get("max_lines",200))
+        return ("hara.process.start" if managed else "hara.process.run"),payload
     if name=="read_process_output":
         return "hara.process.output",{"session_id":str(args["session_id"]),**({"offset":int(args["offset"])} if "offset" in args else {}),**({"length":int(args["length"])} if "length" in args else {}),**({"timeout_ms":int(args["timeout_ms"])} if "timeout_ms" in args else {})}
     if name=="interact_with_process":
@@ -2595,6 +2626,50 @@ def local_simple_mcp_call(config,name,args):
     append_console_event("PASS",call,state="COMPLETED",receipt_sha256=result.get("bridge_receipt_sha256"),duration_ms=round((time.monotonic()-started)*1000))
     return result
 
+def local_mcp_operational_error(code,name,args):
+    common={
+        "runtime_authority_from_chatgpt":False,
+        "mutation_performed":False,
+        "customer_services_relay":False,
+        "transport":"LOCAL_STDIO",
+    }
+    def build(state,category,retryable,result=None):
+        value={
+            "state":state,**common,
+            "blocker":{"code":code,"category":category,"retryable":bool(retryable)},
+            "result":result or {},
+        }
+        if isinstance(args,dict) and args.get("computer"):
+            value["computer"]=str(args.get("computer"))[:120]
+        return value
+    if code=="DEVICE_OFFLINE":
+        return build("UNAVAILABLE","DEVICE_AVAILABILITY",True,{"available":False,"device_state":"OFFLINE"})
+    if code in {"DEVICE_BUSY","CHANNEL_TRANSIENT_BUSY"}:
+        return build("BUSY","DEVICE_AVAILABILITY",True,{"available":True,"busy":True})
+    if code in {"DEVICE_CALL_TIMEOUT","CHANNEL_TRANSIENT_TIMEOUT"}:
+        return build("TIMEOUT","DEVICE_EXECUTION",True,{"completed":False})
+    if code in {"FILENOTFOUNDERROR","FILE_NOT_FOUND","PARENT_DIRECTORY_NOT_FOUND","PREIMAGE_NOT_FOUND","RECEIPT_NOT_FOUND","EDIT_MATCH_NOT_FOUND"}:
+        result={"exists":False}
+        if code=="PARENT_DIRECTORY_NOT_FOUND": result["recommended_tool"]="create_directory"
+        if code=="PREIMAGE_NOT_FOUND": result["recommended_tool"]="list_preimages"
+        category="ROLLBACK_STATE" if code=="PREIMAGE_NOT_FOUND" else "AUDIT_STATE" if code=="RECEIPT_NOT_FOUND" else "EDIT_MATCH" if code=="EDIT_MATCH_NOT_FOUND" else "FILESYSTEM_STATE"
+        return build("NOT_FOUND",category,False,result)
+    if code=="PROCESS_SESSION_NOT_FOUND":
+        return build("NOT_FOUND","PROCESS_STATE",False,{"exists":False,"recommended_tool":"list_sessions"})
+    if code=="PROCESS_SESSION_EXITED":
+        return build("TERMINAL","PROCESS_STATE",False,{"session_state":"EXITED"})
+    if code in {"DESTINATION_EXISTS","PATH_EXISTS_NOT_DIRECTORY"}:
+        return build("CONFLICT","FILESYSTEM_STATE",False,{"conflict":True})
+    if code=="EDIT_MATCH_AMBIGUOUS":
+        return build("NEEDS_INPUT","EDIT_MATCH",False,{"selection_required":True})
+    if code in {"PATH_NOT_FILE","PATH_NOT_DIRECTORY","SOURCE_NOT_FILE","DELETE_TARGET_NOT_FILE","ROLLBACK_TARGET_NOT_FILE","PROCESS_CWD_INVALID"}:
+        return build("INVALID_TARGET","FILESYSTEM_STATE",False,{"valid_target":False})
+    if code=="BINARY_FILE_DENIED":
+        return build("UNSUPPORTED_CONTENT","FILESYSTEM_CONTENT",False,{"text_required":True})
+    if code in {"FILE_TOO_LARGE","HASH_FILE_TOO_LARGE","COPY_FILE_TOO_LARGE","DELETE_FILE_TOO_LARGE","PREIMAGE_FILE_TOO_LARGE","WRITE_TOO_LARGE"}:
+        return build("LIMIT_EXCEEDED","PAYLOAD_LIMIT",False,{"within_limit":False})
+    return None
+
 def _stdio_mcp_write(payload):
     sys.stdout.write(json.dumps(payload,separators=(",",":"),ensure_ascii=False)+"\n")
     sys.stdout.flush()
@@ -2618,6 +2693,8 @@ def run_local_mcp_stdio():
         params=msg.get("params") or {}
         if method.startswith("notifications/"):
             continue
+        name=""
+        args={}
         try:
             if method=="initialize":
                 result={"protocolVersion":"2025-06-18","capabilities":{"tools":{"listChanged":False}},"serverInfo":{"name":"H.A.R.A. Commander Local","version":AGENT_VERSION},"instructions":"Local MCP. Start a H.A.R.A. Commander operator session before executing computer tools."}
@@ -2636,7 +2713,11 @@ def run_local_mcp_stdio():
             _stdio_mcp_write({"jsonrpc":"2.0","id":req_id,"result":result})
         except Exception as exc:
             code=safe_error_code(exc)
-            _stdio_mcp_write({"jsonrpc":"2.0","id":req_id,"result":{"isError":True,"content":[{"type":"text","text":json.dumps({"ok":False,"code":code},separators=(",",":"))}]}})
+            operational=local_mcp_operational_error(code,name,args)
+            if operational is not None:
+                _stdio_mcp_write({"jsonrpc":"2.0","id":req_id,"result":{"content":[{"type":"text","text":json.dumps(operational,separators=(",",":"),ensure_ascii=False)}],"structuredContent":operational}})
+            else:
+                _stdio_mcp_write({"jsonrpc":"2.0","id":req_id,"result":{"isError":True,"content":[{"type":"text","text":json.dumps({"ok":False,"code":code},separators=(",",":"))}]}})
 
 def commander_doctor():
     config=load_config()
@@ -2807,6 +2888,7 @@ def main():
         raise RuntimeError("RUNTIME_STATUS_STARTUP_WRITE_FAILED")
     last_heartbeat=0.0
     last_product_lease=0.0
+    poll_hot_until=time.monotonic()+CALL_POLL_STARTUP_HOT_SECONDS
     last_error_code=None
     last_error_write=0.0
     was_authorized=False
@@ -2829,10 +2911,11 @@ def main():
             continue
         if not was_authorized:
             last_heartbeat=0.0
+            poll_hot_until=now+CALL_POLL_STARTUP_HOT_SECONDS
             append_console_event("AGENT_ONLINE",state="PERSISTENT_TRUSTED" if persistent else "AUTHORIZED")
             was_authorized=True
         try:
-            if now-last_heartbeat>=30:
+            if now-last_heartbeat>=HEARTBEAT_SECONDS:
                 post_json(config["HARA_COMMANDER_URL"]+"/api/device/heartbeat",config["HARA_DEVICE_TOKEN"],{
                     "device_id":config["HARA_DEVICE_ID"],"architecture":config["HARA_DEVICE_ARCH"],"agent_version":AGENT_VERSION,
                     "approval_mode":effective_approval_mode(config),
@@ -2852,14 +2935,17 @@ def main():
                         error_code=safe_error_code(exc),
                     )
             call=post_json(config["HARA_COMMANDER_URL"]+"/api/device/calls/next",config["HARA_DEVICE_TOKEN"],{})
-            if call: execute_call(config,call)
+            if call:
+                poll_hot_until=time.monotonic()+CALL_POLL_HOT_WINDOW_SECONDS
+                execute_call(config,call)
         except Exception as exc:
             code=safe_error_code(exc)
             if code != last_error_code or now-last_error_write>=60:
                 try_write_runtime_status(error_code=code,error_at=utcnow())
                 last_error_code=code
                 last_error_write=now
-        time.sleep(2)
+        sleep_seconds=CALL_POLL_HOT_SECONDS if time.monotonic()<poll_hot_until else CALL_POLL_IDLE_SECONDS
+        time.sleep(sleep_seconds)
 
 if __name__=="__main__":
     main()

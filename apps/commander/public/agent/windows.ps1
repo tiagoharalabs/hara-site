@@ -7,7 +7,7 @@ $SessionPath = Join-Path $Root "operator-session.json"
 $ConsoleEvents = Join-Path $Root "console-events.jsonl"
 $OperationsDb = Join-Path $Root "operations.sqlite3"
 $SessionMaxHours = 12
-$AgentVersion = "0.3.40"
+$AgentVersion = "0.3.41"
 $SloProfile = "INTERNAL_BETA_V1"
 $SloMinSuccessPercent = 99.0
 $SloP50MaxMs = 1000
@@ -15,6 +15,11 @@ $SloP95MaxMs = 6000
 $SloP99MaxMs = 12000
 $SloMinLatencySamples = 20
 $SloLatencySampleMax = 5000
+$HeartbeatSeconds = 60
+$CallPollHotSeconds = 2
+$CallPollIdleSeconds = 10
+$CallPollHotWindowSeconds = 120
+$CallPollStartupHotSeconds = 30
 $FunctionId = "device.info"
 
 function Get-PlainText([Security.SecureString]$SecureValue) {
@@ -679,7 +684,7 @@ function Assert-StarterMutationAuthorized($Cfg) {
   if ($mode -eq "SESSION_TRUSTED" -and -not (Test-OperatorSessionActive)) { throw "LOCAL_OPERATOR_SESSION_REQUIRED" }
 }
 
-function New-DirectResult([string]$FunctionId,[string]$RiskClass,$Data,[int]$ExitCode=0) {
+function New-DirectResult([string]$FunctionId,[string]$RiskClass,$Data,[object]$ExitCode=0) {
   return @{
     function_id=$FunctionId
     risk_class=$RiskClass
@@ -942,7 +947,7 @@ function Invoke-Tool($Cfg,$Call) {
     $timeout=if ($null -ne $payload.timeout_ms) {[int]$payload.timeout_ms} else {3000}
     $maxLines=if ($null -ne $payload.max_lines) {[int]$payload.max_lines} else {200}
     $run=Invoke-WindowsOneShotProcess $Cfg ([string]$payload.command) $cwd $timeout $maxLines
-    $exit=if ($null -ne $run.exit_code) {[int]$run.exit_code} else {0}
+    $exit=if ($null -ne $run.exit_code) {[int]$run.exit_code} else {$null}
     $result=New-DirectResult "process.run" "PROCESS_EXECUTION" $run $exit
   } elseif ($tool -eq "hara.health") {
     $result=@{
@@ -1137,6 +1142,7 @@ try {
 }
 
 $LastHeartbeat=[datetime]::MinValue
+$PollHotUntil=(Get-Date).AddSeconds($CallPollStartupHotSeconds)
 $LastErrorCode=$null
 $LastErrorWrite=[datetime]::MinValue
 $WasAuthorized=$false
@@ -1154,13 +1160,14 @@ while ($true) {
   }
   if (-not $WasAuthorized) {
     $LastHeartbeat=[datetime]::MinValue
+    $PollHotUntil=(Get-Date).AddSeconds($CallPollStartupHotSeconds)
     Write-ConsoleEvent "AGENT_ONLINE" $null "AUTHORIZED"
     $WasAuthorized=$true
   }
   try {
     $SecureToken=ConvertTo-SecureString ([string]$Cfg.encrypted_device_token)
     $DeviceToken=Get-PlainText $SecureToken
-    if (((Get-Date)-$LastHeartbeat).TotalSeconds -ge 30) {
+    if (((Get-Date)-$LastHeartbeat).TotalSeconds -ge $HeartbeatSeconds) {
       Send-Json "$($Cfg.base_url)/api/device/heartbeat" $DeviceToken @{
         device_id=[string]$Cfg.device_id
         architecture=[string]$Cfg.architecture
@@ -1178,6 +1185,7 @@ while ($true) {
       if ($_.Exception.Response -and [int]$_.Exception.Response.StatusCode -eq 204) { $Call=$null } else { throw }
     }
     if ($null -ne $Call -and $Call.call_id) {
+      $PollHotUntil=(Get-Date).AddSeconds($CallPollHotWindowSeconds)
       if (-not $Persistent -and -not (Test-OperatorSessionActive)) {
         $code="LOCAL_OPERATOR_SESSION_REQUIRED"
         Write-ConsoleEvent "DENIED" $Call "DENIED" $code
@@ -1218,5 +1226,6 @@ while ($true) {
   } finally {
     $DeviceToken=$null
   }
-  Start-Sleep -Seconds 2
+  $PollSleep=if ((Get-Date) -lt $PollHotUntil) {$CallPollHotSeconds} else {$CallPollIdleSeconds}
+  Start-Sleep -Seconds $PollSleep
 }
