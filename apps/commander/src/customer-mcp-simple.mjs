@@ -43,30 +43,92 @@ function publicToolResult(value) {
   };
 }
 
+function operationalToolError(code, args = undefined) {
+  const common = {
+    runtime_authority_from_chatgpt: false,
+    mutation_performed: false,
+    customer_services_relay: false,
+  };
+  const build = (state, category, retryable, result = {}, extras = {}) => {
+    const value = {
+      state,
+      ...common,
+      blocker: { code, category, retryable, ...extras },
+      result,
+    };
+    if (args?.computer) value.computer = String(args.computer).slice(0, 120);
+    return publicToolResult(value);
+  };
+
+  if (code === "DEVICE_OFFLINE") {
+    return build("UNAVAILABLE", "DEVICE_AVAILABILITY", true, { available: false, device_state: "OFFLINE" });
+  }
+  if (["DEVICE_BUSY", "CHANNEL_TRANSIENT_BUSY"].includes(code)) {
+    return build("BUSY", "DEVICE_AVAILABILITY", true, { available: true, busy: true });
+  }
+  if (["DEVICE_CALL_TIMEOUT", "CHANNEL_TRANSIENT_TIMEOUT"].includes(code)) {
+    return build("TIMEOUT", "DEVICE_EXECUTION", true, { completed: false });
+  }
+  if (["DEVICE_NOT_FOUND", "DEVICE_CALL_NOT_FOUND"].includes(code)) {
+    return build("NOT_FOUND", "DEVICE_SELECTION", false, { exists: false });
+  }
+  if (code === "COMPUTER_NAME_AMBIGUOUS") {
+    return build("NEEDS_INPUT", "DEVICE_SELECTION", false, { selection_required: true });
+  }
+
+  const filesystemNotFound = new Set([
+    "FILENOTFOUNDERROR", "FILE_NOT_FOUND", "PARENT_DIRECTORY_NOT_FOUND",
+    "PREIMAGE_NOT_FOUND", "RECEIPT_NOT_FOUND", "EDIT_MATCH_NOT_FOUND",
+  ]);
+  if (filesystemNotFound.has(code)) {
+    const category = code === "PREIMAGE_NOT_FOUND" ? "ROLLBACK_STATE"
+      : code === "RECEIPT_NOT_FOUND" ? "AUDIT_STATE"
+      : code === "EDIT_MATCH_NOT_FOUND" ? "EDIT_MATCH"
+      : "FILESYSTEM_STATE";
+    const result = { exists: false };
+    if (code === "PARENT_DIRECTORY_NOT_FOUND") result.recommended_tool = "hara.files.create_directory";
+    if (code === "PREIMAGE_NOT_FOUND") result.recommended_tool = "hara.files.preimages.list";
+    return build("NOT_FOUND", category, false, result);
+  }
+  if (code === "PROCESS_SESSION_NOT_FOUND") {
+    return build("NOT_FOUND", "PROCESS_STATE", false, {
+      exists: false, recommended_tool: "hara.process.sessions",
+    });
+  }
+  if (code === "PROCESS_SESSION_EXITED") {
+    return build("TERMINAL", "PROCESS_STATE", false, { session_state: "EXITED" });
+  }
+  if (["DESTINATION_EXISTS", "PATH_EXISTS_NOT_DIRECTORY"].includes(code)) {
+    return build("CONFLICT", "FILESYSTEM_STATE", false, { conflict: true });
+  }
+  if (code === "EDIT_MATCH_AMBIGUOUS") {
+    return build("NEEDS_INPUT", "EDIT_MATCH", false, { selection_required: true });
+  }
+  if ([
+    "PATH_NOT_FILE", "PATH_NOT_DIRECTORY", "SOURCE_NOT_FILE",
+    "DELETE_TARGET_NOT_FILE", "ROLLBACK_TARGET_NOT_FILE", "PROCESS_CWD_INVALID",
+  ].includes(code)) {
+    return build("INVALID_TARGET", "FILESYSTEM_STATE", false, { valid_target: false });
+  }
+  if (code === "BINARY_FILE_DENIED") {
+    return build("UNSUPPORTED_CONTENT", "FILESYSTEM_CONTENT", false, { text_required: true });
+  }
+  if ([
+    "FILE_TOO_LARGE", "HASH_FILE_TOO_LARGE", "COPY_FILE_TOO_LARGE",
+    "DELETE_FILE_TOO_LARGE", "PREIMAGE_FILE_TOO_LARGE", "WRITE_TOO_LARGE",
+  ].includes(code)) {
+    return build("LIMIT_EXCEEDED", "PAYLOAD_LIMIT", false, { within_limit: false });
+  }
+  return null;
+}
+
 function publicToolError(error, args = undefined) {
   const code = String(error?.message || "COMMANDER_MCP_TOOL_FAILED")
     .replace(/[^A-Z0-9_:-]/gi, "_")
     .slice(0, 160);
 
-  if (code === "DEVICE_OFFLINE") {
-    const result = {
-      state: "UNAVAILABLE",
-      runtime_authority_from_chatgpt: false,
-      mutation_performed: false,
-      customer_services_relay: false,
-      blocker: {
-        code: "DEVICE_OFFLINE",
-        category: "DEVICE_AVAILABILITY",
-        retryable: true,
-      },
-      result: {
-        available: false,
-        device_state: "OFFLINE",
-      },
-    };
-    if (args?.computer) result.computer = String(args.computer).slice(0, 120);
-    return publicToolResult(result);
-  }
+  const operational = operationalToolError(code, args);
+  if (operational) return operational;
 
   return {
     isError: true,
@@ -208,8 +270,8 @@ export function createSimpleCustomerMcpServer({ executeTool }) {
       inputSchema: z.object({
         computer,
         path: z.string().min(1).max(4096),
-        offset: z.number().int().min(0).optional(),
-        length: z.number().int().min(1).max(5000).optional(),
+        offset: z.number().int().min(0).max(1000000).optional(),
+        length: z.number().int().min(1).max(400).optional(),
       }).strict(),
     }),
     call("hara.files.read", (args) => ({
@@ -228,8 +290,8 @@ export function createSimpleCustomerMcpServer({ executeTool }) {
       inputSchema: z.object({
         computer,
         paths: z.array(z.string().min(1).max(4096)).min(1).max(10),
-        offset: z.number().int().min(0).optional(),
-        length: z.number().int().min(1).max(5000).optional(),
+        offset: z.number().int().min(0).max(1000000).optional(),
+        length: z.number().int().min(1).max(100).optional(),
       }).strict(),
     }),
     call("hara.files.read_many", (args) => ({
@@ -248,7 +310,7 @@ export function createSimpleCustomerMcpServer({ executeTool }) {
       inputSchema: z.object({
         computer,
         path: z.string().min(1).max(4096),
-        content: z.string().max(1024 * 1024),
+        content: z.string().max(65536),
         mode: z.enum(["rewrite", "append"]).optional(),
       }).strict(),
       readOnlyHint: false,
@@ -271,8 +333,8 @@ export function createSimpleCustomerMcpServer({ executeTool }) {
       inputSchema: z.object({
         computer,
         path: z.string().min(1).max(4096),
-        old_string: z.string().min(1).max(1024 * 1024),
-        new_string: z.string().max(1024 * 1024),
+        old_string: z.string().min(1).max(32768),
+        new_string: z.string().max(32768),
         replace_all: z.boolean().optional(),
       }).strict(),
       readOnlyHint: false,
@@ -316,8 +378,8 @@ export function createSimpleCustomerMcpServer({ executeTool }) {
       inputSchema: z.object({
         computer,
         path: z.string().min(1).max(4096),
-        depth: z.number().int().min(1).max(8).optional(),
-        limit: z.number().int().min(1).max(1000).optional(),
+        depth: z.number().int().min(1).max(5).optional(),
+        limit: z.number().int().min(1).max(200).optional(),
       }).strict(),
     }),
     call("hara.files.list", (args) => ({
@@ -393,12 +455,12 @@ export function createSimpleCustomerMcpServer({ executeTool }) {
       inputSchema: z.object({
         computer,
         path: z.string().min(1).max(4096),
-        pattern: z.string().min(1).max(4096),
+        pattern: z.string().min(1).max(256),
         search_type: z.enum(["files", "content"]).optional(),
-        max_results: z.number().int().min(1).max(500).optional(),
+        max_results: z.number().int().min(1).max(100).optional(),
         include_hidden: z.boolean().optional(),
         ignore_case: z.boolean().optional(),
-        file_glob: z.string().max(512).optional(),
+        file_glob: z.string().max(180).optional(),
       }).strict(),
     }),
     call("hara.files.search", (args) => ({
@@ -433,7 +495,7 @@ export function createSimpleCustomerMcpServer({ executeTool }) {
       description: "List running processes.",
       inputSchema: z.object({
         computer,
-        limit: z.number().int().min(1).max(500).optional(),
+        limit: z.number().int().min(1).max(200).optional(),
       }).strict(),
     }),
     call("hara.processes.list", (args) => ({
@@ -484,10 +546,10 @@ export function createSimpleCustomerMcpServer({ executeTool }) {
       description: "Read output from a managed interactive process session.",
       inputSchema: z.object({
         computer,
-        session_id: z.string().min(1).max(160),
-        offset: z.number().int().min(0).optional(),
+        session_id: z.string().min(1).max(180),
+        offset: z.number().int().min(0).max(1000000).optional(),
         length: z.number().int().min(1).max(500).optional(),
-        timeout_ms: z.number().int().min(0).max(10000).optional(),
+        timeout_ms: z.number().int().min(0).max(3000).optional(),
       }).strict(),
     }),
     call("hara.process.output", (args) => ({
@@ -506,9 +568,9 @@ export function createSimpleCustomerMcpServer({ executeTool }) {
       description: "Send input to a managed interactive process session.",
       inputSchema: z.object({
         computer,
-        session_id: z.string().min(1).max(160),
-        input: z.string().max(1024 * 1024),
-        timeout_ms: z.number().int().min(0).max(10000).optional(),
+        session_id: z.string().min(1).max(180),
+        input: z.string().max(4096),
+        timeout_ms: z.number().int().min(0).max(3000).optional(),
       }).strict(),
       openWorldHint: true,
       readOnlyHint: false,
@@ -530,7 +592,7 @@ export function createSimpleCustomerMcpServer({ executeTool }) {
       description: "Terminate a managed process session.",
       inputSchema: z.object({
         computer,
-        session_id: z.string().min(1).max(160),
+        session_id: z.string().min(1).max(180),
         force: z.boolean().optional(),
       }).strict(),
       readOnlyHint: false,

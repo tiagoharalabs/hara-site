@@ -9,9 +9,15 @@ const calls=[];
 
 async function executeTool(request) {
   calls.push(request);
-  if (request.arguments?.computer === "__offline__") {
-    throw new Error("DEVICE_OFFLINE");
-  }
+  if (request.arguments?.computer === "__offline__") throw new Error("DEVICE_OFFLINE");
+  if (request.arguments?.computer === "__missing__") throw new Error("FILENOTFOUNDERROR");
+  if (request.arguments?.computer === "__parent_missing__") throw new Error("PARENT_DIRECTORY_NOT_FOUND");
+  if (request.arguments?.computer === "__session_missing__") throw new Error("PROCESS_SESSION_NOT_FOUND");
+  if (request.arguments?.computer === "__busy__") throw new Error("DEVICE_BUSY");
+  if (request.arguments?.computer === "__timeout__") throw new Error("DEVICE_CALL_TIMEOUT");
+  if (request.arguments?.computer === "__exists__") throw new Error("DESTINATION_EXISTS");
+  if (request.arguments?.computer === "__ambiguous__") throw new Error("COMPUTER_NAME_AMBIGUOUS");
+  if (request.arguments?.computer === "__denied__") throw new Error("POLICY_DENIED");
   return {
     state:"PASS",
     operational_authority:"HARA_COMMANDER",
@@ -63,6 +69,27 @@ assert.ok(tools.some((tool)=>tool.name==="read_file"));
 assert.ok(tools.some((tool)=>tool.name==="write_file"));
 assert.ok(tools.some((tool)=>tool.name==="start_process"));
 assert.ok(tools.some((tool)=>tool.name==="read_process_output"));
+
+const schema=(name)=>tools.find((tool)=>tool.name===name)?.inputSchema?.properties || {};
+assert.equal(schema("read_file").offset.maximum,1000000);
+assert.equal(schema("read_file").length.maximum,400);
+assert.equal(schema("read_multiple_files").offset.maximum,1000000);
+assert.equal(schema("read_multiple_files").length.maximum,100);
+assert.equal(schema("write_file").content.maxLength,65536);
+assert.equal(schema("edit_block").old_string.maxLength,32768);
+assert.equal(schema("edit_block").new_string.maxLength,32768);
+assert.equal(schema("list_directory").depth.maximum,5);
+assert.equal(schema("list_directory").limit.maximum,200);
+assert.equal(schema("search").pattern.maxLength,256);
+assert.equal(schema("search").max_results.maximum,100);
+assert.equal(schema("search").file_glob.maxLength,180);
+assert.equal(schema("list_processes").limit.maximum,200);
+assert.equal(schema("read_process_output").session_id.maxLength,180);
+assert.equal(schema("read_process_output").offset.maximum,1000000);
+assert.equal(schema("read_process_output").timeout_ms.maximum,3000);
+assert.equal(schema("interact_with_process").session_id.maxLength,180);
+assert.equal(schema("interact_with_process").input.maxLength,4096);
+assert.equal(schema("interact_with_process").timeout_ms.maximum,3000);
 
 const readCall=await rpc(3,"tools/call",{
   name:"read_file",
@@ -132,6 +159,38 @@ assert.equal(offlinePing.result?.structuredContent?.blocker?.code,"DEVICE_OFFLIN
 assert.equal(offlinePing.result?.structuredContent?.blocker?.retryable,true);
 assert.equal(offlinePing.result?.structuredContent?.computer,"__offline__");
 
+const missingInfo = await rpc(91,"tools/call",{name:"get_file_info",arguments:{computer:"__missing__",path:"/tmp/missing"}});
+assert.equal(missingInfo.result?.isError,undefined);
+assert.equal(missingInfo.result?.structuredContent?.state,"NOT_FOUND");
+assert.equal(missingInfo.result?.structuredContent?.blocker?.code,"FILENOTFOUNDERROR");
+
+const parentMissing = await rpc(92,"tools/call",{name:"write_file",arguments:{computer:"__parent_missing__",path:"/tmp/no-parent/file",content:"x",mode:"rewrite"}});
+assert.equal(parentMissing.result?.structuredContent?.state,"NOT_FOUND");
+assert.equal(parentMissing.result?.structuredContent?.result?.recommended_tool,"hara.files.create_directory");
+
+const sessionMissing = await rpc(93,"tools/call",{name:"read_process_output",arguments:{computer:"__session_missing__",session_id:"missing",length:20}});
+assert.equal(sessionMissing.result?.structuredContent?.state,"NOT_FOUND");
+assert.equal(sessionMissing.result?.structuredContent?.result?.recommended_tool,"hara.process.sessions");
+
+const busy = await rpc(94,"tools/call",{name:"ping",arguments:{computer:"__busy__"}});
+assert.equal(busy.result?.structuredContent?.state,"BUSY");
+assert.equal(busy.result?.structuredContent?.blocker?.retryable,true);
+
+const timeout = await rpc(95,"tools/call",{name:"start_process",arguments:{computer:"__timeout__",command:"sleep 1",timeout_ms:500}});
+assert.equal(timeout.result?.structuredContent?.state,"TIMEOUT");
+assert.equal(timeout.result?.structuredContent?.blocker?.retryable,true);
+
+const conflict = await rpc(96,"tools/call",{name:"copy_file",arguments:{computer:"__exists__",source:"/tmp/a",destination:"/tmp/b"}});
+assert.equal(conflict.result?.structuredContent?.state,"CONFLICT");
+
+const ambiguous = await rpc(97,"tools/call",{name:"ping",arguments:{computer:"__ambiguous__"}});
+assert.equal(ambiguous.result?.structuredContent?.state,"NEEDS_INPUT");
+assert.equal(ambiguous.result?.structuredContent?.result?.selection_required,true);
+
+const denied = await rpc(98,"tools/call",{name:"ping",arguments:{computer:"__denied__"}});
+assert.equal(denied.result?.isError,true);
+assert.match(denied.result?.content?.[0]?.text || "",/POLICY_DENIED/);
+
 for (const tool of tools) {
   assert.deepEqual(tool._meta?.securitySchemes,[{type:"oauth2",scopes:["openid"]}]);
 }
@@ -149,4 +208,5 @@ console.log("COMMANDER_SIMPLE_MCP_HARA_PREFIX_EXPOSED=FALSE");
 console.log("COMMANDER_SIMPLE_MCP_PROCESS_ONE_SHOT_DEFAULT=PASS");
 console.log("COMMANDER_SIMPLE_MCP_INTERACTIVE_OPT_IN=PASS");
 console.log("COMMANDER_SIMPLE_MCP_ALIAS_ROUTING=PASS");
+console.log("COMMANDER_SIMPLE_MCP_DOWNSTREAM_BOUNDS=PASS");
 console.log("COMMANDER_SIMPLE_MCP=PASS");

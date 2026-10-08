@@ -10,9 +10,15 @@ const calls = [];
 
 async function executeTool(request) {
   calls.push(request);
-  if (request.arguments?.computer === "__offline__") {
-    throw new Error("DEVICE_OFFLINE");
-  }
+  if (request.arguments?.computer === "__offline__") throw new Error("DEVICE_OFFLINE");
+  if (request.arguments?.computer === "__missing__") throw new Error("FILENOTFOUNDERROR");
+  if (request.arguments?.computer === "__parent_missing__") throw new Error("PARENT_DIRECTORY_NOT_FOUND");
+  if (request.arguments?.computer === "__session_missing__") throw new Error("PROCESS_SESSION_NOT_FOUND");
+  if (request.arguments?.computer === "__busy__") throw new Error("DEVICE_BUSY");
+  if (request.arguments?.computer === "__timeout__") throw new Error("DEVICE_CALL_TIMEOUT");
+  if (request.arguments?.computer === "__exists__") throw new Error("DESTINATION_EXISTS");
+  if (request.arguments?.computer === "__ambiguous__") throw new Error("COMPUTER_NAME_AMBIGUOUS");
+  if (request.arguments?.computer === "__denied__") throw new Error("POLICY_DENIED");
   return {
     state: "PASS",
     operational_authority: "HARA_COMMANDER",
@@ -191,6 +197,37 @@ const deniedUnknown = await rpc(5, "tools/call", {
 });
 assert.ok(deniedUnknown.error);
 assert.equal(calls.length, 7);
+
+const missingInfo = await rpc(81, "tools/call", { name: "hara.files.info", arguments: { computer: "__missing__", path: "/tmp/missing" } });
+assert.equal(missingInfo.result?.isError, undefined);
+assert.equal(missingInfo.result?.structuredContent?.state, "NOT_FOUND");
+
+const parentMissing = await rpc(82, "tools/call", { name: "hara.files.write", arguments: { computer: "__parent_missing__", path: "/tmp/no-parent/file", content: "x", mode: "rewrite" } });
+assert.equal(parentMissing.result?.structuredContent?.state, "NOT_FOUND");
+assert.equal(parentMissing.result?.structuredContent?.result?.recommended_tool, "hara.files.create_directory");
+
+const sessionMissing = await rpc(83, "tools/call", { name: "hara.process.output", arguments: { computer: "__session_missing__", session_id: "missing", length: 20 } });
+assert.equal(sessionMissing.result?.structuredContent?.state, "NOT_FOUND");
+assert.equal(sessionMissing.result?.structuredContent?.result?.recommended_tool, "hara.process.sessions");
+
+const busy = await rpc(84, "tools/call", { name: "hara.ping", arguments: { computer: "__busy__" } });
+assert.equal(busy.result?.structuredContent?.state, "BUSY");
+assert.equal(busy.result?.structuredContent?.blocker?.retryable, true);
+
+const timeout = await rpc(85, "tools/call", { name: "hara.process.run", arguments: { computer: "__timeout__", command: "sleep 1", timeout_ms: 500, max_lines: 20 } });
+assert.equal(timeout.result?.structuredContent?.state, "TIMEOUT");
+assert.equal(timeout.result?.structuredContent?.blocker?.retryable, true);
+
+const conflict = await rpc(86, "tools/call", { name: "hara.files.copy", arguments: { computer: "__exists__", source: "/tmp/a", destination: "/tmp/b" } });
+assert.equal(conflict.result?.structuredContent?.state, "CONFLICT");
+
+const ambiguous = await rpc(87, "tools/call", { name: "hara.ping", arguments: { computer: "__ambiguous__" } });
+assert.equal(ambiguous.result?.structuredContent?.state, "NEEDS_INPUT");
+assert.equal(ambiguous.result?.structuredContent?.result?.selection_required, true);
+
+const denied = await rpc(88, "tools/call", { name: "hara.ping", arguments: { computer: "__denied__" } });
+assert.equal(denied.result?.isError, true);
+assert.match(denied.result?.content?.[0]?.text || "", /POLICY_DENIED/);
 
 const badHost = await handleCustomerMcpRequest(
   new Request("https://evil.example/mcp", {
