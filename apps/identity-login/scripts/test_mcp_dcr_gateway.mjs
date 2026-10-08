@@ -46,6 +46,7 @@ const inspector=validateDcrRegistration({
   redirect_uris:["http://127.0.0.1:6276/oauth/callback"],
 });
 assert.equal(inspector.application_type,"native");
+assert.deepEqual(inspector.grant_types,["authorization_code","refresh_token"]);
 
 assert.throws(()=>validateDcrRegistration({
   client_name:"Bad",

@@ -134,7 +134,7 @@ export function validateCimdDocument(document, expectedClientId) {
   if (responseTypes.some((value)=>value !== "code")) throw new Error("CIMD_RESPONSE_TYPE_NOT_ALLOWED");
 
   const grantTypes=document.grant_types === undefined
-    ? ["authorization_code"]
+    ? ["authorization_code","refresh_token"]
     : exactStringArray(document.grant_types,"CIMD_GRANT_TYPES_INVALID",{min:1,max:4});
   const allowedGrants=new Set(["authorization_code","refresh_token"]);
   if (grantTypes.some((value)=>!allowedGrants.has(value))) throw new Error("CIMD_GRANT_TYPE_NOT_ALLOWED");

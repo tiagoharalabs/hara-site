@@ -13,6 +13,7 @@ assert.equal(metadata.revocation_endpoint,issuer+"/oauth/v2/revoke");
 assert.equal(metadata.jwks_uri,issuer+"/oauth/v2/keys");
 assert.deepEqual(metadata.response_types_supported,["code"]);
 assert.ok(metadata.grant_types_supported.includes("authorization_code"));
+assert.ok(metadata.grant_types_supported.includes("refresh_token"));
 assert.ok(metadata.code_challenge_methods_supported.includes("S256"));
 assert.equal(metadata.client_id_metadata_document_supported,false);
 assert.ok(!("registration_endpoint" in metadata));

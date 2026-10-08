@@ -60,7 +60,7 @@ export function validateDcrRegistration(document,{allowCustomSchemes=true}={}) {
   if (responseTypes.some((item)=>item !== "code")) throw new Error("DCR_RESPONSE_TYPE_NOT_ALLOWED");
 
   const grantTypes=document.grant_types === undefined
-    ? ["authorization_code"]
+    ? ["authorization_code","refresh_token"]
     : exactStrings(document.grant_types,"DCR_GRANT_TYPES_INVALID",{min:1,max:4});
   const allowedGrants=new Set(["authorization_code","refresh_token"]);
   if (!grantTypes.includes("authorization_code")) throw new Error("DCR_AUTHORIZATION_CODE_REQUIRED");
