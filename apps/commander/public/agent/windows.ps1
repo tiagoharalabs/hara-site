@@ -7,7 +7,7 @@ $SessionPath = Join-Path $Root "operator-session.json"
 $ConsoleEvents = Join-Path $Root "console-events.jsonl"
 $OperationsDb = Join-Path $Root "operations.sqlite3"
 $SessionMaxHours = 12
-$AgentVersion = "0.3.41"
+$AgentVersion = "0.3.42"
 $SloProfile = "INTERNAL_BETA_V1"
 $SloMinSuccessPercent = 99.0
 $SloP50MaxMs = 1000
@@ -20,6 +20,8 @@ $CallPollHotSeconds = 2
 $CallPollIdleSeconds = 10
 $CallPollHotWindowSeconds = 120
 $CallPollStartupHotSeconds = 30
+$RateLimitBackoffInitialSeconds = 30
+$RateLimitBackoffMaxSeconds = 300
 $FunctionId = "device.info"
 
 function Get-PlainText([Security.SecureString]$SecureValue) {
@@ -1145,6 +1147,8 @@ $LastHeartbeat=[datetime]::MinValue
 $PollHotUntil=(Get-Date).AddSeconds($CallPollStartupHotSeconds)
 $LastErrorCode=$null
 $LastErrorWrite=[datetime]::MinValue
+$RateLimitBackoffSeconds=0
+$RateLimitBackoffUntil=[datetime]::MinValue
 $WasAuthorized=$false
 if (-not (Test-OperatorSessionActive) -and (Get-ApprovalMode $StartupCfg) -ne "PERSISTENT_TRUSTED") {
   Set-DeviceOffline $StartupCfg | Out-Null
@@ -1163,6 +1167,11 @@ while ($true) {
     $PollHotUntil=(Get-Date).AddSeconds($CallPollStartupHotSeconds)
     Write-ConsoleEvent "AGENT_ONLINE" $null "AUTHORIZED"
     $WasAuthorized=$true
+  }
+  if ((Get-Date) -lt $RateLimitBackoffUntil) {
+    $remaining=[Math]::Max(1,[Math]::Ceiling(($RateLimitBackoffUntil-(Get-Date)).TotalSeconds))
+    Start-Sleep -Seconds ([Math]::Min(5,$remaining))
+    continue
   }
   try {
     $SecureToken=ConvertTo-SecureString ([string]$Cfg.encrypted_device_token)
@@ -1215,9 +1224,18 @@ while ($true) {
         }
       }
     }
+    $RateLimitBackoffSeconds=0
+    $RateLimitBackoffUntil=[datetime]::MinValue
   } catch {
     $code=Get-SafeErrorCode $_
     $now=Get-Date
+    if ($code -eq "HTTP_429") {
+      if ($RateLimitBackoffSeconds -le 0) { $RateLimitBackoffSeconds=$RateLimitBackoffInitialSeconds }
+      else { $RateLimitBackoffSeconds=[Math]::Min($RateLimitBackoffMaxSeconds,$RateLimitBackoffSeconds*2) }
+      $RateLimitBackoffUntil=(Get-Date).AddSeconds($RateLimitBackoffSeconds)
+      $PollHotUntil=[datetime]::MinValue
+      Write-ConsoleEvent "TRANSPORT_BACKOFF" $null "DEGRADED" $code
+    }
     if ($code -ne $LastErrorCode -or ($now-$LastErrorWrite).TotalSeconds -ge 60) {
       Try-SetRuntimeStatus -ErrorCode $code -ErrorAt ([DateTime]::UtcNow.ToString("o")) | Out-Null
       $LastErrorCode=$code

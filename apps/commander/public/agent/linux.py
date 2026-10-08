@@ -24,7 +24,7 @@ from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-AGENT_VERSION = "0.3.41"
+AGENT_VERSION = "0.3.42"
 CONFIG_FILE = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home()/".config"))) / "hara-commander/device.env"
 DATA_DIR = Path(os.environ.get("XDG_DATA_HOME", str(Path.home()/".local/share"))) / "hara-commander"
 RECEIPT_DIR = DATA_DIR / "receipts"
@@ -47,6 +47,8 @@ CALL_POLL_HOT_SECONDS = 2
 CALL_POLL_IDLE_SECONDS = 10
 CALL_POLL_HOT_WINDOW_SECONDS = 120
 CALL_POLL_STARTUP_HOT_SECONDS = 30
+RATE_LIMIT_BACKOFF_INITIAL_SECONDS = 30
+RATE_LIMIT_BACKOFF_MAX_SECONDS = 300
 SLO_PROFILE = "INTERNAL_BETA_V1"
 SLO_MIN_SUCCESS_PERCENT = 99.0
 SLO_P50_MAX_MS = 1000
@@ -2891,6 +2893,8 @@ def main():
     poll_hot_until=time.monotonic()+CALL_POLL_STARTUP_HOT_SECONDS
     last_error_code=None
     last_error_write=0.0
+    rate_limit_backoff_seconds=0
+    rate_limit_backoff_until=0.0
     was_authorized=False
     persistent=effective_approval_mode(config)=="PERSISTENT_TRUSTED"
     if not operator_session_active() and not persistent:
@@ -2914,6 +2918,9 @@ def main():
             poll_hot_until=now+CALL_POLL_STARTUP_HOT_SECONDS
             append_console_event("AGENT_ONLINE",state="PERSISTENT_TRUSTED" if persistent else "AUTHORIZED")
             was_authorized=True
+        if now < rate_limit_backoff_until:
+            time.sleep(min(5.0, max(0.1, rate_limit_backoff_until-now)))
+            continue
         try:
             if now-last_heartbeat>=HEARTBEAT_SECONDS:
                 post_json(config["HARA_COMMANDER_URL"]+"/api/device/heartbeat",config["HARA_DEVICE_TOKEN"],{
@@ -2938,8 +2945,24 @@ def main():
             if call:
                 poll_hot_until=time.monotonic()+CALL_POLL_HOT_WINDOW_SECONDS
                 execute_call(config,call)
+            rate_limit_backoff_seconds=0
+            rate_limit_backoff_until=0.0
         except Exception as exc:
             code=safe_error_code(exc)
+            if code == "HTTP_429":
+                rate_limit_backoff_seconds = min(
+                    RATE_LIMIT_BACKOFF_MAX_SECONDS,
+                    RATE_LIMIT_BACKOFF_INITIAL_SECONDS if rate_limit_backoff_seconds <= 0
+                    else rate_limit_backoff_seconds * 2,
+                )
+                rate_limit_backoff_until=time.monotonic()+rate_limit_backoff_seconds
+                poll_hot_until=0.0
+                append_console_event(
+                    "TRANSPORT_BACKOFF",
+                    state="DEGRADED",
+                    error_code=code,
+                    action_summary=f"retry_after_seconds={rate_limit_backoff_seconds}",
+                )
             if code != last_error_code or now-last_error_write>=60:
                 try_write_runtime_status(error_code=code,error_at=utcnow())
                 last_error_code=code
