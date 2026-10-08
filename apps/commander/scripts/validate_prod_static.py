@@ -363,6 +363,12 @@ need(
     "MOBILE_NAVIGATION",
 )
 need(
+    "async function startRemoteAuth" in JS
+    and "if (!authProviderConfigured) await configureAuthUi();" in JS
+    and "O HARA Identity ainda não está disponível para autenticação." not in JS,
+    "AUTH_CONFIG_TRANSIENT_FAILURE_DOES_NOT_BLOCK_LOGIN",
+)
+need(
     "function deviceApprovalLabel(mode)" in JS
     and '"PERSISTENT_TRUSTED"' in JS
     and '"Sempre permitido"' in JS

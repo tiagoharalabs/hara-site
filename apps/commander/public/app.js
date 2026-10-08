@@ -117,15 +117,15 @@
   const PORTAL_DASHBOARD_CACHE_MS = 30 * 1000;
   const PORTAL_DEVICES_CACHE_MS = 15 * 1000;
 
-  function startRemoteAuth(signup = false, forceLogin = false) {
+  async function startRemoteAuth(signup = false, forceLogin = false) {
     if (!remotePortal) {
       route(signup ? "signup" : "login");
       return;
     }
-    if (!authProviderConfigured) {
-      showToast("O HARA Identity ainda não está disponível para autenticação.");
-      return;
-    }
+    // Auth availability in the browser is advisory only. A transient failure of
+    // /api/portal/auth-config must never block a valid OIDC login. Recheck once
+    // to refresh the UI, then let /auth/login remain the server-side authority.
+    if (!authProviderConfigured) await configureAuthUi();
     const target = "/auth/login?return_to=" + encodeURIComponent("/#devices")
       + (signup ? "&screen_hint=signup" : "")
       + (forceLogin ? "&force_login=1" : "");
