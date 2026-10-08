@@ -123,6 +123,15 @@ function operationalToolError(code, args = undefined) {
   if (code === "PROCESS_SESSION_EXITED") {
     return build("TERMINAL", "PROCESS_STATE", false, { session_state: "EXITED" });
   }
+  if (code === "PATH_VALUE_INVALID") {
+    return build("INVALID_TARGET", "FILESYSTEM_PATH", false, { valid_target: false, reason: "CONTROL_CHARACTER_OR_LENGTH" });
+  }
+  if (code === "FILE_PRECONDITION_FAILED") {
+    return build("CONFLICT", "FILE_PRECONDITION", false, { file_changed: true, recommended_tool: "hara.files.info" });
+  }
+  if (code === "SYMLINK_MUTATION_DENIED") {
+    return build("INVALID_TARGET", "FILESYSTEM_SAFETY", false, { symlink: true, mutation_allowed: false, recommended_tool: "hara.files.info" });
+  }
   if (["DESTINATION_EXISTS", "PATH_EXISTS_NOT_DIRECTORY", "FILESYSTEM_PATH_EXISTS"].includes(code)) {
     return build("CONFLICT", "FILESYSTEM_STATE", false, { conflict: true });
   }
@@ -392,7 +401,7 @@ export function createCustomerMcpServer({ executeTool }) {
     "hara.files.search",
     toolConfig({
       title: "Search Files",
-      description: "Run a bounded read-only filename or text-content search on a governed computer without invoking a shell. Returns at most 100 matches and reports truncation.",
+      description: "Run a bounded read-only filename or text-content search without invoking a shell. offset + next_offset support deterministic continuation; scan_truncated distinguishes scan limits from more results.",
       inputSchema: z.object({
         computer: z.string().min(1).max(120).optional(),
         path: z.string().min(1).max(4096),
@@ -402,6 +411,7 @@ export function createCustomerMcpServer({ executeTool }) {
         include_hidden: z.boolean().optional(),
         ignore_case: z.boolean().optional(),
         file_glob: z.string().max(180).optional(),
+        offset: z.number().int().min(0).max(10000).optional(),
       }).strict(),
     }),
     call("hara.files.search"),
@@ -411,12 +421,13 @@ export function createCustomerMcpServer({ executeTool }) {
     "hara.files.list",
     toolConfig({
       title: "List Directory",
-      description: "List directory entries and metadata on a governed computer without reading file contents.",
+      description: "List directory entries and metadata without reading file contents. offset + next_offset provide stateless continuation.",
       inputSchema: z.object({
         computer: z.string().min(1).max(120).optional(),
         path: z.string().min(1).max(4096),
         limit: z.number().int().min(1).max(200).optional(),
         depth: z.number().int().min(1).max(5).optional(),
+        offset: z.number().int().min(0).max(10000).optional(),
       }).strict(),
     }),
     call("hara.files.list"),
@@ -426,7 +437,7 @@ export function createCustomerMcpServer({ executeTool }) {
     "hara.files.read",
     toolConfig({
       title: "Read Text File",
-      description: "Read a bounded range of a text file from a governed computer. Binary files and oversized reads are refused.",
+      description: "Read a bounded text-file line range. Returns eof/has_more/next_offset so callers can continue without guessing; symlink resolution is reported explicitly.",
       inputSchema: z.object({
         computer: z.string().min(1).max(120).optional(),
         path: z.string().min(1).max(4096),
@@ -473,12 +484,13 @@ export function createCustomerMcpServer({ executeTool }) {
     "hara.files.write",
     toolConfig({
       title: "Write Text File",
-      description: "Write or append bounded UTF-8 text on a governed computer. Existing content receives a local preimage backup. Requires local terminal approval.",
+      description: "Write or append bounded UTF-8 text. Existing content receives a preimage backup; expected_sha256 can fail closed if the file changed since it was read. Symlink leaf targets are refused for mutation.",
       inputSchema: z.object({
         computer: z.string().min(1).max(120).optional(),
         path: z.string().min(1).max(4096),
         content: z.string().max(65536),
         mode: z.enum(["rewrite","append"]).optional(),
+        expected_sha256: z.string().regex(/^[0-9a-fA-F]{64}$/).optional(),
       }).strict(),
       readOnlyHint: false,
       destructiveHint: true,
@@ -491,16 +503,17 @@ export function createCustomerMcpServer({ executeTool }) {
     "hara.files.edit",
     toolConfig({
       title: "Edit Text File",
-      description: "Replace exact text in a bounded UTF-8 file, with preimage backup and fail-closed match rules. Requires local terminal approval.",
+      description: "Replace exact text with preimage backup and fail-closed match rules. expected_sha256 adds optimistic concurrency protection; symlink leaf targets are refused.",
       inputSchema: z.object({
         computer: z.string().min(1).max(120).optional(),
         path: z.string().min(1).max(4096),
         old_text: z.string().min(1).max(32768),
         new_text: z.string().max(32768),
         replace_all: z.boolean().optional(),
+        expected_sha256: z.string().regex(/^[0-9a-fA-F]{64}$/).optional(),
       }).strict(),
       readOnlyHint: false,
-      destructiveHint: false,
+      destructiveHint: true,
       idempotentHint: false,
     }),
     call("hara.files.edit"),
@@ -517,7 +530,7 @@ export function createCustomerMcpServer({ executeTool }) {
         destination: z.string().min(1).max(4096),
       }).strict(),
       readOnlyHint: false,
-      destructiveHint: false,
+      destructiveHint: true,
       idempotentHint: false,
     }),
     call("hara.files.move"),
@@ -542,10 +555,11 @@ export function createCustomerMcpServer({ executeTool }) {
     "hara.files.delete",
     toolConfig({
       title: "Delete File Reversibly",
-      description: "Delete one regular file only after creating a verified local preimage for rollback. Directories are refused. Requires local operator approval.",
+      description: "Delete one regular file only after creating a verified local preimage. Directories and symlink leaf targets are refused; expected_sha256 can prevent deleting a changed file.",
       inputSchema: z.object({
         computer: z.string().min(1).max(120).optional(),
         path: z.string().min(1).max(4096),
+        expected_sha256: z.string().regex(/^[0-9a-fA-F]{64}$/).optional(),
       }).strict(),
       readOnlyHint: false, destructiveHint: true, idempotentHint: false,
     }),

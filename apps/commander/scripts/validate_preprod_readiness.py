@@ -64,6 +64,7 @@ def main():
     ])
     checks = (
         ("COMMANDER_PREPROD_UI", "validate_prod_static.py"),
+        ("COMMANDER_PREPROD_CANONICAL_FUNCTIONS", "validate_canonical_functions_hardening.py"),
         ("COMMANDER_PREPROD_AGENT", "validate_device_installers.py"),
         ("COMMANDER_PREPROD_AGENT_REQUEST_EFFICIENCY", "validate_agent_request_efficiency.py"),
         ("COMMANDER_PREPROD_REENROLL", "validate_issue168_reenroll.py"),

@@ -7,6 +7,7 @@ import getpass
 import subprocess
 import fnmatch
 import difflib
+import errno
 import shutil
 import os
 import platform
@@ -16,6 +17,7 @@ import select
 import shlex
 import signal
 import sqlite3
+import stat
 import sys
 import threading
 import uuid
@@ -1363,6 +1365,71 @@ def request_local_approval(call, timeout_seconds=30):
     append_console_event("APPROVAL_TIMEOUT",call,state="DENIED",approval_id=approval_id,action_summary=summary)
     raise ValueError("LOCAL_OPERATOR_APPROVAL_TIMEOUT")
 
+def _checked_path_text(path_value):
+    text=str(path_value or "")
+    if not text or len(text)>4096 or any(ord(ch)<32 or ord(ch)==127 for ch in text):
+        raise ValueError("PATH_VALUE_INVALID")
+    return text
+
+def _lexical_path(path_value):
+    raw=Path(_checked_path_text(path_value)).expanduser()
+    return Path(os.path.abspath(os.fspath(raw)))
+
+def _leaf_kind(path):
+    try:
+        mode=path.lstat().st_mode
+    except FileNotFoundError:
+        return "missing"
+    if stat.S_ISLNK(mode): return "symlink"
+    if stat.S_ISDIR(mode): return "directory"
+    if stat.S_ISREG(mode): return "file"
+    return "other"
+
+def _reject_mutation_symlink(path):
+    if _leaf_kind(path)=="symlink":
+        raise ValueError("SYMLINK_MUTATION_DENIED")
+
+def _validate_expected_sha256(value):
+    if value is None: return None
+    text=str(value).strip().lower()
+    if not re.fullmatch(r"[0-9a-f]{64}",text):
+        raise ValueError("FILE_PRECONDITION_INVALID")
+    return text
+
+def _read_regular_nofollow(path,max_bytes):
+    flags=os.O_RDONLY|getattr(os,"O_NOFOLLOW",0)
+    try:
+        fd=os.open(str(path),flags)
+    except OSError as exc:
+        if exc.errno==errno.ELOOP: raise ValueError("SYMLINK_MUTATION_DENIED")
+        raise
+    try:
+        st=os.fstat(fd)
+        if not stat.S_ISREG(st.st_mode): raise ValueError("PATH_NOT_FILE")
+        chunks=[]; total=0
+        while True:
+            chunk=os.read(fd,1024*1024)
+            if not chunk: break
+            total+=len(chunk)
+            if total>max_bytes: raise ValueError("HASH_FILE_TOO_LARGE")
+            chunks.append(chunk)
+        return b"".join(chunks),st
+    finally:
+        os.close(fd)
+
+def _sha256_regular_file(path,max_bytes=128*1024*1024):
+    data,_=_read_regular_nofollow(path,max_bytes)
+    return hashlib.sha256(data).hexdigest(),len(data)
+
+def _enforce_file_precondition(path,expected_sha256):
+    expected=_validate_expected_sha256(expected_sha256)
+    if expected is None: return None
+    if _leaf_kind(path)!="file": raise ValueError("FILE_PRECONDITION_FAILED")
+    actual,_=_sha256_regular_file(path,max_bytes=2*1024*1024)
+    if not hmac.compare_digest(actual,expected): raise ValueError("FILE_PRECONDITION_FAILED")
+    return actual
+
+
 def _preimage_paths(preimage_id):
     value=str(preimage_id or "")
     if not re.fullmatch(r"HARA-PREIMAGE-[0-9a-f]{32}",value): raise ValueError("PREIMAGE_ID_INVALID")
@@ -1380,12 +1447,12 @@ def _load_preimage(preimage_id):
     return meta,data
 
 def _store_preimage(path, call_id, source_tool=None):
-    if not path.exists() or not path.is_file(): return None
-    resolved=path.resolve(strict=True)
-    data=resolved.read_bytes()
-    if len(data)>2*1024*1024: raise ValueError("PREIMAGE_FILE_TOO_LARGE")
+    path=_lexical_path(path)
+    if _leaf_kind(path)=="missing": return None
+    _reject_mutation_symlink(path)
+    if _leaf_kind(path)!="file": return None
+    data,st=_read_regular_nofollow(path,2*1024*1024)
     sha=hashlib.sha256(data).hexdigest()
-    st=resolved.stat()
     preimage_id="HARA-PREIMAGE-"+uuid.uuid4().hex
     PREIMAGE_DIR.mkdir(parents=True,exist_ok=True,mode=0o700)
     meta_path,data_path=_preimage_paths(preimage_id)
@@ -1393,24 +1460,43 @@ def _store_preimage(path, call_id, source_tool=None):
     data_tmp.write_bytes(data); os.chmod(data_tmp,0o600); os.replace(data_tmp,data_path); os.chmod(data_path,0o600)
     meta={
         "schema":"hara.commander-file-preimage.v1",
-        "preimage_id":preimage_id,
-        "original_path":str(resolved),
-        "sha256":sha,
-        "bytes":len(data),
-        "mode":int(st.st_mode & 0o777),
-        "source_call_id":str(call_id or "")[:180],
-        "source_tool":str(source_tool or "")[:120] or None,
+        "preimage_id":preimage_id,"original_path":str(path),"sha256":sha,"bytes":len(data),
+        "mode":int(st.st_mode & 0o777),"device":int(st.st_dev),"inode":int(st.st_ino),
+        "mtime_ns":int(st.st_mtime_ns),"size_bytes":int(st.st_size),
+        "source_call_id":str(call_id or "")[:180],"source_tool":str(source_tool or "")[:120] or None,
         "created_at_utc":utcnow(),
     }
     meta_tmp=meta_path.with_suffix(".tmp")
     meta_tmp.write_text(json.dumps(meta,sort_keys=True,separators=(",",":")),encoding="utf-8"); os.chmod(meta_tmp,0o600); os.replace(meta_tmp,meta_path); os.chmod(meta_path,0o600)
     return meta
 
+def _discard_preimage(preimage):
+    if not preimage: return
+    try:
+        meta_path,data_path=_preimage_paths(preimage.get("preimage_id"))
+        meta_path.unlink(missing_ok=True); data_path.unlink(missing_ok=True)
+    except Exception:
+        pass
+
+def _assert_path_matches_preimage(path,preimage):
+    if not preimage: raise ValueError("PREIMAGE_REQUIRED")
+    _reject_mutation_symlink(path)
+    try: st=path.lstat()
+    except FileNotFoundError: raise ValueError("FILE_PRECONDITION_FAILED")
+    if not stat.S_ISREG(st.st_mode): raise ValueError("FILE_PRECONDITION_FAILED")
+    for key,observed in (("device",st.st_dev),("inode",st.st_ino),("size_bytes",st.st_size),("mtime_ns",st.st_mtime_ns)):
+        expected=preimage.get(key)
+        if expected is not None and int(expected)!=int(observed): raise ValueError("FILE_PRECONDITION_FAILED")
+    sha,_=_sha256_regular_file(path,max_bytes=2*1024*1024)
+    if not hmac.compare_digest(sha,str(preimage.get("sha256") or "")): raise ValueError("FILE_PRECONDITION_FAILED")
+    return sha
+
+
 def filesystem_preimages_list(limit=50,path_filter=None):
     PREIMAGE_DIR.mkdir(parents=True,exist_ok=True,mode=0o700)
     wanted=None
     if path_filter:
-        wanted=str(Path(path_filter).expanduser().resolve(strict=False))
+        wanted=str(Path(_checked_path_text(path_filter)).expanduser().resolve(strict=False))
     items=[]
     for meta_path in PREIMAGE_DIR.glob("HARA-PREIMAGE-*.json"):
         try:
@@ -1434,8 +1520,9 @@ def filesystem_preimages_list(limit=50,path_filter=None):
 
 def filesystem_rollback(call,preimage_id):
     meta,data=_load_preimage(preimage_id)
-    target=Path(str(meta["original_path"]))
-    if target.exists() and not target.is_file(): raise ValueError("ROLLBACK_TARGET_NOT_FILE")
+    target=_lexical_path(str(meta["original_path"]))
+    _reject_mutation_symlink(target)
+    if _leaf_kind(target) not in {"missing","file"}: raise ValueError("ROLLBACK_TARGET_NOT_FILE")
     if not target.parent.exists() or not target.parent.is_dir(): raise ValueError("PARENT_DIRECTORY_NOT_FOUND")
     current=_store_preimage(target,(call.get("call_id") or "rollback")+"-current","hara.files.rollback") if target.exists() else None
     tmp=target.with_name("."+target.name+".hara-rollback-"+str(os.getpid()))
@@ -1518,7 +1605,7 @@ def _process_output_payload(session,offset=None,length=200,wait_ms=0):
 def process_start(command,cwd=None,timeout_ms=1000):
     command=str(command or "")
     if not command or len(command)>4096 or "\x00" in command: raise ValueError("PROCESS_COMMAND_INVALID")
-    work=Path(cwd).expanduser().resolve(strict=True) if cwd else Path.home()
+    work=Path(_checked_path_text(cwd)).expanduser().resolve(strict=True) if cwd else Path.home()
     if not work.is_dir(): raise ValueError("PROCESS_CWD_INVALID")
     pid,fd=pty.fork()
     if pid==0:
@@ -1617,69 +1704,102 @@ def cleanup_process_sessions():
     return killed
 
 def filesystem_create_directory(path_value,parents=True):
-    path=Path(path_value).expanduser()
-    existed=path.exists()
-    if existed and not path.is_dir(): raise ValueError("PATH_EXISTS_NOT_DIRECTORY")
+    path=_lexical_path(path_value)
+    _reject_mutation_symlink(path)
+    existed=_leaf_kind(path)!="missing"
+    if existed and _leaf_kind(path)!="directory": raise ValueError("PATH_EXISTS_NOT_DIRECTORY")
     path.mkdir(parents=bool(parents),exist_ok=True)
     return {"path":str(path.resolve()),"created":not existed,"parents":bool(parents)}
 
-def filesystem_write(call,path_value,content,mode="rewrite"):
-    path=Path(path_value).expanduser()
-    if path.exists() and not path.is_file(): raise ValueError("PATH_NOT_FILE")
-    data=str(content)
-    if len(data.encode("utf-8"))>65536: raise ValueError("WRITE_TOO_LARGE")
-    preimage=_store_preimage(path,call.get("call_id") or "write","hara.files.write") if path.exists() else None
-    if not path.parent.exists() or not path.parent.is_dir(): raise ValueError("PARENT_DIRECTORY_NOT_FOUND")
+def filesystem_write(call,path_value,content,mode="rewrite",expected_sha256=None):
+    path=_lexical_path(path_value); _reject_mutation_symlink(path); kind=_leaf_kind(path)
+    if kind not in {"missing","file"}: raise ValueError("PATH_NOT_FILE")
+    data=str(content); encoded=data.encode("utf-8")
+    if len(encoded)>65536: raise ValueError("WRITE_TOO_LARGE")
+    expected=_validate_expected_sha256(expected_sha256)
+    if expected is not None: _enforce_file_precondition(path,expected)
+    preimage=_store_preimage(path,call.get("call_id") or "write","hara.files.write") if kind=="file" else None
+    previous_sha=str(preimage.get("sha256") or "") if preimage else None
+    if expected is not None and (not previous_sha or not hmac.compare_digest(previous_sha,expected)):
+        _discard_preimage(preimage); raise ValueError("FILE_PRECONDITION_FAILED")
+    if not path.parent.exists() or not path.parent.is_dir():
+        _discard_preimage(preimage); raise ValueError("PARENT_DIRECTORY_NOT_FOUND")
+    if preimage: _assert_path_matches_preimage(path,preimage)
     if mode=="append":
-        with path.open("a",encoding="utf-8") as fh: fh.write(data)
+        flags=os.O_WRONLY|os.O_APPEND|getattr(os,"O_NOFOLLOW",0)
+        try: fd=os.open(str(path),flags)
+        except OSError as exc:
+            if exc.errno==errno.ELOOP: raise ValueError("SYMLINK_MUTATION_DENIED")
+            raise
+        try: os.write(fd,encoded)
+        finally: os.close(fd)
     elif mode=="rewrite":
         tmp=path.with_name("."+path.name+".hara-tmp-"+str(os.getpid()))
         tmp.write_text(data,encoding="utf-8"); os.replace(tmp,path)
-    else: raise ValueError("WRITE_MODE_INVALID")
-    return {"path":str(path.resolve()),"mode":mode,"bytes_written":len(data.encode("utf-8")),"preimage_id":preimage.get("preimage_id") if preimage else None,"preimage_sha256":preimage.get("sha256") if preimage else None}
+    else:
+        _discard_preimage(preimage); raise ValueError("WRITE_MODE_INVALID")
+    current_sha,current_bytes=_sha256_regular_file(path,max_bytes=2*1024*1024)
+    return {"path":str(path),"mode":mode,"bytes_written":len(encoded),"size_bytes":current_bytes,"previous_sha256":previous_sha,"sha256":current_sha,"precondition_checked":expected is not None,"preimage_id":preimage.get("preimage_id") if preimage else None,"preimage_sha256":preimage.get("sha256") if preimage else None}
 
-def filesystem_edit(call,path_value,old_text,new_text,replace_all=False):
-    path=Path(path_value).expanduser().resolve(strict=True)
-    if not path.is_file(): raise ValueError("PATH_NOT_FILE")
+def filesystem_edit(call,path_value,old_text,new_text,replace_all=False,expected_sha256=None):
+    path=_lexical_path(path_value); _reject_mutation_symlink(path)
+    if _leaf_kind(path)!="file": raise ValueError("PATH_NOT_FILE")
     if path.stat().st_size>2*1024*1024: raise ValueError("FILE_TOO_LARGE")
-    text=path.read_text(encoding="utf-8",errors="strict")
-    count=text.count(old_text)
-    if count==0: raise ValueError("EDIT_MATCH_NOT_FOUND")
-    if not replace_all and count!=1: raise ValueError("EDIT_MATCH_AMBIGUOUS")
+    expected=_validate_expected_sha256(expected_sha256)
+    if expected is not None: _enforce_file_precondition(path,expected)
     preimage=_store_preimage(path,call.get("call_id") or "edit","hara.files.edit")
+    previous_sha=str(preimage.get("sha256") or "")
+    if expected is not None and not hmac.compare_digest(previous_sha,expected):
+        _discard_preimage(preimage); raise ValueError("FILE_PRECONDITION_FAILED")
+    _,snapshot=_load_preimage(preimage["preimage_id"])
+    try: text=snapshot.decode("utf-8",errors="strict")
+    except UnicodeDecodeError: _discard_preimage(preimage); raise ValueError("BINARY_FILE_DENIED")
+    count=text.count(old_text)
+    if count==0: _discard_preimage(preimage); raise ValueError("EDIT_MATCH_NOT_FOUND")
+    if not replace_all and count!=1: _discard_preimage(preimage); raise ValueError("EDIT_MATCH_AMBIGUOUS")
     updated=text.replace(old_text,new_text) if replace_all else text.replace(old_text,new_text,1)
+    _assert_path_matches_preimage(path,preimage)
     tmp=path.with_name("."+path.name+".hara-tmp-"+str(os.getpid())); tmp.write_text(updated,encoding="utf-8"); os.replace(tmp,path)
-    return {"path":str(path),"replacements":count if replace_all else 1,"preimage_id":preimage.get("preimage_id"),"preimage_sha256":preimage.get("sha256")}
+    current_sha,current_bytes=_sha256_regular_file(path,max_bytes=2*1024*1024)
+    return {"path":str(path),"replacements":count if replace_all else 1,"size_bytes":current_bytes,"previous_sha256":previous_sha,"sha256":current_sha,"precondition_checked":expected is not None,"preimage_id":preimage.get("preimage_id"),"preimage_sha256":preimage.get("sha256")}
 
 def filesystem_move(source_value,destination_value):
-    src=Path(source_value).expanduser().resolve(strict=True)
-    dst=Path(destination_value).expanduser()
-    if dst.exists(): raise ValueError("DESTINATION_EXISTS")
+    src=_lexical_path(source_value); dst=_lexical_path(destination_value)
+    source_kind=_leaf_kind(src)
+    if source_kind=="missing": raise FileNotFoundError(str(src))
+    if _leaf_kind(dst)!="missing": raise ValueError("DESTINATION_EXISTS")
     if not dst.parent.exists() or not dst.parent.is_dir(): raise ValueError("PARENT_DIRECTORY_NOT_FOUND")
     moved=shutil.move(str(src),str(dst))
-    return {"source":str(src),"destination":str(Path(moved).resolve()),"overwrote":False}
+    return {
+        "source":str(src),"destination":str(_lexical_path(moved)),"source_type":source_kind,
+        "symlink_preserved":source_kind=="symlink","overwrote":False,
+    }
 
 def filesystem_copy(source_value,destination_value):
-    src=Path(source_value).expanduser().resolve(strict=True)
-    if not src.is_file(): raise ValueError("SOURCE_NOT_FILE")
+    src=_lexical_path(source_value); dst=_lexical_path(destination_value)
+    if _leaf_kind(src)=="symlink": raise ValueError("SYMLINK_MUTATION_DENIED")
+    if _leaf_kind(src)!="file": raise ValueError("SOURCE_NOT_FILE")
     if src.stat().st_size>2*1024*1024: raise ValueError("COPY_FILE_TOO_LARGE")
-    dst=Path(destination_value).expanduser()
-    if dst.exists(): raise ValueError("DESTINATION_EXISTS")
+    if _leaf_kind(dst)!="missing": raise ValueError("DESTINATION_EXISTS")
     if not dst.parent.exists() or not dst.parent.is_dir(): raise ValueError("PARENT_DIRECTORY_NOT_FOUND")
     shutil.copy2(str(src),str(dst))
-    return {"source":str(src),"destination":str(dst.resolve(strict=True)),"bytes":int(dst.stat().st_size),"sha256":hashlib.sha256(dst.read_bytes()).hexdigest(),"overwrote":False}
+    sha,size=_sha256_regular_file(dst,max_bytes=2*1024*1024)
+    return {"source":str(src),"destination":str(dst),"bytes":size,"sha256":sha,"overwrote":False}
 
-def filesystem_delete(call,path_value):
-    path=Path(path_value).expanduser().resolve(strict=True)
-    if not path.is_file(): raise ValueError("DELETE_TARGET_NOT_FILE")
+def filesystem_delete(call,path_value,expected_sha256=None):
+    path=_lexical_path(path_value); _reject_mutation_symlink(path)
+    if _leaf_kind(path)!="file": raise ValueError("DELETE_TARGET_NOT_FILE")
     if path.stat().st_size>2*1024*1024: raise ValueError("DELETE_FILE_TOO_LARGE")
+    expected=_validate_expected_sha256(expected_sha256)
+    if expected is not None: _enforce_file_precondition(path,expected)
     preimage=_store_preimage(path,call.get("call_id") or "delete","hara.files.delete")
-    if not preimage: raise ValueError("PREIMAGE_REQUIRED")
-    expected=preimage.get("sha256")
-    if hashlib.sha256(path.read_bytes()).hexdigest()!=expected: raise ValueError("PREIMAGE_SOURCE_MISMATCH")
+    previous_sha=str(preimage.get("sha256") or "") if preimage else ""
+    if expected is not None and not hmac.compare_digest(previous_sha,expected):
+        _discard_preimage(preimage); raise ValueError("FILE_PRECONDITION_FAILED")
+    _assert_path_matches_preimage(path,preimage)
     path.unlink()
-    if path.exists(): raise ValueError("DELETE_VERIFY_FAILED")
-    return {"path":str(path),"deleted":True,"preimage_id":preimage.get("preimage_id"),"preimage_sha256":expected}
+    if _leaf_kind(path)!="missing": raise ValueError("DELETE_VERIFY_FAILED")
+    return {"path":str(path),"deleted":True,"deleted_sha256":previous_sha,"precondition_checked":expected is not None,"preimage_id":preimage.get("preimage_id"),"preimage_sha256":previous_sha}
 
 def mark_device_offline(config):
     try:
@@ -1916,37 +2036,46 @@ def post_json(url, token, payload, timeout=25):
 
 def _function_spec(function_id):
     specs={
-        "device.info":("DEVICE","Consulta informações básicas e não sensíveis deste computador."),
-        "device.ping":("DEVICE","Valida conectividade ponta a ponta com este Agent."),
-        "system.uptime":("SYSTEM","Consulta uptime e load average do sistema."),
-        "system.resources":("SYSTEM","Consulta CPU, memória, swap, load average e capacidade do disco raiz sem shell."),
-        "workspace.inspect":("WORKSPACE","Inspeciona metadados limitados de projeto e Git HEAD sem executar comandos externos."),
-        "process.list":("PROCESS","Lista processos com metadados sanitizados, sem linha de comando ou ambiente."),
-        "filesystem.info":("FILESYSTEM","Consulta metadados de um caminho sem ler conteúdo."),
-        "filesystem.hash":("FILESYSTEM","Calcula SHA-256 e tamanho de um arquivo regular."),
-        "filesystem.diff":("FILESYSTEM","Compara dois arquivos texto com diff unificado limitado."),
-        "filesystem.search":("FILESYSTEM","Busca nomes de arquivos ou texto com limites de tempo, tamanho e quantidade."),
-        "filesystem.list":("FILESYSTEM","Lista entradas e metadados de um diretório sem ler conteúdo de arquivos."),
-        "filesystem.read":("FILESYSTEM","Lê um intervalo limitado de um arquivo texto acessível ao usuário local."),
-        "filesystem.read_many":("FILESYSTEM","Lê intervalos limitados de até dez arquivos texto sem abortar o lote por falha individual."),
+        "device.info":("DEVICE","Consulta informações básicas e não sensíveis deste computador.",{"argv":[],"result_hints":["device_id","hostname","agent_version","tunnel_mode"]}),
+        "device.ping":("DEVICE","Valida conectividade ponta a ponta com este Agent.",{"argv":[],"result_hints":["pong","device_id","at_utc"]}),
+        "system.uptime":("SYSTEM","Consulta uptime e load average do sistema.",{"argv":[],"result_hints":["uptime_seconds","load_average_1m","load_average_5m","load_average_15m"]}),
+        "system.resources":("SYSTEM","Consulta CPU, memória, swap, load average e capacidade do disco raiz sem shell.",{"argv":[],"result_hints":["cpu_logical","memory_available_bytes","root_disk_free_bytes"]}),
+        "workspace.inspect":("WORKSPACE","Inspeciona metadados limitados de projeto e Git HEAD sem executar comandos externos.",{"argv":["path","max_entries? (1..200)"],"bounded":True}),
+        "process.list":("PROCESS","Lista processos com metadados sanitizados, sem linha de comando ou ambiente.",{"argv":["limit? (1..200)"],"result_hints":["returned_count","available_count","truncated"]}),
+        "filesystem.info":("FILESYSTEM","Consulta metadados de um caminho sem ler conteúdo. Symlink leaf é reportado sem ser silenciosamente resolvido.",{"argv":["path"],"symlink_semantics":"LSTAT_LEAF","result_hints":["type","is_symlink","symlink_target","resolved_path"]}),
+        "filesystem.hash":("FILESYSTEM","Calcula SHA-256 e tamanho de um arquivo regular, informando quando um symlink read-only foi seguido.",{"argv":["path"],"max_bytes":134217728,"result_hints":["sha256","bytes","followed_symlink","resolved_path"]}),
+        "filesystem.diff":("FILESYSTEM","Compara dois arquivos texto com diff unificado limitado.",{"argv":["left","right","max_lines? (1..400)"],"bounded":True}),
+        "filesystem.search":("FILESYSTEM","Busca nomes de arquivos ou texto com limites de tempo, tamanho e quantidade.",{"argv":["path","search_type(files|content)","pattern","max_results? (1..100)","include_hidden? (0|1)","ignore_case? (0|1)","file_glob?","offset? (0..10000)"],"continuation":{"input":"offset","output":"next_offset","flags":["has_more","scan_truncated"]}}),
+        "filesystem.list":("FILESYSTEM","Lista entradas e metadados de um diretório sem ler conteúdo de arquivos.",{"argv":["path","limit? (1..200)","depth? (1..5)","offset? (0..10000)"],"continuation":{"input":"offset","output":"next_offset","flag":"has_more"}}),
+        "filesystem.read":("FILESYSTEM","Lê um intervalo limitado de linhas de um arquivo texto acessível ao usuário local.",{"argv":["path","offset? (0..1000000)","length? (1..400)"],"continuation":{"input":"offset","output":"next_offset","flags":["has_more","eof","content_truncated","continuation_safe"]}}),
+        "filesystem.read_many":("FILESYSTEM","Lê o mesmo intervalo de até dez arquivos texto sem abortar o lote por falha individual.",{"argv":["offset (0..1000000)","length (1..100)","path1..path10"],"partial_failure":True,"continuation_per_file":True}),
     }
     if function_id not in specs: raise ValueError("UNKNOWN_FUNCTION_ID")
-    domain,description=specs[function_id]
+    domain,description,contract=specs[function_id]
     return {
         "function_id":function_id,"state":"ACTIVE","IDENTITY":{"domain":domain},
         "PURPOSE":{"description_pt_br":description},
         "EXECUTION_SEMANTICS":{"risk_class":"READ_ONLY","change_intent_required":False},
         "AUTHORITY":{"risk_class":"READ_ONLY","change_intent_required":False,"fail_closed":True},
         "FAILURE_ROLLBACK":{"fail_closed":True},
+        "CONTRACT":contract,
     }
 
 def catalog():
+    functions=[]
+    for fid in FUNCTION_IDS:
+        spec=_function_spec(fid)
+        functions.append({
+            "function_id":fid,"state":"ACTIVE",
+            "domain":spec["IDENTITY"]["domain"],
+            "risk_class":spec["EXECUTION_SEMANTICS"]["risk_class"],
+        })
     return {
         "registered_function_count":len(FUNCTION_IDS),
         "executable_function_count":len(FUNCTION_IDS),
         "active_function_count":len(FUNCTION_IDS),
         "domains":["DEVICE","SYSTEM","WORKSPACE","PROCESS","FILESYSTEM"],
-        "functions":[{"function_id":fid,"state":"ACTIVE"} for fid in FUNCTION_IDS],
+        "functions":functions,
     }
 
 def describe(function_id):
@@ -1957,7 +2086,8 @@ def device_info(config):
         "device_id":config["HARA_DEVICE_ID"],"hostname":platform.node(),
         "platform":platform.system().upper(),"platform_release":platform.release(),
         "architecture":config["HARA_DEVICE_ARCH"],"python_version":platform.python_version(),
-        "agent_version":AGENT_VERSION,"approval_mode":effective_approval_mode(config),"tunnel_mode":"OUTBOUND_RELAY",
+        "agent_version":AGENT_VERSION,"approval_mode":effective_approval_mode(config),
+        "tunnel_mode":transport_mode(config),
     }
 
 def device_ping(config):
@@ -2030,7 +2160,7 @@ def _workspace_git_metadata(root):
         return {"present":True,"branch":None,"head_oid":None,"head_state":"UNRESOLVED","dirty_state":"UNKNOWN_NOT_EVALUATED"}
 
 def workspace_inspect(path_value,max_entries=80):
-    target=Path(path_value).expanduser().resolve(strict=True)
+    target=Path(_checked_path_text(path_value)).expanduser().resolve(strict=True)
     start=target if target.is_dir() else target.parent
     markers=(".git","pyproject.toml","package.json","Cargo.toml","go.mod","pom.xml","build.gradle","build.gradle.kts","requirements.txt","CMakeLists.txt","Makefile")
     root=start; root_marker=None
@@ -2082,32 +2212,41 @@ def process_list(limit=50):
         except (FileNotFoundError,PermissionError,ProcessLookupError):
             continue
     out.sort(key=lambda item:(-int(item.get("rss_kb") or 0), int(item["pid"])))
-    return {"count":min(len(out),limit),"processes":out[:limit],"command_lines_exposed":False,"environment_exposed":False}
+    chosen=out[:limit]
+    return {
+        "count":len(chosen),"returned_count":len(chosen),"available_count":len(out),
+        "truncated":len(out)>len(chosen),"processes":chosen,
+        "command_lines_exposed":False,"environment_exposed":False,
+    }
 
 def filesystem_info(path_value):
-    path=Path(path_value).expanduser().resolve(strict=True)
+    path=_lexical_path(path_value)
     st=path.lstat()
-    kind="symlink" if path.is_symlink() else "directory" if path.is_dir() else "file" if path.is_file() else "other"
+    kind=_leaf_kind(path)
+    resolved_path=None
+    symlink_target=None
+    if kind=="symlink":
+        try: symlink_target=os.readlink(path)
+        except OSError: symlink_target=None
+        try: resolved_path=str(path.resolve(strict=True))
+        except (FileNotFoundError,PermissionError,OSError): resolved_path=None
     return {
         "path":str(path),"name":path.name,"type":kind,
         "size_bytes":int(st.st_size) if kind=="file" else None,
         "mode_octal":oct(st.st_mode & 0o777),
         "modified_at_utc":datetime.fromtimestamp(st.st_mtime,timezone.utc).isoformat(),
+        "is_symlink":kind=="symlink","symlink_target":symlink_target,"resolved_path":resolved_path,
     }
 
 def filesystem_hash(path_value):
-    path=Path(path_value).expanduser().resolve(strict=True)
-    if not path.is_file(): raise ValueError("PATH_NOT_FILE")
-    h=hashlib.sha256(); total=0
-    with path.open("rb") as fh:
-        for chunk in iter(lambda:fh.read(1024*1024),b""):
-            total+=len(chunk)
-            if total>128*1024*1024: raise ValueError("HASH_FILE_TOO_LARGE")
-            h.update(chunk)
-    return {"path":str(path),"bytes":total,"sha256":h.hexdigest()}
+    requested=_lexical_path(path_value)
+    followed_symlink=_leaf_kind(requested)=="symlink"
+    path=requested.resolve(strict=True)
+    sha,total=_sha256_regular_file(path,max_bytes=128*1024*1024)
+    return {"path":str(requested),"resolved_path":str(path),"followed_symlink":followed_symlink,"bytes":total,"sha256":sha}
 
 def filesystem_diff(left_value,right_value,max_lines=200):
-    left=Path(left_value).expanduser().resolve(strict=True); right=Path(right_value).expanduser().resolve(strict=True)
+    left=Path(_checked_path_text(left_value)).expanduser().resolve(strict=True); right=Path(_checked_path_text(right_value)).expanduser().resolve(strict=True)
     for path in (left,right):
         if not path.is_file(): raise ValueError("PATH_NOT_FILE")
         if path.stat().st_size>2*1024*1024: raise ValueError("FILE_TOO_LARGE")
@@ -2119,33 +2258,38 @@ def filesystem_diff(left_value,right_value,max_lines=200):
     cap=max(1,min(400,int(max_lines))); chosen=lines[:cap]
     return {"left":str(left),"right":str(right),"different":bool(lines),"line_count":len(chosen),"diff":"\n".join(chosen),"truncated":len(lines)>cap}
 
-def filesystem_search(path_value,search_type,pattern,max_results=50,include_hidden=False,ignore_case=True,file_glob=""):
-    root=Path(path_value).expanduser().resolve(strict=True)
+def filesystem_search(path_value,search_type,pattern,max_results=50,include_hidden=False,ignore_case=True,file_glob="",offset=0):
+    root=Path(_checked_path_text(path_value)).expanduser().resolve(strict=True)
     if not root.is_dir(): raise ValueError("PATH_NOT_DIRECTORY")
     if search_type not in ("files","content"): raise ValueError("SEARCH_TYPE_INVALID")
     if not pattern or len(pattern)>256: raise ValueError("SEARCH_PATTERN_INVALID")
-    max_results=max(1,min(100,int(max_results)))
-    deadline=time.monotonic()+3.0
-    scan_cap=5000
-    scanned=0; matches=[]; truncated=False
+    max_results=max(1,min(100,int(max_results))); offset=max(0,min(10000,int(offset)))
+    deadline=time.monotonic()+3.0; scan_cap=5000
+    scanned=0; matches=[]; matched_seen=0; scan_truncated=False; has_more=False; stop=False
     needle=pattern.lower() if ignore_case else pattern
+    def accept(match):
+        nonlocal matched_seen,has_more
+        index=matched_seen; matched_seen+=1
+        if index < offset: return False
+        if len(matches) < max_results:
+            matches.append(match); return False
+        has_more=True; return True
     for current,dirs,files in os.walk(root):
         if time.monotonic()>deadline or scanned>=scan_cap:
-            truncated=True; break
+            scan_truncated=True; break
+        dirs.sort(key=str.lower); files=sorted(files,key=str.lower)
         if not include_hidden:
             dirs[:]=[d for d in dirs if not d.startswith(".")]
             files=[f for f in files if not f.startswith(".")]
         for name in files:
             if time.monotonic()>deadline or scanned>=scan_cap:
-                truncated=True; break
+                scan_truncated=True; stop=True; break
             scanned+=1
             if file_glob and not fnmatch.fnmatch(name,file_glob): continue
-            path=Path(current)/name
-            rel=str(path.relative_to(root))
+            path=Path(current)/name; rel=str(path.relative_to(root))
             if search_type=="files":
                 hay=name.lower() if ignore_case else name
-                if needle in hay:
-                    matches.append({"path":rel,"type":"file"})
+                if needle in hay and accept({"path":rel,"type":"file"}): stop=True; break
             else:
                 try:
                     st=path.stat()
@@ -2156,61 +2300,99 @@ def filesystem_search(path_value,search_type,pattern,max_results=50,include_hidd
                         for line_no,line in enumerate(fh,1):
                             hay=line.lower() if ignore_case else line
                             if needle in hay:
-                                snippet=line.rstrip("\n")[:300]
-                                matches.append({"path":rel,"line":line_no,"text":snippet})
-                                if len(matches)>=max_results: break
+                                if accept({"path":rel,"line":line_no,"text":line.rstrip("\n")[:300]}): stop=True; break
+                    if stop: break
                 except (FileNotFoundError,PermissionError,OSError):
                     continue
-            if len(matches)>=max_results:
-                truncated=True; break
-        if truncated and len(matches)>=max_results: break
-    return {"path":str(root),"search_type":search_type,"pattern":pattern,"count":len(matches),"matches":matches[:max_results],"scanned_files":scanned,"truncated":truncated}
+        if stop: break
+    next_offset=offset+len(matches) if (has_more or scan_truncated) else None
+    return {
+        "path":str(root),"search_type":search_type,"pattern":pattern,"offset":offset,
+        "count":len(matches),"matches":matches,"matched_seen":matched_seen,"scanned_files":scanned,
+        "has_more":has_more,"next_offset":next_offset,"scan_truncated":scan_truncated,
+        "truncated":has_more or scan_truncated,
+    }
 
-def filesystem_list(path_value,limit=100,depth=1):
-    root=Path(path_value).expanduser().resolve(strict=True)
+def filesystem_list(path_value,limit=100,depth=1,offset=0):
+    root=Path(_checked_path_text(path_value)).expanduser().resolve(strict=True)
     if not root.is_dir(): raise ValueError("PATH_NOT_DIRECTORY")
-    limit=max(1,min(200,int(limit))); depth=max(1,min(5,int(depth)))
-    entries=[]; truncated=False
+    limit=max(1,min(200,int(limit))); depth=max(1,min(5,int(depth))); offset=max(0,min(10000,int(offset)))
+    entries=[]; seen=0; has_more=False
     def walk(current,level):
-        nonlocal truncated
-        if truncated or level>depth: return
+        nonlocal seen,has_more
+        if has_more or level>depth: return
         try: children=sorted(current.iterdir(),key=lambda e:e.name.lower())
         except PermissionError: return
         for entry in children:
-            if len(entries)>=limit: truncated=True; return
+            if has_more: return
             try:
                 st=entry.lstat(); kind="symlink" if entry.is_symlink() else "directory" if entry.is_dir() else "file" if entry.is_file() else "other"
-                entries.append({"path":str(entry.relative_to(root)),"name":entry.name,"type":kind,"size_bytes":int(st.st_size) if kind=="file" else None,"depth":level})
+                item={"path":str(entry.relative_to(root)),"name":entry.name,"type":kind,"size_bytes":int(st.st_size) if kind=="file" else None,"depth":level}
+                index=seen; seen+=1
+                if index>=offset:
+                    if len(entries)<limit: entries.append(item)
+                    else: has_more=True; return
                 if kind=="directory" and level<depth: walk(entry,level+1)
             except (FileNotFoundError,PermissionError,OSError):
                 continue
     walk(root,1)
-    return {"path":str(root),"count":len(entries),"entries":entries,"depth":depth,"truncated":truncated}
+    return {
+        "path":str(root),"offset":offset,"count":len(entries),"entries":entries,"depth":depth,
+        "has_more":has_more,"next_offset":offset+len(entries) if has_more else None,
+        "truncated":has_more,"visited_entries":seen,
+    }
 
 def filesystem_read(path_value,offset=0,length=200):
-    path=Path(path_value).expanduser().resolve(strict=True)
+    requested=_lexical_path(path_value)
+    followed_symlink=_leaf_kind(requested)=="symlink"
+    path=requested.resolve(strict=True)
     if not path.is_file(): raise ValueError("PATH_NOT_FILE")
-    if path.stat().st_size > 2*1024*1024: raise ValueError("FILE_TOO_LARGE")
-    lines=[]; binary=False
+    file_size=int(path.stat().st_size)
+    if file_size>2*1024*1024: raise ValueError("FILE_TOO_LARGE")
     with path.open("rb") as fh:
-        head=fh.read(4096)
-        binary=b"\x00" in head
-    if binary: raise ValueError("BINARY_FILE_DENIED")
+        if b"\x00" in fh.read(4096): raise ValueError("BINARY_FILE_DENIED")
+    offset=max(0,int(offset)); length=max(1,min(400,int(length)))
+    lines=[]; has_more=False; output_bytes=0; oversized_line=False
     with path.open("r",encoding="utf-8",errors="replace") as fh:
         for idx,line in enumerate(fh):
-            if idx < offset: continue
-            if len(lines)>=length: break
-            lines.append(line.rstrip("\n"))
+            if idx<offset: continue
+            value=line.rstrip("\n")
+            encoded=value.encode("utf-8")
+            separator=1 if lines else 0
+            if len(lines)>=length:
+                has_more=True; break
+            if output_bytes+separator+len(encoded)>65536:
+                if not lines:
+                    # A single logical line cannot be resumed by line offset.
+                    # Return a bounded preview and make the limitation explicit.
+                    preview=encoded[:65536].decode("utf-8",errors="ignore")
+                    lines.append(preview)
+                    output_bytes=len(preview.encode("utf-8"))
+                    oversized_line=True
+                has_more=True
+                break
+            lines.append(value); output_bytes+=separator+len(encoded)
     text="\n".join(lines)
-    if len(text)>65536: text=text[:65536]+"\n[HARA_COMMANDER_OUTPUT_TRUNCATED]"
-    return {"path":str(path),"offset":offset,"line_count":len(lines),"text":text}
+    continuation_safe=not oversized_line
+    next_offset=(offset+len(lines)) if has_more and continuation_safe else None
+    return {
+        "path":str(requested),"resolved_path":str(path),"followed_symlink":followed_symlink,
+        "file_size_bytes":file_size,"offset":offset,"line_count":len(lines),"text":text,
+        "has_more":has_more,"eof":not has_more,"next_offset":next_offset,
+        "content_truncated":oversized_line,"continuation_safe":continuation_safe,
+        "oversized_line":oversized_line,
+    }
 
 def filesystem_read_many(paths,offset=0,length=100):
     out=[]
     for raw in paths[:10]:
         try:
             item=filesystem_read(str(raw),offset,length)
-            out.append({"path":item["path"],"state":"PASS","offset":item["offset"],"line_count":item["line_count"],"text":item["text"]})
+            out.append({
+                "path":item["path"],"state":"PASS","offset":item["offset"],"line_count":item["line_count"],"text":item["text"],
+                "has_more":item.get("has_more"),"eof":item.get("eof"),"next_offset":item.get("next_offset"),
+                "content_truncated":item.get("content_truncated"),
+            })
         except Exception as exc:
             out.append({"path":str(raw),"state":"FAILED","error_code":safe_error_code(exc)})
     return {"count":len(out),"files":out,"offset":offset,"length":length}
@@ -2248,16 +2430,16 @@ def invoke(config, function_id, arguments):
         if len(argv)<2 or len(argv)>3: raise ValueError("FUNCTION_ARGUMENTS_DENIED")
         result=filesystem_diff(str(argv[0]),str(argv[1]),int(argv[2]) if len(argv)>=3 else 200)
     elif function_id=="filesystem.search":
-        if len(argv)<3 or len(argv)>7: raise ValueError("FUNCTION_ARGUMENTS_DENIED")
-        result=filesystem_search(str(argv[0]),str(argv[1]),str(argv[2]),int(argv[3]) if len(argv)>=4 else 50,argv[4]=="1" if len(argv)>=5 else False,argv[5]!="0" if len(argv)>=6 else True,str(argv[6]) if len(argv)>=7 else "")
+        if len(argv)<3 or len(argv)>8: raise ValueError("FUNCTION_ARGUMENTS_DENIED")
+        result=filesystem_search(str(argv[0]),str(argv[1]),str(argv[2]),int(argv[3]) if len(argv)>=4 else 50,argv[4]=="1" if len(argv)>=5 else False,argv[5]!="0" if len(argv)>=6 else True,str(argv[6]) if len(argv)>=7 else "",int(argv[7]) if len(argv)>=8 else 0)
     elif function_id=="filesystem.info":
         if len(argv)!=1: raise ValueError("FUNCTION_ARGUMENTS_DENIED")
         result=filesystem_info(str(argv[0]))
     elif function_id=="filesystem.list":
-        if len(argv)<1 or len(argv)>3: raise ValueError("FUNCTION_ARGUMENTS_DENIED")
-        limit=int(argv[1]) if len(argv)>=2 else 100; depth=int(argv[2]) if len(argv)>=3 else 1
-        if not 1<=limit<=200 or not 1<=depth<=5: raise ValueError("FUNCTION_ARGUMENTS_DENIED")
-        result=filesystem_list(str(argv[0]),limit,depth)
+        if len(argv)<1 or len(argv)>4: raise ValueError("FUNCTION_ARGUMENTS_DENIED")
+        limit=int(argv[1]) if len(argv)>=2 else 100; depth=int(argv[2]) if len(argv)>=3 else 1; offset=int(argv[3]) if len(argv)>=4 else 0
+        if not 1<=limit<=200 or not 1<=depth<=5 or not 0<=offset<=10000: raise ValueError("FUNCTION_ARGUMENTS_DENIED")
+        result=filesystem_list(str(argv[0]),limit,depth,offset)
     elif function_id=="filesystem.read_many":
         if len(argv)<3 or len(argv)>12: raise ValueError("FUNCTION_ARGUMENTS_DENIED")
         offset=int(argv[0]); length=int(argv[1]); paths=argv[2:]
@@ -2291,8 +2473,8 @@ def write_receipt(config, call, state, result=None):
         "device_id":config["HARA_DEVICE_ID"],
         "tool_id":tool_id,
         "function_id_if_any":(call.get("payload") or {}).get("function_id") or DIRECT_TOOL_FUNCTIONS.get(tool_id) or ((result or {}).get("function_id") if isinstance(result,dict) else None),
-        "transport_mode":"OUTBOUND_RELAY",
-        "operational_authority":"HARA_SERVICES",
+        "transport_mode":str(call.get("_transport") or "OUTBOUND_RELAY"),
+        "operational_authority":"HARA_COMMANDER_LOCAL" if str(call.get("_transport") or "")=="LOCAL_MCP" else "HARA_SERVICES",
         "execution_authority":"HARA_COMMANDER_AGENT",
         "mutation_class":_mutation_class(tool_id),
         "human_approval_required":bool(mutation and approval_mode=="ASK_EVERY_ACTION"),
@@ -2326,13 +2508,15 @@ def read_receipt(identifier):
 def execute_tool(config, call):
     tool=str(call.get("tool_id") or "")
     payload=call.get("payload") or {}
+    local_transport=str(call.get("_transport") or "")=="LOCAL_MCP"
+    operational_authority="HARA_COMMANDER_LOCAL" if local_transport else "HARA_SERVICES"
     if tool=="hara.health":
         result={
-            "services_bridge_state":"PASS",
-            "hara_services_state":"PASS",
+            "services_bridge_state":"BYPASSED_LOCAL" if local_transport else "PASS",
+            "hara_services_state":"NOT_IN_DATA_PLANE" if local_transport else "PASS",
             "registered_function_count":len(FUNCTION_IDS),
             "executable_function_count":len(FUNCTION_IDS),
-            "authority":"HARA_SERVICES",
+            "authority":operational_authority,
             "device":device_info(config),
         }
     elif tool=="hara.functions.list":
@@ -2362,17 +2546,15 @@ def execute_tool(config, call):
             argv=[str(payload["left"]),str(payload["right"]),str(payload.get("max_lines",200))]
         elif tool=="hara.files.search":
             required={"path","search_type","pattern"}
-            allowed=required|{"max_results","include_hidden","ignore_case","file_glob"}
+            allowed=required|{"max_results","include_hidden","ignore_case","file_glob","offset"}
             if not required.issubset(payload) or any(k not in allowed for k in payload): raise ValueError("FUNCTION_ARGUMENTS_DENIED")
-            argv=[str(payload["path"]),str(payload["search_type"]),str(payload["pattern"]),str(payload.get("max_results",50)),"1" if payload.get("include_hidden") else "0","0" if payload.get("ignore_case") is False else "1",str(payload.get("file_glob", ""))]
+            argv=[str(payload["path"]),str(payload["search_type"]),str(payload["pattern"]),str(payload.get("max_results",50)),"1" if payload.get("include_hidden") else "0","0" if payload.get("ignore_case") is False else "1",str(payload.get("file_glob", "")),str(payload.get("offset",0))]
         elif tool=="hara.files.info":
             if set(payload)!={"path"}: raise ValueError("FUNCTION_ARGUMENTS_DENIED")
             argv=[str(payload["path"])]
         elif tool=="hara.files.list":
-            if "path" not in payload or any(k not in ("path","limit","depth") for k in payload): raise ValueError("FUNCTION_ARGUMENTS_DENIED")
-            argv=[str(payload["path"])]
-            if "limit" in payload or "depth" in payload: argv.append(str(payload.get("limit",100)))
-            if "depth" in payload: argv.append(str(payload["depth"]))
+            if "path" not in payload or any(k not in ("path","limit","depth","offset") for k in payload): raise ValueError("FUNCTION_ARGUMENTS_DENIED")
+            argv=[str(payload["path"]),str(payload.get("limit",100)),str(payload.get("depth",1)),str(payload.get("offset",0))]
         elif tool=="hara.files.read_many":
             required={"paths"}; allowed=required|{"offset","length"}
             if not required.issubset(payload) or any(k not in allowed for k in payload) or not isinstance(payload.get("paths"),list): raise ValueError("FUNCTION_ARGUMENTS_DENIED")
@@ -2422,12 +2604,12 @@ def execute_tool(config, call):
         data=filesystem_create_directory(str(payload["path"]),payload.get("parents",True))
         result={"function_id":"filesystem.create_directory","risk_class":"MUTATING","process_exit_code":0,"stdout":json.dumps(data,sort_keys=True,separators=(",",":"),ensure_ascii=False),"domain_success_inferred":False,**({"preimage_sha256":data.get("preimage_sha256")} if data.get("preimage_sha256") else {})}
     elif tool=="hara.files.write":
-        if set(payload)-{"path","content","mode"} or not {"path","content"}.issubset(payload): raise ValueError("FUNCTION_ARGUMENTS_DENIED")
-        data=filesystem_write(call,str(payload["path"]),str(payload["content"]),str(payload.get("mode","rewrite")))
+        if set(payload)-{"path","content","mode","expected_sha256"} or not {"path","content"}.issubset(payload): raise ValueError("FUNCTION_ARGUMENTS_DENIED")
+        data=filesystem_write(call,str(payload["path"]),str(payload["content"]),str(payload.get("mode","rewrite")),payload.get("expected_sha256"))
         result={"function_id":"filesystem.write","risk_class":"MUTATING","process_exit_code":0,"stdout":json.dumps(data,sort_keys=True,separators=(",",":"),ensure_ascii=False),"domain_success_inferred":False,"preimage_sha256":data.get("preimage_sha256")}
     elif tool=="hara.files.edit":
-        if set(payload)-{"path","old_text","new_text","replace_all"} or not {"path","old_text","new_text"}.issubset(payload): raise ValueError("FUNCTION_ARGUMENTS_DENIED")
-        data=filesystem_edit(call,str(payload["path"]),str(payload["old_text"]),str(payload["new_text"]),bool(payload.get("replace_all",False)))
+        if set(payload)-{"path","old_text","new_text","replace_all","expected_sha256"} or not {"path","old_text","new_text"}.issubset(payload): raise ValueError("FUNCTION_ARGUMENTS_DENIED")
+        data=filesystem_edit(call,str(payload["path"]),str(payload["old_text"]),str(payload["new_text"]),bool(payload.get("replace_all",False)),payload.get("expected_sha256"))
         result={"function_id":"filesystem.edit","risk_class":"MUTATING","process_exit_code":0,"stdout":json.dumps(data,sort_keys=True,separators=(",",":"),ensure_ascii=False),"domain_success_inferred":False,"preimage_sha256":data.get("preimage_sha256")}
     elif tool=="hara.files.move":
         if set(payload)!={"source","destination"}: raise ValueError("FUNCTION_ARGUMENTS_DENIED")
@@ -2438,13 +2620,13 @@ def execute_tool(config, call):
         data=filesystem_copy(str(payload["source"]),str(payload["destination"]))
         result={"function_id":"filesystem.copy","risk_class":"MUTATING","process_exit_code":0,"stdout":json.dumps(data,sort_keys=True,separators=(",",":"),ensure_ascii=False),"domain_success_inferred":False}
     elif tool=="hara.files.delete":
-        if set(payload)!={"path"}: raise ValueError("FUNCTION_ARGUMENTS_DENIED")
-        data=filesystem_delete(call,str(payload["path"]))
+        if set(payload)-{"path","expected_sha256"} or "path" not in payload: raise ValueError("FUNCTION_ARGUMENTS_DENIED")
+        data=filesystem_delete(call,str(payload["path"]),payload.get("expected_sha256"))
         result={"function_id":"filesystem.delete","risk_class":"MUTATING","process_exit_code":0,"stdout":json.dumps(data,sort_keys=True,separators=(",",":"),ensure_ascii=False),"domain_success_inferred":False,"preimage_id":data.get("preimage_id"),"preimage_sha256":data.get("preimage_sha256")}
     elif tool=="hara.receipts.get":
         result=read_receipt(payload.get("receipt_id_or_sha256"))
         return {
-            "state":"PASS","operational_authority":"HARA_SERVICES",
+            "state":"PASS","operational_authority":operational_authority,
             "runtime_authority_from_chatgpt":False,"mutation_performed":False,
             "result":result,"blocker":None,
         }
@@ -2458,7 +2640,7 @@ def execute_tool(config, call):
         result["local_authorization_mode"]=approval.get("mode")
         result["authorization_source"]=approval.get("source")
     return {
-        "state":"PASS","operational_authority":"HARA_SERVICES",
+        "state":"PASS","operational_authority":operational_authority,
         "runtime_authority_from_chatgpt":False,"mutation_performed":mutation,
         "result":result,"blocker":None,"bridge_receipt_sha256":sha,
     }
@@ -2737,14 +2919,14 @@ def local_simple_mcp_tools():
         ("get_device_info","Get Device Info","Get local device and Agent information.",_mcp_schema({"computer":computer})),
         ("read_file","Read File","Read a text file.",_mcp_schema({"computer":computer,"path":path,"offset":{"type":"integer","minimum":0,"maximum":1000000},"length":{"type":"integer","minimum":1,"maximum":400}},["path"])),
         ("read_multiple_files","Read Multiple Files","Read multiple text files in one call.",_mcp_schema({"computer":computer,"paths":{"type":"array","items":path,"minItems":1,"maxItems":10},"offset":{"type":"integer","minimum":0,"maximum":1000000},"length":{"type":"integer","minimum":1,"maximum":100}},["paths"])),
-        ("write_file","Write File","Write or append text to a file.",_mcp_schema({"computer":computer,"path":path,"content":{"type":"string","maxLength":65536},"mode":{"type":"string","enum":["rewrite","append"]}},["path","content"])),
-        ("edit_block","Edit Block","Apply a focused text replacement.",_mcp_schema({"computer":computer,"path":path,"old_string":{"type":"string","minLength":1,"maxLength":32768},"new_string":{"type":"string","maxLength":32768},"replace_all":boolean},["path","old_string","new_string"])),
+        ("write_file","Write File","Write or append text to a file. expected_sha256 prevents overwriting a file that changed after it was read.",_mcp_schema({"computer":computer,"path":path,"content":{"type":"string","maxLength":65536},"mode":{"type":"string","enum":["rewrite","append"]},"expected_sha256":{"type":"string","pattern":"^[0-9a-fA-F]{64}$"}},["path","content"])),
+        ("edit_block","Edit Block","Apply a focused text replacement. expected_sha256 adds optimistic concurrency protection.",_mcp_schema({"computer":computer,"path":path,"old_string":{"type":"string","minLength":1,"maxLength":32768},"new_string":{"type":"string","maxLength":32768},"replace_all":boolean,"expected_sha256":{"type":"string","pattern":"^[0-9a-fA-F]{64}$"}},["path","old_string","new_string"])),
         ("create_directory","Create Directory","Create a directory.",_mcp_schema({"computer":computer,"path":path,"parents":boolean},["path"])),
-        ("list_directory","List Directory","List directory contents.",_mcp_schema({"computer":computer,"path":path,"depth":{"type":"integer","minimum":1,"maximum":5},"limit":{"type":"integer","minimum":1,"maximum":200}},["path"])),
+        ("list_directory","List Directory","List directory contents with offset-based continuation.",_mcp_schema({"computer":computer,"path":path,"depth":{"type":"integer","minimum":1,"maximum":5},"limit":{"type":"integer","minimum":1,"maximum":200},"offset":{"type":"integer","minimum":0,"maximum":10000}},["path"])),
         ("move_file","Move File","Move or rename a file or directory.",_mcp_schema({"computer":computer,"source":path,"destination":path},["source","destination"])),
-        ("copy_file","Copy File","Copy a file or directory.",_mcp_schema({"computer":computer,"source":path,"destination":path},["source","destination"])),
-        ("delete_file","Delete File","Delete a file with reversible preimage protection.",_mcp_schema({"computer":computer,"path":path},["path"])),
-        ("search","Search","Search file names or text content.",_mcp_schema({"computer":computer,"path":path,"pattern":{"type":"string","minLength":1,"maxLength":256},"search_type":{"type":"string","enum":["files","content"]},"max_results":{"type":"integer","minimum":1,"maximum":100},"include_hidden":boolean,"ignore_case":boolean,"file_glob":{"type":"string","maxLength":180}},["path","pattern"])),
+        ("copy_file","Copy File","Copy one regular file to a new destination; symlink leaf sources are refused.",_mcp_schema({"computer":computer,"source":path,"destination":path},["source","destination"])),
+        ("delete_file","Delete File","Delete a regular file with reversible preimage protection. Symlinks are refused; expected_sha256 can protect against deleting a changed file.",_mcp_schema({"computer":computer,"path":path,"expected_sha256":{"type":"string","pattern":"^[0-9a-fA-F]{64}$"}},["path"])),
+        ("search","Search","Search file names or text content with offset-based continuation.",_mcp_schema({"computer":computer,"path":path,"pattern":{"type":"string","minLength":1,"maxLength":256},"search_type":{"type":"string","enum":["files","content"]},"max_results":{"type":"integer","minimum":1,"maximum":100},"include_hidden":boolean,"ignore_case":boolean,"file_glob":{"type":"string","maxLength":180},"offset":{"type":"integer","minimum":0,"maximum":10000}},["path","pattern"])),
         ("get_file_info","Get File Info","Get file metadata.",_mcp_schema({"computer":computer,"path":path},["path"])),
         ("list_processes","List Processes","List running processes.",_mcp_schema({"computer":computer,"limit":{"type":"integer","minimum":1,"maximum":200}})),
         ("start_process","Start Process","Run a command. Defaults to bounded one-shot execution; interactive=true keeps a managed session. Requests above 10 seconds are automatically routed to a managed session.",_mcp_schema({"computer":computer,"command":{"type":"string","minLength":1,"maxLength":4096},"cwd":path,"timeout_ms":{"type":"integer","minimum":100,"maximum":30000},"max_lines":{"type":"integer","minimum":1,"maximum":500},"interactive":boolean},["command"])),
@@ -2804,15 +2986,15 @@ def _local_simple_map(config,name,args):
         return "hara.files.read",{"path":str(args["path"]),**({"offset":int(args["offset"])} if "offset" in args else {}),**({"length":int(args["length"])} if "length" in args else {})}
     if name=="read_multiple_files":
         return "hara.files.read_many",{"paths":[str(x) for x in args["paths"]],**({"offset":int(args["offset"])} if "offset" in args else {}),**({"length":int(args["length"])} if "length" in args else {})}
-    if name=="write_file": return "hara.files.write",{"path":str(args["path"]),"content":str(args["content"]),"mode":str(args.get("mode","rewrite"))}
-    if name=="edit_block": return "hara.files.edit",{"path":str(args["path"]),"old_text":str(args["old_string"]),"new_text":str(args["new_string"]),"replace_all":bool(args.get("replace_all",False))}
+    if name=="write_file": return "hara.files.write",{"path":str(args["path"]),"content":str(args["content"]),"mode":str(args.get("mode","rewrite")),**({"expected_sha256":str(args["expected_sha256"])} if args.get("expected_sha256") else {})}
+    if name=="edit_block": return "hara.files.edit",{"path":str(args["path"]),"old_text":str(args["old_string"]),"new_text":str(args["new_string"]),"replace_all":bool(args.get("replace_all",False)),**({"expected_sha256":str(args["expected_sha256"])} if args.get("expected_sha256") else {})}
     if name=="create_directory": return "hara.files.create_directory",{"path":str(args["path"]),"parents":bool(args.get("parents",True))}
-    if name=="list_directory": return "hara.files.list",{"path":str(args["path"]),**({"depth":int(args["depth"])} if "depth" in args else {}),**({"limit":int(args["limit"])} if "limit" in args else {})}
+    if name=="list_directory": return "hara.files.list",{"path":str(args["path"]),**({"depth":int(args["depth"])} if "depth" in args else {}),**({"limit":int(args["limit"])} if "limit" in args else {}),**({"offset":int(args["offset"])} if "offset" in args else {})}
     if name=="move_file": return "hara.files.move",{"source":str(args["source"]),"destination":str(args["destination"])}
     if name=="copy_file": return "hara.files.copy",{"source":str(args["source"]),"destination":str(args["destination"])}
-    if name=="delete_file": return "hara.files.delete",{"path":str(args["path"])}
+    if name=="delete_file": return "hara.files.delete",{"path":str(args["path"]),**({"expected_sha256":str(args["expected_sha256"])} if args.get("expected_sha256") else {})}
     if name=="search":
-        return "hara.files.search",{"path":str(args["path"]),"pattern":str(args["pattern"]),"search_type":str(args.get("search_type","files")),**({"max_results":int(args["max_results"])} if "max_results" in args else {}),**({"include_hidden":bool(args["include_hidden"])} if "include_hidden" in args else {}),**({"ignore_case":bool(args["ignore_case"])} if "ignore_case" in args else {}),**({"file_glob":str(args["file_glob"])} if args.get("file_glob") else {})}
+        return "hara.files.search",{"path":str(args["path"]),"pattern":str(args["pattern"]),"search_type":str(args.get("search_type","files")),**({"max_results":int(args["max_results"])} if "max_results" in args else {}),**({"include_hidden":bool(args["include_hidden"])} if "include_hidden" in args else {}),**({"ignore_case":bool(args["ignore_case"])} if "ignore_case" in args else {}),**({"file_glob":str(args["file_glob"])} if args.get("file_glob") else {}),**({"offset":int(args["offset"])} if "offset" in args else {})}
     if name=="get_file_info": return "hara.files.info",{"path":str(args["path"])}
     if name=="list_processes":
         return "hara.processes.list",({"limit":int(args["limit"])} if "limit" in args else {})
@@ -2961,6 +3143,12 @@ def local_mcp_operational_error(code,name,args):
         return build("NOT_FOUND","PROCESS_STATE",False,{"exists":False,"recommended_tool":"list_sessions"})
     if code=="PROCESS_SESSION_EXITED":
         return build("TERMINAL","PROCESS_STATE",False,{"session_state":"EXITED"})
+    if code=="PATH_VALUE_INVALID":
+        return build("INVALID_TARGET","FILESYSTEM_PATH",False,{"valid_target":False,"reason":"CONTROL_CHARACTER_OR_LENGTH"})
+    if code=="FILE_PRECONDITION_FAILED":
+        return build("CONFLICT","FILE_PRECONDITION",False,{"file_changed":True,"recommended_tool":"get_file_info"})
+    if code=="SYMLINK_MUTATION_DENIED":
+        return build("INVALID_TARGET","FILESYSTEM_SAFETY",False,{"symlink":True,"mutation_allowed":False,"recommended_tool":"get_file_info"})
     if code in {"DESTINATION_EXISTS","PATH_EXISTS_NOT_DIRECTORY","FILESYSTEM_PATH_EXISTS","FILEEXISTSERROR"}:
         return build("CONFLICT","FILESYSTEM_STATE",False,{"conflict":True})
     if code=="EDIT_MATCH_AMBIGUOUS":

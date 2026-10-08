@@ -105,6 +105,15 @@ function operationalToolError(code, args = undefined) {
   if (code === "PROCESS_SESSION_EXITED") {
     return build("TERMINAL", "PROCESS_STATE", false, { session_state: "EXITED" });
   }
+  if (code === "PATH_VALUE_INVALID") {
+    return build("INVALID_TARGET", "FILESYSTEM_PATH", false, { valid_target: false, reason: "CONTROL_CHARACTER_OR_LENGTH" });
+  }
+  if (code === "FILE_PRECONDITION_FAILED") {
+    return build("CONFLICT", "FILE_PRECONDITION", false, { file_changed: true, recommended_tool: "hara.files.info" });
+  }
+  if (code === "SYMLINK_MUTATION_DENIED") {
+    return build("INVALID_TARGET", "FILESYSTEM_SAFETY", false, { symlink: true, mutation_allowed: false, recommended_tool: "hara.files.info" });
+  }
   if (["DESTINATION_EXISTS", "PATH_EXISTS_NOT_DIRECTORY", "FILESYSTEM_PATH_EXISTS"].includes(code)) {
     return build("CONFLICT", "FILESYSTEM_STATE", false, { conflict: true });
   }
@@ -246,6 +255,7 @@ export function createSimpleCustomerMcpServer({ executeTool }) {
     call("hara.activity", (args) => ({
       ...(args.window ? { window: args.window } : {}),
       ...(args.limit !== undefined ? { limit: args.limit } : {}),
+      ...(args.offset !== undefined ? { offset: args.offset } : {}),
     })),
   );
 
@@ -313,12 +323,13 @@ export function createSimpleCustomerMcpServer({ executeTool }) {
     "write_file",
     toolConfig({
       title: "Write File",
-      description: "Write or append text to a file.",
+      description: "Write or append text. expected_sha256 can fail closed if the file changed; symlink leaf targets are refused.",
       inputSchema: z.object({
         computer,
         path: z.string().min(1).max(4096),
         content: z.string().max(65536),
         mode: z.enum(["rewrite", "append"]).optional(),
+        expected_sha256: z.string().regex(/^[0-9a-fA-F]{64}$/).optional(),
       }).strict(),
       readOnlyHint: false,
       destructiveHint: true,
@@ -329,6 +340,7 @@ export function createSimpleCustomerMcpServer({ executeTool }) {
       path: args.path,
       content: args.content,
       mode: args.mode || "rewrite",
+      ...(args.expected_sha256 ? { expected_sha256: args.expected_sha256 } : {}),
     })),
   );
 
@@ -336,13 +348,14 @@ export function createSimpleCustomerMcpServer({ executeTool }) {
     "edit_block",
     toolConfig({
       title: "Edit Block",
-      description: "Apply a focused text replacement to one file.",
+      description: "Apply a focused text replacement. expected_sha256 adds optimistic concurrency protection.",
       inputSchema: z.object({
         computer,
         path: z.string().min(1).max(4096),
         old_string: z.string().min(1).max(32768),
         new_string: z.string().max(32768),
         replace_all: z.boolean().optional(),
+        expected_sha256: z.string().regex(/^[0-9a-fA-F]{64}$/).optional(),
       }).strict(),
       readOnlyHint: false,
       destructiveHint: true,
@@ -354,6 +367,7 @@ export function createSimpleCustomerMcpServer({ executeTool }) {
       old_text: args.old_string,
       new_text: args.new_string,
       replace_all: Boolean(args.replace_all),
+      ...(args.expected_sha256 ? { expected_sha256: args.expected_sha256 } : {}),
     })),
   );
 
@@ -381,12 +395,13 @@ export function createSimpleCustomerMcpServer({ executeTool }) {
     "list_directory",
     toolConfig({
       title: "List Directory",
-      description: "List files and directories with bounded recursive depth.",
+      description: "List files and directories with bounded recursive depth and offset-based continuation.",
       inputSchema: z.object({
         computer,
         path: z.string().min(1).max(4096),
         depth: z.number().int().min(1).max(5).optional(),
         limit: z.number().int().min(1).max(200).optional(),
+        offset: z.number().int().min(0).max(10000).optional(),
       }).strict(),
     }),
     call("hara.files.list", (args) => ({
@@ -422,7 +437,7 @@ export function createSimpleCustomerMcpServer({ executeTool }) {
     "copy_file",
     toolConfig({
       title: "Copy File",
-      description: "Copy a file or directory.",
+      description: "Copy one regular file to a new destination. Symlink leaf sources are refused.",
       inputSchema: z.object({
         computer,
         source: z.string().min(1).max(4096),
@@ -442,23 +457,24 @@ export function createSimpleCustomerMcpServer({ executeTool }) {
     "delete_file",
     toolConfig({
       title: "Delete File",
-      description: "Delete a file using H.A.R.A. reversible preimage protection.",
+      description: "Delete a regular file with reversible preimage protection. Symlink leaf targets are refused; expected_sha256 can prevent deleting a changed file.",
       inputSchema: z.object({
         computer,
         path: z.string().min(1).max(4096),
+        expected_sha256: z.string().regex(/^[0-9a-fA-F]{64}$/).optional(),
       }).strict(),
       readOnlyHint: false,
       destructiveHint: true,
       idempotentHint: false,
     }),
-    call("hara.files.delete", (args) => ({ ...deviceArgs(args), path: args.path })),
+    call("hara.files.delete", (args) => ({ ...deviceArgs(args), path: args.path, ...(args.expected_sha256 ? { expected_sha256: args.expected_sha256 } : {}) })),
   );
 
   server.registerTool(
     "search",
     toolConfig({
       title: "Search",
-      description: "Search file names or text content. Returns bounded results in one request.",
+      description: "Search file names or text content with bounded, offset-based continuation.",
       inputSchema: z.object({
         computer,
         path: z.string().min(1).max(4096),
@@ -468,6 +484,7 @@ export function createSimpleCustomerMcpServer({ executeTool }) {
         include_hidden: z.boolean().optional(),
         ignore_case: z.boolean().optional(),
         file_glob: z.string().max(180).optional(),
+        offset: z.number().int().min(0).max(10000).optional(),
       }).strict(),
     }),
     call("hara.files.search", (args) => ({
@@ -479,6 +496,7 @@ export function createSimpleCustomerMcpServer({ executeTool }) {
       ...(args.include_hidden !== undefined ? { include_hidden: args.include_hidden } : {}),
       ...(args.ignore_case !== undefined ? { ignore_case: args.ignore_case } : {}),
       ...(args.file_glob ? { file_glob: args.file_glob } : {}),
+      ...(args.offset !== undefined ? { offset: args.offset } : {}),
     })),
   );
 

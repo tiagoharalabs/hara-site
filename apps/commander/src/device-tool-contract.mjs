@@ -104,6 +104,11 @@ function textArg(value,max) {
   if (!text || text.length > max || text.includes("\u0000")) fail("DEVICE_CALL_PAYLOAD_INVALID");
   return text;
 }
+function sha256Arg(value) {
+  const text=String(value ?? "").trim().toLowerCase();
+  if (!/^[0-9a-f]{64}$/.test(text)) fail("DEVICE_CALL_PAYLOAD_INVALID");
+  return text;
+}
 function pathArg(value) {
   const text=String(value ?? "").trim();
   if (!text || text.length > 4096 || /[\u0000-\u001f\u007f]/.test(text)) fail("DEVICE_CALL_PAYLOAD_INVALID");
@@ -138,7 +143,7 @@ function canonicalArgv(functionId, argv) {
     return [pathArg(argv[0]),pathArg(argv[1]),...(argv.length===3 ? [intArg(argv[2],1,400)] : [])];
   }
   if (functionId === "filesystem.search") {
-    if (argv.length < 3 || argv.length > 7) fail("DEVICE_CALL_PAYLOAD_INVALID");
+    if (argv.length < 3 || argv.length > 8) fail("DEVICE_CALL_PAYLOAD_INVALID");
     const type=String(argv[1] ?? "");
     if (!["files","content"].includes(type)) fail("DEVICE_CALL_PAYLOAD_INVALID");
     const pattern=String(argv[2] ?? "");
@@ -152,13 +157,15 @@ function canonicalArgv(functionId, argv) {
       if (glob.length > 180 || /[\u0000-\u001f\u007f]/.test(glob)) fail("DEVICE_CALL_PAYLOAD_INVALID");
       out.push(glob);
     }
+    if (argv.length >= 8) out.push(intArg(argv[7],0,10000));
     return out;
   }
   if (functionId === "filesystem.list") {
-    if (argv.length < 1 || argv.length > 3) fail("DEVICE_CALL_PAYLOAD_INVALID");
+    if (argv.length < 1 || argv.length > 4) fail("DEVICE_CALL_PAYLOAD_INVALID");
     const out=[pathArg(argv[0])];
     if (argv.length >= 2) out.push(intArg(argv[1],1,200));
     if (argv.length >= 3) out.push(intArg(argv[2],1,5));
+    if (argv.length >= 4) out.push(intArg(argv[3],0,10000));
     return out;
   }
   if (functionId === "filesystem.read") {
@@ -206,7 +213,7 @@ export function canonicalDeviceToolPayload(toolId, payload) {
     return {left:pathArg(body.left),right:pathArg(body.right),max_lines:body.max_lines===undefined ? 200 : intNumber(body.max_lines,1,400)};
   }
   if (toolId === "hara.files.search") {
-    if (!onlyKeys(body,["path","search_type","pattern","max_results","include_hidden","ignore_case","file_glob"],["path","search_type","pattern"])) fail("DEVICE_CALL_PAYLOAD_INVALID");
+    if (!onlyKeys(body,["path","search_type","pattern","max_results","include_hidden","ignore_case","file_glob","offset"],["path","search_type","pattern"])) fail("DEVICE_CALL_PAYLOAD_INVALID");
     const type=String(body.search_type || "");
     if (!["files","content"].includes(type)) fail("DEVICE_CALL_PAYLOAD_INVALID");
     const pattern=String(body.pattern || "");
@@ -218,14 +225,16 @@ export function canonicalDeviceToolPayload(toolId, payload) {
       max_results:body.max_results === undefined ? 50 : intNumber(body.max_results,1,100),
       include_hidden:body.include_hidden === true, ignore_case:body.ignore_case !== false,
       ...(glob === undefined ? {} : {file_glob:glob}),
+      offset:body.offset === undefined ? 0 : intNumber(body.offset,0,10000),
     };
   }
   if (toolId === "hara.files.list") {
-    if (!onlyKeys(body,["path","limit","depth"],["path"])) fail("DEVICE_CALL_PAYLOAD_INVALID");
+    if (!onlyKeys(body,["path","limit","depth","offset"],["path"])) fail("DEVICE_CALL_PAYLOAD_INVALID");
     return {
       path:pathArg(body.path),
       ...(body.limit === undefined ? {} : {limit:intNumber(body.limit,1,200)}),
       ...(body.depth === undefined ? {} : {depth:intNumber(body.depth,1,5)}),
+      ...(body.offset === undefined ? {} : {offset:intNumber(body.offset,0,10000)}),
     };
   }
   if (toolId === "hara.files.read") {
@@ -301,18 +310,18 @@ export function canonicalDeviceToolPayload(toolId, payload) {
     return {path:pathArg(body.path),parents:body.parents !== false};
   }
   if (toolId === "hara.files.write") {
-    if (!onlyKeys(body,["path","content","mode"],["path","content"])) fail("DEVICE_CALL_PAYLOAD_INVALID");
+    if (!onlyKeys(body,["path","content","mode","expected_sha256"],["path","content"])) fail("DEVICE_CALL_PAYLOAD_INVALID");
     const content=String(body.content ?? "");
     if (content.length > 65536 || content.includes("\u0000")) fail("DEVICE_CALL_PAYLOAD_INVALID");
     const mode=String(body.mode || "rewrite");
     if (!["rewrite","append"].includes(mode)) fail("DEVICE_CALL_PAYLOAD_INVALID");
-    return {path:pathArg(body.path),content,mode};
+    return {path:pathArg(body.path),content,mode,...(body.expected_sha256===undefined ? {} : {expected_sha256:sha256Arg(body.expected_sha256)})};
   }
   if (toolId === "hara.files.edit") {
-    if (!onlyKeys(body,["path","old_text","new_text","replace_all"],["path","old_text","new_text"])) fail("DEVICE_CALL_PAYLOAD_INVALID");
+    if (!onlyKeys(body,["path","old_text","new_text","replace_all","expected_sha256"],["path","old_text","new_text"])) fail("DEVICE_CALL_PAYLOAD_INVALID");
     const oldText=String(body.old_text ?? ""), newText=String(body.new_text ?? "");
     if (!oldText || oldText.length > 32768 || newText.length > 32768 || oldText.includes("\u0000") || newText.includes("\u0000")) fail("DEVICE_CALL_PAYLOAD_INVALID");
-    return {path:pathArg(body.path),old_text:oldText,new_text:newText,replace_all:body.replace_all === true};
+    return {path:pathArg(body.path),old_text:oldText,new_text:newText,replace_all:body.replace_all === true,...(body.expected_sha256===undefined ? {} : {expected_sha256:sha256Arg(body.expected_sha256)})};
   }
   if (toolId === "hara.files.move") {
     if (!onlyKeys(body,["source","destination"],["source","destination"])) fail("DEVICE_CALL_PAYLOAD_INVALID");
@@ -323,8 +332,8 @@ export function canonicalDeviceToolPayload(toolId, payload) {
     return {source:pathArg(body.source),destination:pathArg(body.destination)};
   }
   if (toolId === "hara.files.delete") {
-    if (!exactKeys(body,["path"])) fail("DEVICE_CALL_PAYLOAD_INVALID");
-    return {path:pathArg(body.path)};
+    if (!onlyKeys(body,["path","expected_sha256"],["path"])) fail("DEVICE_CALL_PAYLOAD_INVALID");
+    return {path:pathArg(body.path),...(body.expected_sha256===undefined ? {} : {expected_sha256:sha256Arg(body.expected_sha256)})};
   }
   if (toolId === "hara.functions.describe") {
     if (!exactKeys(body, ["function_id"])) fail("DEVICE_CALL_PAYLOAD_INVALID");

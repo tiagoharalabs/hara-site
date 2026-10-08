@@ -38,9 +38,9 @@ def main() -> int:
     for tool in TOOLS:
         assert module.count(f'"{tool}"') >= 2, tool
 
-    assert "readOnlyHint: true" in module
-    assert "destructiveHint: false" in module
-    assert "idempotentHint: true" in module
+    assert "readOnlyHint = true" in module
+    assert "destructiveHint = false" in module
+    assert "idempotentHint = true" in module
     assert "openWorldHint: true" in module
     assert 'securitySchemes: SECURITY_SCHEMES' in module
     assert '{ type: "oauth2", scopes: ["openid"] }' in module
