@@ -1,0 +1,205 @@
+# H.A.R.A. Commander — Product Current Handoff
+
+Date: 2026-10-08
+Authoritative branch: `local/commander-product-current`
+Authoritative base: `9df6c8aa72c2f6b18f63123b0aef25ffabcfec98`
+
+## Product law
+
+H.A.R.A. Commander is one product line.
+
+Customer execution path:
+
+```text
+OpenAI / ChatGPT / Codex
+        |
+OpenAI Secure MCP Tunnel
+        |
+hara-commander mcp
+        |
+customer machine
+```
+
+H.A.R.A. Cloud is the control plane only:
+
+- Identity/login;
+- device pairing/registry;
+- plan/billing/entitlement;
+- revoke/update/release;
+- one-time device authorization;
+- signed product lease;
+- aggregate usage/metering persistence.
+
+A LOCAL_TUNNEL device must not silently fall back to cloud relay.
+
+The legacy remote/V1 relay is migration fallback only.
+
+## Authorization
+
+- device authorization code: one-time, device/tenant bound, server stores only SHA-256;
+- authorization-code TTL: 10 minutes;
+- product lease: RS256, device-bound, valid for 6 hours;
+- local MCP fails closed without a valid LOCAL_TUNNEL lease;
+- tunnel transport may remain connected while H.A.R.A. execution authority is expired;
+- expired authority returns structured AUTHORIZATION_EXPIRED with Commander reauthorization URL.
+
+## Metering and billing
+
+There is no periodic timer-based H.A.R.A. heartbeat in LOCAL_TUNNEL.
+
+Metering is event-driven:
+
+- MCP_START: sync aggregate usage only if the previous successful sync is at least 1 hour old;
+- MCP_STOP: sync only if the session lasted at least 1 hour and the previous successful sync is at least 1 hour old;
+- no metering request runs in the middle of an open MCP session;
+- lease authorization also carries aggregate usage and counts as a successful sync when accepted.
+
+Server and Agent both enforce the 1-hour minimum interval.
+
+Cloud metering stores only aggregate/minimal metadata:
+
+- device/tenant/subject;
+- random MCP session id;
+- START/STOP;
+- timestamps and bounded session duration;
+- Agent version/transport;
+- cumulative local governed-execution count and recent daily buckets.
+
+No command, path, file content, stdout, tool result or raw customer payload is sent.
+
+Portal product usage is:
+
+`remote governed calls + synchronized local governed execution aggregates`.
+
+It is separate from Cloudflare infrastructure request count.
+
+## Trial / Free enforcement
+
+LOCAL_TUNNEL must not return to cloud for every tool or every 100 tools.
+
+For metered plans, the 6-hour authorization can allocate the remaining period entitlement into the signed local budget. The Agent debits locally and fails closed at zero.
+
+Reauthorization reconciles usage before another authorization/lease cycle.
+
+Unlimited plans keep aggregate product history but do not enforce a quantity ceiling.
+
+## Canonical functions
+
+Current Linux/local canonical-function hardening is part of this branch.
+
+Key guarantees:
+
+- symlink leaf mutations denied; move preserves the symlink object;
+- lstat semantics for symlink info;
+- O_NOFOLLOW where applicable;
+- optional expected_sha256 preconditions for write/edit/delete;
+- preimage TOCTOU revalidation using device/inode/size/mtime metadata;
+- path control-character/length guards;
+- safe continuation metadata for read/list/search;
+- deterministic list/search pagination;
+- truthful LOCAL_MCP authority/transport receipts;
+- functions.describe exposes canonical contract details;
+- operational errors are structured instead of opaque failures.
+
+Local MCP functional canary on nucleo-a:
+
+`COMMANDER_LOCAL_MCP_FULL_CANARY_33_OF_33=PASS`.
+
+Simple MCP remains exactly 24 tools.
+
+## Current source/release boundary
+
+Source Agent candidate: **0.3.43**.
+
+Published signed release manifest: **0.3.41**.
+
+Full readiness intentionally stops fail-closed at:
+
+`RELEASE_SHA256_DRIFT:agent/linux.py`.
+
+This is correct until 0.3.43 is built and signed through the canonical release-signing process.
+
+## Migration
+
+Migration 0029 contains:
+
+- local authorization expiry on commander_devices;
+- one-time authorization codes;
+- aggregate local usage totals/daily buckets;
+- last metering/start/stop timestamps;
+- minimal MCP lifecycle metering events.
+
+Migration chain 0001..0029 passes locally.
+
+0029 is not yet applied to PROD.
+
+## Platform status
+
+Linux:
+- LOCAL_TUNNEL source-qualified;
+- canonical function hardening PASS;
+- zero periodic cloud polling/heartbeat in LOCAL_TUNNEL;
+- zero per-tool H.A.R.A. relay;
+- real local MCP 33/33 PASS.
+
+Windows:
+- source Agent version aligned;
+- customer path remains legacy relay;
+- LOCAL_TUNNEL authorization action remains withheld until Windows local-MCP/canonical parity closes.
+
+## Current live boundary
+
+No LOCAL_TUNNEL product cutover to PROD has been claimed.
+
+Current live blockers:
+
+1. sign/package Agent 0.3.43 with canonical release trust;
+2. apply migration 0029 before the new Worker;
+3. deploy DEV and run real OpenAI Secure MCP Tunnel canary using an actual tunnel_id/runtime key;
+4. validate usage/metering readback;
+5. promote with exact-version rollback evidence;
+6. finish Windows local-tunnel/canonical parity before enabling it to customers.
+
+## Branch policy
+
+Continue Commander development only from:
+
+`local/commander-product-current`
+
+Historical Commander branches are evidence/archive only. They are not independent product strategies and must not be used as continuation bases unless this handoff explicitly reopens one.
+
+The following lines have been absorbed into Product Current:
+
+- command robustness;
+- process-run recovery;
+- Agent request efficiency/backoff;
+- LOCAL_TUNNEL control plane;
+- usage-meter wording/semantics;
+- canonical-function hardening.
+
+Identity/DCR remains a separate infrastructure concern. Do not merge it into the Commander product branch merely to repair Identity.
+
+## Canonical next attacks
+
+1. release/sign 0.3.43;
+2. DEV migration 0029 + Worker/UI;
+3. real OpenAI tunnel E2E;
+4. Windows parity;
+5. canonical process contract hardening and move-rollback semantics;
+6. remove legacy relay from default customer onboarding after local-tunnel live proof.
+
+State:
+
+`COMMANDER_PRODUCT_CURRENT=SINGLE_ACTIVE_LINE`
+
+`COMMANDER_PRODUCT_DATA_PLANE=LOCAL_TUNNEL`
+
+`COMMANDER_PRODUCT_CLOUD_ROLE=CONTROL_PLANE`
+
+`COMMANDER_PRODUCT_METERING=MCP_START_STOP_MIN_1H`
+
+`COMMANDER_PRODUCT_SOURCE_AGENT=0.3.43`
+
+`COMMANDER_PRODUCT_SIGNED_RELEASE=0.3.41`
+
+`COMMANDER_PRODUCT_PROD_LOCAL_TUNNEL=PENDING`

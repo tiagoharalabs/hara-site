@@ -1,5 +1,11 @@
 # H.A.R.A. Commander — production package
 
+> **Authoritative product continuation:** `local/commander-product-current`
+>
+> Start every new Commander product front from this branch. The canonical handoff is
+> `docs/handoffs/HARA_COMMANDER_PRODUCT_CURRENT_HANDOFF_20261008.md`. Other Commander
+> branches are historical evidence/superseded work unless that handoff explicitly reopens them.
+
 Canonical standalone product-plane Worker for:
 
 `https://commander.haralabs.com.br`
