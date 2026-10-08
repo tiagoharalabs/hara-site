@@ -45,6 +45,7 @@ APPROVAL_DIR = DATA_DIR / "approvals"
 PREIMAGE_DIR = DATA_DIR / "preimages"
 SESSION_MAX_SECONDS = 12 * 60 * 60
 PRODUCT_LEASE_REFRESH_SECONDS = 4 * 60 * 60
+LOCAL_METERING_MIN_INTERVAL_SECONDS = 60 * 60
 TRANSPORT_MODES = {"OUTBOUND_RELAY","LOCAL_TUNNEL"}
 TUNNEL_PROFILE = "hara-commander"
 TUNNEL_ENV_FILE = CONFIG_FILE.parent / "openai-tunnel.env"
@@ -829,6 +830,126 @@ def local_usage_report(config):
         "metadata_only":True,
         "customer_content_included":False,
     }
+
+def _local_meta_get(key):
+    with _ops_connect() as conn:
+        row=conn.execute(
+            "SELECT meta_value FROM local_store_meta WHERE meta_key=?",
+            (str(key),),
+        ).fetchone()
+    return None if not row else str(row["meta_value"])
+
+def _local_meta_set(key,value):
+    with _ops_connect() as conn:
+        conn.execute(
+            "INSERT INTO local_store_meta(meta_key,meta_value) VALUES(?,?) "
+            "ON CONFLICT(meta_key) DO UPDATE SET meta_value=excluded.meta_value",
+            (str(key),str(value)),
+        )
+        conn.commit()
+
+def _iso_epoch(value):
+    try:
+        return datetime.fromisoformat(str(value).replace("Z","+00:00")).timestamp()
+    except Exception:
+        return None
+
+def local_metering_sync_due(now_epoch=None):
+    now_epoch=time.time() if now_epoch is None else float(now_epoch)
+    last=_iso_epoch(_local_meta_get("local_metering_last_sync_at_utc") or "")
+    if last is None:
+        return True
+    return now_epoch-last >= LOCAL_METERING_MIN_INTERVAL_SECONDS
+
+def local_metering_sync(config,event_type,session_id,session_started_at_utc,session_duration_seconds=None):
+    event=str(event_type or "").strip().upper()
+    if event not in {"MCP_START","MCP_STOP"}:
+        raise ValueError("LOCAL_METERING_EVENT_INVALID")
+    if event=="MCP_STOP" and (session_duration_seconds is None or int(session_duration_seconds)<LOCAL_METERING_MIN_INTERVAL_SECONDS):
+        append_console_event(
+            "METERING_SYNC_SKIPPED",
+            state="SESSION_UNDER_MIN_INTERVAL",
+            action_summary="event=MCP_STOP",
+        )
+        return {"attempted":False,"reason":"SESSION_UNDER_MIN_INTERVAL"}
+    if transport_mode(config)!="LOCAL_TUNNEL":
+        return {"attempted":False,"reason":"TRANSPORT_NOT_LOCAL_TUNNEL"}
+    try:
+        with _ops_connect() as conn:
+            lease=_active_verified_product_lease(conn,config)
+        if not lease or str(lease.get("transport_mode") or "")!="LOCAL_TUNNEL":
+            return {"attempted":False,"reason":"LEASE_NOT_ACTIVE"}
+    except Exception:
+        return {"attempted":False,"reason":"LEASE_NOT_ACTIVE"}
+    if not local_metering_sync_due():
+        append_console_event(
+            "METERING_SYNC_SKIPPED",
+            state="THROTTLED_LOCAL",
+            action_summary="event="+event,
+        )
+        return {"attempted":False,"reason":"MIN_INTERVAL"}
+
+    payload={
+        "schema":"hara.commander-local-metering-sync.v1",
+        "event_type":event,
+        "session_id":str(session_id),
+        "session_started_at_utc":str(session_started_at_utc),
+        "session_duration_seconds":None if session_duration_seconds is None else max(0,int(session_duration_seconds)),
+        "agent_version":AGENT_VERSION,
+        "transport_mode":"LOCAL_TUNNEL",
+        "usage_report":local_usage_report(config),
+        "metadata_only":True,
+        "customer_content_included":False,
+    }
+    try:
+        response=post_json(
+            config["HARA_COMMANDER_URL"]+"/api/device/metering-sync",
+            config["HARA_DEVICE_TOKEN"],
+            payload,
+            timeout=8,
+        ) or {}
+        accepted=response.get("accepted") is True
+        if accepted:
+            synced_at=str(response.get("event_at_utc") or response.get("server_time_utc") or utcnow())
+            _local_meta_set("local_metering_last_sync_at_utc",synced_at)
+            _local_meta_set("local_metering_last_event",event)
+            append_console_event(
+                "METERING_SYNC",
+                state="SYNCED",
+                action_summary="event="+event,
+            )
+            return {"attempted":True,"accepted":True,"event":event}
+        if str(response.get("code") or "")=="LOCAL_METERING_THROTTLED":
+            # Another local MCP process may have synchronized first. Respect the
+            # server's one-hour window locally so retries do not create traffic.
+            server_time=str(response.get("server_time_utc") or utcnow())
+            _local_meta_set("local_metering_last_sync_at_utc",server_time)
+            append_console_event(
+                "METERING_SYNC_SKIPPED",
+                state="THROTTLED_SERVER",
+                action_summary="event="+event,
+            )
+            return {"attempted":True,"accepted":False,"reason":"SERVER_THROTTLED"}
+        return {"attempted":True,"accepted":False,"reason":"NOT_ACCEPTED"}
+    except Exception as exc:
+        append_console_event(
+            "METERING_SYNC_DEGRADED",
+            state="DEGRADED",
+            error_code=safe_error_code(exc),
+            action_summary="event="+event,
+        )
+        return {"attempted":True,"accepted":False,"reason":"CONTROL_PLANE_UNAVAILABLE"}
+
+def _local_metering_sync_background(config,event_type,session_id,session_started_at_utc):
+    try:
+        local_metering_sync(config,event_type,session_id,session_started_at_utc)
+    except Exception as exc:
+        append_console_event(
+            "METERING_SYNC_DEGRADED",
+            state="DEGRADED",
+            error_code=safe_error_code(exc),
+            action_summary="event="+str(event_type),
+        )
 
 def refresh_product_lease(config,authorization_code=None,requested_transport=None):
     report=_local_budget_report()
@@ -2859,47 +2980,68 @@ def _stdio_mcp_write(payload):
 def run_local_mcp_stdio():
     config=load_config()
     RECEIPT_DIR.mkdir(parents=True,exist_ok=True,mode=0o700)
-    for raw in sys.stdin:
-        if len(raw)>2*1024*1024:
-            _stdio_mcp_write({"jsonrpc":"2.0","id":None,"error":{"code":-32600,"message":"REQUEST_TOO_LARGE"}})
-            continue
-        raw=raw.strip()
-        if not raw: continue
-        try:
-            msg=json.loads(raw)
-        except Exception:
-            _stdio_mcp_write({"jsonrpc":"2.0","id":None,"error":{"code":-32700,"message":"PARSE_ERROR"}})
-            continue
-        req_id=msg.get("id")
-        method=str(msg.get("method") or "")
-        params=msg.get("params") or {}
-        if method.startswith("notifications/"):
-            continue
-        name=""
-        args={}
-        try:
-            if method=="initialize":
-                result={"protocolVersion":"2025-06-18","capabilities":{"tools":{"listChanged":False}},"serverInfo":{"name":"H.A.R.A. Commander Local","version":AGENT_VERSION},"instructions":"Local MCP. Start a H.A.R.A. Commander operator session before executing computer tools."}
-            elif method=="ping":
-                result={}
-            elif method=="tools/list":
-                result={"tools":local_simple_mcp_tools()}
-            elif method=="tools/call":
-                name=str(params.get("name") or "")
-                args=params.get("arguments") or {}
-                value=local_simple_mcp_call(config,name,args)
-                result={"content":[{"type":"text","text":json.dumps(value,separators=(",",":"),ensure_ascii=False)}],"structuredContent":value}
-            else:
-                _stdio_mcp_write({"jsonrpc":"2.0","id":req_id,"error":{"code":-32601,"message":"METHOD_NOT_FOUND"}})
+    session_id="HARA-MCP-SESSION-"+uuid.uuid4().hex
+    session_started_at_utc=utcnow()
+    session_started_monotonic=time.monotonic()
+    append_console_event("LOCAL_MCP_SESSION_START",state="ACTIVE",action_summary="session_open")
+    if transport_mode(config)=="LOCAL_TUNNEL" and local_metering_sync_due():
+        threading.Thread(
+            target=_local_metering_sync_background,
+            args=(config,"MCP_START",session_id,session_started_at_utc),
+            daemon=True,
+            name="hara-metering-start",
+        ).start()
+    try:
+        for raw in sys.stdin:
+            if len(raw)>2*1024*1024:
+                _stdio_mcp_write({"jsonrpc":"2.0","id":None,"error":{"code":-32600,"message":"REQUEST_TOO_LARGE"}})
                 continue
-            _stdio_mcp_write({"jsonrpc":"2.0","id":req_id,"result":result})
-        except Exception as exc:
-            code=safe_error_code(exc)
-            operational=local_mcp_operational_error(code,name,args)
-            if operational is not None:
-                _stdio_mcp_write({"jsonrpc":"2.0","id":req_id,"result":{"content":[{"type":"text","text":json.dumps(operational,separators=(",",":"),ensure_ascii=False)}],"structuredContent":operational}})
-            else:
-                _stdio_mcp_write({"jsonrpc":"2.0","id":req_id,"result":{"isError":True,"content":[{"type":"text","text":json.dumps({"ok":False,"code":code},separators=(",",":"))}]}})
+            raw=raw.strip()
+            if not raw: continue
+            try:
+                msg=json.loads(raw)
+            except Exception:
+                _stdio_mcp_write({"jsonrpc":"2.0","id":None,"error":{"code":-32700,"message":"PARSE_ERROR"}})
+                continue
+            req_id=msg.get("id")
+            method=str(msg.get("method") or "")
+            params=msg.get("params") or {}
+            if method.startswith("notifications/"):
+                continue
+            name=""
+            args={}
+            try:
+                if method=="initialize":
+                    result={"protocolVersion":"2025-06-18","capabilities":{"tools":{"listChanged":False}},"serverInfo":{"name":"H.A.R.A. Commander Local","version":AGENT_VERSION},"instructions":"Local MCP. Start a H.A.R.A. Commander operator session before executing computer tools."}
+                elif method=="ping":
+                    result={}
+                elif method=="tools/list":
+                    result={"tools":local_simple_mcp_tools()}
+                elif method=="tools/call":
+                    name=str(params.get("name") or "")
+                    args=params.get("arguments") or {}
+                    value=local_simple_mcp_call(config,name,args)
+                    result={"content":[{"type":"text","text":json.dumps(value,separators=(",",":"),ensure_ascii=False)}],"structuredContent":value}
+                else:
+                    _stdio_mcp_write({"jsonrpc":"2.0","id":req_id,"error":{"code":-32601,"message":"METHOD_NOT_FOUND"}})
+                    continue
+                _stdio_mcp_write({"jsonrpc":"2.0","id":req_id,"result":result})
+            except Exception as exc:
+                code=safe_error_code(exc)
+                operational=local_mcp_operational_error(code,name,args)
+                if operational is not None:
+                    _stdio_mcp_write({"jsonrpc":"2.0","id":req_id,"result":{"content":[{"type":"text","text":json.dumps(operational,separators=(",",":"),ensure_ascii=False)}],"structuredContent":operational}})
+                else:
+                    _stdio_mcp_write({"jsonrpc":"2.0","id":req_id,"result":{"isError":True,"content":[{"type":"text","text":json.dumps({"ok":False,"code":code},separators=(",",":"))}]}})
+    finally:
+        duration=max(0,int(time.monotonic()-session_started_monotonic))
+        append_console_event("LOCAL_MCP_SESSION_STOP",state="CLOSED",action_summary=f"duration_seconds={duration}")
+        if (
+            transport_mode(config)=="LOCAL_TUNNEL"
+            and duration>=LOCAL_METERING_MIN_INTERVAL_SECONDS
+            and local_metering_sync_due()
+        ):
+            local_metering_sync(config,"MCP_STOP",session_id,session_started_at_utc,duration)
 
 def commander_doctor():
     config=load_config()
@@ -3067,6 +3209,10 @@ def authorize_local_tunnel():
     if not code: raise RuntimeError("DEVICE_AUTHORIZATION_CODE_REQUIRED")
     payload=refresh_product_lease(config,authorization_code=code,requested_transport="LOCAL_TUNNEL")
     lease=payload.get("product_lease") or {}
+    usage_sync=payload.get("usage_sync") or {}
+    if usage_sync.get("accepted") is True:
+        _local_meta_set("local_metering_last_sync_at_utc",str(usage_sync.get("synced_at_utc") or utcnow()))
+        _local_meta_set("local_metering_last_event","LEASE_AUTHORIZATION")
     _set_config_value("HARA_COMMANDER_TRANSPORT_MODE","LOCAL_TUNNEL")
     print("HARA_COMMANDER_LOCAL_TUNNEL_AUTHORIZED=PASS")
     print("AUTHORIZATION_VALID_UNTIL_UTC="+str(lease.get("valid_until_utc") or ""))

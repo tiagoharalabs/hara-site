@@ -68,19 +68,34 @@ This separates transport availability from H.A.R.A. execution authority.
 In LOCAL_TUNNEL mode the background Agent performs:
 
 - zero `/api/device/calls/next` polling;
-- zero periodic H.A.R.A. heartbeat;
+- zero periodic timer-based H.A.R.A. heartbeat;
 - zero per-tool H.A.R.A. relay;
 - zero H.A.R.A. cloud quota transaction per local tool.
 
-Core H.A.R.A. control traffic for a continuously authorized device is bounded by
-the six-hour manual authorization flow:
+H.A.R.A. persistence is event-driven instead of periodic:
 
-- portal code request;
-- device lease exchange, with aggregate usage sync piggybacked.
+- `MCP_START`: aggregate metering sync only when the previous successful sync is
+  at least one hour old;
+- `MCP_STOP`: aggregate metering sync only when the MCP session itself lasted at
+  least one hour **and** the previous successful sync is at least one hour old;
+- no metering request runs in the middle of an open MCP session;
+- authorization/lease exchange also carries the same aggregate usage report, so
+  an MCP start immediately after authorization does not create a duplicate sync.
 
-At most four six-hour authorization cycles/day means eight core control requests
-per continuously active device/day, excluding user portal navigation and other
-explicit operator actions.
+The server independently enforces the same one-hour minimum interval. Duplicate
+`device + session + event` reports are idempotent.
+
+The six-hour manual authorization flow adds:
+
+- one portal code request;
+- one device lease exchange.
+
+At most four six-hour authorization cycles/day means eight authorization-control
+requests/day. Event-driven metering is additionally capped by the one-hour
+minimum to at most 24 accepted metering syncs/day in an intentionally pathological
+start/stop pattern. Therefore the absolute core control-plane ceiling modeled for
+one continuously active device is 32 requests/day, while a normal long-running
+MCP session is substantially below that ceiling.
 
 ## Usage accounting
 
@@ -88,18 +103,32 @@ Product usage and infrastructure traffic are separate metrics.
 
 Local MCP execution history remains in the device SQLite store.
 
-At authorization time the Agent sends metadata-only cumulative aggregates:
+At authorization time and eligible MCP start/stop events, the Agent sends
+metadata-only cumulative aggregates:
 
 - local lifetime governed execution count;
-- recent daily buckets.
+- recent daily buckets;
+- random MCP session id;
+- MCP start/stop timestamp and, for stop, bounded session duration;
+- Agent version and transport mode.
 
-It does not send commands, paths, file contents, stdout or results.
+It does not send commands, paths, file contents, stdout or results. The cloud
+stores only the aggregate counters plus a minimal metering event record.
 
 Server aggregation is monotonic/idempotent with MAX/upsert semantics. A retry
 does not double count.
 
 Re-enrollment creates a new per-device baseline so old local history is not
 reattributed to the new device identity.
+
+
+### Trial / Free enforcement without per-tool cloud calls
+
+For metered plans in `LOCAL_TUNNEL`, the six-hour authorization can allocate the
+remaining entitlement balance to the signed local budget instead of the legacy
+100-unit relay block. The Agent debits that budget locally and fails closed at
+zero. Reauthorization reconciles the cumulative usage before another lease is
+issued. The legacy relay path keeps the smaller block behavior.
 
 The portal's governed-execution counter is:
 

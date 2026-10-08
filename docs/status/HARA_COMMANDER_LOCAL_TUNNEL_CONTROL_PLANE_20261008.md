@@ -37,7 +37,10 @@ PASS:
 - invalid/replayed code fail-closed;
 - authorization validation occurs before budget mutation;
 - signed lease required for all local tool calls in LOCAL_TUNNEL;
-- zero H.A.R.A. polling/heartbeat branch;
+- zero H.A.R.A. polling and zero periodic timer-based heartbeat branch;
+- event-driven MCP_START/MCP_STOP metering sync with one-hour minimum interval;
+- MCP_STOP sync additionally requires a session duration of at least one hour;
+- Trial/Free LOCAL_TUNNEL budget can carry the remaining period entitlement locally;
 - strace runtime proof: zero AF_INET/AF_INET6 outbound connect while idle;
 - official OpenAI tunnel-client v0.0.15 CLI/flags validated;
 - OpenAI profile persists env reference, not runtime API key;
@@ -55,15 +58,19 @@ PASS:
 
 ## Quantitative control-plane model
 
-With six-hour authorization:
+With six-hour authorization and event-driven metering:
 - max authorization cycles/day: 4;
-- core control requests/cycle: 2;
-- max core control requests/day: 8;
-- max core control requests/30 days: 240.
+- authorization requests/cycle: 2;
+- authorization-control requests/day: 8;
+- metering sync: start/stop only, minimum one hour between accepted syncs;
+- worst-case accepted metering syncs/day: 24;
+- absolute modeled core-control ceiling/day: 32;
+- absolute modeled core-control ceiling/30 days: 960.
 
-For a Free 10,000-governed-execution month, that is a 2.4% core control-request
-ratio versus one cloud request per execution, before counting the much larger
-polling reduction.
+For a Free 10,000-governed-execution month, even that pathological ceiling is a
+9.6% control-request ratio versus one cloud request per execution, a 90.4%
+reduction before counting the much larger elimination of idle polling. Normal
+long-running tunnel sessions are materially below this ceiling.
 
 ## Current blockers to live cutover
 

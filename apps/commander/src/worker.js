@@ -67,6 +67,7 @@ const LOCAL_BUDGET_MIN_LINUX_PATCH = 36;
 const LOCAL_BUDGET_BLOCK_UNITS = 100;
 const PRODUCT_LEASE_TTL_SECONDS = 6 * 60 * 60;
 const DEVICE_AUTHORIZATION_CODE_TTL_SECONDS = 10 * 60;
+const LOCAL_METERING_MIN_INTERVAL_SECONDS = 60 * 60;
 const SLO_ALERT_PROFILE = "INTERNAL_BETA_V1";
 const SLO_ALERT_BREACH_STREAK = 2;
 const SLO_ALERT_RECOVERY_STREAK = 2;
@@ -1491,7 +1492,7 @@ function publicBudgetBlock(row, leaseToken) {
   };
 }
 
-async function issueDeviceBudgetBlock(env, device, entitlement, report = null) {
+async function issueDeviceBudgetBlock(env, device, entitlement, report = null, options = {}) {
   const periodKey = monthKey();
   const now = nowIso();
   const expiresAt = monthEndUtc(periodKey);
@@ -1575,7 +1576,11 @@ async function issueDeviceBudgetBlock(env, device, entitlement, report = null) {
     };
   }
 
-  const units = Math.min(LOCAL_BUDGET_BLOCK_UNITS, remaining);
+  const requestedCap = Number(options?.allocation_cap_units ?? LOCAL_BUDGET_BLOCK_UNITS);
+  const allocationCap = Number.isSafeInteger(requestedCap) && requestedCap > 0
+    ? Math.min(requestedCap, limit)
+    : LOCAL_BUDGET_BLOCK_UNITS;
+  const units = Math.min(allocationCap, remaining);
   const budgetId = "HARA-BUDGET-" + crypto.randomUUID();
   const leaseToken = randomToken(32);
   const leaseTokenHash = await sha256(leaseToken);
@@ -1675,7 +1680,137 @@ async function reconcileLocalUsageReport(env, device, report) {
     );
   }
   await env.PRODUCT_DB.batch(statements);
-  return { accepted: true, lifetime_units: lifetime, daily_buckets: daily.length };
+  return { accepted: true, lifetime_units: lifetime, daily_buckets: daily.length, synced_at_utc: updatedAt };
+}
+
+async function deviceLocalMeteringSync(env, request, body = {}) {
+  const device = await resolveDeviceCredential(env, request);
+  if (String(device.tunnel_mode || "") !== "LOCAL_TUNNEL") {
+    throw new Error("LOCAL_METERING_REQUIRES_LOCAL_TUNNEL");
+  }
+  const schema = String(body?.schema || "");
+  if (schema !== "hara.commander-local-metering-sync.v1") {
+    throw new Error("LOCAL_METERING_PAYLOAD_INVALID");
+  }
+  const eventType = String(body?.event_type || "").trim().toUpperCase();
+  if (!["MCP_START","MCP_STOP"].includes(eventType)) {
+    throw new Error("LOCAL_METERING_EVENT_INVALID");
+  }
+  const sessionId = cleanId(body?.session_id, 180);
+  const startedAt = String(body?.session_started_at_utc || "");
+  const startedMs = Date.parse(startedAt);
+  if (!Number.isFinite(startedMs)) throw new Error("LOCAL_METERING_TIME_INVALID");
+  const duration = body?.session_duration_seconds == null
+    ? null
+    : Number(body.session_duration_seconds);
+  if (duration != null && (!Number.isInteger(duration) || duration < 0 || duration > 30 * 24 * 60 * 60)) {
+    throw new Error("LOCAL_METERING_DURATION_INVALID");
+  }
+  if (eventType === "MCP_STOP" && (duration == null || duration < LOCAL_METERING_MIN_INTERVAL_SECONDS)) {
+    return {
+      schema:"hara.commander-local-metering-sync-response.v1",
+      ok:true,
+      accepted:false,
+      existing:false,
+      code:"LOCAL_METERING_SESSION_TOO_SHORT",
+      event_type:eventType,
+      min_interval_seconds:LOCAL_METERING_MIN_INTERVAL_SECONDS,
+      server_time_utc:new Date().toISOString(),
+    };
+  }
+  const agentVersion = cleanAgentValue(body?.agent_version, 80) || device.agent_version;
+  const transport = String(body?.transport_mode || "").trim().toUpperCase();
+  if (transport !== "LOCAL_TUNNEL") throw new Error("LOCAL_METERING_TRANSPORT_INVALID");
+
+  const existing = await env.PRODUCT_DB.prepare(
+    `SELECT event_id,event_at_utc
+       FROM commander_device_metering_events
+      WHERE device_id=? AND session_id=? AND event_type=?
+      LIMIT 1`
+  ).bind(device.device_id, sessionId, eventType).first();
+  if (existing) {
+    return {
+      schema:"hara.commander-local-metering-sync-response.v1",
+      ok:true,
+      accepted:true,
+      existing:true,
+      event_type:eventType,
+      event_at_utc:existing.event_at_utc,
+      min_interval_seconds:LOCAL_METERING_MIN_INTERVAL_SECONDS,
+    };
+  }
+
+  const now = new Date();
+  const nowText = now.toISOString();
+  const lastSyncMs = Date.parse(String(device.last_metering_sync_at_utc || ""));
+  if (Number.isFinite(lastSyncMs)) {
+    const elapsedSeconds = Math.floor((now.getTime() - lastSyncMs) / 1000);
+    if (elapsedSeconds < LOCAL_METERING_MIN_INTERVAL_SECONDS) {
+      return {
+        schema:"hara.commander-local-metering-sync-response.v1",
+        ok:true,
+        accepted:false,
+        existing:false,
+        code:"LOCAL_METERING_THROTTLED",
+        event_type:eventType,
+        min_interval_seconds:LOCAL_METERING_MIN_INTERVAL_SECONDS,
+        retry_after_seconds:Math.max(1, LOCAL_METERING_MIN_INTERVAL_SECONDS - Math.max(0, elapsedSeconds)),
+        server_time_utc:nowText,
+      };
+    }
+  }
+
+  const report = body?.usage_report || null;
+  if (!report || report.schema !== "hara.commander-local-usage-report.v1") {
+    throw new Error("LOCAL_USAGE_REPORT_INVALID");
+  }
+  const lifetime = Number(report.lifetime_units);
+  if (!Number.isSafeInteger(lifetime) || lifetime < 0 || lifetime > 1_000_000_000_000) {
+    throw new Error("LOCAL_USAGE_REPORT_INVALID");
+  }
+
+  // Usage persistence is idempotent/monotonic and contains aggregates only.
+  await reconcileLocalUsageReport(env, device, report);
+
+  const eventId = "HARA-METER-" + crypto.randomUUID();
+  const updateColumn = eventType === "MCP_START"
+    ? "last_local_mcp_started_at_utc"
+    : "last_local_mcp_stopped_at_utc";
+  const updateSql = `UPDATE commander_devices
+       SET last_metering_sync_at_utc=?,
+           last_seen_at_utc=?,
+           agent_version=?,
+           ${updateColumn}=?
+     WHERE device_id=? AND tenant_id=? AND state='ACTIVE' AND revoked_at_utc IS NULL`;
+
+  await env.PRODUCT_DB.batch([
+    env.PRODUCT_DB.prepare(
+      `INSERT INTO commander_device_metering_events
+         (event_id,device_id,tenant_id,subject_id,session_id,event_type,event_at_utc,
+          session_started_at_utc,session_duration_seconds,local_lifetime_units,
+          agent_version,transport_mode,created_at_utc)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`
+    ).bind(
+      eventId, device.device_id, device.tenant_id, device.enrolled_by_subject_id,
+      sessionId, eventType, nowText, startedAt, duration, lifetime,
+      agentVersion, "LOCAL_TUNNEL", nowText,
+    ),
+    env.PRODUCT_DB.prepare(updateSql).bind(
+      nowText, nowText, agentVersion, nowText, device.device_id, device.tenant_id,
+    ),
+  ]);
+
+  return {
+    schema:"hara.commander-local-metering-sync-response.v1",
+    ok:true,
+    accepted:true,
+    existing:false,
+    event_type:eventType,
+    event_at_utc:nowText,
+    min_interval_seconds:LOCAL_METERING_MIN_INTERVAL_SECONDS,
+    local_lifetime_units:lifetime,
+    customer_content_persisted:false,
+  };
 }
 
 async function deviceProductLease(env, request, body = {}) {
@@ -1714,6 +1849,7 @@ async function deviceProductLease(env, request, body = {}) {
   }
 
   let budget = null;
+  let usageSync = { accepted:false };
   if (productLease.usage_mode === "LOCAL_BUDGET") {
     try {
       budget = await issueDeviceBudgetBlock(
@@ -1721,6 +1857,7 @@ async function deviceProductLease(env, request, body = {}) {
         device,
         context,
         body?.budget_report || null,
+        { allocation_cap_units: localTunnel ? context.unit_limit : LOCAL_BUDGET_BLOCK_UNITS },
       );
     } catch (error) {
       productLease.usage_mode = "CLOUD_QUOTA";
@@ -1744,9 +1881,15 @@ async function deviceProductLease(env, request, body = {}) {
       productLease.valid_until_utc, activatedAt, device.device_id, device.tenant_id,
     ).run();
     // Aggregate usage is not authorization-critical and may catch up on the next
-    // six-hour cycle. Never strand a consumed code because telemetry was stale.
-    await reconcileLocalUsageReport(env, device, body?.usage_report || null)
+    // lifecycle event. Never strand a consumed code because telemetry was stale.
+    usageSync = await reconcileLocalUsageReport(env, device, body?.usage_report || null)
       .catch(() => ({ accepted:false }));
+    if (usageSync.accepted) {
+      await env.PRODUCT_DB.prepare(
+        `UPDATE commander_devices SET last_metering_sync_at_utc=?
+          WHERE device_id=? AND tenant_id=? AND state='ACTIVE' AND revoked_at_utc IS NULL`
+      ).bind(usageSync.synced_at_utc || activatedAt, device.device_id, device.tenant_id).run();
+    }
   }
 
   return {
@@ -1759,6 +1902,7 @@ async function deviceProductLease(env, request, body = {}) {
       kid: "commander-lease-v1",
     },
     budget,
+    usage_sync: usageSync,
   };
 }
 
@@ -2368,7 +2512,8 @@ async function listDevices(env, session) {
   const result = await env.PRODUCT_DB.prepare(
     `SELECT d.device_id, d.enrolled_by_subject_id, d.device_name, d.platform, d.architecture,
             d.agent_version, d.tunnel_mode, d.state, d.created_at_utc, d.last_seen_at_utc,
-            d.revoked_at_utc, d.approval_mode, d.local_authorized_until_utc
+            d.revoked_at_utc, d.approval_mode, d.local_authorized_until_utc,
+            d.last_metering_sync_at_utc, d.last_local_mcp_started_at_utc, d.last_local_mcp_stopped_at_utc
        FROM commander_devices d
       WHERE d.tenant_id = ?
       ORDER BY d.created_at_utc DESC`
@@ -2391,6 +2536,9 @@ async function listDevices(env, session) {
     approval_mode: normalizeApprovalMode(row.approval_mode, "ASK_EVERY_ACTION"),
     local_authorized_until_utc: row.local_authorized_until_utc || null,
     authorization_active: Boolean(row.local_authorized_until_utc && Date.parse(row.local_authorized_until_utc) > now),
+    last_metering_sync_at_utc: row.last_metering_sync_at_utc || null,
+    last_local_mcp_started_at_utc: row.last_local_mcp_started_at_utc || null,
+    last_local_mcp_stopped_at_utc: row.last_local_mcp_stopped_at_utc || null,
   }));
 }
 
@@ -2493,7 +2641,9 @@ async function resolveDeviceCredential(env, request) {
   const device = await env.PRODUCT_DB.prepare(
     `SELECT device_id, tenant_id, enrolled_by_subject_id, device_name, platform,
             architecture, agent_version, tunnel_mode, state, created_at_utc,
-            last_seen_at_utc, revoked_at_utc, approval_mode
+            last_seen_at_utc, revoked_at_utc, approval_mode,
+            local_authorized_until_utc, last_metering_sync_at_utc,
+            last_local_mcp_started_at_utc, last_local_mcp_stopped_at_utc
        FROM commander_devices
       WHERE credential_hash = ?
       LIMIT 1`
@@ -5472,6 +5622,11 @@ export default {
         return json(await deviceProductLease(env, request, body));
       }
 
+      if (url.pathname === "/api/device/metering-sync" && request.method === "POST") {
+        const body = await request.json().catch(() => ({}));
+        return json(await deviceLocalMeteringSync(env, request, body));
+      }
+
       if (url.pathname === "/api/device/offline" && request.method === "POST") {
         const body = await request.json().catch(() => ({}));
         return json(await markDeviceOffline(env, request, body));
@@ -5818,6 +5973,12 @@ export default {
         DEVICE_AUTHORIZATION_CODE_ALREADY_USED: 409,
         LOCAL_TUNNEL_PLATFORM_PENDING: 409,
         LOCAL_USAGE_REPORT_INVALID: 400,
+        LOCAL_METERING_REQUIRES_LOCAL_TUNNEL: 409,
+        LOCAL_METERING_PAYLOAD_INVALID: 400,
+        LOCAL_METERING_EVENT_INVALID: 400,
+        LOCAL_METERING_TIME_INVALID: 400,
+        LOCAL_METERING_DURATION_INVALID: 400,
+        LOCAL_METERING_TRANSPORT_INVALID: 400,
         DEVICE_LOCAL_TUNNEL_DIRECT_PATH_REQUIRED: 409,
         DEVICE_EVENT_V2_DISABLED: 404,
         DEVICE_EVENT_V2_BINDING_MISSING: 503,

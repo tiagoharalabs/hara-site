@@ -89,6 +89,19 @@ need("MAX(commander_device_usage_totals.lifetime_units,excluded.lifetime_units)"
 need("MAX(commander_device_usage_daily.units,excluded.units)" in WORKER, "USAGE_SYNC_IDEMPOTENT_DAILY")
 need("reconcileLocalUsageReport(env, device, body?.usage_report || null)" in WORKER and ".catch(() => ({ accepted:false }))" in WORKER, "USAGE_SYNC_NONBLOCKING_AUTH")
 need("Number(local7d?.units || 0)" in WORKER and "Number(localTotal?.units || 0)" in WORKER, "PORTAL_USAGE_INCLUDES_LOCAL")
+need("LOCAL_METERING_MIN_INTERVAL_SECONDS = 60 * 60" in WORKER, "METERING_SERVER_MIN_INTERVAL_1H")
+need("LOCAL_METERING_MIN_INTERVAL_SECONDS = 60 * 60" in AGENT_SOURCE, "METERING_AGENT_MIN_INTERVAL_1H")
+need("/api/device/metering-sync" in WORKER and "/api/device/metering-sync" in AGENT_SOURCE, "METERING_SYNC_ROUTE")
+need("commander_device_metering_events" in WORKER and "commander_device_metering_events" in MIGRATION.read_text(encoding="utf-8"), "METERING_EVENT_TABLE")
+need("MCP_START" in WORKER and "MCP_STOP" in WORKER, "METERING_START_STOP_ONLY")
+need("LOCAL_METERING_SESSION_TOO_SHORT" in WORKER, "METERING_SERVER_SHORT_SESSION_GUARD")
+need("SESSION_UNDER_MIN_INTERVAL" in AGENT_SOURCE, "METERING_AGENT_SHORT_SESSION_GUARD")
+need("LOCAL_MCP_SESSION_START" in AGENT_SOURCE and "LOCAL_MCP_SESSION_STOP" in AGENT_SOURCE, "MCP_SESSION_LIFECYCLE_EVENTS")
+need("local_metering_sync_due" in AGENT_SOURCE, "METERING_LOCAL_THROTTLE")
+need("METERING_SYNC_DEGRADED" in AGENT_SOURCE, "METERING_BEST_EFFORT")
+need('"customer_content_included":False' in AGENT_SOURCE, "METERING_NO_CUSTOMER_CONTENT")
+need("local_lifetime_units" in WORKER and "customer_content_persisted:false" in WORKER, "METERING_MINIMAL_CLOUD_TELEMETRY")
+need("allocation_cap_units: localTunnel ? context.unit_limit : LOCAL_BUDGET_BLOCK_UNITS" in WORKER, "LOCAL_TUNNEL_FULL_REMAINING_BUDGET")
 lease_block = WORKER.split("async function deviceProductLease",1)[1].split("async function ensureSecondaryMcpBinding",1)[0]
 need("validateDeviceAuthorizationCode" in lease_block, "AUTH_CODE_READONLY_VALIDATE")
 need("consumeValidatedDeviceAuthorizationCode" in lease_block, "AUTH_CODE_ATOMIC_CONSUME")
@@ -124,6 +137,11 @@ with sqlite3.connect(":memory:") as db:
     need("commander_device_authorization_codes" in tables, "MIGRATION_AUTH_TABLE")
     need("commander_device_usage_totals" in tables, "MIGRATION_USAGE_TOTALS")
     need("commander_device_usage_daily" in tables, "MIGRATION_USAGE_DAILY")
+    need("commander_device_metering_events" in tables, "MIGRATION_METERING_EVENTS")
+    device_cols={row[1] for row in db.execute("PRAGMA table_info(commander_devices)")}
+    need("last_metering_sync_at_utc" in device_cols, "MIGRATION_LAST_METERING_SYNC")
+    need("last_local_mcp_started_at_utc" in device_cols, "MIGRATION_LAST_MCP_START")
+    need("last_local_mcp_stopped_at_utc" in device_cols, "MIGRATION_LAST_MCP_STOP")
 
 # Load Agent without executing main.
 ns = {"__name__": "hara_agent_local_tunnel_test", "__file__": str(AGENT_PATH)}
@@ -217,6 +235,39 @@ with tempfile.TemporaryDirectory(prefix="hara-local-tunnel-test-") as td:
     )
     after_relay = ns["local_usage_report"](config)
     need(int(after_relay["lifetime_units"]) == before, "LOCAL_USAGE_EXCLUDES_RELAY")
+
+    # Metering is start/stop only and has a local one-hour throttle. The
+    # payload carries aggregate counters, never customer content.
+    metering_calls=[]
+    def fake_metering_post(url,token,payload,timeout=25):
+        assert url.endswith("/api/device/metering-sync")
+        assert token=="TEST_DEVICE_TOKEN"
+        metering_calls.append(json.loads(json.dumps(payload)))
+        return {
+            "schema":"hara.commander-local-metering-sync-response.v1",
+            "ok":True,
+            "accepted":True,
+            "event_type":payload["event_type"],
+            "event_at_utc":datetime.now(timezone.utc).isoformat(),
+            "min_interval_seconds":3600,
+        }
+    ns["post_json"]=fake_metering_post
+    ns["_local_meta_set"]("local_metering_last_sync_at_utc","2000-01-01T00:00:00+00:00")
+    m1=ns["local_metering_sync"](config,"MCP_START","session-metering",now.isoformat())
+    need(m1.get("accepted") is True and len(metering_calls)==1, "METERING_START_SYNC")
+    keys=set(metering_calls[0])
+    need(keys=={
+        "schema","event_type","session_id","session_started_at_utc",
+        "session_duration_seconds","agent_version","transport_mode",
+        "usage_report","metadata_only","customer_content_included",
+    }, "METERING_PAYLOAD_MINIMAL_KEYS")
+    need(metering_calls[0]["metadata_only"] is True and metering_calls[0]["customer_content_included"] is False, "METERING_PAYLOAD_PRIVACY")
+    m2=ns["local_metering_sync"](config,"MCP_STOP","session-metering",now.isoformat(),1200)
+    need(m2.get("reason")=="SESSION_UNDER_MIN_INTERVAL" and len(metering_calls)==1, "METERING_STOP_UNDER_1H_SKIPPED")
+    ns["_local_meta_set"]("local_metering_last_sync_at_utc",(datetime.now(timezone.utc)-timedelta(hours=2)).isoformat())
+    m3=ns["local_metering_sync"](config,"MCP_STOP","session-metering",now.isoformat(),7200)
+    need(m3.get("accepted") is True and len(metering_calls)==2, "METERING_STOP_AFTER_1H_SYNC")
+    need(metering_calls[1]["event_type"]=="MCP_STOP" and metering_calls[1]["session_duration_seconds"]==7200, "METERING_STOP_DURATION")
 
     # Re-enrollment changes device identity and starts a fresh baseline instead
     # of reattributing the previous device's local history.

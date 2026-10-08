@@ -15,7 +15,10 @@ def need(ok,code):
 lease_hours=6
 renewals_per_day=24//lease_hours
 requests_per_renewal=2  # portal code + device lease exchange (usage sync piggybacks)
-core_requests_per_day=renewals_per_day*requests_per_renewal
+authorization_requests_per_day=renewals_per_day*requests_per_renewal
+metering_min_interval_hours=1
+max_metering_syncs_per_day=24//metering_min_interval_hours
+core_requests_per_day=authorization_requests_per_day+max_metering_syncs_per_day
 core_requests_30d=core_requests_per_day*30
 free_tools_month=10000
 ratio=core_requests_30d/free_tools_month
@@ -33,14 +36,20 @@ need('relay_calls_per_local_tool_call":0' in AGENT,"TOOL_RELAY_ZERO")
 need('cloud_quota_consumed_by_local_tool_call":False' in AGENT,"TOOL_CLOUD_QUOTA_ZERO")
 need('commander_device_usage_totals' in MIGRATION and 'commander_device_usage_daily' in MIGRATION,"AGGREGATE_SYNC_TABLES")
 need(renewals_per_day==4,"MAX_RENEWALS_PER_DAY")
-need(core_requests_per_day==8,"CORE_REQUESTS_PER_DAY")
-need(core_requests_30d==240,"CORE_REQUESTS_30D")
-need(ratio<=0.024,"FREE_10K_CONTROL_PLANE_RATIO")
-need(reduction>=97.6,"FREE_10K_REQUEST_REDUCTION")
+need('LOCAL_METERING_MIN_INTERVAL_SECONDS = 60 * 60' in AGENT,"METERING_MIN_INTERVAL_1H")
+need('LOCAL_MCP_SESSION_START' in AGENT and 'LOCAL_MCP_SESSION_STOP' in AGENT,"METERING_START_STOP_ONLY")
+need(max_metering_syncs_per_day==24,"MAX_METERING_SYNCS_PER_DAY")
+need(authorization_requests_per_day==8,"AUTHORIZATION_REQUESTS_PER_DAY")
+need(core_requests_per_day==32,"CORE_REQUESTS_PER_DAY_WORST_CASE")
+need(core_requests_30d==960,"CORE_REQUESTS_30D_WORST_CASE")
+need(ratio<=0.096,"FREE_10K_CONTROL_PLANE_RATIO_WORST_CASE")
+need(reduction>=90.4,"FREE_10K_REQUEST_REDUCTION_WORST_CASE")
 
 print(f"COMMANDER_LOCAL_TUNNEL_MAX_RENEWALS_PER_DAY={renewals_per_day}")
-print(f"COMMANDER_LOCAL_TUNNEL_CORE_CONTROL_REQUESTS_PER_DAY={core_requests_per_day}")
-print(f"COMMANDER_LOCAL_TUNNEL_CORE_CONTROL_REQUESTS_30D={core_requests_30d}")
-print(f"COMMANDER_LOCAL_TUNNEL_FREE_10K_CORE_REQUEST_RATIO={ratio:.4f}")
-print(f"COMMANDER_LOCAL_TUNNEL_FREE_10K_CORE_REQUEST_REDUCTION_PERCENT={reduction:.1f}")
+print(f"COMMANDER_LOCAL_TUNNEL_AUTHORIZATION_REQUESTS_PER_DAY={authorization_requests_per_day}")
+print(f"COMMANDER_LOCAL_TUNNEL_MAX_METERING_SYNCS_PER_DAY={max_metering_syncs_per_day}")
+print(f"COMMANDER_LOCAL_TUNNEL_CORE_CONTROL_REQUESTS_PER_DAY_WORST_CASE={core_requests_per_day}")
+print(f"COMMANDER_LOCAL_TUNNEL_CORE_CONTROL_REQUESTS_30D_WORST_CASE={core_requests_30d}")
+print(f"COMMANDER_LOCAL_TUNNEL_FREE_10K_CORE_REQUEST_RATIO_WORST_CASE={ratio:.4f}")
+print(f"COMMANDER_LOCAL_TUNNEL_FREE_10K_CORE_REQUEST_REDUCTION_PERCENT_WORST_CASE={reduction:.1f}")
 print("COMMANDER_LOCAL_TUNNEL_UNIT_ECONOMICS=PASS")

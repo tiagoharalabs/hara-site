@@ -1040,8 +1040,10 @@
       const arch = device.architecture ? " · " + String(device.architecture) : "";
       const agentVersion = device.agent_version ? " · Agent " + String(device.agent_version) : "";
       const authUntil = device.local_authorized_until_utc ? " · Autorizado até: " + formatDeviceSeen(device.local_authorized_until_utc) : "";
-      const transport = String(device.tunnel_mode || "").toUpperCase() === "LOCAL_TUNNEL" ? " · OpenAI Tunnel" : " · Último contato: " + formatDeviceSeen(device.last_seen_at_utc);
-      meta.textContent = String(device.platform || "—") + arch + agentVersion + transport + authUntil;
+      const localTunnel = String(device.tunnel_mode || "").toUpperCase() === "LOCAL_TUNNEL";
+      const usageSync = localTunnel && device.last_metering_sync_at_utc ? " · Uso sync: " + formatDeviceSeen(device.last_metering_sync_at_utc) : "";
+      const transport = localTunnel ? " · OpenAI Tunnel" : " · Último contato: " + formatDeviceSeen(device.last_seen_at_utc);
+      meta.textContent = String(device.platform || "—") + arch + agentVersion + transport + authUntil + usageSync;
       body.append(titleLine, meta);
 
       const readiness=deviceReadiness(device);

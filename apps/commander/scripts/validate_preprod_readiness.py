@@ -117,7 +117,16 @@ def main():
     if "LOCAL_TUNNEL" in worker:
         assert local_tunnel_migration.is_file(), "LOCAL_TUNNEL_MIGRATION_0029_MISSING"
         migration_text = local_tunnel_migration.read_text(encoding="utf-8")
-        for token in ("local_authorized_until_utc","commander_device_authorization_codes","commander_device_usage_totals","commander_device_usage_daily"):
+        for token in (
+            "local_authorized_until_utc",
+            "last_metering_sync_at_utc",
+            "last_local_mcp_started_at_utc",
+            "last_local_mcp_stopped_at_utc",
+            "commander_device_authorization_codes",
+            "commander_device_usage_totals",
+            "commander_device_usage_daily",
+            "commander_device_metering_events",
+        ):
             assert token in migration_text, "LOCAL_TUNNEL_MIGRATION_0029_INCOMPLETE:" + token
         print("COMMANDER_PREPROD_LOCAL_TUNNEL_MIGRATION_BEFORE_WORKER=PASS")
     assert '"workers_dev": false' in wrangler, "WORKERS_DEV_NOT_DISABLED"
