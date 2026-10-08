@@ -64,7 +64,7 @@ try:
     check("tool_count",len(names)==24,len(names))
 
     conf=sc(rpc("get_config")) or {}
-    check("get_config",conf.get("agent_version")=="0.3.41" and conf.get("transport")=="LOCAL_STDIO",conf)
+    check("get_config",conf.get("agent_version")==args.expect_version and conf.get("transport")=="LOCAL_STDIO",conf)
 
     usage=sc(rpc("get_usage_stats")) or {}
     check("usage_zero_relay",usage.get("relay_calls_per_local_tool_call")==0 and usage.get("cloud_quota_consumed_by_local_tool_call") is False,usage)
@@ -170,9 +170,9 @@ finally:
     except Exception: pass
 
 for k,v in results.items():
-    print(f"HARA_LOCAL_0341_{k.upper()}={v}")
-print(f"HARA_LOCAL_0341_TOTAL={len(results)}")
-print(f"HARA_LOCAL_0341_FAILURES={len(failures)}")
+    print(f"HARA_LOCAL_MCP_{k.upper()}={v}")
+print(f"HARA_LOCAL_MCP_TOTAL={len(results)}")
+print(f"HARA_LOCAL_MCP_FAILURES={len(failures)}")
 if failures:
     for k,d in failures:
         print("FAIL",k,json.dumps(d,default=str)[:1000])

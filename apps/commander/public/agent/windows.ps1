@@ -43,6 +43,21 @@ function Get-SafeErrorCode($ErrorRecord) {
   if ($normalized -match "^[A-Z][A-Z0-9_]{0,79}$") { return $normalized }
   return "RUNTIME_ERROR"
 }
+
+function Test-OperationalErrorCode([string]$Code) {
+  $operational=@(
+    "DEVICE_OFFLINE","DEVICE_BUSY","CHANNEL_TRANSIENT_BUSY","DEVICE_CALL_TIMEOUT","CHANNEL_TRANSIENT_TIMEOUT",
+    "DEVICE_NOT_FOUND","DEVICE_CALL_NOT_FOUND","COMPUTER_NAME_AMBIGUOUS",
+    "FILENOTFOUNDERROR","FILE_NOT_FOUND","PARENT_DIRECTORY_NOT_FOUND","FILESYSTEM_PARENT_NOT_FOUND",
+    "PREIMAGE_NOT_FOUND","RECEIPT_NOT_FOUND","EDIT_MATCH_NOT_FOUND","PROCESS_SESSION_NOT_FOUND","PROCESS_SESSION_EXITED",
+    "DESTINATION_EXISTS","PATH_EXISTS_NOT_DIRECTORY","FILESYSTEM_PATH_EXISTS","FILEEXISTSERROR","EDIT_MATCH_AMBIGUOUS",
+    "PATH_NOT_FILE","PATH_NOT_DIRECTORY","FILESYSTEM_NOT_DIRECTORY","SOURCE_NOT_FILE","DELETE_TARGET_NOT_FILE",
+    "ROLLBACK_TARGET_NOT_FILE","PROCESS_CWD_INVALID","ISADIRECTORYERROR","NOTADIRECTORYERROR","BINARY_FILE_DENIED",
+    "FILE_TOO_LARGE","HASH_FILE_TOO_LARGE","COPY_FILE_TOO_LARGE","DELETE_FILE_TOO_LARGE","PREIMAGE_FILE_TOO_LARGE","WRITE_TOO_LARGE"
+  )
+  return $operational -contains $Code
+}
+
 function Set-RuntimeStatus([string]$HeartbeatAt=$null,[string]$ErrorCode=$null,[string]$ErrorAt=$null,[string]$StartedAt=$null) {
   New-Item -ItemType Directory -Path $Root -Force | Out-Null
   $existing=$null
@@ -384,25 +399,26 @@ function Get-LocalActivityWindow([string]$Window="7d") {
 SELECT COUNT(*) AS total_calls,
        SUM(CASE WHEN state='COMPLETED' THEN 1 ELSE 0 END) AS completed,
        SUM(CASE WHEN state='FAILED' THEN 1 ELSE 0 END) AS failed,
+       SUM(CASE WHEN state='EXPECTED' THEN 1 ELSE 0 END) AS operational,
        ROUND(AVG(CASE WHEN duration_ms IS NOT NULL THEN duration_ms END),1) AS avg_total_ms,
        SUM(CASE WHEN state='COMPLETED' AND duration_ms < 3000 THEN 1 ELSE 0 END) AS under_3s,
        SUM(CASE WHEN state='COMPLETED' AND duration_ms IS NOT NULL THEN 1 ELSE 0 END) AS duration_population
 FROM activity_events
-WHERE at_utc >= ? AND event IN ('PASS','DENIED')
+WHERE at_utc >= ? AND event IN ('PASS','DENIED','OPERATIONAL')
 "@ @($since))
   $row=if ($summaryRows.Count) {$summaryRows[0]} else {$null}
 
   $tools=@(Invoke-LocalDbQuery @"
 SELECT COALESCE(tool_id,'unknown') AS tool_id,COUNT(*) AS calls
 FROM activity_events
-WHERE at_utc >= ? AND event IN ('PASS','DENIED')
+WHERE at_utc >= ? AND event IN ('PASS','DENIED','OPERATIONAL')
 GROUP BY COALESCE(tool_id,'unknown')
 ORDER BY calls DESC,tool_id LIMIT 6
 "@ @($since))
   $failureRows=@(Invoke-LocalDbQuery @"
 SELECT COALESCE(error_code,'UNKNOWN') AS error_code,COUNT(*) AS calls
 FROM activity_events
-WHERE at_utc >= ? AND event='DENIED'
+WHERE at_utc >= ? AND event='DENIED' AND state='FAILED'
 GROUP BY COALESCE(error_code,'UNKNOWN')
 ORDER BY calls DESC,error_code
 "@ @($since))
@@ -410,7 +426,7 @@ ORDER BY calls DESC,error_code
   $transports=@(Invoke-LocalDbQuery @"
 SELECT DISTINCT COALESCE(transport_mode,'OUTBOUND_RELAY') AS transport_mode
 FROM activity_events
-WHERE at_utc >= ? AND event IN ('PASS','DENIED')
+WHERE at_utc >= ? AND event IN ('PASS','DENIED','OPERATIONAL')
 ORDER BY transport_mode
 "@ @($since))
   $durationRows=@(Invoke-LocalDbQuery @"
@@ -424,6 +440,7 @@ LIMIT ?
   $total=if ($row -and $null -ne $row["total_calls"]) {[int64]$row["total_calls"]} else {0}
   $completed=if ($row -and $null -ne $row["completed"]) {[int64]$row["completed"]} else {0}
   $failed=if ($row -and $null -ne $row["failed"]) {[int64]$row["failed"]} else {0}
+  $operational=if ($row -and $null -ne $row["operational"]) {[int64]$row["operational"]} else {0}
   [int64]$clientFailed=0
   [int64]$policyFailed=0
   [int64]$serviceFailed=0
@@ -444,6 +461,7 @@ LIMIT ?
     total_calls=$total
     completed=$completed
     failed=$failed
+    operational=$operational
     client_failed=$clientFailed
     policy_failed=$policyFailed
     service_failed=$serviceFailed
@@ -1214,7 +1232,8 @@ while ($true) {
           Write-ConsoleEvent "PASS" $Call "COMPLETED" "" $receipt
         } catch {
           $code=Get-SafeErrorCode $_
-          Write-ConsoleEvent "DENIED" $Call "FAILED" $code
+          $operational=Test-OperationalErrorCode $code
+          Write-ConsoleEvent $(if($operational){"OPERATIONAL"}else{"DENIED"}) $Call $(if($operational){"EXPECTED"}else{"FAILED"}) $code
           $denied=@{
             state="DENIED";operational_authority="LOCAL_OPERATOR_SESSION"
             runtime_authority_from_chatgpt=$false;mutation_performed=$false

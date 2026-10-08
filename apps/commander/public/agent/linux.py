@@ -422,18 +422,19 @@ def local_activity_snapshot(window="7d",limit=50,include_events=True):
                      COUNT(*) AS total_calls,
                      SUM(CASE WHEN state='COMPLETED' THEN 1 ELSE 0 END) AS completed,
                      SUM(CASE WHEN state='FAILED' THEN 1 ELSE 0 END) AS failed,
+                     SUM(CASE WHEN state='EXPECTED' THEN 1 ELSE 0 END) AS operational,
                      ROUND(AVG(CASE WHEN duration_ms IS NOT NULL THEN duration_ms END),1) AS avg_total_ms,
                      SUM(CASE WHEN state='COMPLETED' AND duration_ms < 3000 THEN 1 ELSE 0 END) AS under_3s,
                      SUM(CASE WHEN state='COMPLETED' AND duration_ms IS NOT NULL THEN 1 ELSE 0 END) AS duration_population
                    FROM activity_events
                   WHERE at_utc >= ?
-                    AND event IN ('PASS','DENIED')""",
+                    AND event IN ('PASS','DENIED','OPERATIONAL')""",
                 (since,),
             ).fetchone()
             tools=conn.execute(
                 """SELECT COALESCE(tool_id,'unknown') AS tool_id,COUNT(*) AS calls
                      FROM activity_events
-                    WHERE at_utc >= ? AND event IN ('PASS','DENIED')
+                    WHERE at_utc >= ? AND event IN ('PASS','DENIED','OPERATIONAL')
                     GROUP BY COALESCE(tool_id,'unknown')
                     ORDER BY calls DESC,tool_id
                     LIMIT 6""",
@@ -442,7 +443,7 @@ def local_activity_snapshot(window="7d",limit=50,include_events=True):
             failure_rows=conn.execute(
                 """SELECT COALESCE(error_code,'UNKNOWN') AS error_code,COUNT(*) AS calls
                      FROM activity_events
-                    WHERE at_utc >= ? AND event='DENIED'
+                    WHERE at_utc >= ? AND event='DENIED' AND state='FAILED'
                     GROUP BY COALESCE(error_code,'UNKNOWN')
                     ORDER BY calls DESC,error_code""",
                 (since,),
@@ -451,7 +452,7 @@ def local_activity_snapshot(window="7d",limit=50,include_events=True):
             transports=conn.execute(
                 """SELECT DISTINCT COALESCE(transport_mode,'LOCAL_AGENT') AS transport_mode
                      FROM activity_events
-                    WHERE at_utc >= ? AND event IN ('PASS','DENIED')
+                    WHERE at_utc >= ? AND event IN ('PASS','DENIED','OPERATIONAL')
                     ORDER BY transport_mode""",
                 (since,),
             ).fetchall()
@@ -471,7 +472,7 @@ def local_activity_snapshot(window="7d",limit=50,include_events=True):
                     """SELECT at_utc,event,state,tool_id,function_id,error_code,receipt_sha256,
                               action_summary,duration_ms,transport_mode
                          FROM activity_events
-                        WHERE at_utc >= ? AND event IN ('PASS','DENIED')
+                        WHERE at_utc >= ? AND event IN ('PASS','DENIED','OPERATIONAL')
                         ORDER BY event_id DESC
                         LIMIT ?""",
                     (since,limit),
@@ -481,6 +482,7 @@ def local_activity_snapshot(window="7d",limit=50,include_events=True):
     total=int((row["total_calls"] if row else 0) or 0)
     completed=int((row["completed"] if row else 0) or 0)
     failed=int((row["failed"] if row else 0) or 0)
+    operational=int((row["operational"] if row else 0) or 0)
     failure_classes={"CLIENT_ACTION":0,"POLICY":0,"SERVICE":0}
     for item in failure_rows:
         klass=_slo_failure_class(item["error_code"])
@@ -499,7 +501,7 @@ def local_activity_snapshot(window="7d",limit=50,include_events=True):
     summary={
         "total_calls":total,
         "completed":completed,
-        "failed":failed,
+        "failed":failed,"operational":operational,
         "client_failed":client_failed,
         "policy_failed":policy_failed,
         "service_failed":service_failed,
@@ -2282,7 +2284,14 @@ def execute_call(config,call):
                 local_budget_release(call.get("request_id"))
             except Exception:
                 pass
-        append_console_event("DENIED",call,state="FAILED",error_code=code,duration_ms=round((time.monotonic()-started)*1000))
+        operational = local_mcp_operational_error(code,"",{}) is not None
+        append_console_event(
+            "OPERATIONAL" if operational else "DENIED",
+            call,
+            state="EXPECTED" if operational else "FAILED",
+            error_code=code,
+            duration_ms=round((time.monotonic()-started)*1000),
+        )
         complete(config,call,"FAILED",{
             "state":"DENIED","operational_authority":"LOCAL_OPERATOR_SESSION",
             "runtime_authority_from_chatgpt":False,"mutation_performed":False,
@@ -2623,7 +2632,15 @@ def local_simple_mcp_call(config,name,args):
     try:
         result=execute_tool(config,call)
     except Exception as exc:
-        append_console_event("DENIED",call,state="FAILED",error_code=safe_error_code(exc),duration_ms=round((time.monotonic()-started)*1000))
+        code=safe_error_code(exc)
+        operational = local_mcp_operational_error(code,name,args) is not None
+        append_console_event(
+            "OPERATIONAL" if operational else "DENIED",
+            call,
+            state="EXPECTED" if operational else "FAILED",
+            error_code=code,
+            duration_ms=round((time.monotonic()-started)*1000),
+        )
         raise
     append_console_event("PASS",call,state="COMPLETED",receipt_sha256=result.get("bridge_receipt_sha256"),duration_ms=round((time.monotonic()-started)*1000))
     return result
@@ -2650,7 +2667,7 @@ def local_mcp_operational_error(code,name,args):
         return build("BUSY","DEVICE_AVAILABILITY",True,{"available":True,"busy":True})
     if code in {"DEVICE_CALL_TIMEOUT","CHANNEL_TRANSIENT_TIMEOUT"}:
         return build("TIMEOUT","DEVICE_EXECUTION",True,{"completed":False})
-    if code in {"FILENOTFOUNDERROR","FILE_NOT_FOUND","PARENT_DIRECTORY_NOT_FOUND","PREIMAGE_NOT_FOUND","RECEIPT_NOT_FOUND","EDIT_MATCH_NOT_FOUND"}:
+    if code in {"FILENOTFOUNDERROR","FILE_NOT_FOUND","PARENT_DIRECTORY_NOT_FOUND","FILESYSTEM_PARENT_NOT_FOUND","PREIMAGE_NOT_FOUND","RECEIPT_NOT_FOUND","EDIT_MATCH_NOT_FOUND"}:
         result={"exists":False}
         if code=="PARENT_DIRECTORY_NOT_FOUND": result["recommended_tool"]="create_directory"
         if code=="PREIMAGE_NOT_FOUND": result["recommended_tool"]="list_preimages"
@@ -2660,11 +2677,11 @@ def local_mcp_operational_error(code,name,args):
         return build("NOT_FOUND","PROCESS_STATE",False,{"exists":False,"recommended_tool":"list_sessions"})
     if code=="PROCESS_SESSION_EXITED":
         return build("TERMINAL","PROCESS_STATE",False,{"session_state":"EXITED"})
-    if code in {"DESTINATION_EXISTS","PATH_EXISTS_NOT_DIRECTORY"}:
+    if code in {"DESTINATION_EXISTS","PATH_EXISTS_NOT_DIRECTORY","FILESYSTEM_PATH_EXISTS","FILEEXISTSERROR"}:
         return build("CONFLICT","FILESYSTEM_STATE",False,{"conflict":True})
     if code=="EDIT_MATCH_AMBIGUOUS":
         return build("NEEDS_INPUT","EDIT_MATCH",False,{"selection_required":True})
-    if code in {"PATH_NOT_FILE","PATH_NOT_DIRECTORY","SOURCE_NOT_FILE","DELETE_TARGET_NOT_FILE","ROLLBACK_TARGET_NOT_FILE","PROCESS_CWD_INVALID"}:
+    if code in {"PATH_NOT_FILE","PATH_NOT_DIRECTORY","FILESYSTEM_NOT_DIRECTORY","SOURCE_NOT_FILE","DELETE_TARGET_NOT_FILE","ROLLBACK_TARGET_NOT_FILE","PROCESS_CWD_INVALID","ISADIRECTORYERROR","NOTADIRECTORYERROR"}:
         return build("INVALID_TARGET","FILESYSTEM_STATE",False,{"valid_target":False})
     if code=="BINARY_FILE_DENIED":
         return build("UNSUPPORTED_CONTENT","FILESYSTEM_CONTENT",False,{"text_required":True})
