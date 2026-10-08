@@ -42,6 +42,18 @@ PASS:
 - truthful local authority/receipts;
 - Full/Simple MCP regressions.
 
+
+## Repository sanitation
+
+Repository continuation has been normalized around this branch.
+
+- `local/commander-product-current` is the only authoritative product continuation.
+- Recent absorbed internal branches were fast-forwarded in Storage to the same canonical product-current SHA where ancestry allowed it.
+- Redundant recent worktrees were removed locally after clean-status verification.
+- Divergent historical branches remain evidence only; they are not continuation bases.
+- The Git Gateway forbids deleting `local/*` remote branches, so sanitation uses canonical alignment rather than bypassing branch-protection hooks.
+- GitHub publication is intentionally limited to `local/commander-product-current`; internal historical workstream branches are not part of the public continuation surface.
+
 ## Release truth
 
 Source Agent: 0.3.43.

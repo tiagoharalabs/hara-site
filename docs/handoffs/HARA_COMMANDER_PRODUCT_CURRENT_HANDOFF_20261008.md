@@ -179,6 +179,17 @@ The following lines have been absorbed into Product Current:
 
 Identity/DCR remains a separate infrastructure concern. Do not merge it into the Commander product branch merely to repair Identity.
 
+
+### Repository continuation policy
+
+Storage may retain historical `local/commander-*` names because the Git Gateway denies branch deletion. Absorbed recent refs are aligned to the canonical line where fast-forward is valid. This does not create separate product strategies.
+
+The GitHub continuation branch is only:
+
+`local/commander-product-current`
+
+Do not publish historical internal workstream branches to GitHub merely for archival convenience.
+
 ## Canonical next attacks
 
 1. release/sign 0.3.43;
