@@ -92,6 +92,7 @@ def main():
         ("COMMANDER_PREPROD_LOCAL_FIRST_UNIT_ECONOMICS", "validate_local_first_unit_economics.py"),
         ("COMMANDER_PREPROD_LOCAL_TUNNEL_CONTROL_PLANE", "validate_local_tunnel_control_plane.py"),
         ("COMMANDER_PREPROD_LINUX_TUNNEL_START_MODES", "validate_linux_tunnel_start_modes.py"),
+        ("COMMANDER_PREPROD_CUSTOMER_OPENAI_LOCAL_BRIDGE", "validate_local_openai_bridge_bootstrap.py"),
         ("COMMANDER_PREPROD_LOCAL_TUNNEL_UNIT_ECONOMICS", "validate_local_tunnel_unit_economics.py"),
         ("COMMANDER_PREPROD_UNLIMITED_PLAN_FASTPATH", "validate_unlimited_plan_fastpath.py"),
         ("COMMANDER_PREPROD_LOCAL_ACTIVITY_STORE", "validate_local_activity_store.py"),

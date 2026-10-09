@@ -512,3 +512,46 @@ The active ChatGPT baseline connector still resolves execution through
 HARA_SERVICES; the final direct OpenAI Secure MCP Tunnel E2E is pending.
 Stripe PROD credentials/Price ID remain pending, so do not claim paid
 checkout is available.
+
+## 2026-10-09 — customer-side OpenAI tunnel bridge bootstrap prepared on Nucleo A
+
+The customer requested a **private, locally instantiated MCP process**:
+ChatGPT/OpenAI -> OpenAI Secure MCP Tunnel -> outbound tunnel-client on
+the customer's own machine -> signed `hara-commander mcp` over stdio,
+**not** ChatGPT -> HARA_SERVICES Remote MCP.
+
+On nucleo-a, signed Agent **0.3.41** local MCP initializes (24 tools).
+Official `tunnel-client` 0.0.15 exists and network TLS to api.openai.com
+succeeds. A new standalone, isolated bootstrap executable is installed
+at `~/.local/bin/hara-commander-openai-bridge` and the associated
+systemd --user unit `hara-commander-openai-tunnel.service` is
+**loaded / disabled / inactive**. The unit runs the official tunnel-client
+with profile `hara-commander`. Existing signed Agent and OUTBOUND_RELAY
+background service remain untouched. No HARA Services tool-call relay
+is placed in this new unit.
+
+Source and offline test:
+- `apps/commander/scripts/hara_commander_local_tunnel_bootstrap.py`
+- `apps/commander/scripts/validate_local_openai_bridge_bootstrap.py`
+- tests PASS: idempotent preparation, no auto-start, no raw credentials,
+  no invented tunnel_id, secure systemd unit, fail-closed start.
+- manual real-host test `hara-commander-openai-bridge start` returns
+  `OPENAI_TUNNEL_ID_NOT_CONFIGURED` (exit 2) as expected.
+- Full instructions and limitations in
+  `docs/operations/HARA_COMMANDER_LOCAL_OPENAI_MCP_BRIDGE_20261009.md`.
+
+BLOCKING external personal/platform credential gate: a real OpenAI-hosted
+`tunnel_id` associated with the owner's Platform org + ChatGPT workspace
+and a scoped OpenAI runtime API key (Tunnels Read + Use). The user must
+create/authorize these in OpenAI Platform; HARA Identity OAuth cannot
+issue them. `~/.config/tunnel-client/hara-commander.yaml` and
+`~/.config/hara-commander/openai-tunnel.env` are absent as verified.
+Do not paste runtime keys into chat or bypass OpenAI permissions.
+Once provided locally, run the bootstrap's interactive `configure`,
+then `doctor`, `start` or `autostart on`, and add a ChatGPT custom
+plugin using connection type **Tunnel**, selecting the real ID.
+Only then can a ChatGPT-originated product tool call be homologated.
+
+The helper does NOT sign or distribute 0.3.43 and is NOT a standalone
+proof of product E2E. The existing commercial HTTPS gateway and
+Cloudflare tunnels remain unmodified.
