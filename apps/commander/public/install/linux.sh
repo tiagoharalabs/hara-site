@@ -331,7 +331,7 @@ if not base or not token or not device_id:
     raise SystemExit(2)
 if action=="heartbeat":
     endpoint="/api/device/heartbeat"
-    payload={"device_id":device_id,"architecture":arch,"agent_version":"0.3.41","approval_mode":values.get("HARA_COMMANDER_APPROVAL_MODE","ASK_EVERY_ACTION")}
+    payload={"device_id":device_id,"architecture":arch,"agent_version":"0.3.43","approval_mode":values.get("HARA_COMMANDER_APPROVAL_MODE","ASK_EVERY_ACTION")}
 elif action=="revoke":
     endpoint="/api/device/revoke-self"
     payload={}
@@ -339,7 +339,7 @@ else:
     raise SystemExit(2)
 req=urllib.request.Request(
     base+endpoint, data=json.dumps(payload,separators=(",",":")).encode(), method="POST",
-    headers={"content-type":"application/json","accept":"application/json","user-agent":"HARA-Commander-Installer/0.3.41","authorization":"Bearer "+token},
+    headers={"content-type":"application/json","accept":"application/json","user-agent":"HARA-Commander-Installer/0.3.43","authorization":"Bearer "+token},
 )
 try:
     with opener.open(req,timeout=15) as response:
@@ -369,7 +369,7 @@ token=sys.stdin.readline().rstrip("\n")
 if not device_id or not token: raise SystemExit(2)
 req=urllib.request.Request(
     base+"/api/device/revoke-self", data=b"{}", method="POST",
-    headers={"content-type":"application/json","accept":"application/json","authorization":"Bearer "+token,"user-agent":"HARA-Commander-Installer-Rollback/0.3.41"},
+    headers={"content-type":"application/json","accept":"application/json","authorization":"Bearer "+token,"user-agent":"HARA-Commander-Installer-Rollback/0.3.43"},
 )
 with opener.open(req,timeout=15) as response:
     obj=json.loads(response.read().decode() or "{}")
@@ -413,11 +413,11 @@ device_id=values.get("HARA_DEVICE_ID","")
 arch=values.get("HARA_DEVICE_ARCH","")
 if not base or not token or not device_id:
     print("REENROLL_LOCAL_ENROLLMENT_INVALID",file=sys.stderr); raise SystemExit(12)
-payload=json.dumps({"device_id":device_id,"architecture":arch,"agent_version":"0.3.41"},separators=(",",":")).encode()
+payload=json.dumps({"device_id":device_id,"architecture":arch,"agent_version":"0.3.43"},separators=(",",":")).encode()
 req=urllib.request.Request(
     base+"/api/device/heartbeat", data=payload, method="POST",
     headers={"content-type":"application/json","accept":"application/json",
-             "user-agent":"HARA-Commander-Reenroll-Check/0.3.41","authorization":"Bearer "+token},
+             "user-agent":"HARA-Commander-Reenroll-Check/0.3.43","authorization":"Bearer "+token},
 )
 try:
     with opener.open(req,timeout=15) as response:
@@ -686,7 +686,7 @@ print(json.dumps({
   "device_name": sys.argv[1],
   "platform": "LINUX",
   "architecture": sys.argv[2],
-  "agent_version": "0.3.41",
+  "agent_version": "0.3.43",
   "approval_mode": sys.argv[3],
 }, separators=(",",":")))
 ' "$DEVICE_NAME" "$ARCH" "$APPROVAL_MODE")"
@@ -817,6 +817,9 @@ printf 'HARA_COMMANDER_TRANSPORT_MODE=%s\n' "$TRANSPORT_MODE"
 printf 'HARA_COMMANDER_TUNNEL_AUTOSTART=%s\n' "$TUNNEL_AUTOSTART"
 printf 'HARA_COMMANDER_TUNNEL_AUTOSTART_PENDING_CONFIGURATION=TRUE\n'
 printf 'NEXT_COMMAND=hara-commander tunnel configure\n'
+printf 'TUNNEL_MANUAL_START_COMMAND=hara-commander tunnel start\n'
+printf 'TUNNEL_MANUAL_STOP_COMMAND=hara-commander tunnel stop\n'
+printf 'OPERATOR_SESSION_COMMAND=hara-commander start\n'
 printf 'STATUS_COMMAND=hara-commander status\n'
 printf 'STOP_COMMAND=hara-commander stop\n'
 printf 'LOCAL_MCP_COMMAND=hara-commander mcp\n'

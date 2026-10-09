@@ -11,7 +11,7 @@ def need(ok,code):
         raise SystemExit("COMMANDER_WINDOWS_LOCAL_ACTIVITY_"+code+"=FAIL")
     print("COMMANDER_WINDOWS_LOCAL_ACTIVITY_"+code+"=PASS")
 
-need('$AgentVersion = "0.3.41"' in WINDOWS,"AGENT_VERSION")
+need('$AgentVersion = "0.3.43"' in WINDOWS,"AGENT_VERSION")
 need('$OperationsDb = Join-Path $Root "operations.sqlite3"' in WINDOWS,"DB_PATH")
 need('DllImport("winsqlite3.dll"' in WINDOWS,"NATIVE_WINSQLITE")
 need("sqlite3_open16" in WINDOWS and "sqlite3_prepare16_v2" in WINDOWS,"PARAMETERIZED_SQLITE_API")
@@ -30,5 +30,5 @@ need("Protect-LocalCommandPreview" in WINDOWS and "<redacted>" in WINDOWS,"COMMA
 need("COMMANDER_WINDOWS_LOCAL_ACTIVITY_SQLITE=PASS" in WINDOWS,"SELFTEST_SQLITE")
 need("COMMANDER_WINDOWS_LOCAL_ACTIVITY_RAW_CONTENT=ABSENT" in WINDOWS,"SELFTEST_RAW_CONTENT")
 need("COMMANDER_WINDOWS_LOCAL_ACTIVITY_SNAPSHOT_PRIVACY=PASS" in WINDOWS,"SELFTEST_SNAPSHOT_PRIVACY")
-need('"agent_version": "0.3.41"' in MANIFEST,"MANIFEST_VERSION")
+need('"agent_version": "0.3.43"' in MANIFEST,"MANIFEST_VERSION")
 print("COMMANDER_WINDOWS_LOCAL_ACTIVITY_STORE=PASS")

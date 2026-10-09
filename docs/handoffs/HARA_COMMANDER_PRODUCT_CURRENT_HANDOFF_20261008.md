@@ -475,3 +475,40 @@ candidate and do not run the official public installer while it serves
 is a canonical signed 0.3.43 release / exact public artifact readback
 followed by the checked update-with-rollback and authorized OpenAI tunnel
 configuration on the customer's machine.
+
+## 2026-10-09 — Signed public beta is now LIVE (0.3.41)
+
+The production public site **actually serves** the verified signed 0.3.41
+Agent/installer package, upgraded from public 0.3.40 by a versioned
+Cloudflare rollout. PROD Worker version at 100%:
+`51348588-5b38-4622-bed9-da99ab9a3ef9`.
+Rollback version:
+`afffe718-fe41-49e5-8728-c07c45382866`.
+All six required Worker secrets inherited; triggers, deployment readback,
+source-based release signature verification and all live asset SHA-256
+readbacks PASS.
+
+The official public `install/linux.sh update` was executed on nucleo-a
+using the published signed artifact; Agent startup/doctor PASS, service
+ACTIVE, stable installed version 0.3.41. The same installed local MCP
+subsequently completed 33/33 functional canaries. This is a real signed
+web-installer smoke test, not a direct OpenAI tunnel E2E.
+
+Candidate 0.3.43 remains **UNSIGNED**. The original public release
+signature and `SHA256SUMS` are kept on 0.3.41, correctly matching the
+trusted release public key, while candidate Linux and Windows source and
+installers are now aligned to 0.3.43 for the next release.
+Signing the candidate failed closed with
+`RELEASE_SIGNING_KEY_MISMATCH`: available private RSA key's modulus
+does not match the public JWK pinned by installed clients.
+No bypass, trust-anchor rotation, or unsigned production upload was made.
+The 0.3.43 signature/publication gate requires correct key custody or
+explicitly authorized key rotation with backwards compatibility.
+A dedicated operational receipt with public SHA hashes, exact Worker
+versions, and what is/isn't tested is in:
+`docs/operations/HARA_COMMANDER_SIGNED_BETA_0_3_41_20261009.md`.
+
+The active ChatGPT baseline connector still resolves execution through
+HARA_SERVICES; the final direct OpenAI Secure MCP Tunnel E2E is pending.
+Stripe PROD credentials/Price ID remain pending, so do not claim paid
+checkout is available.

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from pathlib import Path
+import ast
 import hashlib
 import http.server
 import json
@@ -26,7 +27,7 @@ def need(text: str, token: str, code: str) -> None:
     assert token in text, f"{code}:{token}"
 
 for token in ('platform": "LINUX"', "/api/device/enroll", "/agent/linux.py",
-              "systemctl --user enable --now", "chmod 600", '"agent_version": "0.3.41"',
+              "systemctl --user enable --now", "chmod 600", '"agent_version": "0.3.43"',
               "HARA_COMMANDER_AGENT_UPDATE=PASS", "HARA_COMMANDER_AGENT_UNINSTALL=PASS",
               "HARA_COMMANDER_AGENT_VERSION=", "HARA_COMMANDER_AGENT_DOCTOR=PASS",
               "/api/device/revoke-self", "SERVER_DEVICE_REVOKE=",
@@ -58,7 +59,7 @@ print("LINUX_INSTALLER_SECRET_ARGV_EXPOSURE=FALSE")
 
 for token in ('platform="WINDOWS"', "/api/device/enroll", "/agent/windows.ps1",
               "ConvertFrom-SecureString", "Register-ScheduledTask", "icacls.exe",
-              'agent_version="0.3.41"', "HARA_COMMANDER_AGENT_UPDATE=PASS",
+              'agent_version="0.3.43"', "HARA_COMMANDER_AGENT_UPDATE=PASS",
               "HARA_COMMANDER_AGENT_UNINSTALL=PASS", "HARA_COMMANDER_AGENT_VERSION=",
               "HARA_COMMANDER_AGENT_DOCTOR=PASS", "/api/device/revoke-self",
               "SERVER_DEVICE_REVOKE=", "HARA_COMMANDER_AGENT_UPDATE_ROLLBACK_READY=TRUE",
@@ -95,7 +96,7 @@ print("WINDOWS_INSTALLER_REDIRECT_FAIL_CLOSED=PASS")
 print("WINDOWS_INSTALLER_DEVICE_TOKEN_MEMORY_HYGIENE=PASS")
 
 assert MANIFEST.get("schema") == "hara.commander-agent-release.v1"
-assert MANIFEST.get("agent_version") == "0.3.41"
+assert MANIFEST.get("agent_version") == "0.3.43"
 entries = {item["path"]: item for item in MANIFEST.get("files", [])}
 for rel in ("agent/linux.py", "agent/windows.ps1", "install/linux.sh", "install/windows.ps1"):
     path = PUBLIC / rel
@@ -120,8 +121,28 @@ for token in (
     need(WINDOWS_AGENT, token, "WINDOWS_STARTER_TOOL_MISSING")
 need(WINDOWS_AGENT, "WINDOWS_PER_ACTION_APPROVAL_UNSUPPORTED", "WINDOWS_STARTER_FAIL_CLOSED_APPROVAL")
 need(WINDOWS_AGENT, "-EncodedCommand", "WINDOWS_STARTER_ENCODED_PROCESS_COMMAND")
-for forbidden in ("subprocess.", "os.system(", "shell=True", "paramiko", "ssh "):
+for forbidden in ("os.system(", "shell=True", "paramiko", "ssh "):
     assert forbidden not in LINUX_AGENT, f"LINUX_AGENT_ARBITRARY_EXEC:{forbidden}"
+# An Agent must never call an arbitrary shell via subprocess. Fixed systemctl
+# controls and the pinned local tunnel-client may use subprocess.run, but only
+# inside their five governed administrative functions.
+allowed_subprocess_functions = {
+    "set_transport_mode", "authorize_local_tunnel", "_openai_tunnel_doctor",
+    "_tunnel_systemctl", "configure_openai_tunnel",
+}
+tree = ast.parse(LINUX_AGENT)
+subprocess_call_functions = []
+for func in (node for node in ast.walk(tree) if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))):
+    for node in ast.walk(func):
+        if (isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and isinstance(node.func.value, ast.Name)
+            and node.func.value.id == "subprocess"):
+            assert node.func.attr == "run", "LINUX_AGENT_SUBPROCESS_NON_RUN_CALL"
+            assert func.name in allowed_subprocess_functions, f"LINUX_AGENT_UNGOVERNED_SUBPROCESS:{func.name}"
+            assert all(not (isinstance(kw, ast.keyword) and kw.arg == "shell") for kw in node.keywords), "LINUX_AGENT_SUBPROCESS_SHELL"
+            subprocess_call_functions.append(func.name)
+assert subprocess_call_functions and set(subprocess_call_functions).issubset(allowed_subprocess_functions), "LINUX_AGENT_SUBPROCESS_GOVERNANCE_UNPROVEN"
 for forbidden in ("Invoke-Expression", "Start-Process", "cmd.exe", "powershell.exe -Command"):
     assert forbidden not in WINDOWS_AGENT, f"WINDOWS_AGENT_ARBITRARY_EXEC:{forbidden}"
 assert "UNKNOWN_FUNCTION_ID" in LINUX_AGENT and "UNKNOWN_FUNCTION_ID" in WINDOWS_AGENT
@@ -312,7 +333,7 @@ with tempfile.TemporaryDirectory(prefix="hara-agent-startup-") as tmp:
                     break
             time.sleep(0.1)
         assert startup, "LINUX_AGENT_STARTUP_STATUS_MISSING"
-        assert startup.get("agent_version") == "0.3.41", "LINUX_AGENT_STARTUP_VERSION_INVALID"
+        assert startup.get("agent_version") == "0.3.43", "LINUX_AGENT_STARTUP_VERSION_INVALID"
         assert startup.get("started_at_utc"), "LINUX_AGENT_STARTUP_ATTESTATION_MISSING"
         time.sleep(1.2)
         inert = json.loads(status_path.read_text(encoding="utf-8"))

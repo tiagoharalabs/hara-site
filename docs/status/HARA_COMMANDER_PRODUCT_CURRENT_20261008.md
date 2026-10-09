@@ -240,3 +240,19 @@ candidate and do not run the official public installer while it serves
 is a canonical signed 0.3.43 release / exact public artifact readback
 followed by the checked update-with-rollback and authorized OpenAI tunnel
 configuration on the customer's machine.
+
+## 2026-10-09 — Public signed beta checkpoint
+
+- Signed public Agent/installer **0.3.41 LIVE**, Worker deployment
+  `51348588-5b38-4622-bed9-da99ab9a3ef9` at 100%.
+- Previous Worker rollback `afffe718-fe41-49e5-8728-c07c45382866`
+  recorded and preserved. Secrets/readback/assets/triggers PASS.
+- Official web installer `update` on Nucleo A PASS, systemd active,
+  version 0.3.41 and `doctor=PASS`; local MCP **33/33 PASS**.
+- Latest candidate source and installers aligned 0.3.43. Release signature
+  BLOCKED by private/public JWK modulus mismatch; unsigned candidate
+  was NOT promoted. Canonical published signature/manifest stays 0.3.41.
+- Cloudflare Gateway route and identity exist; direct OpenAI Secure
+  MCP Tunnel remains unconfigured; HARA_SERVICES is not product direct
+  authority. Stripe billing PROD activation still FALSE.
+- Details: `docs/operations/HARA_COMMANDER_SIGNED_BETA_0_3_41_20261009.md`.

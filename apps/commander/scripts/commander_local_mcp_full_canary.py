@@ -3,7 +3,7 @@ import argparse, json, pathlib, subprocess, sys, time, shutil
 
 ap=argparse.ArgumentParser()
 ap.add_argument("--execute",action="store_true")
-ap.add_argument("--expect-version",default="0.3.41")
+ap.add_argument("--expect-version",default="0.3.43")
 ap.add_argument("--commander",default=str(pathlib.Path.home()/".local/bin/hara-commander"))
 args=ap.parse_args()
 commander=pathlib.Path(args.commander).expanduser()

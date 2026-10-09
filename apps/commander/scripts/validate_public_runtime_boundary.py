@@ -38,6 +38,6 @@ need('id="internalBetaDiagnostics"' not in HTML and "DIAGNÓSTICO LOCAL · BETA"
 need("removido da versão final" not in HTML,"NO_PUBLIC_INTERNAL_REMOVAL_COPY")
 need('if (next === "usage") loadUsageActivity();' not in JS,"NO_PUBLIC_USAGE_ACTIVITY_LOAD")
 need('O Commander na nuvem mantém apenas o mínimo necessário' in HTML,"PUBLIC_PRIVACY_COPY")
-need('AGENT_VERSION = "0.3.41"' in LINUX,"LINUX_SIGNED_AGENT_UNCHANGED")
-need('$AgentVersion = "0.3.41"' in WINDOWS,"WINDOWS_SIGNED_AGENT_UNCHANGED")
+need('AGENT_VERSION = "0.3.43"' in LINUX,"LINUX_SOURCE_CANDIDATE_VERSION")
+need('$AgentVersion = "0.3.43"' in WINDOWS,"WINDOWS_SOURCE_CANDIDATE_VERSION")
 print("COMMANDER_PUBLIC_RUNTIME_BOUNDARY=PASS")
