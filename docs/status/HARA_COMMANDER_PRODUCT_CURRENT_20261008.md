@@ -357,3 +357,11 @@ O usuário aprovou explicitamente a distribuição via MCP HTTPS comercial da H.
 - Candidato do plugin `apps/commander/plugin-submission/mcp.json` permanece apontando para o MCP comercial com DCR da Identity; **não é necessário Secure MCP Tunnel OpenAI por cliente**.
 - **ÚNICO GATE COMERCIAL ainda pendente:** ChatGPT concluir consentimento OAuth/PKCE e entregar token de usuário aceito pelo Worker, depois ChatGPT invocar ferramenta no Agent pelo MCP **COMERCIAL** (não pelo Baseline administrativo), isolamento/permissões e revisão/publicação na OpenAI. Não afirmar que a sessão ChatGPT foi homologada, que o app está publicado nem que o Worker valida todo token real antes da prova E2E.
 - Evidência autoritativa da frente de Identity: `docs/status/HARA_COMMANDER_MCP_DCR_GUARDED_LIVE_20261009.md`.
+
+## 2026-10-09 — E2E real pelo plugin comercial do ChatGPT CONFIRMADO (Núcleo A)
+
+O plugin nomeado **H.A.R.A. Commander** chamou `ping` e `get_device_info` via ferramentas próprias `mcp__H_A_R_A__Commander__*`, ambas PASS. Recibos SHA-256 locais do Agent 0.3.41 `nucleo-a` foram verificados e cada `request_id` foi localizado com exatidão como operação `HARA-CUSTOMER-MCP-` concluída na Cloudflare **PROD D1**, incluindo tool ID, dispositivo e horários compatíveis. Isto elimina a dúvida anterior sobre se a chamada teria realmente alcançado o caminho comercial.
+
+ATENÇÃO: `operational_authority=HARA_SERVICES` é rótulo legado *hardcoded* pelo Agent 0.3.41 para **todos os transportes remotos** (qualquer `_transport != LOCAL_MCP`), inclusive `OUTBOUND_RELAY` comercial. `runtime_authority_from_chatgpt=false` também é fixo. Nenhum dos dois rótulos pode servir sozinho para provar o trajeto do pedido. Prova no recibo + D1 é a evidência autoritativa.
+
+Relatório: `docs/operations/HARA_COMMANDER_COMMERCIAL_MCP_REAL_E2E_20261009.md`. Escopo: conta ChatGPT atual e Núcleo A; faltam testes com outro tenant, negações, aprovação/escrita e submissão pública. Manter Agent público assinado 0.3.41 e não declarar plugin publicado.
