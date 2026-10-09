@@ -3,7 +3,22 @@
   "mcpServers": {
     "hara-commander": {
       "type": "streamable-http",
-      "url": "https://commander.haralabs.com.br/api/mcp?profile=simple"
+      "url": "https://commander.haralabs.com.br/api/mcp?profile=simple",
+      "extensions": {
+        "com.openai": {
+          "auth": {
+            "type": "oauth",
+            "client": {
+              "mode": "dcr"
+            },
+            "authorizationServerBase": "https://auth.haralabs.com.br",
+            "resource": "https://commander.haralabs.com.br/api/mcp",
+            "baseScopes": [
+              "openid"
+            ]
+          }
+        }
+      }
     }
   }
 }

@@ -62,3 +62,13 @@ Documentação atual: https://developers.openai.com/plugins/deploy/submission
 - `test_customer_mcp_simple_profile.mjs` e `test_customer_mcp_edge.mjs`: PASS.
 - `node --check apps/commander/public/app.js` e `bash -n apps/commander/public/install/linux.sh`: PASS.
 - A release signature de 0.3.43 **continua pendente**; não confundir a validade do código candidato com a publicação de um Agent assinado.
+
+## 2026-10-09 — Zigurat / HARA Identity / OpenAI OAuth contract reconciliation
+
+- O emissor de tokens do Zigurat/HARA Identity **já existe**; não criar novo gerador. O HARA Identity já anuncia `issuer=https://auth.haralabs.com.br`, `authorization_endpoint`, `token_endpoint`, `registration_endpoint=https://auth.haralabs.com.br/oauth/v2/register` e `code_challenge_methods_supported=["S256"]`. A descoberta OAuth protegida do MCP comercial aponta para essa autoridade.
+- A autorização do usuário no Identity **não é** a assinatura criptográfica da release do Agent. A 0.3.41 está assinada e ativa; a assinatura da candidata 0.3.43 depende de custódia adequada da chave de release, separadamente do Identity.
+- O rascunho de `apps/commander/plugin-submission/mcp.json` foi corrigido para declarar `extensions.com.openai.auth.type=oauth`, `client.mode=dcr`, `authorizationServerBase=https://auth.haralabs.com.br`, `resource=https://commander.haralabs.com.br/api/mcp` e `baseScopes=["openid"]`. Nenhuma chave/token de cliente foi incluída.
+- `validate_cloud_launch_contract.py`: agora exige exatidão do contrato OAuth/DCR, PASS. `test_hara_identity_customer_mcp.mjs`: PASS. Verificação do OIDC público: registro e S256 anunciados.
+- PONTO QUE AINDA NÃO TEM PROVA: o endpoint DCR aceitar o registro real do cliente **ChatGPT**, e a autorização PKCE devolver um token com audiência/escopo admitidos pelo MCP comercial. Um `registration_endpoint` presente no discovery NÃO constitui prova de DCR funcional. Não confundir um token HARA válido para outros clientes com o token emitido para o cliente OAuth do ChatGPT.
+- Submissão/publish no diretório OpenAI: verificação empresarial, comprovação de domínio, scan de ferramentas, testes reais (5 positivos/3 negativos), vídeo e aprovação. Independente da autenticação implementada pelo Zigurat.
+- Não alterar credenciais nem a implantação PROD por essa correção de pacote (somente draft). Nenhuma publicação ou aprovação OpenAI foi realizada aqui.

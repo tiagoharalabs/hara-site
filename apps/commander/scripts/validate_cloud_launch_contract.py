@@ -57,6 +57,14 @@ review = PACKAGE["extensions"]["com.openai"]["review"]
 endpoint = MCP_CONFIG["mcpServers"]["hara-commander"]["url"]
 check(endpoint == "https://commander.haralabs.com.br/api/mcp?profile=simple",
       "PLUGIN_ONLY_COMMERCIAL_ENDPOINT")
+oauth = MCP_CONFIG["mcpServers"]["hara-commander"]["extensions"]["com.openai"]["auth"]
+check(oauth == {
+    "type": "oauth",
+    "client": {"mode": "dcr"},
+    "authorizationServerBase": "https://auth.haralabs.com.br",
+    "resource": "https://commander.haralabs.com.br/api/mcp",
+    "baseScopes": ["openid"],
+}, "PLUGIN_OAUTH_DCR_RESOURCE_DECLARED")
 check(interface["displayName"] == "H.A.R.A. Commander" and
       interface["developerName"] == "H.A.R.A. Labs" and
       len(interface["shortDescription"]) <= 30 and
