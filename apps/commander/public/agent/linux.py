@@ -48,6 +48,7 @@ PREIMAGE_DIR = DATA_DIR / "preimages"
 SESSION_MAX_SECONDS = 12 * 60 * 60
 PRODUCT_LEASE_REFRESH_SECONDS = 4 * 60 * 60
 LOCAL_METERING_MIN_INTERVAL_SECONDS = 60 * 60
+AGENT_TELEMETRY_INTERVAL_SECONDS = 60 * 60
 TRANSPORT_MODES = {"OUTBOUND_RELAY","LOCAL_TUNNEL"}
 TUNNEL_PROFILE = "hara-commander"
 TUNNEL_ENV_FILE = CONFIG_FILE.parent / "openai-tunnel.env"
@@ -952,6 +953,114 @@ def _local_metering_sync_background(config,event_type,session_id,session_started
             error_code=safe_error_code(exc),
             action_summary="event="+str(event_type),
         )
+
+def _agent_telemetry_prepare_queue(conn):
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS agent_telemetry_outbox ("
+        "event_id TEXT PRIMARY KEY, payload_json TEXT NOT NULL, created_at_utc TEXT NOT NULL)"
+    )
+
+def agent_telemetry_enqueue(config,event_type,session_id,session_started_monotonic):
+    """Persist metadata-only presence before any external network attempt."""
+    event=str(event_type or "").strip().upper()
+    if event not in {"AGENT_START","AGENT_HEARTBEAT","AGENT_STOP"}:
+        raise ValueError("AGENT_TELEMETRY_EVENT_INVALID")
+    if transport_mode(config)!="LOCAL_TUNNEL":
+        return None
+    event_id="HARA-AGENT-EVENT-"+uuid.uuid4().hex
+    payload={
+        "schema":"hara.commander-agent-telemetry.v1",
+        "event_id":event_id,
+        "event_type":event,
+        "session_id":str(session_id),
+        "event_at_utc":utcnow(),
+        "session_duration_seconds":max(0,int(time.monotonic()-session_started_monotonic)),
+        "agent_version":AGENT_VERSION,
+        "transport_mode":"LOCAL_TUNNEL",
+        "usage_report":local_usage_report(config),
+        "metadata_only":True,
+        "customer_content_included":False,
+    }
+    with _ops_connect() as conn:
+        _agent_telemetry_prepare_queue(conn)
+        conn.execute(
+            "INSERT OR IGNORE INTO agent_telemetry_outbox(event_id,payload_json,created_at_utc) VALUES(?,?,?)",
+            (event_id,json.dumps(payload,separators=(",",":"),sort_keys=True),utcnow()),
+        )
+        conn.commit()
+    return event_id
+
+def agent_telemetry_flush(config,limit=6):
+    """Best-effort bounded upload; pending events survive outages and restarts."""
+    if transport_mode(config)!="LOCAL_TUNNEL":
+        return {"accepted":0,"pending":0}
+    with _ops_connect() as conn:
+        _agent_telemetry_prepare_queue(conn)
+        rows=conn.execute(
+            "SELECT event_id,payload_json FROM agent_telemetry_outbox ORDER BY created_at_utc,event_id LIMIT ?",
+            (max(1,min(32,int(limit))),),
+        ).fetchall()
+    sent=0
+    for row in rows:
+        try:
+            payload=json.loads(row["payload_json"])
+            response=post_json(
+                config["HARA_COMMANDER_URL"]+"/api/device/metering-sync",
+                config["HARA_DEVICE_TOKEN"],payload,timeout=8,
+            ) or {}
+            accepted=response.get("accepted") is True
+            early=str(response.get("code") or "")=="LOCAL_AGENT_HEARTBEAT_EARLY"
+            if not accepted and not early:
+                break
+            with _ops_connect() as conn:
+                conn.execute("DELETE FROM agent_telemetry_outbox WHERE event_id=?",(row["event_id"],))
+                conn.commit()
+            sent+=int(accepted)
+            append_console_event(
+                "AGENT_TELEMETRY_SYNC",state="SYNCED" if accepted else "THROTTLED",
+                action_summary="event="+str(payload.get("event_type")),
+            )
+        except Exception as exc:
+            append_console_event(
+                "AGENT_TELEMETRY_DEGRADED",state="DEGRADED",
+                error_code=safe_error_code(exc),action_summary="event_upload_retry_later",
+            )
+            break
+    with _ops_connect() as conn:
+        pending=int(conn.execute("SELECT COUNT(*) FROM agent_telemetry_outbox").fetchone()[0])
+    return {"accepted":sent,"pending":pending}
+
+def agent_telemetry_emit(config,event_type,session_id,session_started_monotonic):
+    try:
+        agent_telemetry_enqueue(config,event_type,session_id,session_started_monotonic)
+        return agent_telemetry_flush(config)
+    except Exception as exc:
+        append_console_event(
+            "AGENT_TELEMETRY_DEGRADED",state="DEGRADED",
+            error_code=safe_error_code(exc),action_summary="event="+str(event_type),
+        )
+        return {"accepted":0,"degraded":True}
+
+def run_local_tunnel_agent_telemetry(config):
+    """One service lifecycle: START, at most one scheduled hourly event, STOP."""
+    session_id="HARA-AGENT-SESSION-"+uuid.uuid4().hex
+    started_at=time.monotonic()
+    stop_requested=threading.Event()
+    old_term_handler=signal.getsignal(signal.SIGTERM)
+    def _handle_stop(_signum,_frame):
+        stop_requested.set()
+    signal.signal(signal.SIGTERM,_handle_stop)
+    try:
+        agent_telemetry_emit(config,"AGENT_START",session_id,started_at)
+        last_heartbeat=time.monotonic()
+        while not stop_requested.wait(60):
+            now=time.monotonic()
+            if now-last_heartbeat>=AGENT_TELEMETRY_INTERVAL_SECONDS:
+                agent_telemetry_emit(config,"AGENT_HEARTBEAT",session_id,started_at)
+                last_heartbeat=now
+    finally:
+        agent_telemetry_emit(config,"AGENT_STOP",session_id,started_at)
+        signal.signal(signal.SIGTERM,old_term_handler)
 
 def refresh_product_lease(config,authorization_code=None,requested_transport=None):
     report=_local_budget_report()
@@ -3536,9 +3645,9 @@ def main():
     if not try_write_runtime_status(started_at=utcnow(), error_code=None, error_at=None):
         raise RuntimeError("RUNTIME_STATUS_STARTUP_WRITE_FAILED")
     if transport_mode(config)=="LOCAL_TUNNEL":
-        append_console_event("AGENT_LOCAL_TUNNEL",state="CONTROL_ONLY",action_summary="cloud_polling=disabled")
-        while True:
-            time.sleep(60)
+        append_console_event("AGENT_LOCAL_TUNNEL",state="CONTROL_ONLY",action_summary="cloud_polling=disabled; telemetry_hourly=true")
+        run_local_tunnel_agent_telemetry(config)
+        return
     last_heartbeat=0.0
     last_product_lease=0.0
     poll_hot_until=time.monotonic()+CALL_POLL_STARTUP_HOT_SECONDS

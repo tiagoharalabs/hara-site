@@ -1684,6 +1684,9 @@ async function reconcileLocalUsageReport(env, device, report) {
 }
 
 async function deviceLocalMeteringSync(env, request, body = {}) {
+  if (body?.schema === "hara.commander-agent-telemetry.v1") {
+    return deviceAgentLifecycleTelemetry(env, request, body);
+  }
   const device = await resolveDeviceCredential(env, request);
   if (String(device.tunnel_mode || "") !== "LOCAL_TUNNEL") {
     throw new Error("LOCAL_METERING_REQUIRES_LOCAL_TUNNEL");
@@ -1810,6 +1813,80 @@ async function deviceLocalMeteringSync(env, request, body = {}) {
     min_interval_seconds:LOCAL_METERING_MIN_INTERVAL_SECONDS,
     local_lifetime_units:lifetime,
     customer_content_persisted:false,
+  };
+}
+
+
+async function deviceAgentLifecycleTelemetry(env, request, body = {}) {
+  // Existing metering endpoint; local command contents never cross this boundary.
+  const device = await resolveDeviceCredential(env, request);
+  if (String(device.tunnel_mode || "") !== "LOCAL_TUNNEL") throw new Error("LOCAL_METERING_REQUIRES_LOCAL_TUNNEL");
+  if (body?.schema !== "hara.commander-agent-telemetry.v1"
+      || body?.metadata_only !== true || body?.customer_content_included !== false) {
+    throw new Error("LOCAL_AGENT_TELEMETRY_INVALID");
+  }
+  const eventType = String(body?.event_type || "").trim().toUpperCase();
+  if (!["AGENT_START","AGENT_HEARTBEAT","AGENT_STOP"].includes(eventType)) throw new Error("LOCAL_AGENT_TELEMETRY_EVENT_INVALID");
+  const eventId = cleanId(body?.event_id, 180);
+  const sessionId = cleanId(body?.session_id, 180);
+  if (!/^HARA-AGENT-EVENT-[a-f0-9]{32}$/.test(eventId)
+      || !/^HARA-AGENT-SESSION-[a-f0-9]{32}$/.test(sessionId)) throw new Error("LOCAL_AGENT_TELEMETRY_ID_INVALID");
+  const eventAt = String(body?.event_at_utc || "");
+  const eventMs = Date.parse(eventAt);
+  if (!Number.isFinite(eventMs) || eventMs > Date.now() + 300000) throw new Error("LOCAL_AGENT_TELEMETRY_TIME_INVALID");
+  const duration = Number(body?.session_duration_seconds);
+  if (!Number.isSafeInteger(duration) || duration < 0 || duration > 30 * 86400) throw new Error("LOCAL_AGENT_TELEMETRY_DURATION_INVALID");
+  if (String(body?.transport_mode || "") !== "LOCAL_TUNNEL") throw new Error("LOCAL_METERING_TRANSPORT_INVALID");
+  const report = body?.usage_report;
+  if (!report || report.schema !== "hara.commander-local-usage-report.v1") throw new Error("LOCAL_USAGE_REPORT_INVALID");
+  const lifetime = Number(report.lifetime_units);
+  if (!Number.isSafeInteger(lifetime) || lifetime < 0 || lifetime > 1_000_000_000_000) throw new Error("LOCAL_USAGE_REPORT_INVALID");
+  const existing = await env.PRODUCT_DB.prepare(
+    "SELECT event_id,received_at_utc FROM commander_device_agent_telemetry WHERE event_id=? AND device_id=? LIMIT 1"
+  ).bind(eventId, device.device_id).first();
+  if (existing) return {
+    schema:"hara.commander-agent-telemetry-response.v1",ok:true,accepted:true,existing:true,
+    event_type:eventType,received_at_utc:existing.received_at_utc,customer_content_persisted:false,
+  };
+  if (eventType !== "AGENT_HEARTBEAT") {
+    const prior = await env.PRODUCT_DB.prepare(
+      "SELECT event_id,received_at_utc FROM commander_device_agent_telemetry WHERE device_id=? AND session_id=? AND event_type=? LIMIT 1"
+    ).bind(device.device_id, sessionId, eventType).first();
+    if (prior) return {
+      schema:"hara.commander-agent-telemetry-response.v1",ok:true,accepted:true,existing:true,
+      event_type:eventType,received_at_utc:prior.received_at_utc,customer_content_persisted:false,
+    };
+  } else {
+    const previous = await env.PRODUCT_DB.prepare(
+      "SELECT event_at_utc FROM commander_device_agent_telemetry WHERE device_id=? AND session_id=? AND event_type='AGENT_HEARTBEAT' ORDER BY event_at_utc DESC LIMIT 1"
+    ).bind(device.device_id, sessionId).first();
+    const previousMs = Date.parse(String(previous?.event_at_utc || ""));
+    if (Number.isFinite(previousMs) && eventMs - previousMs < LOCAL_METERING_MIN_INTERVAL_SECONDS * 1000) return {
+      schema:"hara.commander-agent-telemetry-response.v1",ok:true,accepted:false,
+      code:"LOCAL_AGENT_HEARTBEAT_EARLY",min_interval_seconds:LOCAL_METERING_MIN_INTERVAL_SECONDS,
+      customer_content_persisted:false,
+    };
+  }
+  await reconcileLocalUsageReport(env, device, report);
+  const receivedAt = new Date().toISOString();
+  const agentVersion = cleanAgentValue(body?.agent_version, 80) || device.agent_version;
+  await env.PRODUCT_DB.batch([
+    env.PRODUCT_DB.prepare(
+      "INSERT INTO commander_device_agent_telemetry " +
+      "(event_id,device_id,tenant_id,subject_id,session_id,event_type,event_at_utc,received_at_utc,session_duration_seconds,local_lifetime_units,agent_version,transport_mode) " +
+      "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"
+    ).bind(eventId,device.device_id,device.tenant_id,device.enrolled_by_subject_id,sessionId,
+      eventType,eventAt,receivedAt,duration,lifetime,agentVersion,"LOCAL_TUNNEL"),
+    env.PRODUCT_DB.prepare(
+      "UPDATE commander_devices SET last_seen_at_utc=?,last_metering_sync_at_utc=?,agent_version=? " +
+      "WHERE device_id=? AND tenant_id=? AND state='ACTIVE' AND revoked_at_utc IS NULL"
+    ).bind(receivedAt,receivedAt,agentVersion,device.device_id,device.tenant_id),
+  ]);
+  return {
+    schema:"hara.commander-agent-telemetry-response.v1",ok:true,accepted:true,existing:false,
+    event_type:eventType,received_at_utc:receivedAt,
+    min_interval_seconds:LOCAL_METERING_MIN_INTERVAL_SECONDS,
+    local_lifetime_units:lifetime,customer_content_persisted:false,
   };
 }
 

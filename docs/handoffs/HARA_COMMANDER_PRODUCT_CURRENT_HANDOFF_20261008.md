@@ -45,13 +45,13 @@ The legacy remote/V1 relay is migration fallback only.
 
 ## Metering and billing
 
-There is no periodic timer-based H.A.R.A. heartbeat in LOCAL_TUNNEL.
+The customer Agent service now performs minimal, authenticated telemetry on START, every 60 minutes while running, and on normal STOP. This is independent of tool calls and does not use cloud relay.
 
 Metering is event-driven:
 
 - MCP_START: sync aggregate usage only if the previous successful sync is at least 1 hour old;
 - MCP_STOP: sync only if the session lasted at least 1 hour and the previous successful sync is at least 1 hour old;
-- no metering request runs in the middle of an open MCP session;
+- MCP session-based metering remains separately START/STOP only; the Agent service emits its own hourly presence/aggregate events;
 - lease authorization also carries aggregate usage and counts as a successful sync when accepted.
 
 Server and Agent both enforce the 1-hour minimum interval.
@@ -129,16 +129,16 @@ Migration 0029 contains:
 - last metering/start/stop timestamps;
 - minimal MCP lifecycle metering events.
 
-Migration chain 0001..0029 passes locally.
+Migration chain 0001..0029 passes locally. New migration 0030 (Agent lifecycle telemetry) also passes SQLite schema/integrity tests.
 
-0029 is not yet applied to PROD.
+Neither 0029 nor 0030 is claimed applied to PROD.
 
 ## Platform status
 
 Linux:
 - LOCAL_TUNNEL source-qualified;
 - canonical function hardening PASS;
-- zero periodic cloud polling/heartbeat in LOCAL_TUNNEL;
+- zero cloud polling in LOCAL_TUNNEL; one minimal service heartbeat per hour;
 - zero per-tool H.A.R.A. relay;
 - real local MCP 33/33 PASS.
 
@@ -154,7 +154,7 @@ No LOCAL_TUNNEL product cutover to PROD has been claimed.
 Current live blockers:
 
 1. sign/package Agent 0.3.43 with canonical release trust;
-2. apply migration 0029 before the new Worker;
+2. apply migrations 0029 and 0030 in order before the new Worker;
 3. deploy DEV and run real OpenAI Secure MCP Tunnel canary using an actual tunnel_id/runtime key;
 4. validate usage/metering readback;
 5. promote with exact-version rollback evidence;
@@ -193,7 +193,7 @@ Do not publish historical internal workstream branches to GitHub merely for arch
 ## Canonical next attacks
 
 1. release/sign 0.3.43;
-2. DEV migration 0029 + Worker/UI;
+2. DEV migrations 0029 + 0030 and existing Worker endpoint;
 3. real OpenAI tunnel E2E;
 4. Windows parity;
 5. canonical process contract hardening and move-rollback semantics;
@@ -207,10 +207,57 @@ State:
 
 `COMMANDER_PRODUCT_CLOUD_ROLE=CONTROL_PLANE`
 
-`COMMANDER_PRODUCT_METERING=MCP_START_STOP_MIN_1H`
+`COMMANDER_PRODUCT_METERING=MCP_START_STOP_AND_AGENT_HOURLY`
 
 `COMMANDER_PRODUCT_SOURCE_AGENT=0.3.43`
 
 `COMMANDER_PRODUCT_SIGNED_RELEASE=0.3.41`
 
 `COMMANDER_PRODUCT_PROD_LOCAL_TUNNEL=PENDING`
+
+## 2026-10-08 approved Agent telemetry delta — source-only
+
+The user approved precisely three service events through the **existing**
+`POST /api/device/metering-sync` endpoint: `AGENT_START` immediately when the
+local Agent service starts; `AGENT_HEARTBEAT` every 3600 seconds during
+operation; and `AGENT_STOP` before a normal SIGTERM/exit. No new MCP
+endpoint, no per-tool Cloudflare call, no customer-data relay or customer
+command payload is created. The OpenAI Secure MCP Tunnel remains the tool
+transport; the Cloudflare Worker/D1 is the existing product control plane.
+
+The device sends authenticated metadata-only `hara.commander-agent-telemetry.v1`
+with client-generated event/session IDs, timestamps, bounded uptime and
+`hara.commander-local-usage-report.v1` (cumulative count and bounded daily
+counts). Worker verifies device credentials and LOCAL_TUNNEL, enforces a
+one-hour separation of heartbeats within each Agent session, and persists
+to D1 table `commander_device_agent_telemetry` introduced by migration
+`0030_agent_lifecycle_telemetry.sql`. START and STOP are not suppressed
+for sessions under one hour. Duplicate event IDs are idempotent; session
+START/STOP has a unique partial index. The previous MCP_START/MCP_STOP
+events/migration 0029 remain backward-compatible.
+
+The Agent uses a durable SQLite `agent_telemetry_outbox`, flushing a bounded
+batch at START, HEARTBEAT and STOP. Outages do not block the local tool
+data plane, and unsent events survive Agent restarts. SIGKILL/power loss
+cannot guarantee STOP; the last heartbeat and next START provide recovery
+evidence. No background high-frequency polling is introduced.
+
+The Storage collector is a **later separate job**: it should pull minimal
+D1 records using a watermark `(received_at_utc,event_id)` and idempotently
+upsert by event_id. No Citadel/Storage collection job or PROD deployment
+is claimed by this source change.
+
+Offline regressions:
+`python3 apps/commander/scripts/validate_agent_hourly_telemetry.py`
+`node apps/commander/scripts/validate_agent_cloudflare_telemetry.mjs`.
+These validate SQLite replay, three-event Agent lifecycle, Cloudflare
+handler authorization/privacy/idempotency/hourly throttle and migration.
+The release signer/manifest drift gate is **still intentionally red**;
+source 0.3.43 is not a signed/public 0.3.43 release.
+
+Request-efficiency reference (one continuous Agent session per 24h, not a restart
+worst case): 8 authorization requests + up to 24 MCP metering requests +
+24 service heartbeats + 2 service lifecycle events = 58 control-plane
+requests/day, or 1,740 per 30 days. Tool requests still produce no
+per-tool control-plane traffic. This is infrastructure cost, not a billed
+Commander transaction count.

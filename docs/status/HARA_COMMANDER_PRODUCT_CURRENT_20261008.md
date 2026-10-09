@@ -15,7 +15,7 @@ This branch consolidates the current H.A.R.A. Commander product strategy:
 - 6-hour signed authorization lease;
 - one-time authorization code;
 - MCP START/STOP aggregate metering with 1-hour minimum interval;
-- no periodic H.A.R.A. heartbeat in LOCAL_TUNNEL;
+- Agent service START/STOP telemetry and hourly aggregate heartbeat in LOCAL_TUNNEL (source implemented, release pending);
 - no per-tool cloud relay in LOCAL_TUNNEL;
 - Trial/Free local signed budget enforcement;
 - corrected product usage versus infrastructure-request semantics;
@@ -27,8 +27,8 @@ This branch consolidates the current H.A.R.A. Commander product strategy:
 PASS:
 
 - local MCP 33/33 on nucleo-a;
-- zero outbound H.A.R.A. IP connection while LOCAL_TUNNEL Agent idles;
-- migration chain through 0029;
+- historical zero-idle-outbound baseline superseded by the explicitly authorized hourly Agent heartbeat;
+- migration chain through 0029, plus new migration 0030 validated locally;
 - signed product lease validation;
 - local budget and replay guards;
 - aggregate usage sync privacy/idempotency;
@@ -60,8 +60,7 @@ Source Agent: 0.3.43.
 
 Published signed Agent: 0.3.41.
 
-The release gate remains intentionally red at signed-release SHA drift until
-0.3.43 is packaged/signed canonically.
+The release gate remains intentionally red at signed-release SHA drift until the updated 0.3.43 source and migration 0030 are packaged, deployed and signed canonically.
 
 No PROD LOCAL_TUNNEL cutover is claimed.
 
@@ -78,3 +77,13 @@ Canonical handoff:
 `docs/handoffs/HARA_COMMANDER_PRODUCT_CURRENT_HANDOFF_20261008.md`.
 
 `COMMANDER_PRODUCT_CURRENT=SINGLE_ACTIVE_LINE`
+
+## Agent lifecycle telemetry — approved 2026-10-08
+
+- New source-only `AGENT_START`, `AGENT_HEARTBEAT` (3600 s), `AGENT_STOP` via existing authenticated `/api/device/metering-sync`.
+- D1 migration 0030; no new MCP endpoint and no change to 24 Simple MCP tools.
+- Durable SQLite outbox, bounded replay and graceful SIGTERM upload.
+- Detailed customer command history is local; Cloudflare stores aggregated event metadata only.
+- Storage/Citadel collector remains a follow-up; no collector or PROD cutover claimed.
+- Linux and Worker unit/regression tests PASS locally; real tunnel/Cloudflare integration remains pending.
+- Signed release still 0.3.41; source Agent 0.3.43 remains unreleased with SHA drift.
