@@ -116,3 +116,17 @@ Canonical handoff:
   Storage collection, then enable the hourly timer; Worker PROD version
   promotion with secret-carrying target/readback and rollback evidence;
   finally real OpenAI LOCAL_TUNNEL customer MCP E2E on a test Agent.
+
+## 2026-10-09 Desktop Commander canary
+
+- Nucleo-A Agent 0.3.41 already installed; systemd active; doctor PASS.
+- Local STDIO MCP 24 tools, bounded functional canary **33/33 PASS**.
+- Local ping metadata still `HARA_SERVICES` / `runtime_authority_from_chatgpt=false`.
+  **Not** the commercial OpenAI Secure MCP Tunnel E2E.
+- Official checksum-pinned tunnel-client 0.0.15 installed, not configured.
+- Public signed manifest serves 0.3.40; repo signed manifest remains 0.3.41;
+  source is 0.3.43 with SHA drift. No agent upgrade or tunnel cutover.
+- Agent health after canary PASS; all canary scratch files cleaned.
+- Next: legitimate signed 0.3.43 and correct public manifest, real tunnel
+  credentials and ChatGPT customer MCP readback; do not use HARA_SERVICES
+  tools as substitute.

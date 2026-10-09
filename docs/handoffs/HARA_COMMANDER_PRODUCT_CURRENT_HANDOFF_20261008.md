@@ -300,3 +300,48 @@ substitute evidence.
 
 No automatic Agent update, tunnel activation, lease issuance, or production
 customer cutover was attempted during this preparation.
+
+## 2026-10-09 — Desktop Commander installation and local MCP canary
+
+User approved customer-client installation and testing through the **Desktop
+Commander bootstrap channel**. This is separate from the product MCP E2E.
+
+Nucleo A, observed from the client machine:
+
+- Already installed: `hara-commander` Agent **0.3.41**, active
+  `hara-commander-agent.service`, doctor PASS and remote health PASS.
+- Agent executable SHA-256 matches the tracked signed 0.3.41 manifest entry
+  (`e1f44e4695266717c6585f8d0de1e664d99123e36e75b152e136a4428f7b2730`).
+- Existing local STDIO MCP accepts initialize and tools/list; exactly
+  **24 Simple MCP tools**. In a bounded throwaway `/tmp` fixture, the
+  canonical local MCP full canary returned `33/33 PASS` and `0 FAIL`.
+  It covered readonly functions, temporary file mutations, process one-shot,
+  PTY interaction, kill/cleanup, receipts and structured conflicts.
+  Agent remained active/healthy after testing; temporary fixture removed.
+- Crucially, the local ping response identified
+  `operational_authority=HARA_SERVICES` and
+  `runtime_authority_from_chatgpt=false`. This is NOT valid evidence for
+  the intended ChatGPT -> Secure MCP Tunnel -> product Agent path.
+- Official `tunnel-client` v0.0.15 for linux-amd64 installed separately in
+  `~/.local/share/hara-commander/tunnel-client`, mode 0700, after exact
+  verification of the canonical pinned official archive SHA-256
+  `8c836dc5d68d68b663d9a5c5b28ff9fa780d9f7a3fffb1c306880b8f32fab5f1`.
+  Only its version was checked; **no tunnel profile, credentials or
+  systemd tunnel service** was created/enabled.
+- Public `/release/agent-manifest.json` currently advertises **0.3.40**
+  (Cloudflare cache HIT), despite local signed repository manifest 0.3.41,
+  installed binary 0.3.41, and product source 0.3.43.
+  Do not re-run public installer to downgrade the active Agent.
+- Source release remains blocked by `RELEASE_SHA256_DRIFT:agent/linux.py`;
+  `build_release_manifest.py --check` reports STALE. Signing the updated
+  candidate via remote tool was blocked by security controls in the prior
+  preparation; do not bypass signing, publish unsigned binaries, or claim PROD.
+- Existing ChatGPT-connected Baseline interface is HARA_SERVICES, not a
+  genuine product-runtime authority. Product E2E remains unproven.
+
+Next legitimate gate: complete canonical human-approved signature and
+release of Agent 0.3.43, align public signed manifest, install it through
+the verified official updater with rollback, authorize the 6h local lease,
+configure the actual OpenAI Secure MCP Tunnel under a real customer identity,
+and verify end-to-end tool/receipt authority `LOCAL_MCP` with no Services
+execution fallback.
