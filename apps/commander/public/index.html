@@ -11,7 +11,7 @@
   <style>html.auth-bootstrap-pending body>*{visibility:hidden}html.auth-bootstrap-pending body::before{content:"H.A.R.A. COMMANDER · verificando sessão";position:fixed;inset:0;display:grid;place-items:center;visibility:visible;background:#eef8fd;color:#315d78;font:600 12px/1.4 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:.12em}html[data-theme="dark"].auth-bootstrap-pending body::before{background:#061721;color:#a9c8d9}</style>
   <title>H.A.R.A. Commander</title>
   <link rel="icon" type="image/webp" href="./assets/hara-commander-royal.webp?v=20260921-final1" />
-  <link rel="stylesheet" href="./styles.css?v=20261006-productusage1" />
+  <link rel="stylesheet" href="./styles.css?v=20261009-tunnelmode1" />
 </head>
 <body>
   <a class="skip-link" href="#mainContent">Pular para o conteúdo</a>
@@ -302,7 +302,7 @@
             <div class="panel-head"><div><span>COMECE AGORA</span><h2>Do zero ao primeiro comando em 3 passos</h2></div></div>
             <div class="quickstart-steps">
               <div id="quickStartDeviceStep"><span>1</span><p><b>Conecte um computador</b><small id="quickStartDeviceState">Aguardando dispositivo online</small></p></div>
-              <div><span>2</span><p><b>Configure o túnel OpenAI</b><small>Na máquina, rode <code>hara-commander tunnel configure</code>. O túnel liga a OpenAI diretamente ao MCP local sem passar cada comando pela H.A.R.A. Cloud.</small></p></div>
+              <div><span>2</span><p><b>Configure o túnel OpenAI</b><small>Na máquina, rode <code>hara-commander tunnel configure</code>. Escolha início automático ou manual. Para iniciar manualmente, use <code>hara-commander tunnel start</code>; para desconectar, <code>hara-commander tunnel stop</code>. Nenhum comando MCP passa pelo relay H.A.R.A.</small></p></div>
               <div><span>3</span><p><b>Autorize por 6 horas</b><small>Na lista de computadores, gere o código de autorização e confirme localmente com <code>hara-commander authorize</code>.</small></p></div>
             </div>
           </article>
@@ -356,14 +356,25 @@
                     </div>
                   </div>
                   <small class="install-note" id="approvalModeNote">Recomendado: o Agent fica disponível em segundo plano e executa somente operações governadas autorizadas neste computador.</small>
+                  <div class="tunnel-startup-choice" data-tunnel-autostart-container>
+                    <label for="linuxTunnelAutostart">
+                      <input id="linuxTunnelAutostart" type="checkbox" data-tunnel-autostart />
+                      <span>Linux: iniciar o túnel OpenAI automaticamente</span>
+                    </label>
+                    <small id="tunnelAutostartNote">Modo manual (padrão): configure e autorize o túnel antes de iniciar com <code>hara-commander tunnel start</code>.</small>
+                    <small>Esta escolha entra no comando de instalação Linux. O serviço inicia automaticamente ao entrar na sessão do usuário (ou no boot se o Linux tiver linger habilitado). Para uma máquina já instalada, aplique o comando local abaixo: marcar no site não liga remotamente um computador.</small>
+                    <div class="install-command"><code id="tunnelAutostartExistingCommand">hara-commander tunnel autostart off</code><button class="btn btn-secondary small" type="button" data-copy-tunnel-autostart>Copiar ajuste</button></div>
+                  </div>
                 </div>
 
                 <div class="onboarding-step onboarding-step-stack">
                   <span class="onboarding-step-no">03</span>
                   <div><b>Instale e pronto</b><small>Copie o comando, execute e cole o código quando o instalador solicitar “Pairing token”.</small></div>
                   <div class="install-pane" data-os-panel="linux">
-                    <div class="install-command"><code data-install-linux-code>(tmp=$(mktemp) && trap 'rm -f $tmp' EXIT && curl -fsS --proto '=https' --tlsv1.2 --location --max-redirs 0 https://commander.haralabs.com.br/install/linux.sh -o $tmp && HARA_COMMANDER_APPROVAL_MODE=PERSISTENT_TRUSTED HARA_COMMANDER_URL=https://commander.haralabs.com.br bash $tmp)</code><button class="btn btn-secondary small" type="button" data-copy-linux>Copiar comando Linux</button></div>
-                    <small class="install-note">No modo “Sempre permitir”, a instalação termina com o Agent pronto em segundo plano. Em “Pedir confirmação”, use <code>hara-commander start</code> quando quiser autorizar ações.</small>
+                    <div class="install-command"><code data-install-linux-code>(tmp=$(mktemp) && trap 'rm -f $tmp' EXIT && curl -fsS --proto '=https' --tlsv1.2 --location --max-redirs 0 https://commander.haralabs.com.br/install/linux.sh -o $tmp && HARA_COMMANDER_APPROVAL_MODE=PERSISTENT_TRUSTED HARA_COMMANDER_TUNNEL_AUTOSTART=OFF HARA_COMMANDER_URL=https://commander.haralabs.com.br bash $tmp)</code><button class="btn btn-secondary small" type="button" data-copy-linux>Copiar comando Linux</button></div>
+                    <small class="install-note">Depois, execute <code>hara-commander tunnel configure</code> e <code>hara-commander authorize</code>. Se escolheu o modo manual, conecte com o comando abaixo. O Agent local pode continuar em segundo plano sem que o túnel esteja conectado.</small>
+                    <div class="install-command"><code>hara-commander tunnel start</code><button class="btn btn-secondary small" type="button" data-copy-tunnel-start>Copiar início manual</button></div>
+                    <small class="install-note">No modo “Pedir confirmação”, <code>hara-commander start</code> abre a sessão de operador; não inicia o túnel OpenAI.</small>
                   </div>
                   <div class="install-pane" data-os-panel="windows" hidden>
                     <div class="install-command"><code data-install-windows-code>$haraPrevUrl=$env:HARA_COMMANDER_URL; $haraPrevApproval=$env:HARA_COMMANDER_APPROVAL_MODE; $haraInstaller=Join-Path $env:TEMP ('hara-commander-install-'+[guid]::NewGuid().ToString('N')+'.ps1'); try { $env:HARA_COMMANDER_URL='https://commander.haralabs.com.br'; $env:HARA_COMMANDER_APPROVAL_MODE='PERSISTENT_TRUSTED'; Invoke-WebRequest -Uri https://commander.haralabs.com.br/install/windows.ps1 -OutFile $haraInstaller -UseBasicParsing -MaximumRedirection 0 -ErrorAction Stop; & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $haraInstaller; if ($LASTEXITCODE -ne 0) { throw ('HARA_COMMANDER_INSTALL_EXIT_'+$LASTEXITCODE) } } finally { Remove-Item -LiteralPath $haraInstaller -Force -ErrorAction SilentlyContinue; $env:HARA_COMMANDER_URL=$haraPrevUrl; $env:HARA_COMMANDER_APPROVAL_MODE=$haraPrevApproval }</code><button class="btn btn-secondary small" type="button" data-copy-windows>Copiar comando Windows</button></div>
@@ -598,6 +609,6 @@
     </nav>
   </template>
 
-  <script src="./app.js?v=20261006-productusage1"></script>
+  <script src="./app.js?v=20261009-tunnelmode1"></script>
 </body>
 </html>

@@ -190,3 +190,18 @@ No private keys/tokens need be pasted in ChatGPT.
 Do not repeat signature attempts blocked by security controls, substitute
 a locally staged unsigned candidate as a signed release, create a Services
 MCP relay, or issue unverified customer mutation commands.
+
+## 2026-10-09 — Linux tunnel manual / auto startup implementation
+
+- Site Linux onboarding has an opt-in autostart checkbox; generated official
+  installer command passes the mode, which is persisted locally.
+- Source Agent adds `tunnel start|stop|status|autostart on|off`; ON enables
+  systemd user startup and OFF defaults to manual launch.
+- Existing installations use a local command; a site checkbox alone does
+  not remotely execute host operations.
+- User service startup and local signed 6h lease are separate safety gates.
+- Simulator and static tests PASS; no privileged live user-service
+  changes or real tunnel credential creation claimed.
+- Updated candidate source and installer staged on nucleo-a and services.
+  Live versions remain 0.3.41/0.3.40, and published release remains gated.
+- Reference: `docs/operations/HARA_COMMANDER_LINUX_TUNNEL_STARTUP_V1_20261009.md`.

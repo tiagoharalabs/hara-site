@@ -405,3 +405,38 @@ No private keys/tokens need be pasted in ChatGPT.
 Do not repeat signature attempts blocked by security controls, substitute
 a locally staged unsigned candidate as a signed release, create a Services
 MCP relay, or issue unverified customer mutation commands.
+
+## 2026-10-09 — Linux tunnel startup choice completed in source
+
+A new customer-facing, Linux-only checkbox on **Conectar ao Commander**
+selects `HARA_COMMANDER_TUNNEL_AUTOSTART=ON|OFF`. It is reflected in the
+copied official installer command and persisted in mode-0600 local config.
+The site selection does not issue a remote host mutation.
+
+Agent 0.3.43 source now supports:
+`hara-commander tunnel configure`, `tunnel start`, `tunnel stop`,
+`tunnel status` and `tunnel autostart on|off`. Default is OFF.
+The existing bare `hara-commander start` still opens an operator
+session, not the network tunnel. Auto ON uses `systemctl --user enable
+--now`, manual configure `disable --now`, manual start only `start`.
+Turning autostart OFF does not unexpectedly stop a current session.
+Systemd user boot behavior requires linger for pre-login operation.
+
+Every tool remains gated by signed local product lease, and starting the
+tunnel without a valid lease does not grant execution authorization.
+Site and Agent display separate tunnel and authorization statuses.
+No new HARA Cloud endpoint or Services relay was introduced.
+
+A dedicated regression at
+`apps/commander/scripts/validate_linux_tunnel_start_modes.py` exercises
+installer shell, portal checkbox and command propagation, both user-systemd
+start modes, existing-machine toggles, failure-closed behavior and secret
+hygiene. It is added to preprod readiness gates.
+See `docs/operations/HARA_COMMANDER_LINUX_TUNNEL_STARTUP_V1_20261009.md`.
+
+Updated unsigned 0.3.43 source and installer are byte-verified in
+`~/.local/share/hara-commander/candidates/` on nucleo-a and services,
+while the live signed Agents remain 0.3.41 and 0.3.40 respectively.
+Neither OpenAI Secure MCP Tunnel profile nor runtime credentials have
+been provisioned. Do **not** claim live tunnel or PROD deployment: the
+canonical release signature and public manifest remain outstanding.

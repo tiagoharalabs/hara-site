@@ -2071,6 +2071,10 @@ def load_config():
     transport=str(data.get("HARA_COMMANDER_TRANSPORT_MODE") or "OUTBOUND_RELAY").upper()
     if transport not in TRANSPORT_MODES: raise RuntimeError("DEVICE_TRANSPORT_MODE_INVALID")
     data["HARA_COMMANDER_TRANSPORT_MODE"]=transport
+    autostart=str(data.get("HARA_COMMANDER_TUNNEL_AUTOSTART") or "OFF").strip().upper()
+    if autostart not in {"ON","OFF"}:
+        raise RuntimeError("OPENAI_TUNNEL_AUTOSTART_INVALID")
+    data["HARA_COMMANDER_TUNNEL_AUTOSTART"]=autostart
     return data
 def set_approval_mode(value):
     raw=str(value or "").strip().lower()
@@ -3554,6 +3558,94 @@ def _openai_tunnel_doctor(capture=False):
     result=subprocess.run([binary,"doctor","--profile",TUNNEL_PROFILE,"--explain"],**kwargs)
     return int(result.returncode),getattr(result,"stdout",None)
 
+def tunnel_autostart_mode(config=None):
+    if config is None: config=load_config()
+    value=str(config.get("HARA_COMMANDER_TUNNEL_AUTOSTART") or "OFF").strip().upper()
+    if value not in {"ON","OFF"}:
+        raise RuntimeError("OPENAI_TUNNEL_AUTOSTART_INVALID")
+    return value
+
+def _tunnel_systemctl(*args,check=True):
+    """The fixed user unit only; no sudo, arbitrary service names or shell."""
+    env=os.environ.copy()
+    runtime=Path("/run/user")/str(os.getuid())
+    if not env.get("XDG_RUNTIME_DIR") and runtime.is_dir():
+        env["XDG_RUNTIME_DIR"]=str(runtime)
+    if not env.get("DBUS_SESSION_BUS_ADDRESS") and (runtime/"bus").exists():
+        env["DBUS_SESSION_BUS_ADDRESS"]="unix:path="+str(runtime/"bus")
+    result=subprocess.run(
+        ["systemctl","--user",*args],
+        env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,
+        text=True,timeout=25,check=False,
+    )
+    if check and result.returncode!=0:
+        raise RuntimeError("OPENAI_TUNNEL_SYSTEMD_COMMAND_FAILED")
+    return result.returncode==0
+
+def _tunnel_local_lease_active():
+    try:
+        config=load_config()
+        with _ops_connect() as conn:
+            lease=_active_verified_product_lease(conn,config)
+        return bool(lease and str(lease.get("transport_mode") or "")=="LOCAL_TUNNEL")
+    except Exception:
+        return False
+
+def _tunnel_lease_status_output():
+    active=_tunnel_local_lease_active()
+    print("HARA_COMMANDER_LOCAL_AUTHORIZATION="+("PASS" if active else "EXPIRED"))
+    if not active:
+        print("NEXT_AUTHORIZATION_COMMAND=hara-commander authorize")
+
+def tunnel_start():
+    if not TUNNEL_UNIT_FILE.is_file() or not TUNNEL_ENV_FILE.is_file():
+        print("HARA_COMMANDER_TUNNEL=NOT_CONFIGURED")
+        print("NEXT_COMMAND=hara-commander tunnel configure")
+        return 12
+    if not _tunnel_client_binary():
+        print("HARA_COMMANDER_TUNNEL_CLIENT=MISSING")
+        return 12
+    _tunnel_runtime_env()
+    _tunnel_systemctl("start",TUNNEL_UNIT_FILE.name)
+    active=_tunnel_systemctl("is-active","--quiet",TUNNEL_UNIT_FILE.name,check=False)
+    print("HARA_COMMANDER_TUNNEL_ACTIVE="+("TRUE" if active else "FALSE"))
+    print("HARA_COMMANDER_TUNNEL_AUTOSTART="+tunnel_autostart_mode())
+    _tunnel_lease_status_output()
+    return 0 if active else 2
+
+def tunnel_stop():
+    if not TUNNEL_UNIT_FILE.is_file():
+        print("HARA_COMMANDER_TUNNEL=NOT_CONFIGURED")
+        return 12
+    _tunnel_systemctl("stop",TUNNEL_UNIT_FILE.name)
+    print("HARA_COMMANDER_TUNNEL_ACTIVE=FALSE")
+    print("HARA_COMMANDER_TUNNEL_AUTOSTART="+tunnel_autostart_mode())
+    return 0
+
+def set_tunnel_autostart(value):
+    raw=str(value or "").strip().lower()
+    if raw not in {"on","off"}:
+        raise RuntimeError("OPENAI_TUNNEL_AUTOSTART_INVALID")
+    mode=raw.upper()
+    if TUNNEL_UNIT_FILE.is_file():
+        if mode=="ON":
+            if not TUNNEL_ENV_FILE.is_file():
+                raise RuntimeError("OPENAI_TUNNEL_API_KEY_MISSING")
+            _tunnel_runtime_env()
+            _tunnel_systemctl("enable","--now",TUNNEL_UNIT_FILE.name)
+        else:
+            # Disabling boot start does not silently interrupt an active session.
+            _tunnel_systemctl("disable",TUNNEL_UNIT_FILE.name)
+    _set_config_value("HARA_COMMANDER_TUNNEL_AUTOSTART",mode)
+    print("HARA_COMMANDER_TUNNEL_AUTOSTART="+mode)
+    print("HARA_COMMANDER_TUNNEL_CONFIGURED="+("TRUE" if TUNNEL_UNIT_FILE.is_file() else "FALSE"))
+    if mode=="OFF":
+        print("HARA_COMMANDER_TUNNEL_CURRENT_SESSION=UNCHANGED")
+        print("STOP_COMMAND=hara-commander tunnel stop")
+    elif not TUNNEL_UNIT_FILE.is_file():
+        print("NEXT_COMMAND=hara-commander tunnel configure")
+    return 0
+
 def configure_openai_tunnel():
     binary=_tunnel_client_binary()
     if not binary:
@@ -3584,17 +3676,40 @@ def configure_openai_tunnel():
         "[Service]\nType=simple\nEnvironmentFile=%h/.config/hara-commander/openai-tunnel.env\n"
         f"ExecStart={binary} run --profile {TUNNEL_PROFILE}\nRestart=on-failure\nRestartSec=15\n\n"
         "[Install]\nWantedBy=default.target\n",encoding="utf-8")
+    # Do not change the active data-plane mode until the tunnel unit is installed.
+    _tunnel_systemctl("daemon-reload")
+    mode=tunnel_autostart_mode()
+    if mode=="ON":
+        _tunnel_systemctl("enable","--now",TUNNEL_UNIT_FILE.name)
+    else:
+        # Manual mode: keep the service installed but not running at configure.
+        _tunnel_systemctl("disable","--now",TUNNEL_UNIT_FILE.name)
     _set_config_value("HARA_COMMANDER_TRANSPORT_MODE","LOCAL_TUNNEL")
-    subprocess.run(["systemctl","--user","restart","hara-commander-agent.service"],check=False)
-    subprocess.run(["systemctl","--user","daemon-reload"],check=False)
-    subprocess.run(["systemctl","--user","enable","--now","hara-commander-openai-tunnel.service"],check=False)
+    _tunnel_systemctl("restart","hara-commander-agent.service")
     print("HARA_COMMANDER_OPENAI_TUNNEL_CONFIGURED=PASS")
     print("HARA_COMMANDER_TRANSPORT_MODE=LOCAL_TUNNEL")
+    print("HARA_COMMANDER_TUNNEL_AUTOSTART="+mode)
+    if mode=="OFF":
+        print("NEXT_TUNNEL_COMMAND=hara-commander tunnel start")
     print("NEXT_STEP=Generate a 6-hour authorization code in commander.haralabs.com.br and run hara-commander authorize")
     return 0
 
 def openai_tunnel_status():
+    configured=TUNNEL_UNIT_FILE.is_file() and TUNNEL_ENV_FILE.is_file()
+    print("HARA_COMMANDER_TUNNEL_CONFIGURED="+("TRUE" if configured else "FALSE"))
+    print("HARA_COMMANDER_TUNNEL_AUTOSTART="+tunnel_autostart_mode())
+    if not configured:
+        print("HARA_COMMANDER_TUNNEL_ACTIVE=FALSE")
+        print("NEXT_COMMAND=hara-commander tunnel configure")
+        return 12
+    active=_tunnel_systemctl("is-active","--quiet",TUNNEL_UNIT_FILE.name,check=False)
+    print("HARA_COMMANDER_TUNNEL_ACTIVE="+("TRUE" if active else "FALSE"))
+    _tunnel_lease_status_output()
+    if not active:
+        print("NEXT_COMMAND=hara-commander tunnel start")
+        return 2
     rc,_=_openai_tunnel_doctor(capture=False)
+    print("HARA_COMMANDER_TUNNEL_DOCTOR="+("PASS" if rc==0 else "DEGRADED"))
     return rc
 
 def main():
@@ -3620,6 +3735,14 @@ def main():
         raise SystemExit(configure_openai_tunnel())
     if len(sys.argv)>2 and sys.argv[1]=="tunnel" and sys.argv[2]=="status":
         raise SystemExit(openai_tunnel_status())
+    if len(sys.argv)>2 and sys.argv[1]=="tunnel" and sys.argv[2]=="start" and len(sys.argv)==3:
+        raise SystemExit(tunnel_start())
+    if len(sys.argv)>2 and sys.argv[1]=="tunnel" and sys.argv[2]=="stop" and len(sys.argv)==3:
+        raise SystemExit(tunnel_stop())
+    if len(sys.argv)>3 and sys.argv[1:3]==["tunnel","autostart"] and len(sys.argv)==4:
+        raise SystemExit(set_tunnel_autostart(sys.argv[3]))
+    if len(sys.argv)==3 and sys.argv[1:3]==["tunnel","autostart"]:
+        print("HARA_COMMANDER_TUNNEL_AUTOSTART="+tunnel_autostart_mode()); return
     if "--session-start" in sys.argv or (len(sys.argv)>1 and sys.argv[1]=="start"):
         start_operator_console(); return
     if len(sys.argv)>1 and sys.argv[1]=="approval-mode":
@@ -3633,11 +3756,11 @@ def main():
     if "--session-stop" in sys.argv or (len(sys.argv)>1 and sys.argv[1]=="stop"):
         stop_operator_session(); return
     if len(sys.argv) > 1 and sys.argv[1] in {"help", "--help", "-h"}:
-        print("Usage: hara-commander [start|status|stop|mcp|authorize|tunnel configure|tunnel status|doctor|support|transport-mode [local-tunnel|relay]|approval-mode [ask|session|always]|help]")
+        print("Usage: hara-commander [start|status|stop|mcp|authorize|tunnel configure|tunnel start|tunnel stop|tunnel status|tunnel autostart [on|off]|doctor|support|transport-mode [local-tunnel|relay]|approval-mode [ask|session|always]|help]")
         return
     if len(sys.argv) > 1:
         print("HARA_COMMANDER_UNKNOWN_COMMAND=" + str(sys.argv[1]), file=sys.stderr)
-        print("Usage: hara-commander [start|status|stop|mcp|authorize|tunnel configure|tunnel status|doctor|support|transport-mode [local-tunnel|relay]|approval-mode [ask|session|always]|help]", file=sys.stderr)
+        print("Usage: hara-commander [start|status|stop|mcp|authorize|tunnel configure|tunnel start|tunnel stop|tunnel status|tunnel autostart [on|off]|doctor|support|transport-mode [local-tunnel|relay]|approval-mode [ask|session|always]|help]", file=sys.stderr)
         raise SystemExit(64)
     config=load_config()
     RECEIPT_DIR.mkdir(parents=True,exist_ok=True,mode=0o700)

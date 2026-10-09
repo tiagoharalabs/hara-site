@@ -20,6 +20,7 @@ LINUX_BOOTSTRAP = (
     "curl -fsS --proto '=https' --tlsv1.2 --location --max-redirs 0 "
     "https://commander.haralabs.com.br/install/linux.sh -o $tmp && "
     "HARA_COMMANDER_APPROVAL_MODE=PERSISTENT_TRUSTED "
+    "HARA_COMMANDER_TUNNEL_AUTOSTART=OFF "
     "HARA_COMMANDER_URL=https://commander.haralabs.com.br bash $tmp)"
 )
 WINDOWS_BOOTSTRAP = (

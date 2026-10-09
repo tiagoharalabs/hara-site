@@ -55,6 +55,7 @@
   let deviceSectionTab = "devices";
   let deviceTab = "active";
   let installApprovalMode = "PERSISTENT_TRUSTED";
+  let installTunnelAutostart = "OFF";
 
   function currentTheme() {
     return root.dataset.theme === "dark" ? "dark" : "light";
@@ -1336,11 +1337,15 @@
     document.querySelectorAll("[data-os-panel]").forEach((panel) => {
       panel.hidden = panel.dataset.osPanel !== target;
     });
+    document.querySelectorAll("[data-tunnel-autostart-container]").forEach((panel) => {
+      panel.hidden = target !== "linux";
+    });
   }
 
   function installCommandLinux() {
     return "(tmp=$(mktemp) && trap 'rm -f $tmp' EXIT && curl -fsS --proto '=https' --tlsv1.2 --location --max-redirs 0 https://commander.haralabs.com.br/install/linux.sh -o $tmp && HARA_COMMANDER_APPROVAL_MODE="
       + installApprovalMode
+      + " HARA_COMMANDER_TUNNEL_AUTOSTART=" + installTunnelAutostart
       + " HARA_COMMANDER_URL=https://commander.haralabs.com.br bash $tmp)";
   }
 
@@ -1355,12 +1360,25 @@
     const windows = document.querySelector("[data-install-windows-code]");
     if (linux) linux.textContent = installCommandLinux();
     if (windows) windows.textContent = installCommandWindows();
+    const autostart = document.querySelector("[data-tunnel-autostart]");
+    if (autostart) autostart.checked = installTunnelAutostart === "ON";
+    const existing = document.getElementById("tunnelAutostartExistingCommand");
+    if (existing) existing.textContent = "hara-commander tunnel autostart " + installTunnelAutostart.toLowerCase();
+    const startupNote = document.getElementById("tunnelAutostartNote");
+    if (startupNote) startupNote.textContent = installTunnelAutostart === "ON"
+      ? "Após configurar o túnel OpenAI, o Linux habilitará o serviço do usuário para iniciar automaticamente. A autorização assinada continua obrigatória."
+      : "Modo manual: após configurar e autorizar, execute hara-commander tunnel start para conectar. Use tunnel stop para desconectar.";
     const note = document.getElementById("approvalModeNote");
     if (note) {
       note.textContent = installApprovalMode === "PERSISTENT_TRUSTED"
         ? "Recomendado: o Agent fica disponível em segundo plano e executa somente operações governadas autorizadas neste computador."
         : "Modo restritivo: alterações e comandos exigem uma sessão local para confirmação.";
     }
+  }
+
+  function setInstallTunnelAutostart(enabled) {
+    installTunnelAutostart = enabled ? "ON" : "OFF";
+    syncInstallApprovalMode();
   }
 
   function setInstallApprovalMode(mode) {
@@ -1825,12 +1843,19 @@
   copySidebars();
   setInstallOs("linux");
   setInstallApprovalMode("always");
+  setInstallTunnelAutostart(false);
 
   if (bannerAction) {
     bannerAction.addEventListener("click", () => {
       if (retryAction) retryAction();
     });
   }
+
+  document.addEventListener("change", (event) => {
+    if (event.target.matches?.("[data-tunnel-autostart]")) {
+      setInstallTunnelAutostart(event.target.checked);
+    }
+  });
 
   document.addEventListener("click", (event) => {
     const mobileMore = event.target.closest("[data-mobile-more]");
@@ -1979,6 +2004,20 @@
     if (copyFirstPrompt) {
       event.preventDefault();
       copyText("Verifique se meu computador está online e mostre as informações básicas dele.", "Prompt de teste copiado.");
+      return;
+    }
+
+    const copyTunnelAutostart = event.target.closest("[data-copy-tunnel-autostart]");
+    if (copyTunnelAutostart) {
+      event.preventDefault();
+      copyText("hara-commander tunnel autostart " + installTunnelAutostart.toLowerCase(), "Comando de início automático copiado.");
+      return;
+    }
+
+    const copyTunnelStart = event.target.closest("[data-copy-tunnel-start]");
+    if (copyTunnelStart) {
+      event.preventDefault();
+      copyText("hara-commander tunnel start", "Comando de conexão manual copiado.");
       return;
     }
 

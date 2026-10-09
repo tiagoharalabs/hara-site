@@ -22,6 +22,7 @@ SERVICE="hara-commander-agent.service"
 STATUS_FILE="$BIN_DIR/runtime-status.json"
 APPROVAL_MODE_RAW="${HARA_COMMANDER_APPROVAL_MODE:-}"
 TRANSPORT_MODE_RAW="${HARA_COMMANDER_TRANSPORT_MODE:-}"
+TUNNEL_AUTOSTART_RAW="${HARA_COMMANDER_TUNNEL_AUTOSTART:-}"
 ACTION="${1:-install}"
 ACTION="${ACTION#--}"
 REENROLL=FALSE
@@ -85,6 +86,19 @@ for raw in path.read_text(encoding="utf-8").splitlines():
         print(raw.split("=",1)[1]); raise SystemExit(0)
 raise SystemExit(1)
 PY
+}
+
+resolve_tunnel_autostart() {
+  local mode="${TUNNEL_AUTOSTART_RAW:-}"
+  if [ -z "$mode" ] && [ -f "$CONFIG_FILE" ]; then
+    mode="$(read_config_value HARA_COMMANDER_TUNNEL_AUTOSTART 2>/dev/null || true)"
+  fi
+  mode="${mode^^}"
+  case "$mode" in
+    ""|OFF|FALSE|NO|0) printf 'OFF\n' ;;
+    ON|TRUE|YES|1) printf 'ON\n' ;;
+    *) echo 'OPENAI_TUNNEL_AUTOSTART_INVALID' >&2; return 64 ;;
+  esac
 }
 
 resolve_approval_mode() {
@@ -715,6 +729,7 @@ else
   TRANSPORT_MODE="LOCAL_TUNNEL"
 fi
 
+TUNNEL_AUTOSTART="$(resolve_tunnel_autostart)"
 umask 077
 mkdir -p "$CONFIG_DIR" "$BIN_DIR" "$SYSTEMD_DIR"
 if [ "$TRANSPORT_MODE" = "LOCAL_TUNNEL" ]; then
@@ -727,6 +742,7 @@ HARA_DEVICE_TOKEN=$DEVICE_TOKEN
 HARA_DEVICE_ARCH=$ARCH
 HARA_COMMANDER_APPROVAL_MODE=$APPROVAL_MODE
 HARA_COMMANDER_TRANSPORT_MODE=$TRANSPORT_MODE
+HARA_COMMANDER_TUNNEL_AUTOSTART=$TUNNEL_AUTOSTART
 EOF
 chmod 600 "$CONFIG_FILE"
 
@@ -798,6 +814,8 @@ printf 'DEVICE_ID=%s\n' "$DEVICE_ID"
 printf 'DEVICE_TOKEN_EXPOSED=FALSE\n'
 printf 'HARA_COMMANDER_APPROVAL_MODE=%s\n' "$APPROVAL_MODE"
 printf 'HARA_COMMANDER_TRANSPORT_MODE=%s\n' "$TRANSPORT_MODE"
+printf 'HARA_COMMANDER_TUNNEL_AUTOSTART=%s\n' "$TUNNEL_AUTOSTART"
+printf 'HARA_COMMANDER_TUNNEL_AUTOSTART_PENDING_CONFIGURATION=TRUE\n'
 printf 'NEXT_COMMAND=hara-commander tunnel configure\n'
 printf 'STATUS_COMMAND=hara-commander status\n'
 printf 'STOP_COMMAND=hara-commander stop\n'
