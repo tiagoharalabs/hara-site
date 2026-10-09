@@ -131,7 +131,7 @@ Migration 0029 contains:
 
 Migration chain 0001..0029 passes locally. New migration 0030 (Agent lifecycle telemetry) also passes SQLite schema/integrity tests.
 
-Neither 0029 nor 0030 is claimed applied to PROD.
+Migrations 0029 and 0030 were successfully applied to remote DEV and PROD D1 on 2026-10-08. PROD post-migration foreign-key check returned no violations; the Agent telemetry table exists. This prepares storage schema only; it is NOT an Agent/Worker release.
 
 ## Platform status
 
@@ -154,7 +154,7 @@ No LOCAL_TUNNEL product cutover to PROD has been claimed.
 Current live blockers:
 
 1. sign/package Agent 0.3.43 with canonical release trust;
-2. apply migrations 0029 and 0030 in order before the new Worker;
+2. DONE: migrations 0029 and 0030 applied to DEV and PROD in order;
 3. deploy DEV and run real OpenAI Secure MCP Tunnel canary using an actual tunnel_id/runtime key;
 4. validate usage/metering readback;
 5. promote with exact-version rollback evidence;
@@ -193,7 +193,7 @@ Do not publish historical internal workstream branches to GitHub merely for arch
 ## Canonical next attacks
 
 1. release/sign 0.3.43;
-2. DEV migrations 0029 + 0030 and existing Worker endpoint;
+2. DONE: DEV/PROD migrations 0029 + 0030; existing Worker endpoint awaits eligible signed release and deployment;
 3. real OpenAI tunnel E2E;
 4. Windows parity;
 5. canonical process contract hardening and move-rollback semantics;
@@ -242,10 +242,7 @@ data plane, and unsent events survive Agent restarts. SIGKILL/power loss
 cannot guarantee STOP; the last heartbeat and next START provide recovery
 evidence. No background high-frequency polling is introduced.
 
-The Storage collector is a **later separate job**: it should pull minimal
-D1 records using a watermark `(received_at_utc,event_id)` and idempotently
-upsert by event_id. No Citadel/Storage collection job or PROD deployment
-is claimed by this source change.
+The Storage collector has now been written and staged on the real Storage host. It queries Cloudflare D1 metadata directly using a narrowly scoped `D1 Read` API token and the cursor `(received_at_utc,event_id)`; upserts are idempotent by event ID. It is installed as a user systemd oneshot and hourly timer, with a mode-0600 config and SQLite local database. The timer remains **disabled** until the scoped token is provisioned and a live one-shot D1 read succeeds. No customer MCP tool requests pass through Storage.
 
 Offline regressions:
 `python3 apps/commander/scripts/validate_agent_hourly_telemetry.py`
@@ -261,3 +258,45 @@ worst case): 8 authorization requests + up to 24 MCP metering requests +
 requests/day, or 1,740 per 30 days. Tool requests still produce no
 per-tool control-plane traffic. This is infrastructure cost, not a billed
 Commander transaction count.
+
+## 2026-10-08 productive Gateway + Storage preparation
+
+- Cloudflare PROD D1 migrations `0029` and `0030` **applied**, same on DEV;
+  remote D1 lists no pending migrations; PROD foreign-key integrity clean.
+- Worker PROD baseline **unchanged** at
+  `afffe718-fe41-49e5-8728-c07c45382866` (100%). Its HTTP health
+  response was 200; unauthenticated MCP gateway returned 401 as expected.
+- Updated Worker PROD bundle `wrangler versions upload --dry-run` PASS
+  with existing binding to `PRODUCT_DB`; no version deployed or promoted.
+- Release-signing operation via remote tool was blocked by security policy.
+  Do not bypass it, and do not advertise unsigned Agent 0.3.43 as live.
+  Published signed Agent remains 0.3.41; the existing release SHA drift is
+  an intentional fail-closed gate.
+- Storage host collector installed:
+  `/home/sartorius/.local/bin/hara-commander-storage-collector.py`.
+  Local SQLite and read-only collector self-tests PASS; checksum byte-for-byte
+  matches the canonical product script. User systemd service and hourly timer
+  installed; **timer disabled** because scoped `D1 Read` API token has not
+  been provisioned into its mode-0600 config.
+- Secure, private runtime operation note on Services:
+  `/home/sartorius/.local/state/hara-commander-prod-ops/commander_prod_prep_20261008.txt`,
+  mode 0600, with pre-migration D1 bookmark and exact Worker rollback ID.
+  Never publish database recovery bookmark in Git.
+- To close the remaining gate: canonical signer approval and
+  manifest verification; real scoped D1 read-token on Storage; one-shot
+  Storage collection, then enable the hourly timer; Worker PROD version
+  promotion with secret-carrying target/readback and rollback evidence;
+  finally real OpenAI LOCAL_TUNNEL customer MCP E2E on a test Agent.
+
+## Local customer test readiness
+
+Read-only client check on nucleo-a (without using HARA Services as customer
+MCP): the installed `hara-commander` reports **0.3.41**, and the
+`hara-commander tunnel status` subcommand is not available there.
+Consequently, tomorrow's true OpenAI Secure MCP Tunnel customer-path test
+requires canonical signed 0.3.43 installation and actual tunnel authorization.
+The current H.A.R.A. Services administrative MCP must not be accepted as
+substitute evidence.
+
+No automatic Agent update, tunnel activation, lease issuance, or production
+customer cutover was attempted during this preparation.

@@ -28,7 +28,7 @@ PASS:
 
 - local MCP 33/33 on nucleo-a;
 - historical zero-idle-outbound baseline superseded by the explicitly authorized hourly Agent heartbeat;
-- migration chain through 0029, plus new migration 0030 validated locally;
+- migrations 0029 and 0030 applied successfully to remote DEV and PROD D1; post-migration schema/readback PASS;
 - signed product lease validation;
 - local budget and replay guards;
 - aggregate usage sync privacy/idempotency;
@@ -60,7 +60,7 @@ Source Agent: 0.3.43.
 
 Published signed Agent: 0.3.41.
 
-The release gate remains intentionally red at signed-release SHA drift until the updated 0.3.43 source and migration 0030 are packaged, deployed and signed canonically.
+The release gate remains intentionally red at signed-release SHA drift until the updated Agent 0.3.43 is packaged and signed canonically. The remote migrations 0029/0030 are already applied; no Worker/Agent promotion was performed.
 
 No PROD LOCAL_TUNNEL cutover is claimed.
 
@@ -84,6 +84,35 @@ Canonical handoff:
 - D1 migration 0030; no new MCP endpoint and no change to 24 Simple MCP tools.
 - Durable SQLite outbox, bounded replay and graceful SIGTERM upload.
 - Detailed customer command history is local; Cloudflare stores aggregated event metadata only.
-- Storage/Citadel collector remains a follow-up; no collector or PROD cutover claimed.
+- Storage collector installed on real Storage; SQLite and self-tests PASS. Hourly timer disabled pending scoped Cloudflare D1 Read token and live readback. No customer-content relay or PROD Worker cutover claimed.
 - Linux and Worker unit/regression tests PASS locally; real tunnel/Cloudflare integration remains pending.
 - Signed release still 0.3.41; source Agent 0.3.43 remains unreleased with SHA drift.
+
+## 2026-10-08 productive Gateway + Storage preparation
+
+- Cloudflare PROD D1 migrations `0029` and `0030` **applied**, same on DEV;
+  remote D1 lists no pending migrations; PROD foreign-key integrity clean.
+- Worker PROD baseline **unchanged** at
+  `afffe718-fe41-49e5-8728-c07c45382866` (100%). Its HTTP health
+  response was 200; unauthenticated MCP gateway returned 401 as expected.
+- Updated Worker PROD bundle `wrangler versions upload --dry-run` PASS
+  with existing binding to `PRODUCT_DB`; no version deployed or promoted.
+- Release-signing operation via remote tool was blocked by security policy.
+  Do not bypass it, and do not advertise unsigned Agent 0.3.43 as live.
+  Published signed Agent remains 0.3.41; the existing release SHA drift is
+  an intentional fail-closed gate.
+- Storage host collector installed:
+  `/home/sartorius/.local/bin/hara-commander-storage-collector.py`.
+  Local SQLite and read-only collector self-tests PASS; checksum byte-for-byte
+  matches the canonical product script. User systemd service and hourly timer
+  installed; **timer disabled** because scoped `D1 Read` API token has not
+  been provisioned into its mode-0600 config.
+- Secure, private runtime operation note on Services:
+  `/home/sartorius/.local/state/hara-commander-prod-ops/commander_prod_prep_20261008.txt`,
+  mode 0600, with pre-migration D1 bookmark and exact Worker rollback ID.
+  Never publish database recovery bookmark in Git.
+- To close the remaining gate: canonical signer approval and
+  manifest verification; real scoped D1 read-token on Storage; one-shot
+  Storage collection, then enable the hourly timer; Worker PROD version
+  promotion with secret-carrying target/readback and rollback evidence;
+  finally real OpenAI LOCAL_TUNNEL customer MCP E2E on a test Agent.

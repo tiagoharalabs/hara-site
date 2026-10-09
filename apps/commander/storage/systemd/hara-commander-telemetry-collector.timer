@@ -1,0 +1,12 @@
+[Unit]
+Description=Hourly H.A.R.A. Commander aggregate telemetry collection (Storage)
+
+[Timer]
+OnCalendar=hourly
+AccuracySec=1min
+RandomizedDelaySec=300
+Persistent=true
+Unit=hara-commander-telemetry-collector.service
+
+[Install]
+WantedBy=timers.target

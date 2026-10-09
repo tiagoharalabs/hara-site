@@ -1,0 +1,12 @@
+[Unit]
+Description=H.A.R.A. Commander metadata-only Cloudflare D1 telemetry pull (Storage)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 %h/.local/bin/hara-commander-storage-collector.py
+NoNewPrivileges=true
+PrivateTmp=true
+UMask=0077
+TimeoutStartSec=120
