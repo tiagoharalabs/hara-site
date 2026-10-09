@@ -325,3 +325,13 @@ O usuário aprovou explicitamente a distribuição via MCP HTTPS comercial da H.
 - Versão assinada pública em PROD continua 0.3.41. Fonte 0.3.43 não assinada, JWK mismatch não solucionado. Preparado staging isolado `/tmp/hara-commander-prod-cloud-ui-20261009` com assets binários assinados 0.3.41 intactos; a validação final de deploy não pôde ser concluída e **nenhuma promoção de produção foi realizada** nesta rodada. Evitar alegar que o portal live já exibe as alterações candidatas.
 - Próximo gate: homologação **real** do ChatGPT conectado ao MCP comercial via OAuth, sem Services Baseline, com cliente DEMO, e aprovação de submissão à OpenAI. Video, challenge de domínio e credenciais de reviewer ainda pendentes.
 - Runbook: `docs/operations/HARA_COMMANDER_CLOUD_FIRST_PUBLIC_PLUGIN_20261009.md`.
+
+## 2026-10-09 — frota 7/7 Agent assinado 0.3.41 online
+
+- Atualizadas pela distribuição oficial assinada 0.3.41 as máquinas `services`, `sentinela-a`, `sentinela-b`, `sentinela-c`, `sentinela-d`, `ninja-blue`. `nucleo-a` já usava 0.3.41.
+- Ponto causal anterior: nas Sentinelas A/B/C/D e Ninja, o Agent 0.3.40 já existia com cadastro preservado, mas o systemd user estava `inactive/disabled`. Agora todos os sete `active/enabled`, e `Linger=yes` verificado; aplicado `loginctl enable-linger` às Sentinelas A e D.
+- Config do dispositivo preservado byte idêntico em cada atualização; binário 0.3.41 confere com release público, `doctor` e Remote Health PASS.
+- PROD Cloudflare D1: sete dispositivos ativos, 0.3.41, modo `OUTBOUND_RELAY`, presença recente. `hara_ping` pelo Baseline: **7/7 PASS** com recibos.
+- Não confundir: esses pings foram via `HARA_SERVICES`, não a homologação E2E do ChatGPT com o MCP comercial Cloudflare.
+- Detalhes e evidências: `docs/operations/HARA_COMMANDER_FLEET_SIGNED_AGENT_0_3_41_20261009.md`.
+- Nenhum release 0.3.43 não assinado, instalação de serviço D GPU ou mudança na fila de jogo; nenhum host reiniciado.
