@@ -130,3 +130,63 @@ Canonical handoff:
 - Next: legitimate signed 0.3.43 and correct public manifest, real tunnel
   credentials and ChatGPT customer MCP readback; do not use HARA_SERVICES
   tools as substitute.
+
+## 2026-10-09 12:58 BRT — authorized Desktop Commander dual-host product readiness
+
+The user explicitly authorized service changes and installation on **nucleo-a**
+and **services**, provided that the end goal stays ChatGPT -> OpenAI Secure
+MCP Tunnel -> *customer* hara-commander mcp -> local machines, **not** the
+Services administrative MCP.
+
+Actual observations and changes made through Remote Desktop Commander:
+
+- Both pre-existing `hara-commander-agent.service` processes were already
+  active: nucleo-a on **0.3.41**, services on **0.3.40**. Neither was stopped,
+  replaced or restarted to avoid accepting a non-signed production release.
+- The current canonical source on `local/commander-product-current` is
+  Agent **0.3.43**, source SHA-256
+  `5fbff972ce00dcfd73d3e6510563d13cf304040fe2e8911d4d5e6e635dc804b0`.
+  The 0.3.43 source is staged and checksum verified on both hosts as
+  `~/.local/share/hara-commander/candidates/hara-commander-agent-0.3.43`,
+  executable 0700, **not active as the customer Agent service**.
+- The canonical Linux installer is staged on both hosts as
+  `~/.local/share/hara-commander/candidates/install-0.3.43.sh`,
+  with source SHA-256
+  `0401097e72cfecaca994870e82641760b974468a907e6ac4673b1213fa1ccb96`.
+  `bash -n` passed, but it was **not executed**; existing published release
+  fails matching signed version/manifest precondition.
+- The official OpenAI tunnel-client **0.0.15** is installed on each host,
+  validated against the existing pinned official ZIP SHA-256
+  `8c836dc5d68d68b663d9a5c5b28ff9fa780d9f7a3fffb1c306880b8f32fab5f1`.
+  No tunnel service was enabled; `openai-tunnel.env` and profile are absent.
+- On both hosts, the **isolated** 0.3.43 self-tests passed and an ephemeral
+  STDIO protocol session reported `initialize=PASS`, `24 Simple MCP tools`,
+  and expected fail-closed `AUTHORIZATION_EXPIRED` with
+  `PRODUCT_LEASE_REQUIRED` when running without a verified lease
+  (`mutation_performed=false`). No live customer execution claimed.
+- Public production `/release/agent-manifest.json` still advertises
+  **0.3.40** (curl readback); canonical tracked manifest advertises
+  **0.3.41**, and `build_release_manifest.py --check` reports **STALE**
+  versus 0.3.43 source. This **does not substantiate a published/signed
+  0.3.43**, despite the user's expectation.
+- Cloudflare PROD Worker deployment remains the previous
+  `afffe718-fe41-49e5-8728-c07c45382866` version; D1 migrations
+  0029/0030 have no pending entries. Do not equate DB readiness with
+  signed Agent readiness.
+- ChatGPT's connected H.A.R.A. Commander Baseline MCP returned
+  `operational_authority=HARA_SERVICES`,
+  `execution_authority=HARA_SERVICES`,
+  `runtime_authority_from_chatgpt=false` for both named links. **Do not**
+  use this as the proof of product customer tunnel execution.
+
+The remaining HUMAN/PRODUCT activation gate is: canonical signing and
+publication of the updated 0.3.43 Agent and manifest, official signed
+installer/update with rollback, OpenAI Secure MCP Tunnel ID + runtime API key
+configured separately on the authorized customer machines, one-time
+product authorization and 6h signed lease, then a ChatGPT-connected
+**product MCP** instance showing truthful runtime/customer authority.
+No private keys/tokens need be pasted in ChatGPT.
+
+Do not repeat signature attempts blocked by security controls, substitute
+a locally staged unsigned candidate as a signed release, create a Services
+MCP relay, or issue unverified customer mutation commands.
