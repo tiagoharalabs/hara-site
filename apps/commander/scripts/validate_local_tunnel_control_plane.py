@@ -177,6 +177,7 @@ with tempfile.TemporaryDirectory(prefix="hara-local-tunnel-test-") as td:
     ns["PREIMAGE_DIR"] = data_dir / "preimages"
     ns["TUNNEL_ENV_FILE"] = config_dir / "openai-tunnel.env"
     ns["TUNNEL_UNIT_FILE"] = config_dir / "systemd/user/hara-commander-openai-tunnel.service"
+    ns["TUNNEL_PROFILE_FILE"] = config_dir / "tunnel-client/hara-commander.yaml"
 
     config = ns["load_config"]()
     need(ns["transport_mode"](config) == "LOCAL_TUNNEL", "CONFIG_LOCAL_TUNNEL")
@@ -306,7 +307,15 @@ with tempfile.TemporaryDirectory(prefix="hara-local-tunnel-test-") as td:
     ns["shutil"].which = lambda name: str(fake_bin) if name == "tunnel-client" else None
     ns["input"] = lambda _prompt="": "tunnel_0123456789abcdef0123456789abcdef"
     ns["getpass"].getpass = lambda _prompt="": "sk-runtime-TEST-0123456789abcdef0123456789abcdef"
-    ns["subprocess"].run = lambda argv, **kwargs: calls.append((list(argv), dict(kwargs))) or type("R",(),{"returncode":0})()
+    def fake_tunnel_run(argv, **kwargs):
+        calls.append((list(argv), dict(kwargs)))
+        if len(argv)>1 and argv[1]=="init":
+            profile=ns["TUNNEL_PROFILE_FILE"]
+            profile.parent.mkdir(parents=True,exist_ok=True)
+            profile.write_text('tunnel_id: "tunnel_0123456789abcdef0123456789abcdef"\n',encoding="utf-8")
+            profile.chmod(0o600)
+        return type("R",(),{"returncode":0,"stdout":"","stderr":""})()
+    ns["subprocess"].run = fake_tunnel_run
     output = io.StringIO()
     with contextlib.redirect_stdout(output):
         rc = ns["configure_openai_tunnel"]()
@@ -316,6 +325,8 @@ with tempfile.TemporaryDirectory(prefix="hara-local-tunnel-test-") as td:
     argv_text = json.dumps([call[0] for call in calls])
     need("sk-runtime-TEST-0123456789abcdef0123456789abcdef" in env_text, "TUNNEL_KEY_ENVFILE")
     need(stat.S_IMODE(ns["TUNNEL_ENV_FILE"].stat().st_mode) == 0o600, "TUNNEL_KEY_MODE_0600")
+    need(stat.S_IMODE(ns["TUNNEL_PROFILE_FILE"].stat().st_mode) == 0o600, "TUNNEL_PROFILE_MODE_0600")
+    need("--control-plane-api-key-ref" in argv_text, "TUNNEL_KEY_ENV_REFERENCE")
     need("sk-runtime-TEST-0123456789abcdef0123456789abcdef" not in argv_text and "sk-runtime-TEST-0123456789abcdef0123456789abcdef" not in unit_text and "sk-runtime-TEST-0123456789abcdef0123456789abcdef" not in output.getvalue(), "TUNNEL_KEY_NOT_EXPOSED")
     init = calls[0][0]
     need("--tunnel-id" in init and "tunnel_0123456789abcdef0123456789abcdef" in init and "--mcp-command" in init, "TUNNEL_INIT_SHAPE")

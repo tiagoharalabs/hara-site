@@ -302,7 +302,7 @@
             <div class="panel-head"><div><span>COMECE AGORA</span><h2>Do zero ao primeiro comando em 3 passos</h2></div></div>
             <div class="quickstart-steps">
               <div id="quickStartDeviceStep"><span>1</span><p><b>Conecte um computador</b><small id="quickStartDeviceState">Aguardando dispositivo online</small></p></div>
-              <div><span>2</span><p><b>Configure o túnel OpenAI</b><small>Na máquina, rode <code>hara-commander tunnel configure</code>. Escolha início automático ou manual. Para iniciar manualmente, use <code>hara-commander tunnel start</code>; para desconectar, <code>hara-commander tunnel stop</code>. Nenhum comando MCP passa pelo relay H.A.R.A.</small></p></div>
+              <div><span>2</span><p><b>Configure o túnel OpenAI</b><small>Na máquina, rode <code>hara-commander tunnel connect</code>. Escolha início automático ou manual. Para iniciar manualmente, use <code>hara-commander tunnel start</code>; para desconectar, <code>hara-commander tunnel stop</code>. Este modo exige um túnel e uma chave da OpenAI Platform com permissão no workspace; não é um plugin público. Nenhum comando MCP passa pelo relay H.A.R.A.</small></p></div>
               <div><span>3</span><p><b>Autorize por 6 horas</b><small>Na lista de computadores, gere o código de autorização e confirme localmente com <code>hara-commander authorize</code>.</small></p></div>
             </div>
           </article>
@@ -372,7 +372,7 @@
                   <div><b>Instale e pronto</b><small>Copie o comando, execute e cole o código quando o instalador solicitar “Pairing token”.</small></div>
                   <div class="install-pane" data-os-panel="linux">
                     <div class="install-command"><code data-install-linux-code>(tmp=$(mktemp) && trap 'rm -f $tmp' EXIT && curl -fsS --proto '=https' --tlsv1.2 --location --max-redirs 0 https://commander.haralabs.com.br/install/linux.sh -o $tmp && HARA_COMMANDER_APPROVAL_MODE=PERSISTENT_TRUSTED HARA_COMMANDER_TUNNEL_AUTOSTART=OFF HARA_COMMANDER_URL=https://commander.haralabs.com.br bash $tmp)</code><button class="btn btn-secondary small" type="button" data-copy-linux>Copiar comando Linux</button></div>
-                    <small class="install-note">Depois, execute <code>hara-commander tunnel configure</code> e <code>hara-commander authorize</code>. Se escolheu o modo manual, conecte com o comando abaixo. O Agent local pode continuar em segundo plano sem que o túnel esteja conectado.</small>
+                    <small class="install-note">Depois, execute <code>hara-commander tunnel connect</code> e <code>hara-commander authorize</code>. Se escolheu o modo manual, conecte com o comando abaixo. O Agent local pode continuar em segundo plano sem que o túnel esteja conectado.</small>
                     <div class="install-command"><code>hara-commander tunnel start</code><button class="btn btn-secondary small" type="button" data-copy-tunnel-start>Copiar início manual</button></div>
                     <small class="install-note">No modo “Pedir confirmação”, <code>hara-commander start</code> abre a sessão de operador; não inicia o túnel OpenAI.</small>
                   </div>

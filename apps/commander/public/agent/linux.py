@@ -52,6 +52,7 @@ AGENT_TELEMETRY_INTERVAL_SECONDS = 60 * 60
 TRANSPORT_MODES = {"OUTBOUND_RELAY","LOCAL_TUNNEL"}
 TUNNEL_PROFILE = "hara-commander"
 TUNNEL_ENV_FILE = CONFIG_FILE.parent / "openai-tunnel.env"
+TUNNEL_PROFILE_FILE = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home()/".config"))) / "tunnel-client/hara-commander.yaml"
 TUNNEL_UNIT_FILE = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home()/".config"))) / "systemd/user/hara-commander-openai-tunnel.service"
 HEARTBEAT_SECONDS = 60
 CALL_POLL_HOT_SECONDS = 2
@@ -3519,6 +3520,18 @@ def authorize_local_tunnel():
     print("AUTHORIZATION_VALID_UNTIL_UTC="+str(lease.get("valid_until_utc") or ""))
     subprocess.run(["systemctl","--user","restart","hara-commander-agent.service"],check=False)
     print("AGENT_RESTART_REQUESTED=TRUE")
+    if TUNNEL_UNIT_FILE.is_file() and TUNNEL_ENV_FILE.is_file():
+        if tunnel_autostart_mode()=="ON":
+            rc,_=_openai_tunnel_doctor(capture=True)
+            if rc==0:
+                _tunnel_systemctl("enable","--now",TUNNEL_UNIT_FILE.name)
+                print("HARA_COMMANDER_TUNNEL_AUTOSTART=ACTIVE")
+            else:
+                print("HARA_COMMANDER_TUNNEL_AUTOSTART=PENDING_OPENAI_TUNNEL_DOCTOR")
+        else:
+            print("NEXT_COMMAND=hara-commander tunnel start")
+    else:
+        print("NEXT_COMMAND=hara-commander tunnel connect")
     return 0
 
 def _tunnel_client_binary():
@@ -3606,6 +3619,14 @@ def tunnel_start():
         print("HARA_COMMANDER_TUNNEL_CLIENT=MISSING")
         return 12
     _tunnel_runtime_env()
+    if not _tunnel_local_lease_active():
+        print("HARA_COMMANDER_TUNNEL=LOCAL_AUTHORIZATION_REQUIRED")
+        print("NEXT_COMMAND=hara-commander authorize")
+        return 13
+    rc,_=_openai_tunnel_doctor(capture=True)
+    if rc!=0:
+        print("HARA_COMMANDER_TUNNEL=OPENAI_TUNNEL_DOCTOR_FAILED")
+        return 14
     _tunnel_systemctl("start",TUNNEL_UNIT_FILE.name)
     active=_tunnel_systemctl("is-active","--quiet",TUNNEL_UNIT_FILE.name,check=False)
     print("HARA_COMMANDER_TUNNEL_ACTIVE="+("TRUE" if active else "FALSE"))
@@ -3632,6 +3653,13 @@ def set_tunnel_autostart(value):
             if not TUNNEL_ENV_FILE.is_file():
                 raise RuntimeError("OPENAI_TUNNEL_API_KEY_MISSING")
             _tunnel_runtime_env()
+            if not _tunnel_local_lease_active():
+                print("NEXT_COMMAND=hara-commander authorize")
+                return 13
+            rc,_=_openai_tunnel_doctor(capture=True)
+            if rc!=0:
+                print("HARA_COMMANDER_TUNNEL=OPENAI_TUNNEL_DOCTOR_FAILED")
+                return 14
             _tunnel_systemctl("enable","--now",TUNNEL_UNIT_FILE.name)
         else:
             # Disabling boot start does not silently interrupt an active session.
@@ -3647,51 +3675,94 @@ def set_tunnel_autostart(value):
     return 0
 
 def configure_openai_tunnel():
+    """One guided local setup, without uploading OpenAI credentials to HARA."""
     binary=_tunnel_client_binary()
     if not binary:
         print("HARA_COMMANDER_TUNNEL_CLIENT=MISSING")
         print("OPENAI_TUNNEL_DOCS=https://developers.openai.com/api/docs/guides/secure-mcp-tunnels")
         return 12
+    print("OPENAI_TUNNEL_SETTINGS=https://platform.openai.com/settings/organization/tunnels")
+    print("OPENAI_RUNTIME_KEY_SETTINGS=https://platform.openai.com/settings/organization/api-keys")
+    print("CHATGPT_CONNECTION_TYPE=Tunnel")
+    print("OPENAI_TUNNEL_DISTRIBUTION=PRIVATE_WORKSPACE_ONLY")
+    if TUNNEL_ENV_FILE.exists() or TUNNEL_PROFILE_FILE.exists():
+        print("HARA_COMMANDER_TUNNEL=ALREADY_CONFIGURED")
+        print("NEXT_COMMAND=hara-commander tunnel status")
+        return 12
+    if TUNNEL_UNIT_FILE.exists():
+        old=TUNNEL_UNIT_FILE.read_text(encoding="utf-8")
+        if (f"ExecStart={binary} run --profile {TUNNEL_PROFILE}" not in old
+            or "EnvironmentFile=%h/.config/hara-commander/openai-tunnel.env" not in old):
+            raise RuntimeError("OPENAI_TUNNEL_EXISTING_UNIT_CONFLICT")
     tunnel_id=input("OpenAI tunnel_id: ").strip()
-    api_key=getpass.getpass("OpenAI tunnel runtime API key: ").strip()
+    api_key=getpass.getpass("OpenAI tunnel runtime API key (hidden): ").strip()
     if not re.fullmatch(r"tunnel_[A-Za-z0-9_-]{16,180}",tunnel_id):
         raise RuntimeError("OPENAI_TUNNEL_ID_INVALID")
     if not re.fullmatch(r"[A-Za-z0-9_.-]{20,512}",api_key):
         raise RuntimeError("OPENAI_TUNNEL_API_KEY_INVALID")
-    if any(ch.isspace() for ch in binary): raise RuntimeError("OPENAI_TUNNEL_BINARY_PATH_UNSAFE")
-    TUNNEL_ENV_FILE.parent.mkdir(parents=True,exist_ok=True,mode=0o700)
-    TUNNEL_ENV_FILE.write_text("CONTROL_PLANE_API_KEY="+api_key+"\n",encoding="utf-8")
-    os.chmod(TUNNEL_ENV_FILE,0o600)
-    env=os.environ.copy(); env["CONTROL_PLANE_API_KEY"]=api_key
+    if any(ch.isspace() for ch in binary):
+        raise RuntimeError("OPENAI_TUNNEL_BINARY_PATH_UNSAFE")
+    env=os.environ.copy()
+    env["CONTROL_PLANE_API_KEY"]=api_key
     mcp_command=shlex.quote(str(Path.home()/".local/bin/hara-commander"))+" mcp"
-    subprocess.run([
-        binary,"init","--sample","sample_mcp_stdio_local",
-        "--profile",TUNNEL_PROFILE,"--tunnel-id",tunnel_id,
-        "--health-listen-addr","127.0.0.1:0",
-        "--mcp-command",mcp_command,
-    ],env=env,check=True)
-    TUNNEL_UNIT_FILE.parent.mkdir(parents=True,exist_ok=True)
-    TUNNEL_UNIT_FILE.write_text(
-        "[Unit]\nDescription=H.A.R.A. Commander OpenAI Secure MCP Tunnel\nAfter=network-online.target\n\n"
-        "[Service]\nType=simple\nEnvironmentFile=%h/.config/hara-commander/openai-tunnel.env\n"
-        f"ExecStart={binary} run --profile {TUNNEL_PROFILE}\nRestart=on-failure\nRestartSec=15\n\n"
-        "[Install]\nWantedBy=default.target\n",encoding="utf-8")
-    # Do not change the active data-plane mode until the tunnel unit is installed.
+    TUNNEL_ENV_FILE.parent.mkdir(parents=True,exist_ok=True,mode=0o700)
+    TUNNEL_PROFILE_FILE.parent.mkdir(parents=True,exist_ok=True,mode=0o700)
+    try:
+        result=subprocess.run([
+            binary,"init","--sample","sample_mcp_stdio_local",
+            "--profile",TUNNEL_PROFILE,"--tunnel-id",tunnel_id,
+            "--health-listen-addr","127.0.0.1:0",
+            "--control-plane-api-key-ref","env:CONTROL_PLANE_API_KEY",
+            "--mcp-command",mcp_command,
+        ],env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=30,check=False)
+        if result.returncode!=0 or not TUNNEL_PROFILE_FILE.is_file():
+            raise RuntimeError("OPENAI_TUNNEL_PROFILE_INIT_FAILED")
+        if stat.S_IMODE(TUNNEL_PROFILE_FILE.stat().st_mode) & 0o077:
+            raise RuntimeError("OPENAI_TUNNEL_PROFILE_PERMISSIONS_INVALID")
+        fd=os.open(str(TUNNEL_ENV_FILE),os.O_CREAT|os.O_EXCL|os.O_WRONLY,0o600)
+        with os.fdopen(fd,"w",encoding="utf-8") as config_file:
+            config_file.write("CONTROL_PLANE_API_KEY="+api_key+"\n")
+        rc,_=_openai_tunnel_doctor(capture=True)
+        if rc!=0:
+            raise RuntimeError("OPENAI_TUNNEL_DOCTOR_FAILED")
+    except Exception:
+        # Both files were absent before setup; a failed setup must not leave
+        # a half-installed service or a customer credential on disk.
+        TUNNEL_ENV_FILE.unlink(missing_ok=True)
+        TUNNEL_PROFILE_FILE.unlink(missing_ok=True)
+        print("HARA_COMMANDER_TUNNEL=SETUP_FAILED_CLEANED")
+        raise
+    finally:
+        api_key=""
+        env.pop("CONTROL_PLANE_API_KEY",None)
+    unit_text=(
+        "[Unit]\nDescription=H.A.R.A. Commander OpenAI Secure MCP Tunnel\n"
+        "After=network-online.target\nWants=network-online.target\n\n"
+        "[Service]\nType=simple\nUMask=0077\nNoNewPrivileges=true\n"
+        "EnvironmentFile=%h/.config/hara-commander/openai-tunnel.env\n"
+        "ExecStartPre=/usr/bin/test -r %h/.config/tunnel-client/hara-commander.yaml\n"
+        f"ExecStart={binary} run --profile {TUNNEL_PROFILE}\n"
+        "Restart=on-failure\nRestartSec=15\n\n"
+        "[Install]\nWantedBy=default.target\n"
+    )
+    TUNNEL_UNIT_FILE.parent.mkdir(parents=True,exist_ok=True,mode=0o700)
+    if not TUNNEL_UNIT_FILE.exists():
+        fd=os.open(str(TUNNEL_UNIT_FILE),os.O_CREAT|os.O_EXCL|os.O_WRONLY,0o600)
+        with os.fdopen(fd,"w",encoding="utf-8") as output:
+            output.write(unit_text)
     _tunnel_systemctl("daemon-reload")
     mode=tunnel_autostart_mode()
-    if mode=="ON":
+    if mode=="ON" and _tunnel_local_lease_active():
         _tunnel_systemctl("enable","--now",TUNNEL_UNIT_FILE.name)
+        print("HARA_COMMANDER_TUNNEL_AUTOSTART=ACTIVE")
     else:
-        # Manual mode: keep the service installed but not running at configure.
-        _tunnel_systemctl("disable","--now",TUNNEL_UNIT_FILE.name)
-    _set_config_value("HARA_COMMANDER_TRANSPORT_MODE","LOCAL_TUNNEL")
-    _tunnel_systemctl("restart","hara-commander-agent.service")
+        _tunnel_systemctl("disable",TUNNEL_UNIT_FILE.name,check=False)
+        print("HARA_COMMANDER_TUNNEL_AUTOSTART=PENDING_LOCAL_AUTHORIZATION" if mode=="ON" else "HARA_COMMANDER_TUNNEL_AUTOSTART=OFF")
     print("HARA_COMMANDER_OPENAI_TUNNEL_CONFIGURED=PASS")
-    print("HARA_COMMANDER_TRANSPORT_MODE=LOCAL_TUNNEL")
-    print("HARA_COMMANDER_TUNNEL_AUTOSTART="+mode)
-    if mode=="OFF":
-        print("NEXT_TUNNEL_COMMAND=hara-commander tunnel start")
-    print("NEXT_STEP=Generate a 6-hour authorization code in commander.haralabs.com.br and run hara-commander authorize")
+    print("HARA_COMMANDER_TUNNEL_DATA_PLANE=LOCAL_MCP_STDIO")
+    print("HARA_SERVICES_TOOL_RELAY=FALSE")
+    print("NEXT_COMMAND=hara-commander authorize")
+    print("CHATGPT_NEXT=Add custom MCP server > Tunnel > enter the OpenAI tunnel_id")
     return 0
 
 def openai_tunnel_status():
@@ -3731,7 +3802,7 @@ def main():
         if len(sys.argv)==3:
             set_transport_mode(sys.argv[2]); return
         raise SystemExit(64)
-    if len(sys.argv)>2 and sys.argv[1]=="tunnel" and sys.argv[2]=="configure":
+    if len(sys.argv)==3 and sys.argv[1]=="tunnel" and sys.argv[2] in {"configure","connect"}:
         raise SystemExit(configure_openai_tunnel())
     if len(sys.argv)>2 and sys.argv[1]=="tunnel" and sys.argv[2]=="status":
         raise SystemExit(openai_tunnel_status())
@@ -3756,11 +3827,11 @@ def main():
     if "--session-stop" in sys.argv or (len(sys.argv)>1 and sys.argv[1]=="stop"):
         stop_operator_session(); return
     if len(sys.argv) > 1 and sys.argv[1] in {"help", "--help", "-h"}:
-        print("Usage: hara-commander [start|status|stop|mcp|authorize|tunnel configure|tunnel start|tunnel stop|tunnel status|tunnel autostart [on|off]|doctor|support|transport-mode [local-tunnel|relay]|approval-mode [ask|session|always]|help]")
+        print("Usage: hara-commander [start|status|stop|mcp|authorize|tunnel connect|tunnel configure|tunnel start|tunnel stop|tunnel status|tunnel autostart [on|off]|doctor|support|transport-mode [local-tunnel|relay]|approval-mode [ask|session|always]|help]")
         return
     if len(sys.argv) > 1:
         print("HARA_COMMANDER_UNKNOWN_COMMAND=" + str(sys.argv[1]), file=sys.stderr)
-        print("Usage: hara-commander [start|status|stop|mcp|authorize|tunnel configure|tunnel start|tunnel stop|tunnel status|tunnel autostart [on|off]|doctor|support|transport-mode [local-tunnel|relay]|approval-mode [ask|session|always]|help]", file=sys.stderr)
+        print("Usage: hara-commander [start|status|stop|mcp|authorize|tunnel connect|tunnel configure|tunnel start|tunnel stop|tunnel status|tunnel autostart [on|off]|doctor|support|transport-mode [local-tunnel|relay]|approval-mode [ask|session|always]|help]", file=sys.stderr)
         raise SystemExit(64)
     config=load_config()
     RECEIPT_DIR.mkdir(parents=True,exist_ok=True,mode=0o700)

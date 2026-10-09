@@ -83,4 +83,24 @@ with tempfile.TemporaryDirectory(prefix="hara-openai-local-bridge-test-") as dir
     check(not (home / ".config/hara-commander/openai-tunnel.env").exists()
           and not (home / ".config/tunnel-client/hara-commander.yaml").exists(), "NO_FAKE_TUNNEL_OR_SECRET")
 
+    # Even with structurally valid dummy credentials and profile, an older
+    # Agent (or one without a signed LOCAL_TUNNEL lease) cannot start a bridge.
+    profile=home / ".config/tunnel-client/hara-commander.yaml"
+    profile.parent.mkdir(parents=True,exist_ok=True)
+    profile.write_text('tunnel_id: "tunnel_0123456789abcdef0123456789abcdef"\n',encoding="utf-8")
+    profile.chmod(0o600)
+    secret=home / ".config/hara-commander/openai-tunnel.env"
+    secret.parent.mkdir(parents=True,exist_ok=True)
+    secret.write_text("CONTROL_PLANE_API_KEY=DUMMY_LOCAL_TEST_KEY_0123456789abcdef\n",encoding="utf-8")
+    secret.chmod(0o600)
+    start=run("start")
+    check(start.returncode!=0 and "SIGNED_LOCAL_TUNNEL_AGENT_AUTHORIZATION_REQUIRED" in start.stderr,
+          "START_WITHOUT_SIGNED_AGENT_LEASE_DENIED")
+    auto=run("autostart","on")
+    check(auto.returncode!=0 and "SIGNED_LOCAL_TUNNEL_AGENT_AUTHORIZATION_REQUIRED" in auto.stderr,
+          "AUTOSTART_WITHOUT_SIGNED_AGENT_LEASE_DENIED")
+    check(not any(len(value.split())>1 and value.split()[1] in {"start","enable"}
+                  for value in service_log.read_text(encoding="utf-8").splitlines()),
+          "OLD_SIGNED_AGENT_NEVER_OPENS_TUNNEL")
+
 print("COMMANDER_OPENAI_LOCAL_BRIDGE_BOOTSTRAP=PASS")

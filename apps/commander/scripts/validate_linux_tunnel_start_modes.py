@@ -72,6 +72,7 @@ with tempfile.TemporaryDirectory(prefix="hara-tunnel-start-modes-") as directory
     ns["OPERATIONS_DB_FILE"]=data/"operations.sqlite3"
     ns["TUNNEL_ENV_FILE"]=device_dir/"openai-tunnel.env"
     ns["TUNNEL_UNIT_FILE"]=cdir/"systemd/user/hara-commander-openai-tunnel.service"
+    ns["TUNNEL_PROFILE_FILE"]=cdir/"tunnel-client/hara-commander.yaml"
 
     need(ns["tunnel_autostart_mode"]()=="OFF", "DEFAULT_IS_MANUAL")
     with contextlib.redirect_stdout(io.StringIO()):
@@ -89,21 +90,39 @@ with tempfile.TemporaryDirectory(prefix="hara-tunnel-start-modes-") as directory
     calls=[]
     def fake_run(argv,**kwargs):
         calls.append(list(argv))
+        if len(argv)>1 and argv[1]=="init":
+            profile=ns["TUNNEL_PROFILE_FILE"]
+            profile.parent.mkdir(parents=True,exist_ok=True)
+            profile.write_text('tunnel_id: "tunnel_0123456789abcdef0123456789abcdef"\n',encoding="utf-8")
+            profile.chmod(0o600)
         return SimpleNamespace(returncode=0,stdout="",stderr="")
     # Deliberately only in this isolated script/test process, never on the actual hosts.
     ns["subprocess"].run=fake_run
     output=io.StringIO()
     with contextlib.redirect_stdout(output):
         rc=ns["configure_openai_tunnel"]()
-    need(rc==0 and "HARA_COMMANDER_TUNNEL_AUTOSTART=ON" in output.getvalue(), "CONFIGURE_AUTO_ON")
-    need(any(c[:4]==["systemctl","--user","enable","--now"] for c in calls), "SYSTEMD_AUTO_ENABLE_NOW")
-    need(not any(c[:4]==["systemctl","--user","disable","--now"] for c in calls), "AUTO_MODE_NOT_DISABLED")
-    need(any(c[1:4]==["--user","restart","hara-commander-agent.service"] for c in calls), "AGENT_RESTART_AFTER_CONFIG")
+    need(rc==0 and "HARA_COMMANDER_TUNNEL_AUTOSTART=PENDING_LOCAL_AUTHORIZATION" in output.getvalue(), "CONFIGURE_WAITS_FOR_LOCAL_LEASE")
+    need(not any("enable" in c for c in calls), "NO_START_BEFORE_LEASE")
+    need(not any(c[1:3]==["--user","restart"] for c in calls), "NO_AGENT_RESTART_BEFORE_AUTH")
     need(ns["TUNNEL_UNIT_FILE"].exists(), "SYSTEMD_UNIT_CREATED")
     need(stat.S_IMODE(ns["TUNNEL_ENV_FILE"].stat().st_mode)==0o600, "RUNTIME_KEY_PERMISSIONS")
+    need(stat.S_IMODE(ns["TUNNEL_PROFILE_FILE"].stat().st_mode)==0o600, "TUNNEL_PROFILE_PRIVATE")
     need("sk-runtime-TEST" not in ns["TUNNEL_UNIT_FILE"].read_text(), "SYSTEMD_NO_CREDENTIALS")
     need("sk-runtime-TEST" not in str(calls), "ARGV_NO_CREDENTIALS")
 
+    calls.clear()
+    with contextlib.redirect_stdout(io.StringIO()):
+        rc=ns["tunnel_start"]()
+    need(rc==13 and not calls, "TUNNEL_START_MISSING_LEASE_DENIED")
+
+    calls.clear()
+    with contextlib.redirect_stdout(io.StringIO()):
+        rc=ns["set_tunnel_autostart"]("on")
+    need(rc==13 and not any("enable" in c for c in calls), "AUTOSTART_MISSING_LEASE_DENIED")
+
+    # Once the six-hour signed local product lease is present, manual and
+    # automatic start may proceed, but only after OpenAI doctor passes.
+    ns["_tunnel_local_lease_active"]=lambda:True
     calls.clear()
     with contextlib.redirect_stdout(io.StringIO()):
         rc=ns["set_tunnel_autostart"]("off")
@@ -125,14 +144,38 @@ with tempfile.TemporaryDirectory(prefix="hara-tunnel-start-modes-") as directory
     calls.clear()
     with contextlib.redirect_stdout(io.StringIO()):
         rc=ns["configure_openai_tunnel"]()
-    need(rc==0 and any(c[1:4]==["--user","disable","--now"] for c in calls), "CONFIGURE_MANUAL_DOES_NOT_START")
-    need(not any(c[1:4]==["--user","enable","--now"] for c in calls), "CONFIGURE_MANUAL_NOT_ENABLED")
+    need(rc==12 and not calls, "CONFIGURE_NEVER_OVERWRITES_EXISTING_KEY")
 
     calls.clear()
     with contextlib.redirect_stdout(io.StringIO()):
         rc=ns["set_tunnel_autostart"]("on")
     need(rc==0 and ns["tunnel_autostart_mode"]()=="ON", "EXISTING_MACHINE_AUTO_ON")
     need(any(c[1:4]==["--user","enable","--now"] for c in calls), "SYSTEMD_EXISTING_AUTO_ENABLE")
+
+    # After successful manual reauthorization, configured auto mode can start.
+    calls.clear()
+    ns["getpass"].getpass=lambda _prompt="":"SIX_HOUR_AUTH_CODE"
+    ns["refresh_product_lease"]=lambda *_a,**_k:{"product_lease":{"valid_until_utc":"2099-01-01T00:00:00Z"}}
+    with contextlib.redirect_stdout(io.StringIO()):
+        rc=ns["authorize_local_tunnel"]()
+    need(rc==0 and any(c[1:4]==["--user","enable","--now"] for c in calls), "AUTHORIZATION_ACTIVATES_AUTO_TUNNEL")
+
+    # OpenAI doctor failure cannot leave a runtime key or half-created profile.
+    ns["TUNNEL_ENV_FILE"]=device_dir/"failed-setup/openai-tunnel.env"
+    ns["TUNNEL_PROFILE_FILE"]=cdir/"failed-setup/hara-commander.yaml"
+    ns["_openai_tunnel_doctor"]=lambda capture=False:(42,"unavailable")
+    ns["getpass"].getpass=lambda _prompt="":"sk-runtime-TEST-0123456789abcdef0123456789abcdef"
+    calls.clear()
+    blocked=False
+    with contextlib.redirect_stdout(io.StringIO()):
+        try:
+            ns["configure_openai_tunnel"]()
+        except RuntimeError as exc:
+            blocked=str(exc)=="OPENAI_TUNNEL_DOCTOR_FAILED"
+    need(blocked, "TUNNEL_DOCTOR_FAILURE_DENIED")
+    need(not ns["TUNNEL_ENV_FILE"].exists() and not ns["TUNNEL_PROFILE_FILE"].exists(),
+         "FAILED_SETUP_WIPES_KEY_AND_PROFILE")
+    need(not any("enable" in c for c in calls), "FAILED_SETUP_NEVER_STARTS")
 
     # On/off cannot bypass the product lease; the actual MCP call is still gated.
     need("require_local_product_authority" in SOURCE, "PRODUCT_LEASE_GATE_RETAINED")

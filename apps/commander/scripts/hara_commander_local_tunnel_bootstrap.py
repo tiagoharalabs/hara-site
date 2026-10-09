@@ -125,6 +125,21 @@ def doctor() -> bool:
     return result.returncode == 0
 
 
+def require_agent_direct_lease() -> None:
+    """No OpenAI tunnel may start without the Agent's signed LOCAL_TUNNEL lease."""
+    p = paths()
+    result = subprocess.run(
+        [str(p["cli"]), "doctor"],
+        text=True, capture_output=True, timeout=20,
+    )
+    proof = result.stdout
+    if (result.returncode != 0
+        or "HARA_COMMANDER_LOCAL_AUTHORIZATION=PASS" not in proof
+        or "HARA_COMMANDER_TRANSPORT_MODE=LOCAL_TUNNEL" not in proof
+        or "HARA_COMMANDER_TOOL_DATA_PLANE=LOCAL_DIRECT" not in proof):
+        raise BridgeError("SIGNED_LOCAL_TUNNEL_AGENT_AUTHORIZATION_REQUIRED")
+
+
 def atomic_private_write(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     os.chmod(path.parent, 0o700)
@@ -183,6 +198,7 @@ def configure(auto: bool = False) -> None:
         print("OPENAI_TUNNEL_SERVICE=NOT_STARTED")
         raise BridgeError("OPENAI_TUNNEL_DOCTOR_FAILED_CHECK_ORG_WORKSPACE_AND_KEY")
     if auto:
+        require_agent_direct_lease()
         systemctl("enable", "--now", UNIT_NAME)
         print("OPENAI_TUNNEL_AUTOSTART=ON")
     else:
@@ -199,6 +215,7 @@ def start() -> None:
         raise BridgeError("RUN_PREPARE_FIRST")
     if not doctor():
         raise BridgeError("OPENAI_TUNNEL_DOCTOR_FAILED")
+    require_agent_direct_lease()
     systemctl("start", UNIT_NAME)
     if not systemctl("is-active", "--quiet", UNIT_NAME, required=False):
         raise BridgeError("OPENAI_TUNNEL_SERVICE_NOT_ACTIVE")
@@ -214,6 +231,7 @@ def autostart(value: str) -> None:
     if value == "on":
         if not doctor():
             raise BridgeError("OPENAI_TUNNEL_DOCTOR_FAILED")
+        require_agent_direct_lease()
         systemctl("enable", "--now", UNIT_NAME)
     else:
         systemctl("disable", UNIT_NAME)
