@@ -302,17 +302,17 @@
             <div class="panel-head"><div><span>COMECE AGORA</span><h2>Do zero ao primeiro comando em 3 passos</h2></div></div>
             <div class="quickstart-steps">
               <div id="quickStartDeviceStep"><span>1</span><p><b>Conecte um computador</b><small id="quickStartDeviceState">Aguardando dispositivo online</small></p></div>
-              <div><span>2</span><p><b>Configure o túnel OpenAI</b><small>Na máquina, rode <code>hara-commander tunnel connect</code>. Escolha início automático ou manual. Para iniciar manualmente, use <code>hara-commander tunnel start</code>; para desconectar, <code>hara-commander tunnel stop</code>. Este modo exige um túnel e uma chave da OpenAI Platform com permissão no workspace; não é um plugin público. Nenhum comando MCP passa pelo relay H.A.R.A.</small></p></div>
-              <div><span>3</span><p><b>Autorize por 6 horas</b><small>Na lista de computadores, gere o código de autorização e confirme localmente com <code>hara-commander authorize</code>.</small></p></div>
+              <div><span>2</span><p><b>Conecte no ChatGPT</b><small>Escolha o MCP H.A.R.A. Commander e faça login pelo HARA Identity (OAuth). Nenhuma chave da OpenAI Platform é necessária. Enquanto o plugin não estiver publicado no diretório, use a conexão MCP personalizada.</small></p></div>
+              <div><span>3</span><p><b>Execute seu primeiro comando</b><small>O MCP comercial encaminha a solicitação ao Agent pareado. A operação ocorre na máquina; o conteúdo transita pelo Gateway. Ações sensíveis obedecem às políticas locais.</small></p></div>
             </div>
           </article>
 
           <article class="panel device-where-panel">
             <div class="panel-head"><div><span>ONDE USAR</span><h2>Conecte ao cliente que preferir</h2></div></div>
             <div class="device-where-list">
-              <div><span class="where-badge where-badge-brand" title="ChatGPT — OpenAI"><img src="./brand/chatgpt-official.webp" alt="" aria-hidden="true" /></span><p><b>ChatGPT</b><small>Use o OpenAI Secure MCP Tunnel para chegar diretamente ao MCP local do Commander.</small></p><span class="where-state">Tunnel</span></div>
-              <div><span class="where-badge where-badge-brand" title="Claude — Anthropic"><img src="./brand/claude-official.svg" alt="" aria-hidden="true" /></span><p><b>Codex / IDE local</b><small>Conecte diretamente a <code>hara-commander mcp</code> por stdio, sem relay H.A.R.A.</small></p><span class="where-state">Local</span></div>
-              <div><span class="where-badge">MCP</span><p><b>Qualquer cliente MCP local</b><small>Use o servidor local <code>hara-commander mcp</code>. O MCP remoto H.A.R.A. permanece apenas como fallback legado durante a migração.</small></p><button class="link-button" type="button" data-copy-local-mcp>Copiar comando local</button></div>
+              <div><span class="where-badge where-badge-brand" title="ChatGPT — OpenAI"><img src="./brand/chatgpt-official.webp" alt="" aria-hidden="true" /></span><p><b>ChatGPT</b><small>Conecte o MCP remoto H.A.R.A. Commander e autorize pelo HARA Identity. O Agent executa localmente.</small></p><span class="where-state">Cloud MCP</span></div>
+              <div><span class="where-badge where-badge-brand" title="Claude — Anthropic"><img src="./brand/claude-official.svg" alt="" aria-hidden="true" /></span><p><b>Codex / IDE local</b><small>Conecte diretamente a <code>hara-commander mcp</code> por stdio, sem Gateway H.A.R.A.</small></p><span class="where-state">Local</span></div>
+              <div><span class="where-badge">MCP</span><p><b>Qualquer cliente MCP local</b><small>Para ferramentas na mesma máquina, use <code>hara-commander mcp</code> por STDIO, sem relay. Clientes remotos usam o MCP HTTPS comercial com OAuth.</small></p><button class="link-button" type="button" data-copy-local-mcp>Copiar comando local</button></div>
             </div>
           </article>
 
@@ -323,7 +323,7 @@
                   <div><span>NOVO DISPOSITIVO</span><h2>Conectar ao Commander</h2></div>
                   <span class="status-pill"><i></i> Pronto para instalar</span>
                 </div>
-                <p>Gere um código temporário e instale o Agent. Depois do pareamento, configure o OpenAI Secure MCP Tunnel e autorize a máquina por 6 horas. A execução de tools fica local; a H.A.R.A. Cloud permanece apenas como control plane.</p>
+                <p>Gere um código temporário e instale o Agent. No modo Cloud (padrão), conecte o MCP comercial no ChatGPT e autentique pelo HARA Identity: o Gateway encaminha comandos, enquanto a execução fica na máquina. O modo Direct é opcional e privado por workspace.</p>
 
                 <div class="onboarding-step">
                   <span class="onboarding-step-no">01</span>
@@ -338,7 +338,7 @@
 
                 <div class="onboarding-step onboarding-step-stack onboarding-platform-policy">
                   <span class="onboarding-step-no">02</span>
-                  <div><b>Escolha a plataforma e a autorização</b><small>O mesmo código funciona em Linux ou Windows. “Sempre permitir” é o modo recomendado para uso diário.</small></div>
+                  <div><b>Escolha a plataforma e a autorização</b><small>Linux e Windows: modo Cloud por padrão, sem chave da OpenAI. “Pedir confirmação” é recomendado para ações sensíveis; “Sempre permitir” aceita ações governadas sem nova aprovação local.</small></div>
                   <div class="onboarding-choice-row">
                     <div>
                       <small class="choice-label">Sistema</small>
@@ -355,8 +355,18 @@
                       </div>
                     </div>
                   </div>
+                  <div class="onboarding-choice-row">
+                    <div>
+                      <small class="choice-label">Transporte</small>
+                      <div class="os-picker" role="radiogroup" aria-label="Modo de conexão do Commander">
+                        <button class="active" type="button" role="radio" aria-checked="true" data-transport-choice="cloud">Cloud (padrão)</button>
+                        <button type="button" role="radio" aria-checked="false" data-transport-choice="direct">Direct (avançado)</button>
+                      </div>
+                      <small class="install-note" id="transportModeNote">Cloud: o Gateway comercial encaminha comandos; nenhuma chave da OpenAI Platform é necessária. O Direct usa OpenAI Secure MCP Tunnel privado, e a execução permanece local.</small>
+                    </div>
+                  </div>
                   <small class="install-note" id="approvalModeNote">Recomendado: o Agent fica disponível em segundo plano e executa somente operações governadas autorizadas neste computador.</small>
-                  <div class="tunnel-startup-choice" data-tunnel-autostart-container>
+                  <div class="tunnel-startup-choice" data-tunnel-autostart-container hidden>
                     <label for="linuxTunnelAutostart">
                       <input id="linuxTunnelAutostart" type="checkbox" data-tunnel-autostart />
                       <span>Linux: iniciar o túnel OpenAI automaticamente</span>
@@ -371,10 +381,10 @@
                   <span class="onboarding-step-no">03</span>
                   <div><b>Instale e pronto</b><small>Copie o comando, execute e cole o código quando o instalador solicitar “Pairing token”.</small></div>
                   <div class="install-pane" data-os-panel="linux">
-                    <div class="install-command"><code data-install-linux-code>(tmp=$(mktemp) && trap 'rm -f $tmp' EXIT && curl -fsS --proto '=https' --tlsv1.2 --location --max-redirs 0 https://commander.haralabs.com.br/install/linux.sh -o $tmp && HARA_COMMANDER_APPROVAL_MODE=PERSISTENT_TRUSTED HARA_COMMANDER_TUNNEL_AUTOSTART=OFF HARA_COMMANDER_URL=https://commander.haralabs.com.br bash $tmp)</code><button class="btn btn-secondary small" type="button" data-copy-linux>Copiar comando Linux</button></div>
-                    <small class="install-note">Depois, execute <code>hara-commander tunnel connect</code> e <code>hara-commander authorize</code>. Se escolheu o modo manual, conecte com o comando abaixo. O Agent local pode continuar em segundo plano sem que o túnel esteja conectado.</small>
-                    <div class="install-command"><code>hara-commander tunnel start</code><button class="btn btn-secondary small" type="button" data-copy-tunnel-start>Copiar início manual</button></div>
-                    <small class="install-note">No modo “Pedir confirmação”, <code>hara-commander start</code> abre a sessão de operador; não inicia o túnel OpenAI.</small>
+                    <div class="install-command"><code data-install-linux-code>(tmp=$(mktemp) && trap 'rm -f $tmp' EXIT && curl -fsS --proto '=https' --tlsv1.2 --location --max-redirs 0 https://commander.haralabs.com.br/install/linux.sh -o $tmp && HARA_COMMANDER_APPROVAL_MODE=PERSISTENT_TRUSTED HARA_COMMANDER_TRANSPORT_MODE=OUTBOUND_RELAY HARA_COMMANDER_TUNNEL_AUTOSTART=OFF HARA_COMMANDER_URL=https://commander.haralabs.com.br bash $tmp)</code><button class="btn btn-secondary small" type="button" data-copy-linux>Copiar comando Linux</button></div>
+                    <small class="install-note" data-cloud-onboarding-note>Depois, conecte <code>https://commander.haralabs.com.br/api/mcp?profile=simple</code> no ChatGPT, com HARA Identity OAuth. O plugin ainda precisa de aprovação para aparecer no diretório.</small><small class="install-note" data-direct-onboarding-note hidden>Somente no modo Direct: Configure o túnel OpenAI via <code>hara-commander tunnel connect</code> (alias <code>hara-commander tunnel configure</code>), na etapa "Autorize por 6 horas", gere o código local e execute <code>hara-commander authorize</code>. Inicie com <code>hara-commander tunnel start</code> e desconecte com <code>hara-commander tunnel stop</code>. Esse túnel exige credenciais da OpenAI Platform.</small>
+                    <div class="install-command" data-direct-onboarding-note hidden><code>hara-commander tunnel start</code><button class="btn btn-secondary small" type="button" data-copy-tunnel-start>Copiar início manual</button></div>
+                    <small class="install-note">No modo “Pedir confirmação”, <code>hara-commander start</code> abre a sessão de operador na máquina. O túnel direto OpenAI é opcional e não é necessário para o MCP comercial.</small>
                   </div>
                   <div class="install-pane" data-os-panel="windows" hidden>
                     <div class="install-command"><code data-install-windows-code>$haraPrevUrl=$env:HARA_COMMANDER_URL; $haraPrevApproval=$env:HARA_COMMANDER_APPROVAL_MODE; $haraInstaller=Join-Path $env:TEMP ('hara-commander-install-'+[guid]::NewGuid().ToString('N')+'.ps1'); try { $env:HARA_COMMANDER_URL='https://commander.haralabs.com.br'; $env:HARA_COMMANDER_APPROVAL_MODE='PERSISTENT_TRUSTED'; Invoke-WebRequest -Uri https://commander.haralabs.com.br/install/windows.ps1 -OutFile $haraInstaller -UseBasicParsing -MaximumRedirection 0 -ErrorAction Stop; & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $haraInstaller; if ($LASTEXITCODE -ne 0) { throw ('HARA_COMMANDER_INSTALL_EXIT_'+$LASTEXITCODE) } } finally { Remove-Item -LiteralPath $haraInstaller -Force -ErrorAction SilentlyContinue; $env:HARA_COMMANDER_URL=$haraPrevUrl; $env:HARA_COMMANDER_APPROVAL_MODE=$haraPrevApproval }</code><button class="btn btn-secondary small" type="button" data-copy-windows>Copiar comando Windows</button></div>

@@ -312,3 +312,16 @@ Cloudflare tunnels remain unmodified.
 - **Não é E2E com a OpenAI real**. Pendências externas: tunnel_id legítimo, chave OpenAI de runtime e associação ao workspace/permissões, e inclusão da conexão do tipo Tunnel no ChatGPT. Não criar credenciais fictícias.
 - **Não é release público**. A fonte 0.3.43 continua sem assinatura válida pela cadeia do release (mismatch JWK privada/pública reportado anteriormente). Não promover o código ou trocar chave de assinatura fora do processo de custódia autorizado. O PROD permanece com Agent assinado 0.3.41.
 - Documentação pública consultada em 2026-10-09: https://developers.openai.com/api/docs/guides/secure-mcp-tunnels — Secure MCP Tunnel suporta conexões privadas, NÃO submissão/distribuição de plugin público; esse limite não pode ser removido pelo instalador HARA.
+
+## 2026-10-09 — decisão de lançamento Cloud-first (modelo Desktop Commander)
+
+O usuário aprovou explicitamente a distribuição via MCP HTTPS comercial da H.A.R.A., com Agent executando localmente e **o tráfego de cada chamada do plugin passando pelo Gateway Cloudflare**. Não utilizar o MCP administrativo HARA Services como proxy. OpenAI Secure MCP Tunnel privado permanece opcional e não bloqueia beta público.
+
+- Fonte candidata do Linux installer: default de nova instalação `OUTBOUND_RELAY`; Direct somente opt-in; Cloud não precisa de OpenAI Platform key; update evita baixar tunnel-client em máquinas Cloud.
+- Front-end candidato: Cloud como opção padrão, Direct avançado somente Linux, instruções de OAuth HARA Identity e declaração explícita de transporte.
+- Pacote de submissão rascunho com logo da capivara: `apps/commander/plugin-submission/` (`plugin.json`, `mcp.json`, ícones, 5 roteiros positivos + 3 negativos). **Não está publicado na OpenAI.**
+- Privacidade verificada: D1 fallback de chamada contém `payload_json`/`result_json` até TTL nominal de 50 s; redação por manutenção periódica pode ocorrer depois do TTL (cron minuto 17 a cada hora). Depois persistem hash markers e metadados. Não anunciar 'nunca armazena' nem 'nenhum tráfego pela HARA'.
+- Evidência de testes: `validate_cloud_launch_contract.py` PASS; `validate_prod_static.py` PASS; `validate_linux_tunnel_start_modes.py` PASS; `validate_local_tunnel_control_plane.py` PASS; `validate_customer_privacy_noc_contract.py` PASS; `test_customer_mcp_simple_profile.mjs` PASS; `test_customer_mcp_edge.mjs` PASS; `node --check` e `bash -n` PASS.
+- Versão assinada pública em PROD continua 0.3.41. Fonte 0.3.43 não assinada, JWK mismatch não solucionado. Preparado staging isolado `/tmp/hara-commander-prod-cloud-ui-20261009` com assets binários assinados 0.3.41 intactos; a validação final de deploy não pôde ser concluída e **nenhuma promoção de produção foi realizada** nesta rodada. Evitar alegar que o portal live já exibe as alterações candidatas.
+- Próximo gate: homologação **real** do ChatGPT conectado ao MCP comercial via OAuth, sem Services Baseline, com cliente DEMO, e aprovação de submissão à OpenAI. Video, challenge de domínio e credenciais de reviewer ainda pendentes.
+- Runbook: `docs/operations/HARA_COMMANDER_CLOUD_FIRST_PUBLIC_PLUGIN_20261009.md`.

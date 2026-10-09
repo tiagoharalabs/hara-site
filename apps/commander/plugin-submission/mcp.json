@@ -1,0 +1,9 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "hara-commander": {
+      "type": "streamable-http",
+      "url": "https://commander.haralabs.com.br/api/mcp?profile=simple"
+    }
+  }
+}

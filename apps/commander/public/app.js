@@ -56,6 +56,8 @@
   let deviceTab = "active";
   let installApprovalMode = "PERSISTENT_TRUSTED";
   let installTunnelAutostart = "OFF";
+  let installTransportMode = "OUTBOUND_RELAY";
+  let installOs = "linux";
 
   function currentTheme() {
     return root.dataset.theme === "dark" ? "dark" : "light";
@@ -1328,6 +1330,7 @@
 
   function setInstallOs(os) {
     const target = os === "windows" ? "windows" : "linux";
+    installOs = target;
     document.querySelectorAll("[data-os-choice]").forEach((button) => {
       const active = button.dataset.osChoice === target;
       button.classList.toggle("active", active);
@@ -1337,14 +1340,33 @@
     document.querySelectorAll("[data-os-panel]").forEach((panel) => {
       panel.hidden = panel.dataset.osPanel !== target;
     });
-    document.querySelectorAll("[data-tunnel-autostart-container]").forEach((panel) => {
-      panel.hidden = target !== "linux";
+    setInstallTransportMode(target === "windows" ? "cloud" : (installTransportMode === "LOCAL_TUNNEL" ? "direct" : "cloud"));
+  }
+
+  function setInstallTransportMode(mode) {
+    installTransportMode = mode === "direct" && installOs === "linux" ? "LOCAL_TUNNEL" : "OUTBOUND_RELAY";
+    if (installTransportMode !== "LOCAL_TUNNEL") installTunnelAutostart = "OFF";
+    const direct = installTransportMode === "LOCAL_TUNNEL";
+    document.querySelectorAll("[data-transport-choice]").forEach((button) => {
+      const active = (button.dataset.transportChoice === "direct") === direct;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-checked", String(active));
+      button.disabled = installOs !== "linux" && button.dataset.transportChoice === "direct";
     });
+    document.querySelectorAll("[data-tunnel-autostart-container]").forEach((panel) => { panel.hidden = !direct || installOs !== "linux"; });
+    document.querySelectorAll("[data-cloud-onboarding-note]").forEach((node) => { node.hidden = direct; });
+    document.querySelectorAll("[data-direct-onboarding-note]").forEach((node) => { node.hidden = !direct; });
+    const note = document.getElementById("transportModeNote");
+    if (note) note.textContent = direct
+      ? "Direct: túnel privado por workspace. Exige tunnel_id e chave da OpenAI Platform; não serve para distribuição pública."
+      : "Cloud: o MCP comercial encaminha comandos via Cloudflare. Sem chave OpenAI. A execução ocorre na máquina e o conteúdo transita pelo Gateway.";
+    syncInstallApprovalMode();
   }
 
   function installCommandLinux() {
     return "(tmp=$(mktemp) && trap 'rm -f $tmp' EXIT && curl -fsS --proto '=https' --tlsv1.2 --location --max-redirs 0 https://commander.haralabs.com.br/install/linux.sh -o $tmp && HARA_COMMANDER_APPROVAL_MODE="
       + installApprovalMode
+      + " HARA_COMMANDER_TRANSPORT_MODE=" + installTransportMode
       + " HARA_COMMANDER_TUNNEL_AUTOSTART=" + installTunnelAutostart
       + " HARA_COMMANDER_URL=https://commander.haralabs.com.br bash $tmp)";
   }
@@ -1853,7 +1875,7 @@
 
   document.addEventListener("change", (event) => {
     if (event.target.matches?.("[data-tunnel-autostart]")) {
-      setInstallTunnelAutostart(event.target.checked);
+      setInstallTunnelAutostart(event.target.checked && installTransportMode === "LOCAL_TUNNEL");
     }
   });
 
@@ -1979,6 +2001,13 @@
       return;
     }
 
+    const transportChoice = event.target.closest("[data-transport-choice]");
+    if (transportChoice) {
+      event.preventDefault();
+      setInstallTransportMode(transportChoice.dataset.transportChoice);
+      return;
+    }
+
     const approvalChoice = event.target.closest("[data-approval-choice]");
     if (approvalChoice) {
       event.preventDefault();
@@ -2095,6 +2124,15 @@
       const nextOs = osChoice.dataset.osChoice === "linux" ? "windows" : "linux";
       setInstallOs(nextOs);
       document.querySelector('[data-os-choice="' + nextOs + '"]')?.focus();
+      return;
+    }
+
+    const transportChoice = event.target.closest?.("[data-transport-choice]");
+    if (transportChoice && ["ArrowLeft", "ArrowRight"].includes(event.key)) {
+      event.preventDefault();
+      const next = transportChoice.dataset.transportChoice === "cloud" ? "direct" : "cloud";
+      setInstallTransportMode(next);
+      document.querySelector('[data-transport-choice="' + (installTransportMode === "LOCAL_TUNNEL" ? "direct" : "cloud") + '"]')?.focus();
       return;
     }
 

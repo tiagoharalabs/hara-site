@@ -596,7 +596,10 @@ case "$ACTION" in
     configured_url="$(read_config_value HARA_COMMANDER_URL 2>/dev/null || true)"
     [ -z "$configured_url" ] || BASE_URL="${configured_url%/}"
     previous_started="$(read_runtime_status_value started_at_utc 2>/dev/null || true)"
-    install_tunnel_client
+    existing_transport="$(read_config_value HARA_COMMANDER_TRANSPORT_MODE 2>/dev/null || true)"
+    if [ "$existing_transport" = "LOCAL_TUNNEL" ]; then
+      install_tunnel_client
+    fi
     backup="$AGENT.rollback"
     rm -f "$backup"
     [ ! -f "$AGENT" ] || cp -p "$AGENT" "$backup"
@@ -726,10 +729,16 @@ elif [ "$REENROLL" = TRUE ]; then
   TRANSPORT_MODE="$(read_config_value HARA_COMMANDER_TRANSPORT_MODE 2>/dev/null || true)"
   [ -n "$TRANSPORT_MODE" ] || TRANSPORT_MODE="OUTBOUND_RELAY"
 else
-  TRANSPORT_MODE="LOCAL_TUNNEL"
+  # Public plugin onboarding uses the Cloudflare customer MCP gateway;
+  # no OpenAI Platform API key/tunnel required for a normal customer.
+  TRANSPORT_MODE="OUTBOUND_RELAY"
 fi
 
 TUNNEL_AUTOSTART="$(resolve_tunnel_autostart)"
+if [ "$TRANSPORT_MODE" != "LOCAL_TUNNEL" ] && [ "$TUNNEL_AUTOSTART" != "OFF" ]; then
+  echo "OPENAI_TUNNEL_AUTOSTART_REQUIRES_DIRECT_TRANSPORT" >&2
+  exit 64
+fi
 umask 077
 mkdir -p "$CONFIG_DIR" "$BIN_DIR" "$SYSTEMD_DIR"
 if [ "$TRANSPORT_MODE" = "LOCAL_TUNNEL" ]; then
@@ -815,12 +824,19 @@ printf 'DEVICE_TOKEN_EXPOSED=FALSE\n'
 printf 'HARA_COMMANDER_APPROVAL_MODE=%s\n' "$APPROVAL_MODE"
 printf 'HARA_COMMANDER_TRANSPORT_MODE=%s\n' "$TRANSPORT_MODE"
 printf 'HARA_COMMANDER_TUNNEL_AUTOSTART=%s\n' "$TUNNEL_AUTOSTART"
-printf 'HARA_COMMANDER_TUNNEL_AUTOSTART_PENDING_CONFIGURATION=TRUE\n'
-printf 'NEXT_COMMAND=hara-commander tunnel configure\n'
-printf 'DIRECT_CONNECT_COMMAND=hara-commander tunnel connect\n'
-printf 'DIRECT_OPENAI_PLATFORM_TUNNEL_REQUIRED=TRUE\n'
-printf 'TUNNEL_MANUAL_START_COMMAND=hara-commander tunnel start\n'
-printf 'TUNNEL_MANUAL_STOP_COMMAND=hara-commander tunnel stop\n'
+if [ "$TRANSPORT_MODE" = "LOCAL_TUNNEL" ]; then
+  printf 'HARA_COMMANDER_TUNNEL_AUTOSTART_PENDING_CONFIGURATION=TRUE\n'
+  printf 'NEXT_COMMAND=hara-commander tunnel configure\n'
+  printf 'DIRECT_CONNECT_COMMAND=hara-commander tunnel connect\n'
+  printf 'DIRECT_OPENAI_PLATFORM_TUNNEL_REQUIRED=TRUE\n'
+  printf 'TUNNEL_MANUAL_START_COMMAND=hara-commander tunnel start\n'
+  printf 'TUNNEL_MANUAL_STOP_COMMAND=hara-commander tunnel stop\n'
+else
+  printf 'HARA_COMMANDER_CLOUD_PLUGIN_MODE=TRUE\n'
+  printf 'OPENAI_PLATFORM_API_KEY_REQUIRED=FALSE\n'
+  printf 'NEXT_STEP=Conectar o plugin H.A.R.A. Commander no ChatGPT via HARA Identity OAuth\n'
+  printf 'CUSTOMER_MCP_ENDPOINT=https://commander.haralabs.com.br/api/mcp?profile=simple\n'
+fi
 printf 'OPERATOR_SESSION_COMMAND=hara-commander start\n'
 printf 'STATUS_COMMAND=hara-commander status\n'
 printf 'STOP_COMMAND=hara-commander stop\n'

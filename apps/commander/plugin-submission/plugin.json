@@ -1,0 +1,100 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "hara-commander",
+  "version": "0.1.0",
+  "description": "Control authorized local computers through the H.A.R.A. Commander Cloud MCP and a local Agent.",
+  "author": {
+    "name": "H.A.R.A. Labs",
+    "url": "https://www.haralabs.com.br/"
+  },
+  "homepage": "https://commander.haralabs.com.br/",
+  "keywords": [
+    "mcp",
+    "computer",
+    "agent",
+    "automation"
+  ],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "H.A.R.A. Commander",
+        "shortDescription": "Comandos no seu computador",
+        "longDescription": "Conecte o ChatGPT aos seus computadores autorizados com H.A.R.A. Commander. Instale o Agent local, registre a máquina e autentique sua conta pelo HARA Identity. O MCP público na Cloudflare encaminha solicitações e resultados; a execução acontece na máquina do cliente e obedece às autorizações locais. No caminho de fila, conteúdos transitórios podem ser retidos temporariamente em D1 e passam por expiração/redação. O produto não exige OpenAI Platform API key de cada usuário.",
+        "developerName": "H.A.R.A. Labs",
+        "category": "Developer Tools",
+        "capabilities": [
+          "Listar computadores autorizados",
+          "Consultar estado e recursos",
+          "Ler arquivos autorizados",
+          "Executar operações governadas"
+        ],
+        "websiteURL": "https://commander.haralabs.com.br/",
+        "supportURL": "https://www.haralabs.com.br/support/",
+        "privacyPolicyURL": "https://www.haralabs.com.br/legal/privacidade/",
+        "termsOfServiceURL": "https://www.haralabs.com.br/legal/termos/",
+        "defaultPrompt": [
+          "Liste meus computadores cadastrados no Commander.",
+          "Verifique se meu computador está online.",
+          "Mostre as informações do meu computador cadastrado."
+        ],
+        "brandColor": "#916900",
+        "brandColorDark": "#D4A94C",
+        "logo": "./assets/logo.png",
+        "composerIcon": "./assets/icon.png"
+      },
+      "review": {
+        "test_cases": {
+          "positive": [
+            {
+              "description": "Listar computadores",
+              "prompt": "Mostre meus computadores registrados no H.A.R.A. Commander.",
+              "tools_triggered": "list_devices",
+              "expected_behavior": "Listar somente dispositivos da conta autenticada, com estados e sem tokens."
+            },
+            {
+              "description": "Consultar dispositivo",
+              "prompt": "Verifique as informações do meu computador de demonstração.",
+              "tools_triggered": "get_device_info",
+              "expected_behavior": "Retornar dados não sensíveis do Agent e do dispositivo selecionado."
+            },
+            {
+              "description": "Verificar comunicação",
+              "prompt": "Verifique a conectividade com o meu computador de demonstração.",
+              "tools_triggered": "ping",
+              "expected_behavior": "Receber confirmação real do Agent, não apenas sucesso do Gateway."
+            },
+            {
+              "description": "Ler arquivo de demonstração",
+              "prompt": "Leia o arquivo de demonstração na pasta de testes do meu computador.",
+              "tools_triggered": "read_file",
+              "expected_behavior": "Ler conteúdo somente do arquivo explicitamente indicado e autorizado."
+            },
+            {
+              "description": "Criar arquivo de demonstração",
+              "prompt": "Crie um arquivo de texto de teste na pasta de demonstração, após minha autorização.",
+              "tools_triggered": "write_file",
+              "expected_behavior": "Solicitar autorização exigida pelo Agent e escrever apenas na pasta de teste."
+            }
+          ],
+          "negative": [
+            {
+              "description": "Máquina offline",
+              "prompt": "Tente consultar uma máquina cadastrada que está offline.",
+              "expected_behavior": "Retornar indisponibilidade sem fingir que o Agent executou."
+            },
+            {
+              "description": "Dispositivo de outra conta",
+              "prompt": "Tente acessar um computador de outra conta H.A.R.A. Labs.",
+              "expected_behavior": "Negar acesso por isolamento de identidade/tenant; não expor existência nem dados privados."
+            },
+            {
+              "description": "Escrita sem autorização",
+              "prompt": "Altere um arquivo enquanto a aprovação local está negada.",
+              "expected_behavior": "Recusar alteração; nenhum conteúdo modificado; retornar erro governado."
+            }
+          ]
+        }
+      }
+    }
+  }
+}
