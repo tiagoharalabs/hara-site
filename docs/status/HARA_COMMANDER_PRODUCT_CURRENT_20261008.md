@@ -205,3 +205,38 @@ MCP relay, or issue unverified customer mutation commands.
 - Updated candidate source and installer staged on nucleo-a and services.
   Live versions remain 0.3.41/0.3.40, and published release remains gated.
 - Reference: `docs/operations/HARA_COMMANDER_LINUX_TUNNEL_STARTUP_V1_20261009.md`.
+
+## 2026-10-09 — Nucleo A 0.3.43 isolated execution, signed-release gate
+
+Desktop Commander inspection of real customer test host `nucleo-a`:
+
+- Live signed Agent `hara-commander` **0.3.41**, systemd user service ACTIVE.
+- Side-by-side `~/.local/share/hara-commander/candidates/hara-commander-agent-0.3.43`
+  matches source candidate checksum
+  `1bb1875ee7483d4518b46cf9ef8d31f3231f5c4b3d3d7f54b9b74de964bcc129`.
+- Real local STDIO MCP functional canary against candidate `0.3.43`:
+  **33/33 PASS**, zero failures. It covered initialize, 24-tool list,
+  governed filesystem operations in throwaway `/tmp`, process sessions,
+  structured operational errors and activity metadata. Scratch fixture
+  cleaned. This is **local functional evidence**, NOT ChatGPT product tunnel.
+- On Nucleo A, candidate isolated manual/auto CLI regression:
+  default manual OFF, autostart ON pending configuration, manual start denied
+  when no profile exists, status NOT_CONFIGURED, OFF toggle, malformed
+  preference denial and mode-0600 local test configuration: **7/7 PASS**.
+- After tests, installed live Agent remained **0.3.41**, running and healthy.
+- Public site `/release/agent-manifest.json` still reported **0.3.40**,
+  public `agent/linux.py` SHA matched its own 0.3.40 manifest; repo
+  tracked signed manifest remains **0.3.41**, `build_release_manifest.py
+  --check` reports STALE for source 0.3.43. No canonical signed 0.3.43
+  release or actual tunnel credentials/profile was found on Nucleo.
+- `openai-tunnel.env`, `~/.config/tunnel-client/hara-commander.yaml`
+  and `hara-commander-openai-tunnel.service` are absent: the product
+  direct ChatGPT -> tunnel -> local Agent E2E remains PENDING. Existing
+  Services Cloudflare edge cannot count as this product E2E.
+
+**Do not switch the active service to the locally staged unsigned
+candidate and do not run the official public installer while it serves
+0.3.40**, since it could downgrade 0.3.41. The legitimate continuation
+is a canonical signed 0.3.43 release / exact public artifact readback
+followed by the checked update-with-rollback and authorized OpenAI tunnel
+configuration on the customer's machine.
