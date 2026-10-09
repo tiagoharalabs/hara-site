@@ -591,3 +591,13 @@ O usuário aprovou explicitamente a distribuição via MCP HTTPS comercial da H.
 - Não confundir: esses pings foram via `HARA_SERVICES`, não a homologação E2E do ChatGPT com o MCP comercial Cloudflare.
 - Detalhes e evidências: `docs/operations/HARA_COMMANDER_FLEET_SIGNED_AGENT_0_3_41_20261009.md`.
 - Nenhum release 0.3.43 não assinado, instalação de serviço D GPU ou mudança na fila de jogo; nenhum host reiniciado.
+
+## 2026-10-09 — live OAuth/DCR blocker isolated to Identity gate (not token generator)
+
+- Live ZITADEL/HARA Identity OIDC issuer, PKCE S256, endpoints and customer-MCP protected resource metadata: **PASS**.
+- OIDC discovery advertises `registration_endpoint`, but RFC 8414 OAuth authorization server metadata **does not** advertise it; `client_id_metadata_document_supported=false`.
+- Identity Storage `hara-identity-zitadel-dcr-gateway-1` is HEALTHY but **mode=closed**, compose `HARA_DCR_GATEWAY_MODE: closed`, `HARA_DCR_REGISTRATION_ADVERTISED: "false"`. A controlled invalid `POST /oauth/v2/register` is rejected HTTP **404**, consistent with closed guard.
+- Existing Identity worktree `local/identity-dcr-refresh-20261008` already contains guarded DCR promotion + atomic rollback and synthetic security tests (PASS); activation requires authorized ZITADEL owner PAT via private local file and production promotion from the Identity host. **Not executed**; no PAT accessed or exposed.
+- New customer-side preflight: `apps/commander/scripts/commander_cloud_oauth_live_readiness.py --expect closed` PASS; `--expect guarded --require-ready` fails closed as expected.
+- Active blocker for ChatGPT consumer OAuth: **DCR not promoted**. Once governed promotion passes, configure custom MCP connection in ChatGPT with normal HARA Identity consent/PKCE and execute actual commercial tool through Cloudflare (not Services Baseline). No new token generator needed.
+- Evidence/runbook: `docs/operations/HARA_COMMANDER_ZITADEL_DCR_GATE_20261009.md`. Signed 0.3.41 fleet and Cloudflare endpoint remain unchanged.

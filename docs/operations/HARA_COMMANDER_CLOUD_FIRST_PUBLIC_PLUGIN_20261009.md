@@ -72,3 +72,13 @@ Documentação atual: https://developers.openai.com/plugins/deploy/submission
 - PONTO QUE AINDA NÃO TEM PROVA: o endpoint DCR aceitar o registro real do cliente **ChatGPT**, e a autorização PKCE devolver um token com audiência/escopo admitidos pelo MCP comercial. Um `registration_endpoint` presente no discovery NÃO constitui prova de DCR funcional. Não confundir um token HARA válido para outros clientes com o token emitido para o cliente OAuth do ChatGPT.
 - Submissão/publish no diretório OpenAI: verificação empresarial, comprovação de domínio, scan de ferramentas, testes reais (5 positivos/3 negativos), vídeo e aprovação. Independente da autenticação implementada pelo Zigurat.
 - Não alterar credenciais nem a implantação PROD por essa correção de pacote (somente draft). Nenhuma publicação ou aprovação OpenAI foi realizada aqui.
+
+## 2026-10-09 — live OAuth/DCR blocker isolated to Identity gate (not token generator)
+
+- Live ZITADEL/HARA Identity OIDC issuer, PKCE S256, endpoints and customer-MCP protected resource metadata: **PASS**.
+- OIDC discovery advertises `registration_endpoint`, but RFC 8414 OAuth authorization server metadata **does not** advertise it; `client_id_metadata_document_supported=false`.
+- Identity Storage `hara-identity-zitadel-dcr-gateway-1` is HEALTHY but **mode=closed**, compose `HARA_DCR_GATEWAY_MODE: closed`, `HARA_DCR_REGISTRATION_ADVERTISED: "false"`. A controlled invalid `POST /oauth/v2/register` is rejected HTTP **404**, consistent with closed guard.
+- Existing Identity worktree `local/identity-dcr-refresh-20261008` already contains guarded DCR promotion + atomic rollback and synthetic security tests (PASS); activation requires authorized ZITADEL owner PAT via private local file and production promotion from the Identity host. **Not executed**; no PAT accessed or exposed.
+- New customer-side preflight: `apps/commander/scripts/commander_cloud_oauth_live_readiness.py --expect closed` PASS; `--expect guarded --require-ready` fails closed as expected.
+- Active blocker for ChatGPT consumer OAuth: **DCR not promoted**. Once governed promotion passes, configure custom MCP connection in ChatGPT with normal HARA Identity consent/PKCE and execute actual commercial tool through Cloudflare (not Services Baseline). No new token generator needed.
+- Evidence/runbook: `docs/operations/HARA_COMMANDER_ZITADEL_DCR_GATE_20261009.md`. Signed 0.3.41 fleet and Cloudflare endpoint remain unchanged.
