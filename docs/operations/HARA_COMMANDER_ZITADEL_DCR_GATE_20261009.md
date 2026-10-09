@@ -1,5 +1,10 @@
 # H.A.R.A. Commander — diagnóstico DCR real no ZITADEL / HARA Identity (2026-10-09)
 
+**ESTADO MAIS RECENTE (2026-10-09): DCR EM PRODUÇÃO = `GUARDED_PASS`.** A investigação e os valores `closed` documentados abaixo são históricos e foram superados pela reconciliação de borda realizada após a confirmação administrativa `enabled=True / allowUnauthenticated=True`. A implementação atual, o backup, os testes positivos e o readback estão em:
+`docs/status/HARA_COMMANDER_MCP_DCR_GUARDED_LIVE_20261009.md` na branch `local/identity-dcr-refresh-20261008`.
+
+**Não repetir o script antigo de promoção** que exige backend desabilitado. O script agora canônico para esse cenário é `apps/identity-login/scripts/reconcile_mcp_dcr_existing_backend.py`; ele é idempotente e, com o estado já `guarded`, apenas verifica e sai sem alteração. O registro temporário público foi criado (201), consultado (200) e excluído (204), com limpeza PASS. **Resta apenas a autenticação/consentimento real do ChatGPT pelo MCP comercial e submissão à OpenAI.**
+
 ## Decisão e bloqueio único da autenticação inicial do ChatGPT
 
 Produto público: `https://commander.haralabs.com.br/api/mcp?profile=simple` (Cloudflare customer MCP; **não** MCP administrativo HARA Services).
