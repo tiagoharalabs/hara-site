@@ -365,3 +365,13 @@ O plugin nomeado **H.A.R.A. Commander** chamou `ping` e `get_device_info` via fe
 ATENÇÃO: `operational_authority=HARA_SERVICES` é rótulo legado *hardcoded* pelo Agent 0.3.41 para **todos os transportes remotos** (qualquer `_transport != LOCAL_MCP`), inclusive `OUTBOUND_RELAY` comercial. `runtime_authority_from_chatgpt=false` também é fixo. Nenhum dos dois rótulos pode servir sozinho para provar o trajeto do pedido. Prova no recibo + D1 é a evidência autoritativa.
 
 Relatório: `docs/operations/HARA_COMMANDER_COMMERCIAL_MCP_REAL_E2E_20261009.md`. Escopo: conta ChatGPT atual e Núcleo A; faltam testes com outro tenant, negações, aprovação/escrita e submissão pública. Manter Agent público assinado 0.3.41 e não declarar plugin publicado.
+
+## 2026-10-09 — auditoria de tráfego e bloqueio comercial Cloud/Direct
+
+**Não confundir AUTH ONCE com DATA PLANE DIRECT.** Em `OUTBOUND_RELAY` público cada chamada MCP passa por `commander.haralabs.com.br/api/mcp?profile=simple` e é encaminhada pela Cloudflare ao Agent; o Agent ainda faz polling ocioso a cada 10s, hot a cada 2s e heartbeat por minuto. O modelo de testes estima 10.086 HTTP/dia/Agent ocioso (70.602 com sete ligados) — **não são operações cobradas**.
+
+**Cobrança separada da contagem de UI:** Free `TRIAL` 10.000 operações governadas/mês; REVIEW 100/mês; Founder/Pro ilimitados. `TenantQuota` reserva uma unidade antes, confirma com recibo no sucesso, libera em falha, e nega `QUOTA_EXCEEDED` ao esgotar. `ping` é gratuito, mas aparece no contador informativo 7d/total. A sincronização 1/h e os blocos locais são do **modo Direct**, não do Cloud público corrente.
+
+Provas: os testes de quota, orçamento local, TTL, telemetria e eficiência passaram; leitura PROD D1 confirmou planos. A conta conectada é `FOUNDER_INTERNAL` `UNMETERED`, e nenhum entitlement Free ativo foi encontrado nesta leitura: **bloqueio real no limite Free ainda não foi exercitado em PROD**. Próxima prova adequada: tenant sintético DEV com limite reduzido, repetição/idempotência e excesso. Evitar alterar produção para simular esgotamento.
+
+Documento: `docs/operations/HARA_COMMANDER_CLOUD_DIRECT_QUOTA_TRANSPORT_AUDIT_20261009.md`. Nenhuma mutação PROD foi realizada.
