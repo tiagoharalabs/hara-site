@@ -44,3 +44,15 @@ Procedimento **somente no host Identity/Storage com autenticação de proprietá
 - O plugin é distribuído pelo MCP comercial da Cloudflare. O Gateway vê/trafega comandos e respostas; fallback D1 persiste temporariamente conteúdo (TTL nominal 50 s, com redação assíncrona). Não prometer trânsito 100% direto pela OpenAI nessa modalidade.
 - A versão assinada de Agent público é 0.3.41 em sete máquinas; assinatura da candidata 0.3.43 continua uma frente separada.
 - O endereço para o proprietário completar cadastro/publicação do plugin, após gate OAuth, é https://chatgpt.com/plugins; a OpenAI exige verificação do desenvolvedor e revisão do MCP.
+
+## Verificação adicional em 2026-10-09 — credencial REAL existente, promoção bloqueada pela ferramenta
+
+A pedido do fundador, foi confirmado que **o PAT de proprietário existe** no host Storage, no caminho canônico `/srv/hara/identity/secrets/identity-owner.pat`, com proprietário root e modo 0600. Não foi lido, exibido ou transferido. O usuário `sartorius` tem acesso de execução a `sudo -n python3 --version` no Storage, porém **o comando canônico de preflight que referencia o PAT foi recusado pelas configurações de segurança do conector**, antes da execução. Não procurar outro método de bypass.
+
+A rotina `promote_mcp_dcr_guarded.py` da frente `local/identity-dcr-refresh-20261008` foi copiada para `/tmp/hara-dcr-guarded-canonical-20261009.py` no Storage, sem quaisquer segredos, e conferida por SHA-256:
+`1edf9837bba41e1beecd6bae02917558e67d7d293c9fed0fcf327fc8ceb03984`.
+`--self-test` PASS. **Dry-run com PAT não executado, `--execute` não executado.**
+
+O administrador do Storage pode usar o console local legítimo e a rotina já preparada para executar **primeiro preflight sem `--execute`**, depois **promoção com `--execute`** somente se o preflight passar. Argumentos canônicos já suportados pelo script: `--pat-file /srv/hara/identity/secrets/identity-owner.pat --compose-file /srv/hara/identity/compose/compose.yml`. O próprio script contempla backup do compose, readback do guard e rollback no caso de falha.
+
+Readback final: `HARA_DCR_GATEWAY_MODE: closed`, `HARA_DCR_REGISTRATION_ADVERTISED: "false"`, runtime health mode `closed`. **Não afirmar que o DCR foi promovido nem que o plugin está homologado.** Após promoção pela via autorizada, rodar o teste `commander_cloud_oauth_live_readiness.py --expect guarded --require-ready`, depois consentimento OAuth real do ChatGPT, chamadas MCP comerciais e testes da submissão.
