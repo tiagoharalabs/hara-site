@@ -1,5 +1,5 @@
 # H.A.R.A. Commander — auditoria de instaladores, startup manual e contingência Git
-**10/10/2026 · linha canônica `local/commander-product-current` · PROD preservado**
+**10/10/2026 · histórico pré-publicação. ATUALIZAÇÃO: a release comercial 0.3.43 assinada v2 JÁ FOI PUBLICADA em PROD, Worker `8c3eec1b-8783-4aff-868f-7f558e1d9db5`, SHA 10/10 PASS. Consulte `HARA_COMMANDER_SIGNED_COMMERCIAL_V2_PUBLICATION_20261010.md` para o estado autoritativo.**
 
 ## Decisão de produto
 

@@ -59,3 +59,13 @@ python3 -B apps/commander/scripts/validate_signed_commercial_v2_bundle.py --live
 Se a promoção ou readback falhar, usar o rollback aprovado `29e556f3-86af-476d-ba01-a764c3acb6a0@100%` e confirmar health e identidade do Worker. Não fazer alterações D1 desnecessárias no rollback da página.
 
 **O registro final de deploy e status público deve ser acrescentado após readback real.**
+
+## DEPLOY PROD FINAL — 10/10/2026, readback independente PASS
+
+**Promovido para 100% no Worker PROD `hara-commander`:** `8c3eec1b-8783-4aff-868f-7f558e1d9db5`, com triggers de `commander.haralabs.com.br` e cron sincronizados. Versão prévia `29e556f3-86af-476d-ba01-a764c3acb6a0` permanece pronta para rollback. O primeiro ensaio realizou rollback automaticamente: o validador de HTML via SHA bruto detectou o script de métricas que a própria Cloudflare injeta no HTML. A segunda promoção normalizou **somente** esse beacon reconhecido pelo verificador canônico (não ignorou outras diferenças) e passou. Confirmação posterior, independente do shell da promoção: `commander_prod_deployment_readback.py --expect-version ...` PASS, `validate_signed_commercial_v2_bundle.py --live` **10/10 assets PASS** e `validate_prod_runtime_drift.py --expect-assets current` CURRENT PASS.
+
+URLs públicas substituídas por **distribuição nova 0.3.43 manual:** `https://commander.haralabs.com.br/install/linux.sh` e `https://commander.haralabs.com.br/install/windows.ps1`. Os hashes correspondem à release v2 arquivada em Git, com RS256 verificado, chave pública rotacionada pinada no instalador e ausência de autostart. A página exibe os comandos fixos/copiar `start`/`stop` sob cada opção de instalação e Free 15.000 chamadas/mês. `GET /api/health` e `/api/portal/auth-config`: HTTP 200; MCP comercial sem credenciais: 401, corretamente. ChatGPT `H_A_R_A__Commander.ping` em Núcleo A e Sentinela D: PASS, execução real `HARA_COMMANDER_AGENT` v0.3.44 Event V2, sem interromper Founder.
+
+**Catálogo Free PROD e DEV**: TRIAL 15000 / CALENDAR_MONTH, STANDARD sem limite; Stripe continua `FIRST_CHECKOUT_READY=FALSE`. Testes offline e Linux E2E assinados PASS, mas **Windows PowerShell real e 24h de soak multi-tenant permanecem gates de comercialização irrestrita**. Não confundir 'instalador público para download' com 'plugin revisado e listado no diretório OpenAI'.
+
+**GitHub da distribuição pública assinada:** tag `hara-commander-commercial-v0.3.43-signed-v2`, commit `d7e5f128619e4eef702fdc8f4d23e4ab9972aa96`, com readback exato PASS. Tag original `hara-commander-signed-agent-v0.3.41` continua preservada. Storage Git `092f35af...` continua em HOLD; não houve force-push nem alteração de autostart na frota interna.

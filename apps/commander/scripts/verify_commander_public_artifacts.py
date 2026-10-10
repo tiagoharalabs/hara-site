@@ -126,8 +126,16 @@ def main() -> int:
         print("COMMANDER_SIGNED_V1_MANIFEST_CRYPTOGRAPHIC_SIGNATURE=PASS")
         print("COMMANDER_SIGNED_V1_GIT_FOUR_FILE_HASHES=PASS")
         if args.live:
-            check_live(expected)
-            print("COMMANDER_PUBLIC_CLOUDFLARE_SIX_ARTIFACTS_EXACT_GIT_READBACK=PASS")
+            # The archived v1 public release was replaced with the signed v2
+            # commercial release. A live v1 hash comparison is no longer a
+            # meaningful current-PROD readiness test; still verify v1 in Git.
+            live=subprocess.run(
+                ["python3","-B",str(ROOT/"apps/commander/scripts/validate_signed_commercial_v2_bundle.py"),"--live"],
+                cwd=ROOT,check=False,capture_output=True,text=True,timeout=90)
+            if live.returncode:
+                raise RuntimeError("CURRENT_V2_CLOUDFLARE_READBACK_FAILED")
+            print("COMMANDER_PUBLIC_CLOUDFLARE_CURRENT_SIGNED_V2_READBACK=PASS")
+            print("COMMANDER_ARCHIVED_V1_STILL_IN_GIT=TRUE")
         print("COMMANDER_LATEST_CANDIDATE_IS_NOT_SIGNED_RECOVERY_ASSET=TRUE")
         print("COMMANDER_PRODUCTION_MUTATION=FALSE")
         return 0

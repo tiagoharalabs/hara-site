@@ -10,20 +10,23 @@ from urllib.request import Request, urlopen
 
 ROOT = Path(__file__).resolve().parents[3]
 PUBLIC = ROOT / "apps/commander/public"
+SIGNED = ROOT / "apps/commander/release-bundles/commercial-0.3.43-v2"
 ORIGIN = "https://commander.haralabs.com.br"
 
 ASSETS = {
     "/": PUBLIC / "index.html",
     "/app.js": PUBLIC / "app.js",
     "/styles.css": PUBLIC / "styles.css",
-    "/install/linux.sh": PUBLIC / "install/linux.sh",
-    "/install/windows.ps1": PUBLIC / "install/windows.ps1",
-    "/agent/linux.py": PUBLIC / "agent/linux.py",
-    "/agent/windows.ps1": PUBLIC / "agent/windows.ps1",
-    "/release/agent-manifest.json": PUBLIC / "release/agent-manifest.json",
-    "/release/agent-manifest.sig.json": PUBLIC / "release/agent-manifest.sig.json",
-    "/release/release-signing-public.jwk": PUBLIC / "release/release-signing-public.jwk",
-    "/release/SHA256SUMS": PUBLIC / "release/SHA256SUMS",
+    # Current PROD serves the signed v2 commercial release, not unsigned HEAD
+    # Agent/installer sources and not the historic v1 public manifest.
+    "/install/linux.sh": SIGNED / "install/linux.sh",
+    "/install/windows.ps1": SIGNED / "install/windows.ps1",
+    "/agent/linux.py": SIGNED / "agent/linux.py",
+    "/agent/windows.ps1": SIGNED / "agent/windows.ps1",
+    "/release/agent-manifest.json": SIGNED / "release/agent-manifest.json",
+    "/release/agent-manifest.sig.json": SIGNED / "release/agent-manifest.sig.json",
+    "/release/release-signing-public.jwk": SIGNED / "release/release-signing-public.jwk",
+    "/release/SHA256SUMS": SIGNED / "release/SHA256SUMS",
     "/assets/hara-commander-royal.webp": PUBLIC / "assets/hara-commander-royal.webp",
 }
 

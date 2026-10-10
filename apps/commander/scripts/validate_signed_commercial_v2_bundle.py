@@ -17,6 +17,8 @@ from urllib.request import Request, urlopen
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 
+from validate_prod_runtime_drift import normalize_asset
+
 ROOT = Path(__file__).resolve().parents[3]
 APP = ROOT / "apps/commander"
 BUNDLE = APP / "release-bundles/commercial-0.3.43-v2"
@@ -87,6 +89,12 @@ def check_live():
             actual=response.read(4*1024*1024)
             if response.status!=200:
                 raise RuntimeError("COMMERCIAL_V2_PUBLIC_STATUS:"+rel)
+        if rel=="index.html":
+            # Cloudflare PROD injects its own analytics beacon in HTML only.
+            # Remove precisely that known script with the existing validated
+            # production normalizer, never ignore any other HTML difference.
+            actual,removed=normalize_asset("/",actual)
+            print("COMMANDER_COMMERCIAL_V2_CF_BEACON_NORMALIZED="+str(removed).upper())
         if sha(actual)!=sha(expected):
             raise RuntimeError("COMMERCIAL_V2_PUBLIC_ASSET_MISMATCH:"+rel)
         print("COMMANDER_COMMERCIAL_V2_PUBLIC_ASSET=PASS:"+rel)
