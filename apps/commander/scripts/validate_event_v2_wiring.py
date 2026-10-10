@@ -94,8 +94,10 @@ def main() -> int:
     enqueue_fn_at = worker.index("async function enqueueDeviceCall")
     enqueue_fn_end = worker.index("async function claimNextDeviceCall", enqueue_fn_at)
     enqueue_fn_block = worker[enqueue_fn_at:enqueue_fn_end]
-    assert "const device = selection;" in enqueue_fn_block
-    assert "const currentDevice = currentSelection;" in enqueue_fn_block
+    assert "const device = await resolveCustomerTargetDevice(" in enqueue_fn_block
+    assert "env, context, body.computer || null, requestedDeviceId" in enqueue_fn_block
+    assert "const currentDevice = await resolveCustomerTargetDevice(" in enqueue_fn_block
+    assert "env, context, null, deviceId" in enqueue_fn_block
     assert "SELECT device_id, tenant_id, state, tunnel_mode, last_seen_at_utc, revoked_at_utc" not in enqueue_fn_block
     assert "SELECT state, tunnel_mode, last_seen_at_utc, revoked_at_utc" not in enqueue_fn_block
 
@@ -129,7 +131,8 @@ def main() -> int:
     assert "canonicalDeviceToolPayload" in transient_block
     assert "mcpTransientProductContext" in transient_block
     assert "selectedDeviceForSubject" not in transient_block
-    assert "context.selected_device" in transient_block
+    assert "const device = await resolveCustomerTargetDevice(" in transient_block
+    assert "env, context, body.computer || null, requestedDeviceId" in transient_block
     context_at = worker.index("async function mcpTransientProductContext")
     context_end = worker.index("async function mcpIdentityBinding", context_at)
     context_block = worker[context_at:context_end]

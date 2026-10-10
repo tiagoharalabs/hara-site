@@ -2,15 +2,16 @@
 
 Owner: #163
 
-This source defines the transition from the proven Agent 0.3.7 polling baseline
-to a release-candidate transport selector without changing the stable public
-release yet.
+This source defines the transition from the signed Agent 0.3.41
+OUTBOUND_RELAY polling baseline to a release-candidate transport selector
+without changing the stable public release yet. The source candidate 0.3.43
+is intentionally not shipped until its signing trust anchor is reconciled.
 
 ## Transport law
 
 ```text
-STABLE_PUBLIC_AGENT=0.3.7
-STABLE_DEFAULT_TRANSPORT=POLL_V1
+STABLE_PUBLIC_AGENT=0.3.41
+STABLE_DEFAULT_TRANSPORT=OUTBOUND_RELAY
 RC_DEFAULT_TRANSPORT=POLL_V1
 EVENT_V2=EXPLICIT_OPT_IN_ONLY
 AUTO_TRANSPORT_SELECTION=DENY

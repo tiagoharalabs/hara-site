@@ -238,8 +238,10 @@ release_block = WORKER.split(
 )[0]
 
 assert ".getByName(context.tenant_id)" in authorize_block, "QUOTA_AUTHORIZE_TENANT_NAMESPACE_MISSING"
-assert ".getByName(identity.tenant_id)" in commit_block, "QUOTA_COMMIT_TENANT_NAMESPACE_MISSING"
-assert ".getByName(identity.tenant_id)" in release_block, "QUOTA_RELEASE_TENANT_NAMESPACE_MISSING"
+assert ".getByName(context.tenant_id)" in commit_block, "QUOTA_COMMIT_TENANT_NAMESPACE_MISSING"
+assert "const context = await mcpProductContext(env, body.issuer, body.subject)" in commit_block, "QUOTA_COMMIT_RESOLVED_IDENTITY_REQUIRED"
+assert ".getByName(context.tenant_id)" in release_block, "QUOTA_RELEASE_TENANT_NAMESPACE_MISSING"
+assert "const context = await mcpProductContext(env, body.issuer, body.subject)" in release_block, "QUOTA_RELEASE_RESOLVED_IDENTITY_REQUIRED"
 for block, label in (
     (authorize_block, "AUTHORIZE"),
     (commit_block, "COMMIT"),

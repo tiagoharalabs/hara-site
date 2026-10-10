@@ -631,3 +631,11 @@ Relatório: `docs/operations/HARA_COMMANDER_COMMERCIAL_MCP_REAL_E2E_20261009.md`
 Provas: os testes de quota, orçamento local, TTL, telemetria e eficiência passaram; leitura PROD D1 confirmou planos. A conta conectada é `FOUNDER_INTERNAL` `UNMETERED`, e nenhum entitlement Free ativo foi encontrado nesta leitura: **bloqueio real no limite Free ainda não foi exercitado em PROD**. Próxima prova adequada: tenant sintético DEV com limite reduzido, repetição/idempotência e excesso. Evitar alterar produção para simular esgotamento.
 
 Documento: `docs/operations/HARA_COMMANDER_CLOUD_DIRECT_QUOTA_TRANSPORT_AUDIT_20261009.md`. Nenhuma mutação PROD foi realizada.
+
+## 2026-10-09 — Event V2 WebSocket hibernável: E2E DEV no Núcleo A
+
+**Hibernation-capable DeviceChannel DEV = PASS.** Agent Event V2 isolado registrado e conectado à Cloudflare DEV; `hara.health` enfileirado e acordado por WebSocket concluiu em 3829ms. SIGTERM/reconnect limpo, novo wake concluiu em 2499ms. Experimento tem XDG e token DEV separados; Agent comercial assinado 0.3.41 seguiu ativo e respondeu a `ping` após todos os testes. Sem idle HTTP polling no loop Event V2; PING de protocolo a cada 60s não interrompe hibernação segundo a API Cloudflare. Nenhuma economia real de billing medida ainda.
+
+Regressões antigas do pacote Event V2 foram reconciliadas ao Worker autoritativo atual sem relaxar isolamento por tenant nem controles de quota; `validate_event_v2_wiring.py`, `validate_device_channel_source.py`, `validate_event_v2_transient_rpc.py` e `validate_event_v2_productization.py` PASS. O teste de quota DEV via tenant com plano ilimitado não atende precondição de reserva: não tratá-lo como homologação de bloqueio Free.
+
+**PROD EVENT V2 permanece OFF.** Worker PROD sem binding `DEVICE_CHANNEL`; Agent assinado 0.3.41 sem transport Event V2; fonte 0.3.43 requer chave privada legítima que corresponda ao JWK público, sem atalho. Próximo gate: assinatura de release, binding/migração PROD behind flag, opt-in Founder e confirmação de redução efetiva de requests. Detalhes e rollback em `docs/operations/HARA_COMMANDER_EVENT_V2_HIBERNATION_DEV_PROOF_20261009.md`. Token de canário interna foi renovado exclusivamente no Worker DEV, não em PROD.

@@ -43,7 +43,7 @@ def main() -> int:
     else:
         raise AssertionError("UNKNOWN_TRANSPORT_ALLOWED")
 
-    assert manifest["agent_version"] == "0.3.43"
+    assert manifest["agent_version"] == "0.3.41"  # Current cryptographically signed public release.
     assert all("candidate/" not in str(item.get("path") or "") for item in manifest.get("files", []))
     assert 'AGENT_VERSION = "0.3.43"' in public
     assert "HARA_DEVICE_TRANSPORT_MODE" not in public
@@ -73,6 +73,7 @@ def main() -> int:
     print("COMMANDER_AGENT_RC_EVENT_V2=OPT_IN_ONLY")
     print("COMMANDER_CANDIDATE_AGENT_VERSION=0.3.43")
     print("COMMANDER_STABLE_RELEASE_MANIFEST_EVENT_V2=ABSENT")
+    print("COMMANDER_SIGNED_STABLE_AGENT_VERSION=0.3.41")
     print("COMMANDER_AGENT_RC_POLL_V1_AUTHORITY=HARA_COMMANDER")
     print("COMMANDER_AGENT_RC_POLL_V1_TRANSPORT=OUTBOUND_RELAY")
     print("COMMANDER_PUBLIC_ASSET_PYTHON_BYTECODE=DENY")

@@ -83,7 +83,8 @@ def main() -> int:
     assert "mcpTransientProductContext" in dispatcher
     assert "mcpBootstrapHints(body)" in dispatcher
     assert "selectedDeviceForSubject" not in dispatcher
-    assert "context.selected_device" in dispatcher
+    assert "const device = await resolveCustomerTargetDevice(" in dispatcher
+    assert "env, context, body.computer || null, requestedDeviceId" in dispatcher
     context = block(
         worker,
         "async function mcpTransientProductContext",
@@ -95,7 +96,7 @@ def main() -> int:
     assert "selected_device_json" in context
     assert "finalizeMcpProductContext" in context
     assert "ensureSecondaryMcpBinding" in context
-    assert 'selection.tunnel_mode || "") !== "EVENT_V2"' in dispatcher
+    assert 'String(device.tunnel_mode || "") !== "EVENT_V2"' in dispatcher
     assert "persisted_customer_payload: false" in dispatcher
     assert "persisted_customer_result: false" in dispatcher
     assert 'const rawCode = String(payload.code || "DEVICE_TRANSIENT_RPC_FAILED")' in dispatcher
