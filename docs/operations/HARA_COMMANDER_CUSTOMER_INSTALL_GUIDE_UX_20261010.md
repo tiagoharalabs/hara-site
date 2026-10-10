@@ -1,6 +1,6 @@
 # H.A.R.A. Commander — nova navegação de instalação e comandos
 
-**Checkpoint 10/10/2026 · produto comercial · UX exclusivamente, sem alterar serviço/assinatura.**
+**Checkpoint autoritativo 10/10/2026 — Publicado em PROD.** Worker Cloudflare `hara-commander` `9943523c-a573-40bc-bc86-2f45b2156643` a **100%**, sem alterar serviços, instaladores assinados, agentes, D1 nem quotas. DEV `hara-commander-dev-v2` `b160e263-fab5-4918-9d11-0ae128e413b4`. O anterior PROD `228fdb6d-fbde-4a1c-91b0-57ac73f5d193` foi preservado para rollback.
 
 ## O que muda
 
@@ -33,17 +33,11 @@
 
 O staged Worker carrega HTML/JS/CSS com o pacote comercial 0.3.43 RSA-v2 intocado. Promover versão via Wrangler DEV e ler SHA dos assets; em PROD conferir 11/11 assets (HTML normalizado removendo apenas o beacon Cloudflare autorizado), Worker health, quotas D1, ping comercial e commit SHA exato GitHub. Worker anterior permanece como rollback. Nunca alterar a frota Founder 0.3.44 apenas para esta UX.
 
-**Estado deste documento antes da promoção:** código-fonte e testes locais completos; acrescentar versão exata Cloudflare DEV/PROD e readback ao publicar.
-## Estado de publicação nesta sessão
+**Publicação executada e comprovada:** Worker PROD `9943523c-a573-40bc-bc86-2f45b2156643`, health e auth PASS, verificação independente **11/11 SHA** de HTML/JS/CSS e distribuição comercial assinada, runtime drift PASS, MCP comercial respondeu ping no Núcleo A e Sentinela D Agent v0.3.44. Catálogo Free=10.000/mês e Pro sem limite confirmado diretamente no D1 PROD. Rota raiz e assets usam cache keys atualizadas. A nova terceira aba está acessível publicamente.
+## Fechamento da publicação no mesmo dia
 
-**Cloudflare DEV e PROD não foram alterados por esta frente.** O gate e a compilação dry-run para os dois Workers passaram, com instaladores/agentes comerciais assinados v0.3.43 byte-idênticos. Porém a chamada remota de implantação Cloudflare DEV foi bloqueada por controles de segurança da ferramenta, incluindo uma tentativa com comando simplificado. Não repetir o deploy por outro canal para contornar o bloqueio; solicitar uma sessão com autorização/fluxo de publicação permitido.
+A implantação havia sido bloqueada por controles da ferramenta na tentativa anterior. Após nova autorização expressa do proprietário, a mesma rotina oficial Wrangler foi executada com sucesso. O DEV `b160e263-fab5-4918-9d11-0ae128e413b4` e o PROD `9943523c-a573-40bc-bc86-2f45b2156643` passaram pelo readback. A nova UX está disponível em `https://commander.haralabs.com.br`.
 
-### Passos de verificação quando a publicação for permitida
+O PROD anterior, `228fdb6d-fbde-4a1c-91b0-57ac73f5d193`, permanece disponível para rollback. Nenhuma migração D1, rotação de credenciais, atualização dos Agents ou reinício da frota foi necessária. As alterações foram limitadas à distribuição da interface e ao checkpoint de documentação.
 
-1. Atualizar o staging com os três arquivos de interface (index.html, app.js, styles.css) da branch canônica e verificar por cmp que os oito assets comerciais assinados continuam idênticos ao backup `apps/commander/release-bundles/commercial-0.3.43-v2`.
-2. Publicar a versão DEV por Wrangler com a configuração de staging já validada; conferir HTTP 200 no /api/health e readback SHA exato do HTML, JS, CSS e dos oito assets assinados. Não há necessidade de aplicar migrações D1.
-3. No PROD, carregar uma nova versão do Worker, conferir que os segredos necessários foram preservados e que o deploy atual é o esperado; então realizar promoção gradual ou controlada pela rotina canônica, com rollback explícito, sem mexer na frota.
-4. Conferir rota raiz / e alias /index.html (normalizar somente o beacon Cloudflare conhecido), cache keys CSS/JS, botões de copiar, endpoints de pareamento existentes, status online/offline, Free 10.000 e um ping pelo MCP comercial.
-5. Somente após readback exato, registrar o novo Worker version ID como produção atual e atualizar este handoff.
-
-**Não afirmar distribuição pública atualizada com a nova terceira aba enquanto o deploy e readback não forem concluídos.**
+**Gates ainda separados:** homologação nativa do cliente Windows, cobrança Stripe e revisão pública do aplicativo OpenAI.
