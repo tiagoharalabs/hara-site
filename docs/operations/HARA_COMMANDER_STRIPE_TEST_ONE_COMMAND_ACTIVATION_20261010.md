@@ -23,6 +23,23 @@ python3 -B apps/commander/scripts/stripe_test_activation_wizard.py --apply
 
 The operator enters one Stripe **test secret API key** when requested (hidden input). If the webhook already exists, it also asks for its separate `whsec_` signing secret. Never post these values in ChatGPT or a ticket, and never pass them as shell command arguments. **Do not enter `sk_live_`.** If only a live key exists, create/find a test key in Stripe's test environment first.
 
+### SSH non-login shell recovery (10/10/2026)
+
+The first operator invocation from `nucleo-a` via `ssh -t services '...python3 ... --apply'` failed **before any secret prompt** with `STRIPE_TEST_ACTIVATION=CLOUDFLARE_DEV_SECRET_LIST_UNAVAILABLE`. Investigation reproduced Wrangler exit 127: `/usr/bin/env: 'node': No such file or directory`. Non-login SSH did not source `~/.bashrc`/NVM, although the Node 24.15.0 executable was installed in the Services user's `~/.nvm/versions/node/v24.15.0/bin`.
+
+The wizard now supplies a temporary, subprocess-only Wrangler PATH, finding an executable user-owned NVM Node version when `node` is unavailable in the SSH environment. It does **not** source shell profiles, change system PATH, or print authentication material. `secret list` and `secret put` use the same bounded environment.
+
+**Real verification through Núcleo → SSH → Services:** `--check` returned exit 0 both with noninteractive SSH and forced TTY (`ssh -tt`), read the DEV secret names, and confirmed all four Stripe secrets are still MISSING. Offline regression `validate_stripe_test_wizard.py` covers absent-Node-in-PATH recovery. Neither test ran `--apply`; no Stripe API calls, Cloudflare secret writes, production deploy, or charges occurred.
+
+Because the operator is already connected to the Services interactive shell, the next command is simply:
+
+```bash
+cd /srv/hara/repos/local-git-gateway/worktrees/hara-site/commander-product-current
+python3 -B apps/commander/scripts/stripe_test_activation_wizard.py --apply
+```
+
+Enter only a real `sk_test_` key through the private terminal input. The command is intentionally not run unattended without the operator's key.
+
 The wizard writes only test objects to Stripe and only DEV secrets to Cloudflare. The user's actual DEV tenant must then complete a **Stripe test Checkout** through the Commander portal, followed by a real signed webhook delivery. There is no automatic live charge and no automatic promotion to production.
 
 ## Local/production protections

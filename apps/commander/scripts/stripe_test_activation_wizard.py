@@ -12,6 +12,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import sys
 import urllib.error
@@ -83,10 +84,34 @@ def verify_dev_boundary() -> None:
     require(DEV_CONFIG.resolve().is_relative_to(ROOT.resolve()), "CONFIG_OUTSIDE_REPO")
 
 
+def wrangler_environment() -> dict[str, str]:
+    """Find Node installed under NVM when SSH command skips interactive bashrc."""
+    environment = dict(os.environ)
+    if shutil.which("node", path=environment.get("PATH", "")):
+        return environment
+    nvm_root = Path.home() / ".nvm/versions/node"
+    candidates = sorted(
+        nvm_root.glob("v*/bin/node"),
+        key=lambda node: tuple(
+            int(part) for part in re.findall(r"[0-9]+", node.parent.parent.name)
+        ),
+        reverse=True,
+    )
+    for node in candidates:
+        if not node.is_file() or node.is_symlink() or not os.access(node, os.X_OK):
+            continue
+        if node.stat().st_uid != os.getuid():
+            continue
+        environment["PATH"] = str(node.parent) + os.pathsep + environment.get("PATH", "")
+        return environment
+    raise ActivationError("WRANGLER_NODE_RUNTIME_NOT_FOUND")
+
+
 def secret_names() -> set[str]:
     proc = subprocess.run(
         [str(WRANGLER), "secret", "list", "-c", str(DEV_CONFIG)],
-        cwd=ROOT, capture_output=True, text=True, timeout=45, check=False,
+        cwd=ROOT, env=wrangler_environment(),
+        capture_output=True, text=True, timeout=45, check=False,
     )
     require(proc.returncode == 0, "CLOUDFLARE_DEV_SECRET_LIST_UNAVAILABLE")
     try:
@@ -234,7 +259,7 @@ def ensure_portal(client: StripeClient) -> str:
 def put_dev_secret(name: str, value: str) -> None:
     require(name in SECRET_NAMES, "SECRET_NAME_NOT_APPROVED")
     require(value and "\n" not in value and "\r" not in value, "SECRET_FORMAT_REJECTED")
-    environment = dict(os.environ, CI="1")
+    environment = dict(wrangler_environment(), CI="1")
     result = subprocess.run(
         [str(WRANGLER), "secret", "put", name, "-c", str(DEV_CONFIG)],
         input=value + "\n", text=True, capture_output=True,

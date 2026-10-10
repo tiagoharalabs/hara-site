@@ -37,6 +37,15 @@ def sample_price(**updates):
 
 def tests():
     wiz.verify_dev_boundary()
+    # Remote SSH command execution does not source interactive NVM setup.
+    # Wrangler must still resolve a user-owned Node runtime without changing
+    # the caller's environment or accepting external secret input.
+    with patch.dict(wiz.os.environ, {"PATH": "/usr/local/bin:/usr/bin:/bin"}):
+        node_env = wiz.wrangler_environment()
+        node_path = wiz.shutil.which("node", path=node_env["PATH"])
+        assert node_path is not None and node_path.startswith(str(Path.home() / ".nvm/versions/node/"))
+        assert wiz.os.environ["PATH"] == "/usr/local/bin:/usr/bin:/bin"
+    print("STRIPE_TEST_WIZARD_NONLOGIN_SSH_NODE_FALLBACK=PASS")
     expect_denied(lambda: wiz.validate_test_key("sk_live_1234567890123"),
                   "STRIPE_LIVE_KEY")
     expect_denied(lambda: wiz.validate_test_key("pk_test_1234567890123"),
