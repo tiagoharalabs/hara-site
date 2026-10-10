@@ -23,4 +23,4 @@
 
 ## Situação de publicação
 
-**DEV publicado e comprovado:** Cloudflare `hara-commander-dev-v2` versão `d122db6f-7ef4-410a-9656-d50c615d0a07`, com 11/11 assets públicos byte-idênticos ao staging e HTTP health 200. **PROD pendente neste ponto do registro**; promover somente com rollback e readback de todos os assets. A release comercial 0.3.43 segue assinada, sem alterações.
+**DEV e PROD publicados e comprovados:** DEV `hara-commander-dev-v2` versão `d122db6f-7ef4-410a-9656-d50c615d0a07`, 11/11 assets e health 200. PROD `hara-commander` versão `d305c678-7715-4594-b8b9-f1e697112702` com **100% do tráfego**, custom domain e cron sincronizados; rollback `9943523c-a573-40bc-bc86-2f45b2156643`. Readback público independente: **11/11 SHA exatos**, tanto `/` quanto `/index.html` convergiram, health/auth PASS, D1 Free=10.000 e Pro ilimitado; pings comerciais Núcleo A/Sentinela D Agent 0.3.44 PASS. Gate offline 55/55 PASS. A release comercial 0.3.43, assinatura e os serviços Founder continuam inalterados.
