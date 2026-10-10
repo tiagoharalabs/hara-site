@@ -81,7 +81,11 @@ def check_live():
     for rel in LIVE_FILES:
         source=(BUNDLE/rel) if (BUNDLE/rel).is_file() else (PUBLIC/rel)
         expected=source.read_bytes()
-        request=Request(ORIGIN+"/"+rel,headers={
+        # The canonical public page is '/' (as verified by the PROD drift
+        # checker). Cloudflare may cache '/index.html' separately during rollout.
+        # Verify the actual customer landing route, never a stale HTML alias.
+        public_path="/" if rel=="index.html" else "/"+rel
+        request=Request(ORIGIN+public_path,headers={
             "User-Agent":"HARA-Signed-Commercial-V2-Readback/1",
             "Cache-Control":"no-cache",
         })

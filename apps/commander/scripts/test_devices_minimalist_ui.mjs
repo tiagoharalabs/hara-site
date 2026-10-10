@@ -59,6 +59,7 @@ const ids=new Map();
 const document={
   createElement:(tag)=>new Node(tag),
   createTextNode:(text)=>new TextNode(text),
+  querySelectorAll:()=>[],
   getElementById:(id)=>{if(!ids.has(id))ids.set(id,new Node("div"));return ids.get(id);},
 };
 const context=vm.createContext({
@@ -71,11 +72,14 @@ const context=vm.createContext({
 });
 const definitions=[
   'var deviceTab="active";',
+  'var deviceSectionTab="devices";',
+  'var devicesCache=null;',
   'const number=(n)=>String(n);',
   'const setText=(id,text)=>{document.getElementById(id).textContent=text};',
   'const setState=()=>{};',
   functionSource("formatDeviceSeen","formatDeviceSeenCompact"),
   functionSource("formatDeviceSeenCompact","setDeviceSectionTab"),
+  functionSource("setDeviceSectionTab","setDeviceTab"),
   functionSource("deviceApprovalLabel","deviceReadiness"),
   functionSource("deviceReadiness","deviceDiagnosticCommand"),
   functionSource("deviceDiagnosticCommand","renderDevices"),
@@ -152,6 +156,12 @@ assert.ok(row("former-win"));
 assert.equal(byClass(row("former-win"),"device-revoke-action").length,0);
 assert.equal(byClass(row("former-win"),"device-primary-action").length,0);
 console.log("DEVICE_MINIMALIST_HISTORY_AND_SAFETY=PASS");
+
+vm.runInContext('setDeviceSectionTab("connect")',context,{timeout:2500});
+assert.equal(document.getElementById("devicesHelp").hidden,true);
+vm.runInContext('setDeviceSectionTab("devices")',context,{timeout:2500});
+assert.equal(document.getElementById("devicesHelp").hidden,false);
+console.log("DEVICE_MINIMALIST_HELP_HIDDEN_DURING_ONBOARDING=PASS");
 
 assert.match(html,/<details class="devices-help" id="devicesHelp">/);
 assert.match(html,/id="deviceStatusSummary"/);

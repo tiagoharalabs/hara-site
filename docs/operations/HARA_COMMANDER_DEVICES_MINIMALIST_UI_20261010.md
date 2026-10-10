@@ -26,3 +26,13 @@
 Antes do deploy PROD conferir secrets, versão anterior e hashes. Promover somente assets/Worker mantendo D1 Free=10.000 mensal, o mesmo MCP/Cloudflare e o mesmo pacote comercial assinado. Conferir HTML, JS, CSS e 8 assets assinados por SHA; para HTML, remover apenas o beacon Cloudflare reconhecido. Se o readback falhar, reverter versão Worker anterior. A frota Founder e seus serviços não entram no plano de atualização.
 
 **Estado atual deste registro:** staging e DEV comprovados; registrar o identificador da versão PROD após publicação e readback real.
+## Publicação PROD — verificada em 10/10/2026
+
+- Worker comercial PROD hara-commander versão **228fdb6d-fbde-4a1c-91b0-57ac73f5d193**, 100% do tráfego; rollback anterior **43421f6f-5bee-4fe6-9bc4-982a3e10d019** preservado.
+- Publicação versionada com triggers custom-domain e cron, rollback guardado. Um primeiro readback detectou inconsistência transitória em /index.html e fez rollback; o verificador foi alinhado à rota canônica /, padrão já utilizado no runtime drift. A promoção seguinte passou integralmente.
+- Readback independente posterior: 11/11 arquivos públicos exatamente iguais ao Git/stage (HTML normalizado apenas pela injeção conhecida do beacon Cloudflare); tanto / quanto /index.html já convergiram ao novo HTML com versões de CSS/JS corretas.
+- Worker health e auth PASS. Catálogo D1 PROD preservado: Free/TRIAL 10.000 chamadas/mês; Pro/Standard sem limite.
+- Smoke test comercial real pós-deploy: H_A_R_A__Commander.ping nucleo-a e sentinela-d com autoridade HARA_COMMANDER, execução HARA_COMMANDER_AGENT, Agent 0.3.44, recibo e PASS. Nenhum serviço da frota reiniciado.
+- O pacote 0.3.43 comercial continua com os mesmos 8 arquivos assinados; a identidade cromática da capivara, fundo dark e opções neon seguem preservadas.
+
+**Única mudança em PROD:** HTML, JavaScript, CSS e a versão de assets do Worker. Sem alterações em autenticação, banco, preço ou Agents. Verificador de assinatura usa agora a rota canônica do portal / para evitar falso alarme na alias /index.html durante atualização de cache, mantendo a verificação estrita do SHA.

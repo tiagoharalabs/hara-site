@@ -1,6 +1,8 @@
 # H.A.R.A. Commander — CURRENT (10/10/2026, após rollout 7/7)
 
-**DECISÃO MAIS RECENTE DE PREÇO/QUOTA — FREE=10.000 chamadas governadas/mês.** O dono revogou a autorização temporária de 15.000. D1 DEV e PROD estão em 10.000 via migração `0032_free_10000_revert_20261010.sql`. Pro permanece ilimitado. Cloudflare PROD `hara-commander` **43421f6f-5bee-4fe6-9bc4-982a3e10d019 a 100%**, readback de 10/10 assets assinados e portal JS/HTML 10.000 PASS; rollback `8c3eec1b-8783-4aff-868f-7f558e1d9db5`. O conteúdo histórico abaixo sobre 15.000 está SUPERADO. Ver `docs/operations/HARA_COMMANDER_FREE_10K_REVERSION_20261010.md`.
+**SITE PROD ATUAL / UX COMPUTADORES:** Worker `hara-commander` versão `228fdb6d-fbde-4a1c-91b0-57ac73f5d193` está em 100% com UI minimalista (mesmas cores; lista reduzida; detalhes técnicos no menu ⋯; Primeiros passos recolhidos). Cloudflare com 11/11 arquivos exatos, health PASS, rota raiz e alias /index.html convergidas; H_A_R_A__Commander ping Núcleo A e Sentinela D PASS. Rollback do Worker `43421f6f-5bee-4fe6-9bc4-982a3e10d019`. Ver `docs/operations/HARA_COMMANDER_DEVICES_MINIMALIST_UI_20261010.md`. **Sem alteração de D1, quotas, autenticação ou Agents.**
+
+**DECISÃO MAIS RECENTE DE PREÇO/QUOTA — FREE=10.000 chamadas governadas/mês.** O dono revogou a autorização temporária de 15.000. D1 DEV e PROD estão em 10.000 via migração `0032_free_10000_revert_20261010.sql`. Pro permanece ilimitado. A versão **histórica do deploy da quota** foi `43421f6f-5bee-4fe6-9bc4-982a3e10d019`, com readback de 10/10 assets assinados e portal JS/HTML 10.000 PASS; o **Worker atual é o informado no topo deste handoff**, sem alteração do limite. O conteúdo histórico abaixo sobre 15.000 está SUPERADO. Ver `docs/operations/HARA_COMMANDER_FREE_10K_REVERSION_20261010.md`.
 
 **Antes de qualquer mutação ou decisão: ler primeiro**
 `docs/handoffs/HARA_COMMANDER_FLEET_EVENT_V2_HANDOFF_20261010.md`.
