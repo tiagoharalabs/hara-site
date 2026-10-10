@@ -66,8 +66,9 @@ def seed(path: Path) -> None:
     for sqlfile in sorted(MIGRATIONS.glob("*.sql")):
         db.executescript(sqlfile.read_text(encoding="utf-8"))
     migration_names = {file.name for file in MIGRATIONS.glob("*.sql")}
-    assert len(migration_names) >= 31
+    assert len(migration_names) >= 32
     assert "0031_free_15000_20261010.sql" in migration_names
+    assert "0032_free_10000_revert_20261010.sql" in migration_names
     for tenant, user, device in (("T1", "S1", "D1"), ("T2", "S2", "D2")):
         db.execute(
             "INSERT INTO tenants (tenant_id,display_name,state,environment,created_at_utc) VALUES (?,?,?,?,?)",

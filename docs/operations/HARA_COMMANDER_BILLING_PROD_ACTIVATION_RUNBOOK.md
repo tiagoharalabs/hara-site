@@ -12,7 +12,7 @@ material and Price IDs remain runtime-only configuration.
 
 ```text
 FREE_INTERNAL_PLAN_CODE=TRIAL
-FREE_MONTHLY_CALLS=15000
+FREE_MONTHLY_CALLS=10000
 FREE_RESET=CALENDAR_MONTH
 TRIAL_PROD_CHANGE_NOW=TRUE
 
@@ -22,7 +22,7 @@ STANDARD_APPROVED_USAGE=UNLIMITED
 STANDARD_PERIOD_KIND=NONE
 ```
 
-The Free tier receives 15,000 governed calls per calendar month. The allowance
+The Free tier receives 10,000 governed calls per calendar month. The allowance
 resets every month. The Pro/Standard tier is R$ 80 per month with no Commander
 monthly call quota.
 
@@ -73,7 +73,7 @@ IDs are installed only after the complete first-customer acceptance succeeds.
 Approved product terms:
 
 ```text
-Free = 15,000 calls / calendar month
+Free = 10,000 calls / calendar month
 Pro  = BRL 80 / month
 Pro usage = unlimited
 ```
@@ -116,9 +116,9 @@ Expected after migration `0021_commercial_terms_20261005.sql` and before Stripe 
 
 ```text
 COMMANDER_BILLING_PROD_SCHEMA=PASS
-TRIAL_CURRENT_PROD_UNITS=15000
+TRIAL_CURRENT_PROD_UNITS=10000
 TRIAL_LIVE_ALIGNED=TRUE
-TRIAL_TARGET_MONTHLY_UNITS=15000
+TRIAL_TARGET_MONTHLY_UNITS=10000
 COMMERCIAL_TERMS_AUTHORIZED=TRUE
 STANDARD_APPROVED_BRL_MONTHLY_CENTS=8000
 STANDARD_APPROVED_USAGE=UNLIMITED
@@ -145,7 +145,7 @@ PROD_MUTATION=FALSE
    - `invoice.payment_failed`
 6. Store the test secret key and signing secret as Worker secrets.
 7. Store the exact STANDARD test Price ID as runtime configuration.
-8. Verify Free remains 15,000/mmonth and STANDARD remains unlimited.
+8. Verify Free remains 10,000/mmonth and STANDARD remains unlimited.
 9. Run the live preflight again.
 
 Do not expose Stripe webhook secret, API key, Checkout session secrets or
@@ -156,7 +156,7 @@ The first paid tenant is H.A.R.A. Labs.
 
 Acceptance order:
 
-1. tenant starts on Free (`TRIAL` internally) with 15,000 calls/month;
+1. tenant starts on Free (`TRIAL` internally) with 10,000 calls/month;
 2. OWNER opens the Commander Plan page;
 3. select Pro (`STANDARD` internally), displayed as R$ 80/month and unlimited;
 4. Commander creates a Stripe hosted Checkout session;

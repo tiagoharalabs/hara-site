@@ -12,6 +12,7 @@ TRIAL_MIGRATION = COMMANDER / "migrations" / "0008_trial_onboarding.sql"
 STANDARD_MIGRATION = COMMANDER / "migrations" / "0019_standard_beta_plan.sql"
 COMMERCIAL_MIGRATION = COMMANDER / "migrations" / "0021_commercial_terms_20261005.sql"
 FREE_15000_MIGRATION = COMMANDER / "migrations" / "0031_free_15000_20261010.sql"
+FREE_REVERT_MIGRATION = COMMANDER / "migrations" / "0032_free_10000_revert_20261010.sql"
 BILLING = COMMANDER / "src" / "billing.mjs"
 WORKER = COMMANDER / "src" / "worker.js"
 WRANGLER = COMMANDER / "wrangler.jsonc"
@@ -77,6 +78,7 @@ def main() -> int:
     standard_migration = STANDARD_MIGRATION.read_text(encoding="utf-8")
     commercial_migration = COMMERCIAL_MIGRATION.read_text(encoding="utf-8")
     free_15000_migration = FREE_15000_MIGRATION.read_text(encoding="utf-8")
+    free_revert_migration = FREE_REVERT_MIGRATION.read_text(encoding="utf-8")
     source = BILLING.read_text(encoding="utf-8")
     worker = WORKER.read_text(encoding="utf-8")
     wrangler = WRANGLER.read_text(encoding="utf-8")
@@ -140,6 +142,8 @@ def main() -> int:
     catalog_db.executescript(commercial_migration)
     catalog_db.executescript(free_15000_migration)
     catalog_db.executescript(free_15000_migration)
+    catalog_db.executescript(free_revert_migration)
+    catalog_db.executescript(free_revert_migration)
     trial = catalog_db.execute(
         "SELECT display_name,meter_id,period_kind,unit_limit,state FROM plans WHERE plan_code='TRIAL'"
     ).fetchone()
@@ -147,7 +151,7 @@ def main() -> int:
         "Free",
         "HARA_COMMANDER_GOVERNED_INVOKE",
         "CALENDAR_MONTH",
-        15000,
+        10000,
         "ACTIVE",
     )
     standard = catalog_db.execute(
@@ -220,16 +224,16 @@ def main() -> int:
     assert 'currency: "BRL"' in source
     assert 'billing_interval: "month"' in source
     assert 'usage_unlimited: true' in source
-    assert "15.000 <small>chamadas / mês</small>" in html
-    assert "15.000 chamadas renovadas todo mês" in html
+    assert "10.000 <small>chamadas / mês</small>" in html
+    assert "10.000 chamadas renovadas todo mês" in html
     assert "R$ 80 <small>/ mês</small>" in html
     assert "Chamadas ilimitadas" in html
-    assert "15000" in js
+    assert "10000" in js
     assert "INSERT INTO plans" not in migration
 
     # Activation tooling is read-only by default and records the approved commercial terms.
     assert "TRIAL_PREVIOUS_PROD_UNITS = 100" in preflight
-    assert "TRIAL_TARGET_MONTHLY_UNITS = 15_000" in preflight
+    assert "TRIAL_TARGET_MONTHLY_UNITS = 10_000" in preflight
     assert "STANDARD_APPROVED_BRL_MONTHLY_CENTS = 8_000" in preflight
     assert "TRIAL_PROD_CHANGE_NOW=TRUE" in runbook
     assert "STANDARD_APPROVED_PRICE=R$80_MONTH" in runbook
@@ -261,7 +265,7 @@ def main() -> int:
     print("COMMANDER_COMMERCIAL_TERMS_MIGRATION=PASS")
     print("COMMANDER_BILLING_PROD_ACTIVATION_PREFLIGHT=PASS")
     print("TRIAL_PREVIOUS_PROD_UNITS=100")
-    print("TRIAL_TARGET_MONTHLY_UNITS=15000")
+    print("TRIAL_TARGET_MONTHLY_UNITS=10000")
     print("TRIAL_PROD_CHANGE_NOW=TRUE")
     print("STANDARD_APPROVED_BRL_MONTHLY_CENTS=8000")
     print("STANDARD_APPROVED_USAGE=UNLIMITED")

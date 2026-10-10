@@ -179,7 +179,7 @@ def verify(stage: Path):
         die("MANUAL_ONLY_BOOT_POLICY_BROKEN")
     if b'HARA_COMMANDER_APPROVAL_MODE=ASK_EVERY_ACTION' not in (target/"index.html").read_bytes():
         die("PORTAL_APPROVAL_POLICY_DRIFT")
-    if b"15.000 chamadas" not in (target/"index.html").read_bytes():
+    if b"10.000 chamadas" not in (target/"index.html").read_bytes():
         die("PORTAL_FREE_QUOTA_DRIFT")
     if b'RELEASE_SIGNING_KID="'+KID.encode()+b'"' not in linux:
         die("LINUX_BOOTSTRAP_KEY_MISMATCH")

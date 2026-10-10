@@ -20,6 +20,7 @@ READBACK = (APP / "scripts/commander_prod_readback.py").read_text()
 TRIAL_MIGRATION = (APP / "migrations/0008_trial_onboarding.sql").read_text()
 COMMERCIAL_MIGRATION = (APP / "migrations/0021_commercial_terms_20261005.sql").read_text()
 FREE_15000_MIGRATION = (APP / "migrations/0031_free_15000_20261010.sql").read_text()
+FREE_REVERT_MIGRATION = (APP / "migrations/0032_free_10000_revert_20261010.sql").read_text()
 APPROVAL_MODE_MIGRATION = (APP / "migrations/0017_device_approval_mode.sql").read_text()
 
 def need(ok, code):
@@ -70,7 +71,7 @@ need(
     "APPROVAL_MODE_MIGRATION",
 )
 need("styles.css?v=20261009-tunnelmode1" in HTML, "STYLE_CACHE_KEY")
-need("app.js?v=20261010-manualstart1" in HTML, "SCRIPT_CACHE_KEY")
+need("app.js?v=20261010-free10k1" in HTML, "SCRIPT_CACHE_KEY")
 need('./brand/chatgpt-official.webp' in HTML and (APP / "public/brand/chatgpt-official.webp").stat().st_size > 0, "CHATGPT_BRAND_ICON")
 need('./brand/claude-official.svg' in HTML and (APP / "public/brand/claude-official.svg").stat().st_size > 0, "CLAUDE_BRAND_ICON")
 need('class="where-badge">AI</span><p><b>ChatGPT' not in HTML and 'class="where-badge">AI</span><p><b>Claude' not in HTML, "CLIENT_PLACEHOLDER_BADGES_REMOVED")
@@ -134,9 +135,10 @@ need("function requirePortalMutationOrigin" in WORKER and 'if (!origin || origin
 need("fonts.googleapis.com" not in HTML and "fonts.gstatic.com" not in HTML, "EXTERNAL_FONT_DEPENDENCY_ABSENT")
 need("'TRIAL', 'Trial', 'HARA_COMMANDER_GOVERNED_INVOKE', 'CALENDAR_MONTH', 100, 'ACTIVE'" in TRIAL_MIGRATION, "TRIAL_PLAN_HISTORICAL_BASE")
 need("'TRIAL', 'Free', 'HARA_COMMANDER_GOVERNED_INVOKE', 'CALENDAR_MONTH', 10000, 'ACTIVE'" in COMMERCIAL_MIGRATION, "FREE_PLAN_HISTORICAL_LIMIT")
-need("SET unit_limit = 15000" in FREE_15000_MIGRATION and "plan_code = 'TRIAL'" in FREE_15000_MIGRATION, "FREE_PLAN_FINAL_15000")
+need("SET unit_limit = 15000" in FREE_15000_MIGRATION and "plan_code = 'TRIAL'" in FREE_15000_MIGRATION, "FREE_PLAN_HISTORICAL_15000")
+need("SET unit_limit = 10000" in FREE_REVERT_MIGRATION and "plan_code = 'TRIAL'" in FREE_REVERT_MIGRATION, "FREE_PLAN_FINAL_10000")
 need("'STANDARD', 'Pro', 'HARA_COMMANDER_GOVERNED_INVOKE', 'NONE', NULL, 'ACTIVE'" in COMMERCIAL_MIGRATION, "PRO_PLAN_CANONICAL_UNLIMITED")
-need('15.000 <small>chamadas / mês</small>' in HTML and '15.000 chamadas renovadas todo mês' in HTML, "FREE_PLAN_UI_ALIGNMENT")
+need('10.000 <small>chamadas / mês</small>' in HTML and '10.000 chamadas renovadas todo mês' in HTML, "FREE_PLAN_UI_ALIGNMENT")
 need('R$ 80 <small>/ mês</small>' in HTML and 'Chamadas ilimitadas' in HTML, "PRO_PLAN_UI_ALIGNMENT")
 need('100 <small>execuções / mês</small>' not in HTML, "STALE_TRIAL_QUOTA_ABSENT")
 need(

@@ -1,5 +1,7 @@
 # H.A.R.A. Commander — publicação comercial assinada v2 (10/10/2026)
 
+**ATUALIZAÇÃO POSTERIOR: o limite Free de 15.000 foi REVOGADO no mesmo dia. A decisão final é 10.000/mês (migração 0032 aplicada no DEV e PROD).** O relatório original abaixo fica como histórico técnico de publicação da release assinada 0.3.43; para a quota atual, ver `HARA_COMMANDER_FREE_10K_REVERSION_20261010.md`. Os Agents e instaladores assinados permanecem os mesmos.
+
 ## Mudança autorizada pelo proprietário
 
 - Cliente comercial instala o Agent com início único para atestação; **sem autostart** em boot/login. Para sessões futuras, usa `hara-commander start` (Linux) ou o `start` do Agent PowerShell; botão Copiar iniciar/parar fica imediatamente abaixo do comando de instalação do portal.

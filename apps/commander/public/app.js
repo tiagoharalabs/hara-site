@@ -315,7 +315,7 @@
     if (planCard) planCard.classList.toggle("trial", isTrial);
     setText(
       "dashboardPlanDetail",
-      isTrial ? "Plano Free · 15.000 chamadas/mês" : (unmetered ? "Plano sem franquia mensal" : "Plano ativo"),
+      isTrial ? "Plano Free · 10.000 chamadas/mês" : (unmetered ? "Plano sem franquia mensal" : "Plano ativo"),
     );
     setText("dashboardConsumed", unmetered ? "Ilimitado" : (usageAvailable ? number(consumed) : "—"));
     setText("dashboardLimit", unmetered ? "" : "/ " + number(limit));
@@ -363,7 +363,7 @@
     setText("usageCardPlan", plan);
     setText(
       "usageCardPlanDetail",
-      unmetered ? "Execuções governadas sem franquia mensal" : (isTrial ? "Free · 15.000 execuções governadas/mês" : "Plano ativo"),
+      unmetered ? "Execuções governadas sem franquia mensal" : (isTrial ? "Free · 10.000 execuções governadas/mês" : "Plano ativo"),
     );
     setText("usageCardPeriod", unmetered ? "Sem limite" : "Mensal");
     setText(
@@ -1405,7 +1405,7 @@
 
   function applyScenario(name, payload) {
     if (!name) return;
-    const limit = Number(payload?.usage?.limit || payload?.entitlement?.unit_limit || 15000);
+    const limit = Number(payload?.usage?.limit || payload?.entitlement?.unit_limit || 10000);
     const connections = document.querySelectorAll("#connectionList button:not([disabled])");
 
     if (name === "loading") {
