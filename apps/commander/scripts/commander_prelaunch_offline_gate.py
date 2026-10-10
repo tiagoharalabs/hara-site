@@ -60,6 +60,7 @@ PYTHON = (
     "validate_fresh_customer_acceptance.py",
 )
 JS = (
+    "test_devices_minimalist_ui.mjs",
     "test_oidc_helpers.mjs",
     "test_auth_helpers.mjs",
     "test_hara_identity_customer_mcp.mjs",

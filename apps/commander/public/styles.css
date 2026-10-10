@@ -1211,3 +1211,167 @@ html[data-neon="off"] .brand-copy em{
 html[data-theme=dark] .tunnel-startup-choice{background:#102c39;border-color:#365567}
 html[data-theme=dark] .tunnel-startup-choice label{color:#e4f3fb}
 html[data-theme=dark] .tunnel-startup-choice small{color:#a6c4d4}
+
+/* Commander Devices — quiet, scannable control surface.
+   Existing navy / blue / gold / success palette deliberately retained. */
+[data-view="devices"] .devices-workspace-head{margin-bottom:15px}
+[data-view="devices"] .devices-panel-compact{padding:12px 17px 10px}
+[data-view="devices"] .devices-toolbar{gap:12px}
+[data-view="devices"] .devices-toolbar-meta{
+  display:flex;align-items:center;justify-content:flex-end;gap:18px;
+  min-width:0
+}
+[data-view="devices"] .devices-summary-count{
+  font-size:11px;font-weight:650;color:var(--muted);white-space:nowrap
+}
+[data-view="devices"] .devices-panel-compact .device-list{margin-top:8px}
+[data-view="devices"] .devices-panel-compact .device-row{
+  position:relative;grid-template-columns:32px minmax(0,1fr) auto auto;
+  gap:12px;min-height:64px;padding:11px 7px;
+  border-radius:0;border-top:1px solid var(--line)
+}
+[data-view="devices"] .devices-panel-compact .device-row:first-child{border-top:0}
+[data-view="devices"] .devices-panel-compact .device-row:focus-within{z-index:12}
+[data-view="devices"] .devices-panel-compact .device-platform{
+  width:30px;height:30px;border-radius:8px;font-size:9px
+}
+[data-view="devices"] .devices-panel-compact .device-copy{gap:4px;min-width:0}
+[data-view="devices"] .devices-panel-compact .device-copy b{
+  display:block;font-size:13px;font-weight:750;line-height:1.3;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap
+}
+[data-view="devices"] .devices-panel-compact .device-copy small{
+  font-size:11px;line-height:1.35;font-weight:400;color:var(--muted)
+}
+[data-view="devices"] .devices-panel-compact .device-state{
+  padding:5px 9px;border-radius:999px;font-size:10px;font-weight:750;
+  white-space:nowrap
+}
+[data-view="devices"] .devices-panel-compact .device-actions{
+  display:flex;align-items:center;gap:9px;flex-wrap:nowrap;justify-content:flex-end
+}
+[data-view="devices"] .device-primary-action{
+  font-size:11px;font-weight:700;white-space:nowrap
+}
+[data-view="devices"] .device-overflow{position:relative;flex:0 0 auto}
+[data-view="devices"] .device-overflow-toggle{
+  display:grid;place-items:center;width:32px;height:32px;
+  border:1px solid transparent;border-radius:8px;
+  list-style:none;cursor:pointer;user-select:none;
+  font-size:21px;font-weight:700;line-height:1;
+  color:var(--muted);background:transparent
+}
+[data-view="devices"] .device-overflow-toggle::-webkit-details-marker{display:none}
+[data-view="devices"] .device-overflow-toggle:hover,
+[data-view="devices"] .device-overflow[open] .device-overflow-toggle{
+  background:rgba(57,162,223,.08);border-color:rgba(57,162,223,.2);
+  color:var(--ink)
+}
+[data-view="devices"] .device-overflow-toggle:focus-visible,
+[data-view="devices"] .devices-help>summary:focus-visible{
+  outline:2px solid var(--sky);outline-offset:3px
+}
+[data-view="devices"] .device-overflow[open]{z-index:15}
+[data-view="devices"] .device-overflow-panel{
+  position:absolute;right:0;top:calc(100% + 8px);z-index:15;
+  width:min(310px,calc(100vw - 32px));
+  display:grid;gap:12px;padding:16px;
+  background:#fff;border:1px solid var(--line);border-radius:12px;
+  box-shadow:0 14px 32px rgba(6,23,33,.15)
+}
+[data-view="devices"] .device-overflow-heading{
+  font-size:12px;color:var(--ink);letter-spacing:-.01em
+}
+[data-view="devices"] .device-facts{display:grid;gap:8px;margin:0}
+[data-view="devices"] .device-facts>div{
+  display:grid;grid-template-columns:100px minmax(0,1fr);align-items:baseline;
+  gap:8px;font-size:10px;line-height:1.4
+}
+[data-view="devices"] .device-facts dt{color:var(--muted)}
+[data-view="devices"] .device-facts dd{
+  margin:0;color:var(--ink);overflow-wrap:anywhere;
+  font-weight:650
+}
+[data-view="devices"] .device-overflow-actions{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:12px;padding-top:12px;border-top:1px solid var(--line)
+}
+[data-view="devices"] .device-overflow-actions .link-button{
+  font-size:10px;font-weight:750;white-space:normal;text-align:left
+}
+[data-view="devices"] .device-overflow-actions .device-revoke-action{color:#af5c53}
+[data-view="devices"] .device-overflow-actions .confirm-danger{color:#c64d43}
+[data-view="devices"] .devices-help{
+  margin-top:14px;border:1px solid var(--line);border-radius:12px;
+  background:rgba(255,255,255,.65)
+}
+[data-view="devices"] .devices-help>summary{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:13px 16px;list-style:none;cursor:pointer;
+  color:var(--ink);font-size:11px;font-weight:750
+}
+[data-view="devices"] .devices-help>summary::-webkit-details-marker{display:none}
+[data-view="devices"] .devices-help>summary:after{
+  content:"⌄";font-size:17px;font-weight:400;color:var(--muted);margin-left:6px
+}
+[data-view="devices"] .devices-help[open]>summary:after{content:"⌃"}
+[data-view="devices"] .devices-help>summary small{
+  margin-left:auto;font-size:10px;font-weight:400;color:var(--muted)
+}
+[data-view="devices"] .devices-help[open]>summary{border-bottom:1px solid var(--line)}
+[data-view="devices"] .devices-help .quickstart-panel,
+[data-view="devices"] .devices-help .device-where-panel{
+  margin:0;padding:13px 17px;background:transparent;border:0;
+  box-shadow:none;border-radius:0
+}
+[data-view="devices"] .devices-help .device-where-panel{
+  border-top:1px solid var(--line)
+}
+html[data-theme="dark"] [data-view="devices"] .devices-summary-count,
+html[data-theme="dark"] [data-view="devices"] .device-facts dt,
+html[data-theme="dark"] [data-view="devices"] .devices-help>summary small{
+  color:#92b1c2
+}
+html[data-theme="dark"] [data-view="devices"] .device-overflow-toggle,
+html[data-theme="dark"] [data-view="devices"] .device-copy small{
+  color:#91adbd
+}
+html[data-theme="dark"] [data-view="devices"] .device-overflow-panel{
+  background:#0b2637;border-color:#21485d;
+  box-shadow:0 16px 34px rgba(0,0,0,.32)
+}
+html[data-theme="dark"] [data-view="devices"] .device-overflow-heading,
+html[data-theme="dark"] [data-view="devices"] .device-facts dd,
+html[data-theme="dark"] [data-view="devices"] .device-overflow-toggle:hover,
+html[data-theme="dark"] [data-view="devices"] .devices-help>summary{
+  color:#e5f3fa
+}
+html[data-theme="dark"] [data-view="devices"] .device-overflow-actions,
+html[data-theme="dark"] [data-view="devices"] .devices-help[open]>summary,
+html[data-theme="dark"] [data-view="devices"] .devices-help .device-where-panel{
+  border-color:#21485d
+}
+html[data-theme="dark"] [data-view="devices"] .devices-help{
+  background:rgba(10,31,44,.75);border-color:#21485d
+}
+@media(max-width:850px){
+  [data-view="devices"] .devices-toolbar{flex-wrap:wrap}
+  [data-view="devices"] .devices-toolbar-meta{margin-left:auto}
+  [data-view="devices"] .devices-panel-compact .device-row{gap:9px}
+  [data-view="devices"] .device-primary-action{font-size:10px}
+  [data-view="devices"] .devices-help>summary small{display:none}
+}
+@media(max-width:610px){
+  [data-view="devices"] .devices-panel-compact{padding:10px 12px}
+  [data-view="devices"] .devices-panel-compact .device-row{
+    grid-template-columns:30px minmax(0,1fr) auto;
+    padding:12px 4px
+  }
+  [data-view="devices"] .devices-panel-compact .device-state{grid-column:3;grid-row:1}
+  [data-view="devices"] .devices-panel-compact .device-actions{
+    grid-column:2/4;justify-self:end;
+    padding-top:0
+  }
+  [data-view="devices"] .devices-toolbar-meta{gap:10px}
+  [data-view="devices"] .device-overflow-panel{right:0;width:min(290px,calc(100vw - 36px))}
+}

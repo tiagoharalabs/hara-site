@@ -909,6 +909,17 @@
     }).format(date);
   }
 
+  function formatDeviceSeenCompact(value) {
+    if (!value) return "Sem contato registrado";
+    const when = Date.parse(String(value));
+    if (!Number.isFinite(when)) return "Último contato indisponível";
+    const age = Math.max(0, Date.now() - when);
+    if (age < 60000) return "Agora";
+    if (age < 3600000) return "Há " + Math.floor(age / 60000) + " min";
+    if (age < 86400000) return "Há " + Math.floor(age / 3600000) + " h";
+    return "Último contato " + formatDeviceSeen(value);
+  }
+
   function setDeviceSectionTab(next) {
     deviceSectionTab = next === "connect" ? "connect" : "devices";
     document.querySelectorAll("[data-device-section-tab]").forEach((button) => {
@@ -920,6 +931,8 @@
     document.querySelectorAll("[data-device-section-panel]").forEach((panel) => {
       panel.hidden = panel.dataset.deviceSectionPanel !== deviceSectionTab;
     });
+    const help = document.getElementById("devicesHelp");
+    if (help) help.hidden = deviceSectionTab !== "devices";
     if (deviceSectionTab === "devices" && devicesCache) renderDevices(devicesCache);
   }
 
@@ -944,11 +957,12 @@
 
   function deviceReadiness(device) {
     if (device?.state === "REVOKED") return { label:"Revogado", className:"revoked", detail:"Acesso revogado" };
+    // A valid authorization lease is not proof of an active connection.
+    if (!device?.online) return { label:"Offline", className:"offline", detail:"Sem conexão ativa com o Agent" };
     if (String(device?.tunnel_mode || "").toUpperCase() === "LOCAL_TUNNEL") {
-      if (device?.authorization_active) return { label:"Autorizado", className:"ready", detail:"Lease H.A.R.A. válida; execução direta pelo túnel OpenAI" };
-      return { label:"Reautorizar", className:"attention", detail:"A lease local expirou ou ainda não foi emitida" };
+      if (device?.authorization_active) return { label:"Pronto", className:"ready", detail:"Conexão direta autorizada" };
+      return { label:"Atenção", className:"attention", detail:"Conectado; autorização local necessária" };
     }
-    if (!device?.online) return { label:"Offline", className:"offline", detail:"Sem contato recente com o Agent" };
     const mode=String(device?.approval_mode || "").toUpperCase();
     if (mode === "PERSISTENT_TRUSTED" || mode === "SESSION_TRUSTED") {
       return { label:"Pronto", className:"ready", detail:"Online e autorizado para uso" };
@@ -969,8 +983,12 @@
     const activeDevices = devices.filter((device) => device.state === "ACTIVE");
     const revokedDevices = devices.filter((device) => device.state === "REVOKED");
     const visibleDevices = deviceTab === "history" ? revokedDevices : activeDevices;
-    const onlineCount = Number(payload?.online_count || 0);
-    const readyCount = activeDevices.filter((device) => device.online || device.authorization_active).length;
+    const onlineCount = activeDevices.filter((device) => device.online).length;
+    const offlineCount = activeDevices.length - onlineCount;
+    const readyCount = activeDevices.filter((device) => deviceReadiness(device).className === "ready").length;
+
+    setText("deviceStatusSummary",
+      onlineCount + " online" + (offlineCount ? " · " + offlineCount + " offline" : ""));
 
     setText("deviceActiveCount", number(activeDevices.length));
     setText("deviceHistoryCount", number(revokedDevices.length));
@@ -1032,21 +1050,11 @@
       const name = document.createElement("b");
       name.textContent = String(device.device_name || "Computador");
       titleLine.append(name);
-      if (device.state !== "REVOKED") {
-        const approvalPolicy=deviceApprovalLabel(device.approval_mode);
-        const policy=document.createElement("span");
-        policy.className="device-policy " + approvalPolicy.className;
-        policy.textContent=approvalPolicy.label;
-        titleLine.append(policy);
-      }
+      // Authorization mode remains available in Details, not on every row.
       const meta = document.createElement("small");
-      const arch = device.architecture ? " · " + String(device.architecture) : "";
-      const agentVersion = device.agent_version ? " · Agent " + String(device.agent_version) : "";
-      const authUntil = device.local_authorized_until_utc ? " · Autorizado até: " + formatDeviceSeen(device.local_authorized_until_utc) : "";
       const localTunnel = String(device.tunnel_mode || "").toUpperCase() === "LOCAL_TUNNEL";
-      const usageSync = localTunnel && device.last_metering_sync_at_utc ? " · Uso sync: " + formatDeviceSeen(device.last_metering_sync_at_utc) : "";
-      const transport = localTunnel ? " · OpenAI Tunnel" : " · Último contato: " + formatDeviceSeen(device.last_seen_at_utc);
-      meta.textContent = String(device.platform || "—") + arch + agentVersion + transport + authUntil + usageSync;
+      const platformLabel = String(device.platform || "").toUpperCase() === "WINDOWS" ? "Windows" : "Linux";
+      meta.textContent = platformLabel + " · " + formatDeviceSeenCompact(device.last_seen_at_utc);
       body.append(titleLine, meta);
 
       const readiness=deviceReadiness(device);
@@ -1057,33 +1065,87 @@
 
       row.append(icon, body, state);
 
+      const actions = document.createElement("div");
+      actions.className = "device-actions";
+
       if (device.state === "ACTIVE") {
-        const actions = document.createElement("div");
-        actions.className = "device-actions";
-
-        const authorize = document.createElement("button");
-        authorize.className = "link-button";
-        authorize.type = "button";
-        authorize.dataset.authorizeDevice = String(device.device_id);
-        authorize.textContent = device.authorization_active ? "Renovar 6h" : "Autorizar 6h";
-        authorize.title = "Gerar código one-time para lease local de 6 horas";
-        authorize.hidden = String(device.platform || "").toUpperCase() === "WINDOWS";
-
         const diagnostic = document.createElement("button");
-        diagnostic.className = "link-button";
+        diagnostic.className = "link-button device-primary-action";
         diagnostic.type = "button";
         diagnostic.dataset.copyDeviceDiagnostic = String(device.platform || "LINUX");
         diagnostic.textContent = "Diagnóstico";
-        diagnostic.title = "Copiar comando de diagnóstico sanitizado";
+        diagnostic.title = "Copiar comando local de diagnóstico";
+        actions.append(diagnostic);
+      }
+
+      // Use a native, keyboard-accessible disclosure instead of a row full
+      // of secondary links. No device metadata is sent to another endpoint.
+      const more = document.createElement("details");
+      more.className = "device-overflow";
+      const toggle = document.createElement("summary");
+      toggle.className = "device-overflow-toggle";
+      toggle.textContent = "⋯";
+      toggle.setAttribute("aria-label", "Detalhes e ações de " + String(device.device_name || "computador"));
+      toggle.title = "Detalhes e ações";
+      const menu = document.createElement("div");
+      menu.className = "device-overflow-panel";
+
+      const heading = document.createElement("strong");
+      heading.className = "device-overflow-heading";
+      heading.textContent = "Detalhes";
+      menu.append(heading);
+
+      const facts = document.createElement("dl");
+      facts.className = "device-facts";
+      const addFact = (label, value) => {
+        if (value === null || value === undefined || value === "") return;
+        const entry = document.createElement("div");
+        const term = document.createElement("dt");
+        const description = document.createElement("dd");
+        term.textContent = label;
+        description.textContent = String(value);
+        entry.append(term, description);
+        facts.append(entry);
+      };
+      addFact("Sistema", platformLabel);
+      addFact("Arquitetura", device.architecture || "—");
+      addFact("Agent", device.agent_version || "—");
+      addFact("Transporte", localTunnel ? "Direct · OpenAI Tunnel" : "Cloud");
+      addFact("Autorização", deviceApprovalLabel(device.approval_mode).label);
+      addFact("Último contato", formatDeviceSeen(device.last_seen_at_utc));
+      if (device.local_authorized_until_utc) {
+        addFact("Autorizado até", formatDeviceSeen(device.local_authorized_until_utc));
+      }
+      if (localTunnel && device.last_metering_sync_at_utc) {
+        addFact("Uso sincronizado", formatDeviceSeen(device.last_metering_sync_at_utc));
+      }
+      menu.append(facts);
+
+      if (device.state === "ACTIVE") {
+        const secondaryActions = document.createElement("div");
+        secondaryActions.className = "device-overflow-actions";
+        if (platformLabel !== "Windows") {
+          const authorize = document.createElement("button");
+          authorize.className = "link-button";
+          authorize.type = "button";
+          authorize.dataset.authorizeDevice = String(device.device_id);
+          authorize.textContent = device.authorization_active ? "Renovar autorização (6h)" : "Autorizar por 6h";
+          authorize.title = "Gerar código de autorização local de uso único";
+          secondaryActions.append(authorize);
+        }
 
         const revoke = document.createElement("button");
-        revoke.className = "link-button";
+        revoke.className = "link-button device-revoke-action";
         revoke.type = "button";
         revoke.dataset.revokeDevice = String(device.device_id);
-        revoke.textContent = "Revogar";
-        actions.append(authorize,diagnostic,revoke);
-        row.append(actions);
+        revoke.textContent = "Revogar acesso";
+        secondaryActions.append(revoke);
+        menu.append(secondaryActions);
       }
+
+      more.append(toggle, menu);
+      actions.append(more);
+      row.append(actions);
       list.append(row);
     });
   }

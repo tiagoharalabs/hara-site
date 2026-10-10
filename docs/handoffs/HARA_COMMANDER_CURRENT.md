@@ -58,3 +58,9 @@ Documento detalhado: `docs/operations/HARA_COMMANDER_SIGNED_COMMERCIAL_V2_PUBLIC
 Comercial MCP pós-deploy `ping` Núcleo A e Sentinela D PASS em Agent Founder 0.3.44 Event V2; não mudar Founder. Rollback Worker PROD `29e556f3-86af-476d-ba01-a764c3acb6a0`, tag legado assinada `hara-commander-signed-agent-v0.3.41`; novo backup assinado tag GitHub `hara-commander-commercial-v0.3.43-signed-v2` (commit `d7e5f128...`). Manifesto público v2 tem kid v2; não combinar assets v1. Windows ainda BETA sem prova nativa PS 5.1; permitir download não equivale a homologar mutação. Multi-tenant stress/Stripe e OpenAI plugin listing são gates separados.
 
 Relatório e procedimento: `docs/operations/HARA_COMMANDER_SIGNED_COMMERCIAL_V2_PUBLICATION_20261010.md`. Verificador antigo `verify_commander_public_artifacts.py --check` preserva assinatura v1 no Git; `--live` deve usar validador comercial v2, nunca tratar a v1 histórica como atual. Storage protegido segue HOLD `092f35af...`.
+
+## 10/10/2026 — Minimalismo da tela Computadores
+
+Novo refinamento autorizado da UI no portal público (sem alterar cores/identidade): cada linha mostra só nome, sistema, último contato e estado real; Agent/arquitetura/transporte/autorização ficam no menu de detalhes com ações secundárias. O grande guia de onboarding está recolhido por padrão; os botões de diagnóstico e procedimentos de autorização/revogação são preservados. Uma lease local válida não implica máquina online. O total de chamadas Free continua 10.000/mês.
+
+Fonte e contrato: docs/operations/HARA_COMMANDER_DEVICES_MINIMALIST_UI_20261010.md. Gate offline 54/54 PASS, DEV Worker versão 636d9e2f-883c-4a0d-96e1-8280ee2ee4ad com SHA exato 11/11 e health 200. Bundle assinado comercial v0.3.43 e agentes Founder v0.3.44 não foram tocados. Registrar versão PROD depois da promoção e readback.
