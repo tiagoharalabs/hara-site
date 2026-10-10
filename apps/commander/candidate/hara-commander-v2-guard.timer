@@ -1,0 +1,13 @@
+[Unit]
+Description=Periodic local WebSocket health guard for HARA Commander Founder
+
+[Timer]
+OnActiveSec=120s
+OnUnitActiveSec=120s
+AccuracySec=15s
+RandomizedDelaySec=0
+Unit=hara-commander-v2-guard.service
+Persistent=false
+
+[Install]
+WantedBy=timers.target

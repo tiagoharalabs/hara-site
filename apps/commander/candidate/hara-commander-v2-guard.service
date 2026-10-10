@@ -1,0 +1,11 @@
+[Unit]
+Description=HARA Commander Event V2 Founder local failover guard
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /home/sartorius/.local/share/hara-commander/ops/commander_event_v2_persistent_guard.py --run
+TimeoutStartSec=25
+NoNewPrivileges=yes
+# PrivateTmp creates a mount namespace that hides owned TCP PID attribution
+# from ss -tnp; this local watchdog must see the Agent's established socket.
