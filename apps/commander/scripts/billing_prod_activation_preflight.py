@@ -4,11 +4,13 @@ from __future__ import annotations
 import argparse
 import json
 import subprocess
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 COMMANDER = ROOT / "apps" / "commander"
 WRANGLER = COMMANDER / "wrangler.jsonc"
+WRANGLER_BIN = ROOT / "node_modules/.bin/wrangler"
 
 REQUIRED_SECRET_NAMES = {
     "STRIPE_SECRET_KEY",
@@ -24,17 +26,55 @@ STANDARD_APPROVED_BRL_MONTHLY_CENTS = 8_000
 
 
 def run_json(args: list[str]) -> object:
-    proc = subprocess.run(
-        args,
-        cwd=ROOT,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    raw = proc.stdout.strip()
-    if not raw:
-        raise RuntimeError("EMPTY_COMMAND_OUTPUT")
-    return json.loads(raw)
+    """Only allow read-only PROD inspection using the installed Wrangler.
+
+    A bounded second attempt tolerates transient Cloudflare API failures while
+    never printing CLI stderr, account credentials or customer content.
+    """
+    if args[:2] != ["npx", "wrangler"]:
+        raise RuntimeError("BILLING_PREFLIGHT_WRANGLER_COMMAND_DENIED")
+    tail = args[2:]
+    if tail[:2] == ["secret", "list"]:
+        pass
+    elif tail[:2] == ["d1", "execute"]:
+        if "--remote" not in tail or "--command" not in tail:
+            raise RuntimeError("BILLING_PREFLIGHT_D1_REMOTE_READ_REQUIRED")
+        sql = tail[tail.index("--command") + 1].strip()
+        if not sql.upper().startswith("SELECT ") or ";" in sql.rstrip(";"):
+            raise RuntimeError("BILLING_PREFLIGHT_READ_ONLY_SQL_REQUIRED")
+    else:
+        raise RuntimeError("BILLING_PREFLIGHT_COMMAND_NOT_READONLY")
+    if not WRANGLER_BIN.is_file():
+        raise RuntimeError("BILLING_PREFLIGHT_WRANGLER_NOT_INSTALLED")
+    command = [str(WRANGLER_BIN), *tail]
+    for attempt in range(2):
+        try:
+            proc = subprocess.run(
+                command,
+                cwd=ROOT,
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=35,
+            )
+        except subprocess.TimeoutExpired:
+            if attempt == 0:
+                time.sleep(0.5)
+                continue
+            raise RuntimeError("BILLING_PREFLIGHT_READ_TIMEOUT") from None
+        if proc.returncode != 0:
+            if attempt == 0:
+                time.sleep(0.5)
+                continue
+            raise RuntimeError("BILLING_PREFLIGHT_READ_UNAVAILABLE")
+        try:
+            return json.loads(proc.stdout)
+        except json.JSONDecodeError:
+            if attempt == 0:
+                time.sleep(0.5)
+                continue
+            raise RuntimeError("BILLING_PREFLIGHT_NON_JSON_RESPONSE") from None
+    raise RuntimeError("BILLING_PREFLIGHT_RETRY_EXHAUSTED")
 
 
 def secret_names() -> set[str]:

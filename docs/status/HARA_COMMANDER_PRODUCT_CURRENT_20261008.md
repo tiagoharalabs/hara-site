@@ -419,3 +419,22 @@ Report (append-terminal-truth): `docs/operations/HARA_COMMANDER_V2_SIGNED_FOUNDE
 **Limits:** no full OS reboot (other H.A.R.A. jobs preserved), no intentional live failover, no measured Cloudflare billing reduction yet. No other device migrated. Signed 0.3.44 Founder artifact is not a general-distribution release. Next: actual CF/D1 cost metrics, longer soak, maintenance-window reboot, Free quota isolation canary, Windows/platform release signing, then sequential per-device rollout. Rollback: local `python3 ~/.local/share/hara-commander/ops/commander_event_v2_persistent_guard.py --rollback` on nucleo-a.
 
 **Guard hardening correction, same session:** A first periodic service-mode probe recorded one false `EVENT_V2_TCP_CONNECTION_MISSING` because the guard unit had `PrivateTmp=yes`: read-only systemd sandbox tests isolated this exactly, while `NoNewPrivileges=yes` alone preserved PID/socket visibility. Timer was temporarily stopped **before** the two-strike rollback; the signed Event V2 commercial Agent stayed active. Guard unit now omits `PrivateTmp=yes` but retains `NoNewPrivileges=yes`. Exact SHA source-deployment readback PASS, real guard oneshot reset the false strike to `HEALTHY`/0, timer rearmed and live `--check` PASS. PROD D1 remains `0.3.44 / EVENT_V2 / ACTIVE`. All event payloads and tokens remain untouched. Tests now assert that the incompatible PrivateTmp setting cannot return undetected.
+
+## 2026-10-09 — first Cloudflare PROD measured Event V2 request comparison (read-only)
+
+Confirmed via account-scoped Cloudflare GraphQL `workersInvocationsAdaptive`, zone-scoped **exact** `/api/device/calls/next` `httpRequestsAdaptiveGroups` (sampleInterval **1** in both windows) and same-window read-only PROD D1 `commander_device_calls` counts. Primary **matched quiet windows 40min each, 4 commercial calls per window**:
+
+- Before (2026-10-10T00:20–01:00Z): `calls/next=1756`, `Worker requests=2066`, Worker errors 0.
+- After (2026-10-10T02:05–02:45Z): `calls/next=1392`, `Worker requests=1658`, Worker errors 0.
+- **Observed fleet-wide queue-path change −364 (−20.73%)**, Worker requests **−408 (−19.75%)**. Numbers cover the shared Cloudflare Worker/zone, not one device; exact causal attribution and billed DO-duration savings remain unverified. No private user payload or authentication token was exposed.
+- A misleading high-workload baseline (37 vs 4 calls) was explicitly excluded from the principal comparison.
+
+Reproducible read-only probe `apps/commander/scripts/commander_prod_cf_efficiency_probe.py`, sanitized evidence `docs/status/HARA_COMMANDER_CF_EVENT_V2_MATCHED_ACTIVITY_MEASUREMENT_20261009.json`, report `docs/operations/HARA_COMMANDER_EVENT_V2_CLOUDFLARE_MEASURED_TRAFFIC_20261009.md`.
+
+**Next:** longer idle/cost windows and Durable Objects billed duration, live Free-plan quota/cross-tenant canary, per-device signed rollout gates. No production device or Worker code mutations in this audit.
+
+## 2026-10-09 — commercial checkout read-only gate and preflight hardening
+
+`billing_prod_activation_preflight.py --live` now returned **PASS** against actual PROD catalog: `TRIAL Free` 10,000 governed/month, `STANDARD Pro` unlimited, approved price BRL 80/month. `SCALE` is inactive. **Stripe PROD not provisioned:** `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` and `STRIPE_PRICE_STANDARD` pending, billing_connections/webhook_events 0; `COMMANDER_BILLING_FIRST_CHECKOUT_READY=FALSE`. Do not claim public paid checkout is live.
+
+Hardened read-only preflight to pinned local Wrangler, bounded retry after transient D1 CLI failure, and fail-closed `secret list` or remote `SELECT` command allowlist; runtime testing explicitly denied unsafe commands, no PROD mutation. Exact report: `docs/operations/HARA_COMMANDER_COMMERCIAL_READINESS_GATE_20261009.md`. Continue to distinguish Founder-operational commercial MCP from ready-to-charge Stripe subscriptions.

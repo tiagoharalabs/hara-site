@@ -1,0 +1,43 @@
+{
+  "actual_billing_cost_verified": false,
+  "attributable_to_nucleo_only": false,
+  "client_content_collected": false,
+  "matched_commercial_call_count": true,
+  "oauth_token_in_output": false,
+  "path": "/api/device/calls/next",
+  "periods": {
+    "after": {
+      "commercial_device_calls": 4,
+      "end_utc": "2026-10-10T02:45:00Z",
+      "queue_http_requests": 1392,
+      "queue_sample_interval_max": 1.0,
+      "queue_unsampled": true,
+      "start_utc": "2026-10-10T02:05:00Z",
+      "worker_errors": 0,
+      "worker_requests": 1658,
+      "worker_subrequests": 19
+    },
+    "before": {
+      "commercial_device_calls": 4,
+      "end_utc": "2026-10-10T01:00:00Z",
+      "queue_http_requests": 1756,
+      "queue_sample_interval_max": 1.0,
+      "queue_unsampled": true,
+      "start_utc": "2026-10-10T00:20:00Z",
+      "worker_errors": 0,
+      "worker_requests": 2066,
+      "worker_subrequests": 12
+    }
+  },
+  "queue_request_change": {
+    "absolute": -364,
+    "percent": -20.73
+  },
+  "schema": "hara.commander-cloudflare-transport-efficiency.v1",
+  "script": "hara-commander",
+  "source": "CLOUDFLARE_GRAPHQL_PLUS_PROD_D1_READ_ONLY",
+  "worker_request_change": {
+    "absolute": -408,
+    "percent": -19.75
+  }
+}
