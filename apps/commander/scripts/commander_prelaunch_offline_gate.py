@@ -27,6 +27,7 @@ PYTHON = (
     "validate_mcp_process_risk_annotations.py",
     "validate_manual_on_demand_commercial.py",
     "verify_commander_public_artifacts.py",
+    "validate_signed_commercial_v2_bundle.py",
     "commander_linux_clean_lifecycle.py",
     "validate_process_output_memory_budgets.py",
     "validate_preimage_storage_budget.py",

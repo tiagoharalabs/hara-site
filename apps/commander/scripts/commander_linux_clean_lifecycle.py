@@ -41,6 +41,7 @@ class MockState:
 class Handler(http.server.BaseHTTPRequestHandler):
     state: MockState
     base_dir: Path
+    candidate_agent: Path = AGENT
     # Only test data signed with an ephemeral, in-memory RSA key.
     manifest_bytes: bytes
     signature_bytes: bytes
@@ -78,7 +79,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.wfile.write(raw)
             return
         if path == "/agent/linux.py":
-            raw = AGENT.read_bytes()
+            raw = Handler.candidate_agent.read_bytes()
             self.send_response(200)
             self.send_header("content-type", "text/x-python")
             self.send_header("content-length", str(len(raw)))
@@ -291,10 +292,25 @@ def mock_signed_candidate():
     return raw_manifest, (json.dumps(signature_object) + "\n").encode(), script
 
 
-def execute() -> int:
+def execute(signed_stage: Path | None = None) -> int:
     state = MockState()
     Handler.state = state
-    Handler.manifest_bytes, Handler.signature_bytes, mock_installer = mock_signed_candidate()
+    if signed_stage:
+        stage = signed_stage.resolve()
+        if not str(stage).startswith("/tmp_hara/"):
+            raise RuntimeError("SIGNED_STAGE_OUTSIDE_PRIVATE_TMP")
+        verifier = ROOT / "apps/commander/scripts/build_commander_commercial_signed_v2.py"
+        subprocess.run(["python3","-B",str(verifier),"verify","--stage",str(stage)],
+                       check=True,stdout=subprocess.DEVNULL,timeout=20)
+        path = stage / "apps/commander/public"
+        Handler.manifest_bytes=(path/"release/agent-manifest.json").read_bytes()
+        Handler.signature_bytes=(path/"release/agent-manifest.sig.json").read_bytes()
+        Handler.candidate_agent=path/"agent/linux.py"
+        mock_installer=(path/"install/linux.sh").read_text(encoding="utf-8")
+        print("COMMANDER_CLEAN_LINUX_REAL_V2_SIGNED_ASSETS=VERIFIED")
+    else:
+        Handler.manifest_bytes, Handler.signature_bytes, mock_installer = mock_signed_candidate()
+        Handler.candidate_agent=AGENT
     server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
@@ -425,10 +441,11 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--execute", action="store_true")
+    parser.add_argument("--signed-stage")
     args = parser.parse_args()
     self_test()
     if args.execute:
-        return execute()
+        return execute(Path(args.signed_stage) if args.signed_stage else None)
     if args.check:
         print("COMMANDER_CLEAN_LINUX_LIFECYCLE_SOURCE=PASS")
         return 0

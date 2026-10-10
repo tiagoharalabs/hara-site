@@ -19,6 +19,7 @@ HEADERS = (APP / "public/_headers").read_text()
 READBACK = (APP / "scripts/commander_prod_readback.py").read_text()
 TRIAL_MIGRATION = (APP / "migrations/0008_trial_onboarding.sql").read_text()
 COMMERCIAL_MIGRATION = (APP / "migrations/0021_commercial_terms_20261005.sql").read_text()
+FREE_15000_MIGRATION = (APP / "migrations/0031_free_15000_20261010.sql").read_text()
 APPROVAL_MODE_MIGRATION = (APP / "migrations/0017_device_approval_mode.sql").read_text()
 
 def need(ok, code):
@@ -132,9 +133,10 @@ need(WORKER.count("error_code = 'DEVICE_REVOKED'") >= 2, "PORTAL_DEVICE_REVOKE_C
 need("function requirePortalMutationOrigin" in WORKER and 'if (!origin || origin !== expectedOrigin)' in WORKER and WORKER.count("requirePortalMutationOrigin(request);") >= 4, "PORTAL_MUTATION_ORIGIN_GUARD")
 need("fonts.googleapis.com" not in HTML and "fonts.gstatic.com" not in HTML, "EXTERNAL_FONT_DEPENDENCY_ABSENT")
 need("'TRIAL', 'Trial', 'HARA_COMMANDER_GOVERNED_INVOKE', 'CALENDAR_MONTH', 100, 'ACTIVE'" in TRIAL_MIGRATION, "TRIAL_PLAN_HISTORICAL_BASE")
-need("'TRIAL', 'Free', 'HARA_COMMANDER_GOVERNED_INVOKE', 'CALENDAR_MONTH', 10000, 'ACTIVE'" in COMMERCIAL_MIGRATION, "FREE_PLAN_CANONICAL_LIMIT")
+need("'TRIAL', 'Free', 'HARA_COMMANDER_GOVERNED_INVOKE', 'CALENDAR_MONTH', 10000, 'ACTIVE'" in COMMERCIAL_MIGRATION, "FREE_PLAN_HISTORICAL_LIMIT")
+need("SET unit_limit = 15000" in FREE_15000_MIGRATION and "plan_code = 'TRIAL'" in FREE_15000_MIGRATION, "FREE_PLAN_FINAL_15000")
 need("'STANDARD', 'Pro', 'HARA_COMMANDER_GOVERNED_INVOKE', 'NONE', NULL, 'ACTIVE'" in COMMERCIAL_MIGRATION, "PRO_PLAN_CANONICAL_UNLIMITED")
-need('10.000 <small>chamadas / mês</small>' in HTML and '10.000 chamadas renovadas todo mês' in HTML, "FREE_PLAN_UI_ALIGNMENT")
+need('15.000 <small>chamadas / mês</small>' in HTML and '15.000 chamadas renovadas todo mês' in HTML, "FREE_PLAN_UI_ALIGNMENT")
 need('R$ 80 <small>/ mês</small>' in HTML and 'Chamadas ilimitadas' in HTML, "PRO_PLAN_UI_ALIGNMENT")
 need('100 <small>execuções / mês</small>' not in HTML, "STALE_TRIAL_QUOTA_ABSENT")
 need(

@@ -1,0 +1,7 @@
+{
+  "alg": "RS256",
+  "kid": "commander-release-v2",
+  "manifest_sha256": "f99aa5437511e87a78a9e699959c7e243c6ce5f919abe4da99ed109e0925e124",
+  "schema": "hara.commander-release-signature.v1",
+  "signature": "WJ6yfaPufhv50cxs0DmcWQQCDGwevVRYyyo4Ok9EEDy8z7oDQKrtcIMUzt46GF8R3FPKiKflnC5GbvC2bIRyMv4688TwY0DEH9FSmGMsULWdvWrpFOfa-uWRXoYJSaO19vbSMOGPet4aAcige64Q1Ues5w5vdFA24szkFGCLTsskCOulUuR-1K43h1Nx9Et0DGdLtfHOBC83NMwU_qzwUB7Yky5FwryyTSep2UVrYktvsH1EwQ-JC5l6l_Rz7qtW3t6fwUlTC5Y6GyvgoSdHoK9dAziIJsJCIFSg-3jTU6VHFYqwRLkaHnIqls9gVlzAEGpcduLHLezBkzTDZn8HfCOFHSMKoIzRt49IAEjZ42sWpV9WNGFEME7_DkP0WeZOLyWt98G-u1Yi4FqvFpkwtQgp3JOcgklvpWZHjQJnQczX8aE7Ir0Manc866qJFBhgOwWh1RgoZzNy9MkDHkk6vLvZLt_Ct8nzbPOtdRFUIm1Arc-B-UPjTYHSpd2IyCKw"
+}

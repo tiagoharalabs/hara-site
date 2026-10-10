@@ -63,7 +63,7 @@ Execução total de aproximadamente **5,7 segundos** no Services com carga isola
 |---|---|---|
 | **P0** | Assinar e distribuir release de cliente que contém os limites de RAM/disco e aprovação segura por padrão | RS256 manifesto/hash, rollback de versão anterior, instalação nova e update por dispositivo comprovados; teste negativo de adulteração |
 | **P0** | Segundo cliente/tenant genuinamente independente | OAuth, seleção, pairing, revogação, token cross-tenant e conteúdo privado isolados; conta Founder não basta |
-| **P0** | Quota Free real de 10.000/mês | Última unidade aceita, próximo request `QUOTA_EXCEEDED`, replay idempotente, concorrência, retorno de cota em falha, reset mensal |
+| **P0** | Quota Free real de 15.000/mês | Última unidade aceita, próximo request `QUOTA_EXCEEDED`, replay idempotente, concorrência, retorno de cota em falha, reset mensal |
 | **P0** | Stripe | Produto e preço reais, API key/webhook assinados no Worker correto, checkout TEST, falha/recuperação/cancelamento, canário LIVE autorizado e reconciliação de entitlement |
 | **P0** | Soak/carga DEV com identidade independente | 24 horas, reconexão/restart/hibernação, prova de isolamento, sem duplicidade de execução ou cobrança, fila recebe `DEVICE_BUSY` sob saturação, memória local dentro do orçamento |
 | **P0** | Fronteira de plataformas anunciadas | Linux cliente com distribuição assinada; Windows somente se instala, faz update, respeita aprovação e prova Event V2 com rollback. Se não, lançar beta explicitamente Linux-only |
