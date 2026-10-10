@@ -399,3 +399,13 @@ Regressões antigas do pacote Event V2 foram reconciliadas ao Worker autoritativ
 Authoritative report: `docs/operations/HARA_COMMANDER_EVENT_V2_PROD_SERVER_FOUNDER_CANARY_20261009.md`.
 
 **Final operational closeout:** The post-deploy commercial plugin ping was correlated by Agent SHA-256 receipt to exactly one completed production D1 `HARA-CUSTOMER-MCP` call. The isolated DEV Event V2 canary process was then stopped cleanly; the production signed 0.3.41 service remains active. Feature-disable config was dry-run compiled without changing v3 migration or signed assets. PROD WebSocket server capability is live, but no production device has transitioned off 0.3.41 polling.
+
+## 2026-10-09 ~23:00 BRT — Commercial Founder Event V2 LIVE PASS
+
+**NEW AUTHORITATIVE CURRENT:** Núcleo A now executes the **signed Event V2 v0.3.44** Agent via production Cloudflare hibernating WebSocket; actual ChatGPT commercial MCP `ping`, `get_device_info`, `read_file`, `list_processes` all **PASS**. Agent SHA-256 receipts from commercial calls were read and validated on the local device, request IDs correlated to exact PROD D1 `COMPLETED` rows. DEV-only transient RPC still disabled in PROD; OAuth and signed v1 trust anchor unchanged.
+
+User-manager: `hara-commander-agent-v2.service=active` (0 restarts), `hara-commander-agent.service=inactive/enabled`, temporary 15-minute fallback timer **cancelled** after proof. Boot still defaults to signed 0.3.41 legacy; do not claim persistent v2 after reboot. PROD D1 Founder device metadata conditionally synchronized to `agent_version=0.3.44`, `tunnel_mode=EVENT_V2`, `state=ACTIVE` after signed proof. All other devices untouched.
+
+**Transport efficiency:** fixed 10-second idle HTTP polling has been removed from the running Event V2 Agent loop; socket keepalive is RFC6455 PING. Real-world Cloudflare billing/request count reduction must still be measured across representative idle windows before asserting cost savings.
+
+Report (append-terminal-truth): `docs/operations/HARA_COMMANDER_V2_SIGNED_FOUNDER_CANARY_PROOF_20261009.md`. Remaining gates: soak, reboot-safe failover/enablement, Cloudflare request metrics, tenant/Free billing canary, Windows signed parity, expand per-device allowlist sequentially only after verification.
