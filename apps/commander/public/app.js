@@ -921,7 +921,8 @@
   }
 
   function setDeviceSectionTab(next) {
-    deviceSectionTab = next === "connect" ? "connect" : "devices";
+    const sections = ["devices", "connect", "commands"];
+    deviceSectionTab = sections.includes(next) ? next : "devices";
     document.querySelectorAll("[data-device-section-tab]").forEach((button) => {
       const active = button.dataset.deviceSectionTab === deviceSectionTab;
       button.classList.toggle("active", active);
@@ -931,8 +932,6 @@
     document.querySelectorAll("[data-device-section-panel]").forEach((panel) => {
       panel.hidden = panel.dataset.deviceSectionPanel !== deviceSectionTab;
     });
-    const help = document.getElementById("devicesHelp");
-    if (help) help.hidden = deviceSectionTab !== "devices";
     if (deviceSectionTab === "devices" && devicesCache) renderDevices(devicesCache);
   }
 
@@ -1001,8 +1000,6 @@
     }
     setText("landingConnections", number(readyCount));
     setText("landingConnectionsDetail", readyCount ? "Commander pronto" : "Nenhum computador autorizado");
-    setText("quickStartDeviceState",readyCount ? (readyCount === 1 ? "1 computador pronto" : readyCount + " computadores prontos") : "Aguardando autorização local");
-    document.getElementById("quickStartDeviceStep")?.classList.toggle("done",readyCount > 0);
     if (readyCount > 0) {
       setState(
         "Pronto",
@@ -1987,6 +1984,18 @@
       return;
     }
 
+    const guideCommand = event.target.closest("[data-copy-guide-command]");
+    if (guideCommand) {
+      event.preventDefault();
+      const code = guideCommand.closest(".devices-command-copy")?.querySelector("code");
+      if (!code?.textContent?.trim()) {
+        showToast("Não foi possível copiar este comando.");
+        return;
+      }
+      copyText(code.textContent.trim(), "Comando copiado para o terminal.");
+      return;
+    }
+
     const deviceDiagnostic = event.target.closest("[data-copy-device-diagnostic]");
     if (deviceDiagnostic) {
       event.preventDefault();
@@ -2175,7 +2184,10 @@
     const deviceSectionTabButton = event.target.closest?.("[data-device-section-tab]");
     if (deviceSectionTabButton && ["ArrowLeft", "ArrowRight"].includes(event.key)) {
       event.preventDefault();
-      const nextSection = deviceSectionTabButton.dataset.deviceSectionTab === "devices" ? "connect" : "devices";
+      const order = ["devices", "connect", "commands"];
+      const index = order.indexOf(deviceSectionTabButton.dataset.deviceSectionTab);
+      const delta = event.key === "ArrowRight" ? 1 : -1;
+      const nextSection = order[(index + delta + order.length) % order.length];
       setDeviceSectionTab(nextSection);
       document.querySelector('[data-device-section-tab="' + nextSection + '"]')?.focus();
       return;

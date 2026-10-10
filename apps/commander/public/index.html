@@ -11,7 +11,7 @@
   <style>html.auth-bootstrap-pending body>*{visibility:hidden}html.auth-bootstrap-pending body::before{content:"H.A.R.A. COMMANDER · verificando sessão";position:fixed;inset:0;display:grid;place-items:center;visibility:visible;background:#eef8fd;color:#315d78;font:600 12px/1.4 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:.12em}html[data-theme="dark"].auth-bootstrap-pending body::before{background:#061721;color:#a9c8d9}</style>
   <title>H.A.R.A. Commander</title>
   <link rel="icon" type="image/webp" href="./assets/hara-commander-royal.webp?v=20260921-final1" />
-  <link rel="stylesheet" href="./styles.css?v=20261010-devices-minimal1" />
+  <link rel="stylesheet" href="./styles.css?v=20261010-guided-setup1" />
 </head>
 <body>
   <a class="skip-link" href="#mainContent">Pular para o conteúdo</a>
@@ -276,6 +276,9 @@
             <button type="button" role="tab" aria-selected="false" tabindex="-1" data-device-section-tab="connect">
               <span aria-hidden="true">＋</span> Conectar novo
             </button>
+            <button type="button" role="tab" aria-selected="false" tabindex="-1" data-device-section-tab="commands">
+              Comandos e integrações
+            </button>
           </div>
 
           <div class="devices-section-panel" data-device-section-panel="devices" role="tabpanel">
@@ -301,50 +304,18 @@
             </article>
           </div>
 
-          <details class="devices-help" id="devicesHelp">
-            <summary><span>Primeiros passos e integrações</span><small>Guia para conectar o primeiro computador</small></summary>
-          <article class="panel quickstart-panel">
-            <div class="panel-head"><div><span>COMECE AGORA</span><h2>Do zero ao primeiro comando em 3 passos</h2></div></div>
-            <div class="quickstart-steps">
-              <div id="quickStartDeviceStep"><span>1</span><p><b>Conecte um computador</b><small id="quickStartDeviceState">Aguardando dispositivo online</small></p></div>
-              <div><span>2</span><p><b>Conecte no ChatGPT</b><small>Escolha o MCP H.A.R.A. Commander e faça login pelo HARA Identity (OAuth). Nenhuma chave da OpenAI Platform é necessária. Enquanto o plugin não estiver publicado no diretório, use a conexão MCP personalizada.</small></p></div>
-              <div><span>3</span><p><b>Execute seu primeiro comando</b><small>O MCP comercial encaminha a solicitação ao Agent pareado. A operação ocorre na máquina; o conteúdo transita pelo Gateway. Ações sensíveis obedecem às políticas locais.</small></p></div>
-            </div>
-          </article>
-
-          <article class="panel device-where-panel">
-            <div class="panel-head"><div><span>ONDE USAR</span><h2>Conecte ao cliente que preferir</h2></div></div>
-            <div class="device-where-list">
-              <div><span class="where-badge where-badge-brand" title="ChatGPT — OpenAI"><img src="./brand/chatgpt-official.webp" alt="" aria-hidden="true" /></span><p><b>ChatGPT</b><small>Conecte o MCP remoto H.A.R.A. Commander e autorize pelo HARA Identity. O Agent executa localmente.</small></p><span class="where-state">Cloud MCP</span></div>
-              <div><span class="where-badge where-badge-brand" title="Claude — Anthropic"><img src="./brand/claude-official.svg" alt="" aria-hidden="true" /></span><p><b>Codex / IDE local</b><small>Conecte diretamente a <code>hara-commander mcp</code> por stdio, sem Gateway H.A.R.A.</small></p><span class="where-state">Local</span></div>
-              <div><span class="where-badge">MCP</span><p><b>Qualquer cliente MCP local</b><small>Para ferramentas na mesma máquina, use <code>hara-commander mcp</code> por STDIO, sem relay. Clientes remotos usam o MCP HTTPS comercial com OAuth.</small></p><button class="link-button" type="button" data-copy-local-mcp>Copiar comando local</button></div>
-            </div>
-          </article>
-          </details>
-
           <div class="devices-section-panel" data-device-section-panel="connect" role="tabpanel" hidden>
             <div class="device-onboarding">
               <article class="panel device-install-card device-onboarding-flow">
                 <div class="panel-head">
-                  <div><span>NOVO DISPOSITIVO</span><h2>Conectar ao Commander</h2></div>
+                  <div><span>NOVO DISPOSITIVO</span><h2>Instalar e parear</h2></div>
                   <span class="status-pill"><i></i> Pronto para instalar</span>
                 </div>
-                <p>Gere um código temporário e instale o Agent. No modo Cloud (padrão), conecte o MCP comercial no ChatGPT e autentique pelo HARA Identity: o Gateway encaminha comandos, enquanto a execução fica na máquina. O modo Direct é opcional e privado por workspace.</p>
-
-                <div class="onboarding-step">
-                  <span class="onboarding-step-no">01</span>
-                  <div><b>Gere o código de pareamento</b><small>Válido por até 10 minutos e substituído quando um novo código é criado.</small></div>
-                  <button class="btn btn-primary" type="button" data-create-pairing>Gerar código</button>
-                </div>
-
-                <div class="pairing-panel pairing-inline" id="pairingPanel" tabindex="-1" aria-live="polite" hidden>
-                  <div class="pairing-inline-head"><strong>Código temporário</strong><span id="pairingExpiry">10 minutos</span></div>
-                  <div class="pairing-token"><code id="pairingToken">—</code><button class="btn btn-secondary small" type="button" data-copy-pairing>Copiar código</button></div>
-                </div>
+                <p>Em sua conta H.A.R.A., escolha o sistema, gere um código e execute o instalador no computador que deseja conectar. O pareamento usa um código temporário, sem informar tokens na linha de comando.</p>
 
                 <div class="onboarding-step onboarding-step-stack onboarding-platform-policy">
-                  <span class="onboarding-step-no">02</span>
-                  <div><b>Escolha a plataforma</b><small>Linux e Windows: Cloud por padrão, sem chave da OpenAI. O cliente instala sem iniciar automaticamente no próximo login ou boot. Autorizações sensíveis exigem confirmação local.</small></div>
+                  <span class="onboarding-step-no">01</span>
+                  <div><b>Escolha o sistema</b><small>Linux ou Windows. O instalador oficial é baixado por HTTPS e verifica a release assinada.</small></div>
                   <div class="onboarding-choice-row">
                     <div>
                       <small class="choice-label">Sistema</small>
@@ -353,11 +324,10 @@
                         <button type="button" role="tab" aria-selected="false" data-os-choice="windows">Windows</button>
                       </div>
                     </div>
-                    <div>
-                      <small class="choice-label">Segurança</small>
-                      <small class="install-note">Pedir confirmação por ação (padrão). O técnico pode ajustar políticas avançadas diretamente no computador.</small>
-                    </div>
+
                   </div>
+                  <details class="devices-setup-advanced">
+                    <summary>Configurações avançadas · Direct</summary>
                   <div class="onboarding-choice-row">
                     <div>
                       <small class="choice-label">Transporte</small>
@@ -368,33 +338,85 @@
                       <small class="install-note" id="transportModeNote">Cloud: o Gateway comercial encaminha comandos; nenhuma chave da OpenAI Platform é necessária. O Direct usa OpenAI Secure MCP Tunnel privado, e a execução permanece local.</small>
                     </div>
                   </div>
-                  <small class="install-note">Início manual: o instalador liga o Agent apenas para comprovar a instalação; ele não fica configurado para iniciar no próximo boot. Em modo Direct, o túnel também começa desligado. Usuários avançados podem habilitar persistência localmente pelo sistema operacional.</small>
+                  </details>
+                  <small class="install-note">Padrão: Cloud com confirmação por ação e sem início automático no próximo boot. O Direct é opcional.</small>
+                </div>
+
+                <div class="onboarding-step">
+                  <span class="onboarding-step-no">02</span>
+                  <div><b>Gere o código no portal</b><small>Copie e cole quando o instalador solicitar “Pairing token”. Uso único, válido por até 10 minutos.</small></div>
+                  <button class="btn btn-primary" type="button" data-create-pairing>Gerar código</button>
+                </div>
+
+                <div class="pairing-panel pairing-inline" id="pairingPanel" tabindex="-1" aria-live="polite" hidden>
+                  <div class="pairing-inline-head"><strong>Código temporário</strong><span id="pairingExpiry">10 minutos</span></div>
+                  <div class="pairing-token"><code id="pairingToken">—</code><button class="btn btn-secondary small" type="button" data-copy-pairing>Copiar código</button></div>
                 </div>
 
                 <div class="onboarding-step onboarding-step-stack">
                   <span class="onboarding-step-no">03</span>
-                  <div><b>Instale e abra a sessão</b><small>Copie o comando, execute e cole o código de pareamento. A instalação faz uma inicialização de verificação; para usar depois de reiniciar, abra a sessão manualmente.</small></div>
+                  <div><b>Instale no computador</b><small>Copie o comando para o Terminal Linux ou PowerShell Windows. A instalação baixa a release oficial assinada por HTTPS. <a class="devices-repo-link" href="https://github.com/tiagoharalabs/hara-site/tree/hara-commander-commercial-v0.3.43-signed-v2/apps/commander/release-bundles/commercial-0.3.43-v2" target="_blank" rel="noopener noreferrer">Ver a distribuição assinada no GitHub ↗</a></small></div>
                   <div class="install-pane" data-os-panel="linux">
                     <div class="install-command"><code data-install-linux-code>(tmp=$(mktemp) && trap 'rm -f $tmp' EXIT && curl -fsS --proto '=https' --tlsv1.2 --location --max-redirs 0 https://commander.haralabs.com.br/install/linux.sh -o $tmp && HARA_COMMANDER_APPROVAL_MODE=ASK_EVERY_ACTION HARA_COMMANDER_TRANSPORT_MODE=OUTBOUND_RELAY HARA_COMMANDER_TUNNEL_AUTOSTART=OFF HARA_COMMANDER_URL=https://commander.haralabs.com.br bash $tmp)</code><button class="btn btn-secondary small" type="button" data-copy-linux>Copiar comando Linux</button></div>
-                    <small class="install-note" data-cloud-onboarding-note>Depois, conecte <code>https://commander.haralabs.com.br/api/mcp?profile=simple</code> no ChatGPT, com HARA Identity OAuth. O plugin ainda precisa de aprovação para aparecer no diretório.</small><small class="install-note" data-direct-onboarding-note hidden>Somente no modo Direct: Configure o túnel OpenAI via <code>hara-commander tunnel connect</code> (alias <code>hara-commander tunnel configure</code>), na etapa "Autorize por 6 horas", gere o código local e execute <code>hara-commander authorize</code>. Inicie com <code>hara-commander tunnel start</code> e desconecte com <code>hara-commander tunnel stop</code>. Esse túnel exige credenciais da OpenAI Platform.</small>
-                    <div class="install-command" data-direct-onboarding-note hidden><code>hara-commander tunnel start</code><button class="btn btn-secondary small" type="button" data-copy-tunnel-start>Copiar início manual</button></div>
-                    <div class="install-command"><code>hara-commander start</code><button class="btn btn-secondary small" type="button" data-copy-agent-start="linux">Copiar iniciar</button></div>
-                    <div class="install-command"><code>hara-commander stop</code><button class="btn btn-secondary small" type="button" data-copy-agent-stop="linux">Copiar parar</button></div>
-                    <small class="install-note"><b>Depois de cada reinicialização:</b> execute <code>hara-commander start</code> no terminal. O Agent conecta e aguarda suas aprovações. Ctrl+C ou <code>hara-commander stop</code> desconecta. A instalação não habilita o início automático.</small>
+                    <small class="install-note" data-cloud-onboarding-note>Para conectar o ChatGPT depois do pareamento, abra <b>Comandos e integrações → MCP remoto</b> e autentique pelo HARA Identity.</small><small class="install-note" data-direct-onboarding-note hidden>Modo Direct: após parear, abra <b>Comandos e integrações → Direct</b> para configurar e autorizar o túnel OpenAI por 6 horas. Requer credenciais próprias da OpenAI Platform.</small>
+                    <small class="install-note devices-token-reminder">Quando aparecer <b>Pairing token</b>, cole o código do passo 02 e pressione Enter. Depois, abra <b>Comandos e integrações</b> para iniciar ou parar as próximas sessões.</small>
                   </div>
                   <div class="install-pane" data-os-panel="windows" hidden>
                     <div class="install-command"><code data-install-windows-code>$haraPrevUrl=$env:HARA_COMMANDER_URL; $haraPrevApproval=$env:HARA_COMMANDER_APPROVAL_MODE; $haraInstaller=Join-Path $env:TEMP ('hara-commander-install-'+[guid]::NewGuid().ToString('N')+'.ps1'); try { $env:HARA_COMMANDER_URL='https://commander.haralabs.com.br'; $env:HARA_COMMANDER_APPROVAL_MODE='ASK_EVERY_ACTION'; Invoke-WebRequest -Uri https://commander.haralabs.com.br/install/windows.ps1 -OutFile $haraInstaller -UseBasicParsing -MaximumRedirection 0 -ErrorAction Stop; & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $haraInstaller; if ($LASTEXITCODE -ne 0) { throw ('HARA_COMMANDER_INSTALL_EXIT_'+$LASTEXITCODE) } } finally { Remove-Item -LiteralPath $haraInstaller -Force -ErrorAction SilentlyContinue; $env:HARA_COMMANDER_URL=$haraPrevUrl; $env:HARA_COMMANDER_APPROVAL_MODE=$haraPrevApproval }</code><button class="btn btn-secondary small" type="button" data-copy-windows>Copiar comando Windows</button></div>
-                    <div class="install-command"><code data-agent-start-command="windows">$agent=Join-Path $env:LOCALAPPDATA 'HARA Commander\hara-commander-agent.ps1'; &amp; powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $agent start</code><button class="btn btn-secondary small" type="button" data-copy-agent-start="windows">Copiar iniciar</button></div>
-                    <div class="install-command"><code data-agent-stop-command="windows">$agent=Join-Path $env:LOCALAPPDATA 'HARA Commander\hara-commander-agent.ps1'; &amp; powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $agent stop</code><button class="btn btn-secondary small" type="button" data-copy-agent-stop="windows">Copiar parar</button></div>
-                    <small class="install-note"><b>Depois de cada login:</b> inicie manualmente no PowerShell. Nenhuma tarefa roda no logon por padrão. Windows continua em homologação para operações sensíveis.</small>
+                    <small class="install-note devices-token-reminder">O PowerShell solicitará <b>Pairing token</b> em campo protegido. Cole o código do passo 02. Para sessões futuras, use a aba <b>Comandos e integrações</b>.</small>
                   </div>
                 </div>
 
                 <div class="onboarding-finish onboarding-ready">
-                  <div><b>Pronto</b><small>O computador aparece online somente enquanto o Agent está conectado e autorizado. Diagnóstico: <code>hara-commander doctor</code>. O próximo boot não reinicia a conexão automaticamente.</small></div>
+                  <div><b>Concluído</b><small>Depois de parear, vá a <b>Dispositivos</b> e clique em <b>Atualizar</b>. O Agent só fica online enquanto estiver ligado; não inicia automaticamente após reiniciar.</small></div>
                 </div>
               </article>
             </div>
+          </div>
+
+          <div class="devices-section-panel" data-device-section-panel="commands" role="tabpanel" hidden>
+            <article class="panel devices-command-guide">
+              <div class="panel-head">
+                <div><span>REFERÊNCIA RÁPIDA</span><h2>Comandos e integrações</h2></div>
+              </div>
+              <p class="devices-guide-intro">Depois de instalar e informar o código de pareamento, abra a sessão quando precisar. Os comandos abaixo podem ser copiados diretamente no terminal do computador.</p>
+
+              <div class="devices-command-grid">
+                <section class="devices-command-group" aria-labelledby="devices-linux-commands">
+                  <div class="devices-command-group-head"><span class="devices-command-os">LIN</span><div><h3 id="devices-linux-commands">Linux</h3><small>Terminal local</small></div></div>
+                  <div class="devices-command-row"><div><b>Iniciar</b><small>Conecta e abre a sessão de autorização.</small></div><div class="devices-command-copy"><code>hara-commander start</code><button type="button" class="btn btn-secondary small" data-copy-guide-command>Copiar</button></div></div>
+                  <div class="devices-command-row"><div><b>Verificar status</b><small>Confere sessão e estado do Agent.</small></div><div class="devices-command-copy"><code>hara-commander status</code><button type="button" class="btn btn-secondary small" data-copy-guide-command>Copiar</button></div></div>
+                  <div class="devices-command-row"><div><b>Parar</b><small>Desconecta e encerra a autorização.</small></div><div class="devices-command-copy"><code>hara-commander stop</code><button type="button" class="btn btn-secondary small" data-copy-guide-command>Copiar</button></div></div>
+                  <div class="devices-command-row"><div><b>Diagnóstico</b><small>Verifica a instalação e conectividade.</small></div><div class="devices-command-copy"><code>hara-commander doctor</code><button type="button" class="btn btn-secondary small" data-copy-guide-command>Copiar</button></div></div>
+                </section>
+
+                <section class="devices-command-group" aria-labelledby="devices-windows-commands">
+                  <div class="devices-command-group-head"><span class="devices-command-os">WIN</span><div><h3 id="devices-windows-commands">Windows</h3><small>PowerShell local · beta</small></div></div>
+                  <div class="devices-command-row"><div><b>Iniciar</b><small>Conecta e abre a sessão no Windows.</small></div><div class="devices-command-copy"><code>$agent=Join-Path $env:LOCALAPPDATA 'HARA Commander\hara-commander-agent.ps1'; &amp; powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $agent start</code><button type="button" class="btn btn-secondary small" data-copy-guide-command>Copiar</button></div></div>
+                  <div class="devices-command-row"><div><b>Verificar status</b><small>Confere se a sessão local está ativa.</small></div><div class="devices-command-copy"><code>$agent=Join-Path $env:LOCALAPPDATA 'HARA Commander\hara-commander-agent.ps1'; &amp; powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $agent status</code><button type="button" class="btn btn-secondary small" data-copy-guide-command>Copiar</button></div></div>
+                  <div class="devices-command-row"><div><b>Parar</b><small>Encerra a sessão e desliga a tarefa do Agent.</small></div><div class="devices-command-copy"><code>$agent=Join-Path $env:LOCALAPPDATA 'HARA Commander\hara-commander-agent.ps1'; &amp; powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $agent stop</code><button type="button" class="btn btn-secondary small" data-copy-guide-command>Copiar</button></div></div>
+                  <p class="devices-command-note">A versão Windows está em beta: operações sensíveis ainda exigem homologação. O Agent não inicia sozinho após o login.</p>
+                </section>
+
+                <section class="devices-command-group devices-command-group-wide" aria-labelledby="devices-mcp-commands">
+                  <div class="devices-command-group-head"><span class="devices-command-os">MCP</span><div><h3 id="devices-mcp-commands">Integração com clientes MCP</h3><small>Local ou remoto, conforme a capacidade do cliente</small></div></div>
+                  <div class="devices-command-row"><div><b>MCP local · Linux</b><small>STDIO para IDEs e clientes MCP no próprio computador.</small></div><div class="devices-command-copy"><code>hara-commander mcp</code><button type="button" class="btn btn-secondary small" data-copy-guide-command>Copiar</button></div></div>
+                  <div class="devices-command-row"><div><b>MCP remoto · ChatGPT e clientes compatíveis</b><small>Use a URL HTTPS no cliente com suporte a OAuth. Entre pelo HARA Identity.</small></div><div class="devices-command-copy"><code>https://commander.haralabs.com.br/api/mcp?profile=simple</code><button type="button" class="btn btn-secondary small" data-copy-guide-command>Copiar URL</button></div></div>
+                  <p class="devices-command-note">No Windows, use o MCP remoto HTTPS; o modo local STDIO ainda não está disponível no Agent comercial Windows.</p>
+                </section>
+              </div>
+
+              <p class="devices-sync-note"><b>Sincronização:</b> automática enquanto o Agent estiver conectado. Para ver a presença atual, volte a <b>Dispositivos → Atualizar</b>. Não existe comando manual de sincronização.</p>
+
+              <details class="devices-direct-guide">
+                <summary>Direct · túnel OpenAI privado (Linux avançado)</summary>
+                <p>Opcional. Configure a identidade do túnel, autorize pelo portal por 6 horas e execute somente quando precisar. Não é necessário para o MCP comercial Cloud.</p>
+                <div class="devices-command-copy"><code>hara-commander tunnel configure</code><button type="button" class="btn btn-secondary small" data-copy-guide-command>Copiar</button></div>
+                <div class="devices-command-copy"><code>hara-commander authorize</code><button type="button" class="btn btn-secondary small" data-copy-guide-command>Copiar</button></div>
+                <div class="devices-command-copy"><code>hara-commander tunnel start</code><button type="button" class="btn btn-secondary small" data-copy-tunnel-start>Copiar iniciar</button></div>
+                <div class="devices-command-copy"><code>hara-commander tunnel stop</code><button type="button" class="btn btn-secondary small" data-copy-guide-command>Copiar parar</button></div>
+              </details>
+            </article>
           </div>
         </div>
       </div>
@@ -617,6 +639,6 @@
     </nav>
   </template>
 
-  <script src="./app.js?v=20261010-devices-minimal1"></script>
+  <script src="./app.js?v=20261010-guided-setup1"></script>
 </body>
 </html>

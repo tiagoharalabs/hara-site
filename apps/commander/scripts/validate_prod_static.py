@@ -70,10 +70,10 @@ need(
     and 'idx_commander_devices_approval_mode' in APPROVAL_MODE_MIGRATION,
     "APPROVAL_MODE_MIGRATION",
 )
-need("styles.css?v=20261010-devices-minimal1" in HTML, "STYLE_CACHE_KEY")
-need("app.js?v=20261010-devices-minimal1" in HTML, "SCRIPT_CACHE_KEY")
-need('./brand/chatgpt-official.webp' in HTML and (APP / "public/brand/chatgpt-official.webp").stat().st_size > 0, "CHATGPT_BRAND_ICON")
-need('./brand/claude-official.svg' in HTML and (APP / "public/brand/claude-official.svg").stat().st_size > 0, "CLAUDE_BRAND_ICON")
+need("styles.css?v=20261010-guided-setup1" in HTML, "STYLE_CACHE_KEY")
+need("app.js?v=20261010-guided-setup1" in HTML, "SCRIPT_CACHE_KEY")
+need((APP / "public/brand/chatgpt-official.webp").stat().st_size > 0, "CHATGPT_BRAND_ASSET_PRESERVED")
+need((APP / "public/brand/claude-official.svg").stat().st_size > 0, "CLAUDE_BRAND_ASSET_PRESERVED_WITHOUT_MISLABELING_CODEX")
 need('class="where-badge">AI</span><p><b>ChatGPT' not in HTML and 'class="where-badge">AI</span><p><b>Claude' not in HTML, "CLIENT_PLACEHOLDER_BADGES_REMOVED")
 need(
     'class="neon-toggle"' in HTML
@@ -162,8 +162,10 @@ need(
 need(
     'data-device-section-tab="devices"' in HTML
     and 'data-device-section-tab="connect"' in HTML
+    and 'data-device-section-tab="commands"' in HTML
     and 'data-device-section-panel="devices"' in HTML
     and 'data-device-section-panel="connect"' in HTML
+    and 'data-device-section-panel="commands"' in HTML
     and 'function setDeviceSectionTab(next)' in JS
     and 'setDeviceSectionTab("devices")' in JS
     and ".devices-section-tabs" in CSS
@@ -204,13 +206,15 @@ need(
     "CUSTOMER_DEFAULT_DEVICES_ROUTE",
 )
 need(
-    'device-where-panel' in HTML
-    and '<b>ChatGPT</b>' in HTML
-    and 'OpenAI Secure MCP Tunnel' in HTML
-    and '<b>Codex / IDE local</b>' in HTML
-    and '<b>Qualquer cliente MCP local</b>' in HTML
-    and 'data-copy-local-mcp' in HTML,
-    "DEVICE_WHERE_TO_USE_SURFACE",
+    'data-device-section-tab="commands"' in HTML
+    and 'data-device-section-panel="commands"' in HTML
+    and 'Comandos e integrações' in HTML
+    and 'MCP local · Linux' in HTML
+    and 'MCP remoto · ChatGPT e clientes compatíveis' in HTML
+    and '/api/mcp?profile=simple' in HTML
+    and 'data-copy-guide-command' in HTML
+    and 'Não existe comando manual de sincronização' in HTML,
+    "DEVICE_COMMANDS_REFERENCE_TAB",
 )
 need(
     "UX polish: single page title, larger useful content, restrained glow" in CSS
@@ -232,9 +236,9 @@ need(
     and 'data-os-panel="linux"' in HTML
     and 'data-os-panel="windows"' in HTML
     and 'data-approval-choice="always"' not in HTML
-    and "Pedir confirmação" in HTML
+    and "confirmação por ação" in HTML
     and "manual" in HTML
-    and "<b>Pronto</b>" in HTML
+    and "<b>Concluído</b>" in HTML
     and "hara-commander doctor" in HTML
     and "Mantenha o console aberto enquanto usar a IA" not in HTML
     and 'tabindex="-1" aria-live="polite"' in HTML
@@ -249,10 +253,10 @@ need(
     and '<span class="onboarding-step-no">03</span>' in onboarding_block
     and '<span class="onboarding-step-no">04</span>' not in onboarding_block
     and '<span class="onboarding-step-no">05</span>' not in onboarding_block
-    and "Instale e abra a sessão" in onboarding_block
+    and "Instale no computador" in onboarding_block
     and "Sempre permitir" not in onboarding_block
     and "ASK_EVERY_ACTION" in onboarding_block
-    and "Início manual" in onboarding_block
+    and "não inicia automaticamente" in onboarding_block
     and "sessão de IA precisa ser aberta manualmente" not in onboarding_block,
     "COMMERCIAL_ONBOARDING_THREE_STEPS",
 )
@@ -411,15 +415,20 @@ need(
     "DEVICE_SELF_SERVICE_SUPPORT",
 )
 need(
-    'class="panel quickstart-panel"' in HTML
-    and 'id="quickStartDeviceState"' in HTML
-    and 'Configure o túnel OpenAI' in HTML
+    'class="devices-help"' not in HTML
+    and 'class="panel quickstart-panel"' not in HTML
+    and 'id="pairingPanel"' in HTML
+    and 'data-create-pairing' in HTML
+    and 'data-copy-pairing' in HTML
+    and 'Pairing token' in HTML
+    and 'data-install-linux-code' in HTML
+    and 'data-install-windows-code' in HTML
+    and 'class="devices-setup-advanced"' in HTML
     and 'hara-commander tunnel configure' in HTML
-    and 'Autorize por 6 horas' in HTML
     and 'hara-commander authorize' in HTML
-    and 'quickStartDeviceStep' in JS
-    and 'readyCount > 0' in JS,
-    "DEVICE_FIRST_SUCCESS_QUICKSTART",
+    and 'Comandos e integrações' in HTML
+    and 'function createPairing()' in JS,
+    "DEVICE_PAIR_INSTALL_FIRST_SUCCESS",
 )
 need(
     'id="serviceHealthPill"' in HTML

@@ -158,14 +158,17 @@ assert.equal(byClass(row("former-win"),"device-primary-action").length,0);
 console.log("DEVICE_MINIMALIST_HISTORY_AND_SAFETY=PASS");
 
 vm.runInContext('setDeviceSectionTab("connect")',context,{timeout:2500});
-assert.equal(document.getElementById("devicesHelp").hidden,true);
+assert.equal(vm.runInContext('deviceSectionTab',context),'connect');
+vm.runInContext('setDeviceSectionTab("commands")',context,{timeout:2500});
+assert.equal(vm.runInContext('deviceSectionTab',context),'commands');
 vm.runInContext('setDeviceSectionTab("devices")',context,{timeout:2500});
-assert.equal(document.getElementById("devicesHelp").hidden,false);
-console.log("DEVICE_MINIMALIST_HELP_HIDDEN_DURING_ONBOARDING=PASS");
+assert.equal(vm.runInContext('deviceSectionTab',context),'devices');
+console.log("DEVICE_MINIMALIST_THREE_TABS_NAVIGATION=PASS");
 
-assert.match(html,/<details class="devices-help" id="devicesHelp">/);
+assert.match(html,/data-device-section-tab="commands"/);
+assert.match(html,/data-device-section-panel="commands"/);
 assert.match(html,/id="deviceStatusSummary"/);
-assert.doesNotMatch(html,/<details class="devices-help" id="devicesHelp" open/);
+assert.doesNotMatch(html,/<details class="devices-help" id="devicesHelp"/);
 assert.match(css,/\[data-view="devices"\] \.device-overflow-panel/);
 assert.match(css,/html\[data-theme="dark"\] \[data-view="devices"\]/);
 assert.match(css,/--gold:/);
