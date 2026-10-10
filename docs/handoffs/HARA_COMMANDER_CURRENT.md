@@ -1,6 +1,6 @@
 # H.A.R.A. Commander — CURRENT (10/10/2026, após rollout 7/7)
 
-**DECISÃO MAIS RECENTE DE PREÇO/QUOTA — FREE=10.000 chamadas governadas/mês.** O dono revogou a autorização temporária de 15.000. D1 DEV e PROD estão em 10.000 via migração `0032_free_10000_revert_20261010.sql`. Pro permanece ilimitado. O conteúdo histórico abaixo sobre 15.000 está SUPERADO. Ver `docs/operations/HARA_COMMANDER_FREE_10K_REVERSION_20261010.md` e confirmar a atualização pública do portal.
+**DECISÃO MAIS RECENTE DE PREÇO/QUOTA — FREE=10.000 chamadas governadas/mês.** O dono revogou a autorização temporária de 15.000. D1 DEV e PROD estão em 10.000 via migração `0032_free_10000_revert_20261010.sql`. Pro permanece ilimitado. Cloudflare PROD `hara-commander` **43421f6f-5bee-4fe6-9bc4-982a3e10d019 a 100%**, readback de 10/10 assets assinados e portal JS/HTML 10.000 PASS; rollback `8c3eec1b-8783-4aff-868f-7f558e1d9db5`. O conteúdo histórico abaixo sobre 15.000 está SUPERADO. Ver `docs/operations/HARA_COMMANDER_FREE_10K_REVERSION_20261010.md`.
 
 **Antes de qualquer mutação ou decisão: ler primeiro**
 `docs/handoffs/HARA_COMMANDER_FLEET_EVENT_V2_HANDOFF_20261010.md`.

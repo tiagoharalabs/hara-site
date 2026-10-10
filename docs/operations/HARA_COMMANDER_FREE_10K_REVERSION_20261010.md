@@ -19,3 +19,13 @@ O plano comercial **Free**, código interno `TRIAL`, deve permitir **10.000 cham
 - Preservar rollback do Worker anterior e comprovar os hashes de todos os assets (HTML pode ter beacon Cloudflare injetado; comparar normalizando somente o beacon conhecido).
 
 A decisão **10.000** prevalece sobre todos os históricos mencionando **15.000**; Stripe/Pro continuam separados, assim como a política de conexão manual do Agent.
+
+## Resultado comprovado em produção — 10/10/2026
+
+- **D1 PROD e DEV**: `TRIAL=10000` com período `CALENDAR_MONTH`, `STANDARD=NULL` (ilimitado), exact readback PASS.
+- **Cloudflare DEV**: `hara-commander-dev-v2`, versão `46ae1490-6a31-439c-8b8c-937531bd550e`, interface Free 10.000. Conferidos 6/6 arquivos de prova incluindo quatro assets de instalação/assinatura.
+- **Cloudflare PROD**: `hara-commander`, versão `43421f6f-5bee-4fe6-9bc4-982a3e10d019` em **100%**, com cron e domínio sincronizados. Rollback imediato preservado na versão `8c3eec1b-8783-4aff-868f-7f558e1d9db5`.
+- **Readback público independente**: `validate_signed_commercial_v2_bundle.py --live` PASS **10/10 hashes** (HTML normalizado apenas quanto ao beacon Cloudflare), `commander_prod_deployment_readback.py --expect-version ...` PASS, site `/index.html` e `/app.js` mostram 10.000 e não 15.000, endpoint e runtime saudáveis.
+- **Gate offline**: 53/53 verificações PASS, incluindo billing e concorrência SQLite com 32 migrações reconhecidas.
+- **Instaladores assinados**: v0.3.43 RSA v2 byte-idênticos aos anteriores, `manual start` preservado. Nenhuma atualização ou reinício de Agent Founder causada pela mudança de quota.
+- O Stripe permanece sem checkout pago ativo; código Free no catálogo continua `TRIAL` somente por compatibilidade, e o Pro não foi alterado.
