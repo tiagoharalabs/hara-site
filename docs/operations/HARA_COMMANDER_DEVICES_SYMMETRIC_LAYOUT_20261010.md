@@ -33,4 +33,4 @@
 - HTML e CSS somente, sem mudanças no JavaScript, Worker API, credenciais, agentes, assinatura ou preços. Cache-bust do CSS atualizado para `20261010-command-frame1`.
 - Testes `test_devices_setup_commands_ui.mjs`, `test_devices_minimalist_ui.mjs`, `validate_prod_static.py` e gate offline **55/55 PASS**. Dry-run DEV/PROD PASS. DEV Worker `7438d28f-266f-46c4-9063-8bb00f2c7eb3`: **11/11 assets com SHA exato**, health 200.
 
-**Estado de publicação neste registro:** DEV comprovado. Documentar versão PROD e readback real após a promoção.
+**Estado final da publicação:** DEV comprovado, versão `7438d28f-266f-46c4-9063-8bb00f2c7eb3` com 11/11 SHA e health PASS. PROD `hara-commander` versão `4946ed70-bbf0-4605-98a8-063d0af0a8cb` **100%**, domínio e triggers sincronizados, rollback anterior `d305c678-7715-4594-b8b9-f1e697112702`. Readback independente confirmou **11/11 arquivos** com SHA exato, rotas `/` e `/index.html`, health/auth PASS, runtime drift CURRENT. A intervenção retirou apenas o rótulo redundante e restaurou a borda externa; Agents, instaladores assinados, esquema D1, identidade visual e autenticação seguem iguais.
