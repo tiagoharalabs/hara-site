@@ -1,19 +1,21 @@
-# H.A.R.A. Commander — CURRENT (10/10/2026)
+# H.A.R.A. Commander — CURRENT (10/10/2026, após rollout 7/7)
 
-**Início obrigatório de qualquer próxima conversa ou agente:** ler primeiro
-`docs/handoffs/HARA_COMMANDER_NEXT_CHAT_HANDOFF_20261010.md`.
+**Antes de qualquer mutação ou decisão: ler primeiro**
+`docs/handoffs/HARA_COMMANDER_FLEET_EVENT_V2_HANDOFF_20261010.md`.
 
 **Única branch autoritativa de produto:** `local/commander-product-current`.
 Worktree Services: `/srv/hara/repos/local-git-gateway/worktrees/hara-site/commander-product-current`.
 Repo GitHub: `tiagoharalabs/hara-site`.
 
-**Current truth resumida:** MCP comercial H.A.R.A. Commander funciona pelo ChatGPT no `nucleo-a` com Agent Linux **0.3.44 assinado**, transporte **EVENT_V2** WebSocket hibernável, user systemd persistente e watchdog local `HEALTHY`, com v1 assinada 0.3.41 guardada para rollback. Os outros dispositivos continuam em OUTBOUND_RELAY 0.3.41. **Stripe PROD e checkout pago não estão ativos.** Free = 10 mil chamadas governadas/mês; Pro = ilimitado no catálogo.
+## Estado atual comprovado
+- **Frota Linux Founder 7/7** em Agent **0.3.44 assinado per-device** e **EVENT_V2 WebSocket**, com `H_A_R_A__Commander.get_device_info` e `ping` comerciais PASS: `nucleo-a`, `sentinela-a`, `sentinela-b`, `sentinela-c`, `sentinela-d`, `ninja-blue`, `services`.
+- V2 `active+enabled`, v1 0.3.41 `inactive+disabled` mas preservada para rollback; watchdog/timer ativo em todos. Nenhum reboot nem failover forçado foi realizado. Windows permanece offline/revogado/não homologado em Event V2.
+- Worker PROD Cloudflare `hara-commander` versão `29e556f3-86af-476d-ba01-a764c3acb6a0` (100%) no último readback. Allowlist original Núcleo mais seis Founder configurados em **secret** `DEVICE_EVENT_V2_ADDITIONAL_DEVICE_IDS`; sem wildcard, sem liberar outros tenants.
+- `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_STANDARD` ainda PENDING. **Checkout pago NÃO ATIVO.** Catálogo Free = 10.000 chamadas governadas/mês; Standard Pro = R$80/mês (ilimitado no catálogo), não comprovadamente faturado.
+- Métrica anterior Cloudflare de canário Núcleo −20,7% polling, −19,7% requisições Worker entre duas janelas equivalentes; **não transferir esse percentual à frota 7/7 nem à economia de fatura sem nova medição**.
+- **Storage diverge de GitHub/local**: `092f35afc52827d6c5584f0401e9f60eaeb3d985`; `STORAGE_RECONCILIATION=HOLD`. Não forçar refs ou burlar hooks.
+- O handoff anterior `HARA_COMMANDER_NEXT_CHAT_HANDOFF_20261010.md` e o arquivo de preparação `HARA_COMMANDER_EVENT_V2_FOUNDER_FLEET_STAGE_20261010.md` são **históricos**, não a verdade atual de deploy.
 
-**Cloudflare medida:** `/api/device/calls/next` 1.756→1.392 (−20,73%) e requisições Worker 2.066→1.658 (−19,75%) em duas janelas 40min com quatro operações comerciais em cada, **agregadas por Worker, não economia isolada nem fatura comprovada**.
+**Próximos gates P0:** Stripe real checkout+webhook/idempotência; segundo tenant real e isolamento, homologação da franquia Free (fim do limite, concorrência, replay), roteiros de suporte/instalação externa. **P1:** Windows Event V2, cold boot/failover, métricas 24h por host e Cloudflare faturado, observabilidade `last_seen`, Storage/CI. Ver handoff completo para provas e rollback.
 
-**Governança Git crítica:** GitHub/local avançaram na linha limpa; **Storage está em ref divergente `092f35a...`** decorrente de commit com alteração `.github/workflows` recusada pelo token GH. Não forçar refs nem alegar sincronização tripla. Ver handoff completo e `docs/operations/HARA_COMMANDER_PUBLISH_SCOPE_AND_STORAGE_RECONCILIATION_20261009.md`.
-
-Handoff histórico extenso (pode conter checkpoints superados):
-`docs/handoffs/HARA_COMMANDER_PRODUCT_CURRENT_HANDOFF_20261008.md`.
-
-**Antes de executar mutações:** verificar estado vivo do plugin **`H_A_R_A__Commander` comercial**, do Agent, PROD D1, GitHub e Storage; não confundir com `H_A_R_A__Commander_Baseline`/Services nem distribuir chave privada RSA v2.
+**Não confundir ferramentas:** `H_A_R_A__Commander` é o MCP comercial; `H_A_R_A__Commander_Baseline` é superfície Services/admin. Verificar novamente com plugin comercial ao iniciar novo chat.

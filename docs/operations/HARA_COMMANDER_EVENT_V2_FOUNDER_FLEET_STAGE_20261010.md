@@ -1,4 +1,6 @@
-# H.A.R.A. Commander — preparação segura do rollout Event V2 na frota Founder
+# H.A.R.A. Commander — preparação histórica do rollout Event V2 na frota Founder
+
+> **ETAPA CONCLUÍDA:** este registro descreve a preparação antes das ativações. Para o resultado pós-deploy ver `docs/handoffs/HARA_COMMANDER_FLEET_EVENT_V2_HANDOFF_20261010.md`: 7/7 Linux Founder em Event V2 0.3.44, Worker atualizado e provas comerciais PASS.
 **10/10/2026 — checkpoint de preparação, NÃO uma declaração de rollout completo**
 
 ## Autoridades e baseline

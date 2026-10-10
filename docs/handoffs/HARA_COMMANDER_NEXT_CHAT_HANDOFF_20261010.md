@@ -1,7 +1,9 @@
-# H.A.R.A. Commander — handoff canônico e completo para o próximo chat
+# H.A.R.A. Commander — handoff histórico pré-migração total da frota
+
+> **SUPERADO NO ESTADO OPERACIONAL:** consultar primeiro `docs/handoffs/HARA_COMMANDER_FLEET_EVENT_V2_HANDOFF_20261010.md` e `HARA_COMMANDER_CURRENT.md`. Este documento permanece como trilha de decisões e provas do canário inicial, não como estado atual dos sete Agents.
 **Checkpoint de 10/10/2026 (America/Sao_Paulo) | Produto comercial, Event V2, Cloudflare, segurança, assinatura, billing e governança Git**
 
-> **COMECE POR AQUI.** Este documento é a verdade mais recente do produto neste checkpoint. As linhas antigas nos handoffs de 08 e 09/10 mostram a evolução histórica, **não** devem ser lidas como o estado atual quando contradizem este documento. Não iniciar outra frente de produto; continuar exclusivamente em `local/commander-product-current`.
+> **CHECKPOINT HISTÓRICO DO CANÁRIO ORIGINAL.** As seções a seguir representam a situação antes do rollout 7/7; consultar primeiro `HARA_COMMANDER_FLEET_EVENT_V2_HANDOFF_20261010.md` para a verdade atual. Não iniciar outra frente de produto; continuar exclusivamente em `local/commander-product-current`.
 
 ## 1. Identidade, produto e objetivo
 - Produto: **H.A.R.A. Commander** da H.A.R.A. Labs, aplicativo/MCP comercial para ChatGPT, com autenticação, computadores pareados, execução local governada, histórico/recibos e controle de plano. O Founder usa sua própria conta como canário real.
