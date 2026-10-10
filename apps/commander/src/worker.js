@@ -589,11 +589,18 @@ async function openDeviceEventChannel(env, request) {
   }
 
   const device = await resolveDeviceCredential(env, request);
-  // Production cutover is explicitly restricted to a single enrolled Founder
-  // device. A valid token from another customer cannot enable Event V2.
+  // Production Event V2 is explicitly limited to enrolled Founder-fleet
+  // device IDs. Credentials remain tenant/device-bound; arbitrary customer
+  // devices and wildcard allowlists remain denied.
   if (env.ENVIRONMENT === "PROD") {
     const canaryId = String(env.DEVICE_EVENT_V2_CANARY_DEVICE_ID || "").trim();
-    if (!canaryId || device.device_id !== canaryId) {
+    const extraRaw = String(env.DEVICE_EVENT_V2_ADDITIONAL_DEVICE_IDS || "").trim();
+    const extraIds = extraRaw ? extraRaw.split(",").map((id) => id.trim()) : [];
+    const deviceIdPattern = /^HARA-DEVICE-[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/;
+    if (!deviceIdPattern.test(canaryId) || extraIds.length > 8
+        || extraIds.some((id) => !deviceIdPattern.test(id) || id === canaryId)
+        || new Set(extraIds).size !== extraIds.length
+        || (device.device_id !== canaryId && !extraIds.includes(device.device_id))) {
       throw new Error("DEVICE_EVENT_V2_CANARY_DENIED");
     }
   }

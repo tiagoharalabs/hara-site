@@ -12,6 +12,7 @@ import base64
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -43,6 +44,13 @@ def build(target: Path) -> None:
     require(cfg["vars"].get("DEVICE_EVENT_V2_ENABLED") == "true", "FEATURE_FLAG")
     require(cfg["vars"].get("DEVICE_EVENT_V2_CANARY_DEVICE_ID") == EXPECTED_CANARY_DEVICE,
             "CANARY_ALLOWLIST")
+    fleet_ids_raw = str(cfg["vars"].get("DEVICE_EVENT_V2_ADDITIONAL_DEVICE_IDS") or "")
+    fleet_ids = fleet_ids_raw.split(",") if fleet_ids_raw else []
+    valid_device = re.compile(r"^HARA-DEVICE-[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$")
+    require(len(fleet_ids) <= 8 and len(fleet_ids) == len(set(fleet_ids))
+            and EXPECTED_CANARY_DEVICE not in fleet_ids
+            and all(valid_device.fullmatch(device) for device in fleet_ids),
+            "FOUNDER_FLEET_ALLOWLIST")
     require(cfg["vars"].get("DEVICE_EVENT_V2_TRANSIENT_RPC_ENABLED") is None,
             "TRANSIENT_PROD_MUST_BE_DISABLED")
     require(any(row.get("name") == "DEVICE_CHANNEL"
@@ -139,7 +147,9 @@ def build(target: Path) -> None:
     print("EVENT_V2_CUSTOMER_SECRETS_STAGED=FALSE")
     print("EVENT_V2_AGENT_UNSIGNED_0.3.43_EXCLUDED=TRUE")
     print("EVENT_V2_EMERGENCY_DISABLE_CONFIG="+str(rollback_path))
-    print("EVENT_V2_CANARY_ONLY=" + EXPECTED_CANARY_DEVICE)
+    print("EVENT_V2_FOUNDER_CANARY=" + EXPECTED_CANARY_DEVICE)
+    print("EVENT_V2_FOUNDER_FLEET_ADDITIONAL_DEVICE_COUNT=" + str(len(fleet_ids)))
+    print("EVENT_V2_OTHER_CUSTOMER_ALLOWLIST=WILDCARD_DENIED")
 
 def main() -> None:
     parser = argparse.ArgumentParser()
