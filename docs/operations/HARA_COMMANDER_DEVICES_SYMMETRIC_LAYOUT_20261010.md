@@ -24,3 +24,13 @@
 ## Situação de publicação
 
 **DEV e PROD publicados e comprovados:** DEV `hara-commander-dev-v2` versão `d122db6f-7ef4-410a-9656-d50c615d0a07`, 11/11 assets e health 200. PROD `hara-commander` versão `d305c678-7715-4594-b8b9-f1e697112702` com **100% do tráfego**, custom domain e cron sincronizados; rollback `9943523c-a573-40bc-bc86-2f45b2156643`. Readback público independente: **11/11 SHA exatos**, tanto `/` quanto `/index.html` convergiram, health/auth PASS, D1 Free=10.000 e Pro ilimitado; pings comerciais Núcleo A/Sentinela D Agent 0.3.44 PASS. Gate offline 55/55 PASS. A release comercial 0.3.43, assinatura e os serviços Founder continuam inalterados.
+
+## Refinamento adicional aprovado — moldura única externa
+
+- O texto redundante `REFERÊNCIA RÁPIDA` foi removido da aba Comandos e integrações; o título funcional permanece.
+- O contêiner externo `panel.devices-command-guide` voltou a ter moldura discreta de 1 px, raio de 14 px e padding de 20/24 px, preenchendo a mesma largura útil das abas Dispositivos/Conectar novo. Usa os tokens já existentes `--line` e `--white`, incluindo tema dark, **sem trocar as cores**.
+- Dentro da moldura permanecem apenas os três cards Linux, Windows (colunas simétricas) e MCP (largura total), mantendo fonte ampliada, comandos em linhas sem caixas internas e botões Copiar originais.
+- HTML e CSS somente, sem mudanças no JavaScript, Worker API, credenciais, agentes, assinatura ou preços. Cache-bust do CSS atualizado para `20261010-command-frame1`.
+- Testes `test_devices_setup_commands_ui.mjs`, `test_devices_minimalist_ui.mjs`, `validate_prod_static.py` e gate offline **55/55 PASS**. Dry-run DEV/PROD PASS. DEV Worker `7438d28f-266f-46c4-9063-8bb00f2c7eb3`: **11/11 assets com SHA exato**, health 200.
+
+**Estado de publicação neste registro:** DEV comprovado. Documentar versão PROD e readback real após a promoção.

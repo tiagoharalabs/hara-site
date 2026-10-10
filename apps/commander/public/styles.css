@@ -1417,8 +1417,10 @@ html[data-theme="dark"] [data-view="devices"] .devices-help{
 }
 [data-view="devices"] .devices-repo-link:hover{text-decoration:underline}
 [data-view="devices"] .devices-command-guide{
-  width:100%;max-width:none;min-width:0;margin:0;padding:0;
-  border:0;box-shadow:none;background:transparent;
+  width:100%;max-width:none;min-width:0;margin:0;
+  padding:20px 24px 24px;
+  border:1px solid var(--line);border-radius:14px;
+  box-shadow:none;background:var(--white);
 }
 [data-view="devices"] .devices-command-guide .panel-head h2{
   font-size:22px;line-height:1.25;letter-spacing:-.02em
