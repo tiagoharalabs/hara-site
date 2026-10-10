@@ -45,6 +45,9 @@ LOCAL_PORTAL_HOST = "127.0.0.1"
 LOCAL_PORTAL_PORT = max(1024, min(65535, int(os.environ.get("HARA_COMMANDER_LOCAL_PORT", "32145"))))
 APPROVAL_DIR = DATA_DIR / "approvals"
 PREIMAGE_DIR = DATA_DIR / "preimages"
+MAX_PREIMAGE_ENTRIES = 4096
+MAX_PREIMAGE_STORE_BYTES = 256 * 1024 * 1024
+PREIMAGE_CUSTODY_LOCK = threading.RLock()
 SESSION_MAX_SECONDS = 12 * 60 * 60
 PRODUCT_LEASE_REFRESH_SECONDS = 4 * 60 * 60
 LOCAL_METERING_MIN_INTERVAL_SECONDS = 60 * 60
@@ -115,6 +118,11 @@ PROCESS_MUTATION_TOOLS = {
 }
 PROCESS_SESSIONS = {}
 MAX_PROCESS_LINES = 5000
+MAX_PROCESS_LINE_CHARS = 8192
+MAX_PROCESS_BUFFER_CHARS = 2 * 1024 * 1024
+MAX_PROCESS_ACTIVE_SESSIONS = 16
+MAX_PROCESS_RETAINED_SESSIONS = 48
+PROCESS_FINISHED_RETENTION_SECONDS = 60 * 60
 
 def _is_process_tool(tool_id):
     return str(tool_id or "") in PROCESS_TOOLS
@@ -1564,21 +1572,34 @@ def _store_preimage(path, call_id, source_tool=None):
     data,st=_read_regular_nofollow(path,2*1024*1024)
     sha=hashlib.sha256(data).hexdigest()
     preimage_id="HARA-PREIMAGE-"+uuid.uuid4().hex
-    PREIMAGE_DIR.mkdir(parents=True,exist_ok=True,mode=0o700)
-    meta_path,data_path=_preimage_paths(preimage_id)
-    data_tmp=data_path.with_suffix(".tmp")
-    data_tmp.write_bytes(data); os.chmod(data_tmp,0o600); os.replace(data_tmp,data_path); os.chmod(data_path,0o600)
-    meta={
-        "schema":"hara.commander-file-preimage.v1",
-        "preimage_id":preimage_id,"original_path":str(path),"sha256":sha,"bytes":len(data),
-        "mode":int(st.st_mode & 0o777),"device":int(st.st_dev),"inode":int(st.st_ino),
-        "mtime_ns":int(st.st_mtime_ns),"size_bytes":int(st.st_size),
-        "source_call_id":str(call_id or "")[:180],"source_tool":str(source_tool or "")[:120] or None,
-        "created_at_utc":utcnow(),
-    }
-    meta_tmp=meta_path.with_suffix(".tmp")
-    meta_tmp.write_text(json.dumps(meta,sort_keys=True,separators=(",",":")),encoding="utf-8"); os.chmod(meta_tmp,0o600); os.replace(meta_tmp,meta_path); os.chmod(meta_path,0o600)
-    return meta
+    with PREIMAGE_CUSTODY_LOCK:
+        PREIMAGE_DIR.mkdir(parents=True,exist_ok=True,mode=0o700)
+        # Preserve existing rollback history. Do not auto-delete old snapshots;
+        # reject new file mutations before they exhaust customer disk capacity.
+        existing=list(PREIMAGE_DIR.glob("HARA-PREIMAGE-*.bin"))
+        if len(existing)>=MAX_PREIMAGE_ENTRIES:
+            raise ValueError("PREIMAGE_CAPACITY_EXCEEDED")
+        current_bytes=0
+        for item in existing:
+            if item.is_symlink() or not item.is_file():
+                raise ValueError("PREIMAGE_STORAGE_UNSAFE")
+            current_bytes+=item.stat().st_size
+            if current_bytes+len(data)>MAX_PREIMAGE_STORE_BYTES:
+                raise ValueError("PREIMAGE_CAPACITY_EXCEEDED")
+        meta_path,data_path=_preimage_paths(preimage_id)
+        data_tmp=data_path.with_suffix(".tmp")
+        data_tmp.write_bytes(data); os.chmod(data_tmp,0o600); os.replace(data_tmp,data_path); os.chmod(data_path,0o600)
+        meta={
+            "schema":"hara.commander-file-preimage.v1",
+            "preimage_id":preimage_id,"original_path":str(path),"sha256":sha,"bytes":len(data),
+            "mode":int(st.st_mode & 0o777),"device":int(st.st_dev),"inode":int(st.st_ino),
+            "mtime_ns":int(st.st_mtime_ns),"size_bytes":int(st.st_size),
+            "source_call_id":str(call_id or "")[:180],"source_tool":str(source_tool or "")[:120] or None,
+            "created_at_utc":utcnow(),
+        }
+        meta_tmp=meta_path.with_suffix(".tmp")
+        meta_tmp.write_text(json.dumps(meta,sort_keys=True,separators=(",",":")),encoding="utf-8"); os.chmod(meta_tmp,0o600); os.replace(meta_tmp,meta_path); os.chmod(meta_path,0o600)
+        return meta
 
 def _discard_preimage(preimage):
     if not preimage: return
@@ -1649,16 +1670,45 @@ def filesystem_rollback(call,preimage_id):
     }
 
 def _append_process_output(session,text):
-    combined=session.get("partial","")+str(text)
+    # A command may print arbitrary binary-like output without line breaks.
+    # Keep both the incomplete line and retained history bounded in RAM.
+    combined=str(session.get("partial",""))+str(text)
     parts=combined.split("\n")
-    session["partial"]=parts.pop() if parts else ""
-    session["lines"].extend(parts)
-    if len(session["lines"])>MAX_PROCESS_LINES:
-        drop=len(session["lines"])-MAX_PROCESS_LINES
-        session["lines"]=session["lines"][drop:]
-        session["base_line"]+=drop
-        session["cursor"]=max(session["cursor"],session["base_line"])
+    partial=parts.pop() if parts else ""
+    if len(partial)>MAX_PROCESS_LINE_CHARS:
+        partial=partial[-MAX_PROCESS_LINE_CHARS:]
         session["truncated"]=True
+    session["partial"]=partial
+
+    history=session["lines"]
+    total=session.get("_buffer_chars")
+    if total is None:
+        total=sum(len(line) for line in history)
+    for line in parts:
+        if len(line)>MAX_PROCESS_LINE_CHARS:
+            line=line[-MAX_PROCESS_LINE_CHARS:]
+            session["truncated"]=True
+        history.append(line)
+        total+=len(line)
+
+    # Use bulk front eviction for line-count pressure, then enforce a byte-ish
+    # character budget. Output is already decoded as text by _drain_process.
+    excess=len(history)-MAX_PROCESS_LINES
+    if excess>0:
+        total-=sum(len(line) for line in history[:excess])
+        del history[:excess]
+        session["base_line"]+=excess
+        session["truncated"]=True
+    removed=0
+    while total>MAX_PROCESS_BUFFER_CHARS and removed<len(history):
+        total-=len(history[removed])
+        removed+=1
+    if removed:
+        del history[:removed]
+        session["base_line"]+=removed
+        session["truncated"]=True
+    session["_buffer_chars"]=max(0,total)
+    session["cursor"]=max(session.get("cursor",0),session["base_line"])
 
 def _process_update_state(session):
     if session.get("exit_code") is not None: return
@@ -1668,8 +1718,9 @@ def _process_update_state(session):
         pid=int(session["pid"]); status=0
     if pid:
         session["exit_code"]=os.waitstatus_to_exitcode(status) if hasattr(os,"waitstatus_to_exitcode") else 0
+        session["finished_monotonic"]=time.monotonic()
         if session.get("partial"):
-            session["lines"].append(session["partial"]); session["partial"]=""
+            _append_process_output(session,"\n")
         try: os.close(int(session["fd"]))
         except OSError: pass
         session["fd"]=-1
@@ -1694,7 +1745,30 @@ def _drain_process(session,wait_ms=0):
         if time.monotonic()>=deadline: break
     _process_update_state(session)
 
+def _prune_process_sessions():
+    now=time.monotonic()
+    for sid,session in list(PROCESS_SESSIONS.items()):
+        if session.get("exit_code") is None:
+            _process_update_state(session)
+        if session.get("exit_code") is not None:
+            completed=float(session.get("finished_monotonic",now))
+            if now-completed>=PROCESS_FINISHED_RETENTION_SECONDS:
+                PROCESS_SESSIONS.pop(sid,None)
+
+    # Process results remain available for a bounded period, but never allow
+    # an unlimited number of finished sessions to pin their output in RAM.
+    if len(PROCESS_SESSIONS)>=MAX_PROCESS_RETAINED_SESSIONS:
+        finished=sorted(
+            ((sid,s) for sid,s in PROCESS_SESSIONS.items() if s.get("exit_code") is not None),
+            key=lambda pair:float(pair[1].get("finished_monotonic",0)),
+        )
+        for sid,_ in finished:
+            if len(PROCESS_SESSIONS)<MAX_PROCESS_RETAINED_SESSIONS: break
+            PROCESS_SESSIONS.pop(sid,None)
+
+
 def _process_get(session_id):
+    _prune_process_sessions()
     sid=str(session_id or "")
     session=PROCESS_SESSIONS.get(sid)
     if not session: raise ValueError("PROCESS_SESSION_NOT_FOUND")
@@ -1715,6 +1789,10 @@ def _process_output_payload(session,offset=None,length=200,wait_ms=0):
 def process_start(command,cwd=None,timeout_ms=1000):
     command=str(command or "")
     if not command or len(command)>4096 or "\x00" in command: raise ValueError("PROCESS_COMMAND_INVALID")
+    _prune_process_sessions()
+    running=sum(s.get("exit_code") is None for s in PROCESS_SESSIONS.values())
+    if running>=MAX_PROCESS_ACTIVE_SESSIONS or len(PROCESS_SESSIONS)>=MAX_PROCESS_RETAINED_SESSIONS:
+        raise ValueError("PROCESS_SESSION_CAPACITY_EXCEEDED")
     work=Path(_checked_path_text(cwd)).expanduser().resolve(strict=True) if cwd else Path.home()
     if not work.is_dir(): raise ValueError("PROCESS_CWD_INVALID")
     pid,fd=pty.fork()
@@ -1770,6 +1848,7 @@ def process_run(command,cwd=None,timeout_ms=3000,max_lines=200):
     return result
 
 def process_sessions():
+    _prune_process_sessions()
     items=[]
     for sid,session in list(PROCESS_SESSIONS.items()):
         _drain_process(session,0)

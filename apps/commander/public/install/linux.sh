@@ -106,7 +106,8 @@ resolve_approval_mode() {
   if [ -z "$mode" ] && [ -f "$CONFIG_FILE" ]; then
     mode="$(read_config_value HARA_COMMANDER_APPROVAL_MODE 2>/dev/null || true)"
   fi
-  [ -n "$mode" ] || mode="PERSISTENT_TRUSTED"
+  # Safe customer default: unattended mutations require explicit opt-in.
+  [ -n "$mode" ] || mode="ASK_EVERY_ACTION"
   mode="${mode^^}"
   case "$mode" in
     ASK|ASK_EVERY_ACTION) printf 'ASK_EVERY_ACTION

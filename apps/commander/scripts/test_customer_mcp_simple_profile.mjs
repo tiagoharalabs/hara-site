@@ -67,12 +67,15 @@ await rpc(1,"initialize",{
 const listed=await rpc(2,"tools/list",{});
 const tools=listed.result?.tools || [];
 assert.deepEqual(tools.map((tool)=>tool.name),CUSTOMER_MCP_SIMPLE_TOOLS);
-assert.equal(tools.length,24);
+assert.equal(tools.length,27);
 assert.ok(!tools.some((tool)=>tool.name.startsWith("hara.")));
 assert.ok(tools.some((tool)=>tool.name==="read_file"));
 assert.ok(tools.some((tool)=>tool.name==="write_file"));
 assert.ok(tools.some((tool)=>tool.name==="start_process"));
 assert.ok(tools.some((tool)=>tool.name==="read_process_output"));
+assert.ok(tools.some((tool)=>tool.name==="list_file_preimages"));
+assert.ok(tools.some((tool)=>tool.name==="rollback_file"));
+assert.ok(tools.some((tool)=>tool.name==="get_receipt"));
 
 const schema=(name)=>tools.find((tool)=>tool.name===name)?.inputSchema?.properties || {};
 assert.equal(schema("read_file").offset.maximum,1000000);
@@ -82,6 +85,9 @@ assert.equal(schema("read_multiple_files").length.maximum,100);
 assert.equal(schema("write_file").content.maxLength,65536);
 assert.equal(schema("edit_block").old_string.maxLength,32768);
 assert.equal(schema("edit_block").new_string.maxLength,32768);
+assert.equal(schema("list_file_preimages").limit.maximum,100);
+assert.equal(schema("get_receipt").receipt_id_or_sha256.maxLength,256);
+assert.equal(schema("rollback_file").preimage_id.type,"string");
 assert.equal(schema("list_directory").depth.maximum,5);
 assert.equal(schema("list_directory").limit.maximum,200);
 assert.equal(schema("search").pattern.maxLength,256);
@@ -121,6 +127,33 @@ await rpc(5,"tools/call",{
 assert.equal(calls.at(-1).tool_id,"hara.process.run");
 assert.equal(calls.at(-1).arguments.timeout_ms,3000);
 assert.equal(calls.at(-1).arguments.max_lines,200);
+
+await rpc(101,"tools/call",{name:"list_file_preimages",arguments:{
+  computer:"nucleo-a",path:"/tmp/a.txt",limit:20,
+}});
+assert.equal(calls.at(-1).tool_id,"hara.files.preimages.list");
+assert.deepEqual(calls.at(-1).arguments,{computer:"nucleo-a",path:"/tmp/a.txt",limit:20});
+
+const preimageId="HARA-PREIMAGE-"+"a".repeat(32);
+await rpc(102,"tools/call",{name:"rollback_file",arguments:{
+  computer:"nucleo-a",preimage_id:preimageId,
+}});
+assert.equal(calls.at(-1).tool_id,"hara.files.rollback");
+assert.deepEqual(calls.at(-1).arguments,{computer:"nucleo-a",preimage_id:preimageId});
+
+await rpc(103,"tools/call",{name:"get_receipt",arguments:{
+  computer:"nucleo-a",receipt_id_or_sha256:"receipt-sha-test",
+}});
+assert.equal(calls.at(-1).tool_id,"hara.receipts.get");
+assert.deepEqual(calls.at(-1).arguments,{computer:"nucleo-a",receipt_id_or_sha256:"receipt-sha-test"});
+
+await rpc(104,"tools/call",{name:"list_directory",arguments:{
+  computer:"nucleo-a",path:"/tmp",limit:10,depth:2,offset:55,
+}});
+assert.equal(calls.at(-1).tool_id,"hara.files.list");
+assert.deepEqual(calls.at(-1).arguments,{
+  computer:"nucleo-a",path:"/tmp",limit:10,depth:2,offset:55,
+});
 
 await rpc(6,"tools/call",{
   name:"start_process",
@@ -216,13 +249,17 @@ for (const tool of tools) {
 
 const mutating=new Set([
   "write_file","edit_block","create_directory","move_file","copy_file","delete_file",
-  "start_process","interact_with_process","kill_process",
+  "rollback_file","start_process","interact_with_process","kill_process",
 ]);
 for (const tool of tools) {
   assert.equal(tool.annotations?.readOnlyHint,!mutating.has(tool.name));
 }
+assert.equal(tools.find((x)=>x.name==="start_process")?.annotations?.destructiveHint,true);
+assert.equal(tools.find((x)=>x.name==="rollback_file")?.annotations?.destructiveHint,true);
+console.log("COMMANDER_SIMPLE_MCP_PROCESS_RISK_HONEST=PASS");
 
-console.log("COMMANDER_SIMPLE_MCP_TOOL_COUNT=24");
+console.log("COMMANDER_SIMPLE_MCP_TOOL_COUNT=27");
+console.log("COMMANDER_SIMPLE_MCP_ROLLBACK_AND_AUDIT=PASS");
 console.log("COMMANDER_SIMPLE_MCP_HARA_PREFIX_EXPOSED=FALSE");
 console.log("COMMANDER_SIMPLE_MCP_PROCESS_ONE_SHOT_DEFAULT=PASS");
 console.log("COMMANDER_SIMPLE_MCP_INTERACTIVE_OPT_IN=PASS");

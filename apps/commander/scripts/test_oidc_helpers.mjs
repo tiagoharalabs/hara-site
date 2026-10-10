@@ -18,8 +18,9 @@ publicJwk.use = "sig";
 
 const originalFetch = globalThis.fetch;
 let jwksKeys = [publicJwk];
+let currentJwksUri = metadata.jwks_uri;
 globalThis.fetch = async (url, init = {}) => {
-  assert.equal(String(url), metadata.jwks_uri);
+  assert.equal(String(url), currentJwksUri);
   return Response.json({ keys: jwksKeys });
 };
 
@@ -55,25 +56,32 @@ assert.equal(
   "subject-1",
 );
 
-for (const incompatibleKey of [
+// Every negative-case JWKS URI is isolated: the production verifier caches
+// a previously verified key for five minutes to avoid fetching on each call.
+// Mutating a mocked JWKS response at the same URI would only test that cache,
+// rather than the signing-key metadata rejection.
+for (const [index, incompatibleKey] of [
   { ...publicJwk, use: "enc" },
   { ...publicJwk, alg: "RS512" },
   { ...publicJwk, key_ops: ["encrypt"] },
   { ...publicJwk, key_ops: "verify" },
-]) {
+].entries()) {
   jwksKeys = [incompatibleKey];
+  currentJwksUri = metadata.jwks_uri + "?negative=" + index;
   await assert.rejects(
-    verifyIdToken({ idToken: valid, metadata, issuer, clientId, nonce }),
+    verifyIdToken({ idToken: valid, metadata: { ...metadata, jwks_uri: currentJwksUri }, issuer, clientId, nonce }),
     /OIDC_SIGNING_KEY_NOT_FOUND/,
   );
 }
 
 jwksKeys = [{ ...publicJwk, use: "enc" }, publicJwk];
+currentJwksUri = metadata.jwks_uri + "?mixed=1";
 assert.equal(
-  (await verifyIdToken({ idToken: valid, metadata, issuer, clientId, nonce })).sub,
+  (await verifyIdToken({ idToken: valid, metadata: { ...metadata, jwks_uri: currentJwksUri }, issuer, clientId, nonce })).sub,
   "subject-1",
 );
 jwksKeys = [publicJwk];
+currentJwksUri = metadata.jwks_uri;
 
 const missingAzp = await signJwt(baseClaims);
 await assert.rejects(

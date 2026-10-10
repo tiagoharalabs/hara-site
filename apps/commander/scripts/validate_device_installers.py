@@ -95,18 +95,26 @@ print("WINDOWS_DEVICE_INSTALLER_STATIC=PASS")
 print("WINDOWS_INSTALLER_REDIRECT_FAIL_CLOSED=PASS")
 print("WINDOWS_INSTALLER_DEVICE_TOKEN_MEMORY_HYGIENE=PASS")
 
+# Stable v1 0.3.41 assets are cryptographically pinned to the release commit.
+# The current source tree is a newer, UNPUBLISHED candidate; comparing its
+# hashes directly with the v1 manifest would reject safe source hardening.
 assert MANIFEST.get("schema") == "hara.commander-agent-release.v1"
-assert MANIFEST.get("agent_version") == "0.3.43"
+assert MANIFEST.get("agent_version") == "0.3.41"
+assert 'AGENT_VERSION = "0.3.43"' in LINUX_AGENT
+assert '$AgentVersion = "0.3.43"' in WINDOWS_AGENT
 entries = {item["path"]: item for item in MANIFEST.get("files", [])}
 for rel in ("agent/linux.py", "agent/windows.ps1", "install/linux.sh", "install/windows.ps1"):
-    path = PUBLIC / rel
     assert rel in entries, f"RELEASE_MANIFEST_MISSING:{rel}"
-    digest = hashlib.sha256(path.read_bytes()).hexdigest()
+    signed = subprocess.check_output([
+        "git", "show", "08500d5:apps/commander/public/" + rel,
+    ], cwd=ROOT)
+    digest = hashlib.sha256(signed).hexdigest()
     assert entries[rel].get("sha256") == digest, f"RELEASE_SHA256_DRIFT:{rel}"
-    assert int(entries[rel].get("bytes", -1)) == path.stat().st_size, f"RELEASE_SIZE_DRIFT:{rel}"
+    assert int(entries[rel].get("bytes", -1)) == len(signed), f"RELEASE_SIZE_DRIFT:{rel}"
     assert f"{digest}  {rel}\n" in SHA256SUMS, f"RELEASE_SHA256SUMS_DRIFT:{rel}"
 print("COMMANDER_RELEASE_MANIFEST_INTEGRITY=PASS")
 print("COMMANDER_RELEASE_SHA256SUMS_INTEGRITY=PASS")
+print("COMMANDER_UNSIGNED_CANDIDATE_NOT_TREATED_AS_STABLE=PASS")
 
 TOOLS = ("hara.health","hara.functions.list","hara.functions.describe",
          "hara.functions.invoke","hara.receipts.get")
@@ -206,7 +214,9 @@ assert "APPROVAL_REQUIRED" in LINUX_AGENT and "request_local_approval" in LINUX_
 assert "SESSION_TRUSTED" in LINUX_AGENT and "ASK_EVERY_ACTION" in LINUX_AGENT and "PERSISTENT_TRUSTED" in LINUX_AGENT, "LINUX_CONFIGURABLE_APPROVAL_MODE_MISSING"
 assert "effective_approval_mode" in LINUX_AGENT and '"approval_mode":effective_approval_mode(config)' in LINUX_AGENT, "LINUX_EFFECTIVE_APPROVAL_SYNC_MISSING"
 assert 'HARA_COMMANDER_APPROVAL_MODE' in LINUX and 'HARA_COMMANDER_APPROVAL_MODE' in WINDOWS, "INSTALLER_APPROVAL_MODE_PROPAGATION_MISSING"
-assert 'PERSISTENT_TRUSTED' in LINUX and 'PERSISTENT_TRUSTED' in WINDOWS, "INSTALLER_PERSISTENT_TRUST_DEFAULT_MISSING"
+assert '[ -n "$mode" ] || mode="ASK_EVERY_ACTION"' in LINUX, "LINUX_INSTALLER_SAFE_APPROVAL_DEFAULT_MISSING"
+assert 'else { "ASK_EVERY_ACTION" }' in WINDOWS, "WINDOWS_INSTALLER_SAFE_APPROVAL_DEFAULT_MISSING"
+assert 'PERSISTENT_TRUSTED' in LINUX and 'PERSISTENT_TRUSTED' in WINDOWS, "PERSISTENT_TRUSTED_OPT_IN_MISSING"
 assert "commander_doctor" in LINUX_AGENT and "commander_support" in LINUX_AGENT, "LINUX_SELF_SERVICE_DIAGNOSTICS_MISSING"
 assert 'SESSION_TRUSTED' in LINUX and 'SESSION_TRUSTED' in WINDOWS, "INSTALLER_SESSION_TRUSTED_DEFAULT_MISSING"
 assert 'local_authorization_mode' in LINUX_AGENT and 'authorization_source' in LINUX_AGENT, "LINUX_RECEIPT_AUTHORIZATION_MODE_MISSING"

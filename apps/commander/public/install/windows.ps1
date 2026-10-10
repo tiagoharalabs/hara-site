@@ -6,7 +6,7 @@ $BaseUrl = if ($env:HARA_COMMANDER_URL) { $env:HARA_COMMANDER_URL.TrimEnd("/") }
 $ReleaseSigningKid = "commander-release-v1"
 $ReleaseSigningN = "pydKPlIuz-00dO2sGHCTY1Z968YbjZ_-r7qWSKRhFCyCfJfaaL53XWS-jaXxWFzhqEryeqFxuUvL-8OdCKxtG_Lo7Ac6FWS_k2EFrgQmdCPja9N78MMQd7gC8Hu68BhyqkoNa2NMpg610NWcYwTQjAz9bcyKcoc8uV5G-iX3aXSRAJYe0BKi4H9xfARD5TWE3N3DuMrNZybabsnfk-88xR5AFcXZ58WhvMuUvRp7_26cYhuHd4RLyPKNUI7WK9if8aa48UMqF49KQ64NSQHhOVfnZjjmiwfKtWOBsO_DstVYyLnVtfttmeaTZGgwuHd37XOsz0Q267CKHUORYyvTJw"
 $ReleaseSigningE = "AQAB"
-$ApprovalModeRaw = if ($env:HARA_COMMANDER_APPROVAL_MODE) { ([string]$env:HARA_COMMANDER_APPROVAL_MODE).Trim().ToUpperInvariant() } else { "PERSISTENT_TRUSTED" }
+$ApprovalModeRaw = if ($env:HARA_COMMANDER_APPROVAL_MODE) { ([string]$env:HARA_COMMANDER_APPROVAL_MODE).Trim().ToUpperInvariant() } else { "ASK_EVERY_ACTION" }
 $ApprovalMode = switch ($ApprovalModeRaw) {
   "ASK" { "ASK_EVERY_ACTION" }
   "ASK_EVERY_ACTION" { "ASK_EVERY_ACTION" }

@@ -20,6 +20,8 @@ export const CUSTOMER_MCP_SIMPLE_TOOLS = Object.freeze([
   "move_file",
   "copy_file",
   "delete_file",
+  "list_file_preimages",
+  "rollback_file",
   "search",
   "get_file_info",
   "list_processes",
@@ -29,6 +31,7 @@ export const CUSTOMER_MCP_SIMPLE_TOOLS = Object.freeze([
   "kill_process",
   "list_sessions",
   "get_recent_tool_calls",
+  "get_receipt",
 ]);
 
 const SECURITY_SCHEMES = Object.freeze([
@@ -409,6 +412,7 @@ export function createSimpleCustomerMcpServer({ executeTool }) {
       path: args.path,
       ...(args.depth !== undefined ? { depth: args.depth } : {}),
       ...(args.limit !== undefined ? { limit: args.limit } : {}),
+      ...(args.offset !== undefined ? { offset: args.offset } : {}),
     })),
   );
 
@@ -468,6 +472,43 @@ export function createSimpleCustomerMcpServer({ executeTool }) {
       idempotentHint: false,
     }),
     call("hara.files.delete", (args) => ({ ...deviceArgs(args), path: args.path, ...(args.expected_sha256 ? { expected_sha256: args.expected_sha256 } : {}) })),
+  );
+
+  server.registerTool(
+    "list_file_preimages",
+    toolConfig({
+      title: "List File Rollback Points",
+      description: "Show metadata-only local preimages created by governed file edits or deletes.",
+      inputSchema: z.object({
+        computer,
+        limit: z.number().int().min(1).max(100).optional(),
+        path: z.string().min(1).max(4096).optional(),
+      }).strict(),
+    }),
+    call("hara.files.preimages.list", (args) => ({
+      ...deviceArgs(args),
+      ...(args.limit !== undefined ? { limit: args.limit } : {}),
+      ...(args.path ? { path: args.path } : {}),
+    })),
+  );
+
+  server.registerTool(
+    "rollback_file",
+    toolConfig({
+      title: "Restore Previous File Version",
+      description: "Restore a previously recorded, integrity-checked file preimage. The current file is snapshotted before the restore, so undo can itself be undone. Requires governed mutation authorization.",
+      inputSchema: z.object({
+        computer,
+        preimage_id: z.string().regex(/^HARA-PREIMAGE-[0-9a-f]{32}$/),
+      }).strict(),
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: false,
+    }),
+    call("hara.files.rollback", (args) => ({
+      ...deviceArgs(args),
+      preimage_id: args.preimage_id,
+    })),
   );
 
   server.registerTool(
@@ -544,7 +585,7 @@ export function createSimpleCustomerMcpServer({ executeTool }) {
       }).strict(),
       openWorldHint: true,
       readOnlyHint: false,
-      destructiveHint: false,
+      destructiveHint: true,
       idempotentHint: false,
     }),
     call(
@@ -656,6 +697,22 @@ export function createSimpleCustomerMcpServer({ executeTool }) {
       ...deviceArgs(args),
       ...(args.tool ? { tool: args.tool } : {}),
       ...(args.limit !== undefined ? { limit: args.limit } : {}),
+    })),
+  );
+
+  server.registerTool(
+    "get_receipt",
+    toolConfig({
+      title: "Read Execution Receipt",
+      description: "Read one privacy-minimized SHA-bound H.A.R.A. Commander audit receipt for an operation.",
+      inputSchema: z.object({
+        computer,
+        receipt_id_or_sha256: z.string().min(1).max(256),
+      }).strict(),
+    }),
+    call("hara.receipts.get", (args) => ({
+      ...deviceArgs(args),
+      receipt_id_or_sha256: args.receipt_id_or_sha256,
     })),
   );
 

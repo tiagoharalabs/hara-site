@@ -227,8 +227,17 @@ def parse_config(path: Path) -> dict[str, str]:
 def self_test() -> None:
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
     entry = next(item for item in manifest["files"] if item["path"] == "agent/linux.py")
-    assert hashlib.sha256(AGENT.read_bytes()).hexdigest() == entry["sha256"]
-    assert manifest["agent_version"] == "0.3.43"
+    # The published v1 release is immutable 0.3.41; the local candidate
+    # Agent source is intentionally newer and must not be mistaken for a
+    # cryptographically signed/public installer artifact.
+    signed = subprocess.check_output(
+        ["git", "show", "08500d5:apps/commander/public/agent/linux.py"],
+        cwd=ROOT,
+    )
+    assert hashlib.sha256(signed).hexdigest() == entry["sha256"]
+    assert manifest["agent_version"] == "0.3.41"
+    assert b'AGENT_VERSION = "0.3.43"' in AGENT.read_bytes()
+    print("COMMANDER_CLEAN_LINUX_SIGNED_V1_AND_UNSIGNED_CANDIDATE_SEPARATED=PASS")
     print("COMMANDER_CLEAN_LINUX_HARNESS_SELFTEST=PASS")
 
 

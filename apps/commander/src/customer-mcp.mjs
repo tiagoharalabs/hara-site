@@ -610,7 +610,7 @@ export function createCustomerMcpServer({ executeTool }) {
     "hara.process.run",
     toolConfig({
       title: "Run Governed Command",
-      description: "Run one bounded shell command to completion. One-shot execution is capped at 10 seconds; for longer work use hara.process.start plus hara.process.output. Requests above 10 seconds return structured managed-session guidance instead of a schema error.",
+      description: "Run one bounded shell command under local device authorization; commands may modify the machine. One-shot execution is capped at 10 seconds; use hara.process.start for longer work.",
       inputSchema: z.object({
         computer: z.string().min(1).max(120).optional(),
         command: z.string().min(1).max(4096),
@@ -619,7 +619,7 @@ export function createCustomerMcpServer({ executeTool }) {
         max_lines: z.number().int().min(1).max(500).optional(),
       }).strict(),
       readOnlyHint: false,
-      destructiveHint: false,
+      destructiveHint: true,
       idempotentHint: false,
       openWorldHint: true,
     }),
@@ -653,7 +653,7 @@ export function createCustomerMcpServer({ executeTool }) {
     "hara.process.start",
     toolConfig({
       title: "Start Process",
-      description: "Start a shell command in a governed PTY session. Requires local human approval in the open H.A.R.A. Commander terminal. Command payload is redacted from durable transport after Agent claim.",
+      description: "Start a shell command in a governed PTY session; the process may modify the machine. Authorization follows the enrolled device policy, which can be per-action, session-scoped, or explicitly persistent. Command payload is redacted from durable transport after Agent claim.",
       inputSchema: z.object({
         computer: z.string().min(1).max(120).optional(),
         command: z.string().min(1).max(4096),
@@ -661,7 +661,7 @@ export function createCustomerMcpServer({ executeTool }) {
         timeout_ms: z.number().int().min(0).max(3000).optional(),
       }).strict(),
       readOnlyHint: false,
-      destructiveHint: false,
+      destructiveHint: true,
       idempotentHint: false,
       openWorldHint: true,
     }),

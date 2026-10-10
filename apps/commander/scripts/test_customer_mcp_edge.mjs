@@ -98,7 +98,7 @@ const mutationTools = new Set([
 ]);
 for (const tool of tools) {
   assert.equal(tool.annotations?.readOnlyHint, !mutationTools.has(tool.name));
-  assert.equal(tool.annotations?.destructiveHint, ["hara.files.write","hara.files.edit","hara.files.move","hara.files.delete","hara.files.rollback","hara.process.interact","hara.process.kill"].includes(tool.name));
+  assert.equal(tool.annotations?.destructiveHint, ["hara.files.write","hara.files.edit","hara.files.move","hara.files.delete","hara.files.rollback","hara.process.run","hara.process.start","hara.process.interact","hara.process.kill"].includes(tool.name));
   assert.deepEqual(tool._meta?.securitySchemes, [
     { type: "oauth2", scopes: ["openid"] },
   ]);
