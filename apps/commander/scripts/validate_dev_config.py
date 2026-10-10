@@ -61,7 +61,7 @@ need(vars_.get("DEVICE_EVENT_V2_ENABLED") == "true", "DEV_EVENT_V2_CANARY_ENABLE
 
 dev_migrations = dev["migrations"]
 prod_migrations = prod["migrations"]
-need(len(prod_migrations) == 2, "PROD_DO_MIGRATION_COUNT")
+need(len(prod_migrations) == 3, "PROD_DO_MIGRATION_COUNT")
 need(len(dev_migrations) == 3, "DEV_DO_MIGRATION_COUNT")
 need(dev_migrations[0] == prod_migrations[0], "DEV_DO_V1_PROD_BASELINE")
 need(
@@ -75,6 +75,10 @@ need(
 need(
     dev_migrations[2] == {"tag": "v3", "new_sqlite_classes": ["SecurityRateLimit"]},
     "DEV_DO_V3_SECURITY_RATE_LIMIT_SQLITE",
+)
+need(
+    prod_migrations[2] == {"tag": "v3", "new_sqlite_classes": ["DeviceChannel"]},
+    "PROD_DO_V3_DEVICE_CHANNEL_SQLITE",
 )
 
 raw = DEV_PATH.read_text(encoding="utf-8")

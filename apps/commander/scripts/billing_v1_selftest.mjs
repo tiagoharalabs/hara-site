@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   APPROVED_COMMERCIAL_TERMS,
   createBillingCheckout,
+  createBillingPortal,
   stripeBillingConfigured,
   stripePlanForPrice,
   stripePriceForPlan,
@@ -21,6 +22,18 @@ assert.equal(APPROVED_COMMERCIAL_TERMS.STANDARD.price_amount_cents, 8000);
 assert.equal(APPROVED_COMMERCIAL_TERMS.STANDARD.billing_interval, "month");
 assert.equal(APPROVED_COMMERCIAL_TERMS.STANDARD.usage_unlimited, true);
 assert.equal(stripeBillingConfigured(env), true);
+assert.equal(stripeBillingConfigured({
+  ENVIRONMENT:"PROD", STRIPE_SECRET_KEY:"sk_test_MustNotBeProd123",
+  STRIPE_WEBHOOK_SECRET:"whsec_ValidFixture123",
+}), false);
+assert.equal(stripeBillingConfigured({
+  ENVIRONMENT:"DEV", STRIPE_SECRET_KEY:"sk_live_MustNotBeDev123",
+  STRIPE_WEBHOOK_SECRET:"whsec_ValidFixture123",
+}), false);
+assert.equal(stripeBillingConfigured({
+  ENVIRONMENT:"DEV", STRIPE_SECRET_KEY:"sk_test_ValidFixture123",
+  STRIPE_WEBHOOK_SECRET:"whsec_ValidFixture123",
+}), true);
 assert.equal(stripePriceForPlan(env, "STANDARD"), "price_standard_fixture");
 assert.equal(stripePlanForPrice(env, "price_scale_fixture"), "SCALE");
 assert.equal(stripePlanForPrice(env, "price_unknown"), null);
@@ -172,6 +185,35 @@ await assert.rejects(
   ),
   /BILLING_CHECKOUT_RESPONSE_INVALID/,
 );
+
+let portalRequest = null;
+const portalEnv = {
+  ...env,
+  STRIPE_PORTAL_CONFIGURATION: "bpc_test_config123",
+  PRODUCT_DB: {
+    prepare() {
+      return { bind() {
+        return { async first() { return { external_customer_id: "cus_test_fixture" }; } };
+      } };
+    },
+  },
+};
+const portalResult = await createBillingPortal(
+  new Request("https://commander.haralabs.com.br/api/portal/billing/portal", {method:"POST"}),
+  portalEnv,
+  {tenant_id:"HARA-TENANT-FIXTURE",role:"OWNER"},
+  async (url,options) => {
+    portalRequest = {url,options};
+    return new Response(JSON.stringify({url:"https://billing.stripe.com/p/session/test_fixture"}),{
+      status:200,headers:{"content-type":"application/json"},
+    });
+  },
+);
+assert.equal(portalResult.secret_material_exposed,false);
+assert.equal(portalRequest.url,"https://api.stripe.com/v1/billing_portal/sessions");
+assert.equal(new URLSearchParams(portalRequest.options.body).get("configuration"),"bpc_test_config123");
+assert.equal(new URLSearchParams(portalRequest.options.body).get("customer"),"cus_test_fixture");
+console.log("COMMANDER_BILLING_PORTAL_EXPLICIT_CONFIGURATION=PASS");
 
 console.log("COMMANDER_BILLING_V1_SIGNATURE=PASS");
 console.log("COMMANDER_BILLING_V1_PLAN_MAPPING=PASS");

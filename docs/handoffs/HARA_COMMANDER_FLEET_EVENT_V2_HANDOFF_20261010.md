@@ -56,7 +56,7 @@ Preflight read-only `python3 apps/commander/scripts/billing_prod_activation_pref
 
 ## 6. Pendências priorizadas para produto final
 
-1. **P0 Stripe:** criar/verificar produto e Price BRL autorizados, secrets de produção, endpoint webhook assinado, deduplicação/replay, checkout real supervisionado, portal, cancelamento/refund e ciclo completo de entitlement.
+1. **P0 Stripe:** a etapa TEST agora tem wizard seguro e testes de regressão prontos em `docs/operations/HARA_COMMANDER_STRIPE_TEST_ONE_COMMAND_ACTIVATION_20261010.md`, Worker DEV `490c38bf-5ef0-4b55-a33a-2dc6d0c6ad6c` publicado. **Ainda falta** operador fornecer `sk_test_` em terminal privado e homologar checkout/webhook real de TEST; só depois Stripe LIVE: produto/Price BRL autorizados, secrets PROD, webhook assinado, deduplicação/replay, checkout real supervisionado, portal, cancelamento/refund e ciclo completo de entitlement.
 2. **P0 Cliente externo/segurança:** testar OAuth de segundo tenant, pairing/revogação, grants locais, isolamento cross-tenant em PROD/DEV isolado, negativa de tokens cruzados, autorizações e dados protegidos. As sete máquinas de hoje pertencem ao Founder, não a clientes independentes.
 3. **P0 Quota Free real:** última operação aceita, `QUOTA_EXCEEDED` subsequente, concorrência de reservas, idempotência de replay, liberação em erro e virada mensal; Founder ilimitado NÃO homologa Free.
 4. **P1 Publicação de Agent:** transformação de pacote Founder per-device para instalador/atualizador de cliente final Linux, cadeia de confiança/rotação de assinatura v2, atualização assistida, rollback automatizado e documentação de suporte. **Windows Event V2 está pendente**; registros antigos offline/revogados não foram migrados.

@@ -70,10 +70,15 @@ function priceMap(env) {
 }
 
 export function stripeBillingConfigured(env) {
-  return Boolean(
-    cleanText(env.STRIPE_SECRET_KEY, 512)
-    && cleanText(env.STRIPE_WEBHOOK_SECRET, 512)
-  );
+  const key = cleanText(env.STRIPE_SECRET_KEY, 512);
+  const webhook = cleanText(env.STRIPE_WEBHOOK_SECRET, 512);
+  if (!key || !webhook) return false;
+  // Fail closed on mixing Stripe test credentials with live customer billing.
+  const mode = String(env.ENVIRONMENT || "").toUpperCase();
+  if (mode === "PROD" && !/^(?:sk|rk)_live_[A-Za-z0-9]+$/.test(key)) return false;
+  if (mode === "DEV" && !/^(?:sk|rk)_test_[A-Za-z0-9]+$/.test(key)) return false;
+  if (["PROD", "DEV"].includes(mode) && !/^whsec_[A-Za-z0-9]+$/.test(webhook)) return false;
+  return true;
 }
 
 export function stripePriceForPlan(env, planCode) {
@@ -290,6 +295,7 @@ export async function createBillingPortal(request, env, session, fetcher = fetch
   const portal = await stripePost(env, "/billing_portal/sessions", {
     customer: customerId,
     return_url: origin + "/#plans",
+    configuration: cleanStripeId(env.STRIPE_PORTAL_CONFIGURATION, ["bpc_"]),
   }, fetcher);
 
   const url = stripeHttpsUrl(portal.url);
@@ -435,12 +441,24 @@ async function upsertBillingConnection(env, tenantId, {
      ON CONFLICT(billing_connection_id) DO UPDATE SET
        external_customer_id = COALESCE(excluded.external_customer_id, billing_connections.external_customer_id),
        external_subscription_id = COALESCE(excluded.external_subscription_id, billing_connections.external_subscription_id),
-       state = excluded.state,
+       state = CASE
+         WHEN excluded.state = 'CHECKOUT_COMPLETED'
+           AND excluded.external_subscription_id = billing_connections.external_subscription_id
+           AND billing_connections.state IN ('ACTIVE','SUSPENDED','REVOKED')
+         THEN billing_connections.state
+         ELSE excluded.state
+       END,
        updated_at_utc = excluded.updated_at_utc,
        plan_code = COALESCE(excluded.plan_code, billing_connections.plan_code),
        subscription_status = COALESCE(excluded.subscription_status, billing_connections.subscription_status),
        current_period_end_utc = COALESCE(excluded.current_period_end_utc, billing_connections.current_period_end_utc),
-       cancel_at_period_end = excluded.cancel_at_period_end`
+       cancel_at_period_end = CASE
+         WHEN excluded.state = 'CHECKOUT_COMPLETED'
+           AND excluded.external_subscription_id = billing_connections.external_subscription_id
+           AND billing_connections.state IN ('ACTIVE','SUSPENDED','REVOKED')
+         THEN billing_connections.cancel_at_period_end
+         ELSE excluded.cancel_at_period_end
+       END`
   ).bind(
     id, tenantId, customerId, subscriptionId, state, now, now,
     planCode, subscriptionStatus, currentPeriodEndUtc, boolInt(cancelAtPeriodEnd),
@@ -499,6 +517,14 @@ async function processCheckoutCompleted(env, object) {
   const customerId = cleanStripeId(object?.customer, ["cus_"]);
   const subscriptionId = cleanStripeId(object?.subscription, ["sub_"]);
   const planCode = cleanPlanCode(object?.metadata?.plan_code);
+  // A delayed Checkout from a prior subscription cannot take ownership
+  // of a newer active/processing subscription for this tenant.
+  const current = await billingConnection(env, tenantId);
+  if (subscriptionId && current?.external_subscription_id
+      && current.external_subscription_id !== subscriptionId
+      && current.state !== "REVOKED") {
+    return "CHECKOUT_OTHER_SUBSCRIPTION_IGNORED";
+  }
   await upsertBillingConnection(env, tenantId, {
     customerId,
     subscriptionId,
@@ -516,6 +542,21 @@ async function processSubscription(env, eventType, object) {
   const subscriptionId = cleanStripeId(object?.id, ["sub_"]);
   const status = String(object?.status || "").trim().toLowerCase();
   if (!subscriptionId || !status) throw new Error("BILLING_SUBSCRIPTION_INVALID");
+
+  // A late event from an older subscription must not replace a newer
+  // checkout/subscription. An already-revoked subscription cannot become
+  // active again from a stale event delivered after its deletion.
+  const current = await billingConnection(env, tenantId);
+  if (current?.external_subscription_id && current.external_subscription_id !== subscriptionId) {
+    if (current.state !== "REVOKED" || eventType !== "customer.subscription.created") {
+      return "SUBSCRIPTION_OTHER_ID_IGNORED";
+    }
+  }
+  if (current?.external_subscription_id === subscriptionId
+      && current.state === "REVOKED"
+      && eventType !== "customer.subscription.deleted") {
+    return "SUBSCRIPTION_REVOKED_STALE_EVENT_IGNORED";
+  }
 
   const priceId = cleanStripeId(object?.items?.data?.[0]?.price?.id, ["price_"]);
   const planCode = stripePlanForPrice(env, priceId)
@@ -545,9 +586,20 @@ async function processSubscription(env, eventType, object) {
 async function processInvoicePaymentFailed(env, object) {
   const tenantId = await resolveTenantForObject(env, object);
   if (!tenantId) return "INVOICE_TENANT_NOT_FOUND";
+  // Invoice events can be delayed or associated with another subscription
+  // of the same Stripe customer. Do not suspend the current entitlement
+  // without a verified match to its active subscription ID.
+  const invoiceSubscriptionId = cleanStripeId(object?.subscription, ["sub_"])
+    || cleanStripeId(object?.parent?.subscription_details?.subscription, ["sub_"]);
+  const current = await billingConnection(env, tenantId);
+  if (!invoiceSubscriptionId || !current?.external_subscription_id
+      || current.external_subscription_id !== invoiceSubscriptionId
+      || current.state === "REVOKED") {
+    return "INVOICE_NOT_CURRENT_SUBSCRIPTION";
+  }
   await upsertBillingConnection(env, tenantId, {
     customerId: cleanStripeId(object?.customer, ["cus_"]),
-    subscriptionId: cleanStripeId(object?.subscription, ["sub_"]),
+    subscriptionId: invoiceSubscriptionId,
     subscriptionStatus: "past_due",
     state: "SUSPENDED",
   });
@@ -598,6 +650,16 @@ export async function handleStripeWebhook(request, env) {
     event = JSON.parse(rawBody);
   } catch (_error) {
     throw new Error("BILLING_WEBHOOK_JSON_INVALID");
+  }
+
+  // Reject events from the wrong Stripe account mode, even if a signing
+  // secret was mistakenly provisioned to the wrong Worker environment.
+  const mode = String(env.ENVIRONMENT || "").toUpperCase();
+  if (mode === "PROD" && event.livemode !== true) {
+    throw new Error("BILLING_WEBHOOK_LIVE_EVENT_REQUIRED");
+  }
+  if (mode === "DEV" && event.livemode !== false) {
+    throw new Error("BILLING_WEBHOOK_TEST_EVENT_REQUIRED");
   }
 
   const eventId = cleanStripeId(event?.id, ["evt_"]);
