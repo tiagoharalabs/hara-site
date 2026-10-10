@@ -589,6 +589,14 @@ async function openDeviceEventChannel(env, request) {
   }
 
   const device = await resolveDeviceCredential(env, request);
+  // Production cutover is explicitly restricted to a single enrolled Founder
+  // device. A valid token from another customer cannot enable Event V2.
+  if (env.ENVIRONMENT === "PROD") {
+    const canaryId = String(env.DEVICE_EVENT_V2_CANARY_DEVICE_ID || "").trim();
+    if (!canaryId || device.device_id !== canaryId) {
+      throw new Error("DEVICE_EVENT_V2_CANARY_DENIED");
+    }
+  }
   const stub = env.DEVICE_CHANNEL.getByName(
     deviceChannelName(device.tenant_id, device.device_id)
   );
@@ -6058,6 +6066,7 @@ export default {
         LOCAL_METERING_TRANSPORT_INVALID: 400,
         DEVICE_LOCAL_TUNNEL_DIRECT_PATH_REQUIRED: 409,
         DEVICE_EVENT_V2_DISABLED: 404,
+        DEVICE_EVENT_V2_CANARY_DENIED: 403,
         DEVICE_EVENT_V2_BINDING_MISSING: 503,
         DEVICE_TRANSIENT_RPC_DISABLED: 404,
         DEVICE_TRANSIENT_REQUIRES_EVENT_V2: 409,

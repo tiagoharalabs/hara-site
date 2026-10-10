@@ -195,17 +195,32 @@ def main() -> int:
         for row in dev["migrations"]
     )
 
-    # PROD is intentionally untouched by package 2.
-    assert "DEVICE_EVENT_V2_ENABLED" not in prod_raw
-    assert '"DEVICE_CHANNEL"' not in prod_raw
-    assert '"DeviceChannel"' not in prod_raw
+    # PROD now has the Event V2 namespace but enforces one Founder canary.
+    # Customer transient RPC remains DEV-only; no untrusted device can enroll
+    # into the new transport without an authenticated Agent and canary match.
+    prod = json.loads(prod_raw)
+    assert prod["vars"]["ENVIRONMENT"] == "PROD"
+    assert prod["vars"]["DEVICE_EVENT_V2_ENABLED"] == "true"
+    assert prod["vars"]["DEVICE_EVENT_V2_CANARY_DEVICE_ID"] == "HARA-DEVICE-e032ffff-f2d2-43ad-b2a8-f5385a900f62"
+    assert any(row.get("name") == "DEVICE_CHANNEL" and row.get("class_name") == "DeviceChannel"
+               for row in prod["durable_objects"]["bindings"])
+    assert any(row.get("tag") == "v3" and "DeviceChannel" in row.get("new_sqlite_classes", [])
+               for row in prod["migrations"])
+    assert "DEVICE_EVENT_V2_TRANSIENT_RPC_ENABLED" not in prod_raw
     assert "MCP_PRODUCT_CANARY_TOKEN" not in prod_raw
+    assert 'DEVICE_EVENT_V2_CANARY_DENIED: 403' in worker
+    assert 'env.ENVIRONMENT === "PROD"' in open_block
+    assert 'device.device_id !== canaryId' in open_block
+    assert 'const canaryId = String(env.DEVICE_EVENT_V2_CANARY_DEVICE_ID || "").trim();' in open_block
+    assert open_block.index("resolveDeviceCredential(env, request)") < open_block.index("DEVICE_EVENT_V2_CANARY_DENIED")
+    assert open_block.index("DEVICE_EVENT_V2_CANARY_DENIED") < open_block.index("new Request")
 
     print("COMMANDER_EVENT_V2_WORKER_WIRING=PASS")
     print("COMMANDER_MCP_BOOTSTRAP_ONLY_WHEN_HINTED=PASS")
     print("COMMANDER_EVENT_V2_DEV_BINDING_SQLITE=PASS")
     print("COMMANDER_EVENT_V2_DEV_CANARY=ON")
-    print("COMMANDER_EVENT_V2_PROD_BINDING=ABSENT")
+    print("COMMANDER_EVENT_V2_PROD_BINDING=FOUNDER_CANARY_GUARDED")
+    print("COMMANDER_EVENT_V2_PROD_TRANSIENT_RPC=DISABLED")
     print("COMMANDER_EVENT_V2_NOTIFY_AFTER_DURABLE_INSERT=PASS")
     print("COMMANDER_EVENT_V2_NOTIFY_ONLY_FOR_EVENT_V2_DEVICE=PASS")
     print("COMMANDER_EVENT_V2_V1_NOTIFY_DO=ABSENT")
