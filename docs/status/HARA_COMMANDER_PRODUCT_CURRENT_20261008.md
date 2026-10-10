@@ -442,3 +442,11 @@ Hardened read-only preflight to pinned local Wrangler, bounded retry after trans
 ## 2026-10-09 — publishing scope / Storage mirror reconciliation hold
 
 **Clean content commit `225c60e70c1458f7bddf74ed1b94951efc67797a` published on GitHub and present in local history** (Cloudflare matched workload efficiency + billing read-only preflight). **Storage mirror separately holds `092f35afc52827d6c5584f0401e9f60eaeb3d985`**, a rejected draft that includes a CI workflow edit. GitHub OAuth lacked `workflow` scope; therefore the published commit was surgically prepared without workflow changes and accepted by normal GitHub fast-forward. Storage denied the guarded non-fast-forward reconciliation and **this repository control was not bypassed**. See `docs/operations/HARA_COMMANDER_PUBLISH_SCOPE_AND_STORAGE_RECONCILIATION_20261009.md`. Do not falsely claim local/Storage/GitHub equal; administrative Storage ref reconciliation is required. CI wiring of two new source-only tests is DEFERRED, but manual tests PASS. **No live PROD change** from this publishing issue.
+
+## 2026-10-10 — HANDOFF CANÔNICO PARA NOVO CHAT (prioridade sobre checkpoints históricos)
+
+**LEITURA OBRIGATÓRIA:** `docs/handoffs/HARA_COMMANDER_NEXT_CHAT_HANDOFF_20261010.md`, apontado pelo índice `docs/handoffs/HARA_COMMANDER_CURRENT.md`.
+
+Ele consolida o produto e a arquitetura comercial, Agent Founder 0.3.44 EVENT_V2 ativo/persistente/assinatura v2, watchdog e rollback v1, provas ChatGPT→D1, medições Cloudflare com limites causais, quotas e Stripe pendente, higienização, governança Git e checklist prático. **Esta seção substitui interpretações de estados transitórios anteriores deste arquivo** como “Event V2 PROD OFF”, “assinatura 0.3.44 pendente”, “v2 não persistente”, “sem medição de tráfego” e “GitHub/Storage sempre sincronizados”.
+
+**Git:** branch única `local/commander-product-current`. Pré-handoff local/GitHub `e764b13e6437a7e210dd45763a7827ad05b653c3`; Storage `092f35afc52827d6c5584f0401e9f60eaeb3d985` em hold governado. Após publicação do novo handoff, usar os HEADs efetivamente lidos, não repetir um SHA antigo como atual. Não tentar contornar branch protection.
