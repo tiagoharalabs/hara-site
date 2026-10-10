@@ -54,8 +54,8 @@
   let currentView = null;
   let deviceSectionTab = "devices";
   let deviceTab = "active";
-  let installApprovalMode = "PERSISTENT_TRUSTED";
-  let installTunnelAutostart = "OFF";
+  // Commercial onboarding is always manual-start and per-action approval.
+  // Advanced technicians may opt into OS-level persistence after installation.
   let installTransportMode = "OUTBOUND_RELAY";
   let installOs = "linux";
 
@@ -1345,7 +1345,6 @@
 
   function setInstallTransportMode(mode) {
     installTransportMode = mode === "direct" && installOs === "linux" ? "LOCAL_TUNNEL" : "OUTBOUND_RELAY";
-    if (installTransportMode !== "LOCAL_TUNNEL") installTunnelAutostart = "OFF";
     const direct = installTransportMode === "LOCAL_TUNNEL";
     document.querySelectorAll("[data-transport-choice]").forEach((button) => {
       const active = (button.dataset.transportChoice === "direct") === direct;
@@ -1353,67 +1352,31 @@
       button.setAttribute("aria-checked", String(active));
       button.disabled = installOs !== "linux" && button.dataset.transportChoice === "direct";
     });
-    document.querySelectorAll("[data-tunnel-autostart-container]").forEach((panel) => { panel.hidden = !direct || installOs !== "linux"; });
     document.querySelectorAll("[data-cloud-onboarding-note]").forEach((node) => { node.hidden = direct; });
     document.querySelectorAll("[data-direct-onboarding-note]").forEach((node) => { node.hidden = !direct; });
     const note = document.getElementById("transportModeNote");
     if (note) note.textContent = direct
       ? "Direct: túnel privado por workspace. Exige tunnel_id e chave da OpenAI Platform; não serve para distribuição pública."
       : "Cloud: o MCP comercial encaminha comandos via Cloudflare. Sem chave OpenAI. A execução ocorre na máquina e o conteúdo transita pelo Gateway.";
-    syncInstallApprovalMode();
+    syncInstallCommands();
   }
 
   function installCommandLinux() {
-    return "(tmp=$(mktemp) && trap 'rm -f $tmp' EXIT && curl -fsS --proto '=https' --tlsv1.2 --location --max-redirs 0 https://commander.haralabs.com.br/install/linux.sh -o $tmp && HARA_COMMANDER_APPROVAL_MODE="
-      + installApprovalMode
+    return "(tmp=$(mktemp) && trap 'rm -f $tmp' EXIT && curl -fsS --proto '=https' --tlsv1.2 --location --max-redirs 0 https://commander.haralabs.com.br/install/linux.sh -o $tmp && HARA_COMMANDER_APPROVAL_MODE=ASK_EVERY_ACTION"
       + " HARA_COMMANDER_TRANSPORT_MODE=" + installTransportMode
-      + " HARA_COMMANDER_TUNNEL_AUTOSTART=" + installTunnelAutostart
+      + " HARA_COMMANDER_TUNNEL_AUTOSTART=OFF"
       + " HARA_COMMANDER_URL=https://commander.haralabs.com.br bash $tmp)";
   }
 
   function installCommandWindows() {
-    return "$haraPrevUrl=$env:HARA_COMMANDER_URL; $haraPrevApproval=$env:HARA_COMMANDER_APPROVAL_MODE; $haraInstaller=Join-Path $env:TEMP ('hara-commander-install-'+[guid]::NewGuid().ToString('N')+'.ps1'); try { $env:HARA_COMMANDER_URL='https://commander.haralabs.com.br'; $env:HARA_COMMANDER_APPROVAL_MODE='"
-      + installApprovalMode
-      + "'; Invoke-WebRequest -Uri https://commander.haralabs.com.br/install/windows.ps1 -OutFile $haraInstaller -UseBasicParsing -MaximumRedirection 0 -ErrorAction Stop; & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $haraInstaller; if ($LASTEXITCODE -ne 0) { throw ('HARA_COMMANDER_INSTALL_EXIT_'+$LASTEXITCODE) } } finally { Remove-Item -LiteralPath $haraInstaller -Force -ErrorAction SilentlyContinue; $env:HARA_COMMANDER_URL=$haraPrevUrl; $env:HARA_COMMANDER_APPROVAL_MODE=$haraPrevApproval }";
+    return "$haraPrevUrl=$env:HARA_COMMANDER_URL; $haraPrevApproval=$env:HARA_COMMANDER_APPROVAL_MODE; $haraInstaller=Join-Path $env:TEMP ('hara-commander-install-'+[guid]::NewGuid().ToString('N')+'.ps1'); try { $env:HARA_COMMANDER_URL='https://commander.haralabs.com.br'; $env:HARA_COMMANDER_APPROVAL_MODE='ASK_EVERY_ACTION'; Invoke-WebRequest -Uri https://commander.haralabs.com.br/install/windows.ps1 -OutFile $haraInstaller -UseBasicParsing -MaximumRedirection 0 -ErrorAction Stop; & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $haraInstaller; if ($LASTEXITCODE -ne 0) { throw ('HARA_COMMANDER_INSTALL_EXIT_'+$LASTEXITCODE) } } finally { Remove-Item -LiteralPath $haraInstaller -Force -ErrorAction SilentlyContinue; $env:HARA_COMMANDER_URL=$haraPrevUrl; $env:HARA_COMMANDER_APPROVAL_MODE=$haraPrevApproval }";
   }
 
-  function syncInstallApprovalMode() {
+  function syncInstallCommands() {
     const linux = document.querySelector("[data-install-linux-code]");
     const windows = document.querySelector("[data-install-windows-code]");
     if (linux) linux.textContent = installCommandLinux();
     if (windows) windows.textContent = installCommandWindows();
-    const autostart = document.querySelector("[data-tunnel-autostart]");
-    if (autostart) autostart.checked = installTunnelAutostart === "ON";
-    const existing = document.getElementById("tunnelAutostartExistingCommand");
-    if (existing) existing.textContent = "hara-commander tunnel autostart " + installTunnelAutostart.toLowerCase();
-    const startupNote = document.getElementById("tunnelAutostartNote");
-    if (startupNote) startupNote.textContent = installTunnelAutostart === "ON"
-      ? "Após configurar o túnel OpenAI, o Linux habilitará o serviço do usuário para iniciar automaticamente. A autorização assinada continua obrigatória."
-      : "Modo manual: após configurar e autorizar, execute hara-commander tunnel start para conectar. Use tunnel stop para desconectar.";
-    const note = document.getElementById("approvalModeNote");
-    if (note) {
-      note.textContent = installApprovalMode === "PERSISTENT_TRUSTED"
-        ? "Recomendado: o Agent fica disponível em segundo plano e executa somente operações governadas autorizadas neste computador."
-        : "Modo restritivo: alterações e comandos exigem uma sessão local para confirmação.";
-    }
-  }
-
-  function setInstallTunnelAutostart(enabled) {
-    installTunnelAutostart = enabled ? "ON" : "OFF";
-    syncInstallApprovalMode();
-  }
-
-  function setInstallApprovalMode(mode) {
-    installApprovalMode = mode === "ask" || mode === "ASK_EVERY_ACTION"
-      ? "ASK_EVERY_ACTION"
-      : "PERSISTENT_TRUSTED";
-    document.querySelectorAll("[data-approval-choice]").forEach((button) => {
-      const active = (button.dataset.approvalChoice === "ask") === (installApprovalMode === "ASK_EVERY_ACTION");
-      button.classList.toggle("active", active);
-      button.setAttribute("aria-checked", String(active));
-      button.tabIndex = active ? 0 : -1;
-    });
-    syncInstallApprovalMode();
   }
 
   async function copyText(value, successMessage) {
@@ -1864,20 +1827,12 @@
 
   copySidebars();
   setInstallOs("linux");
-  setInstallApprovalMode("always");
-  setInstallTunnelAutostart(false);
 
   if (bannerAction) {
     bannerAction.addEventListener("click", () => {
       if (retryAction) retryAction();
     });
   }
-
-  document.addEventListener("change", (event) => {
-    if (event.target.matches?.("[data-tunnel-autostart]")) {
-      setInstallTunnelAutostart(event.target.checked && installTransportMode === "LOCAL_TUNNEL");
-    }
-  });
 
   document.addEventListener("click", (event) => {
     const mobileMore = event.target.closest("[data-mobile-more]");
@@ -2008,13 +1963,6 @@
       return;
     }
 
-    const approvalChoice = event.target.closest("[data-approval-choice]");
-    if (approvalChoice) {
-      event.preventDefault();
-      setInstallApprovalMode(approvalChoice.dataset.approvalChoice);
-      return;
-    }
-
     const copyLocalMcp = event.target.closest("[data-copy-local-mcp]");
     if (copyLocalMcp) {
       event.preventDefault();
@@ -2033,13 +1981,6 @@
     if (copyFirstPrompt) {
       event.preventDefault();
       copyText("Verifique se meu computador está online e mostre as informações básicas dele.", "Prompt de teste copiado.");
-      return;
-    }
-
-    const copyTunnelAutostart = event.target.closest("[data-copy-tunnel-autostart]");
-    if (copyTunnelAutostart) {
-      event.preventDefault();
-      copyText("hara-commander tunnel autostart " + installTunnelAutostart.toLowerCase(), "Comando de início automático copiado.");
       return;
     }
 
@@ -2148,14 +2089,6 @@
       return;
     }
 
-    const approvalChoice = event.target.closest?.("[data-approval-choice]");
-    if (approvalChoice && ["ArrowLeft", "ArrowRight"].includes(event.key)) {
-      event.preventDefault();
-      const nextMode = approvalChoice.dataset.approvalChoice === "session" ? "ask" : "session";
-      setInstallApprovalMode(nextMode);
-      document.querySelector('[data-approval-choice="' + nextMode + '"]')?.focus();
-      return;
-    }
     const deviceSectionTabButton = event.target.closest?.("[data-device-section-tab]");
     if (deviceSectionTabButton && ["ArrowLeft", "ArrowRight"].includes(event.key)) {
       event.preventDefault();

@@ -24,3 +24,17 @@ Repo GitHub: `tiagoharalabs/hara-site`.
 **Próximos gates P0:** assinar/testar release externa com hardening e default seguro; Stripe real checkout+webhook/idempotência; segundo tenant real e isolamento; homologação da franquia Free (fim do limite, concorrência, replay); stress DEV 24h com teardown e failover; instalar e dar suporte sem mutações sem aprovação. **P1:** Windows Event V2 ou beta Linux-only, cold boot/failover, métricas 24h por host e Cloudflare faturado, observabilidade `last_seen`/`agent_version`, Storage/CI. Ver handoff completo para provas e rollback.
 
 **Não confundir ferramentas:** `H_A_R_A__Commander` é o MCP comercial; `H_A_R_A__Commander_Baseline` é superfície Services/admin. Verificar novamente com plugin comercial ao iniciar novo chat.
+
+## 10/10/2026 — Política comercial manual-on-demand, publicação e contingência
+
+**Contrato decidido:** ao instalar Linux/Windows, o Agent inicia uma única vez para teste/atestado, mas o instalador **não habilita autostart no próximo reboot/login**. O cliente usa `hara-commander start` no Linux ou `hara-commander-agent.ps1 start` no Windows para abrir uma sessão ativa; `stop` encerra. `ASK_EVERY_ACTION` é padrão seguro; não há seletor de autorização persistente ou autostart na página comercial. Técnico pode optar em Linux por serviço persistente explicitamente via sistema operacional. O MCP STDIO local `hara-commander mcp` é distinto do Agent Cloud.
+
+**Comprovação de publicação de assets:** Cloudflare PROD serve `https://commander.haralabs.com.br/install/linux.sh` e `install/windows.ps1` com HTTP 200, arquivos de release **v0.3.41 assinado antigo** e autostart ainda presente (Linux `enable --now`, Windows `AtLogOn`). Publicação é via Wrangler Worker `hara-commander`, `assets.directory=public`; `git push` isolado não a altera. Novo fluxo está SOMENTE nos arquivos candidatos em Git até nova assinatura e deploy versionado.
+
+**Contingência GitHub real:** tag **`hara-commander-signed-agent-v0.3.41`** criada e publicada, apontando para SHA exata `08500d5c4256d25abc77a26ad377e55eadf1742a` com tag readback PASS. `verify_commander_public_artifacts.py --check/--live` verificou assinatura RSA v1 e seis arquivos byte-idênticos Git↔Cloudflare, incluindo manifesto. Nunca montar distribuição comercial nova combinando candidate HEAD com manifesto v0.3.41.
+
+**Storage:** `origin` commit `092f35af...` está divergente; fontes de instaladores/agents NÃO correspondem ao manifesto assinado legado no Storage. `HOLD`, não usar Storage como fallback assinado nem fazer force-push.
+
+**Alterações exclusivamente candidatas:** Linux systemd disabled+start uma vez, `Restart=on-failure`, CLI start/stop controla unit, status mostra `AUTOSTART`, update e reenroll preservam estado parado; Windows Task Scheduler sem trigger, CLI manual start/stop, update preserva off; portal `ASK_EVERY_ACTION` e `TUNNEL_AUTOSTART=OFF` fixos, sem escolha de autostart no site. Harness Linux com assinatura efêmera e mock localhost passou todos os passos de ciclo de vida. Windows precisa homologação real; não atualizar Founder V2 0.3.44 inadvertidamente.
+
+**Documento autoritativo:** `docs/operations/HARA_COMMANDER_MANUAL_START_DISTRIBUTION_AUDIT_20261010.md`. **GATE PARA PROD:** nova release assinada completa + testes de reboot Linux/Windows, canário Cloudflare DEV e readback de hashes antes de substituir a v0.3.41 no domínio público.

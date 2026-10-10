@@ -2007,6 +2007,43 @@ def mark_device_offline(config):
         append_console_event("OFFLINE_SYNC_ERROR", state="FAILED", error_code=safe_error_code(exc))
         return False
 
+def _manual_agent_systemctl(action):
+    # Fixed, non-shell service control for the explicitly requested local user
+    # service. Do not accept arbitrary systemctl verbs or unit names from MCP.
+    if action not in {"start", "stop", "is-active", "is-enabled"}:
+        raise ValueError("AGENT_SERVICE_ACTION_DENIED")
+    try:
+        result=subprocess.run(
+            ["systemctl", "--user", action, "hara-commander-agent.service"],
+            stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,
+            timeout=12,check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        raise RuntimeError("AGENT_SERVICE_CONTROL_UNAVAILABLE") from None
+    if action in {"is-active","is-enabled"}:
+        return result.returncode==0
+    if result.returncode:
+        raise RuntimeError("AGENT_SERVICE_"+action.upper()+"_FAILED")
+    return True
+
+
+def start_manual_operator_console():
+    # Starting the local operator session also starts its disabled-by-default
+    # daemon, so "hara-commander start" still works after a reboot. Closing
+    # the terminal relinquishes only a service that this command started.
+    if not sys.stdin.isatty():
+        raise RuntimeError("LOCAL_OPERATOR_TERMINAL_REQUIRED")
+    was_active=_manual_agent_systemctl("is-active")
+    started_here=not was_active
+    if started_here:
+        _manual_agent_systemctl("start")
+    try:
+        start_operator_console()
+    finally:
+        if started_here and not _manual_agent_systemctl("is-enabled"):
+            _manual_agent_systemctl("stop")
+
+
 def start_operator_console():
     config = load_config()
     approval_mode=str(config.get("HARA_COMMANDER_APPROVAL_MODE") or "ASK_EVERY_ACTION").upper()
@@ -2120,6 +2157,11 @@ def session_status():
     if session:
         print("SESSION_STARTED_AT_UTC=" + str(session.get("started_at_utc") or ""))
         print("HARA_COMMANDER_APPROVAL_MODE=" + str(session.get("approval_mode") or "ASK_EVERY_ACTION"))
+    try:
+        print("HARA_COMMANDER_AGENT_SERVICE_ACTIVE=" + ("TRUE" if _manual_agent_systemctl("is-active") else "FALSE"))
+        print("HARA_COMMANDER_AGENT_AUTOSTART=" + ("ON" if _manual_agent_systemctl("is-enabled") else "OFF"))
+    except RuntimeError:
+        print("HARA_COMMANDER_AGENT_SERVICE_STATUS=UNAVAILABLE")
     print("SECRET_MATERIAL_EXPOSED=FALSE")
 
 def stop_operator_session():
@@ -3894,7 +3936,7 @@ def main():
     if len(sys.argv)==3 and sys.argv[1:3]==["tunnel","autostart"]:
         print("HARA_COMMANDER_TUNNEL_AUTOSTART="+tunnel_autostart_mode()); return
     if "--session-start" in sys.argv or (len(sys.argv)>1 and sys.argv[1]=="start"):
-        start_operator_console(); return
+        start_manual_operator_console(); return
     if len(sys.argv)>1 and sys.argv[1]=="approval-mode":
         if len(sys.argv)==2:
             print("HARA_COMMANDER_APPROVAL_MODE="+load_config().get("HARA_COMMANDER_APPROVAL_MODE","ASK_EVERY_ACTION")); return
@@ -3904,7 +3946,9 @@ def main():
     if "--session-status" in sys.argv or (len(sys.argv)>1 and sys.argv[1]=="status"):
         session_status(); return
     if "--session-stop" in sys.argv or (len(sys.argv)>1 and sys.argv[1]=="stop"):
-        stop_operator_session(); return
+        stop_operator_session()
+        _manual_agent_systemctl("stop")
+        return
     if len(sys.argv) > 1 and sys.argv[1] in {"help", "--help", "-h"}:
         print("Usage: hara-commander [start|status|stop|mcp|authorize|tunnel connect|tunnel configure|tunnel start|tunnel stop|tunnel status|tunnel autostart [on|off]|doctor|support|transport-mode [local-tunnel|relay]|approval-mode [ask|session|always]|help]")
         return

@@ -48,15 +48,20 @@ need('return json({ configured: authStatus(env).configured });' in auth_config_b
 need('DEV_ENDPOINT_DISABLED: 404' in WORKER, "DEV_DISABLED_STATUS")
 need("auth-bootstrap-pending" in HTML, "AUTH_FIRST_PAINT")
 need(
-    'data-approval-choice="always"' in HTML
-    and 'data-approval-choice="ask"' in HTML
-    and 'HARA_COMMANDER_APPROVAL_MODE=PERSISTENT_TRUSTED' in HTML
-    and 'let installApprovalMode = "PERSISTENT_TRUSTED"' in JS
+    'data-approval-choice="always"' not in HTML
+    and 'data-approval-choice="ask"' not in HTML
+    and 'data-tunnel-autostart' not in HTML
+    and 'HARA_COMMANDER_APPROVAL_MODE=ASK_EVERY_ACTION' in HTML
+    and '$env:HARA_COMMANDER_APPROVAL_MODE=\'ASK_EVERY_ACTION\'' in JS
+    and 'HARA_COMMANDER_TUNNEL_AUTOSTART=OFF' in HTML
+    and 'HARA_COMMANDER_TUNNEL_AUTOSTART=OFF' in JS
+    and 'installApprovalMode' not in JS
+    and 'setInstallTunnelAutostart' not in JS
+    and 'hara-commander start' in HTML
     and 'hara-commander doctor' in HTML
-    and 'setInstallApprovalMode' in JS
     and 'installCommandLinux' in JS
     and 'installCommandWindows' in JS,
-    "APPROVAL_MODE_ONBOARDING",
+    "MANUAL_ONLY_APPROVAL_MODE_ONBOARDING",
 )
 need(
     "ADD COLUMN approval_mode TEXT NOT NULL DEFAULT 'ASK_EVERY_ACTION'" in APPROVAL_MODE_MIGRATION
@@ -64,7 +69,7 @@ need(
     "APPROVAL_MODE_MIGRATION",
 )
 need("styles.css?v=20261009-tunnelmode1" in HTML, "STYLE_CACHE_KEY")
-need("app.js?v=20261009-tunnelmode1" in HTML, "SCRIPT_CACHE_KEY")
+need("app.js?v=20261010-manualstart1" in HTML, "SCRIPT_CACHE_KEY")
 need('./brand/chatgpt-official.webp' in HTML and (APP / "public/brand/chatgpt-official.webp").stat().st_size > 0, "CHATGPT_BRAND_ICON")
 need('./brand/claude-official.svg' in HTML and (APP / "public/brand/claude-official.svg").stat().st_size > 0, "CLAUDE_BRAND_ICON")
 need('class="where-badge">AI</span><p><b>ChatGPT' not in HTML and 'class="where-badge">AI</span><p><b>Claude' not in HTML, "CLIENT_PLACEHOLDER_BADGES_REMOVED")
@@ -222,8 +227,9 @@ need(
     and 'data-os-choice="windows"' in HTML
     and 'data-os-panel="linux"' in HTML
     and 'data-os-panel="windows"' in HTML
-    and "Sempre permitir" in HTML
+    and 'data-approval-choice="always"' not in HTML
     and "Pedir confirmação" in HTML
+    and "manual" in HTML
     and "<b>Pronto</b>" in HTML
     and "hara-commander doctor" in HTML
     and "Mantenha o console aberto enquanto usar a IA" not in HTML
@@ -239,9 +245,10 @@ need(
     and '<span class="onboarding-step-no">03</span>' in onboarding_block
     and '<span class="onboarding-step-no">04</span>' not in onboarding_block
     and '<span class="onboarding-step-no">05</span>' not in onboarding_block
-    and "Instale e pronto" in onboarding_block
-    and "Sempre permitir" in onboarding_block
-    and "mantenha esse console aberto" not in onboarding_block
+    and "Instale e abra a sessão" in onboarding_block
+    and "Sempre permitir" not in onboarding_block
+    and "ASK_EVERY_ACTION" in onboarding_block
+    and "Início manual" in onboarding_block
     and "sessão de IA precisa ser aberta manualmente" not in onboarding_block,
     "COMMERCIAL_ONBOARDING_THREE_STEPS",
 )

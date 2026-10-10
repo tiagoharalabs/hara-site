@@ -175,7 +175,7 @@ function Invoke-Preflight {
     release_manifest = $true
     release_signature = $true
     stable_agent_version = [string]$release.Version
-    persistence = "scheduled-task"
+    persistence = "on-demand-scheduled-task"
     persistence_ready = ($scheduledTaskReady -and $powershellReady)
     mutation_performed = $false
   }
@@ -244,6 +244,8 @@ function Show-Status {
   }
   Write-Host ("HARA_COMMANDER_DEVICE_ENROLLED=" + $(if ($cfg) {"TRUE"} else {"FALSE"}))
   Write-Host ("HARA_COMMANDER_AGENT_REGISTERED=" + $(if ($task) {"TRUE"} else {"FALSE"}))
+  Write-Host ("HARA_COMMANDER_AGENT_ACTIVE=" + $(if ($task -and [string]$task.State -eq "Running") {"TRUE"} else {"FALSE"}))
+  Write-Host ("HARA_COMMANDER_AGENT_AUTOSTART=" + $(if ($task -and $task.Triggers) {"ON"} else {"OFF"}))
   Write-Host ("HARA_COMMANDER_AGENT_VERSION=" + $version)
   if ($cfg -and $cfg.device_id) { Write-Host ("DEVICE_ID=" + [string]$cfg.device_id) }
   if ($cfg -and $cfg.approval_mode) { Write-Host ("HARA_COMMANDER_APPROVAL_MODE=" + [string]$cfg.approval_mode) }
@@ -263,6 +265,8 @@ if ($Action -eq "update") {
   if (-not (Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue)) { throw "AGENT_TASK_NOT_INSTALLED" }
   $cfg = Get-InstalledDevice
   if ($cfg -and $cfg.base_url) { $BaseUrl = ([string]$cfg.base_url).TrimEnd("/") }
+  $taskBefore = Get-ScheduledTask -TaskName $TaskName -ErrorAction Stop
+  $UpdateTaskWasRunning = [string]$taskBefore.State -eq "Running"
   $PreviousStarted = Get-RuntimeStartedAt
   $tmp = $Agent + ".update"
   $backup = $Agent + ".rollback"
@@ -277,22 +281,30 @@ if ($Action -eq "update") {
   if (-not $VersionMatch -or -not $VersionMatch.Matches.Count) { throw "AGENT_VERSION_NOT_FOUND" }
   $ExpectedVersion=[string]$VersionMatch.Matches[0].Groups[1].Value
   if (Test-Path -LiteralPath $Agent -PathType Leaf) { Copy-Item -Force $Agent $backup }
-  Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
-  Move-Item -Force $tmp $Agent
-  Start-ScheduledTask -TaskName $TaskName
-  Start-Sleep -Seconds 2
-  $task = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
-  if (-not $task -or [string]$task.State -ne "Running" -or -not (Wait-AgentStartup $ExpectedVersion $PreviousStarted 10)) {
+  if ($UpdateTaskWasRunning) {
     Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
-    if (Test-Path -LiteralPath $backup -PathType Leaf) {
-      Move-Item -Force $backup $Agent
-      Start-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
-      Write-Host "HARA_COMMANDER_AGENT_UPDATE_ROLLBACK=PASS"
+  }
+  Move-Item -Force $tmp $Agent
+  if ($UpdateTaskWasRunning) {
+    Start-ScheduledTask -TaskName $TaskName
+    Start-Sleep -Seconds 2
+    $task = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+    if (-not $task -or [string]$task.State -ne "Running" -or -not (Wait-AgentStartup $ExpectedVersion $PreviousStarted 10)) {
+      Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+      if (Test-Path -LiteralPath $backup -PathType Leaf) {
+        Move-Item -Force $backup $Agent
+        Start-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+        Write-Host "HARA_COMMANDER_AGENT_UPDATE_ROLLBACK=PASS"
+      }
+      throw "AGENT_UPDATE_START_FAILED"
     }
-    throw "AGENT_UPDATE_START_FAILED"
+    Write-Host "HARA_COMMANDER_AGENT_STARTUP_ATTESTATION=PASS"
+  } else {
+    # Updating a manually stopped agent must never initiate a connection.
+    Write-Host "HARA_COMMANDER_AGENT_UPDATE_RUNTIME_ATTESTATION=SKIPPED_MANUAL_STOP"
   }
   Remove-Item -Force $backup -ErrorAction SilentlyContinue
-  Write-Host "HARA_COMMANDER_AGENT_STARTUP_ATTESTATION=PASS"
+  Write-Host ("HARA_COMMANDER_AGENT_UPDATE_TASK_WAS_RUNNING=" + $(if ($UpdateTaskWasRunning) {"TRUE"} else {"FALSE"}))
   Write-Host "HARA_COMMANDER_AGENT_UPDATE=PASS"
   Write-Host "HARA_COMMANDER_AGENT_UPDATE_ROLLBACK_READY=TRUE"
   Show-Status
@@ -363,9 +375,12 @@ try {
   $PowerShellExe = (Get-Command powershell.exe).Source
   $Argument = "-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$Agent`""
   $TaskAction = New-ScheduledTaskAction -Execute $PowerShellExe -Argument $Argument
-  $Trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
+  # Register an ON-DEMAND task with NO AtLogOn / AtStartup trigger.
+  # Installation starts it once; reboot/login never starts it automatically.
   $Settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RestartCount 10 -RestartInterval (New-TimeSpan -Minutes 1)
-  Register-ScheduledTask -TaskName $TaskName -Action $TaskAction -Trigger $Trigger -Settings $Settings -Description "HARA Commander outbound device agent" -Force | Out-Null
+  Register-ScheduledTask -TaskName $TaskName -Action $TaskAction -Settings $Settings -Description "HARA Commander on-demand device agent" -Force | Out-Null
+  $Registered = Get-ScheduledTask -TaskName $TaskName -ErrorAction Stop
+  if ($Registered.Triggers -and @($Registered.Triggers).Count -gt 0) { throw "AGENT_MANUAL_START_POLICY_VIOLATED" }
   Start-ScheduledTask -TaskName $TaskName
   Start-Sleep -Seconds 2
   $Task = Get-ScheduledTask -TaskName $TaskName
@@ -376,6 +391,8 @@ try {
   $DeviceTokenForRollback = $null
   Write-Host "HARA_COMMANDER_DEVICE_ENROLLMENT=PASS"
   Write-Host "HARA_COMMANDER_AGENT_TASK=REGISTERED_INERT_UNTIL_LOCAL_SESSION"
+  Write-Host "HARA_COMMANDER_AGENT_AUTOSTART=OFF"
+  Write-Host "HARA_COMMANDER_AGENT_START_MODE=MANUAL_AFTER_INSTALL"
   Write-Host "DEVICE_ID=$EnrollDeviceId"
   Write-Host "DEVICE_TOKEN_EXPOSED=FALSE"
   Write-Host ("NEXT_COMMAND=powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File `"" + $Agent + "`" start")

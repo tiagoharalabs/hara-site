@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Fail-closed, network-free prelaunch validation of H.A.R.A. Commander.
+"""Fail-closed, external-network-free prelaunch H.A.R.A. Commander gate.
 
-This runs only established offline validators, mocked MCP, local SQLite stress,
-and deterministic capacity/reconnect models. It never calls Wrangler, production
-D1, live customer MCP, Stripe, or real client device agents. A PASS is *not*
+Runs offline validators, mocked MCP, temporary SQLite stress, an ephemeral-key
+installer simulation over localhost and deterministic capacity/reconnect models.
+It never calls Wrangler, production D1, live customer MCP, Stripe, or real
+client device agents. A PASS is *not*
 a public-release authorization or a substitute for independent E2E/soak tests.
 """
 from __future__ import annotations
@@ -24,10 +25,15 @@ TIMEOUT = 65
 PYTHON = (
     "validate_canonical_functions_hardening.py",
     "validate_mcp_process_risk_annotations.py",
+    "validate_manual_on_demand_commercial.py",
+    "verify_commander_public_artifacts.py",
+    "commander_linux_clean_lifecycle.py",
     "validate_process_output_memory_budgets.py",
     "validate_preimage_storage_budget.py",
     "validate_concurrent_device_queue_sql.py",
     "validate_device_installers.py",
+    "validate_bootstrap_supply_chain.py",
+    "validate_linux_tunnel_start_modes.py",
     "validate_clean_linux_lifecycle.py",
     "validate_device_lifecycle_races.py",
     "validate_claim_revoke_race.py",
@@ -91,6 +97,9 @@ def invoke(name: str, *, stress: int, threads: int) -> dict:
         command = [sys.executable, "-B", str(script)]
     if name in MODELS:
         command.append("--check")
+    if name == "commander_linux_clean_lifecycle.py":
+        # Ephemerally signed candidate over localhost + fake systemctl only.
+        command.append("--execute")
     if name == "validate_concurrent_device_queue_sql.py":
         command += ["--attempts", str(stress), "--threads", str(threads)]
     env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")

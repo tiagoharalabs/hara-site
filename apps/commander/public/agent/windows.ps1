@@ -6,6 +6,7 @@ $RuntimeStatus = Join-Path $Root "runtime-status.json"
 $SessionPath = Join-Path $Root "operator-session.json"
 $ConsoleEvents = Join-Path $Root "console-events.jsonl"
 $OperationsDb = Join-Path $Root "operations.sqlite3"
+$AgentTaskName = "HARA Commander Agent"
 $SessionMaxHours = 12
 $AgentVersion = "0.3.43"
 $SloProfile = "INTERNAL_BETA_V1"
@@ -595,6 +596,29 @@ function Format-ConsoleEvent($Entry) {
   return "[$stamp] $([string]$Entry.event)$suffix"
 }
 
+function Start-ManualOperatorConsole {
+  # The commercial Windows task has no boot/login trigger by default.
+  # Explicit "start" activates it before opening the operator console.
+  if (-not (Test-Path -LiteralPath $ConfigPath -PathType Leaf)) { throw "DEVICE_NOT_ENROLLED" }
+  $task = Get-ScheduledTask -TaskName $AgentTaskName -ErrorAction SilentlyContinue
+  if (-not $task) { throw "AGENT_TASK_NOT_INSTALLED" }
+  $startedHere = [string]$task.State -ne "Running"
+  if ($startedHere) {
+    Start-ScheduledTask -TaskName $AgentTaskName -ErrorAction Stop
+    Start-Sleep -Seconds 1
+    $nowRunning = Get-ScheduledTask -TaskName $AgentTaskName -ErrorAction SilentlyContinue
+    if (-not $nowRunning -or [string]$nowRunning.State -ne "Running") { throw "AGENT_TASK_START_FAILED" }
+  }
+  try {
+    Start-OperatorConsole
+  } finally {
+    $currentTask = Get-ScheduledTask -TaskName $AgentTaskName -ErrorAction SilentlyContinue
+    if ($startedHere -and $currentTask -and -not $currentTask.Triggers) {
+      Stop-ScheduledTask -TaskName $AgentTaskName -ErrorAction SilentlyContinue
+    }
+  }
+}
+
 function Start-OperatorConsole {
   $cfg=Get-Content -Raw -LiteralPath $ConfigPath | ConvertFrom-Json
   $existing=Get-OperatorSession
@@ -1133,9 +1157,13 @@ function Invoke-AgentSelfTest {
 }
 
 if ($args -contains "--self-test") { Invoke-AgentSelfTest; exit 0 }
-if ($args -contains "--session-start" -or ($args.Count -gt 0 -and [string]$args[0] -eq "start")) { Start-OperatorConsole; exit 0 }
+if ($args -contains "--session-start" -or ($args.Count -gt 0 -and [string]$args[0] -eq "start")) { Start-ManualOperatorConsole; exit 0 }
 if ($args -contains "--session-status" -or ($args.Count -gt 0 -and [string]$args[0] -eq "status")) { Show-OperatorSession; exit 0 }
-if ($args -contains "--session-stop" -or ($args.Count -gt 0 -and [string]$args[0] -eq "stop")) { Stop-OperatorSession; exit 0 }
+if ($args -contains "--session-stop" -or ($args.Count -gt 0 -and [string]$args[0] -eq "stop")) {
+  Stop-OperatorSession
+  Stop-ScheduledTask -TaskName $AgentTaskName -ErrorAction SilentlyContinue
+  exit 0
+}
 if ($args.Count -gt 0 -and @("help","--help","-h") -contains [string]$args[0]) {
   Write-Host "Usage: hara-commander [start|status|stop|help]"
   exit 0

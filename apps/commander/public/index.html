@@ -338,7 +338,7 @@
 
                 <div class="onboarding-step onboarding-step-stack onboarding-platform-policy">
                   <span class="onboarding-step-no">02</span>
-                  <div><b>Escolha a plataforma e a autorização</b><small>Linux e Windows: modo Cloud por padrão, sem chave da OpenAI. “Pedir confirmação” é recomendado para ações sensíveis; “Sempre permitir” aceita ações governadas sem nova aprovação local.</small></div>
+                  <div><b>Escolha a plataforma</b><small>Linux e Windows: Cloud por padrão, sem chave da OpenAI. O cliente instala sem iniciar automaticamente no próximo login ou boot. Autorizações sensíveis exigem confirmação local.</small></div>
                   <div class="onboarding-choice-row">
                     <div>
                       <small class="choice-label">Sistema</small>
@@ -348,11 +348,8 @@
                       </div>
                     </div>
                     <div>
-                      <small class="choice-label">Autorização</small>
-                      <div class="os-picker approval-picker" role="radiogroup" aria-label="Modo de autorização">
-                        <button class="active" type="button" role="radio" aria-checked="true" data-approval-choice="always">Sempre permitir</button>
-                        <button type="button" role="radio" aria-checked="false" data-approval-choice="ask">Pedir confirmação</button>
-                      </div>
+                      <small class="choice-label">Segurança</small>
+                      <small class="install-note">Pedir confirmação por ação (padrão). O técnico pode ajustar políticas avançadas diretamente no computador.</small>
                     </div>
                   </div>
                   <div class="onboarding-choice-row">
@@ -365,35 +362,26 @@
                       <small class="install-note" id="transportModeNote">Cloud: o Gateway comercial encaminha comandos; nenhuma chave da OpenAI Platform é necessária. O Direct usa OpenAI Secure MCP Tunnel privado, e a execução permanece local.</small>
                     </div>
                   </div>
-                  <small class="install-note" id="approvalModeNote">Recomendado: o Agent fica disponível em segundo plano e executa somente operações governadas autorizadas neste computador.</small>
-                  <div class="tunnel-startup-choice" data-tunnel-autostart-container hidden>
-                    <label for="linuxTunnelAutostart">
-                      <input id="linuxTunnelAutostart" type="checkbox" data-tunnel-autostart />
-                      <span>Linux: iniciar o túnel OpenAI automaticamente</span>
-                    </label>
-                    <small id="tunnelAutostartNote">Modo manual (padrão): configure e autorize o túnel antes de iniciar com <code>hara-commander tunnel start</code>.</small>
-                    <small>Esta escolha entra no comando de instalação Linux. O serviço inicia automaticamente ao entrar na sessão do usuário (ou no boot se o Linux tiver linger habilitado). Para uma máquina já instalada, aplique o comando local abaixo: marcar no site não liga remotamente um computador.</small>
-                    <div class="install-command"><code id="tunnelAutostartExistingCommand">hara-commander tunnel autostart off</code><button class="btn btn-secondary small" type="button" data-copy-tunnel-autostart>Copiar ajuste</button></div>
-                  </div>
+                  <small class="install-note">Início manual: o instalador liga o Agent apenas para comprovar a instalação; ele não fica configurado para iniciar no próximo boot. Em modo Direct, o túnel também começa desligado. Usuários avançados podem habilitar persistência localmente pelo sistema operacional.</small>
                 </div>
 
                 <div class="onboarding-step onboarding-step-stack">
                   <span class="onboarding-step-no">03</span>
-                  <div><b>Instale e pronto</b><small>Copie o comando, execute e cole o código quando o instalador solicitar “Pairing token”.</small></div>
+                  <div><b>Instale e abra a sessão</b><small>Copie o comando, execute e cole o código de pareamento. A instalação faz uma inicialização de verificação; para usar depois de reiniciar, abra a sessão manualmente.</small></div>
                   <div class="install-pane" data-os-panel="linux">
-                    <div class="install-command"><code data-install-linux-code>(tmp=$(mktemp) && trap 'rm -f $tmp' EXIT && curl -fsS --proto '=https' --tlsv1.2 --location --max-redirs 0 https://commander.haralabs.com.br/install/linux.sh -o $tmp && HARA_COMMANDER_APPROVAL_MODE=PERSISTENT_TRUSTED HARA_COMMANDER_TRANSPORT_MODE=OUTBOUND_RELAY HARA_COMMANDER_TUNNEL_AUTOSTART=OFF HARA_COMMANDER_URL=https://commander.haralabs.com.br bash $tmp)</code><button class="btn btn-secondary small" type="button" data-copy-linux>Copiar comando Linux</button></div>
+                    <div class="install-command"><code data-install-linux-code>(tmp=$(mktemp) && trap 'rm -f $tmp' EXIT && curl -fsS --proto '=https' --tlsv1.2 --location --max-redirs 0 https://commander.haralabs.com.br/install/linux.sh -o $tmp && HARA_COMMANDER_APPROVAL_MODE=ASK_EVERY_ACTION HARA_COMMANDER_TRANSPORT_MODE=OUTBOUND_RELAY HARA_COMMANDER_TUNNEL_AUTOSTART=OFF HARA_COMMANDER_URL=https://commander.haralabs.com.br bash $tmp)</code><button class="btn btn-secondary small" type="button" data-copy-linux>Copiar comando Linux</button></div>
                     <small class="install-note" data-cloud-onboarding-note>Depois, conecte <code>https://commander.haralabs.com.br/api/mcp?profile=simple</code> no ChatGPT, com HARA Identity OAuth. O plugin ainda precisa de aprovação para aparecer no diretório.</small><small class="install-note" data-direct-onboarding-note hidden>Somente no modo Direct: Configure o túnel OpenAI via <code>hara-commander tunnel connect</code> (alias <code>hara-commander tunnel configure</code>), na etapa "Autorize por 6 horas", gere o código local e execute <code>hara-commander authorize</code>. Inicie com <code>hara-commander tunnel start</code> e desconecte com <code>hara-commander tunnel stop</code>. Esse túnel exige credenciais da OpenAI Platform.</small>
                     <div class="install-command" data-direct-onboarding-note hidden><code>hara-commander tunnel start</code><button class="btn btn-secondary small" type="button" data-copy-tunnel-start>Copiar início manual</button></div>
-                    <small class="install-note">No modo “Pedir confirmação”, <code>hara-commander start</code> abre a sessão de operador na máquina. O túnel direto OpenAI é opcional e não é necessário para o MCP comercial.</small>
+                    <small class="install-note"><code>hara-commander start</code> liga o Agent e abre a sessão local. Ctrl+C encerra a sessão e libera a conexão iniciada por esse comando. Em reinicializações futuras o Agent não sobe sozinho. Para desconectar manualmente: <code>hara-commander stop</code>. O modo Direct é opcional.</small>
                   </div>
                   <div class="install-pane" data-os-panel="windows" hidden>
-                    <div class="install-command"><code data-install-windows-code>$haraPrevUrl=$env:HARA_COMMANDER_URL; $haraPrevApproval=$env:HARA_COMMANDER_APPROVAL_MODE; $haraInstaller=Join-Path $env:TEMP ('hara-commander-install-'+[guid]::NewGuid().ToString('N')+'.ps1'); try { $env:HARA_COMMANDER_URL='https://commander.haralabs.com.br'; $env:HARA_COMMANDER_APPROVAL_MODE='PERSISTENT_TRUSTED'; Invoke-WebRequest -Uri https://commander.haralabs.com.br/install/windows.ps1 -OutFile $haraInstaller -UseBasicParsing -MaximumRedirection 0 -ErrorAction Stop; & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $haraInstaller; if ($LASTEXITCODE -ne 0) { throw ('HARA_COMMANDER_INSTALL_EXIT_'+$LASTEXITCODE) } } finally { Remove-Item -LiteralPath $haraInstaller -Force -ErrorAction SilentlyContinue; $env:HARA_COMMANDER_URL=$haraPrevUrl; $env:HARA_COMMANDER_APPROVAL_MODE=$haraPrevApproval }</code><button class="btn btn-secondary small" type="button" data-copy-windows>Copiar comando Windows</button></div>
-                    <small class="install-note">No modo “Sempre permitir”, o Agent fica pronto em segundo plano após a instalação. Em “Pedir confirmação”, abra a sessão local quando quiser autorizar ações.</small>
+                    <div class="install-command"><code data-install-windows-code>$haraPrevUrl=$env:HARA_COMMANDER_URL; $haraPrevApproval=$env:HARA_COMMANDER_APPROVAL_MODE; $haraInstaller=Join-Path $env:TEMP ('hara-commander-install-'+[guid]::NewGuid().ToString('N')+'.ps1'); try { $env:HARA_COMMANDER_URL='https://commander.haralabs.com.br'; $env:HARA_COMMANDER_APPROVAL_MODE='ASK_EVERY_ACTION'; Invoke-WebRequest -Uri https://commander.haralabs.com.br/install/windows.ps1 -OutFile $haraInstaller -UseBasicParsing -MaximumRedirection 0 -ErrorAction Stop; & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $haraInstaller; if ($LASTEXITCODE -ne 0) { throw ('HARA_COMMANDER_INSTALL_EXIT_'+$LASTEXITCODE) } } finally { Remove-Item -LiteralPath $haraInstaller -Force -ErrorAction SilentlyContinue; $env:HARA_COMMANDER_URL=$haraPrevUrl; $env:HARA_COMMANDER_APPROVAL_MODE=$haraPrevApproval }</code><button class="btn btn-secondary small" type="button" data-copy-windows>Copiar comando Windows</button></div>
+                    <small class="install-note">Após reiniciar o Windows, abra PowerShell e execute o Agent instalado com o argumento <code>start</code> para conectar e autorizar a sessão. A tarefa agendada não possui disparador de logon. Para encerrar a sessão, utilize <code>stop</code>. O modo de aprovação por ação no Windows ainda precisa de homologação antes de liberar escritas.</small>
                   </div>
                 </div>
 
                 <div class="onboarding-finish onboarding-ready">
-                  <div><b>Pronto</b><small>O computador aparecerá na lista assim que o Agent conectar. Diagnóstico: <code>hara-commander doctor</code>.</small></div>
+                  <div><b>Pronto</b><small>O computador aparece online somente enquanto o Agent está conectado e autorizado. Diagnóstico: <code>hara-commander doctor</code>. O próximo boot não reinicia a conexão automaticamente.</small></div>
                 </div>
               </article>
             </div>
@@ -619,6 +607,6 @@
     </nav>
   </template>
 
-  <script src="./app.js?v=20261009-tunnelmode1"></script>
+  <script src="./app.js?v=20261010-manualstart1"></script>
 </body>
 </html>

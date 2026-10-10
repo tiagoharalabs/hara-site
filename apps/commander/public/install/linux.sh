@@ -564,7 +564,7 @@ doctor_agent() {
   [ -f "$CONFIG_FILE" ] || { echo 'DEVICE_NOT_ENROLLED' >&2; return 5; }
   [ -f "$AGENT" ] || { echo 'AGENT_BINARY_MISSING' >&2; return 6; }
   [ -f "$UNIT" ] || { echo 'AGENT_SERVICE_NOT_INSTALLED' >&2; return 6; }
-  systemctl --user is-enabled --quiet "$SERVICE" || { echo 'AGENT_SERVICE_NOT_ENABLED' >&2; return 7; }
+  # Manual-on-demand units are deliberately disabled at boot.
   systemctl --user is-active --quiet "$SERVICE" || { echo 'AGENT_SERVICE_NOT_ACTIVE' >&2; return 7; }
   python3 "$AGENT" --self-test >/dev/null || { echo 'AGENT_SELF_TEST_FAILED' >&2; return 8; }
   local transport
@@ -597,6 +597,8 @@ case "$ACTION" in
     configured_url="$(read_config_value HARA_COMMANDER_URL 2>/dev/null || true)"
     [ -z "$configured_url" ] || BASE_URL="${configured_url%/}"
     previous_started="$(read_runtime_status_value started_at_utc 2>/dev/null || true)"
+    UPDATE_SERVICE_WAS_ACTIVE=FALSE
+    systemctl --user is-active --quiet "$SERVICE" 2>/dev/null && UPDATE_SERVICE_WAS_ACTIVE=TRUE || true
     existing_transport="$(read_config_value HARA_COMMANDER_TRANSPORT_MODE 2>/dev/null || true)"
     if [ "$existing_transport" = "LOCAL_TUNNEL" ]; then
       install_tunnel_client
@@ -608,21 +610,27 @@ case "$ACTION" in
     install_cli
     expected_version="$(python3 "$AGENT" --version)"
     systemctl --user daemon-reload
-    systemctl --user restart "$SERVICE"
-    sleep 1
-    if ! systemctl --user is-active --quiet "$SERVICE" || ! wait_for_agent_startup "$expected_version" "$previous_started"; then
-      if [ -f "$backup" ]; then
-        mv -f "$backup" "$AGENT"
-        chmod 700 "$AGENT"
-        systemctl --user restart "$SERVICE" || true
-        sleep 1
-        systemctl --user is-active --quiet "$SERVICE" && printf 'HARA_COMMANDER_AGENT_UPDATE_ROLLBACK=PASS\n' >&2
+    if [ "$UPDATE_SERVICE_WAS_ACTIVE" = TRUE ]; then
+      systemctl --user restart "$SERVICE"
+      sleep 1
+      if ! systemctl --user is-active --quiet "$SERVICE" || ! wait_for_agent_startup "$expected_version" "$previous_started"; then
+        if [ -f "$backup" ]; then
+          mv -f "$backup" "$AGENT"
+          chmod 700 "$AGENT"
+          systemctl --user restart "$SERVICE" || true
+          sleep 1
+          systemctl --user is-active --quiet "$SERVICE" && printf 'HARA_COMMANDER_AGENT_UPDATE_ROLLBACK=PASS\n' >&2
+        fi
+        echo 'HARA Commander Agent failed after update; previous agent restored when available.' >&2
+        exit 7
       fi
-      echo 'HARA Commander Agent failed after update; previous agent restored when available.' >&2
-      exit 7
+      printf 'HARA_COMMANDER_AGENT_STARTUP_ATTESTATION=PASS\n'
+    else
+      # Updating a manually stopped agent must not establish a new connection.
+      printf 'HARA_COMMANDER_AGENT_UPDATE_RUNTIME_ATTESTATION=SKIPPED_MANUAL_STOP\n'
     fi
     rm -f "$backup"
-    printf 'HARA_COMMANDER_AGENT_STARTUP_ATTESTATION=PASS\n'
+    printf 'HARA_COMMANDER_AGENT_UPDATE_SERVICE_WAS_ACTIVE=%s\n' "$UPDATE_SERVICE_WAS_ACTIVE"
     printf 'HARA_COMMANDER_AGENT_UPDATE=PASS\n'
     printf 'HARA_COMMANDER_AGENT_UPDATE_ROLLBACK_READY=TRUE\n'
     status_agent; exit 0 ;;
@@ -761,11 +769,20 @@ if [ "$REENROLL" = TRUE ]; then
   expected_version="$(python3 "$AGENT" --version 2>/dev/null || true)"
   [ -n "$expected_version" ] || { echo 'AGENT_VERSION_INVALID' >&2; exit 6; }
   previous_started="$(read_runtime_status_value started_at_utc 2>/dev/null || true)"
-  systemctl --user restart "$SERVICE"
+  # Re-enrollment verifies startup once but does not change an inactive
+  # agent into a persistent background connection.
+  if [ "$REENROLL_SERVICE_WAS_ACTIVE" = TRUE ]; then
+    systemctl --user restart "$SERVICE"
+  else
+    systemctl --user start "$SERVICE"
+  fi
   sleep 1
   if ! systemctl --user is-active --quiet "$SERVICE" || ! wait_for_agent_startup "$expected_version" "$previous_started"; then
     echo 'HARA Commander Agent failed re-enroll startup attestation.' >&2
     exit 4
+  fi
+  if [ "$REENROLL_SERVICE_WAS_ACTIVE" != TRUE ]; then
+    systemctl --user stop "$SERVICE"
   fi
   install_cli
   printf 'HARA_COMMANDER_AGENT_STARTUP_ATTESTATION=PASS\n'
@@ -795,7 +812,9 @@ Wants=network-online.target
 [Service]
 Type=simple
 ExecStart=$AGENT
-Restart=always
+# The service may restart after a failure only while explicitly started.
+# It is NOT enabled at boot by the installer.
+Restart=on-failure
 RestartSec=5
 NoNewPrivileges=yes
 PrivateTmp=yes
@@ -806,7 +825,14 @@ EOF
 chmod 600 "$UNIT"
 
 systemctl --user daemon-reload
-systemctl --user enable --now hara-commander-agent.service
+# New customer: run immediately for installation attestation, but never
+# enable automatic start on future logins or reboots.
+systemctl --user disable "$SERVICE" >/dev/null 2>&1 || true
+systemctl --user start "$SERVICE"
+if systemctl --user is-enabled --quiet "$SERVICE"; then
+  echo 'AGENT_MANUAL_START_POLICY_VIOLATED' >&2
+  exit 8
+fi
 
 sleep 1
 if ! systemctl --user is-active --quiet hara-commander-agent.service || ! wait_for_agent_startup "$expected_version" ""; then
@@ -820,6 +846,8 @@ trap - EXIT
 unset DEVICE_TOKEN
 printf 'HARA_COMMANDER_DEVICE_ENROLLMENT=PASS\n'
 printf 'HARA_COMMANDER_AGENT_SERVICE=ACTIVE_LOCAL_CONTROL_PLANE\n'
+printf 'HARA_COMMANDER_AGENT_AUTOSTART=OFF\n'
+printf 'HARA_COMMANDER_AGENT_START_MODE=MANUAL_AFTER_INSTALL\n'
 printf 'DEVICE_ID=%s\n' "$DEVICE_ID"
 printf 'DEVICE_TOKEN_EXPOSED=FALSE\n'
 printf 'HARA_COMMANDER_APPROVAL_MODE=%s\n' "$APPROVAL_MODE"
@@ -835,10 +863,11 @@ if [ "$TRANSPORT_MODE" = "LOCAL_TUNNEL" ]; then
 else
   printf 'HARA_COMMANDER_CLOUD_PLUGIN_MODE=TRUE\n'
   printf 'OPENAI_PLATFORM_API_KEY_REQUIRED=FALSE\n'
-  printf 'NEXT_STEP=Conectar o plugin H.A.R.A. Commander no ChatGPT via HARA Identity OAuth\n'
+  printf 'NEXT_STEP=Abra hara-commander start no terminal para conectar e autorizar a sessão; depois conecte o plugin via HARA Identity OAuth\n'
   printf 'CUSTOMER_MCP_ENDPOINT=https://commander.haralabs.com.br/api/mcp?profile=simple\n'
 fi
 printf 'OPERATOR_SESSION_COMMAND=hara-commander start\n'
+printf 'MANUAL_CONNECTION_COMMAND=hara-commander start\n'
 printf 'STATUS_COMMAND=hara-commander status\n'
 printf 'STOP_COMMAND=hara-commander stop\n'
 printf 'LOCAL_MCP_COMMAND=hara-commander mcp\n'

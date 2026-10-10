@@ -27,7 +27,7 @@ def need(text: str, token: str, code: str) -> None:
     assert token in text, f"{code}:{token}"
 
 for token in ('platform": "LINUX"', "/api/device/enroll", "/agent/linux.py",
-              "systemctl --user enable --now", "chmod 600", '"agent_version": "0.3.43"',
+              'systemctl --user start "$SERVICE"', "chmod 600", '"agent_version": "0.3.43"',
               "HARA_COMMANDER_AGENT_UPDATE=PASS", "HARA_COMMANDER_AGENT_UNINSTALL=PASS",
               "HARA_COMMANDER_AGENT_VERSION=", "HARA_COMMANDER_AGENT_DOCTOR=PASS",
               "/api/device/revoke-self", "SERVER_DEVICE_REVOKE=",
@@ -136,7 +136,7 @@ for forbidden in ("os.system(", "shell=True", "paramiko", "ssh "):
 # inside their five governed administrative functions.
 allowed_subprocess_functions = {
     "set_transport_mode", "authorize_local_tunnel", "_openai_tunnel_doctor",
-    "_tunnel_systemctl", "configure_openai_tunnel",
+    "_tunnel_systemctl", "configure_openai_tunnel", "_manual_agent_systemctl",
 }
 tree = ast.parse(LINUX_AGENT)
 subprocess_call_functions = []
@@ -192,7 +192,13 @@ for token in ("operator-session.json", "LOCAL_OPERATOR_SESSION_REQUIRED", "AGENT
 assert "if not authorized:" in LINUX_AGENT, "LINUX_DAEMON_NOT_INERT_WITHOUT_SESSION"
 assert "if (-not (Test-OperatorSessionActive))" in WINDOWS_AGENT, "WINDOWS_DAEMON_NOT_INERT_WITHOUT_SESSION"
 assert "hara-commander start" in LINUX, "LINUX_MANUAL_START_GUIDANCE_MISSING"
+assert 'systemctl --user disable "$SERVICE"' in LINUX and 'systemctl --user start "$SERVICE"' in LINUX, "LINUX_INSTALL_MANUAL_ON_DEMAND_POLICY_MISSING"
+assert 'systemctl --user enable --now hara-commander-agent.service' not in LINUX, "LINUX_INSTALL_BOOT_AUTOSTART_FORBIDDEN"
+assert "Restart=on-failure" in LINUX, "LINUX_AGENT_RECONNECT_RESTART_BUDGET_MISSING"
+assert "def start_manual_operator_console():" in LINUX_AGENT and '_manual_agent_systemctl("start")' in LINUX_AGENT, "LINUX_MANUAL_SESSION_DAEMON_START_MISSING"
+assert 'if started_here and not _manual_agent_systemctl("is-enabled"):' in LINUX_AGENT, "LINUX_MANUAL_SESSION_STOP_AFTER_EXIT_MISSING"
 assert "REGISTERED_INERT_UNTIL_LOCAL_SESSION" in WINDOWS, "WINDOWS_MANUAL_START_GUIDANCE_MISSING"
+assert "New-ScheduledTaskTrigger -AtLogOn" not in WINDOWS, "WINDOWS_AUTOSTART_AT_LOGON_FORBIDDEN"
 linux_doctor = LINUX.split("doctor_agent() {",1)[1].split("case \"$ACTION\" in",1)[0]
 windows_doctor = WINDOWS.split("function Invoke-Doctor",1)[1].split("function Show-Status",1)[0]
 assert "remote_device_action heartbeat" not in linux_doctor, "LINUX_DOCTOR_HEARTBEAT_OUTSIDE_SESSION"
