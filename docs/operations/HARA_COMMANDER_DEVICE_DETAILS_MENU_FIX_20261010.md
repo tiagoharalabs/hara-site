@@ -12,4 +12,4 @@ A política Free=10.000 e Pro ilimitado, o MCP comercial, o Agent assinado 0.3.4
 
 Teste de DOM com renderDevices verdadeiro comprova clique de abertura, fechamento, mudança de máquina, estado ARIA, histórico, autorização e revogação disponíveis. Gate offline 55/55 PASS.
 
-DEV validado: Cloudflare Worker `hara-commander-dev-v2`, versão `b9ecf6c0-dd0d-4020-83ef-0746db2eadc7`, SHA de 11/11 assets exato e health 200. PROD será promovido com rollback e readback independente. Nenhum Agent, token ou quota foi alterado.
+DEV e PROD publicados e comprovados. DEV `hara-commander-dev-v2` versão `b9ecf6c0-dd0d-4020-83ef-0746db2eadc7` com SHA 11/11 e health 200. PROD `hara-commander` versão `48c04065-7de8-41f7-8e3e-48c289bcaa5b` com 100% do tráfego; rollback anterior `66958dc2-2951-423d-9699-6396e78d2890`. Readback PROD 11/11 hashes, `/` e `/index.html` exatos após normalização do beacon Cloudflare, health/auth PASS, Free 10.000/Pro ilimitado, pings MCP Services/Núcleo A/Sentinela C/D Agent 0.3.44 PASS. Sem mudanças em Agent, token, D1 ou quota.
