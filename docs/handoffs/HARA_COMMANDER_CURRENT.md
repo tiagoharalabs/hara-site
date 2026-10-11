@@ -1,5 +1,16 @@
 # H.A.R.A. Commander — CURRENT (10/10/2026, após rollout 7/7)
 
+## PROD administrativo oficial — 11/10/2026
+
+Código funcional implantado: commit `605ffdad230e34c0f5acc09dd3bcc361a1c11618`. Perfil MCP simples: **32 ferramentas**, incluindo novas primitivas READ_ONLY de uptime, recursos, workspace, SHA-256 e diff; processos, sessões, arquivos, rollback, atividade e recibos continuam disponíveis e governados. Gate local **73/73 PASS**.
+
+Cloudflare DEV: Worker `3ff8b6b0-28f0-4cbc-b8be-2f571bbdaf63` 100%, migração aditiva `0033_portal_read_indexes_20261011.sql` aplicada, health/auth HTTP 200. PROD: Worker `ecbd82d8-6780-4605-8eed-17d844ab3415` 100%, a mesma migração aplicada, health/auth PASS. Assets comerciais assinados 0.3.43-v2 preservados no stage; sem alteração de preços ou agentes assinados.
+
+Frota Founder Linux após PROD e reconciliação por resultados canônicos do Agent: **7/7 ONLINE, Agent 0.3.44** (`nucleo-a`, `sentinela-a/b/c/d`, `ninja-blue`, `services`). Núcleo teve o Agent V2/guard reabilitados; v1 permanece disabled. Sentinela A recebeu wake pela rotina canônica e retornou; Ninja retornou e respondeu pelo produto embora não conste no wake-map canônico. Registros Windows legados permanecem offline/revogados e não integram esta homologação.
+
+O conector já aberto nesta conversa pode manter o schema antigo de ferramentas em cache; novas sessões/conexões devem descobrir as 32 ferramentas do Worker publicado.
+
+
 ## Perfil administrativo ampliado — 11/10/2026
 
 O perfil MCP simples passa de 27 para **32 ferramentas**, adicionando uptime, recursos, inspeção de workspace, hash e diff como primitivas READ_ONLY. Processos e mutações de arquivo já existiam e permanecem governados. Gate local **73/73 PASS**. Documento: `docs/operations/HARA_COMMANDER_ADMIN_PROFILE_20261011.md`.
