@@ -1254,7 +1254,7 @@ html[data-theme=dark] .tunnel-startup-choice small{color:#a6c4d4}
 [data-view="devices"] .device-primary-action{
   font-size:11px;font-weight:700;white-space:nowrap
 }
-[data-view="devices"] .device-overflow{position:relative;flex:0 0 auto}
+[data-view="devices"] .device-row.device-details-open{position:relative}
 [data-view="devices"] .device-overflow-toggle{
   display:grid;place-items:center;width:32px;height:32px;
   border:1px solid transparent;border-radius:8px;
@@ -1262,23 +1262,25 @@ html[data-theme=dark] .tunnel-startup-choice small{color:#a6c4d4}
   font-size:21px;font-weight:700;line-height:1;
   color:var(--muted);background:transparent
 }
-[data-view="devices"] .device-overflow-toggle::-webkit-details-marker{display:none}
+[data-view="devices"] .device-overflow-toggle{flex:0 0 auto}
 [data-view="devices"] .device-overflow-toggle:hover,
-[data-view="devices"] .device-overflow[open] .device-overflow-toggle{
+[data-view="devices"] .device-overflow-toggle[aria-expanded="true"]{
   background:rgba(57,162,223,.08);border-color:rgba(57,162,223,.2);
   color:var(--ink)
 }
-[data-view="devices"] .device-overflow-toggle:focus-visible,
-[data-view="devices"] .devices-help>summary:focus-visible{
+[data-view="devices"] .device-overflow-toggle:focus-visible{
   outline:2px solid var(--sky);outline-offset:3px
 }
-[data-view="devices"] .device-overflow[open]{z-index:15}
+[data-view="devices"] .device-overflow-panel[hidden]{display:none!important}
 [data-view="devices"] .device-overflow-panel{
-  position:absolute;right:0;top:calc(100% + 8px);z-index:15;
-  width:min(310px,calc(100vw - 32px));
-  display:grid;gap:12px;padding:16px;
-  background:#fff;border:1px solid var(--line);border-radius:12px;
-  box-shadow:0 14px 32px rgba(6,23,33,.15)
+  grid-column:1/-1;
+  position:static;
+  width:100%;min-width:0;
+  display:grid;gap:12px;
+  margin:3px 0 8px;padding:15px 18px;
+  background:rgba(57,162,223,.04);
+  border:1px solid var(--line);border-radius:10px;
+  box-shadow:none
 }
 [data-view="devices"] .device-overflow-heading{
   font-size:12px;color:var(--ink);letter-spacing:-.01em
@@ -1338,8 +1340,8 @@ html[data-theme="dark"] [data-view="devices"] .device-copy small{
   color:#91adbd
 }
 html[data-theme="dark"] [data-view="devices"] .device-overflow-panel{
-  background:#0b2637;border-color:#21485d;
-  box-shadow:0 16px 34px rgba(0,0,0,.32)
+  background:rgba(14,48,68,.55);border-color:#21485d;
+  box-shadow:none
 }
 html[data-theme="dark"] [data-view="devices"] .device-overflow-heading,
 html[data-theme="dark"] [data-view="devices"] .device-facts dd,

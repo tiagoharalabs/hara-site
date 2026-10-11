@@ -43,6 +43,7 @@
   let dashboardCacheAt = 0;
   let devicesCache = null;
   let devicesCacheAt = 0;
+  let expandedDeviceId = null;
   let pairingExpiryTimer = null;
   const activityCache = new Map();
   let activityWindow = "7d";
@@ -976,6 +977,23 @@
     return "$tmp=Join-Path $env:TEMP ('hara-commander-support-'+[guid]::NewGuid().ToString('N')+'.ps1'); try { Invoke-WebRequest -Uri https://commander.haralabs.com.br/install/windows.ps1 -OutFile $tmp -UseBasicParsing -MaximumRedirection 0 -ErrorAction Stop; & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $tmp -Action doctor; & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $tmp -Action support } finally { Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue }";
   }
 
+  function toggleDeviceDetails(deviceId) {
+    const id = String(deviceId || "");
+    if (!id) return;
+    expandedDeviceId = expandedDeviceId === id ? null : id;
+    const list = document.getElementById("deviceList");
+    if (!list) return;
+    list.querySelectorAll(".device-row").forEach((row) => {
+      const button = row.querySelector("[data-toggle-device-details]");
+      const panel = row.querySelector(".device-overflow-panel");
+      if (!button || !panel) return;
+      const open = expandedDeviceId === button.dataset.toggleDeviceDetails;
+      panel.hidden = !open;
+      button.setAttribute("aria-expanded", String(open));
+      row.classList.toggle("device-details-open", open);
+    });
+  }
+
   function renderDevices(payload) {
     const list = document.getElementById("deviceList");
     const devices = Array.isArray(payload?.devices) ? payload.devices : [];
@@ -1075,17 +1093,21 @@
         actions.append(diagnostic);
       }
 
-      // Use a native, keyboard-accessible disclosure instead of a row full
-      // of secondary links. No device metadata is sent to another endpoint.
-      const more = document.createElement("details");
-      more.className = "device-overflow";
-      const toggle = document.createElement("summary");
+      // Keep the advanced panel inline so it cannot disappear behind other
+      // rows or browser-specific native disclosure positioning.
+      const toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.dataset.toggleDeviceDetails = String(device.device_id);
       toggle.className = "device-overflow-toggle";
       toggle.textContent = "⋯";
       toggle.setAttribute("aria-label", "Detalhes e ações de " + String(device.device_name || "computador"));
       toggle.title = "Detalhes e ações";
       const menu = document.createElement("div");
       menu.className = "device-overflow-panel";
+      menu.hidden = expandedDeviceId !== String(device.device_id);
+      menu.id = "device-details-" + String(device.device_id);
+      toggle.setAttribute("aria-controls", menu.id);
+      toggle.setAttribute("aria-expanded", String(!menu.hidden));
 
       const heading = document.createElement("strong");
       heading.className = "device-overflow-heading";
@@ -1140,9 +1162,8 @@
         menu.append(secondaryActions);
       }
 
-      more.append(toggle, menu);
-      actions.append(more);
-      row.append(actions);
+      actions.append(toggle);
+      row.append(actions, menu);
       list.append(row);
     });
   }
@@ -1993,6 +2014,13 @@
         return;
       }
       copyText(code.textContent.trim(), "Comando copiado para o terminal.");
+      return;
+    }
+
+    const deviceDetailsButton = event.target.closest("[data-toggle-device-details]");
+    if (deviceDetailsButton) {
+      event.preventDefault();
+      toggleDeviceDetails(deviceDetailsButton.dataset.toggleDeviceDetails);
       return;
     }
 

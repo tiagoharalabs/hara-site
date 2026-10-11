@@ -51,6 +51,18 @@ class Node {
   appendChild(item){this.append(item);return item}
   replaceChildren(...items){this.children=[];this._text="";this.append(...items)}
   setAttribute(k,v){this.attributes[k]=String(v)}
+  querySelectorAll(selector){
+    const match=(node)=>{
+      if (selector.startsWith(".")) return elementClass(node,selector.slice(1));
+      if (selector === "[data-toggle-device-details]") return Boolean(node.dataset?.toggleDeviceDetails);
+      return false;
+    };
+    const visit=(node)=>(node.children||[]).flatMap((child)=>[
+      ...(match(child)?[child]:[]), ...visit(child),
+    ]);
+    return visit(this);
+  }
+  querySelector(selector){return this.querySelectorAll(selector)[0]||null}
 }
 class TextNode{
   constructor(value){this.textContent=String(value)}
@@ -74,6 +86,7 @@ const definitions=[
   'var deviceTab="active";',
   'var deviceSectionTab="devices";',
   'var devicesCache=null;',
+  'var expandedDeviceId=null;',
   'const number=(n)=>String(n);',
   'const setText=(id,text)=>{document.getElementById(id).textContent=text};',
   'const setState=()=>{};',
@@ -134,11 +147,13 @@ for(const name of ["services","nucleo-a","ninja-blue"]){
   assert.ok(!body.textContent.includes("Agent"));
   assert.ok(!body.textContent.includes("x86_64"));
   assert.ok(!body.textContent.includes("Sempre permitido"));
-  assert.equal(byClass(target,"device-overflow").length,1);
-  const more=byClass(target,"device-overflow")[0];
-  assert.ok(more.tagName==="DETAILS");
   const trigger=byClass(target,"device-overflow-toggle")[0];
-  assert.equal(trigger.tagName,"SUMMARY");
+  const panel=byClass(target,"device-overflow-panel")[0];
+  assert.equal(trigger.tagName,"BUTTON");
+  assert.equal(trigger.attributes["aria-expanded"],"false");
+  assert.equal(trigger.attributes["aria-controls"],panel.id);
+  assert.equal(panel.hidden,true);
+  assert.ok(trigger.dataset.toggleDeviceDetails);
   assert.ok(trigger.attributes["aria-label"].includes(name));
   assert.equal(byClass(target,"device-primary-action").length,1);
   assert.equal(byClass(target,"device-revoke-action").length,1);
@@ -149,6 +164,22 @@ assert.equal(byClass(row("ninja-blue"),"device-state")[0].textContent,"Offline",
 assert.equal(byClass(row("services"),"device-state")[0].textContent,"Pronto");
 assert.equal(byClass(row("nucleo-a"),"device-state")[0].textContent,"Atenção");
 console.log("DEVICE_MINIMALIST_ROW_DISCLOSURES_AND_ACCURATE_STATES=PASS");
+vm.runInContext('toggleDeviceDetails("D1")',context,{timeout:2500});
+assert.equal(byClass(row("services"),"device-overflow-panel")[0].hidden,false);
+assert.equal(byClass(row("services"),"device-overflow-toggle")[0].attributes["aria-expanded"],"true");
+assert.equal(byClass(row("nucleo-a"),"device-overflow-panel")[0].hidden,true);
+vm.runInContext('toggleDeviceDetails("D2")',context,{timeout:2500});
+assert.equal(byClass(row("services"),"device-overflow-panel")[0].hidden,true);
+assert.equal(byClass(row("nucleo-a"),"device-overflow-panel")[0].hidden,false);
+vm.runInContext('toggleDeviceDetails("D2")',context,{timeout:2500});
+assert.equal(byClass(row("nucleo-a"),"device-overflow-panel")[0].hidden,true);
+vm.runInContext('toggleDeviceDetails("D1");renderDevices(payload)',context,{timeout:2500});
+assert.equal(byClass(row("services"),"device-overflow-panel")[0].hidden,false);
+assert.match(source,/closest\("\[data-toggle-device-details\]"\)/);
+assert.match(css,/\.device-overflow-panel\[hidden\]\{display:none!important\}/);
+assert.match(css,/grid-column:1\/-1/);
+assert.match(css,/position:static/);
+console.log("DEVICE_DETAILS_OPEN_CLOSE_SWITCH_REFRESH=PASS");
 
 vm.runInContext('deviceTab="history";renderDevices(payload)',context,{timeout:2500});
 assert.equal(byClass(document.getElementById("deviceList"),"device-row").length,1);
