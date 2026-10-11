@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "hara-commander",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Control authorized local computers through the H.A.R.A. Commander Cloud MCP and a local Agent.",
   "author": {
     "name": "H.A.R.A. Labs",
@@ -94,6 +94,9 @@
             }
           ]
         }
+      },
+      "publication": {
+        "release_notes": "Primeira candidatura pública do H.A.R.A. Commander: 33 ferramentas MCP de administração governada, leitura/escrita de arquivos com proteção por hash, processos e sessões interativas, recibos, diagnósticos e telemetria agregada. Autenticação por HARA Identity OAuth. A assinatura comercial será ativada separadamente após testes de cobrança; nenhum pagamento é executado pelo plugin."
       }
     }
   }

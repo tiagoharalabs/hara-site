@@ -40,8 +40,13 @@
     "mcp_tools": 33,
     "oauth_dcr_preflight": "PASS",
     "plugin_zip_source_preflight": "PASS",
+    "recording_provided": false,
+    "release_notes_included": true,
     "review_cases_negative": 3,
     "review_cases_positive": 5,
+    "review_package_version": "0.2.0",
+    "review_zip_sha256": "40c5a69ed30b7ed626fe725b1eb2841d423e3e3ef772b49120aad228f606c483",
+    "source_archive_verified": true,
     "submitted": false
   },
   "real_1000_users_certified": false,

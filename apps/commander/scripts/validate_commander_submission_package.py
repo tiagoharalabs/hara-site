@@ -14,7 +14,7 @@ from urllib.parse import urlsplit
 ROOT=Path(__file__).resolve().parents[3]
 BASE=ROOT/"apps/commander/plugin-submission"
 FILES=("plugin.json","mcp.json","assets/logo.png","assets/icon.png")
-ZIP=BASE/"hara-commander-com-capivara-v0.1.0.zip"
+ZIP=BASE/"hara-commander-capivara-v0.2.0-review.zip"
 def require(value,code):
     if not value: raise AssertionError(code)
 
@@ -29,6 +29,10 @@ def main():
     review=plugin["extensions"]["com.openai"]["review"]["test_cases"]
     require(re.fullmatch(r"[a-z0-9][a-z0-9-_]{0,63}",plugin["name"]) is not None,"PACKAGE_NAME")
     require(re.fullmatch(r"\d+\.\d+\.\d+",plugin["version"]) is not None,"PACKAGE_SEMVER")
+    require(plugin["version"]=="0.2.0","REVIEW_PACKAGE_VERSION")
+    release=plugin["extensions"]["com.openai"].get("publication",{})
+    require(isinstance(release.get("release_notes"),str)
+            and len(release["release_notes"].strip())>=80,"RELEASE_NOTES_REQUIRED")
     require(0<len(interface["displayName"])<=30,"DISPLAY_NAME")
     require(0<len(interface["shortDescription"])<=30,"SHORT_DESCRIPTION")
     require(0<len(interface["longDescription"])<=4000,"LONG_DESCRIPTION")
@@ -56,8 +60,13 @@ def main():
     require(valid_https(auth["authorizationServerBase"]),"OAUTH_ISSUER")
     require(valid_https(auth["resource"]),"OAUTH_RESOURCE")
     require("annotations: { readOnlyHint, destructiveHint, idempotentHint, openWorldHint }" in source,"EXPLICIT_ANNOTATION_HINTS")
+    import struct
     for filename in ("assets/logo.png","assets/icon.png"):
-        require((BASE/filename).read_bytes()[:8]==b"\x89PNG\r\n\x1a\n","PNG_ASSET")
+        raw=(BASE/filename).read_bytes()
+        require(raw[:8]==bytes([137,80,78,71,13,10,26,10])
+                and raw[12:16]==b"IHDR","PNG_ASSET")
+        width,height=struct.unpack(">II",raw[16:24])
+        require(width==height and 48<=width<=4096,"ICON_DIMENSIONS_INVALID")
     with zipfile.ZipFile(ZIP) as archive:
         names=set(archive.namelist())
         require(names==set(FILES),"ZIP_MEMBERS")
@@ -65,6 +74,9 @@ def main():
             require(archive.read(filename)==(BASE/filename).read_bytes(),"ZIP_SOURCE_DRIFT:"+filename)
     report={"schema":"hara.commander-openai-submission-preflight.v1",
         "state":"SOURCE_PACKAGE_PASS","zip_source_matches":True,
+        "package_version":plugin["version"],
+        "release_notes_present":True,
+        "review_demo_video_present":bool(plugin["extensions"]["com.openai"].get("review",{}).get("demo_recording_url")),
         "tools_count":len(tool_list),"positive_cases":5,"negative_cases":3,
         "mcp_oauth_dcr_configured":True,"all_listing_https":True,
         "review_demo_credentials_verified":False,

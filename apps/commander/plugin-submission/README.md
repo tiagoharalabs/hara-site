@@ -32,3 +32,17 @@ Fonte de requisitos: https://developers.openai.com/plugins/deploy/submission
 - Candidato do plugin `apps/commander/plugin-submission/mcp.json` permanece apontando para o MCP comercial com DCR da Identity; **não é necessário Secure MCP Tunnel OpenAI por cliente**.
 - **ÚNICO GATE COMERCIAL ainda pendente:** ChatGPT concluir consentimento OAuth/PKCE e entregar token de usuário aceito pelo Worker, depois ChatGPT invocar ferramenta no Agent pelo MCP **COMERCIAL** (não pelo Baseline administrativo), isolamento/permissões e revisão/publicação na OpenAI. Não afirmar que a sessão ChatGPT foi homologada, que o app está publicado nem que o Worker valida todo token real antes da prova E2E.
 - Evidência autoritativa da frente de Identity: `docs/status/HARA_COMMANDER_MCP_DCR_GUARDED_LIVE_20261009.md`.
+
+
+## 11/10/2026 — pacote de revisão 0.2.0 (AINDA NÃO SUBMETIDO)
+
+Usar hara-commander-capivara-v0.2.0-review.zip; o 0.1.0 permanece só como histórico.
+A revisão inclui as 33 ferramentas expostas pelo MCP atual, nota de release,
+cinco cenários positivos, três negativos, OAuth DCR e dois ícones PNG quadrados.
+Verificação local: apps/commander/scripts/validate_commander_submission_package.py.
+A nota não alega Stripe ativo nem produto aprovado.
+
+Bloqueios externos de publicação: Business Verification H.A.R.A. Labs, login
+isolado do revisor sem MFA bloqueante, vídeo demonstrativo real acessível,
+desafio de domínio emitido pelo portal, Scan Tools e Submit for review. Não
+incluir tokens, credenciais Stripe, Founder ou dispositivos reais no ZIP.

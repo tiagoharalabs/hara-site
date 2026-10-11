@@ -24,6 +24,10 @@ Preflight remoto PROD: schema PASS; TRIAL 10.000 chamadas/mês, STANDARD ativo a
 
 Próxima ação que requer o operador: no terminal do Services, dentro da árvore canônica, executar python3 -B apps/commander/scripts/stripe_test_activation_wizard.py --apply e digitar sk_test_ exclusivamente no prompt secreto local (nunca no chat). A rotina, test-only, cria ou reutiliza produto/preço mensal BRL 80, webhook, portal e instala configurações DEV. Concluir TEST Checkout, eventos assinados/idempotentes, suspensão/recuperação/cancelamento e tenant Pro isolado da conta Founder antes do modo LIVE. Não cobrar cartão real ou tocar conta Founder na homologação.
 
+## Pacote técnico atualizado para upload
+
+O arquivo apps/commander/plugin-submission/hara-commander-capivara-v0.2.0-review.zip está preparado e validado (SHA-256 40c5a69ed30b7ed626fe725b1eb2841d423e3e3ef772b49120aad228f606c483). Contém 33 ferramentas referenciadas no source, cinco casos positivos, três negativos, OAuth DCR e notas de release. O ZIP 0.1.0 está aposentado como histórico. A ausência de vídeo de demonstração e conta separada de revisor continua bloqueando envio público.
+
 ## Revisão da OpenAI
 
 O pacote já existente apps/commander/plugin-submission contém plugin.json, mcp.json, ícones e ZIP; validação offline SOURCE_PACKAGE_PASS, 33 ferramentas, cinco testes positivos e três negativos, URLs HTTPS. Metadados OAuth/PKCE S256/DCR de produção passaram precheck, mas fluxo de consentimento e troca de tokens de uma nova conta revisora via ChatGPT continuam não comprovados. Teste protegido sem token é negado (401).

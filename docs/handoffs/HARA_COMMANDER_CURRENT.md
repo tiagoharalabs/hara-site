@@ -1,5 +1,9 @@
 # H.A.R.A. Commander — CURRENT (10/10/2026, após rollout 7/7)
 
+## Pacote OpenAI atualizado, gate 79/79 (11/10/2026)
+
+Plugin submission ZIP 0.2.0 sob apps/commander/plugin-submission, com notas de release e dados técnicos compatíveis com 33 ferramentas. Validação offline de pacote PASS; gate ampliado 79/79 PASS no Services. Continua DRAFT não submetido, sem demo vídeo/credenciais de revisor/verificação empresarial. Evidências em docs/evidence/commander-golive-20261011/acceptance.json.
+
 ## Fechamento Founder 7/7 e entrada comercial (11/10/2026)
 
 Sete Linux Founder online no Agent Event V2 0.3.45 via readback MCP comercial, com contratos/autorização preservados e pacote antigo de rollback por máquina. Provas comerciais Founder: write/edit com hash esperado, hash obsoleto negado, leitura, execução e REPL interativa, recibos do Agent. Novo smoke HTTP DEV 1.000 GET de health/50 concorrentes máximo, 0 erro (NAO representa 1.000 clientes OAuth/Agents). Validação de escopo/ZIP OpenAI 33 tools, 5 positivos/3 negativos: SOURCE_PACKAGE_PASS, nao submissão. Billing PROD catálogo STANDARD BRL80/mes e TRIAL 10k, mas tres segredos Stripe PENDING e zero eventos. Gate local 79/79 PASS, CI hospedado aguardando readback. Referência: docs/operations/HARA_COMMANDER_GO_LIVE_READINESS_20261011.md e docs/evidence/commander-golive-20261011/acceptance.json.
