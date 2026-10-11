@@ -74,7 +74,7 @@ assert.ok(linuxInstall.includes("HARA_COMMANDER_TRANSPORT_MODE=OUTBOUND_RELAY"))
 assert.ok(linuxInstall.includes("curl -fsS"));
 assert.ok(windowsInstall.includes("Invoke-WebRequest"));
 assert.ok(windowsInstall.includes("powershell.exe"));
-assert.match(js,/fetch\("\/api\/portal\/devices\/pairing"/);
+assert.match(js,/portalFetch\("\/api\/portal\/devices\/pairing"/);
 assert.match(js,/armPairingExpiry\(payload\.expires_at_utc\)/);
 assert.match(js,/pairingToken/);
 console.log("COMMANDER_SETUP_COMMANDS_SIGNED_HTTP_AND_TOKEN_PROMPT=PASS");
@@ -113,7 +113,7 @@ assert.match(css,/\.devices-command-grid/);
 assert.match(css,/\.devices-setup-advanced/);
 assert.match(css,/html\[data-theme="dark"\] \[data-view="devices"\]/);
 assert.match(html,/styles\.css\?v=20261010-centered-plans-vertical1/);
-assert.match(html,/app\.js\?v=20261010-device-details1/);
+assert.match(html,/app\.js\?v=20261011-capacity-r2/);
 assert.match(css,/--gold/);
 console.log("COMMANDER_GUIDE_COLORS_THEME_RESPONSIVE=PASS");
 

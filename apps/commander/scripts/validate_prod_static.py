@@ -71,7 +71,7 @@ need(
     "APPROVAL_MODE_MIGRATION",
 )
 need("styles.css?v=20261010-centered-plans-vertical1" in HTML, "STYLE_CACHE_KEY")
-need("app.js?v=20261010-device-details1" in HTML, "SCRIPT_CACHE_KEY")
+need("app.js?v=20261011-capacity-r2" in HTML, "SCRIPT_CACHE_KEY")
 need((APP / "public/brand/chatgpt-official.webp").stat().st_size > 0, "CHATGPT_BRAND_ASSET_PRESERVED")
 need((APP / "public/brand/claude-official.svg").stat().st_size > 0, "CLAUDE_BRAND_ASSET_PRESERVED_WITHOUT_MISLABELING_CODEX")
 need('class="where-badge">AI</span><p><b>ChatGPT' not in HTML and 'class="where-badge">AI</span><p><b>Claude' not in HTML, "CLIENT_PLACEHOLDER_BADGES_REMOVED")
@@ -441,7 +441,7 @@ need(
     and 'id="serviceHealthDetail"' in HTML
     and 'data-refresh-service-health' in HTML
     and "async function loadServiceHealth(trigger=null)" in JS
-    and 'fetch("/api/health"' in JS
+    and 'portalFetch("/api/health"' in JS
     and 'payload?.service === "hara-commander"' in JS
     and '"Operacional"' in JS
     and '"Degradado"' in JS

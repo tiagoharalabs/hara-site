@@ -1,4 +1,144 @@
 (() => {
+  // PORTAL_READ_COORDINATOR_BEGIN
+  // Per-tab only: no persistent cache of identities, grants, cookies or data.
+  // Writes are never shared, retried or suppressed, and invalidate older reads.
+  function createPortalReadCoordinator(fetchImpl, origin, options = {}) {
+    const now = options.now || (() => Date.now());
+    const schedule = options.setTimeout || setTimeout;
+    const cancelTimer = options.clearTimeout || clearTimeout;
+    const random = options.random || Math.random;
+    const timeoutMs = options.timeoutMs || 12000;
+    // Bound the buffered JSON read, not downloads or caller-customized fetches.
+    const maxResponseBytes = Number.isSafeInteger(options.maxResponseBytes)
+      && options.maxResponseBytes > 0 && options.maxResponseBytes <= 8 * 1024 * 1024
+      ? options.maxResponseBytes : 2 * 1024 * 1024;
+    const allowed = new Set([
+      "/api/portal/auth-config", "/api/portal/session", "/api/portal/bootstrap",
+      "/api/portal/dashboard", "/api/portal/devices", "/api/portal/billing",
+      "/api/portal/beta-access", "/api/health",
+    ]);
+    const sharedOptions = new Set(["method", "cache", "credentials"]);
+    const pending = new Map();
+    const cooldowns = new Map();
+    let generation = 0;
+    function invalidate() {
+      generation += 1;
+      for (const entry of pending.values()) entry.controller.abort();
+      pending.clear();
+      cooldowns.clear();
+    }
+    function unavailable(code, seconds = 1, status = 503) {
+      return new Response(JSON.stringify({ ok: false, code }), {
+        status, headers: { "content-type": "application/json", "cache-control": "no-store", "retry-after": String(Math.max(1, Math.ceil(seconds))) },
+      });
+    }
+    async function readBoundedBody(response, controller) {
+      if (response.body === null) return null;
+      if (!response.body || typeof response.body.getReader !== "function") {
+        controller.abort();
+        throw new Error("PORTAL_READ_STREAM_UNAVAILABLE");
+      }
+      const reader = response.body.getReader();
+      const chunks = [];
+      let size = 0;
+      let readerStopped = false;
+      const stopReader = () => {
+        if (readerStopped) return;
+        readerStopped = true;
+        try { Promise.resolve(reader.cancel()).catch(() => {}); }
+        catch (_error) { /* Cancellation is best effort; still reject the read. */ }
+      };
+      controller.signal.addEventListener("abort", stopReader, { once: true });
+      try {
+        const declared = Number(response.headers.get("content-length"));
+        if (Number.isFinite(declared) && declared > maxResponseBytes) {
+          throw new Error("PORTAL_READ_RESPONSE_TOO_LARGE");
+        }
+        while (true) {
+          if (controller.signal.aborted) throw new DOMException("Read invalidated", "AbortError");
+          const { done, value } = await reader.read();
+          if (controller.signal.aborted) throw new DOMException("Read invalidated", "AbortError");
+          if (done) break;
+          size += value.byteLength;
+          if (size > maxResponseBytes) throw new Error("PORTAL_READ_RESPONSE_TOO_LARGE");
+          chunks.push(value);
+        }
+        const buffer = new Uint8Array(size);
+        let position = 0;
+        for (const chunk of chunks) { buffer.set(chunk, position); position += chunk.byteLength; }
+        return buffer;
+      } catch (error) {
+        controller.abort();
+        // The timeout may have fired before this reader existed.
+        stopReader();
+        throw error;
+      } finally {
+        controller.signal.removeEventListener("abort", stopReader);
+        reader.releaseLock();
+      }
+    }
+    async function request(input, init = {}) {
+      let url;
+      const inputIsRequest = typeof Request !== "undefined" && input instanceof Request;
+      const target = inputIsRequest ? input.url : input;
+      try { url = typeof target === "string" || target instanceof URL ? new URL(target, origin) : null; }
+      catch (_error) { url = null; }
+      const method = String(init.method || (inputIsRequest ? input.method : "GET")).toUpperCase();
+      const sameOrigin = url && url.origin === origin;
+      if (sameOrigin && method !== "GET" && (url.pathname.startsWith("/api/portal/") || url.pathname === "/auth/logout")) {
+        invalidate();
+        try {
+          // Send the original write once; preserve its body, headers and signal.
+          return await fetchImpl(input, init);
+        } finally {
+          // Reads may start while the write is pending. Invalidate them on
+          // completion too, including uncertain failures. Never retry writes.
+          invalidate();
+        }
+      }
+      // Custom policies, Request/URL objects and non-portal traffic stay native.
+      const ordinaryOptions = Object.keys(init).every(key => sharedOptions.has(key));
+      if (typeof input !== "string" || !sameOrigin || method !== "GET" || !allowed.has(url.pathname)
+          || !ordinaryOptions || (init.cache && !["default", "no-store"].includes(init.cache))
+          || (init.credentials && init.credentials !== "same-origin")) return fetchImpl(input, init);
+      if (url.search || url.username || url.password) return fetchImpl(input, init);
+      const resource = url.pathname;
+      // Respect differing HTTP cache policies even while requests overlap.
+      const key = resource + ":" + (init.cache || "default");
+      const cooldown = cooldowns.get(resource);
+      if (cooldown && cooldown.until > now()) return unavailable("PORTAL_READ_BACKOFF", (cooldown.until - now()) / 1000, cooldown.status);
+      if (cooldown) cooldowns.delete(resource);
+      if (pending.has(key)) return (await pending.get(key).promise).clone();
+      const controller = new AbortController();
+      const startGeneration = generation;
+      const entry = { controller, promise: null };
+      const timer = schedule(() => controller.abort(), timeoutMs);
+      entry.promise = (async () => {
+        const response = await fetchImpl(input, { ...init, signal: controller.signal });
+        const body = await readBoundedBody(response, controller);
+        if (generation !== startGeneration || controller.signal.aborted) throw new DOMException("Read invalidated", "AbortError");
+        if (response.status === 429 || response.status === 503) {
+          const header = response.headers.get("retry-after");
+          let delay = header && /^\d+(?:\.\d+)?$/.test(header.trim()) ? Number(header) * 1000 : Date.parse(header || "") - now();
+          if (!Number.isFinite(delay) || delay < 0) delay = 2000 + random() * 1000;
+          cooldowns.set(resource, { until: now() + Math.max(1000, delay), status: response.status });
+        }
+        return new Response([204,205,304].includes(response.status) ? null : body, {
+          status: response.status, statusText: response.statusText, headers: response.headers,
+        });
+      })().finally(() => {
+        cancelTimer(timer);
+        if (pending.get(key) === entry) pending.delete(key);
+      });
+      pending.set(key, entry);
+      return (await entry.promise).clone();
+    }
+    request.invalidate = invalidate;
+    return request;
+  }
+  // PORTAL_READ_COORDINATOR_END
+
+  const portalFetch = createPortalReadCoordinator((...args) => fetch(...args), location.origin);
   const views = [...document.querySelectorAll("[data-view]")];
   const toast = document.getElementById("toast");
   const sidebarTemplate = document.getElementById("sidebarTemplate");
@@ -139,7 +279,7 @@
   async function configureAuthUi() {
     if (!remotePortal) return;
     try {
-      const response = await fetch("/api/portal/auth-config", { cache: "no-store" });
+      const response = await portalFetch("/api/portal/auth-config", { cache: "no-store" });
       const config = await response.json();
       authProviderConfigured = Boolean(response.ok && config.configured);
 
@@ -194,7 +334,7 @@
   async function logoutRemote() {
     if (remotePortal) {
       try {
-        const response = await fetch("/auth/logout", { method: "POST", cache: "no-store" });
+        const response = await portalFetch("/auth/logout", { method: "POST", cache: "no-store" });
         if (!response.ok) throw new Error("HTTP_" + response.status);
       } catch (_error) {
         showToast("Não foi possível encerrar a sessão agora. Tente novamente.");
@@ -482,7 +622,7 @@
         signal:controller.signal,
         targetAddressSpace:"loopback",
       };
-      const response=await fetch(new Request(url,options));
+      const response=await portalFetch(new Request(url,options));
       if (!response.ok) return null;
       return localActivityToPortal(await response.json().catch(()=>null));
     } catch (_error) {
@@ -515,7 +655,7 @@
         signal:controller.signal,
         targetAddressSpace:"loopback",
       });
-      const response=await fetch(request);
+      const response=await portalFetch(request);
       if (!response.ok) return null;
       const payload=await response.json().catch(()=>null);
       return supportReportPrivacySafe(payload) ? payload : null;
@@ -550,7 +690,7 @@
       const report=await fetchLocalSupportReport();
       if (!report) throw new Error("LOCAL_SUPPORT_UNAVAILABLE");
       if (trigger) trigger.textContent="Enviando…";
-      const response=await fetch("/api/portal/support-reports",{
+      const response=await portalFetch("/api/portal/support-reports",{
         method:"POST",
         cache:"no-store",
         credentials:"same-origin",
@@ -819,7 +959,7 @@
     }
     try {
       const started=performance.now();
-      const response=await fetch("/api/health",{cache:"no-store"});
+      const response=await portalFetch("/api/health",{cache:"no-store"});
       const payload=await response.json().catch(()=>({}));
       const latency=Math.max(0,Math.round(performance.now()-started));
       const ok=Boolean(response.ok && payload?.ok === true && payload?.service === "hara-commander");
@@ -847,7 +987,7 @@
   async function hydrateSessionHeader() {
     if (!remotePortal) return false;
     try {
-      const response = await fetch("/api/portal/session", { cache: "no-store", credentials: "same-origin" });
+      const response = await portalFetch("/api/portal/session", { cache: "no-store", credentials: "same-origin" });
       if (!response.ok) {
         if (response.status === 401) setGuestHeader();
         return false;
@@ -867,7 +1007,7 @@
   async function loadPortalBootstrap() {
     if (!remotePortal) return null;
     try {
-      const response = await fetch("/api/portal/bootstrap", {
+      const response = await portalFetch("/api/portal/bootstrap", {
         cache: "no-store",
         credentials: "same-origin",
       });
@@ -1209,7 +1349,7 @@
     }
     renderDeviceLoading();
     try {
-      const response = await fetch("/api/portal/devices", { cache: "no-store", credentials: "same-origin" });
+      const response = await portalFetch("/api/portal/devices", { cache: "no-store", credentials: "same-origin" });
       if (handlePortalAuthFailure(response, "Entre novamente para consultar seus computadores.")) return;
       if (!response.ok) throw new Error("HTTP_" + response.status);
       const payload = await response.json();
@@ -1276,7 +1416,7 @@
     const buttons = [...document.querySelectorAll("[data-create-pairing]")];
     buttons.forEach((button) => { button.disabled = true; });
     try {
-      const response = await fetch("/api/portal/devices/pairing", {
+      const response = await portalFetch("/api/portal/devices/pairing", {
         method: "POST",
         cache: "no-store",
         credentials: "same-origin",
@@ -1312,7 +1452,7 @@
       trigger.textContent = "Selecionando…";
     }
     try {
-      const response = await fetch("/api/portal/devices/select", {
+      const response = await portalFetch("/api/portal/devices/select", {
         method: "POST",
         cache: "no-store",
         credentials: "same-origin",
@@ -1348,7 +1488,7 @@
     const button = trigger;
     if (button) button.disabled = true;
     try {
-      const response = await fetch("/api/portal/devices/authorization-code", {
+      const response = await portalFetch("/api/portal/devices/authorization-code", {
         method:"POST",
         credentials:"same-origin",
         headers:{"content-type":"application/json"},
@@ -1386,7 +1526,7 @@
     trigger.disabled = true;
     trigger.textContent = "Revogando…";
     try {
-      const response = await fetch("/api/portal/devices/revoke", {
+      const response = await portalFetch("/api/portal/devices/revoke", {
         method: "POST",
         cache: "no-store",
         credentials: "same-origin",
@@ -1567,7 +1707,7 @@
     }
 
     try {
-      const response = await fetch(apiBase + dashboardPath, { cache: "no-store", credentials: "same-origin" });
+      const response = await portalFetch(apiBase + dashboardPath, { cache: "no-store", credentials: "same-origin" });
       if (response.status === 401) {
         setGuestHeader();
         route("login");
@@ -1611,7 +1751,7 @@
     const planButtons = document.querySelectorAll("[data-billing-plan]");
 
     try {
-      const response = await fetch("/api/portal/billing", {
+      const response = await portalFetch("/api/portal/billing", {
         cache: "no-store",
         credentials: "same-origin",
       });
@@ -1668,7 +1808,7 @@
           && ["active","trialing"].includes(String(payload?.connection?.subscription_status || "").toLowerCase());
         betaAccess.hidden = Boolean(activation.first_checkout_ready || standardCurrent);
         if (!betaAccess.hidden) {
-          const betaResponse=await fetch("/api/portal/beta-access",{cache:"no-store",credentials:"same-origin"});
+          const betaResponse=await portalFetch("/api/portal/beta-access",{cache:"no-store",credentials:"same-origin"});
           if (betaResponse.ok) {
             const betaPayload=await betaResponse.json().catch(()=>({}));
             const state=String(betaPayload?.request?.state || "").toUpperCase();
@@ -1720,7 +1860,7 @@
     button.disabled=true;
     button.textContent="Enviando solicitação...";
     try {
-      const response=await fetch("/api/portal/beta-access",{
+      const response=await portalFetch("/api/portal/beta-access",{
         method:"POST",
         credentials:"same-origin",
         headers:{"content-type":"application/json"},
@@ -1751,7 +1891,7 @@
     }
 
     try {
-      const response = await fetch("/api/portal/billing/checkout", {
+      const response = await portalFetch("/api/portal/billing/checkout", {
         method: "POST",
         credentials: "same-origin",
         headers: { "content-type": "application/json" },
@@ -1788,7 +1928,7 @@
     }
 
     try {
-      const response = await fetch("/api/portal/billing/portal", {
+      const response = await portalFetch("/api/portal/billing/portal", {
         method: "POST",
         credentials: "same-origin",
       });

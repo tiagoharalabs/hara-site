@@ -1295,29 +1295,33 @@ async function productTransactionHistory(env, tenantId, subjectId) {
   const since7d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   try {
     const sinceDay = since7d.slice(0,10);
-    const [row, localTotal, local7d] = await Promise.all([
-      env.PRODUCT_DB.prepare(
-        `SELECT COUNT(*) AS calls_total,
-                SUM(CASE WHEN created_at_utc >= ? THEN 1 ELSE 0 END) AS calls_7d
+    // One consistent read and one D1 round trip; the indexes scope work to
+    // this tenant/subject. Do not cache authorization or change billing totals.
+    const row = await env.PRODUCT_DB.prepare(
+      `WITH relay AS (
+         SELECT COUNT(*) AS calls_total,
+                COALESCE(SUM(CASE WHEN created_at_utc >= ? THEN 1 ELSE 0 END),0) AS calls_7d
            FROM commander_device_calls
-          WHERE tenant_id = ? AND subject_id = ?`
-      ).bind(since7d, tenantId, subjectId).first(),
-      env.PRODUCT_DB.prepare(
-        `SELECT COALESCE(SUM(lifetime_units),0) AS units
+          WHERE tenant_id = ? AND subject_id = ?
+       ), local_lifetime AS (
+         SELECT COALESCE(SUM(lifetime_units),0) AS units
            FROM commander_device_usage_totals
-          WHERE tenant_id=? AND subject_id=?`
-      ).bind(tenantId, subjectId).first(),
-      env.PRODUCT_DB.prepare(
-        `SELECT COALESCE(SUM(units),0) AS units
+          WHERE tenant_id = ? AND subject_id = ?
+       ), local_window AS (
+         SELECT COALESCE(SUM(units),0) AS units
            FROM commander_device_usage_daily
-          WHERE tenant_id=? AND subject_id=? AND day_key>=?`
-      ).bind(tenantId, subjectId, sinceDay).first(),
-    ]);
+          WHERE tenant_id = ? AND subject_id = ? AND day_key >= ?
+       )
+       SELECT relay.calls_total + local_lifetime.units AS calls_total,
+              relay.calls_7d + local_window.units AS calls_7d
+         FROM relay CROSS JOIN local_lifetime CROSS JOIN local_window`
+    ).bind(since7d, tenantId, subjectId, tenantId, subjectId,
+      tenantId, subjectId, sinceDay).first();
     return {
       available: true,
       window: "7d",
-      calls_7d: Number(row?.calls_7d || 0) + Number(local7d?.units || 0),
-      calls_total: Number(row?.calls_total || 0) + Number(localTotal?.units || 0),
+      calls_7d: Number(row?.calls_7d || 0),
+      calls_total: Number(row?.calls_total || 0),
       detail_level: "AGGREGATE_ONLY",
     };
   } catch (_error) {
