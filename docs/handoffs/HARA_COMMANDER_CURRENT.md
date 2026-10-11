@@ -1,4 +1,9 @@
-# H.A.R.A. Commander — CURRENT (11/10/2026, Agent 0.3.46 PTY P0 CLOSED 7/7)
+# H.A.R.A. Commander — CURRENT (11/10/2026, Founder 7/7; comercial HOLD)
+
+## Hardening comercial / 1.000 clientes — 11/10/2026
+
+Founder Linux 0.3.46 7/7 ONLINE; atividade MCP das últimas 24h verificada em 7 dispositivos Event V2, mas não certifica 1.000 tenants. Windows comercial em POLL_V1 0.3.43; adaptador Event V2 Windows é RC de fonte DEV-only, não homologado em Windows real. Validadores Windows RC source/installer passaram, sem PowerShell dinâmico no Services; local activity store reportou MANIFEST_VERSION=FAIL. Nova ferramenta opcional de acompanhamento de evidências (commander_commercial_readiness_gate.py) indica Founder PASS, Commercial Beta HOLD e GA HOLD; ainda não é gate de deploy/CI. O teste candidato da ferramenta está com expectativa incorreta e não foi publicado. Ver docs/operations/HARA_COMMANDER_COMMERCIAL_1000_HARDENING_20261011.md. Stripe permanece desconectado, não condiciona beta técnico. Não confundir modelos 1k/10k e 1000 HTTP health com mil clientes simultâneos.
+
 
 ## Autoritativo — correção P0 terminal validada na frota Linux Founder
 
