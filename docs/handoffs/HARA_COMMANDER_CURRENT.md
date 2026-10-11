@@ -1,17 +1,19 @@
-# H.A.R.A. Commander — CURRENT (11/10/2026, transferência e continuidade)
+# H.A.R.A. Commander — CURRENT (11/10/2026, Agent 0.3.46 PTY P0 CLOSED 7/7)
 
-## Agent PTY 0.3.46 — saída pós-exit corrigida (11/10/2026)
+## Autoritativo — correção P0 terminal validada na frota Linux Founder
 
-Fonte linux.py corrigida: drenar PTY não bloqueante (até 4 MiB/250 ms) antes de fechar fd após waitpid; preservar buffers com limite, sinalizar possível truncamento. Regressão com PTYs reais 19/19 PASS, incluindo 120/120 linhas pós-exit; gate local completo 83/83 PASS. Signer v2 0.3.46 isolado de 0.3.45 e bundle Services com sete arquivos RS256 validado. CANÁRIO MCP REAL E ROLLOUT AINDA PENDENTES. Evidência: docs/operations/HARA_COMMANDER_PTY_TERMINAL_DRAIN_FIX_20261011.md.
+O fechamento prematuro da PTY após waitpid foi corrigido: drenagem não bloqueante antes de close, limite de 4 MiB/250 ms, retenção de 2 MiB/5.000 linhas. Regressão PTY real **19/19 PASS**, gate offline completo **83/83 PASS** e GitHub Actions run **38180317904 SUCCESS** na fonte `0f337dd5c41413ad4f37e1a5fd28f78a244acc90`. Release **0.3.46 RS256** assinada por dispositivo; todos os sete Linux Founder online em **0.3.46**, confirmados pelo MCP real. Teste pós-exit **120/120 linhas em cada uma das 7 máquinas**, exit=0 e sem truncamento; quatro sessões concorrentes no Services **480/480 linhas** e Unicode **40/40**. Rollback 0.3.45 preservado por host; nenhuma máquina ou app CSOTN reiniciados. P0 `PTY_OUTPUT_LOST_ON_EXIT` **CLOSED_PASS**.
+
+A seção abaixo documenta a evidência histórica de 0.3.45, anterior à correção. Não reabrir P0 por confusão de datas. Ainda pendentes, separadamente: ferramenta binária inter-host nativa, Windows, recuperação/soak multitenant e billing Stripe. Evidências: `docs/operations/HARA_COMMANDER_PTY_TERMINAL_DRAIN_FIX_20261011.md` e `docs/evidence/commander-pty-drain-20261011/acceptance.json`.
 
 
 ## Prova real sem Desktop — transferência, recuperação e stdout pendente (11/10/2026)
 
 Na frente de substituição do Desktop, o MCP comercial executou as provas em diretórios descartáveis: transferência de 32 arquivos e 12.842.112 bytes (inclui binário 12 MiB, Unicode, symlink interno) do Services para Núcleo, C e D, **3/3 destinos com manifesto SHA-256 PASS**. A Sentinela D retomou após interrupção intencional aos 720.896 bytes; SHA final PASS. Transmissão grande usou rsync/SSH sob comandos governados do H.A.R.A., não uma ferramenta de transferência binária nativa. O MCP nativo transferiu manifesto de texto, e hara.files.copy local validou binário 1 MiB; há limite nativo de cópia local 2 MiB.
 
-Uma parada controlada do Agent da Sentinela A resultou DEVICE_OFFLINE e recuperação por outro Agent (Services) via SSH, sem Desktop. Tarefa independente em systemd user preservou 25/25 checkpoints após restart do Agent. **BLOQUEADOR P0:** sessão PTY que imprimiu 120 linhas registradas em arquivo retornou 0/120 no MCP após exit=0 e sem flag de truncamento; reprodução menor 8/25. Possível fechamento prematuro do FD no _process_update_state antes de drenar. Tentativa de gravar teste de código foi bloqueada pela segurança da plataforma, sem contorno; nenhuma mudança de Agent ou release nesta rodada. Prova e critérios: docs/operations/HARA_COMMANDER_DESKTOP_PARITY_RUNTIME_PROOF_20261011.md.
+Uma parada controlada do Agent da Sentinela A resultou DEVICE_OFFLINE e recuperação por outro Agent (Services) via SSH, sem Desktop. Tarefa independente em systemd user preservou 25/25 checkpoints após restart do Agent. **BLOQUEADOR P0 (histórico da 0.3.45, resolvido na 0.3.46):** sessão PTY que imprimiu 120 linhas registradas em arquivo retornou 0/120 no MCP após exit=0 e sem flag de truncamento; reprodução menor 8/25. Possível fechamento prematuro do FD no _process_update_state antes de drenar. Tentativa de gravar teste de código foi bloqueada pela segurança da plataforma, sem contorno; nenhuma mudança de Agent ou release nesta rodada. Prova e critérios: docs/operations/HARA_COMMANDER_DESKTOP_PARITY_RUNTIME_PROOF_20261011.md.
 
-Não declarar paridade completa até corrigir P0 e homologar transferência binária inter-host nativa, socket-recovery e soak. Stripe e pagamento permanecem independentes.
+O P0 da saída do terminal foi resolvido na 0.3.46. Não declarar paridade completa até homologar transferência binária inter-host nativa, socket-recovery e soak. Stripe e pagamento permanecem independentes.
 
 ## CI 81/81 e persistência boot Founder — 11/10/2026
 

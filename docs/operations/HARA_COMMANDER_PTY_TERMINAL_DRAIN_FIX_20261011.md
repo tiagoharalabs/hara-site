@@ -1,6 +1,6 @@
 # H.A.R.A. Commander — correção de perda de saída PTY (11/10/2026)
 
-Estado: **CÓDIGO CORRIGIDO / TESTES LOCAIS PASS / RELEASE 0.3.46 ASSINADA / CANÁRIO AINDA PENDENTE**.
+Estado: **P0 CLOSED_PASS / 0.3.46 ASSINADA E HOMOLOGADA VIA MCP COMERCIAL / FROTA LINUX FOUNDER 7/7 ONLINE**. As etapas preparatórias abaixo foram concluídas; resultados reais ao final.
 
 ## Defeito reproduzido
 
@@ -28,3 +28,17 @@ A função `_drain_completed_process_output` consome os bytes pendentes do descr
 6. Registrar comparação antes/depois e aprovar rollout governado da frota 7/7; máquinas de laboratório C/D apenas se não houver sessões Commander ativas, sem reiniciar outras tarefas, e com rollback por dispositivo.
 
 **Não promover frota nem afirmar P0 encerrado até passar o teste MCP de canário real.** O armazenamento local de métricas e o heartbeat esparso Event V2 continuam independentes desta mudança.
+
+## Fechamento da execução real — 0.3.46, 11/10/2026
+
+**P0 CLOSED_PASS.** O commit funcional `0f337dd5c41413ad4f37e1a5fd28f78a244acc90` foi publicado no GitHub com readback exato; GitHub Actions run `38180317904` concluiu **SUCCESS**, com 83/83 validadores. Gate PTY local 19/19 PASS.
+
+- **Services**: canário 0.3.46 assinado e verificado; processo que em 0.3.45 retornava zero de 120 linhas agora devolveu **120/120**, primeira linha `HARA_PTY_FIX_000` e última `HARA_PTY_FIX_119`, exit 0, sem truncamento, recibo do MCP real.
+- Concorrência Services: quatro sessões PTY ao mesmo tempo, 120/120 por sessão (**480/480**), todas exit 0, sem mistura de conteúdo, com recibos. Unicode: 40/40 linhas `áé🚀` preservadas.
+- Rollout por dispositivos RS256 aos outros seis Linux Founder pelo H.A.R.A. Commander no Services, com assinatura verificada antes da troca, backup da unit e rollback automático por host. Para Sentinela D, a sessão que estava RUNNING terminou antes da atualização; nenhuma sessão foi encerrada à força.
+- Leitura direta no MCP comercial após cada restart confirmou Agent 0.3.46. Catálogo final: **7/7 Linux ONLINE, Agent 0.3.46** (Services, Núcleo A, Sentinela A/B/C/D, Ninja Blue).
+- Teste real pós-exit de 120 linhas efetuado **individualmente nos sete dispositivos**, inclusive Ninja Blue: sete resultados 120/120, exit=0, `buffer_truncated=false`, primeira/última linha corretas, e recibos do Agent.
+- Não houve reboot dos computadores nem reinício de serviços CSOTN/jogos. Só o Agent Commander V2 de cada nó foi reiniciado; timers guard C/D não foram ativados indevidamente. Release 0.3.45 e backups de unit preservados localmente em cada host.
+- **Escopo:** versão Founder Linux somente. Pacote comercial público e Windows não foram alterados. Cloudflare Worker/D1 e Stripe não sofreram mudanças nesta correção.
+
+Evidência estruturada em `docs/evidence/commander-pty-drain-20261011/acceptance.json`. Os próximos gates (outros que não P0) continuam: transferência binária nativa entre clientes sem SSH, recuperação autônoma do host, Windows e 1.000 clientes multitenant em soak real.

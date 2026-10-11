@@ -1,0 +1,70 @@
+{
+  "schema": "hara.commander-pty-terminal-drain-acceptance.v1",
+  "date": "2026-10-11",
+  "source_commit": "0f337dd5c41413ad4f37e1a5fd28f78a244acc90",
+  "hosted_ci": {
+    "run_id": 38180317904,
+    "conclusion": "success",
+    "offline_gate": {
+      "checked": 83,
+      "passed": 83,
+      "failed": 0
+    }
+  },
+  "regression": {
+    "scope": "REAL_LOCAL_PTY_NO_CLOUD",
+    "checked": 19,
+    "passed": 19,
+    "failed": 0,
+    "terminal_lines": 120
+  },
+  "signed_release": {
+    "agent_version": "0.3.46",
+    "channel": "FOUNDER_LINUX_ONLY",
+    "algorithm": "RS256",
+    "trust_anchor_fingerprint": "93a595c5c7ee29d341fe0aee1a1625610e8015bf9df1ff64a3f4accdb39400b4",
+    "signed_files": 7,
+    "founder_manifest_sha256": "411cacad9a6719a3d21c3abab7ead55f528a19a35a0704f6edc6c2c079f202f1",
+    "services_manifest_sha256": "a619336b5a276619984c5244e34e90831e77be5ba272bd42554c427e080e2061",
+    "private_key_exported": false,
+    "previous_0_3_45_release_preserved": true,
+    "rollback_unit_backup_per_host": true
+  },
+  "real_commercial_mcp": {
+    "canary": "services",
+    "services_pty_120_lines": "PASS",
+    "services_pty_concurrent_sessions": 4,
+    "services_pty_concurrent_lines_total": 480,
+    "services_pty_concurrent_success": 4,
+    "services_pty_unicode_40_lines": "PASS",
+    "fleet_expected_each_lines": 120,
+    "fleet_each_lines_passed": {
+      "services": 120,
+      "nucleo-a": 120,
+      "sentinela-a": 120,
+      "sentinela-b": 120,
+      "sentinela-c": 120,
+      "sentinela-d": 120,
+      "ninja-blue": 120
+    },
+    "fleet_online_0346_count": 7,
+    "fleet_online_total": 7,
+    "fleet_full_pty_test_state": "PASS",
+    "execution_proven_by_agent_receipts": true
+  },
+  "change_scope": {
+    "application_restarts": "ONLY_HARA_COMMANDER_AGENT",
+    "host_reboots": 0,
+    "csotn_services_touched": false,
+    "cloudflare_worker_deploy_performed": false,
+    "stripe_modified": false,
+    "windows_agents_modified": false,
+    "commercial_public_installer_modified": false
+  },
+  "deferred": {
+    "native_binary_interhost_transfer": true,
+    "autonomous_single_host_recovery": true,
+    "one_thousand_customer_soak": true,
+    "windows_parity": true
+  }
+}
