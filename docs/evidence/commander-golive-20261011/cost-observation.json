@@ -1,0 +1,32 @@
+{
+  "billed_total_usd": null,
+  "estimated_1000_client_cost": null,
+  "excluded": [
+    "stored GB-months",
+    "account subscription",
+    "Workers logs",
+    "other products",
+    "Identity/tunnel hosts",
+    "taxes/FX"
+  ],
+  "invoice_verified": false,
+  "measured_component_subtotal_usd": 0.0033500826176,
+  "monthly_allowances_applied": false,
+  "observed_components": [
+    "d1",
+    "d1_storage",
+    "do_invocations",
+    "do_periodic",
+    "worker"
+  ],
+  "private_ids_or_credentials_included": false,
+  "production_scale_certified": false,
+  "provider_sampling_note": "Provider analytics, possibly adaptively sampled; not an invoice. Request pricing bound is not a statistical confidence bound.",
+  "schema": "hara.commander-cost-observation-sanitized.v1",
+  "variable_list_rate_upper_estimate_usd": 0.0033740826176,
+  "window": {
+    "closed_open": true,
+    "end_utc": "2026-10-11T20:28:00Z",
+    "start_utc": "2026-10-11T19:28:00Z"
+  }
+}

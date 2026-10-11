@@ -1,5 +1,9 @@
 # H.A.R.A. Commander — CURRENT (10/10/2026, após rollout 7/7)
 
+## CI hospedado e custo de referência (11/10/2026)
+
+OpenAI review ZIP 0.2.0 validado; CI hospedado GitHub Actions run 38173368104 PASS no commit a4b0cca (79 suites offline). Auditoria read-only Cloudflare na janela 19:28-20:28 UTC observou subtotal variável de referência US$ 0.0033500826176; NÂO fatura, sem franquias nem mensalidade, sem capacidade 1k comprovada. Stripe produção ainda pendente de três configurações secretas, necessitando chave sk_test no wizard TEST em Services. Provas sanitizadas em docs/evidence/commander-golive-20261011/.
+
 ## Pacote OpenAI atualizado, gate 79/79 (11/10/2026)
 
 Plugin submission ZIP 0.2.0 sob apps/commander/plugin-submission, com notas de release e dados técnicos compatíveis com 33 ferramentas. Validação offline de pacote PASS; gate ampliado 79/79 PASS no Services. Continua DRAFT não submetido, sem demo vídeo/credenciais de revisor/verificação empresarial. Evidências em docs/evidence/commander-golive-20261011/acceptance.json.

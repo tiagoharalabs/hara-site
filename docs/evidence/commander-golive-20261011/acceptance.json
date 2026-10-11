@@ -10,6 +10,12 @@
     "trial_monthly_calls": 10000,
     "webhook_events": 0
   },
+  "cost_observation": {
+    "invoice_verified": false,
+    "measured_at_real_1000_clients": false,
+    "monthly_allowances_applied": false,
+    "reference_variable_component_usd_for_one_hour": 0.0033500826176
+  },
   "dev_health_ramp": {
     "authenticated_users": 0,
     "failed": 0,
@@ -27,6 +33,14 @@
     "linux_agent_version": "0.3.45",
     "via_commercial_mcp": true,
     "windows_certified": false
+  },
+  "hosted_ci": {
+    "conclusion": "success",
+    "head_sha": "a4b0cca0b57b2965cd2173a8a6efb3fcf3488465",
+    "run_id": 38173368104,
+    "scope": "OFFLINE_ONLY",
+    "validator_count": 79,
+    "workflow": "hara-commander-full-offline-gate.yml"
   },
   "offline_gate": {
     "checked": 79,

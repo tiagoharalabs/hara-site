@@ -14,6 +14,10 @@ Cloudflare DEV recebeu 1.000 requisições HTTP de GET /api/health: 100 em conco
 
 O modelo SQLite com 1.000 contas/2.000 dispositivos e 10.000 contas/20.000 dispositivos/210.000 sessões passou. Ambos os testes NÃO representam 1.000 usuários OAuth/ChatGPT autenticados, dispositivos ativos, Durable Objects, carga simultânea real nem custo de produção. Esses fatores precisam de um ramp/soak multitenant medido. O último resumo de atividade MCP de 24h mostrou 2.091 chamadas, 2.062 concluídas, 20 falhas e 98,7% de sucesso observado, incluindo ensaios negativos; não certificar SLO sem separar tráfego de teste.
 
+## Linha de base Cloudflare observada
+
+Auditoria read-only executada em janela UTC fechada-aberta 2026-10-11T19:28:00Z a 20:28:00Z. Componentes Workers, D1, D1 storage, Durable Objects invocations/periodic reportados como MEASURED. Subtotal de tarifa variável de referência: US$ 0.0033500826176 na janela. Estimativa superior por tarifário do componente: US$ 0.0033740826176. Valores NÃO são fatura, não incluem taxa básica Workers Paid, franquias mensais, storage GB-month, identidade/túnel, taxas ou FX. O provedor pode amostrar analiticamente; o cálculo não certifica custos de 1.000 usuários. Prova sanitizada em docs/evidence/commander-golive-20261011/cost-observation.json.
+
 ## Telemetria
 
 Event V2 0.3.45 possui SQLite local com modo 0600, retenção de sete dias e agregados enviados no LIVENESS existente a cada ~6h, sem novo polling HTTP. Um reinício controlado no Services provou persistência. No último readback D1 PROD, commander_device_telemetry_snapshot ainda tinha 0 registros. Falta observar o primeiro snapshot real após a janela de checkpoint; não antecipar ou inventar entrega cloud.
