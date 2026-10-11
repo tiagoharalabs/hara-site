@@ -28,6 +28,8 @@ const TX_RETENTION_BATCH = 100;
 const SESSION_TOUCH_SECONDS = 30 * 60;
 const SESSION_RETENTION_SECONDS = 30 * 24 * 60 * 60;
 const SESSION_RETENTION_BATCH = 100;
+const AUTH_RETENTION_MAX_ROUNDS = 20;
+const AUTH_RETENTION_TIME_BUDGET_MS = 5000;
 
 function nowIso(offsetSeconds = 0) {
   return new Date(Date.now() + offsetSeconds * 1000).toISOString();
@@ -213,9 +215,8 @@ function authConfig(env) {
   };
 }
 
-async function cleanupExpiredOidcTransactions(env) {
-  const now = nowIso();
-  await env.PRODUCT_DB.prepare(
+async function cleanupExpiredOidcTransactions(env, now) {
+  return env.PRODUCT_DB.prepare(
     `DELETE FROM oidc_transactions
       WHERE state_hash IN (
         SELECT state_hash
@@ -227,24 +228,65 @@ async function cleanupExpiredOidcTransactions(env) {
   ).bind(now, TX_RETENTION_BATCH).run().catch(() => null);
 }
 
-async function cleanupTerminalPortalSessions(env) {
-  const cutoff = nowIso(-SESSION_RETENTION_SECONDS);
-  await env.PRODUCT_DB.prepare(
+async function cleanupTerminalPortalSessions(env, cutoff) {
+  // Each index walk is bounded BEFORE the union. Never sort all historical
+  // terminal sessions; IN also deduplicates sessions in both terminal sets.
+  return env.PRODUCT_DB.prepare(
     `DELETE FROM portal_sessions
       WHERE session_hash IN (
-        SELECT session_hash
-          FROM portal_sessions
-         WHERE expires_at_utc <= ?
-            OR (revoked_at_utc IS NOT NULL AND revoked_at_utc <= ?)
-         ORDER BY COALESCE(revoked_at_utc, expires_at_utc) ASC
-         LIMIT ${SESSION_RETENTION_BATCH}
+        SELECT session_hash FROM (
+          SELECT session_hash FROM portal_sessions
+           WHERE expires_at_utc <= ?
+           ORDER BY expires_at_utc ASC
+           LIMIT ${SESSION_RETENTION_BATCH}
+        )
+        UNION ALL
+        SELECT session_hash FROM (
+          SELECT session_hash FROM portal_sessions
+           WHERE revoked_at_utc IS NOT NULL AND revoked_at_utc <= ?
+           ORDER BY revoked_at_utc ASC
+           LIMIT ${SESSION_RETENTION_BATCH}
+        )
       )`
   ).bind(cutoff, cutoff).run().catch(() => null);
 }
 
 export async function runAuthRetentionMaintenance(env) {
-  await cleanupExpiredOidcTransactions(env);
-  await cleanupTerminalPortalSessions(env);
+  const started = Date.now();
+  const now = nowIso();
+  const cutoff = nowIso(-SESSION_RETENTION_SECONDS);
+  const report = {
+    scope: "AUTH_RETENTION", state: "PASS", rounds: 0,
+    transactions_deleted: 0, sessions_deleted: 0,
+    budget_exhausted: false, elapsed_ms: 0,
+  };
+  let drained = false;
+  // Serial bounded batches yield between database calls. No login request,
+  // session expiry, revocation authority or 30-day retention is changed.
+  while (report.rounds < AUTH_RETENTION_MAX_ROUNDS
+      && Date.now() - started < AUTH_RETENTION_TIME_BUDGET_MS) {
+    const transactions = await cleanupExpiredOidcTransactions(env, now);
+    const sessions = await cleanupTerminalPortalSessions(env, cutoff);
+    report.rounds += 1;
+    if (!transactions || !sessions) {
+      report.state = "DEGRADED";
+      // Retain successful counts, do not misreport a failed batch as drained.
+      report.transactions_deleted += Number(transactions?.meta?.changes || 0);
+      report.sessions_deleted += Number(sessions?.meta?.changes || 0);
+      break;
+    }
+    const txCount = Number(transactions.meta?.changes || 0);
+    const sessionCount = Number(sessions.meta?.changes || 0);
+    report.transactions_deleted += txCount;
+    report.sessions_deleted += sessionCount;
+    if (txCount < TX_RETENTION_BATCH && sessionCount < SESSION_RETENTION_BATCH) {
+      drained = true;
+      break;
+    }
+  }
+  report.elapsed_ms = Date.now() - started;
+  report.budget_exhausted = report.state === "PASS" && !drained;
+  return report;
 }
 
 export async function beginLogin(request, env) {

@@ -1,0 +1,90 @@
+[
+  {
+    "results": [
+      {
+        "id": 3,
+        "parent": 0,
+        "notused": 90,
+        "detail": "SEARCH portal_sessions USING COVERING INDEX sqlite_autoindex_portal_sessions_1 (session_hash=?)"
+      },
+      {
+        "id": 7,
+        "parent": 0,
+        "notused": 0,
+        "detail": "LIST SUBQUERY 4"
+      },
+      {
+        "id": 8,
+        "parent": 7,
+        "notused": 0,
+        "detail": "COMPOUND QUERY"
+      },
+      {
+        "id": 9,
+        "parent": 8,
+        "notused": 0,
+        "detail": "LEFT-MOST SUBQUERY"
+      },
+      {
+        "id": 11,
+        "parent": 9,
+        "notused": 0,
+        "detail": "CO-ROUTINE (subquery-1)"
+      },
+      {
+        "id": 16,
+        "parent": 11,
+        "notused": 204,
+        "detail": "SEARCH portal_sessions USING INDEX idx_portal_sessions_expiry (expires_at_utc<?)"
+      },
+      {
+        "id": 26,
+        "parent": 9,
+        "notused": 82,
+        "detail": "SCAN (subquery-1)"
+      },
+      {
+        "id": 33,
+        "parent": 8,
+        "notused": 0,
+        "detail": "UNION ALL"
+      },
+      {
+        "id": 35,
+        "parent": 33,
+        "notused": 0,
+        "detail": "CO-ROUTINE (subquery-3)"
+      },
+      {
+        "id": 40,
+        "parent": 35,
+        "notused": 184,
+        "detail": "SEARCH portal_sessions USING INDEX idx_portal_sessions_revoked (revoked_at_utc>? AND revoked_at_utc<?)"
+      },
+      {
+        "id": 52,
+        "parent": 33,
+        "notused": 82,
+        "detail": "SCAN (subquery-3)"
+      }
+    ],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "ENAM",
+      "served_by_colo": "EWR",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 0.4932
+      },
+      "duration": 0.4932,
+      "changes": 0,
+      "last_row_id": 0,
+      "changed_db": false,
+      "size_after": 1187840,
+      "rows_read": 0,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  }
+]

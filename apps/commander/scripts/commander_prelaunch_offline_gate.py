@@ -38,6 +38,8 @@ PYTHON = (
     "validate_clean_linux_lifecycle.py",
     "validate_device_lifecycle_races.py",
     "validate_claim_revoke_race.py",
+    "validate_session_retention.py",
+    "validate_human_scale_v2.py",
     "validate_invite_claim_race.py",
     "validate_multitenant_isolation.py",
     "validate_quota_reservation_ttl.py",
@@ -66,6 +68,7 @@ JS = (
     "test_plan_cards_centered_ui.mjs",
     "test_oidc_helpers.mjs",
     "test_auth_helpers.mjs",
+    "test_auth_retention_capacity.mjs",
     "test_hara_identity_customer_mcp.mjs",
     "test_customer_mcp_simple_profile.mjs",
     "test_customer_mcp_device_routing.mjs",
@@ -78,6 +81,7 @@ JS = (
 )
 MODELS = (
     "commander_scale_capacity_model.py",
+    "validate_commander_1k_10k_capacity.py",
     "commander_event_v2_active_1k_model.py",
     "commander_event_v2_reconnect_storm_model.py",
     "commander_event_v2_dev_multidevice_lab.py",
