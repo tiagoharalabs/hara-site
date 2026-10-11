@@ -1,0 +1,76 @@
+{
+  "valid_report": {
+    "state": "PASS",
+    "source_head": "48f68c85e76a727cb57f8456363b297de294651a",
+    "validated_suites": 72,
+    "scope": "LOCAL_ONLY_OFFLINE_NO_CLOUDFLARE_MUTATION",
+    "production_certified": false,
+    "real_client_capacity_certified": false,
+    "report_age_seconds": 0.054,
+    "report_sha256": "47bfe7a485c87188f815d56ba92af84146cfbc712eccc35dbeac31c28603c13e"
+  },
+  "invalid_reports_rejected": 12,
+  "cases": [
+    {
+      "case": "wrong_revision",
+      "rejected": true,
+      "code": "CI_REPORT_REVISION_MISMATCH"
+    },
+    {
+      "case": "missing_suite",
+      "rejected": true,
+      "code": "CI_REPORT_SUITE_INCOMPLETE"
+    },
+    {
+      "case": "duplicate_suite",
+      "rejected": true,
+      "code": "CI_REPORT_SUITE_MISMATCH"
+    },
+    {
+      "case": "nonzero_exit",
+      "rejected": true,
+      "code": "CI_REPORT_TEST_NOT_PASS"
+    },
+    {
+      "case": "failed_row",
+      "rejected": true,
+      "code": "CI_REPORT_TEST_NOT_PASS"
+    },
+    {
+      "case": "smaller_workload",
+      "rejected": true,
+      "code": "CI_REPORT_COUNTER_MISMATCH"
+    },
+    {
+      "case": "missing_scope_flag",
+      "rejected": true,
+      "code": "CI_REPORT_UNSUPPORTED_CLAIM"
+    },
+    {
+      "case": "overstated_claim",
+      "rejected": true,
+      "code": "CI_REPORT_UNSUPPORTED_CLAIM"
+    },
+    {
+      "case": "boolean_count",
+      "rejected": true,
+      "code": "CI_REPORT_COUNTER_MISMATCH"
+    },
+    {
+      "case": "invalid_time",
+      "rejected": true,
+      "code": "CI_REPORT_TIME_INVALID"
+    },
+    {
+      "case": "stale_report",
+      "rejected": true,
+      "code": "CI_REPORT_TIME_OUTSIDE_WINDOW"
+    },
+    {
+      "case": "nan_duration",
+      "rejected": true,
+      "code": "CI_REPORT_DURATION_INVALID"
+    }
+  ],
+  "validation_scope": "REPORT_CONSISTENCY_NOT_CRYPTOGRAPHIC_ATTESTATION"
+}

@@ -1,0 +1,16 @@
+{
+  "yaml_parsed": true,
+  "all_shell_blocks_syntax_pass": true,
+  "contents_read_only": true,
+  "no_external_actions": true,
+  "legacy_steps": [
+    {
+      "step": "Validate Event V2 JavaScript syntax",
+      "exit_code": 0
+    },
+    {
+      "step": "Validate capacity and transport guards",
+      "exit_code": 1
+    }
+  ]
+}

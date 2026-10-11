@@ -1,0 +1,102 @@
+name: HARA Commander Full Offline Gate
+
+on:
+  pull_request:
+    branches: [main, "local/commander-product-current"]
+    paths:
+      - "apps/commander/**"
+      - "package.json"
+      - "package-lock.json"
+      - "docs/architecture/HARA_COMMANDER_SCALE_V2_EVENT_TRANSPORT.md"
+      - "docs/architecture/HARA_COMMANDER_SCALE_V2_HUMAN_10K.md"
+      - "docs/architecture/HARA_COMMANDER_PRIVACY_FIRST_TELEMETRY.md"
+      - ".github/workflows/hara-commander-full-offline-gate.yml"
+  push:
+    branches: [main, "local/commander-product-current"]
+    paths:
+      - "apps/commander/**"
+      - "package.json"
+      - "package-lock.json"
+      - "docs/architecture/HARA_COMMANDER_SCALE_V2_EVENT_TRANSPORT.md"
+      - "docs/architecture/HARA_COMMANDER_SCALE_V2_HUMAN_10K.md"
+      - ".github/workflows/hara-commander-full-offline-gate.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: commander-validation-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Complete Commander offline regression
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact revision without external actions
+        shell: bash
+        env:
+          HARA_GIT_TOKEN: ${{ github.token }}
+          HARA_REPOSITORY: ${{ github.repository }}
+          HARA_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          HARA_SIGNED_BASE_SHA: 08500d5c4256d25abc77a26ad377e55eadf1742a
+        run: |
+          set -Eeuo pipefail
+          HARA_BASIC_AUTH="$(printf 'x-access-token:%s' "$HARA_GIT_TOKEN" | base64 -w0)"
+          git init --quiet .
+          git remote add origin "https://github.com/${HARA_REPOSITORY}.git"
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic ${HARA_BASIC_AUTH}" fetch --quiet --no-tags --depth=1 origin "$HARA_HEAD_SHA" "$HARA_SIGNED_BASE_SHA"
+          git checkout --quiet --detach "$HARA_HEAD_SHA"
+          git cat-file -e "$HARA_SIGNED_BASE_SHA^{commit}"
+          test "$(git rev-parse HEAD)" = "$HARA_HEAD_SHA"
+          unset HARA_GIT_TOKEN HARA_BASIC_AUTH
+
+      - name: Prepare isolated Node runtime and locked dependencies
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          shopt -s nullglob
+          candidates=("$RUNNER_TOOL_CACHE"/node/24.*/x64/bin)
+          test "${#candidates[@]}" -gt 0 || { echo 'COMMANDER_CI_NODE24_MISSING'; exit 1; }
+          node_bin="$(printf '%s\n' "${candidates[@]}" | sort -V | tail -n 1)"
+          export PATH="$node_bin:$PATH"
+          echo "$node_bin" >> "$GITHUB_PATH"
+          node --version
+          npm --version
+          /usr/bin/python3 --version
+          if ! /usr/bin/python3 -c 'import cryptography' 2>/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y --no-install-recommends python3-cryptography
+          fi
+          /usr/bin/python3 -c 'import cryptography; print("cryptography", cryptography.__version__)'
+          npm ci --ignore-scripts --no-audit --no-fund
+          git diff --exit-code -- package.json package-lock.json
+
+      - name: Run complete Commander offline gate
+        shell: bash
+        env:
+          HARA_EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -Eeuo pipefail
+          test "$(git rev-parse HEAD)" = "$HARA_EXPECTED_SHA"
+          test -z "$(git status --porcelain=v1 --untracked-files=all -- apps/commander package.json package-lock.json)"
+          report="$RUNNER_TEMP/commander-offline-gate.json"
+          /usr/bin/python3 -B apps/commander/scripts/commander_prelaunch_offline_gate.py --stress 1000 --threads 24 --json > "$report"
+          test -z "$(git status --porcelain=v1 --untracked-files=all -- apps/commander package.json package-lock.json)"
+          /usr/bin/python3 -B apps/commander/scripts/verify_commander_ci_report.py --report "$report" --expected-head "$HARA_EXPECTED_SHA" --summary "$GITHUB_STEP_SUMMARY"
+          cat "$report"
+
+      - name: Validate Event V2 JavaScript syntax
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          node --check apps/commander/src/worker.js
+          node --check apps/commander/src/auth.js
+          node apps/commander/scripts/test_auth_maintenance_observer.mjs
+          node --check apps/commander/src/oidc.js
+          node --check apps/commander/public/app.js
+          node --check apps/commander/src/device-channel.mjs
+          echo "COMMANDER_EVENT_V2_JS_SYNTAX=PASS"
+
