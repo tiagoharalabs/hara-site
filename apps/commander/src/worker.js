@@ -42,6 +42,7 @@ import {
 } from "./device-tool-contract.mjs";
 import { chooseCustomerTargetDevice } from "./device-targeting.mjs";
 import { DeviceChannel, deviceChannelName } from "./device-channel.mjs";
+import { reconcileAgentVersion } from "./device-version-observation.mjs";
 import { SecurityRateLimit } from "./security-rate-limit-do.mjs";
 import {
   enforceLayeredRateLimit,
@@ -5150,6 +5151,17 @@ async function completeDeviceCall(env, request, body) {
       throw new Error("DEVICE_CALL_EXPIRED");
     }
     throw new Error("DEVICE_CALL_NOT_EXECUTING");
+  }
+
+  // Version metadata is derived only from a newly accepted, authenticated
+  // self-info result. A metadata failure must not undo an executed operation.
+  try {
+    await reconcileAgentVersion(env, device, row, body.result);
+  } catch (_error) {
+    console.warn(JSON.stringify({
+      schema: "hara.commander-device-version-observation.v1",
+      code: "DEVICE_VERSION_OBSERVATION_DEGRADED",
+    }));
   }
 
   return {

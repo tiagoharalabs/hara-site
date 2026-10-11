@@ -23,6 +23,7 @@ SCRIPTS = ROOT / "apps/commander/scripts"
 GATE = "HARA_COMMANDER_PRELAUNCH_OFFLINE"
 TIMEOUT = 65
 PYTHON = (
+    "test_commander_cf_cost_audit.py",
     "validate_canonical_functions_hardening.py",
     "validate_mcp_process_risk_annotations.py",
     "validate_manual_on_demand_commercial.py",
@@ -63,6 +64,7 @@ PYTHON = (
     "validate_fresh_customer_acceptance.py",
 )
 JS = (
+    "test_device_version_observation.mjs",
     "test_devices_minimalist_ui.mjs",
     "test_devices_setup_commands_ui.mjs",
     "test_nav_no_duplicate_titles.mjs",
