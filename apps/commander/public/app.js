@@ -186,6 +186,8 @@
   let expandedDeviceId = null;
   let pairingExpiryTimer = null;
   const activityCache = new Map();
+  let activityReadGeneration = 0;
+  const activityTriggerReads = new WeakMap();
   let activityWindow = "7d";
   const ACTIVITY_CACHE_MS = 15000;
   const LOCAL_ACTIVITY_ORIGIN = "http://127.0.0.1:32145";
@@ -312,6 +314,11 @@
     sessionDegraded = false;
     sessionDegradedReason = "";
     currentRole = "";
+    // Retire pending diagnostics before clearing their session-local data.
+    activityReadGeneration += 1;
+    activityCache.clear();
+    const diagnosticsPanel = document.getElementById("internalBetaDiagnostics");
+    if (diagnosticsPanel) diagnosticsPanel.hidden = true;
     dashboardCache = null;
     dashboardCacheAt = 0;
     devicesCache = null;
@@ -911,36 +918,61 @@
 
   async function loadUsageActivity(trigger=null, force=false) {
     if (!remotePortal || !sessionAuthenticated) return;
+    // The selected window may change while permissions or the Agent respond.
+    // Even a cache hit supersedes older requests; only the current read renders.
+    const requestedWindow=activityWindow;
+    const generation=++activityReadGeneration;
+    const isCurrent=()=>remotePortal && sessionAuthenticated
+      && generation === activityReadGeneration && requestedWindow === activityWindow;
     const diagnosticsPanel=document.getElementById("internalBetaDiagnostics");
-    const cached=activityCache.get(activityWindow);
+    const cached=activityCache.get(requestedWindow);
     if (!force && cached && Date.now()-cached.at < ACTIVITY_CACHE_MS) {
       renderActivity(cached.payload);
       return;
     }
-    const original=trigger?.textContent || "Atualizar";
+    const priorTrigger=trigger ? activityTriggerReads.get(trigger) : null;
+    const triggerRead=trigger ? {
+      original:priorTrigger?.original ?? (trigger.textContent || "Atualizar"),
+      disabled:priorTrigger?.disabled ?? trigger.disabled,
+    } : null;
     if (trigger) {
+      activityTriggerReads.set(trigger,triggerRead);
       trigger.disabled=true;
       trigger.textContent="Atualizando…";
     }
     try {
       const permissionState=await localLoopbackPermissionState();
+      if (!isCurrent()) return;
       if (permissionState === "denied") {
+        activityCache.delete(requestedWindow);
         if (diagnosticsPanel) diagnosticsPanel.hidden=true;
         if (trigger) showToast("Diagnóstico beta disponível somente no computador que executa o Agent local.");
         return;
       }
-      const payload=await fetchLocalActivityDirect(activityWindow);
+      const payload=await fetchLocalActivityDirect(requestedWindow);
+      if (!isCurrent()) return;
       if (!payload) {
+        activityCache.delete(requestedWindow);
         if (diagnosticsPanel) diagnosticsPanel.hidden=true;
         if (trigger) showToast("O Agent local não respondeu ao diagnóstico beta.");
         return;
       }
-      activityCache.set(activityWindow,{at:Date.now(),payload});
+      activityCache.set(requestedWindow,{at:Date.now(),payload});
       renderActivity(payload);
+    } catch (_error) {
+      // A stale failure must not hide a newer success or expose error details.
+      if (!isCurrent()) return;
+      activityCache.delete(requestedWindow);
+      if (diagnosticsPanel) diagnosticsPanel.hidden=true;
+      if (trigger) showToast("Não foi possível atualizar o diagnóstico beta agora.");
     } finally {
-      if (trigger?.isConnected) {
-        trigger.disabled=false;
-        trigger.textContent=original;
+      // Concurrent reads can use the same button. Only its latest owner resets it.
+      if (trigger && activityTriggerReads.get(trigger) === triggerRead) {
+        activityTriggerReads.delete(trigger);
+        if (trigger.isConnected) {
+          trigger.disabled=triggerRead.disabled;
+          trigger.textContent=triggerRead.original;
+        }
       }
     }
   }

@@ -1,5 +1,12 @@
 # H.A.R.A. Commander — CURRENT (10/10/2026, após rollout 7/7)
 
+## Revisão local de contratos — 11/10/2026; NÃO é novo deploy
+
+A fonte local contém as melhorias de leitura do checkpoint `aa4a90b` e correções posteriores de concorrência da atividade, verificadas no Services contra o arquivo integral: **25/25 PASS**. O novo teste `test_customer_argument_pipeline.mjs` detectou perda de `expected_sha256` em escrita/edição/exclusão e de `offset` em busca/listagem no adaptador do Worker: **fonte atual 16/38 PASS; candidata apenas em memória 38/38 PASS**. **O patch desse Worker não foi aplicado**, pois a tentativa de gravação foi bloqueada. O modo candidato não substitui a aprovação do código do produto.
+
+Não houve deploy, migração, coleta nova de custos, atualização de agentes nem comprovação de escala nesta revisão. A bateria geral anterior de 68 validadores não foi reexecutada. Leituras históricas de Cloudflare abaixo continuam históricas; não promovê-las a verificação desta rodada. Referências: `docs/operations/HARA_COMMANDER_ARGUMENT_PIPELINE_REVIEW_20261011.md` e `docs/operations/HARA_COMMANDER_ACTIVITY_SESSION_CONCURRENCY_20261011.md`.
+
+
 ## Atualização autoritativa — capacidade, 11/10/2026
 
 Visual de Plano e cobrança aprovado pelo proprietário. Capacidade: auditoria e melhorias publicadas, **sem certificação de 1.000–10.000 clientes simultâneos**. Suíte final **63/63 PASS**; testes de fonte/SQLite com 10.000 contas, 20.000 dispositivos e 210.000 sessões; plano da nova consulta confirmado no D1 DEV real. Limpeza indexada em lotes limitados, observação agregada sem dados de clientes e empacotamento comercial assinado testável.
