@@ -3529,6 +3529,7 @@ function customerMcpDevicePayload(toolId, args) {
       max_results:args.max_results === undefined ? 50 : Number(args.max_results),
       include_hidden:args.include_hidden === true, ignore_case:args.ignore_case !== false,
       ...(args.file_glob === undefined ? {} : {file_glob:String(args.file_glob)}),
+      ...(args.offset === undefined ? {} : {offset:args.offset}),
     };
   }
   if (toolId === "hara.files.list") {
@@ -3536,6 +3537,7 @@ function customerMcpDevicePayload(toolId, args) {
       path:String(args.path || ""),
       ...(args.limit === undefined ? {} : {limit:Number(args.limit)}),
       ...(args.depth === undefined ? {} : {depth:Number(args.depth)}),
+      ...(args.offset === undefined ? {} : {offset:args.offset}),
     };
   }
   if (toolId === "hara.files.read") {
@@ -3561,11 +3563,11 @@ function customerMcpDevicePayload(toolId, args) {
   if (toolId === "hara.process.interact") return {session_id:String(args.session_id || ""),input:String(args.input ?? ""),timeout_ms:args.timeout_ms === undefined ? 1000 : Number(args.timeout_ms)};
   if (toolId === "hara.process.kill") return {session_id:String(args.session_id || ""),force:args.force === true};
   if (toolId === "hara.files.create_directory") return {path:String(args.path || ""),parents:args.parents !== false};
-  if (toolId === "hara.files.write") return {path:String(args.path || ""),content:String(args.content ?? ""),mode:String(args.mode || "rewrite")};
-  if (toolId === "hara.files.edit") return {path:String(args.path || ""),old_text:String(args.old_text ?? ""),new_text:String(args.new_text ?? ""),replace_all:args.replace_all === true};
+  if (toolId === "hara.files.write") return {path:String(args.path || ""),content:String(args.content ?? ""),mode:String(args.mode || "rewrite"),...(args.expected_sha256 === undefined ? {} : {expected_sha256:args.expected_sha256})};
+  if (toolId === "hara.files.edit") return {path:String(args.path || ""),old_text:String(args.old_text ?? ""),new_text:String(args.new_text ?? ""),replace_all:args.replace_all === true,...(args.expected_sha256 === undefined ? {} : {expected_sha256:args.expected_sha256})};
   if (toolId === "hara.files.move") return {source:String(args.source || ""),destination:String(args.destination || "")};
   if (toolId === "hara.files.copy") return {source:String(args.source || ""),destination:String(args.destination || "")};
-  if (toolId === "hara.files.delete") return {path:String(args.path || "")};
+  if (toolId === "hara.files.delete") return {path:String(args.path || ""),...(args.expected_sha256 === undefined ? {} : {expected_sha256:args.expected_sha256})};
   if (toolId === "hara.functions.describe") return { function_id: cleanId(args.function_id, 180) };
   if (toolId === "hara.functions.invoke") {
     return {
@@ -3598,11 +3600,13 @@ function legacyInvokePayload(toolId, payload) {
   if (functionId === "filesystem.search") return {function_id:functionId,arguments:{argv:[
     payload.path, payload.search_type, payload.pattern, String(payload.max_results ?? 50),
     payload.include_hidden ? "1" : "0", payload.ignore_case === false ? "0" : "1", payload.file_glob ?? "",
+    ...(payload.offset === undefined ? [] : [String(payload.offset)]),
   ]}};
   if (functionId === "filesystem.list") {
     const argv=[payload.path];
-    if (payload.limit !== undefined || payload.depth !== undefined) argv.push(String(payload.limit ?? 100));
-    if (payload.depth !== undefined) argv.push(String(payload.depth));
+    if (payload.limit !== undefined || payload.depth !== undefined || payload.offset !== undefined) argv.push(String(payload.limit ?? 100));
+    if (payload.depth !== undefined || payload.offset !== undefined) argv.push(String(payload.depth ?? 1));
+    if (payload.offset !== undefined) argv.push(String(payload.offset));
     return {function_id:functionId,arguments:{argv}};
   }
   if (functionId === "filesystem.read_many") return {function_id:functionId,arguments:{argv:[String(payload.offset ?? 0),String(payload.length ?? 100),...(payload.paths||[])]}};

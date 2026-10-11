@@ -1,5 +1,10 @@
 # H.A.R.A. Commander — CURRENT (10/10/2026, após rollout 7/7)
 
+## Regressão unificada — 11/10/2026; publicação pendente
+
+Worker REAL corrigido: hash esperado e paginação preservados; teste padrão **38/38 PASS**, gate **72/72 PASS**. Candidatas em memória e bloqueios do patch citados abaixo são históricos. Não inferir deploy do commit. Referência: `docs/operations/HARA_COMMANDER_RELEASE_VALIDATION_20261011.md`.
+
+
 ## Consistência dos resultados MCP — 11/10/2026; fonte local, sem deploy
 
 O perfil simples passou a sinalizar erros operacionais com `isError: true`, distinguir timeout de não execução, orientar reconciliação em vez de repetição automática, restringir mensagens públicas de exceção a códigos simbólicos e separar trecho de edição ausente de arquivo ausente. Teste novo contra o handler MCP real, executor simulado no Services: **38/38 PASS**; suíte anterior do perfil simples também PASS. Não confundir este teste com os 38 casos da cadeia de argumentos abaixo. A bateria geral não foi reexecutada e o Worker não foi alterado. Contrato de timeout com valores nulos exige homologação do cliente antes de promoção. Documento: `docs/operations/HARA_COMMANDER_MCP_RESULT_CONSISTENCY_20261011.md`.

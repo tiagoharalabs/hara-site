@@ -65,6 +65,10 @@ PYTHON = (
     "validate_fresh_customer_acceptance.py",
 )
 JS = (
+    "test_customer_argument_pipeline.mjs",
+    "test_mcp_result_consistency.mjs",
+    "test_portal_read_boundaries.mjs",
+    "test_usage_activity_concurrency.mjs",
     "test_device_version_observation.mjs",
     "test_portal_read_coordinator.mjs",
     "test_portal_history_read.mjs",

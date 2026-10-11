@@ -9,31 +9,8 @@ import { handleSimpleCustomerMcpRequest } from '../src/customer-mcp-simple.mjs';
 // requests remain in-process. No Cloudflare, device, shell or network is invoked.
 let worker=fs.readFileSync(new URL('../src/worker.js',import.meta.url),'utf8');
 const originalWorkerSha256=createHash('sha256').update(worker).digest('hex');
-const candidateMode=process.argv.includes('--candidate');
-// Candidate mode only transforms a string in this test's memory. It never
-// writes a source file, deploys, starts a device or changes a remote service.
-if(candidateMode) {
- const replaceOnce=(oldValue,newValue)=>{
-  assert.equal(worker.split(oldValue).length,2,'CANDIDATE_ANCHOR_MUST_BE_UNIQUE');
-  worker=worker.replace(oldValue,newValue);
- };
- for(const [tool,tail] of [
-  ['hara.files.write','path:String(args.path || ""),content:String(args.content ?? ""),mode:String(args.mode || "rewrite")'],
-  ['hara.files.edit','path:String(args.path || ""),old_text:String(args.old_text ?? ""),new_text:String(args.new_text ?? ""),replace_all:args.replace_all === true'],
-  ['hara.files.delete','path:String(args.path || "")'],
- ]) {
-  const oldValue='  if (toolId === "'+tool+'") return {'+tail+'};';
-  replaceOnce(oldValue,'  if (toolId === "'+tool+'") return {'+tail+',...(args.expected_sha256 === undefined ? {} : {expected_sha256:args.expected_sha256})};');
- }
- for(const anchor of [
-  '      ...(args.file_glob === undefined ? {} : {file_glob:String(args.file_glob)}),',
-  '      ...(args.depth === undefined ? {} : {depth:Number(args.depth)}),',
- ]) replaceOnce(anchor,anchor+'\n      ...(args.offset === undefined ? {} : {offset:args.offset}),');
- const searchAnchor='    payload.include_hidden ? "1" : "0", payload.ignore_case === false ? "0" : "1", payload.file_glob ?? "",';
- replaceOnce(searchAnchor,searchAnchor+'\n    ...(payload.offset === undefined ? [] : [String(payload.offset)]),');
- replaceOnce('    if (payload.limit !== undefined || payload.depth !== undefined) argv.push(String(payload.limit ?? 100));\n    if (payload.depth !== undefined) argv.push(String(payload.depth));',
-  '    if (payload.limit !== undefined || payload.depth !== undefined || payload.offset !== undefined) argv.push(String(payload.limit ?? 100));\n    if (payload.depth !== undefined || payload.offset !== undefined) argv.push(String(payload.depth ?? 1));\n    if (payload.offset !== undefined) argv.push(String(payload.offset));');
-}
+const candidateMode=false;
+assert.ok(!process.argv.includes('--candidate'),'TEST_REQUIRES_ACTUAL_PRODUCT_SOURCE');
 function extract(start,end) {
  const a=worker.indexOf(start),b=worker.indexOf(end,a+start.length);
  assert.ok(a>=0&&b>a,'WORKER_FUNCTION_BOUNDARIES_REQUIRED');return worker.slice(a,b).trim();
@@ -148,5 +125,5 @@ await test('received_preconditions_are_present_before_request_id_derivation',()=
  assert.ok(start>=0);const block=worker.slice(start,start+400);
  assert.ok(block.includes('customerMcpRequestId('));assert.ok(block.includes('{ device_id: targetDeviceId, payload }'));
 });
-console.log(JSON.stringify({schema:'hara.commander-argument-pipeline.v1',scope:'REAL_INPROCESS_MCP_AND_SOURCE_ADAPTERS_NO_NETWORK',candidate_mode:candidateMode,candidate_applied_to_product:false,original_worker_sha256:originalWorkerSha256,source_worker_sha256:createHash('sha256').update(worker).digest('hex'),checked:results.length,passed:results.filter(x=>x.state==='PASS').length,failed:results.filter(x=>x.state==='FAIL').length,tests:results},null,2));
+console.log(JSON.stringify({schema:'hara.commander-argument-pipeline.v1',scope:'REAL_INPROCESS_MCP_AND_SOURCE_ADAPTERS_NO_NETWORK',candidate_mode:candidateMode,tests_actual_product_source:true,original_worker_sha256:originalWorkerSha256,source_worker_sha256:createHash('sha256').update(worker).digest('hex'),checked:results.length,passed:results.filter(x=>x.state==='PASS').length,failed:results.filter(x=>x.state==='FAIL').length,tests:results},null,2));
 process.exitCode=results.some(x=>x.state!=='PASS')?1:0;
