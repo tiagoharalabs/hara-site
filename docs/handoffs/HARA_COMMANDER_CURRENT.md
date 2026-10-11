@@ -1,5 +1,10 @@
 # H.A.R.A. Commander — CURRENT (10/10/2026, após rollout 7/7)
 
+## Fechamento Founder 7/7 e entrada comercial (11/10/2026)
+
+Sete Linux Founder online no Agent Event V2 0.3.45 via readback MCP comercial, com contratos/autorização preservados e pacote antigo de rollback por máquina. Provas comerciais Founder: write/edit com hash esperado, hash obsoleto negado, leitura, execução e REPL interativa, recibos do Agent. Novo smoke HTTP DEV 1.000 GET de health/50 concorrentes máximo, 0 erro (NAO representa 1.000 clientes OAuth/Agents). Validação de escopo/ZIP OpenAI 33 tools, 5 positivos/3 negativos: SOURCE_PACKAGE_PASS, nao submissão. Billing PROD catálogo STANDARD BRL80/mes e TRIAL 10k, mas tres segredos Stripe PENDING e zero eventos. Gate local 79/79 PASS, CI hospedado aguardando readback. Referência: docs/operations/HARA_COMMANDER_GO_LIVE_READINESS_20261011.md e docs/evidence/commander-golive-20261011/acceptance.json.
+
+
 ## Atualização efetiva da telemetria Event V2 — 11/10/2026
 
 Runtime 93ebcf0 publicado em DEV/PROD com D1 0034, Workers DEV 15801b6f-6ec2-40e9-8508-2f1d578824df e PROD 3b926608-cff0-4dfb-947f-6ff3099cbe3f, ambos 100%; health/auth PASS. O Agent Founder 0.3.45 (RS256, sete arquivos) está instalado/ativo no services, com persistência local SQLite 0600 comprovada por reinício controlado; outros seis Founders permanecem 0.3.44, pacotes não instalados. LIVENESS cloud ~6h sem requisições HTTP adicionais; snapshots D1 ainda vazios no readback, e não significa falha antes do primeiro checkpoint. Gate local 77/77 PASS; GitHub Actions hospedado PASS no commit 1aec24c, run 38171345712, depois de corrigir limpeza do wrapper Linux no uninstall. Referência: docs/operations/HARA_COMMANDER_EVENT_V2_LOCAL_TELEMETRY_LOW_CHATTER_20261011.md.

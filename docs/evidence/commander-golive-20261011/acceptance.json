@@ -1,0 +1,58 @@
+{
+  "at_utc": "2026-10-11T20:26:49.597554+00:00",
+  "billing": {
+    "billing_connections": 0,
+    "pro_unlimited_monthly_units": true,
+    "secrets_recorded": false,
+    "standard_monthly_brl_cents": 8000,
+    "stripe_dev_config_ready": false,
+    "stripe_prod_config_ready": false,
+    "trial_monthly_calls": 10000,
+    "webhook_events": 0
+  },
+  "dev_health_ramp": {
+    "authenticated_users": 0,
+    "failed": 0,
+    "full_concurrency_certified": false,
+    "max_concurrent_requests": 50,
+    "p50_ms": 42.03,
+    "p95_ms": 231.45,
+    "p99_ms": 482.81,
+    "requests": 1000,
+    "success": 1000
+  },
+  "founder": {
+    "device_count": 7,
+    "e2e_directory_file_sha_cas_process_and_interactive": "PASS",
+    "linux_agent_version": "0.3.45",
+    "via_commercial_mcp": true,
+    "windows_certified": false
+  },
+  "offline_gate": {
+    "checked": 79,
+    "failed": 0,
+    "passed": 79,
+    "sha256": "ae8f19e99c5bb7d8b782cee2fb02080aab5f4c5ebe5c8473aa0d6e97b6e69f14"
+  },
+  "openai": {
+    "approved": false,
+    "external_review_prerequisites_verified": false,
+    "mcp_tools": 33,
+    "oauth_dcr_preflight": "PASS",
+    "plugin_zip_source_preflight": "PASS",
+    "review_cases_negative": 3,
+    "review_cases_positive": 5,
+    "submitted": false
+  },
+  "real_1000_users_certified": false,
+  "schema": "hara.commander-golive-checkpoint.v1",
+  "source_head_at_test": "4ca20c74586b4e958b3b3698eab68fbf608d9176",
+  "source_operations": {
+    "source_agent_0_3_45_deployed_founder": true,
+    "source_runtime_changes_in_this_commit": false
+  },
+  "telemetry": {
+    "cloud_d1_snapshot_observed": false,
+    "local_sqlite_persisted": true
+  }
+}

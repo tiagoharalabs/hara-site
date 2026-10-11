@@ -24,6 +24,8 @@ SCRIPTS = ROOT / "apps/commander/scripts"
 GATE = "HARA_COMMANDER_PRELAUNCH_OFFLINE"
 TIMEOUT = 65
 PYTHON = (
+    "validate_commander_submission_package.py",
+    "commander_paid_dev_health_ramp.py",
     "validate_event_v2_telemetry_signed_release.py",
     "validate_event_v2_local_telemetry.py",
     "test_commander_cf_cost_audit.py",
