@@ -70,7 +70,7 @@ need(
     and 'idx_commander_devices_approval_mode' in APPROVAL_MODE_MIGRATION,
     "APPROVAL_MODE_MIGRATION",
 )
-need("styles.css?v=20261010-device-details1" in HTML, "STYLE_CACHE_KEY")
+need("styles.css?v=20261010-nav-nodup-wrap1" in HTML, "STYLE_CACHE_KEY")
 need("app.js?v=20261010-device-details1" in HTML, "SCRIPT_CACHE_KEY")
 need((APP / "public/brand/chatgpt-official.webp").stat().st_size > 0, "CHATGPT_BRAND_ASSET_PRESERVED")
 need((APP / "public/brand/claude-official.svg").stat().st_size > 0, "CLAUDE_BRAND_ASSET_PRESERVED_WITHOUT_MISLABELING_CODEX")
@@ -177,10 +177,15 @@ need(
     and '<span class="eyebrow"><i></i> PLANO</span>' not in HTML
     and '<span class="eyebrow"><i></i> INTEGRAÇÕES</span>' not in HTML
     and '<span class="eyebrow"><i></i> SEGURANÇA</span>' not in HTML
-    and '<h1 id="plans-title">Plano e cobrança</h1>' in HTML
-    and '<h1 id="usage-title">Uso</h1>' in HTML
-    and '<h1 id="security-title">Configurações</h1>' in HTML,
-    "WORKSPACE_SINGLE_TITLE_HIERARCHY",
+    and 'data-view="devices" aria-label="Computadores"' in HTML
+    and 'data-view="usage" aria-label="Uso"' in HTML
+    and 'data-view="plans" aria-label="Plano e cobrança"' in HTML
+    and 'data-view="security" aria-label="Configurações"' in HTML
+    and 'id="devices-title"' not in HTML
+    and 'id="usage-title"' not in HTML
+    and 'id="plans-title"' not in HTML
+    and 'id="security-title"' not in HTML,
+    "WORKSPACE_NO_SIDEBAR_TITLE_DUPLICATION",
 )
 sidebar_block = HTML.split('<template id="sidebarTemplate">',1)[1].split('</template>',1)[0]
 need(
@@ -202,7 +207,7 @@ need(
     and 'route("devices");' in JS
     and 'data-view="devices" aria-label="Computadores"' in HTML
     and 'id="devices-title"' not in HTML
-    and 'id="usage-title"' in HTML
+    and 'data-view="usage" aria-label="Uso"' in HTML
     and 'O Commander na nuvem mantém apenas o mínimo necessário' in HTML,
     "CUSTOMER_DEFAULT_DEVICES_ROUTE",
 )

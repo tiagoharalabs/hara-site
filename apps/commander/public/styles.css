@@ -434,8 +434,8 @@ html[data-theme="dark"] .connection-readiness{background:rgba(9,29,42,.94);borde
   padding:18px 20px;
 }
 .devices-section-panel .device-install-card>p{
-  margin:6px 0 4px;
-  max-width:1000px;
+  margin:6px 0 8px;
+  width:100%;max-width:none;min-width:0;
 }
 .devices-section-panel .onboarding-step,
 .devices-section-panel .onboarding-finish{
@@ -1429,8 +1429,9 @@ html[data-theme="dark"] [data-view="devices"] .devices-help{
   font-size:22px;line-height:1.25;letter-spacing:-.02em
 }
 [data-view="devices"] .devices-guide-intro{
-  margin:7px 0 19px;color:var(--muted);
-  font-size:13px;line-height:1.55;max-width:920px
+  margin:7px 0 16px;color:var(--muted);
+  font-size:13px;line-height:1.55;
+  width:100%;max-width:none;min-width:0
 }
 [data-view="devices"] .devices-command-grid{
   display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
@@ -1620,4 +1621,52 @@ html[data-theme="dark"] [data-view="devices"] .devices-command-note{
 @media(max-width:760px){
   [data-view="devices"] .workspace-main{padding-top:9px}
   [data-view="devices"] .devices-section-tabs{gap:16px}
+}
+
+
+/* Unified navigation: the sidebar names the page, so these views start
+   directly with their content. Keep the same visual rhythm as Computers. */
+.app-view[data-view="usage"] .workspace-main,
+.app-view[data-view="plans"] .workspace-main,
+.app-view[data-view="security"] .workspace-main{
+  padding-top:10px;
+}
+.app-view[data-view="plans"] .plan-grid{
+  width:100%;
+  max-width:none;
+  margin:0;
+}
+.app-view[data-view="plans"] .plan-card>p{
+  font-size:12.5px;
+  line-height:1.55;
+  min-height:0;
+}
+.app-view[data-view="plans"] .plan-card li{
+  font-size:12px;
+  line-height:1.45;
+}
+/* Never use an artificial 850/920px cap on full-width instructional prose. */
+[data-view="devices"] .devices-setup-advanced .install-note{
+  max-width:none;
+  width:100%;
+}
+@media(min-width:1400px){
+  [data-view="devices"] .devices-guide-intro,
+  [data-view="devices"] .device-install-card>p{
+    white-space:nowrap;
+  }
+}
+@media(max-width:1399px){
+  [data-view="devices"] .devices-guide-intro,
+  [data-view="devices"] .device-install-card>p{
+    white-space:normal;
+    overflow-wrap:normal;
+  }
+}
+@media(max-width:760px){
+  .app-view[data-view="usage"] .workspace-main,
+  .app-view[data-view="plans"] .workspace-main,
+  .app-view[data-view="security"] .workspace-main{
+    padding-top:9px;
+  }
 }

@@ -112,7 +112,7 @@ console.log("COMMANDER_GUIDE_LINUX_WINDOWS_MCP_TRUE_COMMANDS=PASS");
 assert.match(css,/\.devices-command-grid/);
 assert.match(css,/\.devices-setup-advanced/);
 assert.match(css,/html\[data-theme="dark"\] \[data-view="devices"\]/);
-assert.match(html,/styles\.css\?v=20261010-device-details1/);
+assert.match(html,/styles\.css\?v=20261010-nav-nodup-wrap1/);
 assert.match(html,/app\.js\?v=20261010-device-details1/);
 assert.match(css,/--gold/);
 console.log("COMMANDER_GUIDE_COLORS_THEME_RESPONSIVE=PASS");
