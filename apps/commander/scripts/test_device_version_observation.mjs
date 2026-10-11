@@ -40,4 +40,14 @@ await test('worker integration after accepted completion and fail-soft',()=>{
  assert.ok(fn.indexOf('reconcileAgentVersion(env, device, row, body.result)')>fn.indexOf('throw new Error("DEVICE_CALL_NOT_EXECUTING")'));
  assert.ok(fn.includes('DEVICE_VERSION_OBSERVATION_DEGRADED'));
 });
+const envelope = (value=result(),state='PASS') => ({state,runtime_authority_from_chatgpt:false,mutation_performed:false,blocker:null,result:value});
+await test('canonical live Agent info envelope accepted',()=>assert.equal(observedAgentVersion(device,call,envelope()),'0.3.44'));
+await test('canonical live Agent ping envelope accepted',()=>assert.equal(observedAgentVersion(device,{...call,tool_id:'hara.ping'},envelope(result('0.3.44','device-a','device.ping'))),'0.3.44'));
+await test('failed or ambiguous envelopes ignored',()=>{for(const state of ['FAILED','DENIED','TIMEOUT',null])assert.equal(observedAgentVersion(device,call,envelope(result(),state)),null);});
+await test('envelope does not bypass inner device identity',()=>assert.equal(observedAgentVersion(device,call,envelope(result('0.3.44','device-b'))),null));
+await test('envelope does not admit process output',()=>assert.equal(observedAgentVersion(device,{...call,tool_id:'hara.process.run'},envelope()),null));
+await test('mutating or uncertain envelope ignored',()=>{for(const patch of [{mutation_performed:true},{mutation_performed:null},{runtime_authority_from_chatgpt:true},{blocker:{code:'DENIED'}}])assert.equal(observedAgentVersion(device,call,{...envelope(),...patch}),null);});
+await test('nested arbitrary envelopes not traversed',()=>assert.equal(observedAgentVersion(device,call,envelope(envelope())),null));
+await test('accepted envelope issues one scoped update and no polling',async()=>{const env=db();assert.equal((await reconcileAgentVersion(env,device,call,envelope())).state,'UPDATED');assert.equal(env.seen.length,1);const stable=db();for(let i=0;i<10000;i++)await reconcileAgentVersion(stable,{...device,agent_version:'0.3.44'},call,envelope());assert.equal(stable.seen.length,0);});
+
 console.log(JSON.stringify({schema:'hara.device-version-observation-tests.v1',passed,failed:0,live_test:false}));

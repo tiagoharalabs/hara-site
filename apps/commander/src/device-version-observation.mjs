@@ -18,6 +18,15 @@ export function observedAgentVersion(device, acceptedCall, result) {
   if (!device || device.state !== "ACTIVE" || device.revoked_at_utc != null
       || !device.tenant_id || !device.device_id
       || acceptedCall?.state !== "COMPLETED") return null;
+  // The live Agent wraps function output in its canonical PASS envelope.
+  // Accept only a successful, non-mutating self-info envelope; retain support
+  // for the flat output contract. Device/tenant validation remains below.
+  if (result && typeof result === "object" && !Array.isArray(result)
+      && Object.prototype.hasOwnProperty.call(result, "result")) {
+    if (result.state !== "PASS" || result.runtime_authority_from_chatgpt !== false
+        || result.mutation_performed !== false || result.blocker != null) return null;
+    result = result.result;
+  }
   const expectedFunction = INFO_FUNCTIONS.get(acceptedCall.tool_id);
   if (!expectedFunction || !result || Array.isArray(result)
       || result.function_id !== expectedFunction || result.process_exit_code !== 0
