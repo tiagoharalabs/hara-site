@@ -1710,6 +1710,38 @@ def _append_process_output(session,text):
     session["_buffer_chars"]=max(0,total)
     session["cursor"]=max(session.get("cursor",0),session["base_line"])
 
+def _drain_completed_process_output(session):
+    """Consume buffered PTY output after waitpid and before closing the master.
+
+    The master is nonblocking (set by process_start). A descendant could keep
+    the slave fd open, so never wait for EOF indefinitely or retain unbounded
+    data. _append_process_output applies the existing 2 MiB/5,000-line cap.
+    """
+    fd=int(session.get("fd",-1))
+    if fd<0: return
+    max_bytes=4*1024*1024
+    deadline=time.monotonic()+0.25
+    consumed=0
+    while consumed<max_bytes and time.monotonic()<deadline:
+        try:
+            data=os.read(fd,min(65536,max_bytes-consumed))
+        except InterruptedError:
+            continue
+        except BlockingIOError:
+            break
+        except OSError as exc:
+            # A Linux PTY raises EIO when its last slave closes.
+            if exc.errno in (errno.EIO,errno.EBADF): break
+            session["truncated"]=True
+            break
+        if not data: break
+        _append_process_output(session,data.decode("utf-8",errors="replace"))
+        consumed+=len(data)
+    if consumed>=max_bytes or time.monotonic()>=deadline:
+        # Mark potential loss rather than silently claim complete output.
+        session["truncated"]=True
+
+
 def _process_update_state(session):
     if session.get("exit_code") is not None: return
     try:
@@ -1717,13 +1749,18 @@ def _process_update_state(session):
     except ChildProcessError:
         pid=int(session["pid"]); status=0
     if pid:
+        # waitpid reports process completion before PTY master bytes have
+        # necessarily been consumed; never close the fd first.
         session["exit_code"]=os.waitstatus_to_exitcode(status) if hasattr(os,"waitstatus_to_exitcode") else 0
         session["finished_monotonic"]=time.monotonic()
-        if session.get("partial"):
-            _append_process_output(session,"\n")
-        try: os.close(int(session["fd"]))
-        except OSError: pass
-        session["fd"]=-1
+        try:
+            _drain_completed_process_output(session)
+            if session.get("partial"):
+                _append_process_output(session,"\n")
+        finally:
+            try: os.close(int(session["fd"]))
+            except OSError: pass
+            session["fd"]=-1
 
 def _drain_process(session,wait_ms=0):
     fd=int(session.get("fd",-1))

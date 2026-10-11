@@ -1,5 +1,10 @@
 # H.A.R.A. Commander — CURRENT (11/10/2026, transferência e continuidade)
 
+## Agent PTY 0.3.46 — saída pós-exit corrigida (11/10/2026)
+
+Fonte linux.py corrigida: drenar PTY não bloqueante (até 4 MiB/250 ms) antes de fechar fd após waitpid; preservar buffers com limite, sinalizar possível truncamento. Regressão com PTYs reais 19/19 PASS, incluindo 120/120 linhas pós-exit; gate local completo 83/83 PASS. Signer v2 0.3.46 isolado de 0.3.45 e bundle Services com sete arquivos RS256 validado. CANÁRIO MCP REAL E ROLLOUT AINDA PENDENTES. Evidência: docs/operations/HARA_COMMANDER_PTY_TERMINAL_DRAIN_FIX_20261011.md.
+
+
 ## Prova real sem Desktop — transferência, recuperação e stdout pendente (11/10/2026)
 
 Na frente de substituição do Desktop, o MCP comercial executou as provas em diretórios descartáveis: transferência de 32 arquivos e 12.842.112 bytes (inclui binário 12 MiB, Unicode, symlink interno) do Services para Núcleo, C e D, **3/3 destinos com manifesto SHA-256 PASS**. A Sentinela D retomou após interrupção intencional aos 720.896 bytes; SHA final PASS. Transmissão grande usou rsync/SSH sob comandos governados do H.A.R.A., não uma ferramenta de transferência binária nativa. O MCP nativo transferiu manifesto de texto, e hara.files.copy local validou binário 1 MiB; há limite nativo de cópia local 2 MiB.
