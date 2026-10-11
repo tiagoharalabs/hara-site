@@ -13,6 +13,7 @@ import argparse
 from datetime import datetime, timezone
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -137,7 +138,23 @@ def invoke(name: str, *, stress: int, threads: int) -> dict:
     except subprocess.TimeoutExpired:
         return {"test": name, "state": "TIMEOUT", "seconds": TIMEOUT}
     seconds = round(time.monotonic() - start, 3)
+    # Only static test-stage markers and the harness source line are retained.
+    # Never surface installer output, tokens, paths or command arguments.
+    diagnostic = {}
+    if name == "commander_linux_clean_lifecycle.py" and output.returncode:
+        stages = re.findall(
+            r"(?m)^COMMANDER_CLEAN_LINUX_[A-Z0-9_]+=PASS$", output.stdout
+        )
+        lines = re.findall(
+            r'commander_linux_clean_lifecycle[.]py", line ([0-9]+)',
+            output.stderr,
+        )
+        diagnostic = {
+            "last_passed_stage": stages[-1] if stages else None,
+            "harness_failure_line": int(lines[-1]) if lines else None,
+        }
     return {
+        **diagnostic,
         "test": name,
         "state": "PASS" if output.returncode == 0 else "FAIL",
         "seconds": seconds,
