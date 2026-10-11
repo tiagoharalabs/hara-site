@@ -29,3 +29,7 @@ Links oficiais: https://developers.openai.com/plugins/deploy/submission , https:
 ## Pendente externo
 
 Stripe: cadastro bancário e teste de faturamento continuam sob controle do proprietário, sem urgência imposta por esta frente. D1 de telemetria Event V2: primeiro snapshot real ainda precisa ser observado após o liveness periódico; não usar uma contagem zero antes da janela como falha de execução. Handoff anterior / GitHub sempre prevalece pela revisão e data mais recente; entradas históricas sobre versões antigas são histórico, não status atual.
+
+## Fechamento de CI e persistência de boot
+
+GitHub Actions run 38175694137 PASS na revisão 7ee4686 com 81 validadores, sem Stripe e sem segredo. Sentinelas C e D receberam apenas enable do Agent V2 no systemd user (mesmo PID antes/depois, sem restart do Agent). Guard local periódico dessas duas máquinas permaneceu inativo para evitar interrupções do laboratório. As outras cinco máquinas já mantinham o Agent habilitado. Tarefa técnica de carga real 1000 usuários e Store cloud snapshot permanecem abertas.

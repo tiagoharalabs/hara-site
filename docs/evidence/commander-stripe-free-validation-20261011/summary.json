@@ -29,7 +29,11 @@
     "cross_device_hostname_pass": 7,
     "desktop_not_used_for_operational_invocations": true,
     "online_linux": 7,
-    "receipt_and_agent_execution_proven": true
+    "other_applicative_workloads_restarted": false,
+    "receipt_and_agent_execution_proven": true,
+    "sentinela_c_d_agent_boot_enabled": true,
+    "sentinela_c_d_local_guard_enabled": false,
+    "sentinela_c_d_pid_unchanged_on_enable": true
   },
   "gate": {
     "checked": 81,
@@ -37,6 +41,14 @@
     "passed": 81,
     "report_sha256": "0d49f071b84ff375c5c4e98da0f964e85bbc5640e9827a6b7301a9478b9a6c87",
     "scope": "LOCAL_ONLY_OFFLINE_NO_CLOUDFLARE_MUTATION"
+  },
+  "hosted_ci": {
+    "conclusion": "success",
+    "head_sha": "7ee4686ef7a6f322e73e310ae8941535b556c91f",
+    "offline_validators": 81,
+    "real_1000_concurrent_clients_certified": false,
+    "run_id": 38175694137,
+    "run_url": "https://github.com/tiagoharalabs/hara-site/actions/runs/38175694137"
   },
   "openai": {
     "business_verification_and_demo_account_required": true,

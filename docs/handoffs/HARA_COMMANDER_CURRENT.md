@@ -1,5 +1,10 @@
 # H.A.R.A. Commander — CURRENT (10/10/2026, após rollout 7/7)
 
+## CI 81/81 e persistência boot Founder — 11/10/2026
+
+GitHub CI run 38175694137 PASS no código Stripe-free 7ee4686, 81/81 suítes. Agent V2 Founder Sentinelas C/D habilitado para auto-start (sem mudança de PID e sem ativação do guard para preservar workloads). 7/7 Agent 0.3.45 online. Stripe não configurado, pagamento não testado. Evidências: docs/evidence/commander-stripe-free-validation-20261011/summary.json.
+
+
 ## Beta técnico independente de Stripe — 11/10/2026
 
 Frota Linux Founder 7/7 Agent 0.3.45 ONLINE; H.A.R.A. comercial confirmou 14/14 pings em duas ondas, 7/7 execuções remotas hostname com exit=0 e recibos. Portal protegido de cache/resposta antiga após logout/troca de sessão, deploy DEV/PROD confirmado e CI no runtime 5270796 PASS (run 38175333829). Nova suíte de 13 cenários garante que sem as credenciais Stripe, billing continua fail-closed, o Founder/Free permanece tecnicamente operável e nenhum checkout externo é iniciado. Gate agora 81/81 PASS LOCAL. Modelos 1k/10k e reconnect PASS locais, sem homologação real de 1000 clientes. OpenAI review exige conta demo, vídeo, verificação de negócio e avaliação específica de execução local; Stripe bancário não foi acessado. Docs: docs/operations/HARA_COMMANDER_STRIPE_INDEPENDENT_VALIDATION_20261011.md e docs/evidence/commander-stripe-free-validation-20261011/summary.json.
