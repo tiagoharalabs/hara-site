@@ -1,4 +1,10 @@
-# H.A.R.A. Commander — CURRENT (11/10/2026, Founder 7/7; comercial HOLD)
+# H.A.R.A. Commander — CURRENT (11/10/2026, Windows signed updater v3; beta comercial HOLD)
+
+## Atualização comercial Windows — v3 verificada na VM
+
+Hotfix `commercial-0.3.43-v3` assinado RS256, preservando todos os Agents e o instalador Linux v2 (byte-idênticos). A única alteração assinada é corrigir o sufixo temporário Windows de `.ps1.update` para `.update.ps1`. Teste real como usuário logado no Windows 11: Agent `0.3.14 → 0.3.43` **PASS**, assinatura SHA PASS, configuração de dispositivo idêntica byte a byte, backup do Agent antigo preservado, tarefa permaneceu `Ready`, sem re-pareamento, sem exibir token. Novo validador v3 e staging canônico PASS; gate offline local **84/84 PASS**. O dispositivo `HARA_WIN11` continua **OFFLINE** pelo MCP após atualização: falta sessão de operador iniciada localmente e homologação E2E; tarefa antiga contém trigger AtLogOn legado que não foi alterado. CI hospedado e deploy DEV/PROD do hotfix devem ser confirmados separadamente. Evidência: `docs/operations/HARA_COMMANDER_WINDOWS_UPDATER_V3_20261011.md` e `docs/evidence/commander-windows-updater-v3-20261011/acceptance.json`.
+
+
 
 ## Hardening comercial / 1.000 clientes — 11/10/2026
 

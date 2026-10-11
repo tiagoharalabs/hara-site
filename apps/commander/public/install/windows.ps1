@@ -268,7 +268,9 @@ if ($Action -eq "update") {
   $taskBefore = Get-ScheduledTask -TaskName $TaskName -ErrorAction Stop
   $UpdateTaskWasRunning = [string]$taskBefore.State -eq "Running"
   $PreviousStarted = Get-RuntimeStartedAt
-  $tmp = $Agent + ".update"
+  # PowerShell -File requires an executable .ps1 suffix. The previous
+  # '.ps1.update' name failed before self-test, even for a signed valid Agent.
+  $tmp = $Agent + ".update.ps1"
   $backup = $Agent + ".rollback"
   Remove-Item -Force $tmp,$backup -ErrorAction SilentlyContinue
   Invoke-WebRequest -Uri "$BaseUrl/agent/windows.ps1" -OutFile $tmp -UseBasicParsing -TimeoutSec 30 -MaximumRedirection 0

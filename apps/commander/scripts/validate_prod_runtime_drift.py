@@ -10,14 +10,14 @@ from urllib.request import Request, urlopen
 
 ROOT = Path(__file__).resolve().parents[3]
 PUBLIC = ROOT / "apps/commander/public"
-SIGNED = ROOT / "apps/commander/release-bundles/commercial-0.3.43-v2"
+SIGNED = ROOT / "apps/commander/release-bundles/commercial-0.3.43-v3"
 ORIGIN = "https://commander.haralabs.com.br"
 
 ASSETS = {
     "/": PUBLIC / "index.html",
     "/app.js": PUBLIC / "app.js",
     "/styles.css": PUBLIC / "styles.css",
-    # Current PROD serves the signed v2 commercial release, not unsigned HEAD
+    # Current PROD must serve the current signed v3 commercial hotfix, not unsigned HEAD
     # Agent/installer sources and not the historic v1 public manifest.
     "/install/linux.sh": SIGNED / "install/linux.sh",
     "/install/windows.ps1": SIGNED / "install/windows.ps1",

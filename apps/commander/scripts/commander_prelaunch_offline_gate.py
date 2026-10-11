@@ -37,6 +37,7 @@ PYTHON = (
     "validate_manual_on_demand_commercial.py",
     "verify_commander_public_artifacts.py",
     "validate_signed_commercial_v2_bundle.py",
+    "validate_signed_commercial_v3_bundle.py",
     "stage_signed_commercial_assets.py",
     "commander_linux_clean_lifecycle.py",
     "validate_process_output_memory_budgets.py",

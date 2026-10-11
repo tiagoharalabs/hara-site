@@ -18,7 +18,7 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[3]
 APP = ROOT / 'apps/commander'
 PUBLIC = APP / 'public'
-SIGNED = APP / 'release-bundles/commercial-0.3.43-v2'
+SIGNED = APP / 'release-bundles/commercial-0.3.43-v3'
 RELEASE_FILES = (
     'agent/linux.py', 'agent/windows.ps1',
     'install/linux.sh', 'install/windows.ps1',
@@ -37,7 +37,7 @@ def verified_file(root: Path, relative: str) -> Path:
 
 def validate_bundle() -> None:
     proc = subprocess.run(
-        [sys.executable, '-B', str(APP / 'scripts/validate_signed_commercial_v2_bundle.py')],
+        [sys.executable, '-B', str(APP / 'scripts/validate_signed_commercial_v3_bundle.py')],
         cwd=ROOT, capture_output=True, text=True, timeout=30, check=False,
     )
     if proc.returncode:
@@ -87,7 +87,7 @@ def stage(output: Path) -> dict:
             raise RuntimeError('SIGNED_STAGE_UI_CHANGED:' + name)
     return {
         'schema': 'hara.commander-signed-asset-stage.v1', 'state': 'PASS',
-        'release': 'commercial-0.3.43-v2',
+        'release': 'commercial-0.3.43-v3',
         'tracked_public_files': len(originals), 'signed_files_verified': len(release),
         'candidate_sources_replaced_only_in_stage': overrides,
         'ui_unchanged': True, 'signed_sha256': hashes,
@@ -117,7 +117,7 @@ def main() -> int:
             assert report['signed_files_verified'] == 8
             assert report['ui_unchanged']
         print('COMMANDER_SIGNED_ASSET_STAGE=PASS')
-        print('COMMANDER_SIGNED_ASSET_STAGE_RELEASE=COMMERCIAL_0_3_43_V2')
+        print('COMMANDER_SIGNED_ASSET_STAGE_RELEASE=COMMERCIAL_0_3_43_V3')
         print('COMMANDER_SIGNED_ASSET_STAGE_UI_UNCHANGED=PASS')
         print('COMMANDER_SIGNED_ASSET_STAGE_CLOUD_OPERATIONS=FALSE')
     return 0

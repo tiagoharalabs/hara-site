@@ -1,0 +1,67 @@
+{
+  "schema": "hara.commander-windows-v3-hotfix-acceptance.v1",
+  "date": "2026-10-11",
+  "commercial_release": "commercial-0.3.43-v3",
+  "target": "commander-win11 (Windows 11 Pro VM)",
+  "purpose": "fix invalid PowerShell -File temporary .ps1.update extension without re-enrollment",
+  "old_signed_release": "commercial-0.3.43-v2",
+  "old_signed_release_preserved": true,
+  "signed_release": {
+    "algorithm": "RS256",
+    "kid": "commander-release-v2",
+    "checked_file_count": 4,
+    "verified": true,
+    "windows_installer_sha256": "d0f6d7e3a79a87e439a6275ebf60b2918ad5ccdbc28666ce18288644f3d595b9",
+    "windows_agent_sha256": "d507a6f91a635b025ef4f06cbd758a03c7da6f3410aadec9a3d76c28f904c6fb",
+    "old_windows_agent_same_bytes": true,
+    "old_linux_agent_same_bytes": true,
+    "old_linux_installer_same_bytes": true,
+    "private_key_exported": false
+  },
+  "real_user_upgrade": {
+    "state": "PASS",
+    "source_agent_version": "0.3.14",
+    "target_agent_version": "0.3.43",
+    "real_windows_user_context": true,
+    "signed_agent_hash_verified": true,
+    "original_config_byte_identical": true,
+    "existing_task_remained_stopped": true,
+    "old_agent_backup_preserved": true,
+    "new_enrollment_performed": false,
+    "customer_token_exposed": false
+  },
+  "existing_task": {
+    "original_state": "Ready",
+    "legacy_login_trigger_detected": true,
+    "principal_matches_logged_in_user": true,
+    "manual_probe_started": "YES",
+    "manual_probe_stopped_and_task_restored": "Ready",
+    "legacy_triggers_modified": false
+  },
+  "cloud_product": {
+    "catalog_windows_device_reported_version": "0.3.43",
+    "windows_device_online_after_task_start": false,
+    "real_user_operator_session_present": false,
+    "cross_machine_command_proven": false
+  },
+  "regression": {
+    "signed_v3_bundle": "PASS",
+    "offline_gate": {
+      "checked": 84,
+      "passed": 84,
+      "failed": 0
+    },
+    "vm_real_user_upgrade": "PASS"
+  },
+  "deployment": {
+    "dev": "NOT_YET_DEPLOYED",
+    "prod": "NOT_YET_DEPLOYED",
+    "public_agent_binary_modified": false,
+    "stripe_modified": false,
+    "founder_linux_fleet_modified": false
+  },
+  "caveats": [
+    "Windows end-to-end remote execution remains HOLD until user-authorized local operator session is active",
+    "Existing legacy AtLogOn trigger was intentionally not modified by updater"
+  ]
+}
