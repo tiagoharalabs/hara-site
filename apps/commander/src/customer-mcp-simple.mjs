@@ -11,6 +11,11 @@ export const CUSTOMER_MCP_SIMPLE_TOOLS = Object.freeze([
   "get_activity",
   "ping",
   "get_device_info",
+  "get_system_uptime",
+  "get_system_resources",
+  "inspect_workspace",
+  "hash_file",
+  "diff_files",
   "read_file",
   "read_multiple_files",
   "write_file",
@@ -304,6 +309,77 @@ export function createSimpleCustomerMcpServer({ executeTool }) {
       inputSchema: z.object({ computer }).strict(),
     }),
     call("hara.device.info", (args) => ({ ...deviceArgs(args) })),
+  );
+
+  server.registerTool(
+    "get_system_uptime",
+    toolConfig({
+      title: "Get System Uptime",
+      description: "Read uptime and load averages from the selected computer without starting a shell.",
+      inputSchema: z.object({ computer }).strict(),
+    }),
+    call("hara.system.uptime", (args) => ({ ...deviceArgs(args) })),
+  );
+
+  server.registerTool(
+    "get_system_resources",
+    toolConfig({
+      title: "Get System Resources",
+      description: "Read bounded CPU, memory, swap, load and root-disk capacity metrics without starting a shell.",
+      inputSchema: z.object({ computer }).strict(),
+    }),
+    call("hara.system.resources", (args) => ({ ...deviceArgs(args) })),
+  );
+
+  server.registerTool(
+    "inspect_workspace",
+    toolConfig({
+      title: "Inspect Workspace",
+      description: "Inspect bounded workspace metadata and Git state without executing arbitrary commands.",
+      inputSchema: z.object({
+        computer,
+        path: z.string().min(1).max(4096),
+        max_entries: z.number().int().min(1).max(200).optional(),
+      }).strict(),
+    }),
+    call("hara.workspace.inspect", (args) => ({
+      ...deviceArgs(args),
+      path: args.path,
+      ...(args.max_entries !== undefined ? { max_entries: args.max_entries } : {}),
+    })),
+  );
+
+  server.registerTool(
+    "hash_file",
+    toolConfig({
+      title: "Hash File",
+      description: "Calculate SHA-256 and size for one bounded regular file.",
+      inputSchema: z.object({
+        computer,
+        path: z.string().min(1).max(4096),
+      }).strict(),
+    }),
+    call("hara.files.hash", (args) => ({ ...deviceArgs(args), path: args.path })),
+  );
+
+  server.registerTool(
+    "diff_files",
+    toolConfig({
+      title: "Diff Files",
+      description: "Compare two text files with a bounded line budget.",
+      inputSchema: z.object({
+        computer,
+        left: z.string().min(1).max(4096),
+        right: z.string().min(1).max(4096),
+        max_lines: z.number().int().min(1).max(400).optional(),
+      }).strict(),
+    }),
+    call("hara.files.diff", (args) => ({
+      ...deviceArgs(args),
+      left: args.left,
+      right: args.right,
+      ...(args.max_lines !== undefined ? { max_lines: args.max_lines } : {}),
+    })),
   );
 
   server.registerTool(

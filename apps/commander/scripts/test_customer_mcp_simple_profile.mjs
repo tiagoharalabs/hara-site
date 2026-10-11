@@ -67,7 +67,7 @@ await rpc(1,"initialize",{
 const listed=await rpc(2,"tools/list",{});
 const tools=listed.result?.tools || [];
 assert.deepEqual(tools.map((tool)=>tool.name),CUSTOMER_MCP_SIMPLE_TOOLS);
-assert.equal(tools.length,27);
+assert.equal(tools.length,32);
 assert.ok(!tools.some((tool)=>tool.name.startsWith("hara.")));
 assert.ok(tools.some((tool)=>tool.name==="read_file"));
 assert.ok(tools.some((tool)=>tool.name==="write_file"));
@@ -76,6 +76,9 @@ assert.ok(tools.some((tool)=>tool.name==="read_process_output"));
 assert.ok(tools.some((tool)=>tool.name==="list_file_preimages"));
 assert.ok(tools.some((tool)=>tool.name==="rollback_file"));
 assert.ok(tools.some((tool)=>tool.name==="get_receipt"));
+for (const name of ["get_system_uptime","get_system_resources","inspect_workspace","hash_file","diff_files"]) {
+  assert.ok(tools.some((tool)=>tool.name===name));
+}
 
 const schema=(name)=>tools.find((tool)=>tool.name===name)?.inputSchema?.properties || {};
 assert.equal(schema("read_file").offset.maximum,1000000);
@@ -261,7 +264,7 @@ assert.equal(tools.find((x)=>x.name==="start_process")?.annotations?.destructive
 assert.equal(tools.find((x)=>x.name==="rollback_file")?.annotations?.destructiveHint,true);
 console.log("COMMANDER_SIMPLE_MCP_PROCESS_RISK_HONEST=PASS");
 
-console.log("COMMANDER_SIMPLE_MCP_TOOL_COUNT=27");
+console.log("COMMANDER_SIMPLE_MCP_TOOL_COUNT=32");
 console.log("COMMANDER_SIMPLE_MCP_ROLLBACK_AND_AUDIT=PASS");
 console.log("COMMANDER_SIMPLE_MCP_HARA_PREFIX_EXPOSED=FALSE");
 console.log("COMMANDER_SIMPLE_MCP_PROCESS_ONE_SHOT_DEFAULT=PASS");

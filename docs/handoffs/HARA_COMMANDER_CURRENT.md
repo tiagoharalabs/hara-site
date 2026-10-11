@@ -1,5 +1,10 @@
 # H.A.R.A. Commander — CURRENT (10/10/2026, após rollout 7/7)
 
+## Perfil administrativo ampliado — 11/10/2026
+
+O perfil MCP simples passa de 27 para **32 ferramentas**, adicionando uptime, recursos, inspeção de workspace, hash e diff como primitivas READ_ONLY. Processos e mutações de arquivo já existiam e permanecem governados. Gate local **73/73 PASS**. Documento: `docs/operations/HARA_COMMANDER_ADMIN_PROFILE_20261011.md`.
+
+
 ## Regressão unificada — 11/10/2026; publicação pendente
 
 Worker REAL corrigido: hash esperado e paginação preservados; teste padrão **38/38 PASS**, gate **72/72 PASS**. Candidatas em memória e bloqueios do patch citados abaixo são históricos. Não inferir deploy do commit. Referência: `docs/operations/HARA_COMMANDER_RELEASE_VALIDATION_20261011.md`.
