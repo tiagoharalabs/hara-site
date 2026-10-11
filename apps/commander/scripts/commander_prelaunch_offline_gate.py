@@ -70,6 +70,7 @@ PYTHON = (
     "validate_fresh_customer_acceptance.py",
 )
 JS = (
+    "test_no_stripe_technical_mode.mjs",
     "test_portal_session_isolation.mjs",
     "test_device_status_poll.mjs",
     "test_device_telemetry.mjs",

@@ -1,0 +1,77 @@
+{
+  "at_utc": "2026-10-11T21:16:07.311428+00:00",
+  "base_source_commit": "5270796f3b338b4258242b8c30259311f9661f23",
+  "billing": {
+    "configured_for_live": false,
+    "external_bank_info_accessed": false,
+    "free_and_founder_product_access_without_stripe": true,
+    "no_stripe_mode_tests": {
+      "checked": 13,
+      "passed": 13
+    },
+    "real_payment_requests": 0,
+    "tenant_pro_payment_cycle_homologated": false
+  },
+  "capacity": {
+    "dev_1000_get_health_previous_pass": true,
+    "dev_health_max_request_concurrency": 50,
+    "do_d1_cpu_live_soak_certified": false,
+    "local_1k_and_10k_sql_capacity_model_pass": true,
+    "local_event_v2_reconnect_storm_model_pass": true,
+    "real_concurrent_users_1000_certified": false
+  },
+  "founder": {
+    "agent_version": "0.3.45",
+    "commercial_mcp_ping_calls": 14,
+    "commercial_mcp_ping_pass": 14,
+    "commercial_mcp_ping_waves": 2,
+    "cross_device_hostname_calls": 7,
+    "cross_device_hostname_pass": 7,
+    "desktop_not_used_for_operational_invocations": true,
+    "online_linux": 7,
+    "receipt_and_agent_execution_proven": true
+  },
+  "gate": {
+    "checked": 81,
+    "failed": 0,
+    "passed": 81,
+    "report_sha256": "0d49f071b84ff375c5c4e98da0f964e85bbc5640e9827a6b7301a9478b9a6c87",
+    "scope": "LOCAL_ONLY_OFFLINE_NO_CLOUDFLARE_MUTATION"
+  },
+  "openai": {
+    "business_verification_and_demo_account_required": true,
+    "local_computer_execution_partner_review_may_be_required": true,
+    "mcp_public_review_approved": false
+  },
+  "portal": {
+    "activity_regression": {
+      "checked": 25,
+      "passed": 25
+    },
+    "app_js_sha256": "7c3ec0b7bf6de107474cf674b8365136e91535a1929e8bf1af56fa12672c4a31",
+    "dev_and_prod_health_auth_pass": true,
+    "dev_and_prod_static_asset_hash_readback": true,
+    "dev_worker": "fba1a6e8-a38e-4497-aa25-7ea4776b6053",
+    "github_hosted_ci": {
+      "conclusion": "success",
+      "run_id": 38175333829,
+      "source_sha": "5270796f3b338b4258242b8c30259311f9661f23"
+    },
+    "prod_worker": "7d148653-fc93-4cd6-94cc-07c3d26b52c5",
+    "session_isolation_after": {
+      "checked": 14,
+      "passed": 14
+    },
+    "session_isolation_cases_before": {
+      "checked": 11,
+      "passed": 3
+    },
+    "source_commit_for_runtime": "5270796f3b338b4258242b8c30259311f9661f23"
+  },
+  "production_customer_billing_enabled": false,
+  "schema": "hara.commander-technical-beta-stripe-free.v1",
+  "telemetry": {
+    "first_cloud_periodic_snapshot_seen": false,
+    "observe_without_extra_heartbeat": true
+  }
+}

@@ -1,5 +1,10 @@
 # H.A.R.A. Commander — CURRENT (10/10/2026, após rollout 7/7)
 
+## Beta técnico independente de Stripe — 11/10/2026
+
+Frota Linux Founder 7/7 Agent 0.3.45 ONLINE; H.A.R.A. comercial confirmou 14/14 pings em duas ondas, 7/7 execuções remotas hostname com exit=0 e recibos. Portal protegido de cache/resposta antiga após logout/troca de sessão, deploy DEV/PROD confirmado e CI no runtime 5270796 PASS (run 38175333829). Nova suíte de 13 cenários garante que sem as credenciais Stripe, billing continua fail-closed, o Founder/Free permanece tecnicamente operável e nenhum checkout externo é iniciado. Gate agora 81/81 PASS LOCAL. Modelos 1k/10k e reconnect PASS locais, sem homologação real de 1000 clientes. OpenAI review exige conta demo, vídeo, verificação de negócio e avaliação específica de execução local; Stripe bancário não foi acessado. Docs: docs/operations/HARA_COMMANDER_STRIPE_INDEPENDENT_VALIDATION_20261011.md e docs/evidence/commander-stripe-free-validation-20261011/summary.json.
+
+
 ## Isolamento de sessão para 1k — 11/10/2026 (sem Stripe)
 
 Corrigida corrida de logout/troca de sessão em bootstrap, identidade, dispositivos, dashboard e billing do portal. Respostas anteriores agora não repovoam dados depois de um novo contexto; pedidos antigos são invalidados na saída da sessão. Prova reproduzida antes 3/11 PASS (8 falhas) e depois 14/14 PASS; regressão de atividade 25/25, gate geral local 80/80 PASS. Visual aprovado e Stripe inalterados. A prova é por aba, não substitui isolamento entre tenants no backend; a homologação de 1.000 clientes reais continua pendente. Doc: docs/operations/HARA_COMMANDER_PORTAL_SESSION_ISOLATION_20261011.md.
