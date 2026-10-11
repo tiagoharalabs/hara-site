@@ -69,6 +69,10 @@ def main() -> int:
     assert "await clearPendingOffline(this.ctx)" in source
     assert "await scheduleDisconnected(this.ctx" in source
     assert 'Object.keys(payload).sort().join(",") === "schema,type"' in source
+    assert 'Object.keys(payload).sort().join(",") === "metrics,schema,type"' in source
+    assert "canonicalChannelTelemetry(payload.metrics)" in source
+    assert "telemetryRollupQuery(env, tenantId, deviceId, seenAt, telemetry)" in source
+    assert "env.PRODUCT_DB.batch([" in source
     assert 'payload.type === "PING"' not in source
     assert 'type: "PONG"' not in source
 

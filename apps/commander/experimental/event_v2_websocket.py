@@ -272,12 +272,39 @@ def send_text(sock: socket.socket, text: str) -> None:
     sock.sendall(encode_client_frame(0x1, payload))
 
 
-def send_liveness(sock: socket.socket) -> None:
-    send_text(sock, json.dumps(
-        {"schema": EVENT_SCHEMA, "type": "LIVENESS"},
-        separators=(",", ":"),
-        sort_keys=True,
-    ))
+def send_liveness(sock: socket.socket, telemetry: dict | None = None) -> None:
+    event = {"schema": EVENT_SCHEMA, "type": "LIVENESS"}
+    if telemetry is not None:
+        import importlib.util
+        import sys
+        from pathlib import Path
+        spec = importlib.util.spec_from_file_location(
+            "hara_event_v2_telemetry_protocol",
+            Path(__file__).with_name("event_v2_telemetry.py"),
+        )
+        if spec is None or spec.loader is None:
+            raise fail("EVENT_V2_TELEMETRY_MODULE_MISSING")
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = module
+        spec.loader.exec_module(module)
+        if (
+            not isinstance(telemetry, dict)
+            or set(telemetry) != {"schema", "window_days", *module.METRICS}
+            or telemetry.get("schema") != module.SCHEMA
+            or telemetry.get("window_days") != module.WINDOW_DAYS
+            or any(
+                type(telemetry[key]) is not int
+                or telemetry[key] < 0
+                or telemetry[key] > module.MAX_COUNTER
+                for key in module.METRICS
+            )
+        ):
+            raise fail("EVENT_V2_TELEMETRY_INVALID")
+        event["metrics"] = telemetry
+    encoded = json.dumps(event, separators=(",", ":"), sort_keys=True)
+    if len(encoded.encode("utf-8")) > MAX_WAKE_EVENT_BYTES:
+        raise fail("EVENT_V2_TELEMETRY_TOO_LARGE")
+    send_text(sock, encoded)
 
 
 def _clean_identifier(value, max_length: int, code: str) -> str:

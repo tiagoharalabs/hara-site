@@ -120,6 +120,21 @@ def post_json(url, token, payload):
     return BASELINE.post_json(url, token, payload)
 
 
+def open_telemetry():
+    # An isolated metadata-only SQLite store; source/signature packaging
+    # includes this module only in new, separately verified Agent releases.
+    path = HERE / "event_v2_telemetry.py"
+    spec = importlib.util.spec_from_file_location(
+        "hara_event_v2_telemetry_store", path
+    )
+    if spec is None or spec.loader is None:
+        raise RuntimeError("EVENT_V2_TELEMETRY_MODULE_MISSING")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module.LocalTelemetry(BASELINE.DATA_DIR / "event-v2-telemetry.sqlite3")
+
+
 def _receipt_dir():
     return BASELINE.RECEIPT_DIR
 

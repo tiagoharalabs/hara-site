@@ -9,6 +9,7 @@ export const CUSTOMER_MCP_SIMPLE_TOOLS = Object.freeze([
   "get_config",
   "get_usage_stats",
   "get_activity",
+  "get_device_telemetry",
   "ping",
   "get_device_info",
   "get_system_uptime",
@@ -288,6 +289,22 @@ export function createSimpleCustomerMcpServer({ executeTool }) {
       ...(args.window ? { window: args.window } : {}),
       ...(args.limit !== undefined ? { limit: args.limit } : {}),
       ...(args.offset !== undefined ? { offset: args.offset } : {}),
+    })),
+  );
+
+  server.registerTool(
+    "get_device_telemetry",
+    toolConfig({
+      title: "Get Device Telemetry",
+      description: "Read latest seven-day metadata-only counters for tenant devices. Never returns command content.",
+      inputSchema: z.object({
+        computer,
+        limit: z.number().int().min(1).max(100).optional(),
+      }).strict(),
+    }),
+    call("hara.telemetry", (args) => ({
+      ...deviceArgs(args),
+      ...(args.limit !== undefined ? { limit: args.limit } : {}),
     })),
   );
 

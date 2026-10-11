@@ -1,4 +1,5 @@
 import { DurableObject } from "cloudflare:workers";
+import { canonicalChannelTelemetry, telemetryRollupQuery } from "./device-telemetry.mjs";
 
 const CHANNEL_SCHEMA = "hara.commander-device-channel.v2";
 const EVENT_SCHEMA = "hara.commander-device-event.v2";
@@ -57,10 +58,10 @@ async function markConnected(env, tenantId, deviceId) {
   };
 }
 
-async function refreshLiveness(env, tenantId, deviceId) {
+async function refreshLiveness(env, tenantId, deviceId, telemetry = null) {
   if (!env.PRODUCT_DB) throw new Error("CHANNEL_PRODUCT_DB_REQUIRED");
   const seenAt = nowIso();
-  const result = await env.PRODUCT_DB.prepare(
+  const liveness = env.PRODUCT_DB.prepare(
     `UPDATE commander_devices
         SET last_seen_at_utc = ?
       WHERE tenant_id = ?
@@ -68,7 +69,15 @@ async function refreshLiveness(env, tenantId, deviceId) {
         AND tunnel_mode = 'EVENT_V2'
         AND state = 'ACTIVE'
         AND revoked_at_utc IS NULL`
-  ).bind(seenAt, tenantId, deviceId).run();
+  ).bind(seenAt, tenantId, deviceId);
+  // Old Agents remain one D1 operation. Metrics use one atomic batch,
+  // piggybacked on existing 6h LIVENESS: no new HTTP request or timer.
+  const result = telemetry === null
+    ? await liveness.run()
+    : (await env.PRODUCT_DB.batch([
+        liveness,
+        telemetryRollupQuery(env, tenantId, deviceId, seenAt, telemetry),
+      ]))[0];
   if (!result.meta?.changes) throw new Error("CHANNEL_DEVICE_NOT_ACTIVE");
   return seenAt;
 }
@@ -373,14 +382,21 @@ export class DeviceChannel extends DurableObject {
       payload
       && payload.schema === EVENT_SCHEMA
       && payload.type === "LIVENESS"
-      && Object.keys(payload).sort().join(",") === "schema,type"
+      && (
+        Object.keys(payload).sort().join(",") === "schema,type"
+        || Object.keys(payload).sort().join(",") === "metrics,schema,type"
+      )
     ) {
       const attachment = socket.deserializeAttachment();
+      if (!attachment || attachment.superseded) return;
       try {
+        const telemetry = Object.prototype.hasOwnProperty.call(payload, "metrics")
+          ? canonicalChannelTelemetry(payload.metrics) : null;
         await refreshLiveness(
           this.env,
           attachment?.tenant_id,
           attachment?.device_id,
+          telemetry,
         );
       } catch (_error) {
         try {

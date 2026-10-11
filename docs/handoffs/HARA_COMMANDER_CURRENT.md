@@ -1,5 +1,10 @@
 # H.A.R.A. Commander — CURRENT (10/10/2026, após rollout 7/7)
 
+## Event V2 telemetria local e menos leituras — 11/10/2026
+
+O Agent candidato grava métricas agregadas em SQLite 0600 por sete dias, com flush em lotes e resumo piggyback no LIVENESS Event V2 existente (~6h com jitter). Sem novos POST/polling de telemetria. D1 salva último resumo por tenant/dispositivo com migração 0034, schema estrito e socket autenticado. MCP adiciona get_device_telemetry (perfil 33 ferramentas). Polling de chamadas adaptativo: modelo 45s 180 para 36 consultas, não medição cloud. Gate offline 77/77 PASS; assinatura Founder 0.3.45 (sete arquivos) verificada, canário Services preparado. Não inferir instalação do Agent nem registro de snapshot D1 antes do canário. Referência: docs/operations/HARA_COMMANDER_EVENT_V2_LOCAL_TELEMETRY_LOW_CHATTER_20261011.md.
+
+
 ## PROD administrativo oficial — 11/10/2026
 
 Código funcional implantado: commit `605ffdad230e34c0f5acc09dd3bcc361a1c11618`. Perfil MCP simples: **32 ferramentas**, incluindo novas primitivas READ_ONLY de uptime, recursos, workspace, SHA-256 e diff; processos, sessões, arquivos, rollback, atividade e recibos continuam disponíveis e governados. Gate local **73/73 PASS**.

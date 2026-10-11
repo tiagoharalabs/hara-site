@@ -27,7 +27,7 @@ async function rpc(name,args){
   return calls.at(-1);
 }
 
-assert.equal(CUSTOMER_MCP_SIMPLE_TOOLS.length,32);
+assert.equal(CUSTOMER_MCP_SIMPLE_TOOLS.length,33);
 for(const n of ["get_system_uptime","get_system_resources","inspect_workspace","hash_file","diff_files"]){
   assert.ok(CUSTOMER_MCP_SIMPLE_TOOLS.includes(n));
 }
@@ -52,8 +52,12 @@ c=await rpc("diff_files",{computer:"services",left:"/tmp/a",right:"/tmp/b",max_l
 assert.equal(c.tool_id,"hara.files.diff");
 assert.deepEqual(c.arguments,{computer:"services",left:"/tmp/a",right:"/tmp/b",max_lines:37});
 
+c=await rpc("get_device_telemetry",{computer:"services",limit:3});
+assert.equal(c.tool_id,"hara.telemetry");
+assert.deepEqual(c.arguments,{computer:"services",limit:3});
+
 for(const c of calls) {
   assert.equal(c.mcp_request_id!==undefined,true);
   assert.ok(c.transport_request_id);
 }
-console.log(JSON.stringify({schema:"hara.commander-admin-profile.v1",checked:5,passed:5,failed:0,tool_count:CUSTOMER_MCP_SIMPLE_TOOLS.length}));
+console.log(JSON.stringify({schema:"hara.commander-admin-profile.v1",checked:6,passed:6,failed:0,tool_count:CUSTOMER_MCP_SIMPLE_TOOLS.length}));

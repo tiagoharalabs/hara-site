@@ -71,7 +71,16 @@ def durable_liveness_interval(device_id: str, target_seconds: float) -> float:
     return target_seconds + ((unit * 2.0) - 1.0) * LIVENESS_JITTER_SECONDS
 
 
-def drain_durable_calls(agent, config, max_calls: int = MAX_DRAIN_CALLS) -> int:
+def safe_telemetry_add(telemetry, key, amount=1) -> None:
+    if telemetry is not None:
+        try:
+            telemetry.add(key, amount)
+        except Exception:
+            # Observability cannot turn successful customer commands into errors.
+            pass
+
+
+def drain_durable_calls(agent, config, max_calls: int = MAX_DRAIN_CALLS, *, telemetry=None) -> int:
     if max_calls < 1 or max_calls > MAX_DRAIN_CALLS:
         raise RuntimeError("EVENT_V2_DRAIN_BOUND_INVALID")
     drained = 0
@@ -83,6 +92,7 @@ def drain_durable_calls(agent, config, max_calls: int = MAX_DRAIN_CALLS) -> int:
         )
         if not call:
             break
+        safe_telemetry_add(telemetry, "durable_calls")
         agent.execute_call(config, call)
         drained += 1
     return drained
@@ -95,6 +105,7 @@ def run_connected_session(
     *,
     max_steps: int | None = None,
     monotonic=time.monotonic,
+    reconnected=False,
 ) -> dict:
     sock = transport.open_event_socket(
         config["HARA_COMMANDER_URL"],
@@ -110,7 +121,18 @@ def run_connected_session(
     ):
         transport.close_socket(sock)
         raise RuntimeError("EVENT_V2_STATUS_WRITE_FAILED")
+    telemetry = None
+    if hasattr(agent, "open_telemetry"):
+        try:
+            telemetry = agent.open_telemetry()
+        except Exception:
+            # Keep the connected Agent functional if telemetry is unavailable.
+            telemetry = None
+    safe_telemetry_add(telemetry, "connections")
+    if reconnected:
+        safe_telemetry_add(telemetry, "reconnects")
     last_liveness = connected_at
+    last_duration_checkpoint = connected_at
     liveness_interval = durable_liveness_interval(
         config.get("HARA_DEVICE_ID", ""),
         transport.DURABLE_LIVENESS_SECONDS,
@@ -122,14 +144,32 @@ def run_connected_session(
     try:
         # Reconcile durable truth exactly once after connect/reconnect so a
         # notification lost while disconnected cannot strand a pending call.
-        drained += drain_durable_calls(agent, config)
+        drained += drain_durable_calls(agent, config, telemetry=telemetry)
 
         while max_steps is None or steps < max_steps:
             frame = transport.recv_event_or_keepalive(sock)
             now = monotonic()
+            duration_delta = max(0, int(now - last_duration_checkpoint))
+            if duration_delta >= 300:
+                safe_telemetry_add(telemetry, "connected_seconds", min(86400, duration_delta))
+                last_duration_checkpoint = now
+            if frame is None:
+                # Transport PING is an RFC6455 control frame, never a D1 write.
+                safe_telemetry_add(telemetry, "transport_pings")
 
             if now - last_liveness >= liveness_interval:
-                transport.send_liveness(sock)
+                safe_telemetry_add(telemetry, "liveness_attempts")
+                summary = None
+                if telemetry is not None:
+                    try:
+                        summary = telemetry.snapshot()
+                    except Exception:
+                        pass
+                if summary is None:
+                    transport.send_liveness(sock)
+                else:
+                    # Piggyback once per ~6h; never create an extra HTTP poll.
+                    transport.send_liveness(sock, summary)
                 last_liveness = now
 
             if frame is not None:
@@ -137,9 +177,12 @@ def run_connected_session(
                 if event["type"] == "CALL_AVAILABLE":
                     # call_id is deliberately not trusted as execution authority.
                     # It only wakes a bounded read from durable call truth.
-                    drained += drain_durable_calls(agent, config)
+                    drained += drain_durable_calls(agent, config, telemetry=telemetry)
                 elif event["type"] == "CALL_TRANSIENT":
+                    safe_telemetry_add(telemetry, "transient_calls")
                     result = agent.execute_transient_call(config, event)
+                    if str(result.get("state") or "") != "COMPLETED":
+                        safe_telemetry_add(telemetry, "transient_failures")
                     transport.send_transient_result(sock, result)
                     transient_calls += 1
 
@@ -151,7 +194,17 @@ def run_connected_session(
             "transient_calls": transient_calls,
             "steps": steps,
         }
+    except Exception:
+        safe_telemetry_add(telemetry, "session_errors")
+        raise
     finally:
+        safe_telemetry_add(telemetry, "disconnects")
+        safe_telemetry_add(telemetry, "connected_seconds", max(0, min(86400, int(monotonic() - last_duration_checkpoint))))
+        if telemetry is not None:
+            try:
+                telemetry.close()
+            except Exception:
+                pass
         transport.close_socket(sock)
         agent.try_write_event_v2_status(
             connected=False,
@@ -172,11 +225,12 @@ def run_forever(
     entropy = random.SystemRandom()
     random_unit = random_unit or entropy.random
     attempt = 0
+    had_session = False
 
     while True:
         started = time.monotonic()
         try:
-            run_connected_session(transport, agent, config)
+            run_connected_session(transport, agent, config, reconnected=had_session)
             connected_seconds = time.monotonic() - started
         except KeyboardInterrupt:
             raise
@@ -190,6 +244,7 @@ def run_forever(
                 error_code=code,
             )
 
+        had_session = True
         if connected_seconds >= STABLE_CONNECTION_SECONDS:
             attempt = 0
         else:

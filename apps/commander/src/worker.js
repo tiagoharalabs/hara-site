@@ -43,6 +43,8 @@ import {
 import { chooseCustomerTargetDevice } from "./device-targeting.mjs";
 import { DeviceChannel, deviceChannelName } from "./device-channel.mjs";
 import { reconcileAgentVersion } from "./device-version-observation.mjs";
+import { readTenantDeviceTelemetry } from "./device-telemetry.mjs";
+import { customerStatusWaitMs, CUSTOMER_STATUS_TIMEOUT_MS } from "./device-status-poll.mjs";
 import { SecurityRateLimit } from "./security-rate-limit-do.mjs";
 import {
   enforceLayeredRateLimit,
@@ -101,6 +103,7 @@ const MCP_TOOL_GRANTS = Object.freeze({
   "hara.capabilities": "COMMANDER_DISCOVERY",
   "hara.usage": "COMMANDER_RECEIPT_READ",
   "hara.activity": "COMMANDER_RECEIPT_READ",
+  "hara.telemetry": "COMMANDER_RECEIPT_READ",
   "hara.health": "COMMANDER_DISCOVERY",
   "hara.ping": "COMMANDER_DISCOVERY",
   "hara.device.info": "COMMANDER_READ_ONLY_INVOKE",
@@ -3647,14 +3650,15 @@ function agentPurposeToolReady(device, toolId) {
 
 async function customerMcpWaitForCall(env, identity, call) {
   let status = call;
-  const deadline = Date.now() + 45_000;
+  const startedAt = Date.now();
+  const deadline = startedAt + CUSTOMER_STATUS_TIMEOUT_MS;
   while (!["COMPLETED", "FAILED", "EXPIRED", "CANCELLED"].includes(String(status.state))) {
-    if (Date.now() >= deadline) {
+    const now = Date.now();
+    if (now >= deadline) {
       throw new Error("DEVICE_CALL_TIMEOUT");
     }
-    const retryMs = Math.max(
-      100,
-      Math.min(500, Number(status.retry_after_ms || 250)),
+    const retryMs = customerStatusWaitMs(
+      Number(status.retry_after_ms), now - startedAt, deadline - now,
     );
     if (globalThis.scheduler?.wait) {
       await globalThis.scheduler.wait(retryMs);
@@ -4839,6 +4843,18 @@ async function executeCustomerMcpTool(
       state:"PASS", operational_authority:"HARA_SERVICES", execution_authority:"HARA_SERVICES",
       runtime_authority_from_chatgpt:false, mutation_performed:false, customer_services_relay:false,
       result:activity,
+      product:{plan_code:context.plan_code,entitlement_id:context.entitlement_id,quota:null},
+    };
+  }
+
+  if (toolId === "hara.telemetry") {
+    const telemetry = await readTenantDeviceTelemetry(
+      env, context.tenant_id, args?.computer || null, args?.limit ?? 50,
+    );
+    return {
+      state:"PASS", operational_authority:"HARA_SERVICES", execution_authority:"HARA_SERVICES",
+      runtime_authority_from_chatgpt:false, mutation_performed:false, customer_services_relay:false,
+      result:telemetry,
       product:{plan_code:context.plan_code,entitlement_id:context.entitlement_id,quota:null},
     };
   }

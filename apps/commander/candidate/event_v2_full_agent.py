@@ -49,6 +49,12 @@ def utcnow():
     return RESTRICTED.utcnow()
 
 
+def open_telemetry():
+    # The signed full-tool launcher, not just the restricted test adapter,
+    # must expose the same local metadata-only store to its Event V2 loop.
+    return RESTRICTED.open_telemetry()
+
+
 def safe_error_code(error):
     return BASELINE.safe_error_code(error)
 
