@@ -42,7 +42,12 @@
     "catalog_windows_device_reported_version": "0.3.43",
     "windows_device_online_after_task_start": false,
     "real_user_operator_session_present": false,
-    "cross_machine_command_proven": false
+    "cross_machine_command_proven": false,
+    "linux_founder_online": 7,
+    "linux_founder_agent_version": "0.3.46",
+    "local_operator_manual_launcher_ready": true,
+    "local_operator_manual_launcher_executed": false,
+    "windows_real_mcp_remote_execution_proven": false
   },
   "regression": {
     "signed_v3_bundle": "PASS",
@@ -54,8 +59,19 @@
     "vm_real_user_upgrade": "PASS"
   },
   "deployment": {
-    "dev": "NOT_YET_DEPLOYED",
-    "prod": "NOT_YET_DEPLOYED",
+    "dev": "PASS",
+    "prod": "PASS",
+    "dev_worker_version_id": "aaa289cc-7e8e-490c-9a25-c7c9bd763b9d",
+    "prod_worker_version_id": "e5544ad6-b1a4-47ac-bf09-78874ca0bc4a",
+    "prod_previous_worker_version_id": "7d148653-fc93-4cd6-94cc-07c3d26b52c5",
+    "dev_traffic_percent": 100,
+    "prod_traffic_percent": 100,
+    "exact_dev_asset_readback": 9,
+    "exact_prod_asset_readback": 9,
+    "prod_runtime_drift": "CURRENT",
+    "dev_health_auth": "PASS",
+    "prod_health_auth": "PASS",
+    "prod_win11_signed_preflight": "PASS",
     "public_agent_binary_modified": false,
     "stripe_modified": false,
     "founder_linux_fleet_modified": false
@@ -63,5 +79,13 @@
   "caveats": [
     "Windows end-to-end remote execution remains HOLD until user-authorized local operator session is active",
     "Existing legacy AtLogOn trigger was intentionally not modified by updater"
-  ]
+  ],
+  "hosted_ci": {
+    "run_id": 38185936537,
+    "head_sha": "a1d5f7276780e1b9f1ec60e8fd8c36e0ab150675",
+    "conclusion": "success",
+    "offline_gate_checked": 84,
+    "offline_gate_passed": 84,
+    "offline_gate_failed": 0
+  }
 }

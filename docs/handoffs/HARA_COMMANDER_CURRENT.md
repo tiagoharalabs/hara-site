@@ -1,4 +1,12 @@
-# H.A.R.A. Commander — CURRENT (11/10/2026, Windows signed updater v3; beta comercial HOLD)
+# H.A.R.A. Commander — CURRENT (11/10/2026, Windows updater v3 PROD; beta comercial HOLD)
+
+## Windows updater 0.3.43-v3 — DEV/PROD homologados
+
+CI GitHub run **38185936537 PASS**, 84/84 testes offline no commit `a1d5f72`. O instalador Windows assinado v3, com a correção do sufixo `.update.ps1`, está publicado em DEV (Worker `aaa289cc…`) e PROD (Worker `e5544ad6…`), 100% em ambos, 9/9 assets exatos, saúde/autenticação PASS e drift PROD `CURRENT`. A VM Windows 11 executou a atualização real `0.3.14 → 0.3.43` como usuário logado, preservou a configuração byte a byte e o backup; depois baixou o instalador v3 público e passou no preflight RS256. Os 7 Agents Founder Linux continuam online em 0.3.46.
+
+**HARA_WIN11 ainda aparece OFFLINE** no MCP; falta o usuário iniciar a sessão autorizada localmente. Foi preparado no Desktop público `HARA Commander - CONECTAR MANUALMENTE.cmd`, não executado automaticamente. O AtLogOn legado da tarefa foi preservado, sem troca silenciosa de política. Não declarar paridade de comandos Windows até obter recibos de execução reais. Evidências em `docs/operations/HARA_COMMANDER_WINDOWS_UPDATER_V3_20261011.md` e `docs/evidence/commander-windows-updater-v3-20261011/acceptance.json`. Stripe e D1 inalterados.
+
+
 
 ## Atualização comercial Windows — v3 verificada na VM
 

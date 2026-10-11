@@ -33,3 +33,15 @@ O catálogo do produto passou a registrar a versão 0.3.43 para `HARA_WIN11`, ma
 5. Separadamente: revisão do trigger legado de login e homologação Event V2 Windows em release próprio; não introduzir mudança oculta de política no hotfix.
 
 Stripe, conta bancária, preços, tokens de usuário e demais máquinas Founder não foram modificados neste hotfix.
+
+## Fechamento de DEV e PROD após homologação
+
+O GitHub Actions passou no commit `a1d5f7276780e1b9f1ec60e8fd8c36e0ab150675` (run **38185936537**, 84/84 validadores offline).
+
+**DEV:** Worker `aaa289cc-7e8e-490c-9a25-c7c9bd763b9d` em 100%; saúde e autenticação aprovadas; 9/9 arquivos públicos idênticos ao stage assinado.
+
+**PROD:** Worker `e5544ad6-b1a4-47ac-bf09-78874ca0bc4a` em 100%; anterior `7d148653-fc93-4cd6-94cc-07c3d26b52c5` registrado para rollback. Auditoria `CURRENT`, saúde/autenticação PASS, 9/9 arquivos exatos, manifesto e assinatura incluídos. O instalador Windows público apresenta SHA-256 `d0f6d7e3a79a87e439a6275ebf60b2918ad5ccdbc28666ce18288644f3d595b9`.
+
+O Windows 11 da VM baixou o novo instalador diretamente de PROD e aprovou o preflight RS256, versão do Agent 0.3.43 e Task Scheduler. A frota Founder Linux continua 7/7 online em 0.3.46.
+
+**Limite ainda aberto:** `HARA_WIN11` permanece OFFLINE no MCP. A tarefa legada contém gatilho AtLogOn e foi devolvida ao estado Ready, sem alterar o registro, a identidade ou o token. Há um novo atalho `HARA Commander - CONECTAR MANUALMENTE.cmd` no Desktop da VM, verificado por SHA, mas ainda não executado pelo usuário. A conexão Windows e as operações pelo MCP dependem dessa sessão autorizada localmente. Nenhuma mudança no Stripe, no D1 ou em aplicações CSOTN foi feita nesta entrega.
