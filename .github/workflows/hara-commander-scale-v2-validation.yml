@@ -71,6 +71,7 @@ jobs:
           python3 apps/commander/scripts/validate_oidc_transaction_hygiene.py
           python3 apps/commander/scripts/validate_session_retention.py
           python3 apps/commander/scripts/validate_commander_1k_10k_capacity.py --check
+          python3 apps/commander/scripts/stage_signed_commercial_assets.py --check
           python3 apps/commander/scripts/validate_device_channel_source.py
           python3 apps/commander/scripts/validate_event_v2_wiring.py
           python3 apps/commander/scripts/validate_event_v2_schema_0011.py
