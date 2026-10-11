@@ -430,6 +430,27 @@ def execute(signed_stage: Path | None = None) -> int:
                 raise AssertionError("MANAGED_HARA_WRAPPER_SURVIVED_UNINSTALL")
             print("COMMANDER_CLEAN_LINUX_UNINSTALL=PASS")
             print("COMMANDER_CLEAN_LINUX_HOME_EMPTY_AFTER_UNINSTALL=PASS")
+
+            # An unrelated executable named hara is not Commander's property.
+            # Repeated uninstall must preserve user software (including links).
+            wrapper_path.parent.mkdir(parents=True, exist_ok=True)
+            wrapper_path.write_text("#!/bin/sh\\necho external-hara\\n", encoding="utf-8")
+            wrapper_path.chmod(0o700)
+            unrelated = run(["bash", str(test_installer), "uninstall"], env)
+            assert unrelated.returncode == 0, "UNRELATED_UNINSTALL_FAILED"
+            assert wrapper_path.is_file(), "UNRELATED_HARA_WRAPPER_DELETED"
+            assert "external-hara" in wrapper_path.read_text(encoding="utf-8")
+            print("COMMANDER_CLEAN_LINUX_UNRELATED_HARA_PRESERVED=PASS")
+
+            wrapper_path.unlink()
+            outside = root / "existing-unrelated-hara"
+            outside.write_text("#!/bin/sh\\n# HARA_COMMANDER_MANAGED_HARA_WRAPPER_V1\\n",
+                               encoding="utf-8")
+            wrapper_path.symlink_to(outside)
+            symlink = run(["bash", str(test_installer), "uninstall"], env)
+            assert symlink.returncode == 0, "SYMLINK_UNINSTALL_FAILED"
+            assert wrapper_path.is_symlink() and outside.is_file(), "UNRELATED_SYMLINK_DELETED"
+            print("COMMANDER_CLEAN_LINUX_USER_SYMLINK_PRESERVED=PASS")
             print("COMMANDER_CLEAN_LINUX_LIFECYCLE=PASS")
             return 0
     finally:

@@ -279,6 +279,7 @@ install_cli() {
   if [ ! -e "$USER_BIN/hara" ] && ! command -v hara >/dev/null 2>&1; then
     cat >"$USER_BIN/hara" <<'EOHARA'
 #!/bin/sh
+# HARA_COMMANDER_MANAGED_HARA_WRAPPER_V1
 set -eu
 if [ "${1:-}" != "commander" ]; then
   echo "Usage: hara commander [start|status|stop|mcp|doctor|support|approval-mode]" >&2
@@ -645,6 +646,12 @@ case "$ACTION" in
     rmdir "${XDG_CONFIG_HOME:-$HOME/.config}/tunnel-client" >/dev/null 2>&1 || true
     systemctl --user daemon-reload >/dev/null 2>&1 || true
     rm -f "$CLI"
+    # Remove only the wrapper created by Commander. Never remove an
+    # unrelated user-owned hara CLI, or follow a symlink placed at this path.
+    if [ -f "$USER_BIN/hara" ] && [ ! -L "$USER_BIN/hara" ] \
+       && grep -Fqx '# HARA_COMMANDER_MANAGED_HARA_WRAPPER_V1' "$USER_BIN/hara"; then
+      rm -f "$USER_BIN/hara"
+    fi
     rm -rf "$BIN_DIR" "$CONFIG_DIR"
     printf 'HARA_COMMANDER_AGENT_UNINSTALL=PASS\n'
     [ -z "$device_id" ] || printf 'DEVICE_ID=%s\n' "$device_id"
