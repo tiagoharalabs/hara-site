@@ -96,3 +96,11 @@ A última solicitação do proprietário foi corrigir a tela **Plano e cobrança
 ---
 
 **Regra de verdade:** separar sempre *código escrito*, *GitHub sincronizado*, *Worker efetivamente promovido*, *readback público comprovado* e *aceitação visual humana*. Não afirmar sucesso de uma etapa com evidência de outra.
+
+## 9. Verificação visual adicional — 11/10/2026, manhã BRT
+
+Após a retomada, confirmei novamente por leitura remota que a branch canônica e o GitHub estão no HEAD `3256f3dba2f1ad9382af55adc0f43b27dc4e6e68`, árvore limpa, Worker PROD `b500dd23-c33b-4247-ac3e-04c24c8af15a` em 100%, `commander_prod_deployment_readback.py` PASS e `validate_prod_runtime_drift.py --expect-assets current` PASS. Não foi necessário novo deploy ou alteração nos Agents.
+
+Realizei inspeção visual técnica adicional com **Firefox headless no Núcleo A**, usando o HTML e o CSS baixados diretamente do domínio público (sem sessão autenticada nem dados de cliente). Visual de referência escuro foi reproduzido isoladamente com uma topbar/sidebar de teste e o trecho real da página de planos, nas resoluções **1710×960 (desktop)** e **420×880 (móvel)**. No desktop, Free e Pro ficaram alinhados em colunas iguais e o conjunto Free/Pro + badges + status ocupou o centro horizontal e vertical da área útil, sem o grande vazio inferior da versão antiga. Na visualização estreita, os cards ficaram empilhados e o conteúdo continuou acessível por scroll, sem corte de controles ou transbordamento horizontal observável. Esta é uma **QA visual reproduzida**, e não equivale a captura da sessão autenticada do proprietário nem à sua aprovação estética humana. As imagens temporárias ficam apenas no diretório de QA local do Núcleo A (`/tmp/hara-commander-pricing-visual-qa/`), não estão no Git.
+
+**Estado pós-verificação:** `VISUAL_QA_DESKTOP_AND_MOBILE=PASS`; `PUBLIC_DEPLOYMENT_UNCHANGED`; `HUMAN_VISUAL_ACCEPTANCE=PENDING`. Próximo passo opcional: colher a percepção visual do proprietário na página já publicada; não reimplementar a centralização sem nova observação concreta.
