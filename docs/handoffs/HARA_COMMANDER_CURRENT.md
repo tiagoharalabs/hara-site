@@ -1,5 +1,18 @@
 # H.A.R.A. Commander — CURRENT (10/10/2026, após rollout 7/7)
 
+## Atualização autoritativa — capacidade, 11/10/2026
+
+Visual de Plano e cobrança aprovado pelo proprietário. Capacidade: auditoria e melhorias publicadas, **sem certificação de 1.000–10.000 clientes simultâneos**. Suíte final **63/63 PASS**; testes de fonte/SQLite com 10.000 contas, 20.000 dispositivos e 210.000 sessões; plano da nova consulta confirmado no D1 DEV real. Limpeza indexada em lotes limitados, observação agregada sem dados de clientes e empacotamento comercial assinado testável.
+
+**PROD `9f7526c5-98a9-415a-b756-25200eee0627`**, 100%, 12/12 assets exatos, saúde/autenticação/assinatura PASS. **DEV `96e67af5-9a67-41f0-8322-763fcd3bb237`**. Rollback íntegro **`b500dd23-c33b-4247-ac3e-04c24c8af15a`**. A candidata `97f050a3-ab1c-4175-94f1-fdd9e4614740` foi revertida por divergência de assets e não deve ser usada como rollback.
+
+**Separar LOCAL_TUNNEL de OUTBOUND_RELAY:** túnel local já desliga polling de fila; a projeção de tráfego elevado é do relay. Telemetria horária não equivale à carga total do túnel. Event V2 Founder não comprova escala de clientes públicos. Sem migração D1, mudança de preços, liberação de Stripe LIVE ou reconfiguração da frota.
+
+Relatório: `docs/operations/HARA_COMMANDER_CAPACITY_1K_10K_20261011.md`. Evidências: `docs/evidence/commander-capacity-20261011/`. Fonte runtime `29067c2`; validação final `b486501`. Publicar assets com `stage_signed_commercial_assets.py` + `wrangler --assets`, nunca com `public/` bruto. Storage segue HOLD.
+
+---
+
+
 **HANDOFF PARA A PRÓXIMA CONVERSA — LEITURA OBRIGATÓRIA:** `docs/handoffs/HARA_COMMANDER_FULL_OPERATIONAL_HANDOFF_20261010.md`. Estado técnico comprovado: PROD `b500dd23-c33b-4247-ac3e-04c24c8af15a` 100%, DEV `39b8e74a-5e5f-40a5-988b-7b0906a59cb0`, centralização horizontal+vertical dos cartões Free/Pro encerrada no código e publicada. **Não confundir implantação com aceitação visual humana: falta verificação estética do proprietário na tela atualizada.** Free 10.000/mês, Pro R$ 80/mês (Stripe checkout LIVE OFF); 57/57 testes offline e 11/11 readback público PASS. O novo handoff reúne as decisões de UX, Fleet Founder 0.3.44 versus instaladores comerciais 0.3.43, limites de autoridade dos conectores, gates Stripe/Windows/Plugin e próximos comandos. Esta linha prevalece sobre as entradas históricas abaixo.
 
 

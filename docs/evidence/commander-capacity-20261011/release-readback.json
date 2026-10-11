@@ -1,0 +1,157 @@
+{
+  "environments": [
+    {
+      "asset_count": 12,
+      "assets": [
+        {
+          "path": "/",
+          "sha256": "220a2d74f5b3e270fd43762a5ee8c60d69fa4a475a70b4947cf5a20cc0630b17",
+          "state": "PASS"
+        },
+        {
+          "path": "/app.js",
+          "sha256": "4b05b34c3a16fdb1a7a86b1555626e4566a63434de3e455e5aa14d9929a90626",
+          "state": "PASS"
+        },
+        {
+          "path": "/styles.css",
+          "sha256": "6d3b87fb284060a4c387d9cd5046d68b9c01fb8d799079056983543e53ba8ddb",
+          "state": "PASS"
+        },
+        {
+          "path": "/install/linux.sh",
+          "sha256": "534e14433da9f86eb4342c6d9400e89ecf164545605e02e22f1646510284aba5",
+          "state": "PASS"
+        },
+        {
+          "path": "/install/windows.ps1",
+          "sha256": "a940b140e872cf6d2c5867cccddf8b827f9bfff715b6515627a3176ae45e11e6",
+          "state": "PASS"
+        },
+        {
+          "path": "/agent/linux.py",
+          "sha256": "3e0db700dd568a85e23212a5400f1d256546fef77b7f59f574ceed29e04c15b7",
+          "state": "PASS"
+        },
+        {
+          "path": "/agent/windows.ps1",
+          "sha256": "d507a6f91a635b025ef4f06cbd758a03c7da6f3410aadec9a3d76c28f904c6fb",
+          "state": "PASS"
+        },
+        {
+          "path": "/release/agent-manifest.json",
+          "sha256": "f99aa5437511e87a78a9e699959c7e243c6ce5f919abe4da99ed109e0925e124",
+          "state": "PASS"
+        },
+        {
+          "path": "/release/agent-manifest.sig.json",
+          "sha256": "d58f37d9bc6f7ebd6e0d896ab37cc33ea6384c63375952ac10e5b586b9d9d957",
+          "state": "PASS"
+        },
+        {
+          "path": "/release/release-signing-public.jwk",
+          "sha256": "4e68608fa891f1b7a1e89c75936a089daeab0ba862a764f9bb31eca849cdfb9b",
+          "state": "PASS"
+        },
+        {
+          "path": "/release/SHA256SUMS",
+          "sha256": "9811d0abbdeb6a80e3c6265099c0255c3341b309979ea5ac1a75fd5768e4e519",
+          "state": "PASS"
+        },
+        {
+          "path": "/assets/hara-commander-royal.webp",
+          "sha256": "e55b9218fc9ef540d1214509226af13c7e7906665e9ec247a92a40103f62ada3",
+          "state": "PASS"
+        }
+      ],
+      "auth_config": "PASS",
+      "environment": "DEV",
+      "health": "PASS",
+      "nonasset_bindings_identical": true,
+      "origin": "https://hara-commander-dev-v2.tiago-sartori.workers.dev",
+      "rollback_known_good": "39b8e74a-5e5f-40a5-988b-7b0906a59cb0",
+      "state": "PASS",
+      "version": "96e67af5-9a67-41f0-8322-763fcd3bb237"
+    },
+    {
+      "asset_count": 12,
+      "assets": [
+        {
+          "path": "/",
+          "sha256": "220a2d74f5b3e270fd43762a5ee8c60d69fa4a475a70b4947cf5a20cc0630b17",
+          "state": "PASS"
+        },
+        {
+          "path": "/app.js",
+          "sha256": "4b05b34c3a16fdb1a7a86b1555626e4566a63434de3e455e5aa14d9929a90626",
+          "state": "PASS"
+        },
+        {
+          "path": "/styles.css",
+          "sha256": "6d3b87fb284060a4c387d9cd5046d68b9c01fb8d799079056983543e53ba8ddb",
+          "state": "PASS"
+        },
+        {
+          "path": "/install/linux.sh",
+          "sha256": "534e14433da9f86eb4342c6d9400e89ecf164545605e02e22f1646510284aba5",
+          "state": "PASS"
+        },
+        {
+          "path": "/install/windows.ps1",
+          "sha256": "a940b140e872cf6d2c5867cccddf8b827f9bfff715b6515627a3176ae45e11e6",
+          "state": "PASS"
+        },
+        {
+          "path": "/agent/linux.py",
+          "sha256": "3e0db700dd568a85e23212a5400f1d256546fef77b7f59f574ceed29e04c15b7",
+          "state": "PASS"
+        },
+        {
+          "path": "/agent/windows.ps1",
+          "sha256": "d507a6f91a635b025ef4f06cbd758a03c7da6f3410aadec9a3d76c28f904c6fb",
+          "state": "PASS"
+        },
+        {
+          "path": "/release/agent-manifest.json",
+          "sha256": "f99aa5437511e87a78a9e699959c7e243c6ce5f919abe4da99ed109e0925e124",
+          "state": "PASS"
+        },
+        {
+          "path": "/release/agent-manifest.sig.json",
+          "sha256": "d58f37d9bc6f7ebd6e0d896ab37cc33ea6384c63375952ac10e5b586b9d9d957",
+          "state": "PASS"
+        },
+        {
+          "path": "/release/release-signing-public.jwk",
+          "sha256": "4e68608fa891f1b7a1e89c75936a089daeab0ba862a764f9bb31eca849cdfb9b",
+          "state": "PASS"
+        },
+        {
+          "path": "/release/SHA256SUMS",
+          "sha256": "9811d0abbdeb6a80e3c6265099c0255c3341b309979ea5ac1a75fd5768e4e519",
+          "state": "PASS"
+        },
+        {
+          "path": "/assets/hara-commander-royal.webp",
+          "sha256": "e55b9218fc9ef540d1214509226af13c7e7906665e9ec247a92a40103f62ada3",
+          "state": "PASS"
+        }
+      ],
+      "auth_config": "PASS",
+      "environment": "PROD",
+      "health": "PASS",
+      "nonasset_bindings_identical": true,
+      "origin": "https://commander.haralabs.com.br",
+      "rollback_known_good": "b500dd23-c33b-4247-ac3e-04c24c8af15a",
+      "state": "PASS",
+      "version": "9f7526c5-98a9-415a-b756-25200eee0627"
+    }
+  ],
+  "offline_passed": 63,
+  "private_keys_read": false,
+  "production_capacity_1000_10000_concurrent_certified": false,
+  "runtime_source_digest": "f9d89f9cf07c3f20ea2f1c5ea3b7c5fab8ff032db580339bbba3a4d0d05cc5de",
+  "schema": "hara.commander-capacity-release.v1",
+  "source_head": "29067c28a4202cbf4cda8ada2b37e954d566fb7f",
+  "state": "PASS"
+}

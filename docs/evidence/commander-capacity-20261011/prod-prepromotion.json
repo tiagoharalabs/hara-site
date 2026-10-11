@@ -1,0 +1,10 @@
+{
+  "candidate_version": "97f050a3-ab1c-4175-94f1-fdd9e4614740",
+  "founder_allowlist_binding_preserved": true,
+  "nonasset_bindings_identical": true,
+  "old_version": "b500dd23-c33b-4247-ac3e-04c24c8af15a",
+  "promotion_outcome": "REJECTED_ASSET_READBACK_AND_ROLLED_BACK",
+  "replacement_verified_version": "9f7526c5-98a9-415a-b756-25200eee0627",
+  "secret_name_count": 7,
+  "secret_values_exposed": false
+}

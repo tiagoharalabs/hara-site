@@ -1,0 +1,29 @@
+{
+  "candidate_sources_replaced_only_in_stage": [
+    "install/linux.sh",
+    "install/windows.ps1",
+    "release/agent-manifest.json",
+    "release/agent-manifest.sig.json",
+    "release/release-signing-public.jwk",
+    "release/SHA256SUMS"
+  ],
+  "cloud_operations": false,
+  "private_keys_read": false,
+  "release": "commercial-0.3.43-v2",
+  "schema": "hara.commander-signed-asset-stage.v1",
+  "signed_files_verified": 8,
+  "signed_sha256": {
+    "agent/linux.py": "3e0db700dd568a85e23212a5400f1d256546fef77b7f59f574ceed29e04c15b7",
+    "agent/windows.ps1": "d507a6f91a635b025ef4f06cbd758a03c7da6f3410aadec9a3d76c28f904c6fb",
+    "install/linux.sh": "534e14433da9f86eb4342c6d9400e89ecf164545605e02e22f1646510284aba5",
+    "install/windows.ps1": "a940b140e872cf6d2c5867cccddf8b827f9bfff715b6515627a3176ae45e11e6",
+    "release/SHA256SUMS": "9811d0abbdeb6a80e3c6265099c0255c3341b309979ea5ac1a75fd5768e4e519",
+    "release/agent-manifest.json": "f99aa5437511e87a78a9e699959c7e243c6ce5f919abe4da99ed109e0925e124",
+    "release/agent-manifest.sig.json": "d58f37d9bc6f7ebd6e0d896ab37cc33ea6384c63375952ac10e5b586b9d9d957",
+    "release/release-signing-public.jwk": "4e68608fa891f1b7a1e89c75936a089daeab0ba862a764f9bb31eca849cdfb9b"
+  },
+  "stage_path": "/tmp_hara/commander-capacity-signed-assets-20261011",
+  "state": "PASS",
+  "tracked_public_files": 17,
+  "ui_unchanged": true
+}
