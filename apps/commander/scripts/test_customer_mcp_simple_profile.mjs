@@ -190,14 +190,14 @@ const offlinePing = await rpc(9,"tools/call",{
   name:"ping",
   arguments:{computer:"__offline__"},
 });
-assert.equal(offlinePing.result?.isError,undefined);
+assert.equal(offlinePing.result?.isError,true);
 assert.equal(offlinePing.result?.structuredContent?.state,"UNAVAILABLE");
 assert.equal(offlinePing.result?.structuredContent?.blocker?.code,"DEVICE_OFFLINE");
 assert.equal(offlinePing.result?.structuredContent?.blocker?.retryable,true);
 assert.equal(offlinePing.result?.structuredContent?.computer,"__offline__");
 
 const missingInfo = await rpc(91,"tools/call",{name:"get_file_info",arguments:{computer:"__missing__",path:"/tmp/missing"}});
-assert.equal(missingInfo.result?.isError,undefined);
+assert.equal(missingInfo.result?.isError,true);
 assert.equal(missingInfo.result?.structuredContent?.state,"NOT_FOUND");
 assert.equal(missingInfo.result?.structuredContent?.blocker?.code,"FILENOTFOUNDERROR");
 
@@ -215,7 +215,10 @@ assert.equal(busy.result?.structuredContent?.blocker?.retryable,true);
 
 const timeout = await rpc(95,"tools/call",{name:"start_process",arguments:{computer:"__timeout__",command:"sleep 1",timeout_ms:500}});
 assert.equal(timeout.result?.structuredContent?.state,"TIMEOUT");
-assert.equal(timeout.result?.structuredContent?.blocker?.retryable,true);
+assert.equal(timeout.result?.structuredContent?.blocker?.retryable,false);
+assert.equal(timeout.result?.structuredContent?.blocker?.requires_reconciliation,true);
+assert.equal(timeout.result?.structuredContent?.mutation_performed,null);
+assert.equal(timeout.result?.structuredContent?.result?.completed,null);
 
 const conflict = await rpc(96,"tools/call",{name:"copy_file",arguments:{computer:"__exists__",source:"/tmp/a",destination:"/tmp/b"}});
 assert.equal(conflict.result?.structuredContent?.state,"CONFLICT");
@@ -233,7 +236,7 @@ assert.equal(ambiguous.result?.structuredContent?.state,"NEEDS_INPUT");
 assert.equal(ambiguous.result?.structuredContent?.result?.selection_required,true);
 
 const localTunnel = await rpc(99,"tools/call",{name:"ping",arguments:{computer:"__local_tunnel__"}});
-assert.equal(localTunnel.result?.isError,undefined);
+assert.equal(localTunnel.result?.isError,true);
 assert.equal(localTunnel.result?.structuredContent?.state,"DIRECT_PATH_REQUIRED");
 assert.equal(localTunnel.result?.structuredContent?.blocker?.retryable,false);
 assert.equal(localTunnel.result?.structuredContent?.result?.recommended_transport,"LOCAL_TUNNEL");

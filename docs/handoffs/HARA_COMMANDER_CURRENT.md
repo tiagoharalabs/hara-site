@@ -1,5 +1,10 @@
 # H.A.R.A. Commander — CURRENT (10/10/2026, após rollout 7/7)
 
+## Consistência dos resultados MCP — 11/10/2026; fonte local, sem deploy
+
+O perfil simples passou a sinalizar erros operacionais com `isError: true`, distinguir timeout de não execução, orientar reconciliação em vez de repetição automática, restringir mensagens públicas de exceção a códigos simbólicos e separar trecho de edição ausente de arquivo ausente. Teste novo contra o handler MCP real, executor simulado no Services: **38/38 PASS**; suíte anterior do perfil simples também PASS. Não confundir este teste com os 38 casos da cadeia de argumentos abaixo. A bateria geral não foi reexecutada e o Worker não foi alterado. Contrato de timeout com valores nulos exige homologação do cliente antes de promoção. Documento: `docs/operations/HARA_COMMANDER_MCP_RESULT_CONSISTENCY_20261011.md`.
+
+
 ## Revisão local de contratos — 11/10/2026; NÃO é novo deploy
 
 A fonte local contém as melhorias de leitura do checkpoint `aa4a90b` e correções posteriores de concorrência da atividade, verificadas no Services contra o arquivo integral: **25/25 PASS**. O novo teste `test_customer_argument_pipeline.mjs` detectou perda de `expected_sha256` em escrita/edição/exclusão e de `offset` em busca/listagem no adaptador do Worker: **fonte atual 16/38 PASS; candidata apenas em memória 38/38 PASS**. **O patch desse Worker não foi aplicado**, pois a tentativa de gravação foi bloqueada. O modo candidato não substitui a aprovação do código do produto.

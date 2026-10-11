@@ -43,6 +43,13 @@ function publicToolResult(value) {
   return {
     content: [{ type: "text", text: JSON.stringify(result) }],
     structuredContent: result,
+    // Transport success does not imply successful tool execution. Do not infer
+    // failure from a command exit code when the tool itself returned PASS.
+    ...((result.ok === false || [
+      "DENIED", "FAILED", "ERROR", "TIMEOUT", "UNAVAILABLE", "BUSY",
+      "NOT_FOUND", "CONFLICT", "NEEDS_INPUT", "INVALID_TARGET",
+      "UNSUPPORTED_CONTENT", "LIMIT_EXCEEDED", "CANCELLED", "EXPIRED",
+    ].includes(result.state)) ? { isError: true } : {}),
   };
 }
 
@@ -60,7 +67,7 @@ function operationalToolError(code, args = undefined) {
       result,
     };
     if (args?.computer) value.computer = String(args.computer).slice(0, 120);
-    return publicToolResult(value);
+    return { ...publicToolResult(value), isError: true };
   };
 
   if (code === "DEVICE_LOCAL_TUNNEL_DIRECT_PATH_REQUIRED") {
@@ -77,7 +84,19 @@ function operationalToolError(code, args = undefined) {
     return build("BUSY", "DEVICE_AVAILABILITY", true, { available: true, busy: true });
   }
   if (["DEVICE_CALL_TIMEOUT", "CHANNEL_TRANSIENT_TIMEOUT"].includes(code)) {
-    return build("TIMEOUT", "DEVICE_EXECUTION", true, { completed: false });
+    // A response deadline is not proof of cancellation, non-execution or
+    // rollback. Reconcile the existing call before any deliberate new action.
+    const value = {
+      state: "TIMEOUT", ...common, mutation_performed: null,
+      blocker: { code, category: "DEVICE_EXECUTION", retryable: false, requires_reconciliation: true },
+      result: {
+        completed: null, execution_outcome: "UNKNOWN", automatic_retry_allowed: false,
+        next_action: "RECONCILE_EXISTING_CALL",
+        recommended_tools: ["get_recent_tool_calls", "get_receipt"],
+      },
+    };
+    if (args?.computer) value.computer = String(args.computer).slice(0, 120);
+    return publicToolResult(value);
   }
   if (["DEVICE_NOT_FOUND", "DEVICE_CALL_NOT_FOUND"].includes(code)) {
     return build("NOT_FOUND", "DEVICE_SELECTION", false, { exists: false });
@@ -95,7 +114,10 @@ function operationalToolError(code, args = undefined) {
       : code === "RECEIPT_NOT_FOUND" ? "AUDIT_STATE"
       : code === "EDIT_MATCH_NOT_FOUND" ? "EDIT_MATCH"
       : "FILESYSTEM_STATE";
-    const result = { exists: false };
+    // A missing edit match is not evidence that the file itself is absent.
+    const result = code === "EDIT_MATCH_NOT_FOUND"
+      ? { match_found: false, recommended_tool: "hara.files.read" }
+      : { exists: false };
     if (["PARENT_DIRECTORY_NOT_FOUND", "FILESYSTEM_PARENT_NOT_FOUND"].includes(code)) result.recommended_tool = "hara.files.create_directory";
     if (code === "PREIMAGE_NOT_FOUND") result.recommended_tool = "hara.files.preimages.list";
     return build("NOT_FOUND", category, false, result);
@@ -142,9 +164,11 @@ function operationalToolError(code, args = undefined) {
 }
 
 function publicToolError(error, args = undefined) {
-  const code = String(error?.message || "COMMANDER_MCP_TOOL_FAILED")
-    .replace(/[^A-Z0-9_:-]/gi, "_")
-    .slice(0, 160);
+  // Do not turn arbitrary exception sentences, paths or headers into public
+  // error text by merely replacing punctuation. Only bounded symbolic codes.
+  const raw = error?.message;
+  const code = typeof raw === "string" && /^[A-Z][A-Z0-9_]{0,119}$/.test(raw)
+    && raw.trim() === raw ? raw : "COMMANDER_MCP_TOOL_FAILED";
 
   const operational = operationalToolError(code, args);
   if (operational) return operational;
