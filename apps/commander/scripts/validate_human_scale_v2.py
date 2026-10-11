@@ -5,6 +5,7 @@ ROOT = Path(__file__).resolve().parents[1]
 AUTH = (ROOT / "src" / "auth.js").read_text()
 OIDC = (ROOT / "src" / "oidc.js").read_text()
 WORKER = (ROOT / "src" / "worker.js").read_text()
+OBSERVER = (ROOT / "src" / "auth-maintenance-observer.mjs").read_text()
 PROD = (ROOT / "wrangler.jsonc").read_text()
 DEV = (ROOT / "wrangler.dev.jsonc").read_text()
 
@@ -20,9 +21,11 @@ assert "cacheGet(jwksCache" in OIDC
 assert "forceRefresh: true" in OIDC
 assert "OIDC_SIGNING_KEY_NOT_FOUND" in OIDC
 
-assert "runAuthRetentionMaintenance" in WORKER
+assert "runAuthRetentionMaintenance" in OBSERVER
+assert "runObservedAuthRetentionMaintenance" in WORKER
 assert "async scheduled(_event, env, ctx)" in WORKER
-assert "ctx.waitUntil(runAuthRetentionMaintenance(env));" in WORKER
+assert "ctx.waitUntil(runObservedAuthRetentionMaintenance(env));" in WORKER
+assert "const record = retentionLogRecord(report)" in OBSERVER
 
 for config in (PROD, DEV):
     assert '"triggers"' in config

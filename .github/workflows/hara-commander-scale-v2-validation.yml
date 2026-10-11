@@ -49,6 +49,7 @@ jobs:
           set -Eeuo pipefail
           node --check apps/commander/src/worker.js
           node --check apps/commander/src/auth.js
+          node apps/commander/scripts/test_auth_maintenance_observer.mjs
           node --check apps/commander/src/oidc.js
           node --check apps/commander/public/app.js
           node --check apps/commander/src/device-channel.mjs

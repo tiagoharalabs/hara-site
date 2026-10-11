@@ -7,8 +7,8 @@ import {
   logout,
   resolveDegradedPortalSession,
   resolvePortalSession,
-  runAuthRetentionMaintenance,
 } from "./auth.js";
+import { runObservedAuthRetentionMaintenance } from "./auth-maintenance-observer.mjs";
 import { normalizeIssuer, randomToken, sha256 } from "./oidc.js";
 import {
   billingStatus,
@@ -6131,7 +6131,7 @@ export default {
   },
   async scheduled(_event, env, ctx) {
     requireRuntime(env);
-    ctx.waitUntil(runAuthRetentionMaintenance(env));
+    ctx.waitUntil(runObservedAuthRetentionMaintenance(env));
     ctx.waitUntil(cleanupExpiredDeviceCalls(env));
     ctx.waitUntil(cleanupExpiredSupportReports(env));
   }
