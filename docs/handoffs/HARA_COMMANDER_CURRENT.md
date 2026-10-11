@@ -1,4 +1,12 @@
-# H.A.R.A. Commander — CURRENT (10/10/2026, após rollout 7/7)
+# H.A.R.A. Commander — CURRENT (11/10/2026, transferência e continuidade)
+
+## Prova real sem Desktop — transferência, recuperação e stdout pendente (11/10/2026)
+
+Na frente de substituição do Desktop, o MCP comercial executou as provas em diretórios descartáveis: transferência de 32 arquivos e 12.842.112 bytes (inclui binário 12 MiB, Unicode, symlink interno) do Services para Núcleo, C e D, **3/3 destinos com manifesto SHA-256 PASS**. A Sentinela D retomou após interrupção intencional aos 720.896 bytes; SHA final PASS. Transmissão grande usou rsync/SSH sob comandos governados do H.A.R.A., não uma ferramenta de transferência binária nativa. O MCP nativo transferiu manifesto de texto, e hara.files.copy local validou binário 1 MiB; há limite nativo de cópia local 2 MiB.
+
+Uma parada controlada do Agent da Sentinela A resultou DEVICE_OFFLINE e recuperação por outro Agent (Services) via SSH, sem Desktop. Tarefa independente em systemd user preservou 25/25 checkpoints após restart do Agent. **BLOQUEADOR P0:** sessão PTY que imprimiu 120 linhas registradas em arquivo retornou 0/120 no MCP após exit=0 e sem flag de truncamento; reprodução menor 8/25. Possível fechamento prematuro do FD no _process_update_state antes de drenar. Tentativa de gravar teste de código foi bloqueada pela segurança da plataforma, sem contorno; nenhuma mudança de Agent ou release nesta rodada. Prova e critérios: docs/operations/HARA_COMMANDER_DESKTOP_PARITY_RUNTIME_PROOF_20261011.md.
+
+Não declarar paridade completa até corrigir P0 e homologar transferência binária inter-host nativa, socket-recovery e soak. Stripe e pagamento permanecem independentes.
 
 ## CI 81/81 e persistência boot Founder — 11/10/2026
 
