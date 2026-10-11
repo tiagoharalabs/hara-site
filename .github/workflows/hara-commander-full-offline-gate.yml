@@ -88,6 +88,14 @@ jobs:
           /usr/bin/python3 -B apps/commander/scripts/verify_commander_ci_report.py --report "$report" --expected-head "$HARA_EXPECTED_SHA" --summary "$GITHUB_STEP_SUMMARY"
           cat "$report"
 
+      - name: Report failed validators without test logs or customer data
+        if: failure()
+        shell: bash
+        run: |
+          if [ -s "$RUNNER_TEMP/commander-offline-gate.json" ]; then
+            /usr/bin/python3 -B -c 'import json,os; p=os.path.join(os.environ["RUNNER_TEMP"],"commander-offline-gate.json"); r=json.load(open(p)); print("COMMANDER_CI_FAILED_COUNT",r.get("failed")); [print("COMMANDER_CI_FAILED_VALIDATOR",row.get("test"),row.get("state")) for row in r.get("tests",[]) if row.get("state")!="PASS"]'
+          fi
+
       - name: Validate Event V2 JavaScript syntax
         shell: bash
         run: |
