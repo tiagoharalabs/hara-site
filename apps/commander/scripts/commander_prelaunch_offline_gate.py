@@ -63,6 +63,7 @@ JS = (
     "test_devices_minimalist_ui.mjs",
     "test_devices_setup_commands_ui.mjs",
     "test_nav_no_duplicate_titles.mjs",
+    "test_plan_cards_centered_ui.mjs",
     "test_oidc_helpers.mjs",
     "test_auth_helpers.mjs",
     "test_hara_identity_customer_mcp.mjs",

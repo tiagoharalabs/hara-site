@@ -66,6 +66,6 @@ assert.ok(css.includes('@media(min-width:1400px)'));
 assert.ok(css.includes('white-space:nowrap'));
 assert.ok(css.includes('@media(max-width:1399px)'));
 assert.ok(css.includes('white-space:normal'));
-assert.ok(html.includes('20261010-nav-nodup-wrap1'));
+assert.ok(html.includes('20261010-centered-plans1'));
 console.log("NAV_RESPONSIVE_INTRO_NO_PREMATURE_WRAP=PASS");
 console.log("NAV_ONLY_HTML_CSS_NO_BACKEND_OR_SECRET_CHANGE=TRUE");

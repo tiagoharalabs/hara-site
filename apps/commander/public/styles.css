@@ -1633,8 +1633,43 @@ html[data-theme="dark"] [data-view="devices"] .devices-command-note{
 }
 .app-view[data-view="plans"] .plan-grid{
   width:100%;
-  max-width:none;
-  margin:0;
+  max-width:1080px;
+  margin:0 auto;
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:18px;
+  align-items:stretch;
+}
+.app-view[data-view="plans"] .plan-card{
+  min-width:0;
+  padding:22px 24px 20px;
+}
+.app-view[data-view="plans"] .plan-card h2{
+  margin:9px 0 6px;
+}
+.app-view[data-view="plans"] .plan-card>strong{
+  margin:8px 0 4px;
+}
+.app-view[data-view="plans"] .plan-card ul{
+  margin:6px 0 12px;
+  padding:11px 0 12px;
+}
+.app-view[data-view="plans"] .plan-card li{
+  padding:4px 0;
+}
+.app-view[data-view="plans"] .beta-access-cta{
+  margin-top:6px;
+}
+@media(max-width:1050px){
+  .app-view[data-view="plans"] .plan-grid{
+    max-width:520px;
+    grid-template-columns:minmax(0,1fr);
+    gap:14px;
+  }
+}
+@media(max-width:760px){
+  .app-view[data-view="plans"] .plan-grid{max-width:100%}
+  .app-view[data-view="plans"] .plan-card{padding:20px 19px 18px}
 }
 .app-view[data-view="plans"] .plan-card>p{
   font-size:12.5px;
