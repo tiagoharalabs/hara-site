@@ -23,7 +23,8 @@ const button = () => ({isConnected:true,disabled:false,textContent:'Atualizar'})
 function setup(permission) {
   const reads=[], renders=[], toasts=[], panel={hidden:false};
   const sandbox={
-    remotePortal:true, sessionAuthenticated:true, sessionDegraded:false,
+    remotePortal:true, sessionAuthenticated:true, portalSessionGeneration:0,
+    portalFetch:{ invalidate(){} }, sessionDegraded:false,
     sessionDegradedReason:'',currentRole:'OWNER',dashboardCache:{},dashboardCacheAt:1,
     devicesCache:{},devicesCacheAt:1,activityReadGeneration:0,
     activityTriggerReads:new WeakMap(), activityCache:new Map(), activityWindow:'7d',

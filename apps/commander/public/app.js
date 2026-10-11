@@ -175,6 +175,8 @@
   let retryAction = null;
   let authProviderConfigured = false;
   let sessionAuthenticated = false;
+  // Retire every in-flight portal read when this tab loses its session.
+  let portalSessionGeneration = 0;
   let sessionDegraded = false;
   let sessionDegradedReason = "";
   let currentRole = "";
@@ -310,6 +312,8 @@
   }
 
   function setGuestHeader() {
+    portalSessionGeneration += 1;
+    portalFetch.invalidate();
     sessionAuthenticated = false;
     sessionDegraded = false;
     sessionDegradedReason = "";
@@ -1018,13 +1022,16 @@
 
   async function hydrateSessionHeader() {
     if (!remotePortal) return false;
+    const readEpoch = portalSessionGeneration;
     try {
       const response = await portalFetch("/api/portal/session", { cache: "no-store", credentials: "same-origin" });
+      if (readEpoch !== portalSessionGeneration) return false;
       if (!response.ok) {
         if (response.status === 401) setGuestHeader();
         return false;
       }
       const payload = await response.json();
+      if (readEpoch !== portalSessionGeneration) return false;
       applyIdentity(payload);
       if (payload?.availability?.degraded === true) {
         history.replaceState(null, "", location.pathname + "#plans");
@@ -1038,12 +1045,14 @@
 
   async function loadPortalBootstrap() {
     if (!remotePortal) return null;
+    const readEpoch = portalSessionGeneration;
     try {
       const response = await portalFetch("/api/portal/bootstrap", {
         cache: "no-store",
         credentials: "same-origin",
       });
       const payload = await response.json().catch(() => ({}));
+      if (readEpoch !== portalSessionGeneration) return null;
       if (response.status === 401) {
         setGuestHeader();
         return false;
@@ -1364,6 +1373,7 @@
 
   async function loadDevices(trigger = null, force = false) {
     if (!remotePortal) return;
+    const readEpoch = portalSessionGeneration;
     const forceRefresh = force || Boolean(trigger);
     if (
       !forceRefresh
@@ -1382,13 +1392,16 @@
     renderDeviceLoading();
     try {
       const response = await portalFetch("/api/portal/devices", { cache: "no-store", credentials: "same-origin" });
+      if (readEpoch !== portalSessionGeneration) return;
       if (handlePortalAuthFailure(response, "Entre novamente para consultar seus computadores.")) return;
       if (!response.ok) throw new Error("HTTP_" + response.status);
       const payload = await response.json();
+      if (readEpoch !== portalSessionGeneration) return;
       devicesCache = payload;
       devicesCacheAt = Date.now();
       renderDevices(payload);
     } catch (_error) {
+      if (readEpoch !== portalSessionGeneration) return;
       const list = document.getElementById("deviceList");
       if (list) {
         list.replaceChildren();
@@ -1400,11 +1413,13 @@
         list.append(empty);
       }
     } finally {
-      const list = document.getElementById("deviceList");
-      if (list) list.setAttribute("aria-busy", "false");
-      if (trigger?.isConnected) {
-        trigger.disabled = false;
-        trigger.textContent = originalLabel;
+      if (readEpoch === portalSessionGeneration) {
+        const list = document.getElementById("deviceList");
+        if (list) list.setAttribute("aria-busy", "false");
+        if (trigger?.isConnected) {
+          trigger.disabled = false;
+          trigger.textContent = originalLabel;
+        }
       }
     }
   }
@@ -1711,6 +1726,7 @@
   }
 
   async function loadProductDashboard(force = false) {
+    const readEpoch = portalSessionGeneration;
     hideBanner();
 
     if (
@@ -1740,6 +1756,7 @@
 
     try {
       const response = await portalFetch(apiBase + dashboardPath, { cache: "no-store", credentials: "same-origin" });
+      if (readEpoch !== portalSessionGeneration) return;
       if (response.status === 401) {
         setGuestHeader();
         route("login");
@@ -1760,6 +1777,7 @@
       }
       if (!response.ok) throw new Error("HTTP_" + response.status);
       const payload = await response.json();
+      if (readEpoch !== portalSessionGeneration) return;
       if (remotePortal) {
         dashboardCache = payload;
         dashboardCacheAt = Date.now();
@@ -1767,15 +1785,17 @@
       applyDashboard(payload);
       applyScenario(scenario, payload);
     } catch (_error) {
+      if (readEpoch !== portalSessionGeneration) return;
       setState("Aguardando", "Dados da conta ainda não carregados");
       showBanner("info", "Plano e uso temporariamente indisponíveis", "Sua sessão continua ativa. Atualize para consultar os dados do Commander novamente.", "Atualizar dados", loadProductDashboard);
     } finally {
-      setLoading(false);
+      if (readEpoch === portalSessionGeneration) setLoading(false);
     }
   }
 
   async function loadBillingState() {
     if (!remotePortal || !sessionAuthenticated) return;
+    const readEpoch = portalSessionGeneration;
 
     const statusNode = document.getElementById("billingPlanStatus");
     const portalButton = document.querySelector("[data-billing-portal]");
@@ -1787,8 +1807,10 @@
         cache: "no-store",
         credentials: "same-origin",
       });
+      if (readEpoch !== portalSessionGeneration || !sessionAuthenticated) return;
       if (!response.ok) return;
       const payload = await response.json();
+      if (readEpoch !== portalSessionGeneration || !sessionAuthenticated) return;
       const canManage = payload?.can_manage === true;
       const activation = payload?.activation || {};
       const readiness = {
@@ -1841,8 +1863,10 @@
         betaAccess.hidden = Boolean(activation.first_checkout_ready || standardCurrent);
         if (!betaAccess.hidden) {
           const betaResponse=await portalFetch("/api/portal/beta-access",{cache:"no-store",credentials:"same-origin"});
+          if (readEpoch !== portalSessionGeneration || !sessionAuthenticated) return;
           if (betaResponse.ok) {
             const betaPayload=await betaResponse.json().catch(()=>({}));
+            if (readEpoch !== portalSessionGeneration || !sessionAuthenticated) return;
             const state=String(betaPayload?.request?.state || "").toUpperCase();
             if (["REQUESTED","CONTACTED"].includes(state)) {
               betaAccess.disabled=true;
