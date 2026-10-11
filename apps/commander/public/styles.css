@@ -434,14 +434,15 @@ html[data-theme="dark"] .connection-readiness{background:rgba(9,29,42,.94);borde
   padding:18px 20px;
 }
 .devices-section-panel .device-install-card>p{
-  margin:8px 0 2px;
-  max-width:850px;
+  margin:6px 0 4px;
+  max-width:1000px;
 }
 .devices-section-panel .onboarding-step,
 .devices-section-panel .onboarding-finish{
-  padding:12px 0;
+  padding:9px 0;
+  border-top:0;
 }
-.devices-section-panel .onboarding-step:first-of-type{margin-top:8px}
+.devices-section-panel .onboarding-step:first-of-type{margin-top:3px}
 .devices-section-panel .onboarding-step-no{
   width:29px;
   height:29px;
@@ -1227,8 +1228,8 @@ html[data-theme=dark] .tunnel-startup-choice small{color:#a6c4d4}
 [data-view="devices"] .devices-panel-compact .device-list{margin-top:8px}
 [data-view="devices"] .devices-panel-compact .device-row{
   position:relative;grid-template-columns:32px minmax(0,1fr) auto auto;
-  gap:12px;min-height:64px;padding:11px 7px;
-  border-radius:0;border-top:1px solid var(--line)
+  gap:11px;min-height:54px;padding:7px 7px;
+  border:0;border-radius:8px
 }
 [data-view="devices"] .devices-panel-compact .device-row:first-child{border-top:0}
 [data-view="devices"] .devices-panel-compact .device-row:focus-within{z-index:12}
@@ -1460,8 +1461,8 @@ html[data-theme="dark"] [data-view="devices"] .devices-help{
 [data-view="devices"] .devices-command-row{
   display:grid;
   grid-template-columns:minmax(145px, .34fr) minmax(0, 1fr);
-  align-items:center;gap:16px;padding:15px 0;
-  border-top:1px solid var(--line)
+  align-items:center;gap:16px;padding:12px 0;
+  border:0
 }
 [data-view="devices"] .devices-command-row > div:first-child{
   display:grid;gap:5px;min-width:0
@@ -1487,8 +1488,8 @@ html[data-theme="dark"] [data-view="devices"] .devices-help{
   font-size:12px;line-height:1.3;box-shadow:none
 }
 [data-view="devices"] .devices-command-note{
-  color:var(--muted);font-size:12px;line-height:1.55;
-  padding-top:15px;border-top:1px solid var(--line);
+  color:var(--muted);font-size:12.5px;line-height:1.55;
+  padding-top:11px;border:0;
   margin:0
 }
 [data-view="devices"] .devices-sync-note{
@@ -1529,7 +1530,7 @@ html[data-theme="dark"] [data-view="devices"] .devices-command-note{
   [data-view="devices"] .devices-command-group-wide{grid-column:auto}
 }
 @media(max-width:870px){
-  [data-view="devices"] .devices-command-guide{padding:0}
+  [data-view="devices"] .devices-command-guide{padding:16px 18px}
   [data-view="devices"] .devices-section-tabs{gap:15px}
 }
 @media(max-width:610px){
@@ -1549,7 +1550,7 @@ html[data-theme="dark"] [data-view="devices"] .devices-command-note{
 /* 2026-10-10: Compact page header and readable, symmetric command reference.
    Scoped to Computers; existing brand colors and all other routes unchanged. */
 [data-view="devices"] .workspace-main{
-  padding-top:19px;
+  padding-top:10px;
 }
 [data-view="devices"] .devices-workspace-head{
   margin-bottom:8px;
@@ -1561,46 +1562,48 @@ html[data-theme="dark"] [data-view="devices"] .devices-command-note{
   margin:0;
 }
 [data-view="devices"] .devices-section-tabs{
-  margin-bottom:12px;
+  margin-bottom:10px;
   gap:26px;
 }
 [data-view="devices"] .devices-section-tabs button{
-  font-size:13px;
+  font-size:13.5px;
   line-height:1.4;
-  padding-bottom:10px;
+  padding-bottom:9px;
 }
 [data-view="devices"] .devices-panel-compact .device-copy b{
-  font-size:14px;
+  font-size:15px;
 }
 [data-view="devices"] .devices-panel-compact .device-copy small{
-  font-size:12px;
+  font-size:12.5px;
 }
 [data-view="devices"] .devices-panel-compact .device-state{
-  font-size:11px;
+  font-size:12px;
 }
 [data-view="devices"] .devices-panel-compact .device-primary-action,
 [data-view="devices"] .devices-panel-compact .device-tabs button,
 [data-view="devices"] .devices-summary-count{
-  font-size:12px;
+  font-size:12.5px;
 }
 [data-view="devices"] .device-onboarding-flow .panel-head h2{
   font-size:19px;
 }
 [data-view="devices"] .device-onboarding-flow > p{
-  font-size:13px;
-  line-height:1.6;
-}
-[data-view="devices"] .device-onboarding-flow .onboarding-step b{
-  font-size:13px;
-}
-[data-view="devices"] .device-onboarding-flow .onboarding-step small,
-[data-view="devices"] .devices-token-reminder,
-[data-view="devices"] .device-onboarding-flow .install-note{
-  font-size:12px;
+  font-size:13.5px;
   line-height:1.55;
 }
+[data-view="devices"] .device-onboarding-flow .onboarding-step b,
+[data-view="devices"] .device-onboarding-flow .onboarding-finish b{
+  font-size:14px;
+}
+[data-view="devices"] .device-onboarding-flow .onboarding-step small,
+[data-view="devices"] .device-onboarding-flow .onboarding-finish small,
+[data-view="devices"] .devices-token-reminder,
+[data-view="devices"] .device-onboarding-flow .install-note{
+  font-size:12.5px;
+  line-height:1.5;
+}
 [data-view="devices"] .device-onboarding-flow .install-command code{
-  font-size:12px;
+  font-size:12.5px;
 }
 /* The three principal cards are the only containers: their commands sit on
    flat separator rows, with no nested rounded rectangles or scrollbars. */
@@ -1613,7 +1616,6 @@ html[data-theme="dark"] [data-view="devices"] .devices-command-note{
   outline-offset:2px;
 }
 @media(max-width:760px){
-  [data-view="devices"] .workspace-main{padding-top:12px}
-  [data-view="devices"] .devices-workspace-head h1{font-size:22px}
+  [data-view="devices"] .workspace-main{padding-top:9px}
   [data-view="devices"] .devices-section-tabs{gap:16px}
 }

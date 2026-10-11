@@ -70,7 +70,7 @@ need(
     and 'idx_commander_devices_approval_mode' in APPROVAL_MODE_MIGRATION,
     "APPROVAL_MODE_MIGRATION",
 )
-need("styles.css?v=20261010-command-frame1" in HTML, "STYLE_CACHE_KEY")
+need("styles.css?v=20261010-clean-rows1" in HTML, "STYLE_CACHE_KEY")
 need("app.js?v=20261010-symmetric-commands1" in HTML, "SCRIPT_CACHE_KEY")
 need((APP / "public/brand/chatgpt-official.webp").stat().st_size > 0, "CHATGPT_BRAND_ASSET_PRESERVED")
 need((APP / "public/brand/claude-official.svg").stat().st_size > 0, "CLAUDE_BRAND_ASSET_PRESERVED_WITHOUT_MISLABELING_CODEX")
@@ -200,7 +200,8 @@ need(
 need(
     'encodeURIComponent("/#devices")' in JS
     and 'route("devices");' in JS
-    and 'id="devices-title"' in HTML
+    and 'data-view="devices" aria-label="Computadores"' in HTML
+    and 'id="devices-title"' not in HTML
     and 'id="usage-title"' in HTML
     and 'O Commander na nuvem mantém apenas o mínimo necessário' in HTML,
     "CUSTOMER_DEFAULT_DEVICES_ROUTE",
