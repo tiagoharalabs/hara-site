@@ -1,5 +1,8 @@
 # H.A.R.A. Commander — CURRENT (10/10/2026, após rollout 7/7)
 
+**HANDOFF PARA A PRÓXIMA CONVERSA — LEITURA OBRIGATÓRIA:** `docs/handoffs/HARA_COMMANDER_FULL_OPERATIONAL_HANDOFF_20261010.md`. Estado técnico comprovado: PROD `b500dd23-c33b-4247-ac3e-04c24c8af15a` 100%, DEV `39b8e74a-5e5f-40a5-988b-7b0906a59cb0`, centralização horizontal+vertical dos cartões Free/Pro encerrada no código e publicada. **Não confundir implantação com aceitação visual humana: falta verificação estética do proprietário na tela atualizada.** Free 10.000/mês, Pro R$ 80/mês (Stripe checkout LIVE OFF); 57/57 testes offline e 11/11 readback público PASS. O novo handoff reúne as decisões de UX, Fleet Founder 0.3.44 versus instaladores comerciais 0.3.43, limites de autoridade dos conectores, gates Stripe/Windows/Plugin e próximos comandos. Esta linha prevalece sobre as entradas históricas abaixo.
+
+
 **PROD ATUAL — PLANO E COBRANÇA CENTRALIZADO VERTICALMENTE, 10/10/2026:** Worker Cloudflare `hara-commander` versão **`b500dd23-c33b-4247-ac3e-04c24c8af15a` em 100%**, rollback `0fd13813-9c0a-45c1-9102-8ab5db7c3d26`. A grade Free/Pro já era centralizada na horizontal; agora o `workspace-main` alinha e centraliza verticalmente **o conjunto inteiro** (cards, readiness, status e gerenciamento), com min-height relativo à área abaixo da topbar. Em telas baixas ou estreitas, rolagem normal preservada. DEV `39b8e74a-5e5f-40a5-988b-7b0906a59cb0`, DEV/PROD 11/11 assets SHA exatos, health/auth PASS, cache HTML e CSS convergidos; D1 Free 10.000 e Pro ilimitado, teste offline 57/57 PASS. Nenhuma mudança em API, Agent assinado, Founder, billing, Stripe ou autenticação. Handoff: `docs/operations/HARA_COMMANDER_PRICING_FULL_FRAME_CENTERING_20261010.md`.
 
 
