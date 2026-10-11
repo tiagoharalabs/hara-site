@@ -1,0 +1,90 @@
+{
+  "adaptive_status_polling": {
+    "case": "one synthetic 45s pending command with retry_after_ms=250",
+    "measured_live": false,
+    "new_reads": 36,
+    "old_reads": 180
+  },
+  "cloud_d1_contract_tests": {
+    "exact_sqlite_executed": true,
+    "failed": 0,
+    "passed": 40
+  },
+  "cloudflare": {
+    "auth_config_dev": "PASS",
+    "auth_config_prod": "PASS",
+    "dev_migration": "PASS",
+    "dev_traffic_percent": 100,
+    "dev_worker": "15801b6f-6ec2-40e9-8508-2f1d578824df",
+    "first_real_six_hour_telemetry_snapshot": "PENDING",
+    "health_dev": "PASS",
+    "health_prod": "PASS",
+    "migration": "0034_event_v2_telemetry_rollup_20261011.sql",
+    "prod_migration": "PASS",
+    "prod_traffic_percent": 100,
+    "prod_worker": "3b926608-cff0-4dfb-947f-6ff3099cbe3f",
+    "snapshots_currently_observed": 0
+  },
+  "code_commit": "93ebcf07b504e88086cefc7f3cade7e3a97bc570",
+  "hosted_ci": {
+    "complete_gate": "PASS",
+    "conclusion": "success",
+    "javascript_syntax": "PASS",
+    "run_id": 38171345712,
+    "run_url": "https://github.com/tiagoharalabs/hara-site/actions/runs/38171345712",
+    "runner": "ubuntu-24.04",
+    "status": "completed",
+    "validated_commit": "1aec24ca97d0abcd9682ddf4c8108832d80e42a4",
+    "validated_workload": "OFFLINE_ONLY",
+    "workflow": "hara-commander-full-offline-gate.yml"
+  },
+  "linux_installer_regression": {
+    "bug": "Commander-owned hara CLI alias survived uninstall on clean machines",
+    "fix": "remove only regular file with exact managed marker; preserve external executables and symlinks",
+    "independent_hosted_ci_confirmed": true,
+    "signed_legacy_installer_modified": false
+  },
+  "live_cost_savings_measured": false,
+  "local_gate": {
+    "checked": 77,
+    "failed": 0,
+    "passed": 77,
+    "scale_certified": false
+  },
+  "local_sqlite_canary": {
+    "customer_content_persisted": false,
+    "file_permissions": "0600",
+    "observed_connected_seconds_at_first_controlled_restart": 74,
+    "observed_connections_at_first_controlled_restart": 1,
+    "observed_disconnections_at_first_controlled_restart": 1,
+    "observed_durable_calls_at_first_controlled_restart": 1,
+    "retention_days": 7
+  },
+  "local_telemetry_tests": {
+    "failed": 0,
+    "passed": 48
+  },
+  "network": {
+    "application_liveness_jitter_seconds": 900,
+    "application_liveness_mean_seconds": 21600,
+    "existing_websocket_kept": true,
+    "independent_telemetry_http_uploads": 0,
+    "new_periodic_polling": false,
+    "protocol_ping_idle_seconds": 60
+  },
+  "production_windows_event_v2_homologated": false,
+  "real_cloud_scale_homologated": false,
+  "release": {
+    "agent_version": "0.3.45",
+    "canary_host": "services",
+    "canary_mcp_device_info": "PASS",
+    "channel": "FOUNDER_ONLY",
+    "commercial_installers_updated": false,
+    "fleet_other_packages_installed": 0,
+    "fleet_other_packages_staged": 5,
+    "legacy_0_3_44_preserved": true,
+    "signed_manifest_files": 7,
+    "signing_private_key_exported": false
+  },
+  "schema": "hara.commander-event-v2-telemetry-live-v1"
+}

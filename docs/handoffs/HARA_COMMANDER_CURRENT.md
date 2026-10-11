@@ -1,5 +1,10 @@
 # H.A.R.A. Commander — CURRENT (10/10/2026, após rollout 7/7)
 
+## Atualização efetiva da telemetria Event V2 — 11/10/2026
+
+Runtime 93ebcf0 publicado em DEV/PROD com D1 0034, Workers DEV 15801b6f-6ec2-40e9-8508-2f1d578824df e PROD 3b926608-cff0-4dfb-947f-6ff3099cbe3f, ambos 100%; health/auth PASS. O Agent Founder 0.3.45 (RS256, sete arquivos) está instalado/ativo no services, com persistência local SQLite 0600 comprovada por reinício controlado; outros seis Founders permanecem 0.3.44, pacotes não instalados. LIVENESS cloud ~6h sem requisições HTTP adicionais; snapshots D1 ainda vazios no readback, e não significa falha antes do primeiro checkpoint. Gate local 77/77 PASS; GitHub Actions hospedado PASS no commit 1aec24c, run 38171345712, depois de corrigir limpeza do wrapper Linux no uninstall. Referência: docs/operations/HARA_COMMANDER_EVENT_V2_LOCAL_TELEMETRY_LOW_CHATTER_20261011.md.
+
+
 ## Event V2 telemetria local e menos leituras — 11/10/2026
 
 O Agent candidato grava métricas agregadas em SQLite 0600 por sete dias, com flush em lotes e resumo piggyback no LIVENESS Event V2 existente (~6h com jitter). Sem novos POST/polling de telemetria. D1 salva último resumo por tenant/dispositivo com migração 0034, schema estrito e socket autenticado. MCP adiciona get_device_telemetry (perfil 33 ferramentas). Polling de chamadas adaptativo: modelo 45s 180 para 36 consultas, não medição cloud. Gate offline 77/77 PASS; assinatura Founder 0.3.45 (sete arquivos) verificada, canário Services preparado. Não inferir instalação do Agent nem registro de snapshot D1 antes do canário. Referência: docs/operations/HARA_COMMANDER_EVENT_V2_LOCAL_TELEMETRY_LOW_CHATTER_20261011.md.

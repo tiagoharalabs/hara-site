@@ -26,3 +26,14 @@ DEV exige migração aditiva 0034 antes do novo Worker. PROD usa a mesma sequên
 Os snapshots de D1 só serão preenchidos após o primeiro LIVENESS autenticado emitido pelo Agent atualizado; não inventar registros logo após o deploy. A contagem de WebSocket PING em nível de transporte não deve ser confundida com requisições Worker faturadas.
 
 Storage permanece em HOLD por divergência. Não forçar refs nem publicar chave privada.
+
+## Execução verificada após commit 93ebcf0
+
+- Migração 0034 aplicada em D1 DEV e PROD. DEV Worker 15801b6f-6ec2-40e9-8508-2f1d578824df (100%) e PROD 3b926608-cff0-4dfb-947f-6ff3099cbe3f (100%), health/auth PASS. Assets comerciais assinados antigos preservados.
+- Agent Founder 0.3.45 assinado (sete arquivos), instalado somente em services; verificações RSA, autoteste e MCP comercial real device.info (0.3.45) PASS. Unit V2 e timer guard active+enabled; v1 inactive. Release 0.3.44 retida para rollback e backup da unit sob /tmp_hara.
+- Reinício canário controlado: SQLite local persistiu uma conexão, uma desconexão, uma chamada durável e 74 segundos conectados. Arquivo com modo 0600; conteúdo dos comandos não é armazenado.
+- Pacotes 0.3.45 de Sentinela A/B/C/D e Ninja Blue foram assinados por dispositivo e verificados em stages restritos no Services, SEM instalação; Núcleo tem o pacote Founder correspondente. Hosts restantes continuam 0.3.44 até rollout governado para não interromper carga ativa.
+- Snapshot cloud nos dois D1 permaneceu com zero linhas no readback após publicação: primeiro LIVENESS real (~6h) ainda pendente. Não afirmar telemetria de nuvem viva antes da primeira entrega.
+- A execução GitHub CI estava falhando somente no ciclo de vida Linux: atalho hara criado pelo instalador não era removido no uninstall em host limpo. A correção remove só o wrapper marcado como gerenciado; executável de terceiros e symlink são preservados. O gate local voltou a 77/77 e o GitHub Actions do commit 1aec24c passou todas as etapas, run 38171345712, PASS. O release comercial assinado legado segue byte-idêntico; correção de fonte só será distribuída em release comercial própria.
+
+Prova JSON sanitizada: docs/evidence/commander-telemetry-20261011/checkpoint.json.
