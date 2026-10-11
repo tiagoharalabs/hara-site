@@ -1705,3 +1705,58 @@ html[data-theme="dark"] [data-view="devices"] .devices-command-note{
     padding-top:9px;
   }
 }
+
+
+/* Center the COMPLETE pricing composition (Free/Pro, readiness, explanation)
+   in the usable content frame. The cards were already centered horizontally;
+   their parent was still anchored to the top of the viewport. */
+.app-view[data-view="plans"] .workspace-main{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  min-height:calc(100vh - 74px);
+  min-height:calc(100dvh - 74px);
+  padding-top:22px;
+  padding-bottom:22px;
+}
+.app-view[data-view="plans"] .plan-grid,
+.app-view[data-view="plans"] .billing-readiness,
+.app-view[data-view="plans"] #billingPlanStatus,
+.app-view[data-view="plans"] .billing-management{
+  width:100%;
+  max-width:1080px;
+  margin-left:auto;
+  margin-right:auto;
+}
+.app-view[data-view="plans"] .billing-management{
+  display:flex;
+  justify-content:center;
+  margin-top:12px;
+}
+/* If cards stack or height is limited, return to normal document flow
+   rather than vertically clipping content or centering off-screen. */
+@media(max-width:1050px), (max-height:700px){
+  .app-view[data-view="plans"] .workspace-main{
+    justify-content:flex-start;
+  }
+}
+@media(max-width:1050px){
+  .app-view[data-view="plans"] .billing-readiness,
+  .app-view[data-view="plans"] #billingPlanStatus,
+  .app-view[data-view="plans"] .billing-management{
+    max-width:520px;
+  }
+}
+@media(max-width:760px){
+  .app-view[data-view="plans"] .workspace-main{
+    min-height:0;
+    padding-top:18px;
+    padding-bottom:36px;
+  }
+  .app-view[data-view="plans"] .billing-readiness,
+  .app-view[data-view="plans"] #billingPlanStatus,
+  .app-view[data-view="plans"] .billing-management{
+    max-width:100%;
+  }
+}

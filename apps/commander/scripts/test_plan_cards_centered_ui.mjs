@@ -39,8 +39,28 @@ assert.ok(findRule('.app-view[data-view="plans"] .plan-card li').includes('paddi
 assert.ok(findRule('.app-view[data-view="plans"] .plan-card ul').includes('margin:6px 0 12px'));
 assert.ok(css.includes('@media(max-width:1050px){\n  .app-view[data-view="plans"] .plan-grid{\n    max-width:520px;\n    grid-template-columns:minmax(0,1fr)'));
 assert.ok(css.includes('@media(max-width:760px){\n  .app-view[data-view="plans"] .plan-grid{max-width:100%}'));
-assert.ok(html.includes('styles.css?v=20261010-centered-plans1'));
+assert.ok(html.includes('styles.css?v=20261010-centered-plans-vertical1'));
 console.log("PLAN_CARDS_CENTERED_COMPACT_SYMMETRIC_RESPONSIVE=PASS");
+
+const frame=findRule('.app-view[data-view="plans"] .workspace-main');
+assert.ok(frame.includes('display:flex'));
+assert.ok(frame.includes('flex-direction:column'));
+assert.ok(frame.includes('justify-content:center'));
+assert.ok(frame.includes('align-items:center'));
+assert.ok(frame.includes('min-height:calc(100dvh - 74px)'));
+const allParts=[
+  '.app-view[data-view="plans"] .plan-grid,',
+  '.app-view[data-view="plans"] .billing-readiness,',
+  '.app-view[data-view="plans"] #billingPlanStatus,',
+  '.app-view[data-view="plans"] .billing-management',
+];
+for(const selector of allParts) assert.ok(css.includes(selector),"MISSING_GROUP_CENTERING:"+selector);
+assert.ok(css.includes('width:100%;\n  max-width:1080px;\n  margin-left:auto;\n  margin-right:auto'));
+assert.ok(section.includes('class="billing-management"'));
+assert.ok(css.includes('@media(max-width:1050px), (max-height:700px)'));
+assert.ok(css.includes('justify-content:flex-start'));
+assert.ok(css.includes('@media(max-width:760px){\n  .app-view[data-view="plans"] .workspace-main'));
+console.log("PLAN_WHOLE_GROUP_VERTICALLY_CENTERED_WITH_MOBILE_SCROLL_SAFETY=PASS");
 
 assert.ok(css.includes('html[data-theme="dark"] .plan-card'));
 assert.ok(css.includes('.plan-card.featured'));
