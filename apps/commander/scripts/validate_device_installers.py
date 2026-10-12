@@ -59,7 +59,7 @@ print("LINUX_INSTALLER_SECRET_ARGV_EXPOSURE=FALSE")
 
 for token in ('platform="WINDOWS"', "/api/device/enroll", "/agent/windows.ps1",
               "ConvertFrom-SecureString", "Register-ScheduledTask", "icacls.exe",
-              'agent_version="0.3.45"', "HARA_COMMANDER_AGENT_UPDATE=PASS",
+              'agent_version="0.3.46"', "HARA_COMMANDER_AGENT_UPDATE=PASS",
               "HARA_COMMANDER_AGENT_UNINSTALL=PASS", "HARA_COMMANDER_AGENT_VERSION=",
               "HARA_COMMANDER_AGENT_DOCTOR=PASS", "/api/device/revoke-self",
               "SERVER_DEVICE_REVOKE=", "HARA_COMMANDER_AGENT_UPDATE_ROLLBACK_READY=TRUE",
@@ -101,7 +101,7 @@ print("WINDOWS_INSTALLER_DEVICE_TOKEN_MEMORY_HYGIENE=PASS")
 assert MANIFEST.get("schema") == "hara.commander-agent-release.v1"
 assert MANIFEST.get("agent_version") == "0.3.41"
 assert 'AGENT_VERSION = "0.3.43"' in LINUX_AGENT
-assert '$AgentVersion = "0.3.45"' in WINDOWS_AGENT
+assert '$AgentVersion = "0.3.46"' in WINDOWS_AGENT
 entries = {item["path"]: item for item in MANIFEST.get("files", [])}
 for rel in ("agent/linux.py", "agent/windows.ps1", "install/linux.sh", "install/windows.ps1"):
     assert rel in entries, f"RELEASE_MANIFEST_MISSING:{rel}"

@@ -1,0 +1,20 @@
+{
+  "schema": "hara.commander-win46-orphan-cloud-terminal-metadata.v1",
+  "commander_tool": "hara.commander_get_recent_tool_calls",
+  "operational_authority": "HARA_SERVICES",
+  "execution_authority": "HARA_SERVICES",
+  "read_only": true,
+  "cloud_call": {
+    "call_id": "HARA-CALL-4ea93468-2003-4c58-928f-9ce6911c378a",
+    "request_id": "HARA-CUSTOMER-MCP-pNmk7MPzQkccsGKxqqO8Xv4DCHkebOvDfFva3zDGrX8",
+    "computer": "HARA_WIN11",
+    "tool_id": "hara.process.run",
+    "state": "EXPIRED",
+    "created_at_utc": "2026-10-12T03:47:18.460Z",
+    "claimed_at_utc": "2026-10-12T03:47:25.136Z",
+    "completed_at_utc": "2026-10-12T04:17:35.456Z",
+    "error_code": "DEVICE_CALL_EXPIRED"
+  },
+  "cryptographic_bridge_receipt_provided": false,
+  "ipc_reconciliation_performed": false
+}

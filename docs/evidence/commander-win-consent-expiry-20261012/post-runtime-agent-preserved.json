@@ -1,0 +1,21 @@
+{
+  "schema": "hara.commander-windows-consent-expiry-live-agent-preserved.v1",
+  "state": "PASS",
+  "transport": "HARA Commander direct MCP -> nucleo-a -> QEMU Guest Agent -> inspection in actual interactive user",
+  "inspection_receipt_sha256": "c8a91897014837abdc1f4add8f152234f09ee9974f982838e3b04a564d09b91d",
+  "signed_live_windows_045_sha256": "c370bff84b283172dcbcc40ee5f426e3b3d09b9181d3227755093d8577443dab",
+  "signed_live_windows_045_still_installed": true,
+  "operator_session_present": true,
+  "operator_process_alive": true,
+  "operator_pid_same_before_and_after": true,
+  "registered_agent_task_state": "Running",
+  "pending_approval": false,
+  "pending_response": false,
+  "approval_mode_changed": false,
+  "real_human_positive_approval_proven": false,
+  "fixture_guest_processes_exited": true,
+  "fixture_checks_r1": 68,
+  "fixture_checks_r2": 86,
+  "close_launch_or_restart_performed": false,
+  "inspection_scheduled_task_was_ephemeral": true
+}

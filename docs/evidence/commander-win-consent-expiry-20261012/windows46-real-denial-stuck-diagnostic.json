@@ -1,0 +1,172 @@
+{
+  "schema": "hara.commander-win46-real-denial-stuck-integration.v1",
+  "state": "HOLD_INTEGRATION_FAILURE",
+  "target_request_id": "HARA-CUSTOMER-MCP-pNmk7MPzQkccsGKxqqO8Xv4DCHkebOvDfFva3zDGrX8",
+  "cloud_state_as_reported_by_root": "EXECUTING",
+  "cloud_claimed_at_utc_as_reported_by_root": "2026-10-12T03:47:25.136Z",
+  "diagnostic_receipt_sha256": "6822f001cf801ffccab2632e6130a20d093dd18ed8651d1f54a613476809cbf0",
+  "read_only_metadata": {
+    "agent_sha256": "71998b7c5e2dae4f4cbcfe80e5413ab1c6ff8e28ad903734cc1f026dfe8765aa",
+    "args_sha_matches": true,
+    "events": [
+      {
+        "at_utc": "2026-10-12T03:32:36.8861133Z",
+        "error_code": null,
+        "event": "SESSION_OPEN",
+        "request_id": null,
+        "state": "AUTHORIZED"
+      },
+      {
+        "at_utc": "2026-10-12T03:32:38.5121562Z",
+        "error_code": null,
+        "event": "AGENT_ONLINE",
+        "request_id": null,
+        "state": "AUTHORIZED"
+      },
+      {
+        "at_utc": "2026-10-12T03:43:28.4537753Z",
+        "error_code": null,
+        "event": "AGENT_OFFLINE",
+        "request_id": null,
+        "state": "OFFLINE"
+      },
+      {
+        "at_utc": "2026-10-12T03:43:28.5102629Z",
+        "error_code": null,
+        "event": "SESSION_CLOSE",
+        "request_id": null,
+        "state": "REVOKED"
+      },
+      {
+        "at_utc": "2026-10-12T03:43:35.4296926Z",
+        "error_code": null,
+        "event": "SESSION_OPEN",
+        "request_id": null,
+        "state": "AUTHORIZED"
+      },
+      {
+        "at_utc": "2026-10-12T03:47:24.7012101Z",
+        "error_code": null,
+        "event": "RECEIVED",
+        "request_id": "HARA-CUSTOMER-MCP-pNmk7MPzQkccsGKxqqO8Xv4DCHkebOvDfFva3zDGrX8",
+        "state": "PENDING"
+      },
+      {
+        "at_utc": "2026-10-12T03:47:24.7408319Z",
+        "error_code": null,
+        "event": "EXECUTING",
+        "request_id": "HARA-CUSTOMER-MCP-pNmk7MPzQkccsGKxqqO8Xv4DCHkebOvDfFva3zDGrX8",
+        "state": "EXECUTING"
+      },
+      {
+        "at_utc": "2026-10-12T03:49:04.5519291Z",
+        "error_code": null,
+        "event": "AGENT_OFFLINE",
+        "request_id": null,
+        "state": "OFFLINE"
+      },
+      {
+        "at_utc": "2026-10-12T03:49:04.6136481Z",
+        "error_code": null,
+        "event": "SESSION_CLOSE",
+        "request_id": null,
+        "state": "REVOKED"
+      },
+      {
+        "at_utc": "2026-10-12T03:49:16.6248554Z",
+        "error_code": null,
+        "event": "AGENT_OFFLINE",
+        "request_id": null,
+        "state": "OFFLINE"
+      },
+      {
+        "at_utc": "2026-10-12T03:49:17.0859967Z",
+        "error_code": null,
+        "event": "SESSION_OPEN",
+        "request_id": null,
+        "state": "AUTHORIZED"
+      },
+      {
+        "at_utc": "2026-10-12T03:49:17.2798316Z",
+        "error_code": null,
+        "event": "AGENT_ONLINE",
+        "request_id": null,
+        "state": "AUTHORIZED"
+      }
+    ],
+    "last_run_utc": "2026-10-12T03:49:15.0000000Z",
+    "last_task_result": 267009,
+    "mutated": false,
+    "nonce_matches": true,
+    "operator_alive": true,
+    "operator_pid": 7572,
+    "operator_start": "2026-10-12T03:49:14.2210344Z",
+    "payload_or_nonce_values_exposed": false,
+    "pending": {
+      "created_at_utc": "2026-10-12T03:47:24.8147410Z",
+      "expires_at_utc": "2026-10-12T03:47:54.8147410Z",
+      "owner_pid": 7524,
+      "request_id": "HARA-CUSTOMER-MCP-pNmk7MPzQkccsGKxqqO8Xv4DCHkebOvDfFva3zDGrX8",
+      "schema": "hara.commander-local-action-approval.v1"
+    },
+    "pending_present": true,
+    "principal_logon_type": "Interactive",
+    "processes": [
+      {
+        "created_at_utc": "2026-10-12T03:49:14.2210340Z",
+        "parent_pid": 6092,
+        "pid": 7572,
+        "role": "OPERATOR",
+        "session_id": 1
+      },
+      {
+        "created_at_utc": "2026-10-12T03:49:15.4104500Z",
+        "parent_pid": 1476,
+        "pid": 2720,
+        "role": "BACKGROUND_AGENT",
+        "session_id": 1
+      }
+    ],
+    "response": {
+      "approved": false,
+      "owner_pid": 7524,
+      "request_id": "HARA-CUSTOMER-MCP-pNmk7MPzQkccsGKxqqO8Xv4DCHkebOvDfFva3zDGrX8",
+      "responded_at_utc": "2026-10-12T03:47:47.4897025Z",
+      "schema": "hara.commander-local-action-response.v1"
+    },
+    "response_approved_is_bool": true,
+    "response_present": true,
+    "runtime": {
+      "agent_version": "0.3.46",
+      "last_runtime_error_at_utc": "",
+      "last_runtime_error_code": "",
+      "last_successful_heartbeat_at_utc": "2026-10-12T03:55:31.5997215Z"
+    },
+    "schema": "hara.commander-win46-stuck-denial-readonly.v1",
+    "start_matches": true,
+    "state": "PASS",
+    "task_state": "Running"
+  },
+  "denial_response_within_original_deadline": true,
+  "no_local_denied_or_expired_event_for_target": true,
+  "pending_and_denied_response_still_present": true,
+  "old_request_owner_differs_current_active_operator": true,
+  "current_agent_and_operator_same_windows_session": true,
+  "state_changes_observed_after_original_deadline": {
+    "session_close_at_utc": "2026-10-12T03:49:04.6136481Z",
+    "current_task_last_run_at_utc": "2026-10-12T03:49:15.0000000Z",
+    "new_session_open_at_utc": "2026-10-12T03:49:17.0859967Z",
+    "origin": "UNKNOWN"
+  },
+  "source_guard_gap": {
+    "description": "Manual console shutdown can stop an Agent started by that console without draining a claimed call; Agent startup does not recover/replay the previously claimed call.",
+    "scope": "RECOVERY_AFTER_STOP_ONLY; does not explain missing denial consumption before deadline by itself.",
+    "source_paths": [
+      "apps/commander/public/agent/windows.ps1:Start-ManualOperatorConsole",
+      "apps/commander/public/agent/windows.ps1:main startup and calls/next loop"
+    ]
+  },
+  "nonce_challenge_payload_or_credentials_exposed": false,
+  "approval_or_task_mutated_by_diagnostic": false,
+  "real_human_positive_approval_proven": false
+}

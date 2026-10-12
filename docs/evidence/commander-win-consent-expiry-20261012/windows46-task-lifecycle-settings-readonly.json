@@ -1,0 +1,24 @@
+{
+  "schema": "hara.commander-win46-readonly-evidence.v1",
+  "diagnostic": {
+    "agent_task_modified": false,
+    "disallow_on_battery": false,
+    "execution_time_limit": "PT72H",
+    "idle_duration": "",
+    "idle_restart_on_idle": false,
+    "idle_stop_on_idle_end": true,
+    "last_run_at_utc": "2026-10-12T03:49:15.0000000Z",
+    "last_task_result": 3221225786,
+    "last_task_result_hex": "0xC000013A",
+    "restart_count": 10,
+    "restart_interval": "PT1M",
+    "schema": "hara.commander-win46-task-lifecycle-settings.v1",
+    "state": "READ_ONLY",
+    "stop_on_battery": false,
+    "task_state": "Ready",
+    "timestamp_utc": "2026-10-12T04:20:27.6379643Z"
+  },
+  "commander_direct_receipt_sha256": "2d041f1bbc86b7b1ca2f59fb7c413d86291c45a707a7b4d02ff7b9a2a83c72f2",
+  "state_origin": "UNKNOWN",
+  "task_modified": false
+}

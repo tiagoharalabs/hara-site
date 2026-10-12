@@ -1,0 +1,13 @@
+{
+  "schema": "hara.commander-windows-full-tool-denial-initial-fixture-failure.v1",
+  "state": "FAIL_FIXTURE_ASSERTION_ONLY",
+  "guest_exit_code": 1,
+  "failed_assertion": "RUN_EXECUTING_EVENT_PRESENT",
+  "cause": "PS51_SINGLETON_PSCUSTOMOBJECT_COUNT_IN_FIXTURE_ASSERTION",
+  "source_sha256": "71998b7c5e2dae4f4cbcfe80e5413ab1c6ff8e28ad903734cc1f026dfe8765aa",
+  "initial_harness_sha256": "4778febb227e34e192215a250eeee9e7a4ca100577939753890a4a765e97951e",
+  "commander_direct_result_receipt_sha256": "05b53d5388130eaf40e9752a2d7ae5274f299f733dc163d5c999c595aa8b3ac9",
+  "live_profile_touched": false,
+  "resolved_by": "windows-ps51-r4b-full-tool-denial-acceptance.json",
+  "source_modified_to_fix_assertion": false
+}

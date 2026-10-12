@@ -1,0 +1,20 @@
+{
+  "any_action_autoapproved": false,
+  "approval_mode": "ASK_EVERY_ACTION",
+  "diagnostic_session_id": 1,
+  "live_agent_sha256": "71998b7c5e2dae4f4cbcfe80e5413ab1c6ff8e28ad903734cc1f026dfe8765aa",
+  "nonce_challenge_payload_or_credentials_exposed": false,
+  "old_signed_45_backup_sha256": "c370bff84b283172dcbcc40ee5f426e3b3d09b9181d3227755093d8577443dab",
+  "operator_pid": 10124,
+  "operator_process_alive": true,
+  "operator_session_id": 1,
+  "operator_start_matches": true,
+  "operator_started_at_utc": "2026-10-12T03:32:35.2222046Z",
+  "pending_request": false,
+  "pending_response": false,
+  "schema": "hara.commander-win46-post-canary-metadata.v1",
+  "state": "PASS",
+  "task_owner_matches_current_interactive_sid": true,
+  "task_state": "Running",
+  "inspection_receipt_sha256": "cdcd22ba8978bd590ef5fe5e7efd61dd36d52fbec95d503fe2771ec6e491041a"
+}

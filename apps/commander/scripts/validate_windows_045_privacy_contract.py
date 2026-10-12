@@ -4,7 +4,9 @@ from pathlib import Path
 import re
 
 ROOT=Path(__file__).resolve().parents[3]
-SOURCE=(ROOT/"apps/commander/public/agent/windows.ps1").read_text(encoding="utf-8")
+# Historical 0.3.45 source is immutable and authenticated by validate_signed_windows_045_v5_rc.py.
+# Candidate expiry fixes have a separate guard; never relax this Read-Host historical contract.
+SOURCE=(ROOT/"apps/commander/release-bundles/commercial-0.3.45-v5-rc/agent/windows.ps1").read_text(encoding="utf-8")
 WORKER=(ROOT/"apps/commander/src/worker.js").read_text(encoding="utf-8")
 def check(code, condition):
  if not condition:raise AssertionError("WINDOWS045_"+code)

@@ -1,0 +1,71 @@
+{
+  "schema": "hara.commander-windows-full-tool-denial-acceptance.v1",
+  "state": "PASS",
+  "checks": 26,
+  "fixture": {
+    "schema": "hara.commander-windows-full-tool-denial-fixture.v1",
+    "state": "PASS",
+    "checks": 26,
+    "passed_checks": [
+      "SOURCE_DISPATCH_INCLUDES_EXECUTING",
+      "RUN_NEGATIVE_BEFORE_DEADLINE",
+      "RUN_NEGATIVE_REPLY_PUBLISHED",
+      "RUN_COMPLETE_CALLED_ONCE",
+      "RUN_COMPLETE_STATE_FAILED",
+      "RUN_COMPLETE_HUMAN_DENIED_CODE",
+      "RUN_RESULT_DENIED_NO_MUTATION",
+      "RUN_OWNED_IPC_CLEANUP",
+      "RUN_COMMAND_NEVER_EXECUTED",
+      "RUN_NO_MANAGED_PROCESS_CREATED",
+      "RUN_EXECUTING_EVENT_PRESENT",
+      "RUN_DENIED_EVENT_PRESENT",
+      "RUN_NO_PASS_EVENT",
+      "START_NEGATIVE_BEFORE_DEADLINE",
+      "START_NEGATIVE_REPLY_PUBLISHED",
+      "START_COMPLETE_CALLED_ONCE",
+      "START_COMPLETE_STATE_FAILED",
+      "START_COMPLETE_HUMAN_DENIED_CODE",
+      "START_RESULT_DENIED_NO_MUTATION",
+      "START_OWNED_IPC_CLEANUP",
+      "START_COMMAND_NEVER_EXECUTED",
+      "START_NO_MANAGED_PROCESS_CREATED",
+      "START_EXECUTING_EVENT_PRESENT",
+      "START_DENIED_EVENT_PRESENT",
+      "START_NO_PASS_EVENT",
+      "START_REAL_CSHARP_WRAPPER_COMPILED_BEFORE_DENIAL"
+    ],
+    "source_sha256": "71998b7c5e2dae4f4cbcfe80e5413ab1c6ff8e28ad903734cc1f026dfe8765aa",
+    "powershell_version": "5.1.26100.9444",
+    "scope": "FROZEN046_AST_FULL_TOOLS_AND_EXACT_DISPATCH_TRY_CATCH",
+    "transport_mocked": true,
+    "local_activity_store_mocked": true,
+    "agent_main_loop_executed": false,
+    "agent_task_touched": false,
+    "real_human_approval_proven": false,
+    "live_profile_touched": false,
+    "production_action_executed": false
+  },
+  "files": [
+    {
+      "bytes": 89715,
+      "name": "windows-candidate.ps1",
+      "sha256": "71998b7c5e2dae4f4cbcfe80e5413ab1c6ff8e28ad903734cc1f026dfe8765aa"
+    },
+    {
+      "bytes": 9531,
+      "name": "test_windows_full_tool_denial_fixture.ps1",
+      "sha256": "b6f8b1e4287bc983c372f925f684d14ade9fc5c6a25c1aad138daf9c1b7c1e81"
+    }
+  ],
+  "windows_powershell_version": "5.1.26100.9444",
+  "commander_direct_stage_receipt_sha256": "094b6b70bd4a929e248e5b20620f35f42d11e9f6c753329a1d31f6bec57cf9f1",
+  "commander_direct_start_receipt_sha256": "ccb51e5d6dad84d7a1e780e5f3539c42dbde878952d3a75ffc54e10f9e6d46f2",
+  "commander_direct_result_receipt_sha256": "6b78027689014efe96ba79c106e30aa860f0367db9148eef60925fc0a10e0dd8",
+  "guest_exit_code": 0,
+  "stderr_present": false,
+  "output_truncated": false,
+  "live_profile_touched": false,
+  "real_human_approval_proven": false,
+  "real_denial_integration_origin": "UNKNOWN",
+  "prior_r4_assertion_failure_corrected": "PS51_SINGLETON_PSCUSTOMOBJECT_COUNT_IN_FIXTURE_ASSERTION_ONLY"
+}

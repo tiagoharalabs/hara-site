@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Offline cryptographic and scope validation of isolated Windows 0.3.45-v4 RC."""
+"""Offline cryptographic and scope validation of immutable Windows 0.3.45-v5 RC."""
 from __future__ import annotations
 import base64
 import hashlib
@@ -15,7 +15,7 @@ NEW=APP/"release-bundles/commercial-0.3.45-v5-rc"
 FILES=("agent/linux.py","agent/windows.ps1","install/linux.sh","install/windows.ps1")
 
 def need(ok,name):
- if not ok:raise AssertionError("WINDOWS044_RC_"+name)
+ if not ok:raise AssertionError("WINDOWS045_RC_"+name)
 def sha(x):return hashlib.sha256(x).hexdigest()
 def unb64(t):return base64.urlsafe_b64decode(t+"="*(-len(t)%4))
 
@@ -55,7 +55,8 @@ def main():
  need(new_win==old_win.replace(b'agent_version="0.3.44"',b'agent_version="0.3.45"'),
       "WINDOWS_INSTALLER_EXTRA_MUTATION")
  windows=(NEW/"agent/windows.ps1").read_bytes()
- need(windows==(APP/"public/agent/windows.ps1").read_bytes(),"WINDOWS_CANDIDATE_SOURCE_DRIFT")
+ need(sha(windows)=="c370bff84b283172dcbcc40ee5f426e3b3d09b9181d3227755093d8577443dab",
+      "IMMUTABLE_SIGNED_V45_AGENT_SHA")
  need(b'$AgentVersion = "0.3.45"' in windows,"WINDOWS_SOURCE_VERSION")
  need(b'WINDOWS_PER_ACTION_APPROVAL_UNSUPPORTED' not in windows,"UNSUPPORTED_APPROVAL_GATE")
  need(b'Invoke-LocalActionApproval' in windows
@@ -73,6 +74,6 @@ def main():
  print(json.dumps({"schema":"hara.commander-windows045-rc-signature-validation.v1",
    "state":"PASS","agent_version":"0.3.45","signature":"RS256_RSA3072",
    "four_files_authenticated":True,"linux_agent_byte_identical":True,
-   "linux_installer_byte_identical":True,"old_v4_preserved":True,
+   "linux_installer_byte_identical":True,"old_v4_preserved":True,"historical_release_immutable":True,
    "production_deployment":False,"customer_agent_modified":False},sort_keys=True))
 if __name__=="__main__":main()

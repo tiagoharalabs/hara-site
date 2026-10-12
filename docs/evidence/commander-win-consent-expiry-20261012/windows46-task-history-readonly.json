@@ -1,0 +1,13 @@
+{
+  "filtered_task_events": [],
+  "history_channel_exists": true,
+  "history_enabled": false,
+  "history_or_task_modified": false,
+  "payload_or_credentials_exposed": false,
+  "record_count": null,
+  "schema": "hara.commander-win46-task-history-readonly.v1",
+  "state": "PASS",
+  "inspection_receipt_sha256": "8c31e75356eff2ef9c60670269d2ee8856d24aa2867badaa0e31fe0340a49979",
+  "old_agent_exit_timing_verifiable": false,
+  "cause_attribution": "UNKNOWN"
+}

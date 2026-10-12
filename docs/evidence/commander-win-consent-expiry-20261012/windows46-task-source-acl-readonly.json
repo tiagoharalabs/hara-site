@@ -1,0 +1,51 @@
+{
+  "schema": "hara.commander-win46-readonly-evidence.v1",
+  "diagnostic": {
+    "actual_paths_sid_payload_or_nonce_exposed": false,
+    "file_acl_metadata": [
+      {
+        "current_sid_rules": [
+          {
+            "inherited": true,
+            "rights": "FullControl",
+            "type": "Allow"
+          }
+        ],
+        "file_role": "pending-action-approval.json",
+        "inheritance_protected": false,
+        "owner_matches_current_sid": true
+      },
+      {
+        "current_sid_rules": [
+          {
+            "inherited": true,
+            "rights": "FullControl",
+            "type": "Allow"
+          }
+        ],
+        "file_role": "action-approval-response.json",
+        "inheritance_protected": false,
+        "owner_matches_current_sid": true
+      }
+    ],
+    "schema": "hara.commander-win46-task-source-acl-readonly.v1",
+    "state": "PASS",
+    "task_actions": [
+      {
+        "execute_is_powershell": true,
+        "file_argument_found": true,
+        "file_matches_installed_target": true,
+        "task_source_sha256": "71998b7c5e2dae4f4cbcfe80e5413ab1c6ff8e28ad903734cc1f026dfe8765aa"
+      }
+    ],
+    "task_file_acl_or_agent_modified": false,
+    "task_logon_type": "Interactive",
+    "task_run_level": "Limited"
+  },
+  "commander_direct_receipt_sha256": "a17fd7e04b1d280c5b37407e350ea37d461059711af978f3a880759d2a1e991e",
+  "state_origin": "UNKNOWN",
+  "real_positive_approval_proven": false,
+  "ipc_modified": false,
+  "task_modified": false,
+  "private_values_exposed": false
+}

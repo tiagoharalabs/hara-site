@@ -1,0 +1,33 @@
+{
+  "schema": "hara.commander-win46-direct-timeout-cleanup-acceptance.v1",
+  "state": "PASS_CLEANUP_ONLY",
+  "scope": "DIRECT_WINDOWS_MCP_TIMEOUT_NEGATIVE_AND_READ_ONLY_POST_DEADLINE_INSPECTION",
+  "direct_call_outcome": "LOCAL_ACTION_APPROVAL_EXPIRED",
+  "direct_call_confirmed_by": "ROOT_AGENT_COMMANDER_DIRECT_TOOL_RESULT",
+  "inspection_receipt_sha256": "f291b3cd3b2eff478845eb0edd3425b72301f0b31f5ca159c07acc9ca55b55b0",
+  "runtime_metadata": {
+    "agent_version": "0.3.46",
+    "focus_close_launch_or_keyboard_performed": false,
+    "human_viewer_focus": "UNKNOWN",
+    "live_agent_sha256": "71998b7c5e2dae4f4cbcfe80e5413ab1c6ff8e28ad903734cc1f026dfe8765aa",
+    "nonce_challenge_payload_or_credentials_exposed": false,
+    "operator_pid": 10124,
+    "operator_process_alive": true,
+    "operator_start_matches": true,
+    "operator_window_title_46_found": false,
+    "operator_window_title_46_visible": false,
+    "pending_request": false,
+    "pending_response": false,
+    "real_human_positive_approval_proven": false,
+    "schema": "hara.commander-win46-direct-timeout-cleanup-runtime.v1",
+    "state": "PASS",
+    "task_state": "Running"
+  },
+  "window_caption_verification": "EXACT_VERSION46_CAPTION_NOT_FOUND",
+  "operator_window_visibility_proven": false,
+  "human_viewer_focus": "UNKNOWN",
+  "real_human_positive_approval_proven": false,
+  "p1_write_cas_interactive_terminal_proven": false,
+  "focus_close_launch_or_keyboard_performed": false,
+  "nonce_challenge_payload_or_credentials_exposed": false
+}

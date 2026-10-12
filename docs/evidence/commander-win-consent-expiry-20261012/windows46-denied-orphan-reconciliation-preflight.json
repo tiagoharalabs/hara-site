@@ -1,0 +1,51 @@
+{
+  "schema": "hara.commander-win46-reconciliation-preflight-evidence.v1",
+  "helper_sha256": "c77c472ab4922067c869c1c4920e0620734e22dfcd6369227f2faf85a4fb121a",
+  "helper_ps51_parser": {
+    "exit_code": 0,
+    "stderr_present": false,
+    "metadata": {
+      "state": "PARSED",
+      "parse_errors": 0,
+      "sha256": "c77c472ab4922067c869c1c4920e0620734e22dfcd6369227f2faf85a4fb121a",
+      "bytes": 9490,
+      "powershell_version": "5.1.26100.9444",
+      "ipc_modified": false
+    }
+  },
+  "diagnostic": {
+    "action": "Inspect",
+    "agent_consumer_absent": true,
+    "agent_top_level_imported": false,
+    "any_approval_generated": false,
+    "approval_mode": "ASK_EVERY_ACTION",
+    "approved": false,
+    "approved_is_bool": true,
+    "call_id": "HARA-CALL-4ea93468-2003-4c58-928f-9ce6911c378a",
+    "cloud_error_code": "",
+    "cloud_receipt_sha256": "",
+    "cloud_terminal_state": "",
+    "config_preserved": true,
+    "current_operator_guard_matches": true,
+    "current_operator_pid": 7572,
+    "current_operator_start": "2026-10-12T03:49:14.2210344Z",
+    "custody_sha_verified": false,
+    "expired_ipc_renamed": false,
+    "nonce_payload_or_credentials_exposed": false,
+    "old_owner_dead": true,
+    "pending_sha256": "c06a2fbac564ca245effee7a92ece813ad1c37efd00c486aedb31112e4e0117c",
+    "request_id": "HARA-CUSTOMER-MCP-pNmk7MPzQkccsGKxqqO8Xv4DCHkebOvDfFva3zDGrX8",
+    "response_sha256": "ff9bba228a2dae890879e83620de9ccc13464a34dcef0172b621aa8b17759e0a",
+    "schema": "hara.commander-win46-denied-orphan-reconciliation.v1",
+    "state": "READ_ONLY_PREPARED",
+    "task_definition_preserved": true,
+    "task_restarted": false,
+    "task_state_before": "Ready"
+  },
+  "commander_direct_inspection_receipt_sha256": "793141efd676768287a75a5e7c339d51c017361362c9b7c7d3f2f768febe5da5",
+  "commander_direct_parser_receipt_sha256": "eeaef39ecee6cc26a71f70120fbbca7adf4f6e2c8a7f0486caab33a4fa3f4ac2",
+  "cloud_terminal_confirmed": false,
+  "reconciliation_executed": false,
+  "task_modified": false,
+  "positive_human_approval_proven": false
+}

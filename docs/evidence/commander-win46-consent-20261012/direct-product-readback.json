@@ -1,0 +1,135 @@
+{
+  "schema": "hara.commander-direct-product-regression.v1",
+  "date_brt": "2026-10-11",
+  "connector": "H.A.R.A. Commander",
+  "baseline_used_for_these_checks": false,
+  "base_commit": "bf91d52394b457fd7f0cfc76f786ab58ff2d0559",
+  "checks": [
+    {
+      "name": "terminal_interactive",
+      "state": "PASS",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "0b6808240122bd04191037db172a9479ba77544b7719fbcbe91481203fd68ebb",
+      "blocker": null
+    },
+    {
+      "name": "terminal_post_exit",
+      "state": "PASS",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "447b086fe89af4a666157669ee4f161084058656ec245eab5a6b57e7e4da5dd7",
+      "blocker": null
+    },
+    {
+      "name": "file_create",
+      "state": "PASS",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "e0f9a2f38e0e6d592dffe663b6dcf0129723723bc0f65c77403b98816244e449",
+      "blocker": null
+    },
+    {
+      "name": "file_cas_correct",
+      "state": "PASS",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "b958606601d8f414d9d396a8939cf1acfdaea7a7b3e681729713c91a22166966",
+      "blocker": null
+    },
+    {
+      "name": "file_cas_stale_rejected",
+      "state": "DENIED",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": null,
+      "blocker": "FILE_PRECONDITION_FAILED"
+    },
+    {
+      "name": "file_readback_after_rejection",
+      "state": "PASS",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "ba2b72e52225d94c8c5d9848b88907fe17fcb17727bf400fa1dd4b95f08a1457",
+      "blocker": null
+    },
+    {
+      "name": "file_cleanup_with_sha",
+      "state": "PASS",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "ec1d79094c2c5c19b90e3e37ed20646f06384ecfcbffcbe33f40e47bc1282109",
+      "blocker": null
+    },
+    {
+      "name": "windows_info",
+      "state": "PASS",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "957757ba796ceffafeba8adc04c34a0e35224ed8345cc63d20038832e0694176",
+      "blocker": null
+    },
+    {
+      "name": "windows_sessions",
+      "state": "PASS",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "9a1e6eb57d60f4ce7f81de65475f5eb1c2d7e5547445bc9d92aaa08bbdd61780",
+      "blocker": null
+    },
+    {
+      "name": "windows46_info",
+      "state": "PASS",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "6f60dd0845bd514f15cfba987a801f138d0a92d7969fa7a6c64501b18cef33f5",
+      "blocker": null
+    },
+    {
+      "name": "windows46_sessions",
+      "state": "PASS",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "2a968f6ae55c851b582676f8c6a3c03fa626930715d60139f95db17e37872480",
+      "blocker": null
+    },
+    {
+      "name": "windows46_hostname_timeout",
+      "state": "DENIED",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": null,
+      "blocker": "LOCAL_ACTION_APPROVAL_EXPIRED"
+    }
+  ],
+  "terminal": {
+    "interactive_input": "PROBE_OK",
+    "exit_code": 0,
+    "expected_output_lines": 120,
+    "unique_output_lines_observed": 120,
+    "post_exit_retention_pass": true
+  },
+  "files": {
+    "utf8_readback_pass": true,
+    "stale_sha_rejected_without_write": true,
+    "readback_after_rejection": "HARA_DIRECT_PROBE=02; UTF8=ação",
+    "synthetic_fixture_deleted_with_current_sha": true,
+    "reversible_preimages_preserved": true
+  },
+  "windows": {
+    "initial_version_observed": "0.3.45",
+    "version_after_canary": "0.3.46",
+    "approval_mode": "ASK_EVERY_ACTION",
+    "managed_sessions": 0,
+    "human_positive_approval": false,
+    "direct_hostname": "LOCAL_ACTION_APPROVAL_EXPIRED",
+    "execution_performed": false,
+    "deadline_files_cleanup_confirmed": true,
+    "console_visibility_confirmed": false,
+    "human_focus": "UNKNOWN",
+    "direct_timeout_request_id": "HARA-CUSTOMER-MCP-IoCUjwcqb4xX3IBzU3Z23W86r3N-6_lNLEW02FKX_Yo"
+  },
+  "fleet_direct_list": {
+    "linux_online": 5,
+    "linux_channel_offline": [
+      "sentinela-c",
+      "ninja-blue"
+    ],
+    "host_power_state_inferred": false
+  },
+  "limits": [
+    "Linux functional probe does not certify Windows mutating execution.",
+    "Synthetic Windows harness does not replace human consent through the direct product MCP.",
+    "No public deployment or 1000-customer soak performed."
+  ],
+  "recorded_at_utc": "2026-10-12T02:46:15.887Z",
+  "updated_at_utc": "2026-10-12T03:46:18.690Z"
+}

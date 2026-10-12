@@ -1,4 +1,14 @@
-# H.A.R.A. Commander — CURRENT (11/10/2026, Windows 0.3.45 online; consentimento humano HOLD)
+# H.A.R.A. Commander — CURRENT (12/10/2026, Windows canário 0.3.46; aceite humano pendente)
+
+## Windows 0.3.46-v6 — expiração corrigida, canário privado aplicado
+
+Documento atual: **docs/operations/HARA_COMMANDER_WINDOWS_046_EXPIRY_RC_20261012.md**. Fonte e RC assinada: `71998b7c5e2dae4f4cbcfe80e5413ab1c6ff8e28ad903734cc1f026dfe8765aa`. **93/93 regressões no Windows PowerShell 5.1 real e 91/91 no gate completo offline.** A janela não bloqueia após deadline; publicação, consumo, limpeza e revogação de sessão foram endurecidos. `ASK_EVERY_ACTION` e prazo de 30 segundos permanecem.
+
+Canário da VM atualizado de 0.3.45 para **0.3.46 assinada**, com backup verificado, identidade/configuração e definição da tarefa preservadas. `device.info` e `process.sessions` pelo **H.A.R.A. Commander direto** PASS, zero sessões. Uma chamada real `hostname` expirou sem aceite; inspeção pós-timeout comprovou pedido/resposta limpos, operador ativo e tarefa Running. **Visibilidade/foco da janela e aprovação humana positiva continuam pendentes**, assim como escrita/terminal Windows mutantes via MCP. Nenhuma aprovação foi automatizada.
+
+A RC v6 é privada: esta frente não promoveu downloads Cloudflare nem mudou Stripe. Releases históricas e Linux preservados. Os testes Linux diretos de interação/120 linhas pós-exit/UTF-8/CAS correto e obsoleto passaram. A listagem direta marcou C e Ninja Blue com canal OFFLINE, sem inferir energia do host ou reiniciar máquinas. Alterações das outras frentes foram preservadas.
+
+O handoff 0.3.45 abaixo é histórico para a versão Windows; procedimentos de autorização e pendências comerciais continuam relevantes. Não tratar suas versões antigas como runtime atual.
 
 ## Handoff para próxima frente — GitHub e canário Windows (11/10/2026)
 
