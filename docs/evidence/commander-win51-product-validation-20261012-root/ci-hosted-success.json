@@ -1,0 +1,14 @@
+{
+  "agent_or_bundle_changed_by_ci_fix": false,
+  "agent_source_sha256": "4c563987986249d78c76258d062a4d360ffb88199539429ea97c2f346644656a",
+  "checked": 115,
+  "conclusion": "success",
+  "failed": 0,
+  "head_sha": "b4d053db8e955171c859272dbfc67de752c63a1e",
+  "html_url": "https://github.com/tiagoharalabs/hara-site/actions/runs/38323042488",
+  "passed": 115,
+  "run_id": 38323042488,
+  "schema": "hara.commander-windows51-hosted-ci-success.v1",
+  "state": "PASS",
+  "status": "completed"
+}

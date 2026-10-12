@@ -34,3 +34,7 @@ Uma publicação paralela colocou manifesto público41 com fontes incompatíveis
 Evidências próprias: `docs/evidence/commander-win51-product-validation-20261012-root/`. Código51: `4da72a6973981f462f5bf6595d36ba72898728ab`. A versão51 permanece canário privado; o download público continua43.
 
 Há dois defeitos de metadados registrados: o envelope Windows retorna `mutation_performed=false` mesmo quando a ação executou, e o replay redigido pode perder `risk_class=PROCESS_EXECUTION`. Os gates de autorização continuam anteriores aos efeitos; estes campos ainda exigem correção. As sessões Windows validadas são comandos PowerShell por pipes; ConPTY e stdin de aplicações arbitrárias não foram certificados. Cobrança, Stripe, soak e mil clientes reais continuam fora desta aceitação. O resultado é **PASS do núcleo funcional Windows**, sem certificação de disponibilidade geral.
+
+## CI hospedado concluído
+
+GitHub Actions **38323042488 SUCCESS /115 de115** no código b4d053db8e955171c859272dbfc67de752c63a1e. O único ajuste após a prova VM foi tornar o diretório temporário do teste de empacotamento portável; os13 guards de tamper/escopo/imutabilidade foram preservados. Fonte instalada e bundles assinados não mudaram. O primeiro run38321663602/114 de115 permanece histórico, sem ser declarado PASS. Evidência: ci-hosted-success.json.
