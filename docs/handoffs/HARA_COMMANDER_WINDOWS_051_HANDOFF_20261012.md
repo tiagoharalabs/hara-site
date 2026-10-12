@@ -1,6 +1,6 @@
 # H.A.R.A. Commander — Windows, 12/10/2026
 
-Estado: homologação parcial do produto. A VM executa o Agent privado 0.3.50 em SESSION_TRUSTED. A correção 0.3.51 está assinada, autenticada dentro da VM e pronta para troca, aguardando o término de uma sessão de terminal ativa.
+Estado: fluxo básico MCP homologado na VM Founder com Agent privado 0.3.51 e SESSION_TRUSTED. Execução, leitura/escrita UTF-8, CAS e terminal interativo com Unicode passaram pelo Commander real. A homologação comercial completa permanece aberta.
 
 ## Provas pelo Commander direto
 
@@ -28,10 +28,18 @@ SESSION_TRUSTED está ativo: abrir a sessão autoriza suas operações; as chama
 
 A correção do cabeçalho JSON UTF-8 do relay foi publicada em produção, versão Cloudflare 3fd724aa-afdb-4b20-a360-b0a013a02c2a. O estágio de implantação preservou os assets anteriores; os bundles .50/.51 continuam privados e o download público .43 foi preservado. O teste unitário do cabeçalho passou em 43 cenários. A sondagem pública /api/health recebeu 403 text/plain da camada de acesso e não é prova do cabeçalho JSON do Worker.
 
-## Próximo passo concreto
+## Prova real final da 0.3.51
 
-Há uma sessão de terminal RUNNING na VM: HARA-PROC-4df86c89f5394828861110c4550f5a67, PID 5448, iniciada em 2026-10-12T22:58:37.6307987Z. Uma leitura limitada de saída foi recusada com IOEXCEPTION; nenhum conteúdo foi impresso e a sessão foi preservada. Os controles de troca exigem ausência de sessões ativas.
+A sessão externa terminou antes da troca. O canário .50 → .51 passou com zero processos de Agent no ponto de substituição, backups privados, configuração byte a byte e tarefa preservadas. Console reaberto pela shell do usuário; fonte instalada 4c563987986249d78c76258d062a4d360ffb88199539429ea97c2f346644656a. Operator PID 5412 permaneceu vivo e o Agent ficou ONLINE.
 
-Após sua conclusão: colher metadados novos, parar a sessão/worker com identidade exata, aplicar o canário assinado .50 → .51 preservando configuração/tarefa/backups, abrir o console pela shell do usuário e repetir pelo MCP real o comando Unicode, escrita com CAS e terminal de 120 linhas com emoji/CJK. O launcher por tarefa temporária encerrou a primeira sessão; ShellExecute manteve a sessão seguinte e foi comprovado pelas chamadas reais.
+Versão .51 confirmada pelo MCP real, recibo e211a9ba0c85a1616d9b840b546e0f9cfac07a58a5e7430999d229a6b88c4488. Execução literal Unicode passou, recibo 30fb85162fb66a1c3903eb821712d4cb2a638f2c2fed8cc39557cdf8129e0fef.
 
-A homologação completa e a publicação comercial permanecem abertas. As provas aqui cobrem a VM Founder e testes locais; não são prova de cobrança Stripe, soak prolongado ou carga real de mil clientes.
+O construtor do terminal preservou "🚀 日本語". A interação devolveu 120 linhas mais marcador Unicode, total 122, exit 0 e output_pending=false; recibo c8909131c5ea2f984748198b8cdabc46ee6e22d6f22aa99d904c968fd98fdbeb. O marcador final foi "HARA51_INTERACTION_PASS: Olá ação 🚀 日本語".
+
+Arquivo inicial: 90 bytes, SHA 25c582bc160431e6344aca1146b3e04c3f5f235e72338effce384340eda25ad0. Reescrita com SHA correto passou. SHA antigo foi recusado com FILE_PRECONDITION_FAILED e mutation_performed=false. Verificação física posterior: 116 bytes, SHA bab6d868800f44aa2a79b97c7b0e3bf7bf93cae7d3914bcf496c6e219d7eb3cd. Leitura pelo MCP preservou todo o texto Unicode, recibo a87a57a1f3cdb2404f1b425475b2c8e6f644201cb616f2e0911f3ceb6b53f4fb.
+
+As chamadas de execução/escrita/entrada passaram sem aprovação individual; get_config confirmou SESSION_TRUSTED, process_execution_requires_local_approval=false e ONLINE. Fechar a sessão continua revogando a autorização.
+
+Uma leitura suplementar do JSON bruto de recibo expirou: HARA-CALL-8fc82367-c9b8-4f99-a16b-ad89d29cfc5c, reconciliada como DEVICE_CALL_EXPIRED. Não foi reenviada. Fica como observação diagnóstica; a leitura do arquivo de homologação e os recibos MCP das operações passaram.
+
+Evidências completas: docs/evidence/commander-win51-unicode-input-20261012/live-product-proof.json. A publicação comercial completa permanece aberta: estas provas cobrem a VM Founder e testes locais, sem comprovar Stripe, soak prolongado ou carga real de mil clientes.

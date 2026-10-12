@@ -1,0 +1,1 @@
+{"action_preapproved": false, "agent_version": "0.3.51", "approval_mode": "SESSION_TRUSTED", "launcher_probe_pid": 1692, "owner_parent_pid": 1692, "owner_parent_process_name": "powershell.exe", "owner_pid": 5412, "owner_started_at_utc": "2026-10-12T23:11:24.8604088Z", "state": "PASS", "task_state": "Running"}

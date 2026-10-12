@@ -1,0 +1,118 @@
+{
+  "schema": "hara.commander-win51-root-control-metadata.v1",
+  "observed_at_utc": "2026-10-12T23:10:08.585Z",
+  "computer": "HARA_WIN11",
+  "calls": [
+    {
+      "call_id": "HARA-CALL-ede47ffb-0354-4239-ba15-d57805394c4f",
+      "effective_state": "COMPLETED",
+      "tool_id": "hara.process.sessions",
+      "completed_at_utc": "2026-10-12T23:09:32.050Z"
+    },
+    {
+      "call_id": "HARA-CALL-a8d3ab9e-a33b-4f8b-93a4-95a9e93866a9",
+      "effective_state": "COMPLETED",
+      "tool_id": "hara.device.info",
+      "completed_at_utc": "2026-10-12T23:09:28.633Z"
+    },
+    {
+      "call_id": "HARA-CALL-e038631f-16ce-45e1-8e80-7f808dbe5ed0",
+      "effective_state": "COMPLETED",
+      "tool_id": "hara.device.info",
+      "completed_at_utc": "2026-10-12T23:09:25.335Z"
+    },
+    {
+      "call_id": "HARA-CALL-64e7deda-9378-488a-b9f4-2793723b917a",
+      "effective_state": "COMPLETED",
+      "tool_id": "hara.ping",
+      "completed_at_utc": "2026-10-12T23:09:22.021Z"
+    },
+    {
+      "call_id": "HARA-CALL-cd26d8ed-559f-4489-a722-2651586dd572",
+      "effective_state": "COMPLETED",
+      "tool_id": "hara.process.output",
+      "completed_at_utc": "2026-10-12T23:08:53.897Z"
+    },
+    {
+      "call_id": "HARA-CALL-5248eb35-4b20-4643-8517-b1429d5ba90b",
+      "effective_state": "COMPLETED",
+      "tool_id": "hara.process.interact",
+      "completed_at_utc": "2026-10-12T23:05:05.999Z"
+    },
+    {
+      "call_id": "HARA-CALL-59f5832c-ca0e-46ca-9a05-464bff43b368",
+      "effective_state": "COMPLETED",
+      "tool_id": "hara.process.sessions",
+      "completed_at_utc": "2026-10-12T23:05:02.738Z"
+    },
+    {
+      "call_id": "HARA-CALL-0e9a413f-101b-4f9c-8340-81aee02a6939",
+      "effective_state": "FAILED",
+      "tool_id": "hara.process.output",
+      "completed_at_utc": "2026-10-12T23:04:00.143Z"
+    },
+    {
+      "call_id": "HARA-CALL-f04b4b49-c015-4546-bf2f-24d7b45a902e",
+      "effective_state": "COMPLETED",
+      "tool_id": "hara.process.sessions",
+      "completed_at_utc": "2026-10-12T23:02:15.308Z"
+    },
+    {
+      "call_id": "HARA-CALL-b107883d-3476-4141-885b-8b2b1245576e",
+      "effective_state": "COMPLETED",
+      "tool_id": "hara.ping",
+      "completed_at_utc": "2026-10-12T23:01:30.006Z"
+    },
+    {
+      "call_id": "HARA-CALL-f54ebf1e-ab15-4e7c-8135-99b57c367576",
+      "effective_state": "COMPLETED",
+      "tool_id": "hara.process.sessions",
+      "completed_at_utc": "2026-10-12T23:00:32.733Z"
+    },
+    {
+      "call_id": "HARA-CALL-3b17f53b-fba0-421d-963c-e7584144a878",
+      "effective_state": "COMPLETED",
+      "tool_id": "hara.process.start",
+      "completed_at_utc": "2026-10-12T22:58:38.714Z"
+    },
+    {
+      "call_id": "HARA-CALL-c4db414f-894b-42ab-b2d1-4004e78ec49f",
+      "effective_state": "FAILED",
+      "tool_id": "hara.files.write",
+      "completed_at_utc": "2026-10-12T22:54:08.595Z"
+    },
+    {
+      "call_id": "HARA-CALL-57bdda0d-612b-4f53-b67b-17bb45db4322",
+      "effective_state": "COMPLETED",
+      "tool_id": "hara.files.read",
+      "completed_at_utc": "2026-10-12T22:52:54.092Z"
+    },
+    {
+      "call_id": "HARA-CALL-f76b5ad5-dda4-45da-9cf2-c61721d9d906",
+      "effective_state": "COMPLETED",
+      "tool_id": "hara.process.output",
+      "completed_at_utc": "2026-10-12T22:52:50.556Z"
+    },
+    {
+      "call_id": "HARA-CALL-b27e77d4-9375-437f-ad79-b6a0b3b0049f",
+      "effective_state": "COMPLETED",
+      "tool_id": "hara.process.output",
+      "completed_at_utc": "2026-10-12T22:52:47.306Z"
+    }
+  ],
+  "all_recent_calls_terminal": true,
+  "historical_session_count": 1,
+  "active_session_count": 0,
+  "historical_sessions_all_exited": true,
+  "sessions": [
+    {
+      "finished_at_utc": "2026-10-12T23:08:53.0788981Z",
+      "started_at_utc": "2026-10-12T22:58:37.6307987Z",
+      "pid": 5448,
+      "buffer_truncated": false,
+      "session_id": "HARA-PROC-4df86c89f5394828861110c4550f5a67",
+      "state": "EXITED"
+    }
+  ],
+  "historical_sessions_receipt_sha256": "ace05b1b29adcd6fc21863fbf30cf2b2c01ee87c47155e10736c51959c146655"
+}

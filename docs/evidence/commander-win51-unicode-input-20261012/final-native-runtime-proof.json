@@ -1,0 +1,20 @@
+{
+  "config_sha256": "ecf734ae64557ba51767268efa94beab1b924ff5b8145afdd80d17c50078e5b6",
+  "marker_present": true,
+  "owner_alive": true,
+  "owner_pid": 5412,
+  "pending": false,
+  "reply": false,
+  "runtime": {
+    "agent_version": "0.3.51",
+    "last_runtime_error_at_utc": "",
+    "last_runtime_error_code": "",
+    "last_successful_heartbeat_at_utc": "2026-10-12T23:15:38.7196868Z",
+    "schema": "hara.commander-agent-runtime-status.v1",
+    "started_at_utc": "",
+    "updated_at_utc": "2026-10-12T23:15:38.7219843Z"
+  },
+  "source_sha256": "4c563987986249d78c76258d062a4d360ffb88199539429ea97c2f346644656a",
+  "state": "PASS",
+  "task_state": "Running"
+}

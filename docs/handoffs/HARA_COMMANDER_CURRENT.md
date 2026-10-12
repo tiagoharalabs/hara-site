@@ -353,6 +353,6 @@ Novo refinamento autorizado da UI no portal público (sem alterar cores/identida
 
 Fonte e contrato: docs/operations/HARA_COMMANDER_DEVICES_MINIMALIST_UI_20261010.md. Gate offline 54/54 PASS, DEV Worker versão 636d9e2f-883c-4a0d-96e1-8280ee2ee4ad com SHA exato 11/11 e health 200. Bundle assinado comercial v0.3.43 e agentes Founder v0.3.44 não foram tocados. Registrar versão PROD depois da promoção e readback.
 
-## Windows 12/10/2026 — homologação parcial
+## Windows 12/10/2026 — fluxo básico MCP aprovado na VM
 
-VM com .50 privada e SESSION_TRUSTED, confirmada pelo Commander direto. Execução Unicode, arquivo UTF-8 físico e CAS passaram; terminal retornou 120 linhas, mas perdeu emoji/CJK na entrada literal. .51 corrige stdin, está assinada e validada dentro da VM: 511 verificações nativas e 115/115 no gate integrado. Troca .50 → .51 aguarda uma sessão de terminal ativa (PID 5448), que foi preservada. Ainda falta prova MCP real da .51. Detalhes e hashes: HARA_COMMANDER_WINDOWS_051_HANDOFF_20261012.md. Download público .43 e Linux preservados; nenhuma declaração de homologação comercial completa.
+Agent privado .51 instalado e ONLINE, com SESSION_TRUSTED. Commander direto confirmou versão, execução Unicode, escrita/leitura física UTF-8, CAS positivo e recusa de SHA antigo sem mutação. Terminal recebeu literal Unicode, devolveu 120 linhas e marcador com emoji/CJK, exit 0 e drenagem completa. Fonte 4c563987986249d78c76258d062a4d360ffb88199539429ea97c2f346644656a; configuração e tarefa preservadas. 511 verificações nativas e 115/115 no gate integrado. Evidências e limites: HARA_COMMANDER_WINDOWS_051_HANDOFF_20261012.md. Download público .43 e Linux preservados. A homologação comercial completa, escala real, soak e Stripe não foram declarados concluídos.

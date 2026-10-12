@@ -1,0 +1,164 @@
+{
+  "agent": {
+    "approval_mode": "SESSION_TRUSTED",
+    "approval_timeout_seconds": 900,
+    "operator_pid": 4140,
+    "operator_started_at_utc": "2026-10-12T21:13:03.0649236Z",
+    "source_sha256": "7b51d2f243228f27aaf742086fe012c73bc17cd8c180a4f9abbcb1e2c51f3080",
+    "state": "ACTIVE_CONFIRMED_BY_COMMANDER_DIRECT",
+    "task_state": "Running",
+    "version": "0.3.49"
+  },
+  "approval_challenges_included": false,
+  "candidate50": {
+    "final_source_sha256": null,
+    "final_source_state": "STILL_CHANGING_DURING_PROCESS_ENCODING_REVIEW",
+    "installed": false,
+    "native_http_fixture_checks": 30,
+    "native_http_fixture_state": "PASS",
+    "real_product_stdin_retest_state": "PENDING",
+    "real_product_utf8_retest_state": "PENDING",
+    "root_input_rename_intermediate_source_sha256": "42c1c9e75f8ef2e6e654d800ddae610310404a55be5d0d0682aa3801ce5ace06",
+    "signed": false
+  },
+  "cas_protection": {
+    "raw_final_file_bytes": 66,
+    "raw_final_file_sha256": "d540d43e240254af78fd4c7b050dbfc7d15d3c5db19ea1763270be1be181db62",
+    "raw_metadata_receipt_sha256": "1fd31dfae780e7e976ea776e74b9f8d4d2e647da2554496c2a44c9aff7d13345",
+    "repeat_stale_sha_error": "FILE_PRECONDITION_FAILED",
+    "state": "PASS_PRODUCT_DIRECT_WITHOUT_NEW_PROMPT",
+    "updated_content_preserved_after_rejection": true,
+    "utf8_accents_fidelity_closed_by_this_test": false,
+    "write_expected_sha256": "426adfb6fb5153082316592e27f758dfb5afa29c5767a517193b850bcc58b6c1",
+    "write_receipt_sha256": "46fb090d17eb33364aa436aa4e423e2b88463469ff2b6b5352d416c60f44b3b4"
+  },
+  "credentials_included": false,
+  "fifteen_minutes_real_wall_clock_homologated": false,
+  "git_commit_performed": false,
+  "git_push_performed": false,
+  "historical_snapshot": true,
+  "hostname": {
+    "authorization_source": "LOCAL_INDIVIDUAL_APPROVAL",
+    "call_id": "HARA-CALL-892f7dfe-df74-44f3-bed8-b082ede767de",
+    "human_approval_state": "APPROVED",
+    "local_authorization_mode": "ASK_EVERY_ACTION",
+    "receipt_sha256": "3a9411069454273a291e433038f6fc53d0a321be814ef69a32afefe856ea0779",
+    "request_id": "HARA-CUSTOMER-MCP-tcGmEAeqgKVUUCtr8elzJYONsq3FySINTH7prOjdkr4",
+    "state": "PASS"
+  },
+  "hostname_session_trusted": {
+    "authorization_source": "LOCAL_OPERATOR_SESSION",
+    "call_id": "HARA-CALL-44e3cbfb-e0e3-44de-8ca0-0465b28fb986",
+    "human_approval_required": false,
+    "local_authorization_mode": "SESSION_TRUSTED",
+    "receipt_provenance": "ROOT_VERIFIED_PHYSICAL_WINDOWS_RECEIPT",
+    "receipt_sha256": "657e743b75f3f05166301cbbba1f569be510a4a26ba7331bdd720a7183f6bbaa",
+    "state": "PASS"
+  },
+  "initial_write": {
+    "actual_bytes": 97,
+    "actual_sha256": "426adfb6fb5153082316592e27f758dfb5afa29c5767a517193b850bcc58b6c1",
+    "call_id": "7ff8cf21-da7f-4260-88cf-ee0a4b1a7568",
+    "execution_state": "PASS",
+    "expected_bytes": 89,
+    "expected_sha256": "d2db30144965bb9c1e6fb0674af17e2099908f4d115f52b137face8f64a98655",
+    "native_content_equal": false,
+    "native_has_mojibake": true,
+    "receipt_sha256": "26101351f603778a6d9971289329a77b000dbba88f206ec710d4426a692deade",
+    "root_cause_state": "UNDER_INVESTIGATION",
+    "text_fidelity_state": "FAIL_UTF8_MOJIBAKE"
+  },
+  "installation": {
+    "any_action_autoapproved": false,
+    "backup_verified": true,
+    "configuration_byte_identical": true,
+    "evidence_authority": "LAB_QGA",
+    "preservation_scope": "AT_R3_INSTALLATION_BEFORE_AUTHORIZED_MODE_CHANGE",
+    "state": "PASS",
+    "task_definition_preserved": true
+  },
+  "integration_base_commit": "680cf20df32b6ac1d221244c151fc6f4bb617ff6",
+  "integration_branch": "local/commander-win50-utf8-20261012",
+  "integration_worktree": "/tmp_hara/commander-win50-utf8-20261012",
+  "managed_terminal": {
+    "complete_terminal_homologated": false,
+    "graceful_stop": {
+      "exit_code": 0,
+      "pid": 6380,
+      "state": "EXITED"
+    },
+    "interact_execution_state": "PASS",
+    "interact_receipt_sha256": "5d446276683337a52eb21cc05c73b7a65c9c83ec369a77d8335e855d9d2b0546",
+    "native_csharp_fixture_state": "FAIL_UNDER_INVESTIGATION",
+    "native_diagnostic": {
+      "automatic_input_variable_chars": 0,
+      "variant_preserved_chars": 102
+    },
+    "start_receipt_sha256": "2ee6dbcb86859d8fe5da4db56ff4eb8904eb7e59b6d9e975acdf1f8e20db3126",
+    "start_state": "PASS_HUMAN_APPROVED",
+    "stdin_fidelity_state": "FAIL_INPUT_LOST"
+  },
+  "pending": [
+    "UTF8_HTTP_WRITE_REAL_PRODUCT_RETEST",
+    "UNICODE_PROCESS_OUTPUT_REAL_PRODUCT_RETEST",
+    "STDIN_CORRECTION_AND_REAL_PRODUCT_RETEST",
+    "WINDOWS_INTERACTIVE_TERMINAL_COMPLETION",
+    "WINDOWS_RECOVERY",
+    "FINAL_WATCHER_EVIDENCE_AND_GATES"
+  ],
+  "preserved_assets": {
+    "linux_source_unchanged": true,
+    "provenance": "ROOT_VERIFIED_CURRENT_STATE",
+    "public_windows43_download_unchanged": true
+  },
+  "private_configuration_content_included": false,
+  "process_output_utf8": {
+    "actual_output": "Ol\ufffd - a\ufffd\ufffdo - ??",
+    "agent_version": "0.3.49",
+    "command_input_kind": "ASCII_COMMAND_CONSTRUCTING_UNICODE_WITH_CHAR_CODES",
+    "expected_output": "Ol\u00e1 - a\u00e7\u00e3o - \ud83d\ude80",
+    "local_authorization_mode": "SESSION_TRUSTED",
+    "new_prompt_required": false,
+    "receipt_sha256": "08d2dd962333710f2b2beb56600911484fc2ff1dc1d2bf32554b3f50fc16b885",
+    "root_cause_state": "PROCESS_ENCODING_REVIEW_IN_PROGRESS",
+    "scope": "CONCRETE_PROCESS_OUTPUT_FAILURE_IN_ADDITION_TO_HTTP_WRITE",
+    "state": "FAIL_UNICODE_OUTPUT_CORRUPTION"
+  },
+  "product_surface": "H.A.R.A. Commander direct",
+  "raw_agent_receipt_payload_included": false,
+  "report_date": "2026-10-12",
+  "reported_facts_provenance": "ROOT_VERIFIED_COMMANDER_DIRECT_RESULTS",
+  "schema": "hara.commander-win49-real-product-homologation.v1",
+  "session_authorization": {
+    "authorization_revoked_on_operator_window_close": true,
+    "config_capabilities_confirmed": {
+      "local_session_authorizes_governed_mutations": true,
+      "process_execution_requires_local_approval": false
+    },
+    "current_configuration_sha256": "ecf734ae64557ba51767268efa94beab1b924ff5b8145afdd80d17c50078e5b6",
+    "explicit_user_preference": "DO_NOT_REPEAT_APPROVALS_WITHIN_THE_OPEN_OPERATOR_SESSION",
+    "mcp_no_new_prompt_confirmation": "PASS",
+    "mode": "SESSION_TRUSTED",
+    "mode_change_nucleo_receipt_sha256": "d99f10cb5ad91180d4d116649a01898404c818b64dd06ffc8c56d45095aaa9b7",
+    "old_configuration_backup_sha256": "e8810f67c0ccaa8780a401f767e5ff99660def8d8815b7288c7a9e4d156bc7f8",
+    "operator_session_pid": 4140,
+    "other_configuration_keys_semantically_preserved": true,
+    "permanent_authorization": false,
+    "source49_supports_mode": true
+  },
+  "state": "PARTIAL_PASS_UTF8_AND_STDIN_BLOCKERS",
+  "storage_mirror_divergence": {
+    "github_confirmed_ref": "680cf20df32b6ac1d221244c151fc6f4bb617ff6",
+    "shared_ancestor": "2cf10e5cac0d44f6fd9c01211053feb6afaa0944",
+    "state": "PRESERVED_NOT_MERGED",
+    "storage_ref": "092f35afc52827d6c5584f0401e9f60eaeb3d985"
+  },
+  "superseded_by": "docs/evidence/commander-win51-unicode-input-20261012/live-product-proof.json",
+  "tracked_result_repeat": {
+    "additional_device_calls": 0,
+    "additional_usage_units": 0,
+    "metadata_redacted": true,
+    "same_receipt": true,
+    "state": "PASS"
+  }
+}
