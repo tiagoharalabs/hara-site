@@ -1,3 +1,17 @@
+# H.A.R.A. Commander — CURRENT (12/10/2026; Windows 49 real e aceite humano positivo, testes em curso)
+
+**O primeiro aceite humano positivo pelo MCP foi comprovado no Windows 49.** A chamada própria de teste hostname, HARA-CALL-6843883f-641b-42e2-a7a1-45a94a3675c0, recebeu claim às 21:21:17.259Z e mostrou PASS local às 21:23:23Z. A imagem enviada pelo usuário mostrou a janela de 15 minutos e a confirmação ENVIADA. O resultado real retornou HARA_WIN11, exit0, sem timeout nem truncamento; recibo 4963b1d2f09e21f27f3507d38c3c62cdddb810462fd08adec30319ac2ddf8dd1. O hostname passou após cerca de 126 segundos, além da antiga janela de 30 segundos; esse teste não esperou os 900 segundos completos.
+
+A leitura real de identificação confirmou Agent 0.3.49, recibo 1109873b28dff84dc1c673f8e8122e9f4d027fdc40b76412efbe5f47a47da2d0, e a listagem retornou zero sessões gerenciadas, recibo 349d01bc835b08fa953e88b3bfd8e650c3641dbff8c304d1c4150b5f85bb6670. A fonte ativa corresponde à assinada SHA 7b51d2f243228f27aaf742086fe012c73bc17cd8c180a4f9abbcb1e2c51f3080. **A origem da instalação permanece UNKNOWN**: os canários anteriores preservados não são prova de uma instalação feita por esta frente. Não se atribui instalação ao Root, SSH ou helper abortado.
+
+A primeira leitura do resultado trouxe a saída; a leitura seguinte trouxe somente metadados com content_redacted=true, sem enfileirar nova chamada e com zero unidades adicionais. O plano Founder estava UNMETERED; esse resultado não valida cobrança ou escala de mil clientes. O watcher não enviou aviso e registrou READ_ONLY_ERROR_QGA_SAMPLE. O aceite observado pelo usuário e o resultado da chamada comprovam o sucesso deste hostname, sem declarar o monitor corrigido.
+
+Evidência: **docs/evidence/commander-win49-approval15m-20261012/windows49-real-human-hostname-root-20261012.json**, SHA 714575b4540a5d81b623f50c3db3b22322a282b5dafadb9cfaed5ed8d9cf6bd0. Escrita CAS, terminal interativo e recuperação Windows continuam em testes; esta atualização não encerra a homologação do produto.
+
+Backend 15min Worker 338e2b88-eae9-41b1-868d-947098fe68a3 e migração 0035 continuam implantados. O código permanece igual ao checkpoint 34c282b2e91c7ff5032fde5a73a7511d1fb012fc, CI 38303773972 SUCCESS /105. Fonte, manifesto e assinatura 49 congelados; downloads públicos 43-v3, held7 e StorageHOLD preservados. Stripe não foi alterado. Documento de operação: **docs/operations/HARA_COMMANDER_WINDOWS_049_APPROVAL15M_RC_20261012.md**.
+
+## Registro anterior preservado — canário abortado e inspeção posterior
+
 # H.A.R.A. Commander — CURRENT (12/10/2026; backend 15min implantado, canário 49 pendente)
 
 Documento atual: **docs/operations/HARA_COMMANDER_WINDOWS_049_APPROVAL15M_RC_20261012.md**. O backend de chamadas de 15 minutos está implantado: Worker 338e2b88-eae9-41b1-868d-947098fe68a3 em 100%, migração 0035 aplicada e validação de health/auth/assets públicos 43 aprovada. A RC privada 49 está assinada e preparada; **instalação 49 e aprovação humana positiva continuam pendentes**.

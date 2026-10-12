@@ -1,0 +1,95 @@
+{
+  "schema": "hara.commander-win49-real-human-approval.v1",
+  "observed_at_utc": "2026-10-12T21:31:10.769Z",
+  "route": "HARA_COMMANDER_DIRECT_MCP",
+  "call_id": "HARA-CALL-6843883f-641b-42e2-a7a1-45a94a3675c0",
+  "command": "hostname",
+  "approval_timeout_seconds": 900,
+  "claimed_at_utc": "2026-10-12T21:21:17.259Z",
+  "local_console_pass_at_utc": "2026-10-12T21:23:23Z",
+  "human_approval_observed_in_user_image": true,
+  "challenge_stored": false,
+  "raw_result": {
+    "state": "PASS",
+    "operational_authority": "HARA_SERVICES",
+    "execution_authority": "HARA_COMMANDER_AGENT",
+    "runtime_authority_from_chatgpt": false,
+    "mutation_performed": false,
+    "result": {
+      "function_id": "process.run",
+      "risk_class": "PROCESS_EXECUTION",
+      "process_exit_code": 0,
+      "domain_success_inferred": false,
+      "stdout": "{\"timed_out\":false,\"session_retained\":false,\"command_sha256\":\"7063dece7cccf374d9fa1ee30ff23300fa42477e064e69be7bb6d01c0cfff682\",\"state\":\"EXITED\",\"exit_code\":0,\"cwd\":\"C:\\\\WINDOWS\\\\system32\",\"output_truncated\":false,\"text\":\"HARA_WIN11\\r\\r\\n\"}"
+    },
+    "customer_services_relay": false,
+    "bridge_receipt_sha256": "4963b1d2f09e21f27f3507d38c3c62cdddb810462fd08adec30319ac2ddf8dd1",
+    "computer": "HARA_WIN11",
+    "call_id": "HARA-CALL-6843883f-641b-42e2-a7a1-45a94a3675c0",
+    "original_tool_id": "hara.process.run",
+    "content_redacted": false,
+    "retrieval": {
+      "operation": "CALL_STATUS_READ",
+      "read_only": true,
+      "new_call_enqueued": false,
+      "additional_usage_units": 0
+    },
+    "product": {
+      "quota": {
+        "mode": "UNMETERED",
+        "state": "UNMETERED",
+        "units": 0,
+        "period_key": "LIFETIME",
+        "budget_id": null,
+        "cloud_quota_transaction": false
+      }
+    }
+  },
+  "replay_result": {
+    "schema": "hara.commander-call-result-metadata.v1",
+    "call_id": "HARA-CALL-6843883f-641b-42e2-a7a1-45a94a3675c0",
+    "request_id": "HARA-CUSTOMER-MCP-FK2CB4AlWuH3cbfi1HdiKTSstGKRUGou3E30UFYVn50",
+    "tool_id": "hara.process.run",
+    "call_state": "COMPLETED",
+    "state": "PASS",
+    "operational_authority": "HARA_SERVICES",
+    "execution_authority": null,
+    "runtime_authority_from_chatgpt": false,
+    "mutation_performed": false,
+    "customer_services_relay": null,
+    "bridge_receipt_sha256": "4963b1d2f09e21f27f3507d38c3c62cdddb810462fd08adec30319ac2ddf8dd1",
+    "result": {
+      "function_id": "process.run",
+      "risk_class": null,
+      "process_exit_code": 0,
+      "domain_success_inferred": false,
+      "content_redacted": true
+    },
+    "error_code": null,
+    "replayed": true,
+    "content_redacted": true,
+    "computer": "HARA_WIN11",
+    "original_tool_id": "hara.process.run",
+    "retrieval": {
+      "operation": "CALL_STATUS_READ",
+      "read_only": true,
+      "new_call_enqueued": false,
+      "additional_usage_units": 0
+    },
+    "product": {
+      "quota": {
+        "mode": "UNMETERED",
+        "state": "UNMETERED",
+        "units": 0,
+        "period_key": "LIFETIME",
+        "budget_id": null,
+        "cloud_quota_transaction": false
+      }
+    }
+  },
+  "watcher_notice_sent": false,
+  "watcher_error": "READ_ONLY_ERROR_QGA_SAMPLE",
+  "source49_install_actor": "UNKNOWN",
+  "agent_version": "0.3.49",
+  "agent_source_sha256": "7b51d2f243228f27aaf742086fe012c73bc17cd8c180a4f9abbcb1e2c51f3080"
+}

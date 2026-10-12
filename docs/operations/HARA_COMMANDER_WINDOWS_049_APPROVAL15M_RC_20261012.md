@@ -1,5 +1,18 @@
 # H.A.R.A. Commander — Windows 0.3.49, aprovação de 15 minutos
 
+## Estado real confirmado — continuidade dos testes
+
+Na atualização das 21:31 UTC, o MCP direto confirmou Windows Agent 0.3.49 e zero sessões gerenciadas. Recibos de identificação/listagem: 1109873b28dff84dc1c673f8e8122e9f4d027fdc40b76412efbe5f47a47da2d0 e 349d01bc835b08fa953e88b3bfd8e650c3641dbff8c304d1c4150b5f85bb6670. Fonte ativa 7b51d2f243228f27aaf742086fe012c73bc17cd8c180a4f9abbcb1e2c51f3080. A autoria da instalação permanece UNKNOWN; os helpers abortados não comprovam que esta frente instalou 49.
+
+A chamada hostname HARA-CALL-6843883f-641b-42e2-a7a1-45a94a3675c0 recebeu claim 21:21:17.259Z e PASS local 21:23:23Z, com aprovação humana observada na imagem do usuário: janela 15min e ENVIADA. O resultado MCP real trouxe HARA_WIN11/exit0, recibo 4963b1d2f09e21f27f3507d38c3c62cdddb810462fd08adec30319ac2ddf8dd1. O tempo observado supera 30s, mas não representa espera de 15min completos.
+
+O replay retornou somente metadados com conteúdo omitido, sem nova chamada e sem unidades adicionais. Founder UNMETERED/0 não valida cobrança nem escala. Watcher notice_sent=false, READ_ONLY_ERROR_QGA_SAMPLE; sua falha permanece distinta do hostname aprovado.
+
+Evidência windows49-real-human-hostname-root-20261012.json SHA 714575b4540a5d81b623f50c3db3b22322a282b5dafadb9cfaed5ed8d9cf6bd0. CAS, terminal e recuperação seguem em testes. Backend 338/0035 real e código CI 105 permanecem iguais. Downloads públicos 43/Stripe/held7/StorageHOLD preservados.
+
+## Registros anteriores preservados — comportamento, fixtures e rollout
+
+
 Data: 2026-10-12. Candidata privada assinada; aplicação na VM e comprovação humana
 pelo MCP seguem o procedimento controlado do laboratório.
 
