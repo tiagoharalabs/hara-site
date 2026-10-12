@@ -1,0 +1,39 @@
+{
+  "schema": "hara.commander-win49-legacy-linux-read-validation.v1",
+  "state": "PASS",
+  "read_operations": 2,
+  "checks": [
+    {
+      "computer": "services",
+      "state": "PASS",
+      "operational_authority": "HARA_COMMANDER",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "function_id": "device.info",
+      "risk_class": "READ_ONLY",
+      "mutation_performed": false,
+      "customer_services_relay": false,
+      "bridge_receipt_sha256": "460996d2338d526c7850ebebfdd0fbd03f3904fe52dd0fbfb05a86950b428898",
+      "platform": "LINUX",
+      "agent_version": "0.3.46",
+      "approval_mode": "PERSISTENT_TRUSTED",
+      "tunnel_mode": "EVENT_V2"
+    },
+    {
+      "computer": "nucleo-a",
+      "state": "PASS",
+      "operational_authority": "HARA_COMMANDER",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "function_id": "device.info",
+      "risk_class": "READ_ONLY",
+      "mutation_performed": false,
+      "customer_services_relay": false,
+      "bridge_receipt_sha256": "47ad72b3647354e958478dc4d56c5a01f9951ff7fa15612a3117f294edd698cb",
+      "platform": "LINUX",
+      "agent_version": "0.3.46",
+      "approval_mode": "PERSISTENT_TRUSTED",
+      "tunnel_mode": "EVENT_V2"
+    }
+  ],
+  "customer_content_saved": false,
+  "keys_read_printed_exported": false
+}

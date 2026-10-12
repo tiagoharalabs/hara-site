@@ -1,0 +1,50 @@
+{
+  "assets_directory": "/tmp_hara/commander-win49-rollout-20261012T200600Z/public43",
+  "compiled_dryrun_worker_sha256": "1c285ccabd96daf4bd088a02915cccd41017e0402044bb98e9ff758cca19692f",
+  "compiled_identity_match": true,
+  "compiled_production_worker_sha256": "1c285ccabd96daf4bd088a02915cccd41017e0402044bb98e9ff758cca19692f",
+  "deployment_config": "/tmp_hara/commander-win49-rollout-20261012T200600Z/app/wrangler.jsonc",
+  "exit_code": 0,
+  "finished_at_utc": "2026-10-12T20:16:51.198119+00:00",
+  "keys_read_printed_exported": false,
+  "new_deployment": {
+    "annotations": {
+      "workers/message": "Commander private Windows49 per-action900s async approval; gate105PASS; public43 unchanged",
+      "workers/triggered_by": "deployment"
+    },
+    "created_on": "2026-10-12T20:16:43.930604Z",
+    "id": "df79c5c7-4a54-4234-891d-c84546f7eec2",
+    "versions": [
+      {
+        "percentage": 100,
+        "version_id": "338e2b88-eae9-41b1-868d-947098fe68a3"
+      }
+    ]
+  },
+  "new_version_has100percent": true,
+  "prior_deployment": {
+    "id": "f2bc733e-739e-4ca0-a28f-f3594914a5d7",
+    "versions": [
+      {
+        "percentage": 100,
+        "version_id": "a326582b-76f6-4571-8adb-49dbd2675071"
+      }
+    ]
+  },
+  "prod_deploy_log_sha256": "379216eb86a6952cdc42d97e5d5a28e49e721798e2bbf7a916864921fce9b018",
+  "production_ddl_applied": true,
+  "production_worker_deployed": true,
+  "rollback_requires": [
+    "hold new canary mutating submissions",
+    "settle all profile900 calls and quota RESERVED900",
+    "restore compatible Agent48 before legacy Worker",
+    "leave additive D1 migration and DO expiry column"
+  ],
+  "schema": "hara.commander-win49-production-deploy.v1",
+  "signed_public_files_exact": 8,
+  "signed_public_release": "commercial-0.3.43-v3",
+  "snapshot_sha256": "e35eaf87bec577ad05e6dad0c6a2e7e8f7af81296ca67f8dc2888e4cf75b7ac0",
+  "started_at_utc": "2026-10-12T20:16:33.156705+00:00",
+  "state": "PASS",
+  "worker_sha256": "d1479c5b406901a5d86b5bee358cf39f4eb04735e36eacc9f2cb0cf5a8e2451a"
+}

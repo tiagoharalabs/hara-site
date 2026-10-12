@@ -1,0 +1,21 @@
+{
+  "auth_configured": true,
+  "checked_at_utc": "2026-10-12T20:15:26.379490+00:00",
+  "commander_process_exit_code": -9,
+  "commander_process_run_id": "HARA-PROC-f293d9a6e350477b86d8598e8c3c7d3e",
+  "commander_state": "TIMED_OUT",
+  "compiled_dryrun_worker_sha256": "1c285ccabd96daf4bd088a02915cccd41017e0402044bb98e9ff758cca19692f",
+  "health_ok": true,
+  "latest_deployment_id": "f2bc733e-739e-4ca0-a28f-f3594914a5d7",
+  "latest_version_id": "a326582b-76f6-4571-8adb-49dbd2675071",
+  "latest_version_number": 159,
+  "migration0035_remains_applied": true,
+  "no_own_wrangler_processes": true,
+  "production_deployment_change": false,
+  "public_assets_current": 12,
+  "public_assets_total": 12,
+  "reason": "default 10000ms Commander execution ceiling killed wrapper; future CLI explicitly managed",
+  "runtime_after_timeout_sha256": "b3ddfa4be565b366f084a70d95da628a9475a1dce280566d166d7282ea772f25",
+  "schema": "hara.commander-win49-first-deploy-failure.v1",
+  "state": "RESOLVED_NO_VERSION_UPLOADED_OR_DEPLOYED"
+}

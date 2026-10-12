@@ -1,0 +1,123 @@
+{
+  "asset_state": "CURRENT",
+  "assets": [
+    {
+      "cloudflare_beacon_removed": true,
+      "content_type": "text/html",
+      "current": true,
+      "live_sha256": "844ac92878355356bc0803033a5dfffb980fa31d0318eb77b58fb2a076a86a68",
+      "normalized_live_sha256": "2c769906d1b51cd5eba4642582ec0401d3685299ebb5b6dc8b7887d50ab3a751",
+      "path": "/",
+      "source_sha256": "2c769906d1b51cd5eba4642582ec0401d3685299ebb5b6dc8b7887d50ab3a751"
+    },
+    {
+      "cloudflare_beacon_removed": false,
+      "content_type": "text/javascript",
+      "current": true,
+      "live_sha256": "7c3ec0b7bf6de107474cf674b8365136e91535a1929e8bf1af56fa12672c4a31",
+      "normalized_live_sha256": "7c3ec0b7bf6de107474cf674b8365136e91535a1929e8bf1af56fa12672c4a31",
+      "path": "/app.js",
+      "source_sha256": "7c3ec0b7bf6de107474cf674b8365136e91535a1929e8bf1af56fa12672c4a31"
+    },
+    {
+      "cloudflare_beacon_removed": false,
+      "content_type": "text/css",
+      "current": true,
+      "live_sha256": "6d3b87fb284060a4c387d9cd5046d68b9c01fb8d799079056983543e53ba8ddb",
+      "normalized_live_sha256": "6d3b87fb284060a4c387d9cd5046d68b9c01fb8d799079056983543e53ba8ddb",
+      "path": "/styles.css",
+      "source_sha256": "6d3b87fb284060a4c387d9cd5046d68b9c01fb8d799079056983543e53ba8ddb"
+    },
+    {
+      "cloudflare_beacon_removed": false,
+      "content_type": "application/x-sh",
+      "current": true,
+      "live_sha256": "534e14433da9f86eb4342c6d9400e89ecf164545605e02e22f1646510284aba5",
+      "normalized_live_sha256": "534e14433da9f86eb4342c6d9400e89ecf164545605e02e22f1646510284aba5",
+      "path": "/install/linux.sh",
+      "source_sha256": "534e14433da9f86eb4342c6d9400e89ecf164545605e02e22f1646510284aba5"
+    },
+    {
+      "cloudflare_beacon_removed": false,
+      "content_type": "",
+      "current": true,
+      "live_sha256": "d0f6d7e3a79a87e439a6275ebf60b2918ad5ccdbc28666ce18288644f3d595b9",
+      "normalized_live_sha256": "d0f6d7e3a79a87e439a6275ebf60b2918ad5ccdbc28666ce18288644f3d595b9",
+      "path": "/install/windows.ps1",
+      "source_sha256": "d0f6d7e3a79a87e439a6275ebf60b2918ad5ccdbc28666ce18288644f3d595b9"
+    },
+    {
+      "cloudflare_beacon_removed": false,
+      "content_type": "",
+      "current": true,
+      "live_sha256": "3e0db700dd568a85e23212a5400f1d256546fef77b7f59f574ceed29e04c15b7",
+      "normalized_live_sha256": "3e0db700dd568a85e23212a5400f1d256546fef77b7f59f574ceed29e04c15b7",
+      "path": "/agent/linux.py",
+      "source_sha256": "3e0db700dd568a85e23212a5400f1d256546fef77b7f59f574ceed29e04c15b7"
+    },
+    {
+      "cloudflare_beacon_removed": false,
+      "content_type": "",
+      "current": true,
+      "live_sha256": "d507a6f91a635b025ef4f06cbd758a03c7da6f3410aadec9a3d76c28f904c6fb",
+      "normalized_live_sha256": "d507a6f91a635b025ef4f06cbd758a03c7da6f3410aadec9a3d76c28f904c6fb",
+      "path": "/agent/windows.ps1",
+      "source_sha256": "d507a6f91a635b025ef4f06cbd758a03c7da6f3410aadec9a3d76c28f904c6fb"
+    },
+    {
+      "cloudflare_beacon_removed": false,
+      "content_type": "application/json",
+      "current": true,
+      "live_sha256": "72711a1099503e9c728e38162a6cf8aea17c783313d85fa486387bc537111092",
+      "normalized_live_sha256": "72711a1099503e9c728e38162a6cf8aea17c783313d85fa486387bc537111092",
+      "path": "/release/agent-manifest.json",
+      "source_sha256": "72711a1099503e9c728e38162a6cf8aea17c783313d85fa486387bc537111092"
+    },
+    {
+      "cloudflare_beacon_removed": false,
+      "content_type": "application/json",
+      "current": true,
+      "live_sha256": "a2211fa308a07658f1d167da63605e423487cee57c7ae705272cd2cfd88545cf",
+      "normalized_live_sha256": "a2211fa308a07658f1d167da63605e423487cee57c7ae705272cd2cfd88545cf",
+      "path": "/release/agent-manifest.sig.json",
+      "source_sha256": "a2211fa308a07658f1d167da63605e423487cee57c7ae705272cd2cfd88545cf"
+    },
+    {
+      "cloudflare_beacon_removed": false,
+      "content_type": "",
+      "current": true,
+      "live_sha256": "4e68608fa891f1b7a1e89c75936a089daeab0ba862a764f9bb31eca849cdfb9b",
+      "normalized_live_sha256": "4e68608fa891f1b7a1e89c75936a089daeab0ba862a764f9bb31eca849cdfb9b",
+      "path": "/release/release-signing-public.jwk",
+      "source_sha256": "4e68608fa891f1b7a1e89c75936a089daeab0ba862a764f9bb31eca849cdfb9b"
+    },
+    {
+      "cloudflare_beacon_removed": false,
+      "content_type": "",
+      "current": true,
+      "live_sha256": "696b0aee214561163a46ecd828da81d0cf5ab47eb967dd338e1c0de5bdf02ff9",
+      "normalized_live_sha256": "696b0aee214561163a46ecd828da81d0cf5ab47eb967dd338e1c0de5bdf02ff9",
+      "path": "/release/SHA256SUMS",
+      "source_sha256": "696b0aee214561163a46ecd828da81d0cf5ab47eb967dd338e1c0de5bdf02ff9"
+    },
+    {
+      "cloudflare_beacon_removed": false,
+      "content_type": "image/webp",
+      "current": true,
+      "live_sha256": "e55b9218fc9ef540d1214509226af13c7e7906665e9ec247a92a40103f62ada3",
+      "normalized_live_sha256": "e55b9218fc9ef540d1214509226af13c7e7906665e9ec247a92a40103f62ada3",
+      "path": "/assets/hara-commander-royal.webp",
+      "source_sha256": "e55b9218fc9ef540d1214509226af13c7e7906665e9ec247a92a40103f62ada3"
+    }
+  ],
+  "auth": {
+    "configured": true
+  },
+  "health": {
+    "ok": true,
+    "service": "hara-commander"
+  },
+  "origin": "https://commander.haralabs.com.br",
+  "production_mutation_performed": false,
+  "stage": "AFTER_BACKEND49_DEPLOY"
+}

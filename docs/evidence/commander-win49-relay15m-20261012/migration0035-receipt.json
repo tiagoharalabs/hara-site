@@ -1,0 +1,42 @@
+{
+  "apply_log_sha256": "af9663719de2a71679149c0e34e1e66184cea92e13a1cd5907d98dbe358412dd",
+  "backup_policy": "WRANGLER_DOCUMENTED_NONINTERACTIVE_BACKUP",
+  "database": "hara-commander-product-prod",
+  "exit_code": 0,
+  "finished_at_utc": "2026-10-12T20:12:39.172149+00:00",
+  "keys_read_printed_exported": false,
+  "migration": "0035_approval_async_call_metadata.sql",
+  "migration_sha256": "108cdf7de9038eba173a1de59f7fc006c30fd131b48a7dd54078144f274a4d91",
+  "production_ddl_applied": true,
+  "production_worker_deployed": false,
+  "remaining_pending_migrations": [],
+  "schema": "hara.commander-win49-d1-migration.v1",
+  "schema_readback": [
+    {
+      "dflt_value": "0",
+      "name": "approval_timeout_seconds",
+      "notnull": 1,
+      "type": "INTEGER"
+    },
+    {
+      "dflt_value": "0",
+      "name": "execution_budget_ms",
+      "notnull": 1,
+      "type": "INTEGER"
+    },
+    {
+      "dflt_value": null,
+      "name": "call_result_metadata_json",
+      "notnull": 0,
+      "type": "TEXT"
+    },
+    {
+      "name": "idx_device_calls_approval_active"
+    },
+    {
+      "name": "0035_approval_async_call_metadata.sql"
+    }
+  ],
+  "started_at_utc": "2026-10-12T20:12:34.395986+00:00",
+  "state": "PASS"
+}

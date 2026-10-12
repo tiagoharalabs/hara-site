@@ -1,0 +1,31 @@
+{
+  "auth_configured": true,
+  "backup_info_receipt_sha256": "c5013478244cc2cb657a31a1a5229f8b898f5dc1e52d9b749456c120738c609d",
+  "checked_at_utc": "2026-10-12T20:18:08.851842+00:00",
+  "compiled_identity_match": true,
+  "compiled_worker_sha256": "1c285ccabd96daf4bd088a02915cccd41017e0402044bb98e9ff758cca19692f",
+  "d1_backup_time_travel_info_state": "PASS",
+  "deployment_id": "df79c5c7-4a54-4234-891d-c84546f7eec2",
+  "deployment_percentage": 100,
+  "health": {
+    "ok": true,
+    "service": "hara-commander"
+  },
+  "keys_read_printed_exported": false,
+  "legacy_linux_read_receipt_sha256": "70ab0ef141880a340aaf59014ef785e9affcf11665aa90e6d8684234cc161e0e",
+  "legacy_linux_reads": "PASS_2_DIRECT_COMMANDER_DEVICE_INFO",
+  "pending_migrations": [],
+  "production_worker_deployed": true,
+  "public_asset_state": "CURRENT",
+  "public_assets_current": 12,
+  "public_assets_total": 12,
+  "remote_migration0035_applied": true,
+  "runtime_after_receipt_sha256": "1ca8f6ebe79c0c797ede4b09c076bc65c0bd0629bd023caaeb2c94e629fe7781",
+  "schema": "hara.commander-win49-production-validation.v1",
+  "signed_public_assets_exact": 8,
+  "signed_public_release": "commercial-0.3.43-v3",
+  "source_worker_sha256": "d1479c5b406901a5d86b5bee358cf39f4eb04735e36eacc9f2cb0cf5a8e2451a",
+  "state": "PASS",
+  "version_id": "338e2b88-eae9-41b1-868d-947098fe68a3",
+  "windows_action_performed": false
+}
