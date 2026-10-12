@@ -3630,6 +3630,11 @@ function agentPurposeToolReady(device, toolId) {
       "hara.files.info","hara.files.list","hara.files.read",
       "hara.files.create_directory","hara.files.write","hara.process.run",
     ];
+    const managed=[
+      "hara.process.sessions","hara.process.start","hara.process.output",
+      "hara.process.interact","hara.process.kill",
+    ];
+    if (managed.includes(toolId)) return semverAtLeast(device.agent_version,44);
     return starter.includes(toolId) && semverAtLeast(device.agent_version,32);
   }
   if (platform !== "LINUX") return false;
@@ -3710,6 +3715,12 @@ function capabilitiesForDevice(device, grants) {
       }
       if (grants.includes("COMMANDER_PROCESS_EXECUTION")) {
         tools.push("hara.process.run");
+      }
+    }
+    if (semverAtLeast(device.agent_version,44)) {
+      tools.push("hara.process.sessions","hara.process.output");
+      if (grants.includes("COMMANDER_PROCESS_EXECUTION")) {
+        tools.push("hara.process.start","hara.process.interact","hara.process.kill");
       }
     }
   }

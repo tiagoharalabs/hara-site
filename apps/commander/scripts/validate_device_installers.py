@@ -59,7 +59,7 @@ print("LINUX_INSTALLER_SECRET_ARGV_EXPOSURE=FALSE")
 
 for token in ('platform="WINDOWS"', "/api/device/enroll", "/agent/windows.ps1",
               "ConvertFrom-SecureString", "Register-ScheduledTask", "icacls.exe",
-              'agent_version="0.3.43"', "HARA_COMMANDER_AGENT_UPDATE=PASS",
+              'agent_version="0.3.44"', "HARA_COMMANDER_AGENT_UPDATE=PASS",
               "HARA_COMMANDER_AGENT_UNINSTALL=PASS", "HARA_COMMANDER_AGENT_VERSION=",
               "HARA_COMMANDER_AGENT_DOCTOR=PASS", "/api/device/revoke-self",
               "SERVER_DEVICE_REVOKE=", "HARA_COMMANDER_AGENT_UPDATE_ROLLBACK_READY=TRUE",
@@ -101,7 +101,7 @@ print("WINDOWS_INSTALLER_DEVICE_TOKEN_MEMORY_HYGIENE=PASS")
 assert MANIFEST.get("schema") == "hara.commander-agent-release.v1"
 assert MANIFEST.get("agent_version") == "0.3.41"
 assert 'AGENT_VERSION = "0.3.43"' in LINUX_AGENT
-assert '$AgentVersion = "0.3.43"' in WINDOWS_AGENT
+assert '$AgentVersion = "0.3.44"' in WINDOWS_AGENT
 entries = {item["path"]: item for item in MANIFEST.get("files", [])}
 for rel in ("agent/linux.py", "agent/windows.ps1", "install/linux.sh", "install/windows.ps1"):
     assert rel in entries, f"RELEASE_MANIFEST_MISSING:{rel}"
@@ -127,7 +127,9 @@ for token in (
     "hara.files.create_directory","hara.files.write","hara.process.run",
 ):
     need(WINDOWS_AGENT, token, "WINDOWS_STARTER_TOOL_MISSING")
-need(WINDOWS_AGENT, "WINDOWS_PER_ACTION_APPROVAL_UNSUPPORTED", "WINDOWS_STARTER_FAIL_CLOSED_APPROVAL")
+need(WINDOWS_AGENT, "Invoke-LocalActionApproval", "WINDOWS_PER_ACTION_LOCAL_APPROVAL_SUPPORTED")
+need(WINDOWS_AGENT, "HUMAN_ACTION_APPROVAL_DENIED", "WINDOWS_PER_ACTION_FAIL_CLOSED_DENIAL")
+need(WINDOWS_AGENT, "LOCAL_OPERATOR_SESSION_REQUIRED", "WINDOWS_PER_ACTION_OPERATOR_SESSION_REQUIRED")
 need(WINDOWS_AGENT, "-EncodedCommand", "WINDOWS_STARTER_ENCODED_PROCESS_COMMAND")
 for forbidden in ("os.system(", "shell=True", "paramiko", "ssh "):
     assert forbidden not in LINUX_AGENT, f"LINUX_AGENT_ARBITRARY_EXEC:{forbidden}"

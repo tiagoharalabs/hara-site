@@ -5,10 +5,13 @@ $ReceiptDir = Join-Path $Root "receipts"
 $RuntimeStatus = Join-Path $Root "runtime-status.json"
 $SessionPath = Join-Path $Root "operator-session.json"
 $ConsoleEvents = Join-Path $Root "console-events.jsonl"
+$PendingApprovalPath = Join-Path $Root "pending-action-approval.json"
+$ApprovalResponsePath = Join-Path $Root "action-approval-response.json"
+$ApprovalTimeoutSeconds = 22
 $OperationsDb = Join-Path $Root "operations.sqlite3"
 $AgentTaskName = "HARA Commander Agent"
 $SessionMaxHours = 12
-$AgentVersion = "0.3.43"
+$AgentVersion = "0.3.44"
 $SloProfile = "INTERNAL_BETA_V1"
 $SloMinSuccessPercent = 99.0
 $SloP50MaxMs = 1000
@@ -670,6 +673,7 @@ function Start-OperatorConsole {
           $seen++
         }
       }
+      Respond-ToLocalApprovalRequest
       Start-Sleep -Milliseconds 250
     }
   } finally {
@@ -722,10 +726,363 @@ function Get-ApprovalMode($Cfg) {
   return $mode
 }
 
-function Assert-StarterMutationAuthorized($Cfg) {
+function Invoke-LocalActionApproval($Call) {
+  # The user, not ChatGPT or an API response, must approve the exact operation.
+  # A per-action nonce and SHA-256 of the payload bind the local response.
+  $session=Get-OperatorSession
+  if (-not $session) { throw "LOCAL_OPERATOR_SESSION_REQUIRED" }
+  if ($Call.request_id -eq $null -or [string]$Call.request_id -eq "") {
+    throw "LOCAL_APPROVAL_REQUEST_ID_REQUIRED"
+  }
+  $payloadJson=$Call.payload | ConvertTo-Json -Depth 10 -Compress
+  $nonce=[guid]::NewGuid().ToString("N")
+  $digest=Get-Utf8Sha256 ([string]$Call.tool_id+"|"+[string]$Call.request_id+"|"+[string]$payloadJson)
+  $expires=[DateTime]::UtcNow.AddSeconds($ApprovalTimeoutSeconds)
+  $pending=[ordered]@{
+    schema="hara.commander-local-action-approval.v1"
+    nonce=$nonce
+    challenge=$nonce.Substring(0,8).ToUpperInvariant()
+    request_id=[string]$Call.request_id
+    tool_id=[string]$Call.tool_id
+    arguments_sha256=$digest
+    owner_pid=[int]$session.owner_pid
+    owner_started_at_utc=[string]$session.owner_started_at_utc
+    created_at_utc=[DateTime]::UtcNow.ToString("o")
+    expires_at_utc=$expires.ToString("o")
+    action_summary=Get-LocalActionSummary $Call
+  }
+  New-Item -ItemType Directory -Path $Root -Force | Out-Null
+  foreach($existing in @($PendingApprovalPath,$ApprovalResponsePath)){
+    if (Test-Path -LiteralPath $existing -PathType Leaf) {
+      # A stale response or crashed prior request never grants another call.
+      $older=((Get-Item -LiteralPath $existing).LastWriteTimeUtc -lt [DateTime]::UtcNow.AddMinutes(-2))
+      if ($older) { Remove-Item -LiteralPath $existing -Force }
+      else { throw "LOCAL_APPROVAL_REQUEST_BUSY" }
+    }
+  }
+  $temporary=$PendingApprovalPath+"."+[guid]::NewGuid().ToString("N")+".tmp"
+  $responseValidated=$false
+  try {
+    [IO.File]::WriteAllText($temporary,($pending | ConvertTo-Json -Depth 5 -Compress),(New-Object Text.UTF8Encoding($false)))
+    [IO.File]::Move($temporary,$PendingApprovalPath)
+    while ([DateTime]::UtcNow -lt $expires) {
+      $active=Get-OperatorSession
+      if (-not $active -or [int]$active.owner_pid -ne [int]$pending.owner_pid -or
+          [string]$active.owner_started_at_utc -ne [string]$pending.owner_started_at_utc) {
+        throw "LOCAL_OPERATOR_SESSION_REQUIRED"
+      }
+      if (Test-Path -LiteralPath $ApprovalResponsePath -PathType Leaf) {
+        $answer=Get-Content -Raw -LiteralPath $ApprovalResponsePath | ConvertFrom-Json
+        if ([string]$answer.schema -ne "hara.commander-local-action-response.v1" -or
+            [string]$answer.nonce -cne $nonce -or
+            [string]$answer.request_id -cne [string]$pending.request_id -or
+            [string]$answer.arguments_sha256 -cne $digest -or
+            [int]$answer.owner_pid -ne [int]$pending.owner_pid) {
+          throw "LOCAL_ACTION_APPROVAL_RESPONSE_INVALID"
+        }
+        $responseValidated=$true
+        if ($answer.approved -cne $true) { throw "HUMAN_ACTION_APPROVAL_DENIED" }
+        if ([DateTime]::UtcNow -ge $expires) { throw "LOCAL_ACTION_APPROVAL_EXPIRED" }
+        return $true
+      }
+      Start-Sleep -Milliseconds 150
+    }
+    throw "LOCAL_ACTION_APPROVAL_EXPIRED"
+  } finally {
+    if (Test-Path -LiteralPath $temporary) {
+      Remove-Item -LiteralPath $temporary -Force -ErrorAction SilentlyContinue
+    }
+    if (Test-Path -LiteralPath $PendingApprovalPath) {
+      try {
+        $current=Get-Content -Raw -LiteralPath $PendingApprovalPath | ConvertFrom-Json
+        if ([string]$current.nonce -ceq $nonce) {
+          Remove-Item -LiteralPath $PendingApprovalPath -Force
+        }
+      } catch {}
+    }
+    if (Test-Path -LiteralPath $ApprovalResponsePath) {
+      # The sole worker is sequential; never reuse responses across calls.
+      Remove-Item -LiteralPath $ApprovalResponsePath -Force -ErrorAction SilentlyContinue
+    }
+  }
+}
+
+function Assert-StarterMutationAuthorized($Cfg,$Call) {
   $mode=Get-ApprovalMode $Cfg
-  if ($mode -eq "ASK_EVERY_ACTION") { throw "WINDOWS_PER_ACTION_APPROVAL_UNSUPPORTED" }
-  if ($mode -eq "SESSION_TRUSTED" -and -not (Test-OperatorSessionActive)) { throw "LOCAL_OPERATOR_SESSION_REQUIRED" }
+  if ($mode -eq "ASK_EVERY_ACTION") {
+    Invoke-LocalActionApproval $Call | Out-Null
+    return
+  }
+  if ($mode -eq "SESSION_TRUSTED" -and -not (Test-OperatorSessionActive)) {
+    throw "LOCAL_OPERATOR_SESSION_REQUIRED"
+  }
+}
+
+function Respond-ToLocalApprovalRequest {
+  # Only the process owning the active operator console can respond.
+  if (-not (Test-Path -LiteralPath $PendingApprovalPath -PathType Leaf)) { return }
+  $pending=Get-Content -Raw -LiteralPath $PendingApprovalPath | ConvertFrom-Json
+  if ([string]$pending.schema -ne "hara.commander-local-action-approval.v1") { return }
+  if ([int]$pending.owner_pid -ne $PID) { return }
+  $current=Get-OperatorSession
+  if (-not $current -or [int]$current.owner_pid -ne $PID) { return }
+  if ([DateTime]::UtcNow -ge [DateTime]::Parse([string]$pending.expires_at_utc).ToUniversalTime()) { return }
+  if (Test-Path -LiteralPath $ApprovalResponsePath) { return }
+  Write-Host ""
+  Write-Host "H.A.R.A. - SOLICITACAO DE APROVACAO INDIVIDUAL" -ForegroundColor Yellow
+  Write-Host ("Ferramenta: "+[string]$pending.tool_id)
+  Write-Host ("Resumo local: "+[string]$pending.action_summary)
+  Write-Host ("SHA256 argumentos: "+[string]$pending.arguments_sha256)
+  Write-Host "Apenas esta acao sera autorizada. A sessao nao vira permanente."
+  $response=Read-Host ("Para autorizar, digite APROVAR "+[string]$pending.challenge+" (Enter nega)")
+  $approved=$response -ceq ("APROVAR "+[string]$pending.challenge)
+  $reply=[ordered]@{
+    schema="hara.commander-local-action-response.v1"
+    nonce=[string]$pending.nonce
+    request_id=[string]$pending.request_id
+    arguments_sha256=[string]$pending.arguments_sha256
+    owner_pid=$PID
+    approved=[bool]$approved
+    responded_at_utc=[DateTime]::UtcNow.ToString("o")
+  }
+  $temporary=$ApprovalResponsePath+"."+[guid]::NewGuid().ToString("N")+".tmp"
+  try {
+    [IO.File]::WriteAllText($temporary,($reply|ConvertTo-Json -Depth 4 -Compress),(New-Object Text.UTF8Encoding($false)))
+    if (-not (Test-Path -LiteralPath $ApprovalResponsePath)) {
+      [IO.File]::Move($temporary,$ApprovalResponsePath)
+    }
+  } finally {
+    if (Test-Path -LiteralPath $temporary) {
+      Remove-Item -LiteralPath $temporary -Force -ErrorAction SilentlyContinue
+    }
+  }
+  Write-Host ($(if($approved){"APROVACAO_INDIVIDUAL=CONCEDIDA"}else{"APROVACAO_INDIVIDUAL=NEGADA"}))
+}
+
+# Windows PowerShell 5.1 has no durable PTY abstraction. This runspace-safe
+# .NET process wrapper handles asynchronous streams without PowerShell event
+# callbacks on threads lacking a runspace. Limits: 8 active processes,
+# 5,000 lines or 2 MiB retained per session, 15m completed retention.
+$script:ManagedWindowsSessions=@{}
+$script:WindowsSessionMaxActive=8
+$script:WindowsSessionFinishedRetentionSeconds=900
+
+function Initialize-WindowsManagedProcessType {
+  if ("HaraWindowsProcessSession" -as [type]) { return }
+  $source=@"
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Text;
+using System.Threading;
+
+public sealed class HaraWindowsProcessSession : IDisposable {
+  public readonly string SessionId;
+  public readonly DateTime StartedUtc;
+  public readonly Process Child;
+  public DateTime FinishedUtc = DateTime.MinValue;
+  readonly object Sync = new object();
+  readonly List<string> Buffer = new List<string>();
+  bool StdoutFinished = false;
+  bool StderrFinished = false;
+  bool Truncated = false;
+  int FirstLine = 0;
+  int BufferChars = 0;
+  bool Killed = false;
+  const int MaxLines = 5000;
+  const int MaxChars = 2 * 1024 * 1024;
+
+  public HaraWindowsProcessSession(string id, string cwd, string command) {
+    SessionId = id;
+    StartedUtc = DateTime.UtcNow;
+    Child = new Process();
+    Child.StartInfo.FileName = "powershell.exe";
+    Child.StartInfo.Arguments = "-NoLogo -NoProfile -NonInteractive -Command -";
+    Child.StartInfo.UseShellExecute = false;
+    Child.StartInfo.CreateNoWindow = true;
+    Child.StartInfo.RedirectStandardInput = true;
+    Child.StartInfo.RedirectStandardOutput = true;
+    Child.StartInfo.RedirectStandardError = true;
+    if (!string.IsNullOrEmpty(cwd)) Child.StartInfo.WorkingDirectory = cwd;
+    Child.OutputDataReceived += new DataReceivedEventHandler(OnStdout);
+    Child.ErrorDataReceived += new DataReceivedEventHandler(OnStderr);
+    if (!Child.Start()) throw new InvalidOperationException("PROCESS_START_FAILED");
+    Child.BeginOutputReadLine();
+    Child.BeginErrorReadLine();
+    Child.StandardInput.AutoFlush = true;
+    Child.StandardInput.WriteLine(command);
+  }
+
+  void OnStdout(object sender, DataReceivedEventArgs e) {
+    if (e.Data == null) {lock(Sync) StdoutFinished=true; return;}
+    AddLine(e.Data);
+  }
+  void OnStderr(object sender, DataReceivedEventArgs e) {
+    if (e.Data == null) {lock(Sync) StderrFinished=true; return;}
+    AddLine("STDERR: " + e.Data);
+  }
+
+  void AddLine(string value) {
+    if (value == null) return;
+    lock(Sync) {
+      if(value.Length > 65536) { value=value.Substring(0,65536); Truncated=true; }
+      Buffer.Add(value); BufferChars += value.Length+1;
+      while (Buffer.Count > MaxLines || BufferChars > MaxChars) {
+        if (Buffer.Count == 0) break;
+        BufferChars -= Buffer[0].Length+1;
+        Buffer.RemoveAt(0);
+        FirstLine++;
+        Truncated=true;
+      }
+    }
+  }
+
+  public void Input(string input) {
+    if (input == null || input.Length > 4096 || input.IndexOf('\0') >= 0)
+      throw new InvalidOperationException("PROCESS_INPUT_INVALID");
+    if (Child.HasExited) throw new InvalidOperationException("PROCESS_SESSION_EXITED");
+    Child.StandardInput.WriteLine(input.TrimEnd('\r','\n'));
+    Child.StandardInput.Flush();
+  }
+
+  public void Stop(bool force) {
+    if (Child.HasExited) return;
+    if (force) {
+      Killed = true;
+      Child.Kill();
+    } else {
+      Child.StandardInput.WriteLine("exit");
+      Child.StandardInput.Flush();
+    }
+  }
+
+  public Dictionary<string,object> Snapshot(int offset,int length,int waitMs) {
+    if (offset < 0 || length < 1 || length > 500 || waitMs < 0 || waitMs > 3000)
+      throw new InvalidOperationException("PROCESS_OUTPUT_BOUNDS_INVALID");
+    DateTime deadline = DateTime.UtcNow.AddMilliseconds(waitMs);
+    while (DateTime.UtcNow < deadline) {
+      bool available;
+      lock (Sync) { available=(FirstLine+Buffer.Count) > offset; }
+      if (available || Child.HasExited) break;
+      Thread.Sleep(20);
+    }
+    bool exited = Child.HasExited;
+    if (exited) {
+      if (FinishedUtc == DateTime.MinValue) FinishedUtc = DateTime.UtcNow;
+      DateTime finalDeadline = DateTime.UtcNow.AddMilliseconds(200);
+      while (DateTime.UtcNow < finalDeadline) {
+        bool drained;
+        lock(Sync) { drained=StdoutFinished && StderrFinished; }
+        if (drained) break;
+        Thread.Sleep(5);
+      }
+    }
+    lock (Sync) {
+      int total=FirstLine+Buffer.Count;
+      int start=Math.Max(offset,FirstLine);
+      int count=Math.Min(length,Math.Max(0,total-start));
+      List<string> lines=new List<string>();
+      for(int i=0;i<count;i++) lines.Add(Buffer[start-FirstLine+i]);
+      bool drained=StdoutFinished && StderrFinished;
+      return new Dictionary<string,object>{
+        {"session_id",SessionId},
+        {"pid",Child.Id},
+        {"state", exited ? (Killed ? "KILLED" : "EXITED") : "RUNNING"},
+        {"exit_code",exited ? (object)Child.ExitCode : null},
+        {"started_at_utc",StartedUtc.ToString("o")},
+        {"finished_at_utc",exited ? (object)FinishedUtc.ToString("o") : null},
+        {"base_line",FirstLine},
+        {"total_lines",total},
+        {"next_offset",start+count},
+        {"text",string.Join("\n",lines.ToArray())},
+        {"buffer_truncated",Truncated || (exited && !drained)},
+        {"output_pending",!exited || !drained},
+        {"command_content_persisted",false}
+      };
+    }
+  }
+
+  public void Dispose() {
+    try { if(!Child.HasExited) Child.Kill(); }catch{}
+    try { Child.Dispose(); }catch{}
+  }
+}
+"@
+  Add-Type -TypeDefinition $source -ErrorAction Stop
+}
+
+function Cleanup-WindowsManagedSessions {
+  $ids=@($script:ManagedWindowsSessions.Keys)
+  foreach($id in $ids){
+    $session=$script:ManagedWindowsSessions[$id]
+    $state=$session.Snapshot(0,1,0)
+    if([string]$state.state -ne "RUNNING" -and $session.FinishedUtc -ne [DateTime]::MinValue -and
+       ([DateTime]::UtcNow-$session.FinishedUtc).TotalSeconds -gt $script:WindowsSessionFinishedRetentionSeconds){
+      $session.Dispose()
+      $script:ManagedWindowsSessions.Remove($id)
+    }
+  }
+}
+
+function Get-WindowsManagedSession([string]$Id) {
+  if ($Id -notmatch "^HARA-PROC-[0-9a-f]{32}$") { throw "PROCESS_SESSION_ID_INVALID" }
+  Cleanup-WindowsManagedSessions
+  if (-not $script:ManagedWindowsSessions.ContainsKey($Id)) { throw "PROCESS_SESSION_NOT_FOUND" }
+  return $script:ManagedWindowsSessions[$Id]
+}
+
+function Start-WindowsManagedSession($Cfg,$Call,[string]$Command,[string]$Cwd=$null,[int]$TimeoutMs=1000) {
+  if ([string]::IsNullOrWhiteSpace($Command) -or $Command.Length -gt 4096){throw "PROCESS_COMMAND_INVALID"}
+  if ($TimeoutMs -lt 0 -or $TimeoutMs -gt 3000){throw "PROCESS_TIMEOUT_INVALID"}
+  $where=$null
+  if ($Cwd) {
+    $where=(Resolve-Path -LiteralPath $Cwd -ErrorAction Stop).Path
+    if(-not (Test-Path -LiteralPath $where -PathType Container)){throw "PROCESS_CWD_INVALID"}
+  }
+  Cleanup-WindowsManagedSessions
+  if (@($script:ManagedWindowsSessions.Values | Where-Object {$_.Snapshot(0,1,0).state -eq "RUNNING"}).Count -ge $script:WindowsSessionMaxActive) {
+    throw "PROCESS_SESSION_CAPACITY"
+  }
+  # Every new process, including a session, requires on-device approval.
+  Assert-StarterMutationAuthorized $Cfg $Call
+  Initialize-WindowsManagedProcessType
+  $id="HARA-PROC-"+[guid]::NewGuid().ToString("N")
+  $session=New-Object HaraWindowsProcessSession -ArgumentList $id,$where,$Command
+  $script:ManagedWindowsSessions[$id]=$session
+  $snapshot=$session.Snapshot(0,200,$TimeoutMs)
+  return $snapshot
+}
+
+function Read-WindowsManagedSession([string]$Id,[int]$Offset=0,[int]$Length=200,[int]$WaitMs=500) {
+  $session=Get-WindowsManagedSession $Id
+  return $session.Snapshot($Offset,$Length,$WaitMs)
+}
+
+function Send-WindowsManagedSessionInput($Cfg,$Call,[string]$Id,[string]$Input,[int]$WaitMs=1000) {
+  if ($WaitMs -lt 0 -or $WaitMs -gt 3000){throw "PROCESS_TIMEOUT_INVALID"}
+  if ($Input.Length -gt 4096 -or $Input.Contains([char]0)){throw "PROCESS_INPUT_INVALID"}
+  $session=Get-WindowsManagedSession $Id
+  Assert-StarterMutationAuthorized $Cfg $Call
+  $session.Input($Input)
+  return $session.Snapshot(0,100,$WaitMs)
+}
+
+function Stop-WindowsManagedSession($Cfg,$Call,[string]$Id,[bool]$Force=$false) {
+  $session=Get-WindowsManagedSession $Id
+  Assert-StarterMutationAuthorized $Cfg $Call
+  $session.Stop($Force)
+  return $session.Snapshot(0,200,200)
+}
+
+function List-WindowsManagedSessions {
+  Cleanup-WindowsManagedSessions
+  $entries=@()
+  foreach($id in @($script:ManagedWindowsSessions.Keys | Sort-Object)) {
+    $x=$script:ManagedWindowsSessions[$id].Snapshot(0,1,0)
+    $entries+=@{session_id=$id;pid=$x.pid;state=$x.state;started_at_utc=$x.started_at_utc;finished_at_utc=$x.finished_at_utc;buffer_truncated=$x.buffer_truncated}
+  }
+  return @{count=$entries.Count;sessions=$entries}
 }
 
 function New-DirectResult([string]$FunctionId,[string]$RiskClass,$Data,[object]$ExitCode=0) {
@@ -795,20 +1152,45 @@ function Read-WindowsTextFile([string]$PathValue,[int]$Offset=0,[int]$Length=200
   return @{path=(Resolve-Path -LiteralPath $PathValue).Path;offset=$Offset;line_count=$slice.Count;total_lines=$lines.Count;text=($slice -join [Environment]::NewLine)}
 }
 
-function Write-WindowsTextFile($Cfg,[string]$PathValue,[string]$Content,[string]$Mode="rewrite") {
-  Assert-StarterMutationAuthorized $Cfg
-  if ($Content.Length -gt 1048576) { throw "FUNCTION_ARGUMENTS_DENIED" }
+function Write-WindowsTextFile($Cfg,$Call,[string]$PathValue,[string]$Content,[string]$Mode="rewrite",[string]$ExpectedSha256=$null) {
+  if ($Content.Length -gt 1048576 -or @("rewrite","append") -notcontains $Mode) { throw "FUNCTION_ARGUMENTS_DENIED" }
   $full=[IO.Path]::GetFullPath($PathValue)
   $parent=[IO.Path]::GetDirectoryName($full)
   if (-not $parent -or -not (Test-Path -LiteralPath $parent -PathType Container)) { throw "FILESYSTEM_PARENT_NOT_FOUND" }
-  if ($Mode -eq "append") { Add-Content -LiteralPath $full -Value $Content -Encoding UTF8 }
-  elseif ($Mode -eq "rewrite") { [IO.File]::WriteAllText($full,$Content,(New-Object Text.UTF8Encoding($false))) }
-  else { throw "FUNCTION_ARGUMENTS_DENIED" }
+  # Never follow a leaf reparse point. Compare the hash after local approval,
+  # immediately before mutation, to reject stale ChatGPT edits.
+  Assert-StarterMutationAuthorized $Cfg $Call
+  $exists=Test-Path -LiteralPath $full
+  if ($exists) {
+    $leaf=Get-Item -LiteralPath $full -Force -ErrorAction Stop
+    if (($leaf.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw "FILESYSTEM_SYMLINK_DENIED" }
+    if ($leaf.PSIsContainer) { throw "PATH_NOT_FILE" }
+  }
+  if (-not [string]::IsNullOrWhiteSpace($ExpectedSha256)) {
+    if ($ExpectedSha256 -notmatch "^[0-9a-fA-F]{64}$") { throw "FILE_PRECONDITION_INVALID" }
+    if (-not $exists) { throw "FILE_PRECONDITION_FAILED" }
+    $actual=(Get-FileHash -LiteralPath $full -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($actual -ne $ExpectedSha256.ToLowerInvariant()) { throw "FILE_PRECONDITION_FAILED" }
+  }
+  if ($Mode -eq "append") {
+    Add-Content -LiteralPath $full -Value $Content -Encoding UTF8
+  } else {
+    $temporary=$full+"."+[guid]::NewGuid().ToString("N")+".tmp"
+    $backup=$temporary+".backup"
+    try {
+      [IO.File]::WriteAllText($temporary,$Content,(New-Object Text.UTF8Encoding($false)))
+      if ($exists) { [IO.File]::Replace($temporary,$full,$backup,$true) }
+      else { [IO.File]::Move($temporary,$full) }
+    } finally {
+      if (Test-Path -LiteralPath $temporary) { Remove-Item -LiteralPath $temporary -Force -ErrorAction SilentlyContinue }
+      if (Test-Path -LiteralPath $backup) { Remove-Item -LiteralPath $backup -Force -ErrorAction SilentlyContinue }
+    }
+  }
   return @{path=$full;mode=$Mode;bytes_written=[Text.Encoding]::UTF8.GetByteCount($Content)}
 }
 
-function New-WindowsDirectory($Cfg,[string]$PathValue,[bool]$Parents=$true) {
-  Assert-StarterMutationAuthorized $Cfg
+function New-WindowsDirectory($Cfg,$Call,[string]$PathValue,[bool]$Parents=$true) {
+  Assert-StarterMutationAuthorized $Cfg $Call
   $full=[IO.Path]::GetFullPath($PathValue)
   if (Test-Path -LiteralPath $full) {
     if (-not (Test-Path -LiteralPath $full -PathType Container)) { throw "FILESYSTEM_PATH_EXISTS" }
@@ -822,8 +1204,8 @@ function New-WindowsDirectory($Cfg,[string]$PathValue,[bool]$Parents=$true) {
   return @{path=$full;created=$true}
 }
 
-function Invoke-WindowsOneShotProcess($Cfg,[string]$Command,[string]$Cwd=$null,[int]$TimeoutMs=3000,[int]$MaxLines=200) {
-  Assert-StarterMutationAuthorized $Cfg
+function Invoke-WindowsOneShotProcess($Cfg,$Call,[string]$Command,[string]$Cwd=$null,[int]$TimeoutMs=3000,[int]$MaxLines=200) {
+  Assert-StarterMutationAuthorized $Cfg $Call
   if ([string]::IsNullOrWhiteSpace($Command) -or $Command.Length -gt 4096) { throw "FUNCTION_ARGUMENTS_DENIED" }
   $TimeoutMs=[Math]::Max(100,[Math]::Min(10000,$TimeoutMs))
   $MaxLines=[Math]::Max(1,[Math]::Min(500,$MaxLines))
@@ -922,7 +1304,7 @@ function New-Receipt($Cfg,$Call,[string]$State,$Result) {
     $resultStdoutSha256=Get-Utf8Sha256 ([string]$Result.stdout)
   }
   $tool=[string]$Call.tool_id
-  $mutationClass=if ($tool -eq "hara.process.run") {"PROCESS_EXECUTION_V1"} elseif (@("hara.files.create_directory","hara.files.write") -contains $tool) {"FILESYSTEM_MUTATION_V1"} else {"READ_ONLY_OR_NONE_V1"}
+  $mutationClass=if (@("hara.process.run","hara.process.start","hara.process.interact","hara.process.kill") -contains $tool) {"PROCESS_EXECUTION_V1"} elseif (@("hara.files.create_directory","hara.files.write") -contains $tool) {"FILESYSTEM_MUTATION_V1"} else {"READ_ONLY_OR_NONE_V1"}
   $approvalMode=Get-ApprovalMode $Cfg
   $receipt = [ordered]@{
     schema="hara.commander-device-receipt.v1"
@@ -939,7 +1321,7 @@ function New-Receipt($Cfg,$Call,[string]$State,$Result) {
     human_approval_required=($mutationClass -ne "READ_ONLY_OR_NONE_V1" -and $approvalMode -eq "ASK_EVERY_ACTION")
     human_approval_state=if ($mutationClass -ne "READ_ONLY_OR_NONE_V1") {"APPROVED"} else {$null}
     local_authorization_mode=if ($mutationClass -ne "READ_ONLY_OR_NONE_V1") {$approvalMode} else {$null}
-    authorization_source=if ($mutationClass -ne "READ_ONLY_OR_NONE_V1") {$(if ($approvalMode -eq "PERSISTENT_TRUSTED") {"DEVICE_ENROLLMENT_POLICY"} else {"LOCAL_OPERATOR_SESSION"})} else {$null}
+    authorization_source=if ($mutationClass -ne "READ_ONLY_OR_NONE_V1") {$(if ($approvalMode -eq "PERSISTENT_TRUSTED") {"DEVICE_ENROLLMENT_POLICY"} elseif ($approvalMode -eq "ASK_EVERY_ACTION") {"LOCAL_INDIVIDUAL_APPROVAL"} else {"LOCAL_OPERATOR_SESSION"})} else {$null}
     result_binding=$resultBinding
     result_stdout_sha256=$resultStdoutSha256
     completed_at_utc=[DateTime]::UtcNow.ToString("o")
@@ -982,15 +1364,33 @@ function Invoke-Tool($Cfg,$Call) {
     $result=New-DirectResult "filesystem.read" "READ_ONLY" (Read-WindowsTextFile ([string]$payload.path) $offset $length)
   } elseif ($tool -eq "hara.files.create_directory") {
     $parents=if ($null -ne $payload.parents) {[bool]$payload.parents} else {$true}
-    $result=New-DirectResult "filesystem.create_directory" "MUTATING" (New-WindowsDirectory $Cfg ([string]$payload.path) $parents)
+    $result=New-DirectResult "filesystem.create_directory" "MUTATING" (New-WindowsDirectory $Cfg $Call ([string]$payload.path) $parents)
   } elseif ($tool -eq "hara.files.write") {
     $mode=if ($payload.mode) {[string]$payload.mode} else {"rewrite"}
-    $result=New-DirectResult "filesystem.write" "MUTATING" (Write-WindowsTextFile $Cfg ([string]$payload.path) ([string]$payload.content) $mode)
+    $expected=if ($payload.expected_sha256) {[string]$payload.expected_sha256} else {$null}
+    $result=New-DirectResult "filesystem.write" "MUTATING" (Write-WindowsTextFile $Cfg $Call ([string]$payload.path) ([string]$payload.content) $mode $expected)
+  } elseif ($tool -eq "hara.process.sessions") {
+    $result=New-DirectResult "process.sessions" "READ_ONLY" (List-WindowsManagedSessions)
+  } elseif ($tool -eq "hara.process.start") {
+    $cwd=if ($payload.cwd) {[string]$payload.cwd} else {$null}
+    $timeout=if ($null -ne $payload.timeout_ms) {[int]$payload.timeout_ms} else {1000}
+    $result=New-DirectResult "process.start" "PROCESS_EXECUTION" (Start-WindowsManagedSession $Cfg $Call ([string]$payload.command) $cwd $timeout)
+  } elseif ($tool -eq "hara.process.output") {
+    $offset=if ($null -ne $payload.offset) {[int]$payload.offset} else {0}
+    $length=if ($null -ne $payload.length) {[int]$payload.length} else {200}
+    $wait=if ($null -ne $payload.timeout_ms) {[int]$payload.timeout_ms} else {500}
+    $result=New-DirectResult "process.output" "READ_ONLY" (Read-WindowsManagedSession ([string]$payload.session_id) $offset $length $wait)
+  } elseif ($tool -eq "hara.process.interact") {
+    $wait=if ($null -ne $payload.timeout_ms) {[int]$payload.timeout_ms} else {1000}
+    $result=New-DirectResult "process.interact" "PROCESS_EXECUTION" (Send-WindowsManagedSessionInput $Cfg $Call ([string]$payload.session_id) ([string]$payload.input) $wait)
+  } elseif ($tool -eq "hara.process.kill") {
+    $force=$payload.force -eq $true
+    $result=New-DirectResult "process.kill" "PROCESS_EXECUTION" (Stop-WindowsManagedSession $Cfg $Call ([string]$payload.session_id) $force)
   } elseif ($tool -eq "hara.process.run") {
     $cwd=if ($payload.cwd) {[string]$payload.cwd} else {$null}
     $timeout=if ($null -ne $payload.timeout_ms) {[int]$payload.timeout_ms} else {3000}
     $maxLines=if ($null -ne $payload.max_lines) {[int]$payload.max_lines} else {200}
-    $run=Invoke-WindowsOneShotProcess $Cfg ([string]$payload.command) $cwd $timeout $maxLines
+    $run=Invoke-WindowsOneShotProcess $Cfg $Call ([string]$payload.command) $cwd $timeout $maxLines
     $exit=if ($null -ne $run.exit_code) {[int]$run.exit_code} else {$null}
     $result=New-DirectResult "process.run" "PROCESS_EXECUTION" $run $exit
   } elseif ($tool -eq "hara.health") {
@@ -1059,6 +1459,26 @@ function Invoke-AgentSelfTest {
     $script:OperationsDb=Join-Path $testRoot "operations.sqlite3"
     New-Item -ItemType Directory -Path $script:ReceiptDir -Force | Out-Null
     $cfg=[pscustomobject]@{device_id="selftest";architecture="test"}
+    # ASK_EVERY_ACTION must deny writes and execution without a local session.
+    $savedSelfTestSessionPath=$script:SessionPath
+    try {
+      $script:SessionPath=Join-Path $testRoot "no-session-selftest.json"
+      foreach($unsafe in @(
+        @{tool="hara.files.create_directory";payload=[pscustomobject]@{path=(Join-Path $testRoot "must-not-create");parents=$true}},
+        @{tool="hara.files.write";payload=[pscustomobject]@{path=(Join-Path $testRoot "must-not-write.txt");content="blocked";mode="rewrite"}},
+        @{tool="hara.process.run";payload=[pscustomobject]@{command="Write-Output should_not_run";timeout_ms=1000}}
+      )) {
+        $attempt=[pscustomobject]@{request_id="selftest-unapproved";tool_id=$unsafe.tool;payload=$unsafe.payload}
+        $denied=$false
+        try { Invoke-Tool $cfg $attempt | Out-Null }
+        catch { $denied=([string]$_.Exception.Message -eq "LOCAL_OPERATOR_SESSION_REQUIRED") }
+        if (-not $denied) { throw "SELF_TEST_PER_ACTION_FAIL_CLOSED" }
+      }
+      if (Test-Path -LiteralPath (Join-Path $testRoot "must-not-create")) { throw "SELF_TEST_UNAPPROVED_DIRECTORY_CREATED" }
+      if (Test-Path -LiteralPath (Join-Path $testRoot "must-not-write.txt")) { throw "SELF_TEST_UNAPPROVED_FILE_CREATED" }
+    } finally {
+      $script:SessionPath=$savedSelfTestSessionPath
+    }
     $base=[ordered]@{call_id="selftest";request_id="selftest-001";tool_id="hara.health";payload=[pscustomobject]@{}}
 
     $health=Invoke-Tool $cfg ([pscustomobject]$base)

@@ -1,4 +1,12 @@
-# H.A.R.A. Commander — CURRENT (11/10/2026, Windows updater v3 PROD; beta comercial HOLD)
+# H.A.R.A. Commander — CURRENT (11/10/2026, Windows 0.3.44-v4 RC assinado; beta comercial HOLD)
+
+## Windows local ASK_EVERY_ACTION + terminal gerenciado — RC candidato
+
+O Windows `HARA_WIN11` está **ONLINE no MCP com Agent 0.3.43**, e operações READ_ONLY (ping/info, processos, listagem e leitura de arquivo) foram comprovadas por recibo. Mutações neste Agent v3 retornam `WINDOWS_PER_ACTION_APPROVAL_UNSUPPORTED` e sessões PTY `AGENT_UPGRADE_REQUIRED`.
+
+A versão **0.3.44-v4 RC**, ainda NÃO implantada na identidade registrada nem distribuída ao público, inclui aprovação individual efetiva na janela local do operador (nonce, request_id, SHA dos argumentos e timeout 22s, sem alterar approval_mode), arquivos com CAS/atomic replace/reparse-deny e sessões PowerShell gerenciadas (8 processos, 5.000 linhas, 2 MiB, TTL 15min). No Windows 11 isolado: parser e selftest PASS, default sem sessão negou mutações, sessão .NET 120/120 linhas, segunda instrução interativa, ensaio 7.000 linhas com truncamento correto e gravação CAS PASS. Worker só libera ferramentas de sessão para Windows Agent >=0.3.44. Fonte de segurança 20 checks PASS; contrato de ferramentas 37/37 PASS; release RS256 v4 autenticou os quatro arquivos com Linux byte-idêntico a v3; gate total 87/87 PASS LOCAL. **Aprovação positiva por humano e execução E2E v4 pelo MCP ainda pendentes.** Não promover publicamente antes do canário. Relatório: `docs/operations/HARA_COMMANDER_WINDOWS_044_APPROVAL_AND_PTY_RC_20261012.md`.
+
+
 
 ## Windows updater 0.3.43-v3 — DEV/PROD homologados
 

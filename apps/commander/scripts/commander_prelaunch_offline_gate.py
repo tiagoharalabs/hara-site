@@ -24,6 +24,8 @@ SCRIPTS = ROOT / "apps/commander/scripts"
 GATE = "HARA_COMMANDER_PRELAUNCH_OFFLINE"
 TIMEOUT = 65
 PYTHON = (
+    "validate_signed_windows_044_v4_rc.py",
+    "validate_windows_044_approval_contract.py",
     "validate_event_v2_terminal_release.py",
     "validate_process_terminal_drain.py",
     "validate_commander_submission_package.py",
@@ -73,6 +75,7 @@ PYTHON = (
     "validate_fresh_customer_acceptance.py",
 )
 JS = (
+    "test_windows_044_capability_gate.mjs",
     "test_no_stripe_technical_mode.mjs",
     "test_portal_session_isolation.mjs",
     "test_device_status_poll.mjs",
