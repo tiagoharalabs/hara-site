@@ -1,0 +1,126 @@
+{
+  "cases": [
+    {
+      "args": [],
+      "name": "unicode",
+      "script": "test_windows_051_process_unicode_fixture.ps1",
+      "source_parameter": "-AgentPath"
+    },
+    {
+      "args": [],
+      "name": "http",
+      "script": "test_windows_051_utf8_http_fixture.ps1",
+      "source_parameter": "-AgentPath"
+    },
+    {
+      "args": [
+        "-ExpectedBehavior",
+        "Diagnostic"
+      ],
+      "name": "input-diagnostic",
+      "script": "test_windows_051_managed_input_fixture.ps1",
+      "source_parameter": "-AgentPath"
+    },
+    {
+      "args": [
+        "-ExpectedBehavior",
+        "Candidate051"
+      ],
+      "name": "input-final",
+      "script": "test_windows_051_managed_input_fixture.ps1",
+      "source_parameter": "-AgentPath"
+    },
+    {
+      "args": [],
+      "name": "core",
+      "script": "test_windows_local_approval_expiry.ps1",
+      "source_parameter": "-AgentSource"
+    },
+    {
+      "args": [
+        "-ExpectedSourceSha256",
+        "4c563987986249d78c76258d062a4d360ffb88199539429ea97c2f346644656a"
+      ],
+      "name": "window",
+      "script": "test_windows_051_approval_window_fixture.ps1",
+      "source_parameter": "-AgentSource"
+    },
+    {
+      "args": [
+        "-ExpectedBehavior",
+        "Candidate051",
+        "-ExpectedSourceSha256",
+        "4c563987986249d78c76258d062a4d360ffb88199539429ea97c2f346644656a"
+      ],
+      "name": "startup",
+      "script": "test_windows_operator_session_startup_fixture_051.ps1",
+      "source_parameter": "-AgentSource"
+    },
+    {
+      "args": [],
+      "name": "denial",
+      "script": "test_windows_full_tool_denial_fixture_051.ps1",
+      "source_parameter": "-AgentSource"
+    },
+    {
+      "args": [
+        "-ExpectedBehavior",
+        "Candidate051"
+      ],
+      "name": "resume",
+      "script": "test_windows_existing_console_resume_fixture_051.ps1",
+      "source_parameter": "-AgentSource"
+    }
+  ],
+  "files": [
+    {
+      "bytes": 27221,
+      "name": "test_windows_051_approval_window_fixture.ps1",
+      "sha256": "90f742710955ef0c564bfacfffbb2bb9ac7f653272a71e032479fb2ff52cd168"
+    },
+    {
+      "bytes": 8494,
+      "name": "test_windows_051_managed_input_fixture.ps1",
+      "sha256": "d18c56c3abbb3ba4d3d51e8501b2af9e79cf0cff794f90c93bf9a4fb5d0739a1"
+    },
+    {
+      "bytes": 6974,
+      "name": "test_windows_051_process_unicode_fixture.ps1",
+      "sha256": "509735ea1601b02e0b3921cdd200a9a762b021c4c49a6ce7a948ebf5b4c5caa2"
+    },
+    {
+      "bytes": 9815,
+      "name": "test_windows_051_utf8_http_fixture.ps1",
+      "sha256": "450f13a3ef56200a3148d46abdc4b5c1a05ad15a6b8f6d9ea0d3b3a936cfc36c"
+    },
+    {
+      "bytes": 12114,
+      "name": "test_windows_existing_console_resume_fixture_051.ps1",
+      "sha256": "9a6a0a897eb26a2db7c6b7d0badbea0a056a6c3c8a65df5bcd5b9fd6e6bd77bc"
+    },
+    {
+      "bytes": 9537,
+      "name": "test_windows_full_tool_denial_fixture_051.ps1",
+      "sha256": "709cace08b91cc12082df18467950e999b8e03a327420510606ca57b02fe717a"
+    },
+    {
+      "bytes": 25725,
+      "name": "test_windows_local_approval_expiry.ps1",
+      "sha256": "3cfe01817a58127fc5dcd08c1143ae1b92fdd0b95e0248689e8bbecf32e2d7cf"
+    },
+    {
+      "bytes": 15302,
+      "name": "test_windows_operator_session_startup_fixture_051.ps1",
+      "sha256": "0cc4d326b26446ed8654c6a6b19780d79232b16b05abccf31eed7f3f1c36f723"
+    },
+    {
+      "bytes": 98131,
+      "name": "windows.ps1",
+      "sha256": "4c563987986249d78c76258d062a4d360ffb88199539429ea97c2f346644656a"
+    }
+  ],
+  "installed_agent_or_ipc_touched": false,
+  "schema": "hara.commander-native51-isolated-inputs.v1",
+  "source_name": "windows.ps1",
+  "source_sha256": "4c563987986249d78c76258d062a4d360ffb88199539429ea97c2f346644656a"
+}

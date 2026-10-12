@@ -1,0 +1,11 @@
+{
+  "README.md": "a6c591bc4ff2b73318b60d9c8d2952b45b7961242401fa0c20643519e509ed64",
+  "agent/linux.py": "3e0db700dd568a85e23212a5400f1d256546fef77b7f59f574ceed29e04c15b7",
+  "agent/windows.ps1": "4c563987986249d78c76258d062a4d360ffb88199539429ea97c2f346644656a",
+  "install/linux.sh": "534e14433da9f86eb4342c6d9400e89ecf164545605e02e22f1646510284aba5",
+  "install/windows.ps1": "2f0dae1684fae5a5b4fb716e54ca3d314eedd814eef23238ffa41e479a4346c4",
+  "release/SHA256SUMS": "ee48f33cfa85e9f31ff4d582d0122da10f3dbfbef2c038e2fa45f36e56c50e79",
+  "release/agent-manifest.json": "d7b0cead0a38fa22172be285c8afbc8003802ce4b2fdc0807d3393986312841d",
+  "release/agent-manifest.sig.json": "4a607a4029b954ed9677125f46e1ee64e53740c109c6ca197eaa33cbb6baf84b",
+  "release/release-signing-public.jwk": "4e68608fa891f1b7a1e89c75936a089daeab0ba862a764f9bb31eca849cdfb9b"
+}

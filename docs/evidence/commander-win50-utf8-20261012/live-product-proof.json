@@ -1,0 +1,283 @@
+{
+  "schema": "hara.commander-windows50-live-product-proof.v1",
+  "state": "PARTIAL",
+  "agent_version": "0.3.50",
+  "approval_mode": "SESSION_TRUSTED",
+  "basic_terminal_120_lines_pass": true,
+  "unicode_process_output_pass": true,
+  "unicode_file_physical_sha_pass": true,
+  "guarded_write_pass": true,
+  "stale_sha_denied": true,
+  "interactive_unicode_input_pass": false,
+  "blocking_observation": "Literal emoji and CJK input became question marks in the managed terminal",
+  "scope": "FOUNDER_LAB_DIRECT_MCP",
+  "full_product_homologated": false,
+  "tests": {
+    "actual_device50_real": {
+      "state": "PASS",
+      "operational_authority": "HARA_SERVICES",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "runtime_authority_from_chatgpt": false,
+      "mutation_performed": false,
+      "result": {
+        "function_id": "device.info",
+        "risk_class": "READ_ONLY",
+        "process_exit_code": 0,
+        "domain_success_inferred": false,
+        "stdout": "{\"device_id\":\"HARA-DEVICE-64adbd7a-02b1-4890-acdb-9543e8b48d00\",\"architecture\":\"x64\",\"tunnel_mode\":\"OUTBOUND_RELAY\",\"agent_version\":\"0.3.50\",\"platform_release\":\"Microsoft Windows NT 10.0.26300.0\",\"platform\":\"WINDOWS\",\"hostname\":\"HARA_WIN11\",\"powershell_version\":\"5.1.26100.9444\"}"
+      },
+      "customer_services_relay": false,
+      "bridge_receipt_sha256": "1a8cd81ad3503ce399ee1e3ec8761cccb7a61fb88f90c3e0d7e067ca3e72ef8f",
+      "computer": "HARA_WIN11",
+      "product": {
+        "plan_code": "FOUNDER_INTERNAL",
+        "entitlement_id": "HARA-ENTITLEMENT-XPK",
+        "quota": {
+          "ok": true,
+          "state": "UNMETERED",
+          "mode": "UNMETERED",
+          "units": 0,
+          "cloud_quota_transaction": false
+        }
+      }
+    },
+    "real50_unicode_process": {
+      "state": "PASS",
+      "operational_authority": "HARA_SERVICES",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "runtime_authority_from_chatgpt": false,
+      "mutation_performed": false,
+      "result": {
+        "function_id": "process.run",
+        "risk_class": "PROCESS_EXECUTION",
+        "process_exit_code": 0,
+        "domain_success_inferred": false,
+        "stdout": "{\"timed_out\":false,\"session_retained\":false,\"command_sha256\":\"13591ba407305b7bd0371b52b359f4f2b3ca82b4228ca5caf8d30301315e314a\",\"state\":\"EXITED\",\"exit_code\":0,\"cwd\":\"C:\\\\WINDOWS\\\\system32\",\"output_truncated\":false,\"text\":\"Olá - ação - 🚀 - 日本語\\r\\r\\n\"}"
+      },
+      "customer_services_relay": false,
+      "bridge_receipt_sha256": "e117b7cb1c6ca6a116e14b72b0aa7182fbc35878dfbe420afa11ed2748b5aee6",
+      "computer": "HARA_WIN11",
+      "product": {
+        "plan_code": "FOUNDER_INTERNAL",
+        "entitlement_id": "HARA-ENTITLEMENT-XPK",
+        "quota": {
+          "ok": true,
+          "state": "UNMETERED",
+          "mode": "UNMETERED",
+          "units": 0,
+          "cloud_quota_transaction": false
+        }
+      }
+    },
+    "real50_utf8_write": {
+      "state": "PASS",
+      "operational_authority": "HARA_SERVICES",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "runtime_authority_from_chatgpt": false,
+      "mutation_performed": false,
+      "result": {
+        "function_id": "filesystem.write",
+        "risk_class": "MUTATING",
+        "process_exit_code": 0,
+        "domain_success_inferred": false,
+        "stdout": "{\"path\":\"C:\\\\Users\\\\Public\\\\Documents\\\\HARA_Commander_050_Homologacao_20261012_root_a28b0dc8_UTF8.txt\",\"bytes_written\":90,\"mode\":\"rewrite\"}"
+      },
+      "customer_services_relay": false,
+      "bridge_receipt_sha256": "8115279396f29c8b269ef44f133a29ce217f97aae2433ee26fa60b63bc7ef191",
+      "computer": "HARA_WIN11",
+      "product": {
+        "plan_code": "FOUNDER_INTERNAL",
+        "entitlement_id": "HARA-ENTITLEMENT-XPK",
+        "quota": {
+          "ok": true,
+          "state": "UNMETERED",
+          "mode": "UNMETERED",
+          "units": 0,
+          "cloud_quota_transaction": false
+        }
+      }
+    },
+    "real50_initial_rawhash": {
+      "state": "PASS",
+      "operational_authority": "HARA_SERVICES",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "runtime_authority_from_chatgpt": false,
+      "mutation_performed": false,
+      "result": {
+        "function_id": "process.run",
+        "risk_class": "PROCESS_EXECUTION",
+        "process_exit_code": 0,
+        "domain_success_inferred": false,
+        "stdout": "{\"timed_out\":false,\"session_retained\":false,\"command_sha256\":\"48643d834318ae51dd93fe2284d9692d815c72b761081f699e2c7c67db5cdfad\",\"state\":\"EXITED\",\"exit_code\":0,\"cwd\":\"C:\\\\WINDOWS\\\\system32\",\"output_truncated\":false,\"text\":\"{\\\"bytes\\\":90,\\\"sha256\\\":\\\"5207989024a55e03bdbb30aad67f4c2a3c33140375cda1670cacd08aef7d0926\\\"}\\r\\r\\n\"}"
+      },
+      "customer_services_relay": false,
+      "bridge_receipt_sha256": "91313cb1cf110c87d1d81aa64ffb1caa7de61a537d89e6af22b5b4d8167b0a97",
+      "computer": "HARA_WIN11",
+      "product": {
+        "plan_code": "FOUNDER_INTERNAL",
+        "entitlement_id": "HARA-ENTITLEMENT-XPK",
+        "quota": {
+          "ok": true,
+          "state": "UNMETERED",
+          "mode": "UNMETERED",
+          "units": 0,
+          "cloud_quota_transaction": false
+        }
+      }
+    },
+    "real50_guarded_rewrite": {
+      "state": "PASS",
+      "operational_authority": "HARA_SERVICES",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "runtime_authority_from_chatgpt": false,
+      "mutation_performed": false,
+      "result": {
+        "function_id": "filesystem.write",
+        "risk_class": "MUTATING",
+        "process_exit_code": 0,
+        "domain_success_inferred": false,
+        "stdout": "{\"path\":\"C:\\\\Users\\\\Public\\\\Documents\\\\HARA_Commander_050_Homologacao_20261012_root_a28b0dc8_UTF8.txt\",\"bytes_written\":116,\"mode\":\"rewrite\"}"
+      },
+      "customer_services_relay": false,
+      "bridge_receipt_sha256": "d17e23201df1319dacb7141ff9fdc4c0513e1d0fe86bdbaedb948f880bf6991b",
+      "computer": "HARA_WIN11",
+      "product": {
+        "plan_code": "FOUNDER_INTERNAL",
+        "entitlement_id": "HARA-ENTITLEMENT-XPK",
+        "quota": {
+          "ok": true,
+          "state": "UNMETERED",
+          "mode": "UNMETERED",
+          "units": 0,
+          "cloud_quota_transaction": false
+        }
+      }
+    },
+    "real50_stale_rewrite": {
+      "state": "DENIED",
+      "operational_authority": "LOCAL_OPERATOR_SESSION",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "runtime_authority_from_chatgpt": false,
+      "mutation_performed": false,
+      "result": {},
+      "customer_services_relay": false,
+      "blocker": {
+        "code": "FILE_PRECONDITION_FAILED"
+      },
+      "computer": "HARA_WIN11",
+      "error_code": "INVALID_ARGUMENT"
+    },
+    "real50_terminal_start": {
+      "state": "PASS",
+      "operational_authority": "HARA_SERVICES",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "runtime_authority_from_chatgpt": false,
+      "mutation_performed": false,
+      "result": {
+        "function_id": "process.start",
+        "risk_class": "PROCESS_EXECUTION",
+        "process_exit_code": 0,
+        "domain_success_inferred": false,
+        "stdout": "{\"session_id\":\"HARA-PROC-4907e2c7d9314ddcab35219ecc799337\",\"pid\":7548,\"state\":\"RUNNING\",\"exit_code\":null,\"started_at_utc\":\"2026-10-12T22:43:36.8079245Z\",\"finished_at_utc\":null,\"base_line\":0,\"total_lines\":1,\"next_offset\":1,\"text\":\"HARA50_TERMINAL_READY\",\"buffer_truncated\":false,\"output_pending\":true,\"command_content_persisted\":false}"
+      },
+      "customer_services_relay": false,
+      "bridge_receipt_sha256": "a508a671e2e15be30326d67d1513a56d0c532b8d0b0224bf514c33b8f6f8098d",
+      "computer": "HARA_WIN11",
+      "product": {
+        "plan_code": "FOUNDER_INTERNAL",
+        "entitlement_id": "HARA-ENTITLEMENT-XPK",
+        "quota": {
+          "ok": true,
+          "state": "UNMETERED",
+          "mode": "UNMETERED",
+          "units": 0,
+          "cloud_quota_transaction": false
+        }
+      }
+    },
+    "real50_terminal_interact": {
+      "state": "PASS",
+      "operational_authority": "HARA_SERVICES",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "runtime_authority_from_chatgpt": false,
+      "mutation_performed": false,
+      "result": {
+        "function_id": "process.interact",
+        "risk_class": "PROCESS_EXECUTION",
+        "process_exit_code": 0,
+        "domain_success_inferred": false,
+        "stdout": "{\"session_id\":\"HARA-PROC-4907e2c7d9314ddcab35219ecc799337\",\"pid\":7548,\"state\":\"RUNNING\",\"exit_code\":null,\"started_at_utc\":\"2026-10-12T22:43:36.8079245Z\",\"finished_at_utc\":null,\"base_line\":0,\"total_lines\":1,\"next_offset\":1,\"text\":\"HARA50_TERMINAL_READY\",\"buffer_truncated\":false,\"output_pending\":true,\"command_content_persisted\":false}"
+      },
+      "customer_services_relay": false,
+      "bridge_receipt_sha256": "293d2dc95fa61dfcaeaf98894be72a12007fda8016c4b9877613e1fd55171539",
+      "computer": "HARA_WIN11",
+      "product": {
+        "plan_code": "FOUNDER_INTERNAL",
+        "entitlement_id": "HARA-ENTITLEMENT-XPK",
+        "quota": {
+          "ok": true,
+          "state": "UNMETERED",
+          "mode": "UNMETERED",
+          "units": 0,
+          "cloud_quota_transaction": false
+        }
+      }
+    },
+    "real50_terminal_drain": {
+      "state": "PASS",
+      "operational_authority": "HARA_SERVICES",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "runtime_authority_from_chatgpt": false,
+      "mutation_performed": false,
+      "result": {
+        "function_id": "process.output",
+        "risk_class": "READ_ONLY",
+        "process_exit_code": 0,
+        "domain_success_inferred": false,
+        "stdout": "{\"session_id\":\"HARA-PROC-4907e2c7d9314ddcab35219ecc799337\",\"pid\":7548,\"state\":\"EXITED\",\"exit_code\":0,\"started_at_utc\":\"2026-10-12T22:43:36.8079245Z\",\"finished_at_utc\":\"2026-10-12T22:44:12.5726843Z\",\"base_line\":0,\"total_lines\":122,\"next_offset\":122,\"text\":\"HARA50_TERMINAL_READY\\nHARA50_LINE_001\\nHARA50_LINE_002\\nHARA50_LINE_003\\nHARA50_LINE_004\\nHARA50_LINE_005\\nHARA50_LINE_006\\nHARA50_LINE_007\\nHARA50_LINE_008\\nHARA50_LINE_009\\nHARA50_LINE_010\\nHARA50_LINE_011\\nHARA50_LINE_012\\nHARA50_LINE_013\\nHARA50_LINE_014\\nHARA50_LINE_015\\nHARA50_LINE_016\\nHARA50_LINE_017\\nHARA50_LINE_018\\nHARA50_LINE_019\\nHARA50_LINE_020\\nHARA50_LINE_021\\nHARA50_LINE_022\\nHARA50_LINE_023\\nHARA50_LINE_024\\nHARA50_LINE_025\\nHARA50_LINE_026\\nHARA50_LINE_027\\nHARA50_LINE_028\\nHARA50_LINE_029\\nHARA50_LINE_030\\nHARA50_LINE_031\\nHARA50_LINE_032\\nHARA50_LINE_033\\nHARA50_LINE_034\\nHARA50_LINE_035\\nHARA50_LINE_036\\nHARA50_LINE_037\\nHARA50_LINE_038\\nHARA50_LINE_039\\nHARA50_LINE_040\\nHARA50_LINE_041\\nHARA50_LINE_042\\nHARA50_LINE_043\\nHARA50_LINE_044\\nHARA50_LINE_045\\nHARA50_LINE_046\\nHARA50_LINE_047\\nHARA50_LINE_048\\nHARA50_LINE_049\\nHARA50_LINE_050\\nHARA50_LINE_051\\nHARA50_LINE_052\\nHARA50_LINE_053\\nHARA50_LINE_054\\nHARA50_LINE_055\\nHARA50_LINE_056\\nHARA50_LINE_057\\nHARA50_LINE_058\\nHARA50_LINE_059\\nHARA50_LINE_060\\nHARA50_LINE_061\\nHARA50_LINE_062\\nHARA50_LINE_063\\nHARA50_LINE_064\\nHARA50_LINE_065\\nHARA50_LINE_066\\nHARA50_LINE_067\\nHARA50_LINE_068\\nHARA50_LINE_069\\nHARA50_LINE_070\\nHARA50_LINE_071\\nHARA50_LINE_072\\nHARA50_LINE_073\\nHARA50_LINE_074\\nHARA50_LINE_075\\nHARA50_LINE_076\\nHARA50_LINE_077\\nHARA50_LINE_078\\nHARA50_LINE_079\\nHARA50_LINE_080\\nHARA50_LINE_081\\nHARA50_LINE_082\\nHARA50_LINE_083\\nHARA50_LINE_084\\nHARA50_LINE_085\\nHARA50_LINE_086\\nHARA50_LINE_087\\nHARA50_LINE_088\\nHARA50_LINE_089\\nHARA50_LINE_090\\nHARA50_LINE_091\\nHARA50_LINE_092\\nHARA50_LINE_093\\nHARA50_LINE_094\\nHARA50_LINE_095\\nHARA50_LINE_096\\nHARA50_LINE_097\\nHARA50_LINE_098\\nHARA50_LINE_099\\nHARA50_LINE_100\\nHARA50_LINE_101\\nHARA50_LINE_102\\nHARA50_LINE_103\\nHARA50_LINE_104\\nHARA50_LINE_105\\nHARA50_LINE_106\\nHARA50_LINE_107\\nHARA50_LINE_108\\nHARA50_LINE_109\\nHARA50_LINE_110\\nHARA50_LINE_111\\nHARA50_LINE_112\\nHARA50_LINE_113\\nHARA50_LINE_114\\nHARA50_LINE_115\\nHARA50_LINE_116\\nHARA50_LINE_117\\nHARA50_LINE_118\\nHARA50_LINE_119\\nHARA50_LINE_120\\nHARA50_INTERACTION_PASS: Olá ação ?? ???\",\"buffer_truncated\":false,\"output_pending\":false,\"command_content_persisted\":false}"
+      },
+      "customer_services_relay": false,
+      "bridge_receipt_sha256": "75e9e0d48562ca51e4c6bddb3609c399c34a351a9616cbdb262dd19cad4cf152",
+      "computer": "HARA_WIN11",
+      "product": {
+        "plan_code": "FOUNDER_INTERNAL",
+        "entitlement_id": "HARA-ENTITLEMENT-XPK",
+        "quota": {
+          "ok": true,
+          "state": "UNMETERED",
+          "mode": "UNMETERED",
+          "units": 0,
+          "cloud_quota_transaction": false
+        }
+      }
+    },
+    "real50_post_stale_rawhash": {
+      "state": "PASS",
+      "operational_authority": "HARA_SERVICES",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "runtime_authority_from_chatgpt": false,
+      "mutation_performed": false,
+      "result": {
+        "function_id": "process.run",
+        "risk_class": "PROCESS_EXECUTION",
+        "process_exit_code": 0,
+        "domain_success_inferred": false,
+        "stdout": "{\"timed_out\":false,\"session_retained\":false,\"command_sha256\":\"48643d834318ae51dd93fe2284d9692d815c72b761081f699e2c7c67db5cdfad\",\"state\":\"EXITED\",\"exit_code\":0,\"cwd\":\"C:\\\\WINDOWS\\\\system32\",\"output_truncated\":false,\"text\":\"{\\\"bytes\\\":116,\\\"sha256\\\":\\\"4cd3bfe941c1b3ac78cb9d1a866090b7fcc9c3ef4f3df68b28a2a815688865b0\\\"}\\r\\r\\n\"}"
+      },
+      "customer_services_relay": false,
+      "bridge_receipt_sha256": "1facf870866dddd7275fb3ea870d5bbe654b394524a49bb862304743eb842a02",
+      "computer": "HARA_WIN11",
+      "product": {
+        "plan_code": "FOUNDER_INTERNAL",
+        "entitlement_id": "HARA-ENTITLEMENT-XPK",
+        "quota": {
+          "ok": true,
+          "state": "UNMETERED",
+          "mode": "UNMETERED",
+          "units": 0,
+          "cloud_quota_transaction": false
+        }
+      }
+    }
+  }
+}

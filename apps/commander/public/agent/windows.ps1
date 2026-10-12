@@ -11,7 +11,7 @@ $ApprovalTimeoutSeconds = 900
 $OperationsDb = Join-Path $Root "operations.sqlite3"
 $AgentTaskName = "HARA Commander Agent"
 $SessionMaxHours = 12
-$AgentVersion = "0.3.50"
+$AgentVersion = "0.3.51"
 $SloProfile = "INTERNAL_BETA_V1"
 $SloMinSuccessPercent = 99.0
 $SloP50MaxMs = 1000
@@ -1227,7 +1227,7 @@ public sealed class HaraWindowsProcessSession : IDisposable {
     Child.BeginErrorReadLine();
     Child.StandardInput.AutoFlush = true;
     Child.StandardInput.WriteLine("Invoke-Expression ([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('JFByb2dyZXNzUHJlZmVyZW5jZT0nU2lsZW50bHlDb250aW51ZSc7W0NvbnNvbGVdOjpJbnB1dEVuY29kaW5nPVtUZXh0LlVURjhFbmNvZGluZ106Om5ldygkZmFsc2UpO1tDb25zb2xlXTo6T3V0cHV0RW5jb2Rpbmc9W1RleHQuVVRGOEVuY29kaW5nXTo6bmV3KCRmYWxzZSk7JE91dHB1dEVuY29kaW5nPVtUZXh0LlVURjhFbmNvZGluZ106Om5ldygkZmFsc2UpOw==')))" );
-    Child.StandardInput.WriteLine(command);
+    Child.StandardInput.WriteLine(EncodeConsoleInput(command));
   }
 
   void OnStdout(object sender, DataReceivedEventArgs e) {
@@ -1254,11 +1254,23 @@ public sealed class HaraWindowsProcessSession : IDisposable {
     }
   }
 
+  // ConsoleHost caches its OEM stdin reader before the UTF-8 bootstrap.
+  // An ASCII envelope carries complete Unicode commands without OEM loss.
+  private static string EncodeConsoleInput(string input) {
+    foreach (char value in input) {
+      if (value > 127) {
+        string payload = Convert.ToBase64String(Encoding.UTF8.GetBytes(input));
+        return ". ([ScriptBlock]::Create([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('" + payload + "'))))";
+      }
+    }
+    return input;
+  }
+
   public void Input(string input) {
     if (input == null || input.Length > 4096 || input.IndexOf('\0') >= 0)
       throw new InvalidOperationException("PROCESS_INPUT_INVALID");
     if (Child.HasExited) throw new InvalidOperationException("PROCESS_SESSION_EXITED");
-    Child.StandardInput.WriteLine(input.TrimEnd('\r','\n'));
+    Child.StandardInput.WriteLine(EncodeConsoleInput(input.TrimEnd('\r','\n')));
     Child.StandardInput.Flush();
   }
 

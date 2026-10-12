@@ -1,6 +1,8 @@
 {
   "body_sha256": "2938e9f1284180959e33ab1718d0793a72ff6e4cdb8108c34dcd14e69446de5c",
   "content_type": "text/plain; charset=UTF-8",
+  "json_worker_header_proven": false,
+  "probe_blocked_by_access_layer": true,
   "status": 403,
   "url": "https://commander.haralabs.com.br/api/health"
 }

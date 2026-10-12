@@ -352,3 +352,7 @@ Relatório e procedimento: `docs/operations/HARA_COMMANDER_SIGNED_COMMERCIAL_V2_
 Novo refinamento autorizado da UI no portal público (sem alterar cores/identidade): cada linha mostra só nome, sistema, último contato e estado real; Agent/arquitetura/transporte/autorização ficam no menu de detalhes com ações secundárias. O grande guia de onboarding está recolhido por padrão; os botões de diagnóstico e procedimentos de autorização/revogação são preservados. Uma lease local válida não implica máquina online. O total de chamadas Free continua 10.000/mês.
 
 Fonte e contrato: docs/operations/HARA_COMMANDER_DEVICES_MINIMALIST_UI_20261010.md. Gate offline 54/54 PASS, DEV Worker versão 636d9e2f-883c-4a0d-96e1-8280ee2ee4ad com SHA exato 11/11 e health 200. Bundle assinado comercial v0.3.43 e agentes Founder v0.3.44 não foram tocados. Registrar versão PROD depois da promoção e readback.
+
+## Windows 12/10/2026 — homologação parcial
+
+VM com .50 privada e SESSION_TRUSTED, confirmada pelo Commander direto. Execução Unicode, arquivo UTF-8 físico e CAS passaram; terminal retornou 120 linhas, mas perdeu emoji/CJK na entrada literal. .51 corrige stdin, está assinada e validada dentro da VM: 511 verificações nativas e 115/115 no gate integrado. Troca .50 → .51 aguarda uma sessão de terminal ativa (PID 5448), que foi preservada. Ainda falta prova MCP real da .51. Detalhes e hashes: HARA_COMMANDER_WINDOWS_051_HANDOFF_20261012.md. Download público .43 e Linux preservados; nenhuma declaração de homologação comercial completa.
