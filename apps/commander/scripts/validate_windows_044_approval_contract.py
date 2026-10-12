@@ -4,7 +4,7 @@ from pathlib import Path
 import re
 
 ROOT=Path(__file__).resolve().parents[3]
-SOURCE=(ROOT/"apps/commander/public/agent/windows.ps1").read_text(encoding="utf-8")
+SOURCE=(ROOT/"apps/commander/release-bundles/commercial-0.3.44-v4-rc/agent/windows.ps1").read_text(encoding="utf-8")
 WORKER=(ROOT/"apps/commander/src/worker.js").read_text(encoding="utf-8")
 def check(code, condition):
  if not condition:raise AssertionError("WINDOWS044_"+code)

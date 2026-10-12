@@ -25,7 +25,9 @@ GATE = "HARA_COMMANDER_PRELAUNCH_OFFLINE"
 TIMEOUT = 65
 PYTHON = (
     "validate_signed_windows_044_v4_rc.py",
+    "validate_signed_windows_045_v5_rc.py",
     "validate_windows_044_approval_contract.py",
+    "validate_windows_045_privacy_contract.py",
     "validate_event_v2_terminal_release.py",
     "validate_process_terminal_drain.py",
     "validate_commander_submission_package.py",

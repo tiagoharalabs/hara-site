@@ -7,11 +7,11 @@ $SessionPath = Join-Path $Root "operator-session.json"
 $ConsoleEvents = Join-Path $Root "console-events.jsonl"
 $PendingApprovalPath = Join-Path $Root "pending-action-approval.json"
 $ApprovalResponsePath = Join-Path $Root "action-approval-response.json"
-$ApprovalTimeoutSeconds = 22
+$ApprovalTimeoutSeconds = 30
 $OperationsDb = Join-Path $Root "operations.sqlite3"
 $AgentTaskName = "HARA Commander Agent"
 $SessionMaxHours = 12
-$AgentVersion = "0.3.44"
+$AgentVersion = "0.3.45"
 $SloProfile = "INTERNAL_BETA_V1"
 $SloMinSuccessPercent = 99.0
 $SloP50MaxMs = 1000
@@ -539,10 +539,18 @@ function Get-LocalActionSummary($Call) {
   if ($null -eq $Call) { return $null }
   $tool=[string]$Call.tool_id
   $payload=$Call.payload
-  if ($tool -eq "hara.process.run") {
-    return "process.run cwd="+$(if ($payload.cwd) {[string]$payload.cwd} else {"~"})+
+  if (@("hara.process.run","hara.process.start") -contains $tool) {
+    return $tool+" cwd="+$(if ($payload.cwd) {[string]$payload.cwd} else {"~"})+
       " timeout_ms="+$(if ($null -ne $payload.timeout_ms) {[string]$payload.timeout_ms} else {"3000"})+
       " command="+(Protect-LocalCommandPreview ([string]$payload.command))
+  }
+  if ($tool -eq "hara.process.interact") {
+    return "process.interact session_id="+[string]$payload.session_id+
+      " input_preview="+(Protect-LocalCommandPreview ([string]$payload.input))
+  }
+  if ($tool -eq "hara.process.kill") {
+    return "process.kill session_id="+[string]$payload.session_id+
+      " force="+$(if ($payload.force) {"true"} else {"false"})
   }
   if ($tool -eq "hara.files.write") {
     $bytes=[Text.Encoding]::UTF8.GetByteCount([string]$payload.content)
@@ -574,7 +582,9 @@ function Write-ConsoleEvent([string]$Event,$Call=$null,[string]$State="",[string
     error_code=if ($ErrorCode) {$ErrorCode} else {$null}
     receipt_sha256=if ($ReceiptSha) {$ReceiptSha} else {$null}
     approval_id=$null
-    action_summary=Get-LocalActionSummary $Call
+    # Persistent telemetry must never include command previews, paths or payload values.
+    # The transient consent prompt still uses Get-LocalActionSummary locally.
+    action_summary=$null
     duration_ms=$null
     transport_mode="OUTBOUND_RELAY"
     local_only=$true
@@ -1542,6 +1552,22 @@ function Invoke-AgentSelfTest {
       $entry=(Get-Content -LiteralPath $script:ConsoleEvents | Select-Object -Last 1) | ConvertFrom-Json
       if ($entry.payload_values_exposed -ne $false -or $entry.secret_material_exposed -ne $false) { throw "SELF_TEST_CONSOLE_SANITIZATION_FAILED" }
       if (($entry | ConvertTo-Json -Compress) -match "never") { throw "SELF_TEST_CONSOLE_PAYLOAD_LEAK" }
+      $privateMarker="HARA_PRIVATE_SYNTHETIC_STRING_" + [guid]::NewGuid().ToString("N")
+      $privateCall=[pscustomobject]@{
+        request_id="selftest-private-event"
+        tool_id="hara.process.run"
+        payload=[pscustomobject]@{command=("Write-Output "+$privateMarker);cwd=("C:\LAB-PRIVATE-"+$privateMarker)}
+      }
+      Write-ConsoleEvent "SELFTEST_PRIVACY" $privateCall "COMPLETED"
+      $lastEvent=Get-Content -LiteralPath $script:ConsoleEvents | Select-Object -Last 1
+      $lastJson=$lastEvent | ConvertFrom-Json
+      if ($lastEvent.Contains($privateMarker) -or $null -ne $lastJson.action_summary) {
+        throw "SELF_TEST_LOCAL_CONSOLE_PRIVATE_COMMAND_PERSISTED"
+      }
+      if ([string]$lastJson.tool_id -ne "hara.process.run" -or
+          [string]$lastJson.request_id -ne "selftest-private-event") {
+        throw "SELF_TEST_LOCAL_CONSOLE_EVENT_METADATA_LOST"
+      }
       $columns=@(Invoke-LocalDbQuery "PRAGMA table_info(activity_events)")
       $columnNames=@($columns | ForEach-Object {[string]$_["name"]})
       if ($columnNames -contains "payload_json" -or $columnNames -contains "result_json") { throw "SELF_TEST_LOCAL_DB_RAW_CONTENT_COLUMN" }

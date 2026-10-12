@@ -1,0 +1,77 @@
+{
+  "schema": "hara.commander-windows045-v5-release-validation.v1",
+  "date_brt": "2026-10-11",
+  "release": {
+    "name": "commercial-0.3.45-v5-rc",
+    "version": "0.3.45",
+    "channel": "SIGNED_RC_PRIVATE",
+    "signature": "RS256_RSA3072",
+    "agent_sha256": "c370bff84b283172dcbcc40ee5f426e3b3d09b9181d3227755093d8577443dab",
+    "signed_manifest_sha256": "7d2353f05ab490fc9a854b815f07c20b51e66b3c03beb8d93bbcadfcf8c6ef33",
+    "previous_v4_unchanged": true,
+    "previous_v3_unchanged": true,
+    "linux_agent_byte_identical": true,
+    "linux_installer_byte_identical": true
+  },
+  "reason": "Persistent console event logged synthetic command/path even though payload_values_exposed=false",
+  "original_v44_synthetic_probe": {
+    "command_preview_persisted": true,
+    "private_path_persisted": true
+  },
+  "corrected_v45_signed_probe": {
+    "command_preview_persisted": false,
+    "private_path_persisted": false,
+    "tool_metadata_kept": true,
+    "request_metadata_kept": true
+  },
+  "actual_vm_tests": {
+    "platform": "Windows 11 Pro",
+    "powershell_version": "5.1",
+    "signed_agent_sha256_pass": true,
+    "powershell_parse_pass": true,
+    "agent_selftest_pass": true,
+    "negative_approval_cases": 15,
+    "negative_approval_passed": 15,
+    "negative_cases": [
+      "no_active_operator_session",
+      "explicit_denial",
+      "incorrect_nonce",
+      "timeout_without_response"
+    ],
+    "human_positive_approval_passed": false
+  },
+  "runtime_changes": {
+    "per_action_consent_window_seconds": 30,
+    "ephemeral_consent_previews_for": [
+      "process.run",
+      "process.start",
+      "process.interact",
+      "process.kill",
+      "files.write",
+      "files.create_directory"
+    ],
+    "persistent_command_previews_removed": true,
+    "approval_mode_default_unchanged": "ASK_EVERY_ACTION"
+  },
+  "offline_full_gate": {
+    "checked": 89,
+    "passed": 89,
+    "failed": 0,
+    "scope": "NO_CLOUD_MUTATION",
+    "report_path_local": "/tmp_hara/commander-win45-v5-offline-gate-20261011.json"
+  },
+  "deployment": {
+    "installed_windows_vm": "0.3.44",
+    "public_customer_windows": "0.3.43",
+    "worker_prod_version_change": false,
+    "cloudflare_deployed_v45": false,
+    "github_published_v45": false
+  },
+  "outstanding": [
+    "human positive on-device approval",
+    "real HARA MCP files.write/process.start/interact/output after user consent",
+    "Windows dynamic reconnect + output retaining after Agent restart",
+    "Windows general distribution gate",
+    "one thousand customers authenticated soak"
+  ]
+}

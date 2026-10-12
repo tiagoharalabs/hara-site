@@ -55,7 +55,7 @@ def main():
  need(new_win==old_win.replace(b'agent_version="0.3.43"',b'agent_version="0.3.44"'),
       "WINDOWS_INSTALLER_EXTRA_MUTATION")
  windows=(NEW/"agent/windows.ps1").read_bytes()
- need(windows==(APP/"public/agent/windows.ps1").read_bytes(),"WINDOWS_SOURCE_DRIFT")
+ need(sha(windows)=="3a397ffa7f8a13e69ea88eb1293267397a473927d87f59cef6d8a1a5d5e8f6e3","IMMUTABLE_SIGNED_V44_AGENT_SHA")
  need(b'$AgentVersion = "0.3.44"' in windows,"WINDOWS_SOURCE_VERSION")
  need(b'WINDOWS_PER_ACTION_APPROVAL_UNSUPPORTED' not in windows,"UNSUPPORTED_APPROVAL_GATE")
  need(b'Invoke-LocalActionApproval' in windows

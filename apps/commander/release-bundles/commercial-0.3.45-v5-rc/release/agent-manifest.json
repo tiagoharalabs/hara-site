@@ -1,0 +1,28 @@
+{
+  "agent_version": "0.3.45",
+  "channel": "stable",
+  "files": [
+    {
+      "bytes": 218938,
+      "path": "agent/linux.py",
+      "sha256": "3e0db700dd568a85e23212a5400f1d256546fef77b7f59f574ceed29e04c15b7"
+    },
+    {
+      "bytes": 81179,
+      "path": "agent/windows.ps1",
+      "sha256": "c370bff84b283172dcbcc40ee5f426e3b3d09b9181d3227755093d8577443dab"
+    },
+    {
+      "bytes": 36363,
+      "path": "install/linux.sh",
+      "sha256": "534e14433da9f86eb4342c6d9400e89ecf164545605e02e22f1646510284aba5"
+    },
+    {
+      "bytes": 23774,
+      "path": "install/windows.ps1",
+      "sha256": "3d455684b3a260789b7a8a9140804d6b589f6a93fe5d0cccf257536344584236"
+    }
+  ],
+  "product": "H.A.R.A. Commander",
+  "schema": "hara.commander-agent-release.v1"
+}

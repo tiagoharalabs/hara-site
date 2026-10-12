@@ -29,7 +29,7 @@ def ps_int(name: str) -> int:
     return int(m.group(1))
 
 need('AGENT_VERSION = "0.3.43"' in LINUX, "LINUX_VERSION")
-need('$AgentVersion = "0.3.44"' in WINDOWS, "WINDOWS_VERSION")
+need('$AgentVersion = "0.3.45"' in WINDOWS, "WINDOWS_VERSION")
 
 hb = py_int("HEARTBEAT_SECONDS")
 hot = py_int("CALL_POLL_HOT_SECONDS")
