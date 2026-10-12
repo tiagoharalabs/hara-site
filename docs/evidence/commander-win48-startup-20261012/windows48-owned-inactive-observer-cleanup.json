@@ -1,0 +1,65 @@
+{
+  "schema": "hara.commander-win48-owned-inactive-observer-cleanup.v1",
+  "state": "VERIFIED_CUSTODY_AND_UNREGISTER",
+  "owned_manifest_sha256": "ccf4846998849f2bb13e1d244cc499347c290f2545fe6054ac68945397b439af",
+  "own_inactive_observer_count": 6,
+  "private_xml_in_guest_only": true,
+  "first_client_timeout_preserved": {
+    "state": "PASS",
+    "operational_authority": "HARA_COMMANDER",
+    "execution_authority": "HARA_COMMANDER_AGENT",
+    "runtime_authority_from_chatgpt": false,
+    "mutation_performed": false,
+    "result": {
+      "function_id": "process.output",
+      "risk_class": "READ_ONLY",
+      "process_exit_code": 1,
+      "domain_success_inferred": false,
+      "stdout": "{\"base_line\":0,\"buffer_truncated\":false,\"exit_code\":1,\"next_offset\":7,\"offset\":0,\"partial\":\"\",\"pid\":290005,\"session_id\":\"HARA-PROC-e5e7d82b81664939a6dd5dfea1e02e26\",\"state\":\"EXITED\",\"text\":\"Traceback (most recent call last):\\r\\n  File \\\"/tmp_hara/commander-win48-private-rc-20261012-r1/cleanup-owned-inactive-observers.py\\\", line 8, in <module>\\r\\n    rc,out,err=q.powershell(ps,wait=9);print(out);assert rc==0 and json.loads(out)[\\\"state\\\"]==\\\"PASS\\\"\\r\\n               ^^^^^^^^^^^^^^^^^^^^^^^\\r\\n  File \\\"/tmp_hara/commander-win11-qga-readiness-20261011.py\\\", line 34, in powershell\\r\\n    raise TimeoutError(\\\"VM_GUEST_EXEC_TIMEOUT\\\")\\r\\nTimeoutError: VM_GUEST_EXEC_TIMEOUT\\r\",\"total_lines\":7,\"truncated_before\":false}"
+    },
+    "customer_services_relay": false,
+    "bridge_receipt_sha256": "f7daa3b971245150070ee9caeec359e603fc991943be1b5831aa7fb7f520f9a4",
+    "computer": "nucleo-a",
+    "product": {
+      "plan_code": "FOUNDER_INTERNAL",
+      "entitlement_id": "HARA-ENTITLEMENT-XPK",
+      "quota": {
+        "ok": true,
+        "state": "UNMETERED",
+        "mode": "UNMETERED",
+        "units": 0,
+        "cloud_quota_transaction": false
+      }
+    }
+  },
+  "independent_postconditions": {
+    "state": "PASS",
+    "operational_authority": "HARA_COMMANDER",
+    "execution_authority": "HARA_COMMANDER_AGENT",
+    "runtime_authority_from_chatgpt": false,
+    "mutation_performed": false,
+    "result": {
+      "function_id": "process.output",
+      "risk_class": "READ_ONLY",
+      "process_exit_code": 0,
+      "domain_success_inferred": false,
+      "stdout": "{\"base_line\":0,\"buffer_truncated\":false,\"exit_code\":0,\"next_offset\":1,\"offset\":0,\"partial\":\"\",\"pid\":291404,\"session_id\":\"HARA-PROC-93b3d4813dbd4e8a93933dc9b425e6fc\",\"state\":\"EXITED\",\"text\":\"{\\\"state\\\":\\\"READ_ONLY\\\",\\\"rows\\\":[{\\\"task_name\\\":\\\"HARA_VM48_HostnameMetadataWatch_cf4ac2bb02eb\\\",\\\"task_exists\\\":false,\\\"observed_state\\\":\\\"ABSENT\\\",\\\"private_backup_exists\\\":true,\\\"backup_sha256\\\":\\\"842488fa2f8828796942a3e02a61e76d13ed92175c08f2e436d0f97107d85d2e\\\"},{\\\"task_name\\\":\\\"HARA_VM48_MetadataWatch_42beea9879cf\\\",\\\"task_exists\\\":false,\\\"observed_state\\\":\\\"ABSENT\\\",\\\"private_backup_exists\\\":true,\\\"backup_sha256\\\":\\\"aac280b49bfd865c94ac352e275fbb6eecaa790b3c8952957bc721c041651031\\\"},{\\\"task_name\\\":\\\"HARA_VM48_MetadataWatch_0318f9f3fabe\\\",\\\"task_exists\\\":false,\\\"observed_state\\\":\\\"ABSENT\\\",\\\"private_backup_exists\\\":true,\\\"backup_sha256\\\":\\\"c88a60109836b1d490647d8d43ecce873948b6bee458271371a9c2acefe2f56a\\\"},{\\\"task_name\\\":\\\"HARA_VM48_HostnameMetadataWatch_718544226c73\\\",\\\"task_exists\\\":false,\\\"observed_state\\\":\\\"ABSENT\\\",\\\"private_backup_exists\\\":true,\\\"backup_sha256\\\":\\\"660b05485f2b16c7578b63b4ec72b0d4ee199fe4f6c67c1ceb1348962241055f\\\"},{\\\"task_name\\\":\\\"HARA_VM48_MetadataWatch_6da7d60e7579\\\",\\\"task_exists\\\":false,\\\"observed_state\\\":\\\"ABSENT\\\",\\\"private_backup_exists\\\":true,\\\"backup_sha256\\\":\\\"fada47f271a260e6018a573541f323acdbd503c718971a28ca705ff4959fa917\\\"},{\\\"task_name\\\":\\\"HARA_VM48_HostnameMetadataWatch_5ad7fb7ff608\\\",\\\"task_exists\\\":false,\\\"observed_state\\\":\\\"ABSENT\\\",\\\"private_backup_exists\\\":true,\\\"backup_sha256\\\":\\\"67cee3d9cce024806e095dd9076f06aa08539b43017f12ecc637b93668f1a1fb\\\"}],\\\"custody_acl_protected\\\":true,\\\"agent_task_xml_pinned\\\":true,\\\"agent_task_state\\\":\\\"Running\\\",\\\"stop_or_restart_performed\\\":false,\\\"approval_generated\\\":false}\\r\",\"total_lines\":1,\"truncated_before\":false}"
+    },
+    "customer_services_relay": false,
+    "bridge_receipt_sha256": "223dab8d68d595900b526bed12ba7e18c113283265d6e1138f8dce6f5df29e67",
+    "computer": "nucleo-a",
+    "product": {
+      "plan_code": "FOUNDER_INTERNAL",
+      "entitlement_id": "HARA-ENTITLEMENT-XPK",
+      "quota": {
+        "ok": true,
+        "state": "UNMETERED",
+        "mode": "UNMETERED",
+        "units": 0,
+        "cloud_quota_transaction": false
+      }
+    }
+  },
+  "agent_or_operator_process_targeted": false,
+  "approval_generated": false
+}

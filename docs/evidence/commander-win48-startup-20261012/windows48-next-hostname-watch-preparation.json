@@ -1,0 +1,57 @@
+{
+  "schema": "hara.commander-win48-next-hostname-watch-preparation.v1",
+  "state": "STAGED_PARSER_PASS_NOT_EXECUTED",
+  "watcher_sha256": "aee1c0c53e8e0e5ab2ad3c7ff647ce6ee47a9bd78a94c75c84482a86b4504042",
+  "agent_source_sha256": "f54e5ff8c170e09a3dc795004af426851d111c89ae78408559886e0d693bf805",
+  "owner_pid": 8184,
+  "owner_started_at_utc": "2026-10-12T17:23:02.2031480Z",
+  "tool_id": "hara.process.run",
+  "expected_local_action_summary": "hara.process.run cwd=~ timeout_ms=10000 command=hostname",
+  "request_id_fixed": false,
+  "consumer_dynamic_identity_checks": [
+    "PID",
+    "start UTC",
+    "SID matches installed Task principal",
+    "installed Agent path in consumer command"
+  ],
+  "observer_window_style": "Hidden",
+  "observer_watch_duration_ms": 45000,
+  "host_watch_duration_ms": 45000,
+  "state_file_namespace": "hostname-next-user-pending-watch-state.json",
+  "pending_values_printed": false,
+  "challenge_printed": false,
+  "approval_generated": false,
+  "task_registered_or_started": false,
+  "command_call_generated": false,
+  "native_parser": {
+    "state": "PASS",
+    "operational_authority": "HARA_COMMANDER",
+    "execution_authority": "HARA_COMMANDER_AGENT",
+    "runtime_authority_from_chatgpt": false,
+    "mutation_performed": true,
+    "result": {
+      "function_id": "process.run",
+      "risk_class": "PROCESS_EXECUTION",
+      "process_exit_code": 0,
+      "domain_success_inferred": false,
+      "stdout": "{\"command_preview\":\"python3 /tmp_hara/commander-win48-private-rc-20261012-r1/hostname-next-watch-parser-only.py\",\"command_sha256\":\"99a2d8503535cba28e14930fc8898487a7319d4c30d6c02a0da8db8802793d25\",\"cwd\":\"/home/sartorius\",\"exit_code\":0,\"output_truncated\":false,\"partial\":\"\",\"pid\":259524,\"run_id\":\"HARA-PROC-2e9698f4fb554e53a74e77fbac7bd9b0\",\"session_retained\":false,\"state\":\"EXITED\",\"text\":\"{\\\"state\\\":\\\"PASS\\\",\\\"parse_error_count\\\":0,\\\"executed\\\":false}\\r\",\"timed_out\":false,\"total_lines\":1}",
+      "human_approval_state": "APPROVED",
+      "local_authorization_mode": "PERSISTENT_TRUSTED",
+      "authorization_source": "DEVICE_ENROLLMENT_POLICY"
+    },
+    "customer_services_relay": false,
+    "bridge_receipt_sha256": "a17f6816093451aa5d964097d63a07841e6aeffba8ea5851f65f246e0d0a3556",
+    "computer": "nucleo-a",
+    "product": {
+      "plan_code": "FOUNDER_INTERNAL",
+      "entitlement_id": "HARA-ENTITLEMENT-XPK",
+      "quota": {
+        "ok": true,
+        "state": "UNMETERED",
+        "mode": "UNMETERED",
+        "units": 0,
+        "cloud_quota_transaction": false
+      }
+    }
+  }
+}

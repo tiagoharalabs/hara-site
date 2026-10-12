@@ -1,0 +1,81 @@
+{
+  "schema": "hara.commander-win48-watch-exact-string-native-provenance.v1",
+  "state": "PASS_NO_LITERAL_ESCAPE_BUG",
+  "local_byte_and_ast_proof": {
+    "file_sha256": "aee1c0c53e8e0e5ab2ad3c7ff647ce6ee47a9bd78a94c75c84482a86b4504042",
+    "python_ast_parse_pass": true,
+    "user_script_newline_count": 48,
+    "user_script_literal_backslash_n_count": 0,
+    "user_script_first_newline_utf8_hex": "653d2753746f70270a",
+    "state_writer_suffix_utf8_hex": "0a",
+    "state_json_roundtrip_pass": true,
+    "source_utf8_size": 8294,
+    "watcher_executed": false,
+    "guest_task_touched": false
+  },
+  "staged_byte_and_ast_proof": {
+    "state": "PASS",
+    "operational_authority": "HARA_COMMANDER",
+    "execution_authority": "HARA_COMMANDER_AGENT",
+    "runtime_authority_from_chatgpt": false,
+    "mutation_performed": true,
+    "result": {
+      "function_id": "process.run",
+      "risk_class": "PROCESS_EXECUTION",
+      "process_exit_code": 0,
+      "domain_success_inferred": false,
+      "stdout": "{\"command_preview\":\"python3 -c 'import ast,hashlib,json;from pathlib import Path;p=Path(\\\"/tmp_hara/commander-win48-private-rc-20261012-r1/commander_win48_user_hostname_pending_watch.py\\\");b=p.read_bytes();t=ast.parse(b);u=next(n.value.value for n in t.body i...\",\"command_sha256\":\"a24dca283723c1be8211d680ed210cbe44838a41030f1b042692ec6c7565246a\",\"cwd\":\"/home/sartorius\",\"exit_code\":0,\"output_truncated\":false,\"partial\":\"\",\"pid\":262792,\"run_id\":\"HARA-PROC-3ed43f51b1834ec5bd1399effc1e40b3\",\"session_retained\":false,\"state\":\"EXITED\",\"text\":\"{\\\"file_sha256\\\": \\\"aee1c0c53e8e0e5ab2ad3c7ff647ce6ee47a9bd78a94c75c84482a86b4504042\\\", \\\"user_script_newline_count\\\": 48, \\\"user_script_literal_backslash_n_count\\\": 0, \\\"state_writer_suffix_utf8_hex\\\": \\\"0a\\\", \\\"state_json_roundtrip_pass\\\": true, \\\"watcher_executed\\\": false, \\\"guest_task_touched\\\": false}\\r\",\"timed_out\":false,\"total_lines\":1}",
+      "human_approval_state": "APPROVED",
+      "local_authorization_mode": "PERSISTENT_TRUSTED",
+      "authorization_source": "DEVICE_ENROLLMENT_POLICY"
+    },
+    "customer_services_relay": false,
+    "bridge_receipt_sha256": "5d2982a7173435d858358afe32c2a4fc2346e69e8d39b520fc149a34254dce20",
+    "computer": "nucleo-a",
+    "product": {
+      "plan_code": "FOUNDER_INTERNAL",
+      "entitlement_id": "HARA-ENTITLEMENT-XPK",
+      "quota": {
+        "ok": true,
+        "state": "UNMETERED",
+        "mode": "UNMETERED",
+        "units": 0,
+        "cloud_quota_transaction": false
+      }
+    }
+  },
+  "previous_native_parser": {
+    "state": "PASS",
+    "operational_authority": "HARA_COMMANDER",
+    "execution_authority": "HARA_COMMANDER_AGENT",
+    "runtime_authority_from_chatgpt": false,
+    "mutation_performed": true,
+    "result": {
+      "function_id": "process.run",
+      "risk_class": "PROCESS_EXECUTION",
+      "process_exit_code": 0,
+      "domain_success_inferred": false,
+      "stdout": "{\"command_preview\":\"python3 /tmp_hara/commander-win48-private-rc-20261012-r1/hostname-next-watch-parser-only.py\",\"command_sha256\":\"99a2d8503535cba28e14930fc8898487a7319d4c30d6c02a0da8db8802793d25\",\"cwd\":\"/home/sartorius\",\"exit_code\":0,\"output_truncated\":false,\"partial\":\"\",\"pid\":259524,\"run_id\":\"HARA-PROC-2e9698f4fb554e53a74e77fbac7bd9b0\",\"session_retained\":false,\"state\":\"EXITED\",\"text\":\"{\\\"state\\\":\\\"PASS\\\",\\\"parse_error_count\\\":0,\\\"executed\\\":false}\\r\",\"timed_out\":false,\"total_lines\":1}",
+      "human_approval_state": "APPROVED",
+      "local_authorization_mode": "PERSISTENT_TRUSTED",
+      "authorization_source": "DEVICE_ENROLLMENT_POLICY"
+    },
+    "customer_services_relay": false,
+    "bridge_receipt_sha256": "a17f6816093451aa5d964097d63a07841e6aeffba8ea5851f65f246e0d0a3556",
+    "computer": "nucleo-a",
+    "product": {
+      "plan_code": "FOUNDER_INTERNAL",
+      "entitlement_id": "HARA-ENTITLEMENT-XPK",
+      "quota": {
+        "ok": true,
+        "state": "UNMETERED",
+        "mode": "UNMETERED",
+        "units": 0,
+        "cloud_quota_transaction": false
+      }
+    }
+  },
+  "watcher_executed": false,
+  "guest_tasks_changed": false,
+  "watcher_bytes_modified": false
+}

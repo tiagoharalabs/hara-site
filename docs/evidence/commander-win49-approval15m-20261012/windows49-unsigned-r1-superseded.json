@@ -1,0 +1,24 @@
+{
+  "schema": "hara.commander-windows49-unsigned-r1-superseded.v1",
+  "state": "PRESERVED_UNSIGNED_R1_AWAITING_REVIEWED_UX_FINAL_SOURCE",
+  "observed_at_utc": "2026-10-12T19:34:05.625710+00:00",
+  "stage": "/tmp_hara/commander-win49-v9-signed-stage-20261012",
+  "agent_sha256": "1e32e2c23476a2c8390111d4b9a57e877dbb3dd80426929a75bfb647da33274a",
+  "manifest_sha256": "1c57f693563634cb242ee0301c87318901d2043f55051e44f98b86081d2a993a",
+  "signature_exists": false,
+  "signed_or_frozen": false,
+  "source_native_checks_before_final_ux": 459,
+  "parent_native_counts": [
+    227,
+    111,
+    26,
+    27,
+    68
+  ],
+  "reason": "Root-authorized last UI text clarification Enter sends and empty Enter denies; final source must be reviewed and227+parser rerun before signing",
+  "next_unsigned_stage": "/tmp_hara/commander-win49-v9-signed-stage-20261012-r2",
+  "installed_windows_agent_remains": "0.3.48",
+  "positive_human_approval_proven": false,
+  "key_contents_not_accessed": true,
+  "old_stage_modified_or_overwritten": false
+}

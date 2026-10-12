@@ -83,12 +83,17 @@ PYTHON = (
     "validate_local_activity_store.py",
     "validate_first_device_preflight.py",
     "validate_fresh_customer_acceptance.py",
+    "validate_signed_windows_049_v9_rc.py",
+    "validate_windows_049_approval_expiry.py",
+    "validate_windows_049_operator_startup.py",
+    "validate_windows_049_approval_window.py",
 )
 JS = (
     "test_windows_044_capability_gate.mjs",
     "test_no_stripe_technical_mode.mjs",
     "test_portal_session_isolation.mjs",
     "test_device_status_poll.mjs",
+    "test_recent_call_expiry_projection.mjs",
     "test_device_telemetry.mjs",
     "test_customer_mcp_admin_profile.mjs",
     "test_customer_argument_pipeline.mjs",
@@ -115,6 +120,9 @@ JS = (
     "billing_sqlite_webhook_e2e.mjs",
     "billing_v1_selftest.mjs",
     "validate_event_v2_fleet_allowlist.mjs",
+    "test_approval_async_quota_ttl.mjs",
+    "test_approval_async_storage.mjs",
+    "test_approval_async_queue_claim.mjs",
 )
 MODELS = (
     "commander_scale_capacity_model.py",

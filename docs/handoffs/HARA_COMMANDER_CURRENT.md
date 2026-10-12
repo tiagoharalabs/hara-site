@@ -1,3 +1,44 @@
+# H.A.R.A. Commander — CURRENT (12/10/2026; canário49 assinado e preparado, runtime48, aceite humano pendente)
+
+Documento atual: **docs/operations/HARA_COMMANDER_WINDOWS_049_APPROVAL15M_RC_20261012.md**. O pedido de15 minutos por ação foi implementado na RC privada49 com prazo900s, texto completo+Enter e heartbeat durante a espera, mantendo ASK_EVERY_ACTION. Fonte7b51d2f243228f27aaf742086fe012c73bc17cd8c180a4f9abbcb1e2c51f3080; manifesto d0f375fd95e1e7842abb566359cd8edf2f14c4d10853e844cf2c425d0f9d6124; assinatura RS256/RSA3072/v2 autenticada também no PS5.1. Bundle privado49-v9 congelado; Linux e63 arquivos de bundles históricos preservados.
+
+Validação Windows:227 checks nativos na fonte final+parser,232 regressões na fonte anterior1e32 e prova AST de70 funções com somente um literal de mensagem alterado. Guards17+32+13 PASS. Backend15min integrado:55 checks específicos PASS, migração0035 aditiva e acompanhamento por handleHARA-CALL. Gate integrado **105/105 PASS**, exit0 em37,602s, peak_child_RSS143692KiB e stderr vazio. A primeira execução104/105 foi preservada. O validador legado foi atualizado para29 binds de enqueue/5 de claim e schema35, conservando seis cenários de concorrência e acrescentando a corrida real de900s. Fonte/Worker/bundle ficaram congelados; dependências temporárias removidas.
+
+**LIVE_PENDING:** rollout do backend em andamento; aplicação da migração35 e implantação precisam de readback antes de serem declaradas concluídas. Agent49 ainda não instalado. A VM continua na48; não enviar nova mutação com a janela antiga de30s. Aprovação humana positiva, escrita CAS, terminal e recuperação Windows continuam PENDENTES. Não houve entrada de aprovação automatizada. PublicHTTP Agent/install/manifest43-v3 permanecem byte-idênticos à distribuição assinada, sem promover49 como download padrão. StorageHOLD e outras frentes preservados; publicaçãoGitHub continua3b4/CI97 até nova liberação.
+
+## Registro anterior preservado — preparação de15min
+
+# H.A.R.A. Commander — CURRENT (12/10/2026, 18:46 UTC; aprovação de 15 minutos IN_PROGRESS, ainda não instalada)
+
+O usuário pediu explicitamente **15 minutos por ação** após a última tentativa na janela de 30 segundos. Esse pedido orienta a próxima RC privada .49; Agent e tempo de vida da chamada no relay precisam ser alinhados antes do novo canário. **A .49 ainda não foi instalada nem assinada nesta preparação.** A última fonte Windows confirmada continua a .48, SHA `f54e5ff8c170e09a3dc795004af426851d111c89ae78408559886e0d693bf805`. Não enviar outra mutação usando o prazo antigo.
+
+A última chamada .48, `6a180fa6-d8d4-4605-baef-9c008cf1dd34`, foi criada às18:44:14.400Z, recebeu claim às18:44:23.663Z e terminou às18:44:54.285Z com **LOCAL_ACTION_APPROVAL_EXPIRED**. Resultado MCP DENIED, metadados FAILED e mutation_performed=false; **não houve aceite humano positivo nem execução do hostname**. O pré-aviso no Desktop teve processo exit0 (receipt `aba499d5de938c430907198a69b9a09c99b105a99308590f41e36ba9f66e45bc`), mas isso não comprova que o usuário viu o aviso. A notificação vinculada ao claim ficou null/não enviada.
+
+O laboratório comprovou a falha do watcher: File.Replace com backup null é rejeitado no PowerShell5.1 depois da primeira gravação. O R3 usa backup próprio, leitor com FileShare.Delete, tentativas de escrita e rejeição de amostras vencidas/observador parado. O controle negativo e as escritas concorrentes passaram; preflight de7,28s produziu5 amostras frescas. Isso corrige o monitor no laboratório, sem provar pedido ativo, aviso entregue ou aceite positivo. R1/R2 e watcher original preservados.
+
+Evidência: `docs/evidence/commander-win48-startup-20261012/windows48-final-short-approval-window-attempt.json`, SHA `64a567881d773c9560bdc7dd0a9f7880fd1f19609f13e1048ae53cd626136e0c`. Os testes de aceite positivo, escrita CAS, terminal e recuperação Windows permanecem pendentes. A correção do estado de expiração no Worker passou36/36 e gate98/98 em código, sem deploy; o checkpoint publicado continua3b4 com CI97/97. A continuidade está preservada na worktree48 e aguarda integração/revisão/testes49 antes da publicação. Downloads públicos .43-v3 e StorageHOLD mantidos.
+
+## Registro anterior preservado — continuidade até as 18:33 UTC
+
+# H.A.R.A. Commander — CURRENT (12/10/2026, 18:33 UTC; Windows 0.3.48 online, aprovação positiva pendente)
+
+Documento atual: **docs/operations/HARA_COMMANDER_WINDOWS_048_STARTUP_RC_20261012.md**. A RC privada .48 continua com fonte assinada SHA `f54e5ff8c170e09a3dc795004af426851d111c89ae78408559886e0d693bf805`. O checkpoint publicado é `3b4f791147be54919727628e9c577963af030e3f`, com GitHub Actions **38284856240 SUCCESS / gate 97/97**. As 232 verificações Windows e a correção de StartTime são evidência de regressão; aprovação humana positiva pelo MCP permanece pendente.
+
+Após a abertura manual das 17:23, o consumidor4896 deixou de existir e a tarefa passou a Ready com resultado `0xC000013A`; a causa da interrupção continua **UNKNOWN**. O operador8184 e seu início exato foram preservados. A retomada autorizada executou somente Start-ScheduledTask na tarefa existente, criando consumidor6456 às18:05:45.293Z. Inspeção independente às18:07:22 confirmou tarefa Running e ambos os processos com PID/início exatos, sem alterar fonte/configuração/XML/ASK, sem gerar aprovação ou nova chamada.
+
+Duas tentativas reais tiveram resultados distintos:
+
+- A chamada `894f394e-0ddc-437b-8310-7a642b248812`, criada às17:37:10.999Z, permaneceu **sem claim** e expirou às18:17:39.297Z com DEVICE_CALL_EXPIRED.
+- A chamada nova `ab023a25-91c2-4fdb-b74a-8c59ff405fe5`, criada às18:29:37.022Z, recebeu claim às18:29:42.096Z e terminou às18:30:13.058Z com **LOCAL_ACTION_APPROVAL_EXPIRED**: DENIED no MCP, FAILED nos metadados, mutation_performed=false. O comando não foi executado.
+
+O watcher de SHA `aee1c0c53e8e0e5ab2ad3c7ff647ce6ee47a9bd78a94c75c84482a86b4504042` retornou pending_active=false e notification_sent=false durante essa tentativa. **Falha do monitor em investigação**, sem prova de aviso entregue ou foco da janela. Nenhuma resposta de aprovação foi automatizada. Após a tentativa, device.info direto confirmou Agent .48 (receipt `ec5235322dafca6c0f0d126e31c6192f828aeb3c9e607bc7c98e1d4ae20891ef`) e process.sessions confirmou count0. Evidência: `docs/evidence/commander-win48-startup-20261012/windows48-fresh-hostname-expired-watch-miss.json`, SHA `aecf4205c604a8c7371a28e3f47371d7a14ce01b750b28c7cb763f3547384fa6`.
+
+Correção de fonte do Worker integrada nesta continuidade, **sem deploy**: a listagem recent projeta EXPIRED ao vencer o prazo e preserva persisted_state, claim e resultado. Testes reais da função/consulta36/36 e gate offline98/98 PASS; o CI publicado de3b4 permanece97/97. Expiração de EXECUTING não comprova ausência de execução nem autoriza repetição automática. Ver **docs/operations/HARA_COMMANDER_RECENT_CALL_EXPIRY_PROJECTION_20261012.md**. Agent/bundle48 continuam byte-idênticos.
+
+**Pendentes:** aceite humano positivo e execução, escrita protegida por SHA-256, terminal interativo e recuperação Windows pelo H.A.R.A. Commander direto. ASK_EVERY_ACTION e prazo30s preservados. Os novos registros são continuidade em trabalho; ainda não publicados. Downloads públicos .43-v3, patch Linux de presença sem instalação, Stripe, escala real e Storage mantêm os limites registrados abaixo.
+
+## Registro anterior preservado — leitura e instalação das 17:24 UTC
+
 # H.A.R.A. Commander — CURRENT (12/10/2026; Windows 0.3.48 instalada, acesso direto confirmado)
 
 Documento atual: **docs/operations/HARA_COMMANDER_WINDOWS_048_STARTUP_RC_20261012.md**. A falha de abertura mostrada na imagem (`InvokeMethodOnNull` por StartTime indisponível) foi corrigida na .48, preservando PID e início exatos da sessão. **232 verificações Windows passaram** (68 abertura, 111 consentimento, 26 recusa, 27 retomada), além do controle negativo .47 e do **gate offline 97/97**. RC privada v8 assinada, fonte SHA `f54e5ff8c170e09a3dc795004af426851d111c89ae78408559886e0d693bf805`.

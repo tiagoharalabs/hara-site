@@ -2,7 +2,7 @@
 [CmdletBinding()]
 param(
   [Parameter(Mandatory=$true)][string]$AgentSource,
-  [ValidateSet("Frozen047","Patched047Preview","Candidate048")][string]$ExpectedBehavior="Frozen047",
+  [ValidateSet("Frozen047","Patched047Preview","Candidate049")][string]$ExpectedBehavior="Frozen047",
   [string]$ExpectedSourceSha256=""
 )
 $ErrorActionPreference="Stop"
@@ -15,8 +15,8 @@ if ($ExpectedBehavior -ceq "Frozen047") {
 } elseif ($ExpectedBehavior -ceq "Patched047Preview") {
   if ($sourceSha -cne "18aa91a75232752dc7e29b24423c8acbb886ac78ca83393503a282a66696f9ee") { throw "STARTUP_FIXTURE_PREVIEW_SOURCE_NOT_PINNED" }
 } else {
-  if ($ExpectedSourceSha256 -notmatch '^[0-9a-f]{64}$' -or $sourceSha -cne $ExpectedSourceSha256) { throw "STARTUP_FIXTURE_SOURCE48_NOT_PINNED" }
-  if ($sourceText -notmatch '(?m)^\$AgentVersion = "0[.]3[.]48"$') { throw "STARTUP_FIXTURE_SOURCE48_VERSION_MISSING" }
+  if ($ExpectedSourceSha256 -notmatch '^[0-9a-f]{64}$' -or $sourceSha -cne $ExpectedSourceSha256) { throw "STARTUP_FIXTURE_SOURCE49_NOT_PINNED" }
+  if ($sourceText -notmatch '(?m)^\$AgentVersion = "0[.]3[.]49"$') { throw "STARTUP_FIXTURE_SOURCE49_VERSION_MISSING" }
 }
 $tokens=$null;$parseErrors=$null
 $ast=[Management.Automation.Language.Parser]::ParseFile($source,[ref]$tokens,[ref]$parseErrors)

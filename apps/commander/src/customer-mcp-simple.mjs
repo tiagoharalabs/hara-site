@@ -691,7 +691,7 @@ export function createSimpleCustomerMcpServer({ executeTool }) {
     "start_process",
     toolConfig({
       title: "Start Process",
-      description: "Run a command. By default waits for bounded completion. Set interactive=true for a managed session; requests above 10 seconds are automatically routed to a managed session.",
+      description: "Run a command. By default waits for bounded completion. Set interactive=true for a managed session; requests above 10 seconds are automatically routed to a managed session. Windows per-action approval may return PENDING with a HARA-CALL session_id; read that handle with read_process_output without resending the command.",
       inputSchema: z.object({
         computer,
         command: z.string().min(1).max(4096),
@@ -726,7 +726,7 @@ export function createSimpleCustomerMcpServer({ executeTool }) {
     "read_process_output",
     toolConfig({
       title: "Read Process Output",
-      description: "Read subsequent output from a managed process session. Use after interact_with_process when the immediate response contains only terminal echo.",
+      description: "Read subsequent output from a managed process session, or reconcile an accepted HARA-CALL handle while Windows approval is pending. Reading a call handle never resends its command or reserves another usage unit. Use after interact_with_process when the immediate response contains only terminal echo.",
       inputSchema: z.object({
         computer,
         session_id: z.string().min(1).max(180),

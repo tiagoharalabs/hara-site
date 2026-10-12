@@ -1,0 +1,67 @@
+{
+  "schema": "hara.commander-win48-lab-watcher-r1-r2-failures.v1",
+  "state": "PRESERVED_FAILURES",
+  "original_watcher_sha256": "aee1c0c53e8e0e5ab2ad3c7ff647ce6ee47a9bd78a94c75c84482a86b4504042",
+  "fresh_hostname_call_id": "HARA-CALL-ab023a25-91c2-4fdb-b74a-8c59ff405fe5",
+  "fresh_hostname_result": "FAILED_LOCAL_ACTION_APPROVAL_EXPIRED",
+  "readonly_observer_and_events": {
+    "state": "PASS",
+    "operational_authority": "HARA_COMMANDER",
+    "execution_authority": "HARA_COMMANDER_AGENT",
+    "runtime_authority_from_chatgpt": false,
+    "mutation_performed": true,
+    "result": {
+      "function_id": "process.run",
+      "risk_class": "PROCESS_EXECUTION",
+      "process_exit_code": 0,
+      "domain_success_inferred": false,
+      "stdout": "{\"command_preview\":\"python3 /tmp_hara/commander-win48-private-rc-20261012-r1/windows48-fresh-hostname-watch-readonly.py\",\"command_sha256\":\"3a3713b46cbc7513aeeb88764ba89bb4b306caa4a3b9df94d380b08662329844\",\"cwd\":\"/home/sartorius\",\"exit_code\":0,\"output_truncated\":false,\"partial\":\"\",\"pid\":268776,\"run_id\":\"HARA-PROC-6336128657364f90aa641b82077495ed\",\"session_retained\":false,\"state\":\"EXITED\",\"text\":\"OBSERVER {\\\"state\\\":\\\"READ_ONLY\\\",\\\"observer_task_state\\\":\\\"Ready\\\",\\\"observer_last_result\\\":1,\\\"observer_last_run_utc\\\":\\\"2026-10-12T18:29:34.0000000Z\\\",\\\"observer_hidden\\\":true,\\\"public_result_modified_at_utc\\\":\\\"2026-10-12T18:29:36.5998314Z\\\",\\\"public_sample\\\":{\\\"state\\\":\\\"READ_ONLY\\\",\\\"pending_exists\\\":false,\\\"pending_active\\\":false,\\\"expires_in_future\\\":false,\\\"remaining_ms\\\":0,\\\"expires_at_utc\\\":\\\"\\\",\\\"observed_at_utc\\\":\\\"2026-10-12T18:29:36.5441740Z\\\",\\\"owner_alive_and_bound\\\":false,\\\"consumer_alive_and_bound\\\":false,\\\"source48_pinned\\\":true,\\\"task_running\\\":true,\\\"approval_generated\\\":false,\\\"private_values_exposed\\\":false},\\\"checked_at_utc\\\":\\\"2026-10-12T18:33:34.7039482Z\\\"}\\r\\nOPERATOR_USER_ACTION inspect QGA_EXIT 0\\r\\nRESULT {\\\"agent_task_state\\\": \\\"Running\\\", \\\"approval_generated\\\": false, \\\"events\\\": [{\\\"at_utc\\\": \\\"2026-10-12T18:29:41.7830298Z\\\", \\\"error_code\\\": \\\"\\\", \\\"event\\\": \\\"RECEIVED\\\", \\\"receipt_sha256\\\": \\\"\\\", \\\"state\\\": \\\"PENDING\\\", \\\"tool_id\\\": \\\"hara.process.run\\\"}, {\\\"at_utc\\\": \\\"2026-10-12T18:29:41.9681695Z\\\", \\\"error_code\\\": \\\"\\\", \\\"event\\\": \\\"EXECUTING\\\", \\\"receipt_sha256\\\": \\\"\\\", \\\"state\\\": \\\"EXECUTING\\\", \\\"tool_id\\\": \\\"hara.process.run\\\"}, {\\\"at_utc\\\": \\\"2026-10-12T18:30:12.2013176Z\\\", \\\"error_code\\\": \\\"LOCAL_ACTION_APPROVAL_EXPIRED\\\", \\\"event\\\": \\\"DENIED\\\", \\\"receipt_sha256\\\": \\\"\\\", \\\"state\\\": \\\"FAILED\\\", \\\"tool_id\\\": \\\"hara.process.run\\\"}], \\\"pending_exists\\\": false, \\\"reply_exists\\\": false, \\\"source48_pinned\\\": true, \\\"state\\\": \\\"READ_ONLY\\\"}\\r\",\"timed_out\":false,\"total_lines\":3}",
+      "human_approval_state": "APPROVED",
+      "local_authorization_mode": "PERSISTENT_TRUSTED",
+      "authorization_source": "DEVICE_ENROLLMENT_POLICY"
+    },
+    "customer_services_relay": false,
+    "bridge_receipt_sha256": "8d2f97c4206d0d36837dc8a1394f9a3ed76797beaab8b236b2f01541928f81e7",
+    "computer": "nucleo-a",
+    "product": {
+      "plan_code": "FOUNDER_INTERNAL",
+      "entitlement_id": "HARA-ENTITLEMENT-XPK",
+      "quota": {
+        "ok": true,
+        "state": "UNMETERED",
+        "mode": "UNMETERED",
+        "units": 0,
+        "cloud_quota_transaction": false
+      }
+    }
+  },
+  "r2_native_preflight_failed": {
+    "state": "PASS",
+    "operational_authority": "HARA_COMMANDER",
+    "execution_authority": "HARA_COMMANDER_AGENT",
+    "runtime_authority_from_chatgpt": false,
+    "mutation_performed": false,
+    "result": {
+      "function_id": "process.output",
+      "risk_class": "READ_ONLY",
+      "process_exit_code": 1,
+      "domain_success_inferred": false,
+      "stdout": "{\"base_line\":0,\"buffer_truncated\":false,\"exit_code\":1,\"next_offset\":6,\"offset\":1,\"partial\":\"\",\"pid\":271106,\"session_id\":\"HARA-PROC-1e9e7b78365f41e99f087f946c63f6dd\",\"state\":\"EXITED\",\"text\":\"{\\\"metadata_task_only\\\": true, \\\"no_input_or_approval\\\": true, \\\"state\\\": \\\"STARTED\\\"}\\r\\nSAMPLE {\\\"state\\\": \\\"WAITING\\\", \\\"pending_active\\\": false, \\\"remaining_ms\\\": 0, \\\"observer_running\\\": true, \\\"qga_sample_elapsed_ms\\\": 1360, \\\"notification_sent\\\": false}\\r\\nSAMPLE {\\\"state\\\": \\\"READ_ONLY\\\", \\\"pending_active\\\": false, \\\"remaining_ms\\\": 0, \\\"source48_pinned\\\": true, \\\"task_running\\\": true, \\\"observer_running\\\": true, \\\"sample_fresh\\\": true, \\\"sample_age_ms\\\": 1363, \\\"snapshot_write_failures\\\": 0, \\\"observed_at_utc\\\": \\\"2026-10-12T18:37:54.7069964Z\\\", \\\"private_values_exposed\\\": false, \\\"approval_generated\\\": false, \\\"qga_sample_elapsed_ms\\\": 1989, \\\"notification_sent\\\": false}\\r\\nSAMPLE {\\\"state\\\": \\\"READ_ONLY_ERROR\\\", \\\"pending_active\\\": false, \\\"remaining_ms\\\": 0, \\\"source48_pinned\\\": true, \\\"task_running\\\": true, \\\"observer_running\\\": true, \\\"sample_fresh\\\": false, \\\"sample_age_ms\\\": 3473, \\\"snapshot_write_failures\\\": 0, \\\"observed_at_utc\\\": \\\"2026-10-12T18:37:54.7069964Z\\\", \\\"private_values_exposed\\\": false, \\\"approval_generated\\\": false, \\\"qga_sample_elapsed_ms\\\": 1381, \\\"notification_sent\\\": false}\\r\\nPREFLIGHT_FAILED\\r\",\"total_lines\":6,\"truncated_before\":false}"
+    },
+    "customer_services_relay": false,
+    "bridge_receipt_sha256": "b11e4401cac0e3cbf1bcb77201f1187a09487486af00ab6b66471e764b791d44",
+    "computer": "nucleo-a",
+    "product": {
+      "plan_code": "FOUNDER_INTERNAL",
+      "entitlement_id": "HARA-ENTITLEMENT-XPK",
+      "quota": {
+        "ok": true,
+        "state": "UNMETERED",
+        "mode": "UNMETERED",
+        "units": 0,
+        "cloud_quota_transaction": false
+      }
+    }
+  },
+  "no_agent_or_operator_stop_performed": true
+}

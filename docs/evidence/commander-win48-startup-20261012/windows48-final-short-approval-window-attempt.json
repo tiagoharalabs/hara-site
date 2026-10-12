@@ -1,0 +1,102 @@
+{
+  "schema": "hara.commander-windows48-final-short-window-attempt.v1",
+  "route": "HARA_COMMANDER_DIRECT_MCP",
+  "created_at_utc": "2026-10-12T18:44:13.381Z",
+  "hostname_result": {
+    "state": "DENIED",
+    "operational_authority": "LOCAL_OPERATOR_SESSION",
+    "execution_authority": "HARA_COMMANDER_AGENT",
+    "runtime_authority_from_chatgpt": false,
+    "mutation_performed": false,
+    "result": {},
+    "customer_services_relay": false,
+    "blocker": {
+      "code": "LOCAL_ACTION_APPROVAL_EXPIRED"
+    },
+    "computer": "HARA_WIN11",
+    "error_code": "INVALID_ARGUMENT"
+  },
+  "prealert_notification": {
+    "state": "PASS",
+    "operational_authority": "HARA_COMMANDER",
+    "execution_authority": "HARA_COMMANDER_AGENT",
+    "runtime_authority_from_chatgpt": false,
+    "mutation_performed": true,
+    "result": {
+      "function_id": "process.run",
+      "risk_class": "PROCESS_EXECUTION",
+      "process_exit_code": 0,
+      "domain_success_inferred": false,
+      "stdout": "{\"command_preview\":\"env DISPLAY=:1 DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus XDG_RUNTIME_DIR=/run/user/1000 notify-send --app-name='H.A.R.A. Commander' --urgency=critical --expire-time=10000 'Novo teste do Commander' 'Vou enviar hostname agora. ...\",\"command_sha256\":\"e170e5dceb78e61497c08eb5ac25202be17e506280b63dbe72059719523ef289\",\"cwd\":\"/home/sartorius\",\"exit_code\":0,\"output_truncated\":false,\"partial\":\"\",\"pid\":276283,\"run_id\":\"HARA-PROC-2de0803c31dd45e7b56093f8267ee855\",\"session_retained\":false,\"state\":\"EXITED\",\"text\":\"\",\"timed_out\":false,\"total_lines\":0}",
+      "human_approval_state": "APPROVED",
+      "local_authorization_mode": "PERSISTENT_TRUSTED",
+      "authorization_source": "DEVICE_ENROLLMENT_POLICY"
+    },
+    "customer_services_relay": false,
+    "bridge_receipt_sha256": "aba499d5de938c430907198a69b9a09c99b105a99308590f41e36ba9f66e45bc",
+    "computer": "nucleo-a",
+    "product": {
+      "plan_code": "FOUNDER_INTERNAL",
+      "entitlement_id": "HARA-ENTITLEMENT-XPK",
+      "quota": {
+        "ok": true,
+        "state": "UNMETERED",
+        "mode": "UNMETERED",
+        "units": 0,
+        "cloud_quota_transaction": false
+      }
+    }
+  },
+  "claim_notification": null,
+  "metadata": {
+    "state": "PASS",
+    "operational_authority": "HARA_SERVICES",
+    "execution_authority": "HARA_SERVICES",
+    "runtime_authority_from_chatgpt": false,
+    "mutation_performed": false,
+    "customer_services_relay": false,
+    "result": {
+      "count": 2,
+      "calls": [
+        {
+          "call_id": "HARA-CALL-6a180fa6-d8d4-4605-baef-9c008cf1dd34",
+          "request_id": "HARA-CUSTOMER-MCP-cw7lDUsOoNHgMDQ3z0W-fUHNMm2mgfHL4RAoK6HMOnQ",
+          "computer": "HARA_WIN11",
+          "tool_id": "hara.process.run",
+          "state": "FAILED",
+          "created_at_utc": "2026-10-12T18:44:14.400Z",
+          "claimed_at_utc": "2026-10-12T18:44:23.663Z",
+          "completed_at_utc": "2026-10-12T18:44:54.285Z",
+          "error_code": "LOCAL_ACTION_APPROVAL_EXPIRED"
+        },
+        {
+          "call_id": "HARA-CALL-ab023a25-91c2-4fdb-b74a-8c59ff405fe5",
+          "request_id": "HARA-CUSTOMER-MCP-PRsdzTKnYLRJYkLSC2XOjEzsYG9L3tOpm0OJC5k4FvI",
+          "computer": "HARA_WIN11",
+          "tool_id": "hara.process.run",
+          "state": "FAILED",
+          "created_at_utc": "2026-10-12T18:29:37.022Z",
+          "claimed_at_utc": "2026-10-12T18:29:42.096Z",
+          "completed_at_utc": "2026-10-12T18:30:13.058Z",
+          "error_code": "LOCAL_ACTION_APPROVAL_EXPIRED"
+        }
+      ]
+    },
+    "product": {
+      "plan_code": "FOUNDER_INTERNAL",
+      "entitlement_id": "HARA-ENTITLEMENT-XPK",
+      "quota": null
+    }
+  },
+  "acceptance": {
+    "positive_human_approval": false,
+    "local_expiry_enforced": true,
+    "prealert_process_exited_zero": true,
+    "claim_notification_sent": false
+  },
+  "notes": [
+    "User subsequently reported that the 30-second deadline interrupted manual typing.",
+    "User explicitly requested 15 minutes per action at 15:46 BRT; the next private canary must align Agent and relay lifetime.",
+    "No automated approval input generated. No further mutation request should be sent under the old 30-second window."
+  ]
+}

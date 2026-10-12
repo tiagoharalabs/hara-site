@@ -1,0 +1,101 @@
+{
+  "schema": "hara.commander-relay15m-validation.v1",
+  "state": "PASS_PREPARED",
+  "source_worktree": "/tmp_hara/commander-win49-relay15m-20261012",
+  "worker_sha256": "d1479c5b406901a5d86b5bee358cf39f4eb04735e36eacc9f2cb0cf5a8e2451a",
+  "approval_scope": {
+    "platform": "WINDOWS",
+    "minimum_agent_version": "0.3.49",
+    "approval_mode": "ASK_EVERY_ACTION",
+    "tools": "mutating file and process tools",
+    "legacy_profile_seconds": 0
+  },
+  "lifecycle": {
+    "queue_ttl_seconds": 50,
+    "local_approval_timeout_seconds": 900,
+    "execution_budget_max_ms": 10000,
+    "managed_budget_max_ms": 3000,
+    "transport_grace_seconds": 60,
+    "claim_extension": "claim time + 900 seconds + persisted execution budget + 60 seconds",
+    "quota_reservation_seconds": 1800,
+    "legacy_reservation_seconds": 600,
+    "immediate_response": "PENDING accepted:true; mutation_performed:null; execution_outcome:UNKNOWN",
+    "polling": "read_process_output with same HARA-CALL session_id; no enqueue, reserve or Agent dispatch",
+    "single_active_mutating_approval": true,
+    "receipt_settlement": "original tenant, subject, request, usage period and units; repeat callbacks and reads are idempotent",
+    "raw_result_policy": "settle before redaction; at most one authorized raw-result consumer; sanitized receipt descriptor remains for explicit redacted replay"
+  },
+  "tests": {
+    "total_scenarios": 55,
+    "quota": 16,
+    "storage_and_completion": 20,
+    "queue_claim_public_execute": 19,
+    "sqlite": "REAL_IN_MEMORY_SQLITE",
+    "code": "actual production TenantQuota, storage helpers, resolver, enqueue, claim, complete and public execution function",
+    "final_run_receipt_sha256": "66b7fc0188e30da1977da8baf20ea916ceaf11ee60e7d5e8f0976bedf34cc874",
+    "diff_check": "PASS",
+    "full_release_gate": "PENDING_ROOT_INTEGRATED_WIN49_GATE"
+  },
+  "preparation": {
+    "build": {
+      "state": "PASS",
+      "operation": "wrangler deploy --dry-run",
+      "receipt_sha256": "c5a66bf6dbf385d58ef20266f314402a40b0e455a2836828113f1917168d8508",
+      "production_deployment": false,
+      "integrated_win49_assets_in_build": false
+    },
+    "migration": {
+      "state": "PENDING",
+      "database": "hara-commander-product-prod",
+      "only_pending_migration": "0035_approval_async_call_metadata.sql",
+      "sha256": "108cdf7de9038eba173a1de59f7fc006c30fd131b48a7dd54078144f274a4d91",
+      "receipt_sha256": "0cdda6c38ceb96ed7e5718052892cfc7426f1d2aa51e09209d3245f5bbd3706f",
+      "production_ddl_applied": false
+    },
+    "production_readback": {
+      "state": "PASS",
+      "latest_deployment": {
+        "id": "f2bc733e-739e-4ca0-a28f-f3594914a5d7",
+        "created_on": "2026-10-12T00:49:04.733795Z",
+        "versions": [
+          {
+            "version_id": "a326582b-76f6-4571-8adb-49dbd2675071",
+            "percentage": 100
+          }
+        ],
+        "strategy": "percentage"
+      },
+      "deployment_count": 10,
+      "production_mutation": false,
+      "receipt_sha256": "2b3fb180bfcfea864a2cd24a71aa1ca87502ab9a83673f42bf7ee114578fa431"
+    }
+  },
+  "windows_acceptance": {
+    "positive_human_approval": "PENDING_REAL_DEVICE_TEST",
+    "automation_of_approval_input": false
+  },
+  "rollout_plan": [
+    "Root integrates allowlisted source/tests and merges gate entries into signed Win49 owner worktree.",
+    "Run full integrated gate and final peer review; confirm canary has no active legacy or async mutating calls.",
+    "Recheck remote pending migrations: exactly0035; root applies only0035 after approval. Migration adds columns/index; historical rows default to profile0 and NULL descriptor.",
+    "Root deploys integrated Worker/assets, records deployed version and verifies health plus legacy Linux read operations.",
+    "Only then install/start signed private Agent49 canary and open matching local operator console.",
+    "Send one controlled action; consume returned HARA-CALL with status polling while human approves locally; verify original receipt, finite900-second window, execution, denial/expiry, protected SHA write and managed terminal recovery."
+  ],
+  "rollback_plan": [
+    "Keep additive migration0035; do not drop columns or rewrite existing result markers.",
+    "Before reverting to prior Worker, stop new async canary submissions and reconcile all profile900 calls/reservations to terminal settlement.",
+    "Do not roll back to a runtime that lacks HARA-CALL status or uses600-second reservations while a15-minute approval is active.",
+    "After drain, prior100-percent version from readback is a326582b-76f6-4571-8adb-49dbd2675071. Root must revalidate active deployment before actual rollback."
+  ],
+  "production_mutation_performed": false,
+  "windows_mutation_performed": false,
+  "privacy": {
+    "raw_nonce_saved": false,
+    "credentials_saved": false,
+    "command_output_saved": false,
+    "agent_payload_arguments_saved": false,
+    "public_product_receipt_hashes_saved": true,
+    "author_account_values_saved": false
+  }
+}

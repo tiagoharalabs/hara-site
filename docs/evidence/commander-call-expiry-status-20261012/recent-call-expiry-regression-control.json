@@ -1,0 +1,18 @@
+{
+  "schema": "hara.commander-recent-call-expiry-regression-control.v1",
+  "regression_original_state": "PENDING",
+  "fixed_effective_state": "EXPIRED",
+  "fixed_persisted_state": "PENDING",
+  "fixed_origin": "DEADLINE_PROJECTION",
+  "regression_reproduced": true,
+  "original_selects": 1,
+  "current_selects": 1,
+  "database_writes": 0,
+  "production_database_access": false,
+  "production_mutation": false,
+  "base_commit": "3b4f791147be54919727628e9c577963af030e3f",
+  "base_worker_sha256": "0c5e640cfaa00d9a4bc2d0e2677ce25621f5d9f45828ffdb20bc4d2e04b90c21",
+  "current_worker_sha256": "a761eae013c661c263e12d867e442ac88480037802d06486056cc5b4642c52cd",
+  "test_sha256": "f82a8f4d8e08dfaa3dc66e4c6f28144f6f6b94b7c58e3c46113afd478ad1ef5c",
+  "observed_at_utc": "2026-10-12T18:32:06.958435+00:00"
+}

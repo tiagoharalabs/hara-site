@@ -1,0 +1,18 @@
+{
+  "schema": "hara.commander-recent-call-expiry-offline-acceptance.v1",
+  "state": "PASS",
+  "worker_sha256": "a761eae013c661c263e12d867e442ac88480037802d06486056cc5b4642c52cd",
+  "test_sha256": "f82a8f4d8e08dfaa3dc66e4c6f28144f6f6b94b7c58e3c46113afd478ad1ef5c",
+  "gate_sha256": "3e38d647af3b20bedccb255f263d8fc037f205b6883a1818e2c65e5fe1ed47a7",
+  "windows48_sha256_before_and_after": "f54e5ff8c170e09a3dc795004af426851d111c89ae78408559886e0d693bf805",
+  "windows48_unchanged": true,
+  "temporary_dependency_link_removed": true,
+  "checked": 98,
+  "passed": 98,
+  "failed": 0,
+  "report": "docs/evidence/commander-call-expiry-status-20261012/offline-gate-final.json",
+  "report_sha256": "06994f9fd3d3caf085aefe3b2606a506482243280c91f6b8d82783328dac7e23",
+  "seconds": 32.227,
+  "production_d1_touched": false,
+  "cloudflare_deployed": false
+}

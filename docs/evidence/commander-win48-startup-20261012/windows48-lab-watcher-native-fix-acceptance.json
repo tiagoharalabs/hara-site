@@ -1,0 +1,108 @@
+{
+  "schema": "hara.commander-win48-lab-watcher-fix-native-acceptance.v1",
+  "state": "PASS_LAB_FIX_NO_POSITIVE_CONSENT_CLAIM",
+  "old_watcher_sha256": "aee1c0c53e8e0e5ab2ad3c7ff647ce6ee47a9bd78a94c75c84482a86b4504042",
+  "r2_watcher_sha256": "20dd018a43007f29b896d587b111fc1bdeaf94df5105d1090d0eec45b8782b72",
+  "final_r3_watcher_sha256": "25097b0fd621c078f9ed71e4064ccb934da636f8c5bb3b7c22d78f1925fcdb9f",
+  "agent_source_modified": false,
+  "agent_source_sha256": "f54e5ff8c170e09a3dc795004af426851d111c89ae78408559886e0d693bf805",
+  "root_cause_proven": "PowerShell5.1 File.Replace with null backup rejected after first Move; observer exited or snapshot stopped updating",
+  "fixed_write_backup_own_path": true,
+  "reader_file_share_readwrite_delete": true,
+  "writer_retries_after_failure": true,
+  "error_snapshot_has_observed_utc": true,
+  "latest_write_failure_status_separate": true,
+  "host_rejects_stale_or_stopped_observer": true,
+  "native_fixture": {
+    "state": "PASS",
+    "operational_authority": "HARA_COMMANDER",
+    "execution_authority": "HARA_COMMANDER_AGENT",
+    "runtime_authority_from_chatgpt": false,
+    "mutation_performed": true,
+    "result": {
+      "function_id": "process.run",
+      "risk_class": "PROCESS_EXECUTION",
+      "process_exit_code": 0,
+      "domain_success_inferred": false,
+      "stdout": "{\"command_preview\":\"python3 -u /tmp_hara/commander-win48-private-rc-20261012-r1/hostname-r3-native-write-fixture-only.py\",\"command_sha256\":\"b6483ac9a884874c16ebc889e886f0a00a1835538ee37b21e4296f86c91c4c09\",\"cwd\":\"/home/sartorius\",\"exit_code\":0,\"output_truncated\":false,\"partial\":\"\",\"pid\":276400,\"run_id\":\"HARA-PROC-14f024cf0aa6467e90c1bb198e372fdb\",\"session_retained\":false,\"state\":\"EXITED\",\"text\":\"PARSER {\\\"state\\\":\\\"PASS\\\",\\\"parse_error_count\\\":0,\\\"executed\\\":false}\\r\\nFIXTURE {\\\"state\\\":\\\"PASS\\\",\\\"old_null_backup_rejected\\\":true,\\\"old_exception_type\\\":\\\"System.Management.Automation.MethodInvocationException\\\",\\\"nonnull_backup_two_writes_pass\\\":true,\\\"replace_while_share_delete_reader_open_pass\\\":true,\\\"live_profile_or_task_touched\\\":false}\\r\",\"timed_out\":false,\"total_lines\":2}",
+      "human_approval_state": "APPROVED",
+      "local_authorization_mode": "PERSISTENT_TRUSTED",
+      "authorization_source": "DEVICE_ENROLLMENT_POLICY"
+    },
+    "customer_services_relay": false,
+    "bridge_receipt_sha256": "992aa3efea54e88271631c7d107211354cb53ada88386a629bdb6d2437e7ba9c",
+    "computer": "nucleo-a",
+    "product": {
+      "plan_code": "FOUNDER_INTERNAL",
+      "entitlement_id": "HARA-ENTITLEMENT-XPK",
+      "quota": {
+        "ok": true,
+        "state": "UNMETERED",
+        "mode": "UNMETERED",
+        "units": 0,
+        "cloud_quota_transaction": false
+      }
+    }
+  },
+  "native_parser_and_continuous_preflight_start": {
+    "state": "PASS",
+    "operational_authority": "HARA_COMMANDER",
+    "execution_authority": "HARA_COMMANDER_AGENT",
+    "runtime_authority_from_chatgpt": false,
+    "mutation_performed": true,
+    "result": {
+      "function_id": "process.start",
+      "risk_class": "PROCESS_EXECUTION",
+      "process_exit_code": null,
+      "domain_success_inferred": false,
+      "stdout": "{\"base_line\":0,\"buffer_truncated\":false,\"command_preview\":\"python3 -u /tmp_hara/commander-win48-private-rc-20261012-r1/hostname-r3-watch-parser-and-preflight.py\",\"command_sha256\":\"4b273f909ed0ae666cb997c648da7e05625d1fee563f5e837b1b40038f77e077\",\"cwd\":\"/home/sartorius\",\"exit_code\":null,\"next_offset\":1,\"offset\":0,\"partial\":\"\",\"pid\":281952,\"session_id\":\"HARA-PROC-ffe8103100e340b89d645a1ce85c2db2\",\"state\":\"RUNNING\",\"text\":\"PARSER {\\\"state\\\":\\\"PASS\\\",\\\"parse_error_count\\\":0,\\\"executed\\\":false}\\r\",\"total_lines\":1,\"truncated_before\":false}",
+      "human_approval_state": "APPROVED",
+      "local_authorization_mode": "PERSISTENT_TRUSTED",
+      "authorization_source": "DEVICE_ENROLLMENT_POLICY"
+    },
+    "customer_services_relay": false,
+    "bridge_receipt_sha256": "77ef91126a1c6b454470f6e3079b12fab84c0190ec34f7c7e46f53893365b2fc",
+    "computer": "nucleo-a",
+    "product": {
+      "plan_code": "FOUNDER_INTERNAL",
+      "entitlement_id": "HARA-ENTITLEMENT-XPK",
+      "quota": {
+        "ok": true,
+        "state": "UNMETERED",
+        "mode": "UNMETERED",
+        "units": 0,
+        "cloud_quota_transaction": false
+      }
+    }
+  },
+  "native_continuous_preflight_output": {
+    "state": "PASS",
+    "operational_authority": "HARA_COMMANDER",
+    "execution_authority": "HARA_COMMANDER_AGENT",
+    "runtime_authority_from_chatgpt": false,
+    "mutation_performed": false,
+    "result": {
+      "function_id": "process.output",
+      "risk_class": "READ_ONLY",
+      "process_exit_code": 0,
+      "domain_success_inferred": false,
+      "stdout": "{\"base_line\":0,\"buffer_truncated\":false,\"exit_code\":0,\"next_offset\":8,\"offset\":1,\"partial\":\"\",\"pid\":281952,\"session_id\":\"HARA-PROC-ffe8103100e340b89d645a1ce85c2db2\",\"state\":\"EXITED\",\"text\":\"{\\\"metadata_task_only\\\": true, \\\"no_input_or_approval\\\": true, \\\"state\\\": \\\"STARTED\\\"}\\r\\nSAMPLE {\\\"state\\\": \\\"READ_ONLY\\\", \\\"pending_active\\\": false, \\\"remaining_ms\\\": 0, \\\"source48_pinned\\\": true, \\\"task_running\\\": true, \\\"observer_running\\\": true, \\\"sample_fresh\\\": true, \\\"sample_age_ms\\\": 243, \\\"snapshot_write_failures\\\": 0, \\\"write_failure_exception_type\\\": \\\"\\\", \\\"write_failure_code\\\": \\\"\\\", \\\"observed_at_utc\\\": \\\"2026-10-12T18:48:27.0035310Z\\\", \\\"private_values_exposed\\\": false, \\\"approval_generated\\\": false, \\\"qga_sample_elapsed_ms\\\": 1338, \\\"notification_sent\\\": false}\\r\\nSAMPLE {\\\"state\\\": \\\"READ_ONLY\\\", \\\"pending_active\\\": false, \\\"remaining_ms\\\": 0, \\\"source48_pinned\\\": true, \\\"task_running\\\": true, \\\"observer_running\\\": true, \\\"sample_fresh\\\": true, \\\"sample_age_ms\\\": 194, \\\"snapshot_write_failures\\\": 0, \\\"write_failure_exception_type\\\": \\\"\\\", \\\"write_failure_code\\\": \\\"\\\", \\\"observed_at_utc\\\": \\\"2026-10-12T18:48:28.5224581Z\\\", \\\"private_values_exposed\\\": false, \\\"approval_generated\\\": false, \\\"qga_sample_elapsed_ms\\\": 1398, \\\"notification_sent\\\": false}\\r\\nSAMPLE {\\\"state\\\": \\\"READ_ONLY\\\", \\\"pending_active\\\": false, \\\"remaining_ms\\\": 0, \\\"source48_pinned\\\": true, \\\"task_running\\\": true, \\\"observer_running\\\": true, \\\"sample_fresh\\\": true, \\\"sample_age_ms\\\": 295, \\\"snapshot_write_failures\\\": 0, \\\"write_failure_exception_type\\\": \\\"\\\", \\\"write_failure_code\\\": \\\"\\\", \\\"observed_at_utc\\\": \\\"2026-10-12T18:48:29.8416632Z\\\", \\\"private_values_exposed\\\": false, \\\"approval_generated\\\": false, \\\"qga_sample_elapsed_ms\\\": 1364, \\\"notification_sent\\\": false}\\r\\nSAMPLE {\\\"state\\\": \\\"READ_ONLY\\\", \\\"pending_active\\\": false, \\\"remaining_ms\\\": 0, \\\"source48_pinned\\\": true, \\\"task_running\\\": true, \\\"observer_running\\\": true, \\\"sample_fresh\\\": true, \\\"sample_age_ms\\\": 1187, \\\"snapshot_write_failures\\\": 0, \\\"write_failure_exception_type\\\": \\\"\\\", \\\"write_failure_code\\\": \\\"\\\", \\\"observed_at_utc\\\": \\\"2026-10-12T18:48:30.4251876Z\\\", \\\"private_values_exposed\\\": false, \\\"approval_generated\\\": false, \\\"qga_sample_elapsed_ms\\\": 1333, \\\"notification_sent\\\": false}\\r\\nSAMPLE {\\\"state\\\": \\\"READ_ONLY\\\", \\\"pending_active\\\": false, \\\"remaining_ms\\\": 0, \\\"source48_pinned\\\": true, \\\"task_running\\\": true, \\\"observer_running\\\": true, \\\"sample_fresh\\\": true, \\\"sample_age_ms\\\": 396, \\\"snapshot_write_failures\\\": 0, \\\"write_failure_exception_type\\\": \\\"\\\", \\\"write_failure_code\\\": \\\"\\\", \\\"observed_at_utc\\\": \\\"2026-10-12T18:48:32.7428132Z\\\", \\\"private_values_exposed\\\": false, \\\"approval_generated\\\": false, \\\"qga_sample_elapsed_ms\\\": 1341, \\\"notification_sent\\\": false}\\r\\nPREFLIGHT {\\\"state\\\": \\\"PASS\\\", \\\"continuous_seconds\\\": 7.276931935000903, \\\"valid_samples\\\": 5, \\\"max_sample_ms\\\": 1398, \\\"source48_pinned\\\": true, \\\"task_agent_untouched\\\": true, \\\"no_notification_or_approval\\\": true}\\r\",\"total_lines\":8,\"truncated_before\":false}"
+    },
+    "customer_services_relay": false,
+    "bridge_receipt_sha256": "f30841a4202c71f5ec1183536e1f6ddb05b084bb59b35e2048dbd31a91f9f0e6",
+    "computer": "nucleo-a",
+    "product": {
+      "plan_code": "FOUNDER_INTERNAL",
+      "entitlement_id": "HARA-ENTITLEMENT-XPK",
+      "quota": {
+        "ok": true,
+        "state": "UNMETERED",
+        "mode": "UNMETERED",
+        "units": 0,
+        "cloud_quota_transaction": false
+      }
+    }
+  },
+  "approval_generated": false,
+  "product_positive_consent_observed": false
+}

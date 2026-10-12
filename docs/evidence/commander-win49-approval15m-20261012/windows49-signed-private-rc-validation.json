@@ -1,0 +1,73 @@
+{
+  "schema": "hara.commander-windows49-signed-private-rc-validation.v1",
+  "state": "PASS_SIGNED_PRIVATE_NO_VM_APPLY",
+  "observed_at_utc": "2026-10-12T19:47:11.156818+00:00",
+  "bundle": "/tmp_hara/commander-win49-approval15m-20261012/apps/commander/release-bundles/commercial-0.3.49-v9-rc",
+  "stage": "/tmp_hara/commander-win49-v9-signed-stage-20261012-r2",
+  "agent_version": "0.3.49",
+  "signature_algorithm": "RS256_RSA3072",
+  "authority": "commander-release-v2",
+  "public_jwk_fingerprint": "93a595c5c7ee29d341fe0aee1a1625610e8015bf9df1ff64a3f4accdb39400b4",
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 407,
+      "sha256": "c9ef5252eff1b1c9193a2617d57bcd6c08fc1825d1f9e4f792cbbdda4656d1a9"
+    },
+    {
+      "path": "agent/linux.py",
+      "bytes": 218938,
+      "sha256": "3e0db700dd568a85e23212a5400f1d256546fef77b7f59f574ceed29e04c15b7"
+    },
+    {
+      "path": "agent/windows.ps1",
+      "bytes": 96508,
+      "sha256": "7b51d2f243228f27aaf742086fe012c73bc17cd8c180a4f9abbcb1e2c51f3080"
+    },
+    {
+      "path": "install/linux.sh",
+      "bytes": 36363,
+      "sha256": "534e14433da9f86eb4342c6d9400e89ecf164545605e02e22f1646510284aba5"
+    },
+    {
+      "path": "install/windows.ps1",
+      "bytes": 23774,
+      "sha256": "a97ae8203d961028c09128aeb53f2ab7ee44864e47f31dd8dd9688dd6cbb7a82"
+    },
+    {
+      "path": "release/SHA256SUMS",
+      "bytes": 334,
+      "sha256": "829b32ff4dc36b9d8cbff1f22b6ac7976a0cba0fa11d4f00dbdfc8a13be63ad1"
+    },
+    {
+      "path": "release/agent-manifest.json",
+      "bytes": 765,
+      "sha256": "d0f375fd95e1e7842abb566359cd8edf2f14c4d10853e844cf2c425d0f9d6124"
+    },
+    {
+      "path": "release/agent-manifest.sig.json",
+      "bytes": 725,
+      "sha256": "1352fb54ed1e30d59fbd7c7daf374ef65f1b4f30df3acca4452b2a6d88344cf1"
+    },
+    {
+      "path": "release/release-signing-public.jwk",
+      "bytes": 624,
+      "sha256": "4e68608fa891f1b7a1e89c75936a089daeab0ba862a764f9bb31eca849cdfb9b"
+    }
+  ],
+  "total_release_bytes": 378438,
+  "active_source_byte_identical": true,
+  "historical_tracked_bundle_file_count": 63,
+  "all_previous_tracked_bundle_bytes_preserved_against3b4": true,
+  "linux_bytes_identical_to48": true,
+  "old_unsigned_r1_source_preserved": "1e32e2c23476a2c8390111d4b9a57e877dbb3dd80426929a75bfb647da33274a",
+  "approval_timeout_seconds": 900,
+  "native_final227_parser_root_verified": true,
+  "native_final227_receipt": "b8c59fd702a682c12abfac4e6325ec95a43592dab847a603edd4df19581aa378",
+  "remaining232_prior_source_logic_delta_accepted_by_root": true,
+  "source_installed": false,
+  "public_deployment_performed": false,
+  "key_exported": false,
+  "positive_human_approval_proven": false,
+  "git_diff_check_exit": 0
+}

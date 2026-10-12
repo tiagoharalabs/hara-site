@@ -1,0 +1,39 @@
+{
+  "schema": "hara.commander-windows49-approval-static-evidence.v1",
+  "scope": "STATIC_SOURCE_AND_ISOLATED_NATIVE_FIXTURE_CONTRACT",
+  "result": {
+    "schema": "hara.commander-windows-approval-window49-static.v1",
+    "state": "PASS",
+    "checks": 17,
+    "passed_checks": [
+      "ACTIVE_CANDIDATE_049",
+      "SINGLE_TIMEOUT_LITERAL_900",
+      "PENDING_DEADLINE_DERIVED_FROM_CENTRAL_TIMEOUT",
+      "PROMPT_MINUTES_DERIVED_FROM_CENTRAL_TIMEOUT",
+      "EXACT_PHRASE_AND_REQUEST_CODE_STILL_REQUIRED",
+      "READER_REVALIDATES_ENTER_DEADLINE_AND_REQUEST",
+      "CONSUMER_REVALIDATES_RESPONSE_AND_ACCEPTANCE_DEADLINE",
+      "REQUEST_BINDS_NONCE_OWNER_CONSUMER_AND_ARGUMENT_DIGEST",
+      "EXISTING_PENDING_LIFETIME_USES_ITS_DEADLINE",
+      "ORPHAN_REPLY_AGE_COVERS_FULL_APPROVAL_WINDOW",
+      "REPLY_BOOL_AND_REQUEST_IDENTITY_STILL_VALIDATED",
+      "ASK_EVERY_ACTION_REQUIRES_REAL_LOCAL_APPROVAL",
+      "APPROVAL_CONSUMER_HEARTBEAT_INTERVAL_60",
+      "HEARTBEAT_NETWORK_TIMEOUT_BOUNDED_AND_FAILURE_FAILS_CLOSED",
+      "NATIVE_FIXTURE_HAS_BOUNDARY_AND_CONCURRENCY_CONTROLS",
+      "CLOCK_SEAM_EXISTS_ONLY_INSIDE_SOURCE_PINNED_AST_FIXTURE",
+      "NATIVE_FIXTURE_NEVER_RUNS_AGENT_MAIN_LOOP_OR_PRODUCTION_ACTION"
+    ],
+    "source_sha256": "7b51d2f243228f27aaf742086fe012c73bc17cd8c180a4f9abbcb1e2c51f3080",
+    "dynamic_powershell51_fixture_tested": false,
+    "production_action_executed": false,
+    "real_human_approval_proven": false
+  },
+  "process_exit_code": 0,
+  "bridge_receipt_sha256": "43699e3e354e996ff038085516b02e0c5cf2b1ca192eb7fdd33ac2978e58a53a",
+  "fixture_sha256": "910f2eaaa9b866318e15321ab152abc776935ea85af337499dcc29dbd0e91d75",
+  "validator_sha256": "876fc9ba02e355f4a90a828b0a4b183fcb7c6a5a7f08efc0a82f60988cb85c23",
+  "production_action_executed": false,
+  "real_human_approval_proven": false,
+  "deployed": false
+}

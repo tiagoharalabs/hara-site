@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify private Windows 0.3.48-v8 signature and strict active-source identity."""
+"""Verify immutable historical Windows 0.3.48-v8 signature and reviewed source pin."""
 from __future__ import annotations
 import json
 from pathlib import Path
@@ -59,9 +59,10 @@ def main():
     for rel in ("agent/linux.py", "install/linux.sh"):
         need((NEW / rel).read_bytes() == (OLD / rel).read_bytes(),
              "LINUX_COMPONENT_CHANGED:" + rel)
-    agent, installer = release.final_source_verification()
-    need((NEW / "agent/windows.ps1").read_bytes() == agent,
-         "WINDOWS_CANDIDATE_SOURCE_DRIFT")
+    agent = (NEW / "agent/windows.ps1").read_bytes()
+    installer = release.expected_installer()
+    need(release.signer.sha(agent) == release.APPROVED_SOURCE_SHA256,
+         "IMMUTABLE_SIGNED_V48_AGENT_SHA")
     need((NEW / "install/windows.ps1").read_bytes() == installer,
          "WINDOWS_INSTALLER_EXTRA_MUTATION")
     need((NEW / "release/SHA256SUMS").read_text(encoding="utf-8") ==
@@ -71,7 +72,7 @@ def main():
         "state": "PASS", "agent_version": "0.3.48",
         "signature": "RS256_RSA3072", "authority": "commander-release-v2",
         "four_files_authenticated": True,
-        "active_windows_source_byte_identical": True,
+        "historical_windows_source_sha256_pinned": True,
         "linux_agent_byte_identical": True, "linux_installer_byte_identical": True,
         "old_v3_v4_v5_v6_v7_preserved": True, "approval_deadline_revalidation_pinned": True,
         "production_deployment": False, "customer_agent_modified": False

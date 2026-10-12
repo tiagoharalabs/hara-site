@@ -45,6 +45,8 @@ import { DeviceChannel, deviceChannelName } from "./device-channel.mjs";
 import { reconcileAgentVersion } from "./device-version-observation.mjs";
 import { readTenantDeviceTelemetry } from "./device-telemetry.mjs";
 import { customerStatusWaitMs, CUSTOMER_STATUS_TIMEOUT_MS } from "./device-status-poll.mjs";
+import { CALL_ROW_FIELDS, parseCallMetadata, settleCallUsage, readScopedCall, acceptedCallStatus, publicAcceptedCallStatus } from "./approval-relay-storage.mjs";
+import { asyncApprovalDevice, asyncApprovalTool, asyncApprovalProfile, claimedApprovalExpiresAt, isApprovalCallHandle, pendingApprovalResult, safeCallResultMetadata, replayCallResultMetadata, ASYNC_APPROVAL_RESERVATION_TTL_SECONDS, TERMINAL_CALL_STATES } from "./approval-async-relay.mjs";
 import { SecurityRateLimit } from "./security-rate-limit-do.mjs";
 import {
   enforceLayeredRateLimit,
@@ -908,7 +910,8 @@ export class TenantQuota extends DurableObject {
           state TEXT NOT NULL,
           units INTEGER NOT NULL,
           receipt_sha256 TEXT,
-          updated_at_utc TEXT NOT NULL
+          updated_at_utc TEXT NOT NULL,
+          reservation_expires_at_utc TEXT
         );
 
         CREATE INDEX IF NOT EXISTS idx_request_period
@@ -999,6 +1002,10 @@ export class TenantQuota extends DurableObject {
         );
       }
 
+      if (!columns.some((column) => column.name === "reservation_expires_at_utc")) {
+        this.ctx.storage.sql.exec("ALTER TABLE request_state ADD COLUMN reservation_expires_at_utc TEXT");
+      }
+
       const usageMeta = [...this.ctx.storage.sql.exec(
         "SELECT usage_schema_version FROM quota_meta WHERE id = 1"
       )][0] || { usage_schema_version: 0 };
@@ -1029,7 +1036,9 @@ export class TenantQuota extends DurableObject {
       `UPDATE request_state
           SET state = 'RELEASED', units = 0, updated_at_utc = ?
         WHERE state = 'RESERVED'
-          AND updated_at_utc <= ?`,
+          AND ((reservation_expires_at_utc IS NOT NULL AND reservation_expires_at_utc <= ?)
+            OR (reservation_expires_at_utc IS NULL AND updated_at_utc <= ?))`,
+      now,
       now,
       cutoff
     );
@@ -1053,7 +1062,8 @@ export class TenantQuota extends DurableObject {
     };
   }
 
-  reserve(requestId, subjectId, periodKey, functionId, limit) {
+  reserve(requestId, subjectId, periodKey, functionId, limit, reservationTtlSeconds = QUOTA_RESERVATION_TTL_SECONDS) {
+    if (![QUOTA_RESERVATION_TTL_SECONDS,ASYNC_APPROVAL_RESERVATION_TTL_SECONDS].includes(reservationTtlSeconds)) throw new Error("QUOTA_RESERVATION_TTL_INVALID");
     this.expireStaleReservations();
     const existing = [...this.ctx.storage.sql.exec(
       `SELECT request_id, subject_id, period_key, function_id, state, units, receipt_sha256
@@ -1091,9 +1101,10 @@ export class TenantQuota extends DurableObject {
 
     this.ctx.storage.sql.exec(
       `INSERT INTO request_state
-        (request_id, subject_id, period_key, function_id, state, units, updated_at_utc)
-       VALUES (?, ?, ?, ?, 'RESERVED', 1, ?)`,
-      requestId, subjectId, periodKey, functionId, new Date().toISOString()
+        (request_id, subject_id, period_key, function_id, state, units, updated_at_utc, reservation_expires_at_utc)
+       VALUES (?, ?, ?, ?, 'RESERVED', 1, ?, ?)`,
+      requestId, subjectId, periodKey, functionId, new Date().toISOString(),
+      new Date(Date.now() + reservationTtlSeconds*1000).toISOString()
     );
 
     const consumedUnits = balance.consumed_units + 1;
@@ -1105,6 +1116,12 @@ export class TenantQuota extends DurableObject {
       consumed_units: consumedUnits,
       remaining_units: limit == null ? null : Math.max(limit - consumedUnits, 0),
     };
+  }
+
+  settleDeviceCall(requestId,subjectId,periodKey,units,commitReceipt) {
+    const row=[...this.ctx.storage.sql.exec("SELECT subject_id,period_key,units,state FROM request_state WHERE request_id = ?",requestId)][0];
+    if (!row || row.subject_id !== subjectId || row.period_key !== periodKey || units !== 1 || (Number(row.units) !== units && row.state !== "RELEASED")) return {ok:false,code:"CALL_USAGE_BINDING_INVALID"};
+    return commitReceipt ? this.commit(requestId,subjectId,commitReceipt,null) : this.release(requestId,subjectId,null);
   }
 
   commit(requestId, subjectId, receiptSha256, limit) {
@@ -2398,7 +2415,7 @@ export async function resolveCustomerTargetDevice(env, context, requestedCompute
   const explicitComputer = requestedComputer ? cleanDeviceName(requestedComputer) : null;
   const result = await env.PRODUCT_DB.prepare(
     `SELECT device_id, tenant_id, enrolled_by_subject_id, device_name, platform, architecture,
-            agent_version, tunnel_mode, state, last_seen_at_utc, revoked_at_utc
+            agent_version, approval_mode, tunnel_mode, state, last_seen_at_utc, revoked_at_utc
        FROM commander_devices
       WHERE tenant_id = ?
         AND state = 'ACTIVE'
@@ -3043,7 +3060,7 @@ async function redactExpiredDeviceCallContent(env, cutoff) {
     batch += 1
   ) {
     const result = await env.PRODUCT_DB.prepare(
-      `SELECT call_id, payload_json, result_json
+      `SELECT ${CALL_ROW_FIELDS}
          FROM commander_device_calls INDEXED BY idx_device_calls_expiry
         WHERE state IN ('COMPLETED','FAILED','CANCELLED','EXPIRED')
           AND expires_at_utc <= ?
@@ -3065,6 +3082,12 @@ async function redactExpiredDeviceCallContent(env, cutoff) {
 
     const updates = [];
     for (const row of rows) {
+      if (Number(row.approval_timeout_seconds)===900) {
+        try {
+          const raw=row.result_json && !isRedactedDeviceCallContent(row.result_json) ? JSON.parse(row.result_json) : null;
+          await settleCallUsage(env,row,raw);
+        } catch { continue; }
+      }
       const payloadMarker = await redactedDeviceCallContent(row.payload_json);
       const resultMarker = row.result_json == null
         ? null
@@ -3079,6 +3102,7 @@ async function redactExpiredDeviceCallContent(env, cutoff) {
         ).bind(payloadMarker, resultMarker, row.call_id, cutoff)
       );
     }
+    if (!updates.length) break;
     await env.PRODUCT_DB.batch(updates);
     redacted += updates.length;
     if (rows.length < DEVICE_CALL_CONTENT_REDACTION_BATCH) break;
@@ -3126,7 +3150,7 @@ async function enqueueDeviceCall(env, body) {
   );
   const readExisting = () => env.PRODUCT_DB.prepare(
     `SELECT call_id, tenant_id, subject_id, device_id, tool_id, payload_json, state, expires_at_utc,
-            usage_mode, usage_units, usage_period_key, usage_budget_id
+            usage_mode, usage_units, usage_period_key, usage_budget_id, approval_timeout_seconds, execution_budget_ms
        FROM commander_device_calls WHERE request_id = ? LIMIT 1`
   ).bind(requestId).first();
   const existingResponse = async (existing) => {
@@ -3152,6 +3176,8 @@ async function enqueueDeviceCall(env, body) {
       tool_id: toolId,
       state: existing.state,
       expires_at_utc: existing.expires_at_utc,
+      approval_timeout_seconds:Number(existing.approval_timeout_seconds || 0),
+      execution_budget_ms:Number(existing.execution_budget_ms || 0),
       retry_after_ms: deviceCallRetryAfterMs(existing.state, "enqueue"),
       usage_mode: existing.usage_mode || "CLOUD_QUOTA",
       usage_units: Number(existing.usage_units || 0),
@@ -3167,6 +3193,7 @@ async function enqueueDeviceCall(env, body) {
     env, context, body.computer || null, requestedDeviceId
   );
   const deviceId = cleanId(device.device_id, 180);
+  const approvalProfile=asyncApprovalProfile(device,toolId,canonicalPayload);
   if (String(device.tunnel_mode || "") === "LOCAL_TUNNEL") throw new Error("DEVICE_LOCAL_TUNNEL_DIRECT_PATH_REQUIRED");
   if (!deviceOnline(device.last_seen_at_utc, device.tunnel_mode)) throw new Error("DEVICE_OFFLINE");
 
@@ -3185,7 +3212,7 @@ async function enqueueDeviceCall(env, body) {
     `INSERT OR IGNORE INTO commander_device_calls
       (call_id, request_id, tenant_id, subject_id, device_id, tool_id, payload_json,
        state, created_at_utc, expires_at_utc, claimed_at_utc, completed_at_utc,
-       result_json, error_code, usage_mode, usage_units, usage_period_key, usage_budget_id)
+       result_json, error_code, usage_mode, usage_units, usage_period_key, usage_budget_id, approval_timeout_seconds, execution_budget_ms)
      SELECT ?, ?, ?, ?, d.device_id, ?, ?, 'PENDING', ?, ?, NULL, NULL, NULL, NULL, ?, ?, ?,
             CASE WHEN ? = 'LOCAL_BUDGET' THEN (
               SELECT b.budget_id
@@ -3198,7 +3225,7 @@ async function enqueueDeviceCall(env, body) {
                  AND b.units_issued + ? <= b.units_allocated
                ORDER BY b.allocation_sequence ASC
                LIMIT 1
-            ) ELSE NULL END
+            ) ELSE NULL END, ?, ?
        FROM commander_devices d
       WHERE d.device_id = ?
         AND d.tenant_id = ?
@@ -3217,6 +3244,7 @@ async function enqueueDeviceCall(env, body) {
              AND q.state IN ('PENDING','EXECUTING')
              AND q.expires_at_utc > ?
         ) < ?
+        AND (? = 0 OR NOT EXISTS (SELECT 1 FROM commander_device_calls qa WHERE qa.tenant_id=d.tenant_id AND qa.device_id=d.device_id AND qa.tool_id IN ('hara.files.create_directory','hara.files.write','hara.files.edit','hara.files.move','hara.files.copy','hara.files.delete','hara.files.rollback','hara.process.run','hara.process.start','hara.process.interact','hara.process.kill') AND qa.state IN ('PENDING','EXECUTING') AND qa.expires_at_utc>?))
         AND (
           ? <> 'LOCAL_BUDGET'
           OR EXISTS (
@@ -3234,8 +3262,10 @@ async function enqueueDeviceCall(env, body) {
     callId, requestId, context.tenant_id, context.subject_id, toolId, payloadJson,
     createdAt, expiresAt, usageMode, usageUnits, usagePeriodKey,
     usageMode, usagePeriodKey, createdAt, usageUnits,
+    approvalProfile.approval_timeout_seconds,approvalProfile.execution_budget_ms,
     deviceId, context.tenant_id, eventV2Cutoff, onlineCutoff,
     createdAt, DEVICE_CALL_ACTIVE_QUEUE_LIMIT,
+    approvalProfile.approval_timeout_seconds,createdAt,
     usageMode, usagePeriodKey, createdAt, usageUnits
   ).run();
 
@@ -3275,7 +3305,8 @@ async function enqueueDeviceCall(env, body) {
           AND state IN ('PENDING','EXECUTING')
           AND expires_at_utc > ?`
     ).bind(deviceId, context.tenant_id, nowIso()).first();
-    if (Number(activeQueue?.active_count || 0) >= DEVICE_CALL_ACTIVE_QUEUE_LIMIT) {
+    const aa=approvalProfile.approval_timeout_seconds ? await env.PRODUCT_DB.prepare("SELECT COUNT(*) AS n FROM commander_device_calls WHERE tenant_id=? AND device_id=? AND tool_id IN ('hara.files.create_directory','hara.files.write','hara.files.edit','hara.files.move','hara.files.copy','hara.files.delete','hara.files.rollback','hara.process.run','hara.process.start','hara.process.interact','hara.process.kill') AND state IN ('PENDING','EXECUTING') AND expires_at_utc>?").bind(context.tenant_id,deviceId,nowIso()).first() : null;
+    if (Number(aa?.n || 0)>=1 || Number(activeQueue?.active_count || 0)>=DEVICE_CALL_ACTIVE_QUEUE_LIMIT) {
       throw new Error("DEVICE_BUSY");
     }
 
@@ -3298,7 +3329,7 @@ async function enqueueDeviceCall(env, body) {
     && notification.delivered < 1
   ) {
     const cancelledAt = nowIso();
-    await env.PRODUCT_DB.prepare(
+    const cancelled=await env.PRODUCT_DB.prepare(
       `UPDATE commander_device_calls
           SET state = 'CANCELLED',
               completed_at_utc = ?,
@@ -3313,12 +3344,16 @@ async function enqueueDeviceCall(env, body) {
       context.tenant_id,
       deviceId,
     ).run();
-    throw new Error("DEVICE_OFFLINE");
+    if (cancelled.meta?.changes) throw new Error("DEVICE_OFFLINE");
+    const accepted=await readExisting();
+    if (!accepted) throw new Error("DEVICE_CALL_ENQUEUE_CONFLICT");
+    return await existingResponse(accepted);
   }
 
   let postNotify = null;
   if (
-    eventV2Enabled(env)
+    !approvalProfile.approval_timeout_seconds
+    && eventV2Enabled(env)
     && notification.attempted
     && notification.delivered >= 1
   ) {
@@ -3343,6 +3378,8 @@ async function enqueueDeviceCall(env, body) {
     tool_id: toolId,
     state: responseState,
     expires_at_utc: expiresAt,
+    approval_timeout_seconds:approvalProfile.approval_timeout_seconds,
+    execution_budget_ms:approvalProfile.execution_budget_ms,
     retry_after_ms: deviceCallRetryAfterMs(responseState, "enqueue"),
     usage_mode: usageMode,
     usage_units: usageUnits,
@@ -3816,6 +3853,26 @@ async function customerUsage(env, context) {
   };
 }
 
+// Recent-call reads expose logical expiry without writing D1. Preserve the stored
+// state and completion metadata so this projection never attests execution.
+function projectRecentCustomerCall(row, snapshotNowUtc) {
+  const observedAt = Date.parse(snapshotNowUtc);
+  if (!Number.isFinite(observedAt)) throw new Error("DEVICE_CALL_STATUS_TIMESTAMP_INVALID");
+  const expiresAt = Date.parse(String(row.expires_at_utc || ""));
+  const persistedState = row.state;
+  const deadlineExpired = ["PENDING", "EXECUTING"].includes(persistedState)
+    && Number.isFinite(expiresAt) && expiresAt <= observedAt;
+  const effectiveState = deadlineExpired ? "EXPIRED" : persistedState;
+  return {
+    call_id:row.call_id, request_id:row.request_id, computer:row.device_name, tool_id:row.tool_id,
+    state:effectiveState, effective_state:effectiveState, persisted_state:persistedState,
+    expires_at_utc:row.expires_at_utc || null,
+    expiry_origin:deadlineExpired ? "DEADLINE_PROJECTION" : null,
+    created_at_utc:row.created_at_utc, claimed_at_utc:row.claimed_at_utc,
+    completed_at_utc:row.completed_at_utc, error_code:row.error_code || null,
+  };
+}
+
 async function recentCustomerCalls(env, context, args) {
   const limit=Math.max(1,Math.min(100,Number(args?.limit || 50)));
   const tool=String(args?.tool || "").trim();
@@ -3830,18 +3887,15 @@ async function recentCustomerCalls(env, context, args) {
   if (tool) { clauses.push("c.tool_id = ?"); binds.push(cleanId(tool,120)); }
   binds.push(limit);
   const result=await env.PRODUCT_DB.prepare(`
-    SELECT c.call_id,c.request_id,c.device_id,c.tool_id,c.state,c.created_at_utc,c.claimed_at_utc,
-           c.completed_at_utc,c.error_code,d.device_name
+    SELECT c.call_id,c.request_id,c.device_id,c.tool_id,c.state,c.created_at_utc,c.expires_at_utc,
+           c.claimed_at_utc,c.completed_at_utc,c.error_code,d.device_name
       FROM commander_device_calls c
       JOIN commander_devices d ON d.device_id = c.device_id
      WHERE ${clauses.join(" AND ")}
      ORDER BY c.created_at_utc DESC
      LIMIT ?`).bind(...binds).all();
-  return (result.results||[]).map((row)=>( {
-    call_id:row.call_id, request_id:row.request_id, computer:row.device_name, tool_id:row.tool_id,
-    state:row.state, created_at_utc:row.created_at_utc, claimed_at_utc:row.claimed_at_utc,
-    completed_at_utc:row.completed_at_utc, error_code:row.error_code || null,
-  }));
+  const snapshotNowUtc=nowIso();
+  return (result.results||[]).map((row)=>projectRecentCustomerCall(row,snapshotNowUtc));
 }
 
 function portalActivitySource(requestId) {
@@ -4880,6 +4934,17 @@ async function executeCustomerMcpTool(
     };
   }
 
+  if (toolId === "hara.process.output" && isApprovalCallHandle(args?.session_id)) {
+    const row=await readScopedCall(env,context,args.session_id);
+    if (!row) throw new Error("DEVICE_CALL_NOT_FOUND");
+    const originalGrant=MCP_TOOL_GRANTS[row.tool_id];
+    if (!originalGrant || !context.grants.includes(originalGrant)) throw new Error("GRANT_MISSING");
+    const named=await env.PRODUCT_DB.prepare("SELECT device_name FROM commander_devices WHERE tenant_id=? AND device_id=? LIMIT 1").bind(context.tenant_id,row.device_id).first();
+    if (args?.computer && String(named?.device_name || "").trim().toLocaleLowerCase()!==cleanDeviceName(args.computer).trim().toLocaleLowerCase()) throw new Error("DEVICE_CALL_NOT_FOUND");
+    const status=await acceptedCallStatus(env,context,row.call_id,{expectedDeviceId:row.device_id,nowUtc:nowIso(),newMarker:redactedDeviceCallContent,isRedacted:isRedactedDeviceCallContent});
+    return publicAcceptedCallStatus(status,String(named?.device_name || row.device_id),projectCustomerToolResult);
+  }
+
   const targetDevice = await resolveCustomerTargetDevice(
     env, context, args?.computer || null, null
   );
@@ -4895,6 +4960,13 @@ async function executeCustomerMcpTool(
   );
   if ((isDeviceMutationTool(toolId) || isDeviceProcessTool(toolId) || toolId === "hara.files.preimages.list") && !agentPurposeToolReady(targetDevice, toolId)) {
     throw new Error("AGENT_UPGRADE_REQUIRED");
+  }
+  const approvalProfile=asyncApprovalProfile(targetDevice,toolId,payload);
+  const prior=await env.PRODUCT_DB.prepare("SELECT "+CALL_ROW_FIELDS+" FROM commander_device_calls WHERE request_id=? AND tenant_id=? AND subject_id=? AND device_id=? LIMIT 1").bind(requestId,context.tenant_id,context.subject_id,targetDeviceId).first();
+  if (prior && Number(prior.approval_timeout_seconds)===900) {
+    if (prior.tool_id!==toolId || !await deviceCallStoredContentMatches(prior.payload_json,boundedJson(canonicalDeviceToolPayload(toolId,payload),128*1024,"DEVICE_CALL_PAYLOAD_INVALID"))) throw new Error("IDEMPOTENCY_CONFLICT");
+    const status=await acceptedCallStatus(env,context,prior.call_id,{expectedDeviceId:targetDeviceId,nowUtc:nowIso(),newMarker:redactedDeviceCallContent,isRedacted:isRedactedDeviceCallContent});
+    return publicAcceptedCallStatus(status,targetComputer,projectCustomerToolResult);
   }
   const purposeFunctionId = quotaFunctionIdForTool(toolId, payload);
   const legacyPayload = legacyInvokePayload(toolId, payload);
@@ -4918,6 +4990,7 @@ async function executeCustomerMcpTool(
       cloudPeriodKey,
       functionId,
       cloudQuotaLimit,
+      approvalProfile.approval_timeout_seconds ? ASYNC_APPROVAL_RESERVATION_TTL_SECONDS : QUOTA_RESERVATION_TTL_SECONDS,
     );
     if (!reservation.ok) {
       throw new Error(String(reservation.code || "QUOTA_DENIED"));
@@ -4983,13 +5056,21 @@ async function executeCustomerMcpTool(
       payload: dispatchPayload,
     });
   } catch (error) {
-    if (usageMode === "CLOUD_QUOTA" && quota && reservation?.state === "RESERVED") {
-      await quota.release(requestId, context.subject_id, cloudQuotaLimit)
-        .catch(() => undefined);
+    const accepted=await env.PRODUCT_DB.prepare("SELECT "+CALL_ROW_FIELDS+" FROM commander_device_calls WHERE request_id=? AND tenant_id=? AND subject_id=? AND device_id=? LIMIT 1")
+      .bind(requestId,context.tenant_id,context.subject_id,targetDeviceId).first();
+    if (accepted && (accepted.tool_id!==dispatchToolId || !await deviceCallStoredContentMatches(accepted.payload_json,boundedJson(dispatchPayload,128*1024,"DEVICE_CALL_PAYLOAD_INVALID")))) throw new Error("IDEMPOTENCY_CONFLICT");
+    if (accepted && (accepted.claimed_at_utc || ["PENDING","COMPLETED","FAILED"].includes(accepted.state))) {
+      call=accepted;
+    } else {
+      if (usageMode === "CLOUD_QUOTA" && quota && reservation?.state === "RESERVED") await quota.release(requestId,context.subject_id,cloudQuotaLimit);
+      throw error;
     }
-    throw error;
   }
 
+  if (Number(call.approval_timeout_seconds)===900) {
+    const status=await acceptedCallStatus(env,context,call.call_id,{expectedDeviceId:targetDeviceId,nowUtc:nowIso(),newMarker:redactedDeviceCallContent,isRedacted:isRedactedDeviceCallContent});
+    return publicAcceptedCallStatus(status,targetComputer,projectCustomerToolResult);
+  }
   const status = await customerMcpWaitForCall(env, identity, call);
   if (status.state === "FAILED") {
     if (usageMode === "CLOUD_QUOTA" && quota && reservation?.state === "RESERVED") {
@@ -5067,10 +5148,14 @@ async function executeCustomerMcpTool(
 async function claimNextDeviceCall(env, request) {
   const device = await resolveDeviceCredential(env, request);
   const now = nowIso();
+  if (!asyncApprovalDevice(device)) {
+    await env.PRODUCT_DB.prepare("UPDATE commander_device_calls SET state='CANCELLED',completed_at_utc=?,error_code='CALL_APPROVAL_PROFILE_CHANGED' WHERE device_id=? AND tenant_id=? AND approval_timeout_seconds=900 AND state='PENDING'").bind(now,device.device_id,device.tenant_id).run();
+  }
 
   const result = await env.PRODUCT_DB.prepare(
     `UPDATE commander_device_calls
-        SET state = 'EXECUTING', claimed_at_utc = ?
+        SET state = 'EXECUTING', claimed_at_utc = ?,
+            expires_at_utc=CASE WHEN approval_timeout_seconds=900 THEN strftime('%Y-%m-%dT%H:%M:%fZ',?, '+' || (960.0 + execution_budget_ms / 1000.0) || ' seconds') ELSE expires_at_utc END
       WHERE call_id = (
         SELECT c.call_id
           FROM commander_device_calls c INDEXED BY idx_device_calls_poll
@@ -5082,12 +5167,13 @@ async function claimNextDeviceCall(env, request) {
            AND c.expires_at_utc > ?
            AND d.state = 'ACTIVE'
            AND d.revoked_at_utc IS NULL
+           AND (c.approval_timeout_seconds=0 OR (d.platform='WINDOWS' AND d.approval_mode='ASK_EVERY_ACTION' AND d.agent_version=?))
          ORDER BY c.created_at_utc
          LIMIT 1
       )
       RETURNING call_id, request_id, tool_id, payload_json, expires_at_utc,
-                usage_mode, usage_units, usage_period_key, usage_budget_id`
-  ).bind(now, device.device_id, now).all();
+                usage_mode, usage_units, usage_period_key, usage_budget_id, approval_timeout_seconds, execution_budget_ms`
+  ).bind(now, now, device.device_id, now, device.agent_version).all();
 
   const row = (result.results || [])[0];
   if (!row) return null;
@@ -5111,6 +5197,8 @@ async function claimNextDeviceCall(env, request) {
     tool_id: row.tool_id,
     payload: rawPayload,
     expires_at_utc: row.expires_at_utc,
+    approval_timeout_seconds:Number(row.approval_timeout_seconds || 0),
+    execution_budget_ms:Number(row.execution_budget_ms || 0),
     usage: {
       mode: String(row.usage_mode || "CLOUD_QUOTA"),
       units: Number(row.usage_units || 0),
@@ -5133,10 +5221,13 @@ async function completeDeviceCall(env, request, body) {
     ? cleanId(body.error_code || "DEVICE_EXECUTION_FAILED", 120)
     : null;
   const completedAt = nowIso();
+  const before=await env.PRODUCT_DB.prepare("SELECT "+CALL_ROW_FIELDS+" FROM commander_device_calls WHERE call_id=? AND tenant_id=? AND device_id=? LIMIT 1").bind(callId,device.tenant_id,device.device_id).first();
+  if (!before) throw new Error("DEVICE_CALL_NOT_FOUND");
+  const descriptor=JSON.stringify(safeCallResultMetadata(body.result,{...before,state,error_code:errorCode}));
 
   const update = await env.PRODUCT_DB.prepare(
     `UPDATE commander_device_calls
-        SET state = ?, completed_at_utc = ?, result_json = ?, error_code = ?
+        SET state = ?, completed_at_utc = ?, result_json = ?, error_code = ?, call_result_metadata_json = ?
       WHERE call_id = ?
         AND tenant_id = ?
         AND device_id = ?
@@ -5144,14 +5235,14 @@ async function completeDeviceCall(env, request, body) {
         AND expires_at_utc > ?
       RETURNING call_id, request_id, tool_id, state, completed_at_utc`
   ).bind(
-    state, completedAt, resultJson, errorCode, callId, device.tenant_id, device.device_id,
+    state, completedAt, resultJson, errorCode, descriptor, callId, device.tenant_id, device.device_id,
     completedAt
   ).all();
 
   const row = (update.results || [])[0];
   if (!row) {
     const existing = await env.PRODUCT_DB.prepare(
-      `SELECT state, expires_at_utc, result_json, error_code FROM commander_device_calls
+      `SELECT ${CALL_ROW_FIELDS} FROM commander_device_calls
         WHERE call_id = ? AND tenant_id = ? AND device_id = ? LIMIT 1`
     ).bind(callId, device.tenant_id, device.device_id).first();
     if (existing && existing.state === state) {
@@ -5165,6 +5256,7 @@ async function completeDeviceCall(env, request, body) {
       ) {
         throw new Error("IDEMPOTENCY_CONFLICT");
       }
+      if (Number(existing.approval_timeout_seconds)===900) await settleCallUsage(env,existing,body.result);
       return { schema: "hara.commander-device-call-result.v1", ok: true, existing: true, call_id: callId, state };
     }
     if (
@@ -5186,6 +5278,10 @@ async function completeDeviceCall(env, request, body) {
       throw new Error("DEVICE_CALL_EXPIRED");
     }
     throw new Error("DEVICE_CALL_NOT_EXECUTING");
+  }
+
+  if (Number(before.approval_timeout_seconds)===900) {
+    await settleCallUsage(env,{...before,state,error_code:errorCode,result_json:resultJson,call_result_metadata_json:descriptor},body.result);
   }
 
   // Version metadata is derived only from a newly accepted, authenticated
@@ -5215,6 +5311,15 @@ async function deviceCallStatus(env, body) {
   const callId = cleanId(body.call_id, 180);
   const context = await mcpProductContext(env, body.issuer, body.subject, mcpBootstrapHints(body));
   if (!context.ok) throw new Error(context.code);
+
+  const scoped=await readScopedCall(env,context,callId);
+  if (Number(scoped?.approval_timeout_seconds)===900) {
+    const grant=MCP_TOOL_GRANTS[scoped.tool_id];
+    if (!grant || !context.grants.includes(grant)) throw new Error("GRANT_MISSING");
+    const status=await acceptedCallStatus(env,context,callId,{nowUtc:nowIso(),newMarker:redactedDeviceCallContent,isRedacted:isRedactedDeviceCallContent});
+    const {row}=status;
+    return {schema:"hara.commander-device-call-status.v1",call_id:row.call_id,request_id:row.request_id,device_id:row.device_id,tool_id:row.tool_id,state:row.state,created_at_utc:row.created_at_utc,expires_at_utc:row.expires_at_utc,claimed_at_utc:row.claimed_at_utc,completed_at_utc:row.completed_at_utc,result:status.result || (status.metadata ? replayCallResultMetadata(status.metadata,row) : null),content_redacted:status.content_redacted,error_code:row.error_code || null,retry_after_ms:deviceCallRetryAfterMs(row.state,"status")};
+  }
 
   const now = nowIso();
   const readCall = () => env.PRODUCT_DB.prepare(

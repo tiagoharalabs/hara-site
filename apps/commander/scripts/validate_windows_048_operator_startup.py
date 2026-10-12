@@ -15,8 +15,8 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_SOURCE = ROOT / "apps/commander/public/agent/windows.ps1"
-HARNESS = Path(__file__).resolve().parent / "test_windows_operator_session_startup_fixture.ps1"
+DEFAULT_SOURCE = ROOT / "apps/commander/release-bundles/commercial-0.3.48-v8-rc/agent/windows.ps1"
+HARNESS = Path(__file__).resolve().parent / "test_windows_operator_session_startup_fixture_048.ps1"
 SCOPE = "REAL_AST_SESSION_LOOKUP_AND_TOP_LEVEL_START_DISPATCH_SYNTHETIC_PROFILE_AND_BOUNDARIES"
 LABELS = (
     "CANDIDATE_ACTUAL_TOP_LEVEL_START_NULL_METADATA_RETURNS",
@@ -50,6 +50,8 @@ def main() -> int:
     if args.source.is_symlink() or not source_path.is_file():
         raise AssertionError("WINDOWS_OPERATOR_STARTUP_SOURCE_NOT_REGULAR")
     raw = source_path.read_bytes()
+    if hashlib.sha256(raw).hexdigest() != "f54e5ff8c170e09a3dc795004af426851d111c89ae78408559886e0d693bf805":
+        raise AssertionError("WINDOWS_OPERATOR_STARTUP_HISTORICAL48_SOURCE_SHA_DRIFT")
     source = raw.decode("utf-8-sig")
     body = function(source, "Get-OperatorSession")
     checks = []
@@ -59,7 +61,7 @@ def main() -> int:
             raise AssertionError("WINDOWS_OPERATOR_STARTUP_" + name)
         checks.append(name)
 
-    need("ACTIVE_CANDIDATE_048", '$AgentVersion = "0.3.48"' in source)
+    need("HISTORICAL_CANDIDATE_048", '$AgentVersion = "0.3.48"' in source)
     need("SESSION_FILE_SCHEMA_AND_AGE_BOUNDARY_PRESERVED", all(item in body for item in (
         "Test-Path -LiteralPath $SessionPath -PathType Leaf", "ConvertFrom-Json",
         "hara.commander-operator-session.v1", "started_at_utc", "SessionMaxHours")))

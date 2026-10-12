@@ -1,0 +1,18 @@
+{
+  "schema": "hara.commander-windows049-final-ui-literal-delta.v1",
+  "state": "PASS",
+  "source_before_sha256": "1e32e2c23476a2c8390111d4b9a57e877dbb3dd80426929a75bfb647da33274a",
+  "source_after_sha256": "7b51d2f243228f27aaf742086fe012c73bc17cd8c180a4f9abbcb1e2c51f3080",
+  "source_bytes": 96508,
+  "functions_checked": 70,
+  "changed_functions": [
+    "Read-LocalApprovalResponse"
+  ],
+  "changed_function_source_extent_before_sha256": "1bf0d09c197a40733599e2fc72694424faa99b8281f62b06ad8695bb0b2395f6",
+  "changed_function_source_extent_after_sha256": "709f6b7f59e5205309be321ad1f69d10431d5344ed3bd4c72571c6e06ca039b2",
+  "delta_kind": "SINGLE_WRITE_HOST_LITERAL_ONLY",
+  "powershell_ast_parse_proven": false,
+  "approval_logic_changed": false,
+  "logic_functions_byte_identical": true,
+  "production_action_executed": false
+}

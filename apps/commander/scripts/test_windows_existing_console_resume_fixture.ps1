@@ -2,7 +2,7 @@
 [CmdletBinding()]
 param(
   [Parameter(Mandatory=$true)][string]$AgentSource,
-  [ValidateSet("Frozen046","Candidate047","Candidate048")][string]$ExpectedBehavior="Frozen046"
+  [ValidateSet("Frozen046","Candidate047","Candidate049")][string]$ExpectedBehavior="Frozen046"
 )
 $ErrorActionPreference="Stop"
 if ($PSVersionTable.PSVersion.Major -ne 5 -or $PSVersionTable.PSVersion.Minor -ne 1) {
@@ -16,10 +16,10 @@ if ($ExpectedBehavior -ceq "Frozen046") {
     throw "RESUME_FIXTURE_SOURCE46_NOT_FROZEN"
   }
 } else {
-  if ($ExpectedBehavior -ceq "Candidate048" -and $sourceSha -cne "f54e5ff8c170e09a3dc795004af426851d111c89ae78408559886e0d693bf805") {
-    throw "RESUME_FIXTURE_SOURCE48_NOT_PINNED"
+  if ($ExpectedBehavior -ceq "Candidate049" -and $sourceSha -cne "7b51d2f243228f27aaf742086fe012c73bc17cd8c180a4f9abbcb1e2c51f3080") {
+    throw "RESUME_FIXTURE_SOURCE49_NOT_PINNED"
   }
-  $expectedVersion=if ($ExpectedBehavior -ceq "Candidate048") {"48"} else {"47"}
+  $expectedVersion=if ($ExpectedBehavior -ceq "Candidate049") {"49"} else {"47"}
   if ($sourceText -notmatch ('(?m)^\$AgentVersion = "0[.]3[.]'+$expectedVersion+'"$')) {
     throw ("RESUME_FIXTURE_SOURCE"+$expectedVersion+"_VERSION_MISSING")
   }
@@ -51,7 +51,7 @@ $ApprovalResponsePath=Join-Path $Root "synthetic-response.json"
 $ConsoleEvents=Join-Path $Root "synthetic-events.jsonl"
 $AgentTaskName="SYNTHETIC_TASK_NEVER_REGISTERED_"+[guid]::NewGuid().ToString("N")
 $SessionMaxHours=12
-$AgentVersion=if ($ExpectedBehavior -ceq "Frozen046") {"0.3.46"} elseif ($ExpectedBehavior -ceq "Candidate048") {"0.3.48"} else {"0.3.47"}
+$AgentVersion=if ($ExpectedBehavior -ceq "Frozen046") {"0.3.46"} elseif ($ExpectedBehavior -ceq "Candidate049") {"0.3.49"} else {"0.3.47"}
 $script:Passed=0
 $script:Checks=New-Object 'System.Collections.Generic.List[string]'
 $script:States=New-Object 'System.Collections.Generic.List[object]'
@@ -157,7 +157,7 @@ try {
       error_code=$errorCode
     })
   }
-  if ($ExpectedBehavior -in @("Candidate047","Candidate048")) {
+  if ($ExpectedBehavior -in @("Candidate047","Candidate049")) {
     # Existing console closes during the Task-start sleep: fresh lookup must
     # open this caller's own console, rather than reporting stale ACTIVE.
     Write-FixtureJson $SessionPath $script:ExistingFixtureSession

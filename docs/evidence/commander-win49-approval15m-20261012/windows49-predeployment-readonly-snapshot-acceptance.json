@@ -1,0 +1,55 @@
+{
+  "schema": "hara.commander-win49-predeployment-lab-snapshot-acceptance.v1",
+  "state": "PASS",
+  "snapshot": {
+    "agent_task_changed": false,
+    "approval_mode": "ASK_EVERY_ACTION",
+    "config_pinned": true,
+    "config_sha256": "e8810f67c0ccaa8780a401f767e5ff99660def8d8815b7288c7a9e4d156bc7f8",
+    "input_or_approval_generated": false,
+    "observed_at_utc": "2026-10-12T20:12:13.0320315Z",
+    "operator_marker_exists": true,
+    "operator_marker_expected": true,
+    "pending_exists": false,
+    "private_values_exposed": false,
+    "processes": [
+      {
+        "alive": true,
+        "command_role_matches": true,
+        "expected_start_matches": true,
+        "interactive_session_matches": true,
+        "pid": 8184,
+        "sid_matches_interactive_user": true,
+        "started_at_utc": "2026-10-12T17:23:02.2031480Z"
+      },
+      {
+        "alive": true,
+        "command_role_matches": true,
+        "expected_start_matches": true,
+        "interactive_session_matches": true,
+        "pid": 6456,
+        "sid_matches_interactive_user": true,
+        "started_at_utc": "2026-10-12T18:05:45.2932270Z"
+      }
+    ],
+    "response_exists": false,
+    "schema": "hara.commander-win49-predeployment-readonly-snapshot.v1",
+    "source48_pinned": true,
+    "source_sha256": "f54e5ff8c170e09a3dc795004af426851d111c89ae78408559886e0d693bf805",
+    "state": "READ_ONLY",
+    "target_process_count": 2,
+    "target_process_ids": [
+      8184,
+      6456
+    ],
+    "task_definition_pinned": true,
+    "task_definition_sha256": "9bcc1704ecbb8afb3ce5edd4cb1f7a21ed4d470fc91870ff354d9da24d5dfa08",
+    "task_interactive_limited": true,
+    "task_principal_matches_user": true,
+    "task_state": "Running"
+  },
+  "authority": "AUTHORIZED_LAB_QGA_USER_CONTEXT_METADATA_READ_ONLY_NOT_WINDOWS_PRODUCT_EXECUTION",
+  "bridge_receipt_sha256": "8505c2ecacbff5d1b39c0c90b6af019c864dec4bf23089101a1efae3c6aa8727",
+  "installed_agent_modified": false,
+  "approval_generated": false
+}

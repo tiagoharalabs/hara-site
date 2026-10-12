@@ -1,0 +1,65 @@
+{
+  "schema": "hara.commander-backend-integration-allowlist.v1",
+  "source_worktree": "/tmp_hara/commander-win49-relay15m-20261012",
+  "destination_worktree": "/tmp_hara/commander-win48-startup-20261012",
+  "files": [
+    {
+      "relative_path": "apps/commander/src/worker.js",
+      "source_sha256": "d1479c5b406901a5d86b5bee358cf39f4eb04735e36eacc9f2cb0cf5a8e2451a",
+      "expected_destination_sha256": "a761eae013c661c263e12d867e442ac88480037802d06486056cc5b4642c52cd",
+      "expected_destination_absent": false
+    },
+    {
+      "relative_path": "apps/commander/src/customer-mcp-simple.mjs",
+      "source_sha256": "9bdd61c76ac6a63a2f91f8069f5a0d947340a4d851e53d35c8b1e3eb417a8559",
+      "expected_destination_sha256": "21336b39f08c9b60a3d73dfc4ddf1b274d40e4eb472fb452b34d1fef21cdcb0b",
+      "expected_destination_absent": false
+    },
+    {
+      "relative_path": "apps/commander/src/approval-async-relay.mjs",
+      "source_sha256": "28bc2e9249087f7725bedc4c238d3e4dae32d3fee26546f0f13b11e4cd1a9580",
+      "expected_destination_sha256": null,
+      "expected_destination_absent": true
+    },
+    {
+      "relative_path": "apps/commander/src/approval-relay-storage.mjs",
+      "source_sha256": "25191785e7886dc0db68b69d440cdb1f2d07eb06412b4c50c30f50682f43fcab",
+      "expected_destination_sha256": null,
+      "expected_destination_absent": true
+    },
+    {
+      "relative_path": "apps/commander/migrations/0035_approval_async_call_metadata.sql",
+      "source_sha256": "108cdf7de9038eba173a1de59f7fc006c30fd131b48a7dd54078144f274a4d91",
+      "expected_destination_sha256": null,
+      "expected_destination_absent": true
+    },
+    {
+      "relative_path": "apps/commander/scripts/test_approval_async_quota_ttl.mjs",
+      "source_sha256": "05a9853a74647809b03ecbc8af10d05fb878df499ba7b85243d1f4dd9535cac7",
+      "expected_destination_sha256": null,
+      "expected_destination_absent": true
+    },
+    {
+      "relative_path": "apps/commander/scripts/test_approval_async_storage.mjs",
+      "source_sha256": "4386d698b9a8147a35d38152ec0d179fcd1ad74cfcf94ae4b365caf3e27365e7",
+      "expected_destination_sha256": null,
+      "expected_destination_absent": true
+    },
+    {
+      "relative_path": "apps/commander/scripts/test_approval_async_queue_claim.mjs",
+      "source_sha256": "0e14a3ea06ba9d06c940ee61c2ac78f42e9f161d14070a8c124169ec3e3bebe7",
+      "expected_destination_sha256": null,
+      "expected_destination_absent": true
+    }
+  ],
+  "gate_merge_only": {
+    "script": "apps/commander/scripts/commander_prelaunch_offline_gate.py",
+    "add_JS": [
+      "test_approval_async_quota_ttl.mjs",
+      "test_approval_async_storage.mjs",
+      "test_approval_async_queue_claim.mjs"
+    ],
+    "preserve_existing_entries": true
+  },
+  "production_deployment_performed": false
+}

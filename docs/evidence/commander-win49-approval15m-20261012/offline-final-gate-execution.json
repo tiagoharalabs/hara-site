@@ -1,0 +1,12 @@
+{
+  "exit_code": 0,
+  "checked": 105,
+  "passed": 105,
+  "failed": 0,
+  "failed_tests": [],
+  "evidence_path": "docs/evidence/commander-win49-approval15m-20261012/offline-final-gate.json",
+  "evidence_sha256": "3a6ae220eb1d734ad9965da95ca32b7c906939f07cc87b8cc40136ae035a365a",
+  "stderr_present": false,
+  "elapsed_seconds": 37.602,
+  "peak_child_rss_kib": 143692
+}

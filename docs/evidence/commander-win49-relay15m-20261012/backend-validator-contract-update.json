@@ -1,0 +1,37 @@
+{
+  "schema": "hara.commander-backend-validator-contract-update.v1",
+  "state": "PASS",
+  "relative_path": "apps/commander/scripts/validate_concurrent_device_queue_sql.py",
+  "source_worktree": "/tmp_hara/commander-win49-relay15m-20261012",
+  "source_sha256": "b721edc81d3f770eb84659e1ee79e1daba2dc6f83f1e3e01497bf5f17fca57a1",
+  "expected_destination_sha256": "805aed894a1de5c5814738a171dc5f2774507a8f6a1ebb6359c11eb497ca7d13",
+  "worker_sha256_unchanged": "d1479c5b406901a5d86b5bee358cf39f4eb04735e36eacc9f2cb0cf5a8e2451a",
+  "reason": "Legacy validator assumed25 enqueue and3 claim placeholders. New persisted profile requires29 and5, with exact source binding-symbol order checked.",
+  "checks": [
+    "all real migrations including0035",
+    "schema defaults and nullable result metadata",
+    "integer approval and execution snapshot",
+    "CHECK denies profile901 and execution10001",
+    "legacy queue limit16 under256 concurrent requests",
+    "same request admits one",
+    "cross tenant admission denied",
+    "legacy claims exactly once and preserves50-second deadline/profile0",
+    "expired and revoked calls denied",
+    "900-second approval admits one mutation under256 concurrent requests",
+    "ordinary read admitted alongside pending approval",
+    "approval claimed once with970-second deadline for10-second execution budget",
+    "repeated claims cannot reset original deadline",
+    "policy, version and revocation changes denied by atomic claim SQL"
+  ],
+  "targeted_run": {
+    "attempts": 256,
+    "threads": 12,
+    "elapsed_seconds": 2.061,
+    "receipt_sha256": "fd6e546bbfcb981dbc383b5c50324683d3579a6839e62cfb9b2e5493497b5ef7",
+    "diff_check": "PASS",
+    "sqlite": "TEMPORARY_ISOLATED_REAL_SQLITE"
+  },
+  "full_integrated_gate": "PENDING_ROOT_RERUN",
+  "production_mutation_performed": false,
+  "windows_mutation_performed": false
+}

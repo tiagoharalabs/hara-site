@@ -2,7 +2,7 @@
 """Offline guards for candidate consent expiry; historical signatures are separate.
 
 This verifies source boundaries only. Real PowerShell 5.1 behavior is verified by
-test_windows_local_approval_expiry.ps1 using isolated AST function fixtures.
+test_windows_local_approval_expiry_048.ps1 using isolated AST function fixtures.
 """
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_SOURCE = ROOT / "apps/commander/public/agent/windows.ps1"
+DEFAULT_SOURCE = ROOT / "apps/commander/release-bundles/commercial-0.3.48-v8-rc/agent/windows.ps1"
 SCRIPT_DIR = ROOT / "apps/commander/scripts"
 FIELDS = (
     "schema", "nonce", "challenge", "request_id", "tool_id", "arguments_sha256",
@@ -44,6 +44,8 @@ def main() -> int:
     if args.source.is_symlink() or not source_path.is_file():
         raise AssertionError("WINDOWS_APPROVAL_SOURCE_NOT_REGULAR")
     raw = source_path.read_bytes()
+    if hashlib.sha256(raw).hexdigest() != "f54e5ff8c170e09a3dc795004af426851d111c89ae78408559886e0d693bf805":
+        raise AssertionError("WINDOWS_APPROVAL_HISTORICAL48_SOURCE_SHA_DRIFT")
     source = raw.decode("utf-8-sig")
     if not re.search(r'(?m)^\$AgentVersion = "0[.]3[.]48"$', source):
         raise AssertionError("WINDOWS_APPROVAL_SOURCE48_VERSION_MISSING")
@@ -162,7 +164,7 @@ def main() -> int:
          and "([ref]$sessionOpenedHere)" in manual
          and "$SessionOpened.Value=$true" in console
          and "$currentTask -and -not $currentTask.Triggers -and -not $active" in manual)
-    harness = SCRIPT_DIR / "test_windows_local_approval_expiry.ps1"
+    harness = SCRIPT_DIR / "test_windows_local_approval_expiry_048.ps1"
     fixture = harness.read_text(encoding="utf-8")
     need("HARNESS_ISOLATED_AST_ONLY",
          "Parser]::ParseFile" in fixture and "hara-synthetic-approval-" in fixture

@@ -1,0 +1,22 @@
+{
+  "schema": "hara.commander-recent-call-expiry-projection-evidence.v1",
+  "test_path": "apps/commander/scripts/test_recent_call_expiry_projection.mjs",
+  "test_sha256": "f82a8f4d8e08dfaa3dc66e4c6f28144f6f6b94b7c58e3c46113afd478ad1ef5c",
+  "worker_sha256": "a761eae013c661c263e12d867e442ac88480037802d06486056cc5b4642c52cd",
+  "base_commit": "3b4f791147be54919727628e9c577963af030e3f",
+  "execution_authority": "HARA_COMMANDER_AGENT",
+  "bridge_receipt_sha256": "bbf04a7a5f099dcecf93ba6bd73341799c419c9b528ba9cfef59d03631cd3366",
+  "process_exit_code": 0,
+  "process_session": "HARA-PROC-b440a568a1da456d806321ce47e68e4f",
+  "summary": {
+    "schema": "hara.commander-recent-call-expiry-projection-test.v1",
+    "checked": 36,
+    "passed": 36,
+    "failed": 0,
+    "workload": "synthetic 50-second deadlines; production projection/list functions with read-only D1 fixture",
+    "production_database_access": false,
+    "production_mutation": false
+  },
+  "executed_expiry_is_not_proof_of_non_execution": true,
+  "deployed": false
+}

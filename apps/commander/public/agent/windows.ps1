@@ -7,11 +7,11 @@ $SessionPath = Join-Path $Root "operator-session.json"
 $ConsoleEvents = Join-Path $Root "console-events.jsonl"
 $PendingApprovalPath = Join-Path $Root "pending-action-approval.json"
 $ApprovalResponsePath = Join-Path $Root "action-approval-response.json"
-$ApprovalTimeoutSeconds = 30
+$ApprovalTimeoutSeconds = 900
 $OperationsDb = Join-Path $Root "operations.sqlite3"
 $AgentTaskName = "HARA Commander Agent"
 $SessionMaxHours = 12
-$AgentVersion = "0.3.48"
+$AgentVersion = "0.3.49"
 $SloProfile = "INTERNAL_BETA_V1"
 $SloMinSuccessPercent = 99.0
 $SloP50MaxMs = 1000
@@ -846,7 +846,28 @@ function Remove-LocalApprovalFiles([string]$Nonce) {
   } | Out-Null
 }
 
-function Invoke-LocalActionApproval($Call) {
+function Send-LocalApprovalConsumerHeartbeat($Cfg,[string]$ApprovalDeviceToken) {
+  # The waiting consumer keeps its authenticated lease; heartbeat never grants consent.
+  if (-not $Cfg -or -not $Cfg.base_url -or -not $Cfg.device_id -or
+      [string]::IsNullOrWhiteSpace($ApprovalDeviceToken)) { return $false }
+  try {
+    Send-Json "$($Cfg.base_url)/api/device/heartbeat" $ApprovalDeviceToken @{
+      device_id=[string]$Cfg.device_id
+      architecture=[string]$Cfg.architecture
+      agent_version=$AgentVersion
+      approval_mode=(Get-ApprovalMode $Cfg)
+      activity_snapshots=(Get-LocalActivityHeartbeatSnapshot)
+    } 5 | Out-Null
+    $script:LastHeartbeat=Get-Date
+    Try-SetRuntimeStatus -HeartbeatAt ([DateTime]::UtcNow.ToString("o")) | Out-Null
+    return $true
+  } catch {
+    Try-SetRuntimeStatus -ErrorCode (Get-SafeErrorCode $_) -ErrorAt ([DateTime]::UtcNow.ToString("o")) | Out-Null
+    return $false
+  }
+}
+
+function Invoke-LocalActionApproval($Call,$Cfg=$null,[string]$ApprovalDeviceToken=$null) {
   # The user, not ChatGPT or an API response, must approve the exact operation.
   # A per-action nonce and SHA-256 of the payload bind the local response.
   $session=Get-OperatorSession
@@ -877,18 +898,59 @@ function Invoke-LocalActionApproval($Call) {
   $temporary=$PendingApprovalPath+"."+[guid]::NewGuid().ToString("N")+".tmp"
   try {
     Invoke-WithLocalApprovalLock {
+      $expiredPrior=$null
       foreach($existing in @($PendingApprovalPath,$ApprovalResponsePath)) {
         if (Test-Path -LiteralPath $existing -PathType Leaf) {
-          # A crashed prior request never grants another call.
-          $older=((Get-Item -LiteralPath $existing).LastWriteTimeUtc -lt [DateTime]::UtcNow.AddMinutes(-2))
-          if ($older) { Remove-Item -LiteralPath $existing -Force }
-          else { throw "LOCAL_APPROVAL_REQUEST_BUSY" }
+          # A future request remains BUSY for its entire approval window.
+          # Cleanup never grants consent and is bound to unchanged file bytes.
+          $priorHash=(Get-FileHash -LiteralPath $existing -Algorithm SHA256).Hash
+          $older=$false
+          try {
+            $prior=Get-Content -Raw -LiteralPath $existing | ConvertFrom-Json
+            if ($existing -ceq $PendingApprovalPath) {
+              $priorExpires=[DateTime]::Parse([string]$prior.expires_at_utc).ToUniversalTime()
+              $older=([string]$prior.schema -ceq "hara.commander-local-action-approval.v1" -and
+                [string]$prior.nonce -cmatch "^[0-9a-f]{32}$" -and
+                [string]$prior.arguments_sha256 -cmatch "^[0-9a-f]{64}$" -and
+                [int]$prior.owner_pid -gt 1 -and [int]$prior.consumer_pid -gt 1 -and
+                -not [string]::IsNullOrWhiteSpace([string]$prior.owner_started_at_utc) -and
+                -not [string]::IsNullOrWhiteSpace([string]$prior.consumer_started_at_utc) -and
+                $priorExpires -le [DateTime]::UtcNow)
+              if ($older) { $expiredPrior=$prior }
+            } else {
+              $priorResponded=[DateTime]::Parse([string]$prior.responded_at_utc).ToUniversalTime()
+              $replyValid=([string]$prior.schema -ceq "hara.commander-local-action-response.v1" -and
+                [string]$prior.nonce -cmatch "^[0-9a-f]{32}$" -and
+                [string]$prior.arguments_sha256 -cmatch "^[0-9a-f]{64}$" -and
+                $prior.approved -is [bool] -and [int]$prior.owner_pid -gt 1 -and
+                [int]$prior.consumer_pid -gt 1 -and
+                -not [string]::IsNullOrWhiteSpace([string]$prior.owner_started_at_utc) -and
+                -not [string]::IsNullOrWhiteSpace([string]$prior.consumer_started_at_utc))
+              if ($expiredPrior) {
+                $older=($replyValid -and [string]$prior.nonce -ceq [string]$expiredPrior.nonce -and
+                  [string]$prior.request_id -ceq [string]$expiredPrior.request_id -and
+                  [string]$prior.arguments_sha256 -ceq [string]$expiredPrior.arguments_sha256 -and
+                  [int]$prior.owner_pid -eq [int]$expiredPrior.owner_pid -and
+                  [string]$prior.owner_started_at_utc -ceq [string]$expiredPrior.owner_started_at_utc -and
+                  [int]$prior.consumer_pid -eq [int]$expiredPrior.consumer_pid -and
+                  [string]$prior.consumer_started_at_utc -ceq [string]$expiredPrior.consumer_started_at_utc)
+              } else {
+                $cutoff=[DateTime]::UtcNow.AddSeconds(-[Math]::Max(120,$ApprovalTimeoutSeconds))
+                $older=($replyValid -and $priorResponded -le $cutoff -and
+                  (Get-Item -LiteralPath $existing).LastWriteTimeUtc -le $cutoff)
+              }
+            }
+          } catch { $older=$false }
+          if ($older -and (Get-FileHash -LiteralPath $existing -Algorithm SHA256).Hash -ceq $priorHash) {
+            Remove-Item -LiteralPath $existing -Force
+          } else { throw "LOCAL_APPROVAL_REQUEST_BUSY" }
         }
       }
       [IO.File]::WriteAllText($temporary,($pending | ConvertTo-Json -Depth 5 -Compress),(New-Object Text.UTF8Encoding($false)))
       if ([DateTime]::UtcNow -ge $expires) { throw "LOCAL_ACTION_APPROVAL_EXPIRED" }
       [IO.File]::Move($temporary,$PendingApprovalPath)
     } | Out-Null
+    $nextApprovalHeartbeat=[DateTime]::UtcNow.AddSeconds([Math]::Max(1,$HeartbeatSeconds))
     while ([DateTime]::UtcNow -lt $expires) {
       $accepted=Invoke-WithLocalApprovalLock {
         $active=Get-OperatorSession
@@ -927,6 +989,12 @@ function Invoke-LocalActionApproval($Call) {
         return $true
       }
       if ($accepted -eq $true) { return $true }
+      # Consume a valid reply first; never spend the final five seconds on I/O.
+      if ([DateTime]::UtcNow -ge $nextApprovalHeartbeat -and
+          ($expires-[DateTime]::UtcNow).TotalSeconds -gt 5) {
+        $nextApprovalHeartbeat=[DateTime]::UtcNow.AddSeconds([Math]::Max(1,$HeartbeatSeconds))
+        Send-LocalApprovalConsumerHeartbeat $Cfg $ApprovalDeviceToken | Out-Null
+      }
       Start-Sleep -Milliseconds 150
     }
     throw "LOCAL_ACTION_APPROVAL_EXPIRED"
@@ -943,7 +1011,7 @@ function Assert-StarterMutationAuthorized($Cfg,$Call) {
   if ($mode -eq "ASK_EVERY_ACTION") {
     $approvedSession=Get-OperatorSession
     if (-not $approvedSession) { throw "LOCAL_OPERATOR_SESSION_REQUIRED" }
-    Invoke-LocalActionApproval $Call | Out-Null
+    Invoke-LocalActionApproval $Call $Cfg $script:DeviceToken | Out-Null
     # Cleanup may wait for the console mutex. Revocation during that wait
     # must deny before the caller starts its filesystem or process action.
     $active=Invoke-WithLocalApprovalLock { Get-OperatorSession }
@@ -995,7 +1063,7 @@ function Read-LocalApprovalResponse($Pending) {
   Clear-LocalApprovalConsoleInput
   $text=""
   $expires=[DateTime]::Parse([string]$Pending.expires_at_utc).ToUniversalTime()
-  Write-Host ("Digite a frase completa APROVAR "+[string]$Pending.challenge+" (APROVAR sozinho nao autoriza; Enter nega): ") -NoNewline
+  Write-Host ("Digite a frase completa APROVAR "+[string]$Pending.challenge+" e pressione Enter para enviar (APROVAR sozinho nao autoriza; Enter vazio nega): ") -NoNewline
   try {
     while ([DateTime]::UtcNow -lt $expires) {
       $current=Invoke-WithLocalApprovalLock { Test-LocalApprovalRequestCurrent $Pending }
@@ -1088,7 +1156,7 @@ function Respond-ToLocalApprovalRequest {
   Write-Host ("Resumo local: "+[string]$pending.action_summary)
   Write-Host ("SHA256 argumentos: "+[string]$pending.arguments_sha256)
   Write-Host "Apenas esta acao sera autorizada. A sessao nao vira permanente."
-  Write-Host "O pedido expira em ate 30 segundos; depois, descarte esta solicitacao."
+  Write-Host ("Voce tem ate "+[int]($ApprovalTimeoutSeconds/60)+" minutos para aprovar esta acao; depois, descarte esta solicitacao.")
   $response=Read-LocalApprovalResponse $pending
   if ($response.state -cne "SUBMITTED") {
     Write-Host "APROVACAO_INDIVIDUAL=EXPIRADA" -ForegroundColor Yellow

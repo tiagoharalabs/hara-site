@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Offline concurrent stress for EXACT Worker SQLite enqueue/claim SQL.
 
-Runs only a temporary local SQLite DB with the current 30 real migrations.
+Runs only a temporary local SQLite DB with the current real migrations, including additive approval profile0035.
 No HTTP, production D1, device tokens, GPU, or customer files are accessed.
 """
 from __future__ import annotations
@@ -36,8 +36,28 @@ ENQUEUE_SQL = sql_from_source(
 CLAIM_SQL = sql_from_source(
     r"async function claimNextDeviceCall.*?const result = await env\.PRODUCT_DB\.prepare\(\s*`(UPDATE commander_device_calls.*?)`\s*\)\.bind\("
 )
-assert ENQUEUE_SQL.count("?") == 25
-assert CLAIM_SQL.count("?") == 3
+def source_bindings(pattern: str) -> list[str]:
+    match = re.search(pattern, WORKER, re.S)
+    assert match, "SOURCE_BINDINGS_NOT_FOUND"
+    return [x.strip() for x in match.group(1).split(",") if x.strip()]
+
+
+ENQUEUE_BINDINGS = source_bindings(r"const inserted = await env\.PRODUCT_DB\.prepare\(.*?\)\.bind\((.*?)\)\.run\(\)")
+CLAIM_BINDINGS = source_bindings(r"async function claimNextDeviceCall.*?const result = await env\.PRODUCT_DB\.prepare\(.*?\)\.bind\((.*?)\)\.all\(\)")
+EXPECTED_ENQUEUE_BINDINGS = [
+    "callId", "requestId", "context.tenant_id", "context.subject_id", "toolId", "payloadJson",
+    "createdAt", "expiresAt", "usageMode", "usageUnits", "usagePeriodKey",
+    "usageMode", "usagePeriodKey", "createdAt", "usageUnits",
+    "approvalProfile.approval_timeout_seconds", "approvalProfile.execution_budget_ms",
+    "deviceId", "context.tenant_id", "eventV2Cutoff", "onlineCutoff",
+    "createdAt", "DEVICE_CALL_ACTIVE_QUEUE_LIMIT",
+    "approvalProfile.approval_timeout_seconds", "createdAt",
+    "usageMode", "usagePeriodKey", "createdAt", "usageUnits",
+]
+assert ENQUEUE_BINDINGS == EXPECTED_ENQUEUE_BINDINGS, "ENQUEUE_BIND_ORDER_CHANGED"
+assert CLAIM_BINDINGS == ["now", "now", "device.device_id", "now", "device.agent_version"], "CLAIM_BIND_ORDER_CHANGED"
+assert ENQUEUE_SQL.count("?") == len(ENQUEUE_BINDINGS)
+assert CLAIM_SQL.count("?") == len(CLAIM_BINDINGS)
 assert "DEVICE_CALL_ACTIVE_QUEUE_LIMIT" in WORKER and "DEVICE_CALL_ACTIVE_QUEUE_LIMIT = 16" in WORKER
 
 
@@ -69,6 +89,11 @@ def seed(path: Path) -> None:
     assert len(migration_names) >= 32
     assert "0031_free_15000_20261010.sql" in migration_names
     assert "0032_free_10000_revert_20261010.sql" in migration_names
+    assert "0035_approval_async_call_metadata.sql" in migration_names
+    columns = {row[1]: row for row in db.execute("PRAGMA table_info(commander_device_calls)")}
+    assert columns["approval_timeout_seconds"][4] == "0"
+    assert columns["execution_budget_ms"][4] == "0"
+    assert columns["call_result_metadata_json"][3] == 0
     for tenant, user, device in (("T1", "S1", "D1"), ("T2", "S2", "D2")):
         db.execute(
             "INSERT INTO tenants (tenant_id,display_name,state,environment,created_at_utc) VALUES (?,?,?,?,?)",
@@ -98,16 +123,18 @@ def seed(path: Path) -> None:
     db.close()
 
 
-def enqueue(dbfile: Path, i: int, *, tenant="T1", user="S1", device="D1", request_id=None) -> int:
+def enqueue(dbfile: Path, i: int, *, tenant="T1", user="S1", device="D1", request_id=None, approval=0, execution=0, tool="hara.ping") -> int:
     db = connection(dbfile)
     try:
         request = request_id or ("REQ-" + str(i))
         params = (
-            "CALL-" + tenant + "-" + str(i), request, tenant, user, "hara.ping", "{}",
+            "CALL-" + tenant + "-" + str(i), request, tenant, user, tool, "{}",
             CREATED, EXPIRES, "UNMETERED", 0, None,
             "UNMETERED", None, CREATED, 0,
+            approval, execution,
             device, tenant, CUTOFF_7H, CUTOFF_ONLINE,
             CREATED, QUEUE_LIMIT,
+            approval, CREATED,
             "UNMETERED", None, CREATED, 0,
         )
         cursor = db.execute(ENQUEUE_SQL, params)
@@ -122,10 +149,10 @@ def count(dbfile: Path, where: str) -> int:
         return db.execute("SELECT count(*) FROM commander_device_calls WHERE " + where).fetchone()[0]
 
 
-def claim(dbfile: Path, i: int, when: str) -> str | None:
+def claim(dbfile: Path, i: int, when: str, version="0.3.44") -> str | None:
     db = connection(dbfile)
     try:
-        row = db.execute(CLAIM_SQL, (when, "D1", when)).fetchone()
+        row = db.execute(CLAIM_SQL, (when, when, "D1", when, version)).fetchone()
         db.commit()
         return row[0] if row else None
     finally:
@@ -187,6 +214,8 @@ def main() -> None:
         ids = [x for x in claims if x]
         assert len(ids) == QUEUE_LIMIT and len(set(ids)) == QUEUE_LIMIT, "CALL_CLAIMED_DUPLICATE"
         assert count(file, "state='EXECUTING'") == QUEUE_LIMIT
+        with connection(file) as db:
+            assert db.execute("SELECT count(*) FROM commander_device_calls WHERE approval_timeout_seconds=0 AND execution_budget_ms=0 AND expires_at_utc=? AND call_result_metadata_json IS NULL", (EXPIRES,)).fetchone()[0] == QUEUE_LIMIT, "LEGACY_PROFILE_OR_TTL_CHANGED"
         print(f"QUEUE_OFFLINE_CLAIM_EXACTLY_ONCE=PASS attempts={ATTEMPTS} claimed={len(ids)} elapsed_seconds={elapsed}")
 
         # After expiry the existing queue cannot be newly claimed.
@@ -206,6 +235,43 @@ def main() -> None:
         after_revoke, _ = group_tasks(lambda i: enqueue(file, i + 4000), range(THREADS))
         assert sum(after_revoke) == 0, "REVOKED_DEVICE_ENQUEUE_ALLOWED"
         print("QUEUE_OFFLINE_REVOKED_DEVICE_ENQUEUE=DENIED")
+
+        with connection(file) as db:
+            db.execute("UPDATE commander_devices SET state='ACTIVE',revoked_at_utc=NULL,platform='WINDOWS',agent_version='0.3.49',approval_mode='ASK_EVERY_ACTION' WHERE device_id='D1'")
+            db.commit()
+        approval, elapsed = group_tasks(lambda i: enqueue(file, i+5000, approval=900, execution=10000, tool="hara.process.run"), range(ATTEMPTS))
+        assert sum(approval) == 1, "APPROVAL_MUTATING_ADMISSION_NOT_ATOMIC"
+        with connection(file) as db:
+            profile = db.execute("SELECT call_id,approval_timeout_seconds,execution_budget_ms,typeof(approval_timeout_seconds),typeof(execution_budget_ms),expires_at_utc,call_result_metadata_json FROM commander_device_calls").fetchone()
+            assert profile[1:] == (900,10000,"integer","integer",EXPIRES,None), "APPROVAL_SNAPSHOT_BIND_OR_TYPE_WRONG"
+            for assignment in ("approval_timeout_seconds=901", "execution_budget_ms=10001"):
+                try:
+                    db.execute("UPDATE commander_device_calls SET "+assignment)
+                except sqlite3.IntegrityError:
+                    pass
+                else:
+                    raise AssertionError("APPROVAL_SCHEMA_CONSTRAINT_MISSING")
+        assert enqueue(file, 6000) == 1, "APPROVAL_BLOCKED_READ_ONLY_CALL"
+        claim_at = stamp(CLOCK + timedelta(seconds=30))
+        raced, elapsed = group_tasks(lambda i: claim(file,i,claim_at,"0.3.49"),range(ATTEMPTS))
+        claimed = [x for x in raced if x]
+        assert len(claimed) == len(set(claimed)) == 2 and claimed.count(profile[0]) == 1, "APPROVAL_CLAIM_REPLAYED"
+        expected = stamp(CLOCK + timedelta(seconds=30+900+10+60))
+        with connection(file) as db:
+            assert db.execute("SELECT claimed_at_utc,expires_at_utc FROM commander_device_calls WHERE call_id=?",(profile[0],)).fetchone() == (claim_at,expected), "APPROVAL_CLAIM_DEADLINE_INCOHERENT"
+        assert all(x is None for x in group_tasks(lambda i: claim(file,i,stamp(CLOCK+timedelta(seconds=31)),"0.3.49"),range(THREADS))[0]), "APPROVAL_CLAIM_RETRY_RESET"
+        print(f"QUEUE_OFFLINE_APPROVAL_PROFILE_CONCURRENCY=PASS attempts={ATTEMPTS} admitted=1 reads_coexist=1 claimed_once=1 deadline_seconds=970")
+
+        with connection(file) as db:
+            db.execute("DELETE FROM commander_device_calls")
+            db.commit()
+        assert enqueue(file,7000,approval=900,execution=3000,tool="hara.process.start") == 1
+        for assignment in ("approval_mode='SESSION_TRUSTED'", "approval_mode='ASK_EVERY_ACTION',agent_version='0.3.48'", "agent_version='0.3.49',state='REVOKED',revoked_at_utc='revoked'"):
+            with connection(file) as db:
+                db.execute("UPDATE commander_devices SET "+assignment+" WHERE device_id='D1'")
+                db.commit()
+            assert claim(file,0,CREATED,"0.3.49") is None, "APPROVAL_INCOMPATIBLE_SNAPSHOT_CLAIMED"
+        print("QUEUE_OFFLINE_APPROVAL_ATOMIC_POLICY_VERSION_REVOCATION=DENIED")
     print("QUEUE_OFFLINE_TOTAL_SECONDS="+str(round(time.monotonic()-start,3)))
     print("QUEUE_OFFLINE_DB_TARGET=TEMPORARY_ISOLATED")
 

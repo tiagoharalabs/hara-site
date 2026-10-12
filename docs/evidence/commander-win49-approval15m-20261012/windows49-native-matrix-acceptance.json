@@ -1,0 +1,130 @@
+{
+  "schema": "hara.commander-win49-native-matrix-acceptance.v1",
+  "state": "PASS",
+  "source_sha256": "1e32e2c23476a2c8390111d4b9a57e877dbb3dd80426929a75bfb647da33274a",
+  "native_check_total": 459,
+  "summary": {
+    "state": "ALL_PASS",
+    "powershell_version": "5.1.26100.9444",
+    "cases": [
+      {
+        "case": "window49",
+        "state": "PASS",
+        "checks": 227,
+        "source_sha256": "1e32e2c23476a2c8390111d4b9a57e877dbb3dd80426929a75bfb647da33274a",
+        "report_sha256": "21dd4f020209912ee8c927da09fc8d58b54c1cddc8a2e0150e969b2655d35160",
+        "guest_exit": 0,
+        "approval_timeout_seconds": 900,
+        "real_human_approval_proven": false
+      },
+      {
+        "case": "core111",
+        "state": "PASS",
+        "checks": 111,
+        "source_sha256": "1e32e2c23476a2c8390111d4b9a57e877dbb3dd80426929a75bfb647da33274a",
+        "report_sha256": "b83239c9459bcf3472b1738f3fe6758ebd9b938ef0923f6129061a78af3f14d5",
+        "guest_exit": 0,
+        "approval_timeout_seconds": null,
+        "real_human_approval_proven": false
+      },
+      {
+        "case": "denial26",
+        "state": "PASS",
+        "checks": 26,
+        "source_sha256": "1e32e2c23476a2c8390111d4b9a57e877dbb3dd80426929a75bfb647da33274a",
+        "report_sha256": "4908b760942eef9e80636167bf53a24d9aaad525a1f425a6678fa175aa73bd1f",
+        "guest_exit": 0,
+        "approval_timeout_seconds": null,
+        "real_human_approval_proven": false
+      },
+      {
+        "case": "resume27",
+        "state": "PASS",
+        "checks": 27,
+        "source_sha256": "1e32e2c23476a2c8390111d4b9a57e877dbb3dd80426929a75bfb647da33274a",
+        "report_sha256": "275db8ebf9d05d525bca9727b2729bccbd985ed477578926d881bb33320d27a2",
+        "guest_exit": 0,
+        "approval_timeout_seconds": null,
+        "real_human_approval_proven": false
+      },
+      {
+        "case": "startup68",
+        "state": "PASS",
+        "checks": 68,
+        "source_sha256": "1e32e2c23476a2c8390111d4b9a57e877dbb3dd80426929a75bfb647da33274a",
+        "report_sha256": "21653c258c2cf1e7e5294b26c8717194deda0f727ae6eed5c9a3986853e53e01",
+        "guest_exit": 0,
+        "approval_timeout_seconds": null,
+        "real_human_approval_proven": false
+      }
+    ],
+    "total_checks": 459,
+    "live_agent_touched": false
+  },
+  "summary_receipt": {
+    "state": "PASS",
+    "operational_authority": "HARA_COMMANDER",
+    "execution_authority": "HARA_COMMANDER_AGENT",
+    "runtime_authority_from_chatgpt": false,
+    "mutation_performed": true,
+    "result": {
+      "function_id": "process.run",
+      "risk_class": "PROCESS_EXECUTION",
+      "process_exit_code": 0,
+      "domain_success_inferred": false,
+      "stdout": "{\"command_preview\":\"python3 - <<'PY'\\nfrom pathlib import Path\\nimport json,hashlib\\nh=Path('/tmp_hara/commander-win49-native-fixture-20261012-r1/matrix-r2')\\nrows=[]\\nfor case in ['window49','core111','denial26','resume27','startup68']:\\n p=h/(case+'-result.json...\",\"command_sha256\":\"b90422a0ef553fab818d7e28e5daf2f7bf96e0fb944c3b60f2265b6f69185bb7\",\"cwd\":\"/home/sartorius\",\"exit_code\":0,\"output_truncated\":false,\"partial\":\"\",\"pid\":318955,\"run_id\":\"HARA-PROC-297bec77cb2741aea37f05629687e87a\",\"session_retained\":false,\"state\":\"EXITED\",\"text\":\"{\\\"state\\\": \\\"ALL_PASS\\\", \\\"powershell_version\\\": \\\"5.1.26100.9444\\\", \\\"cases\\\": [{\\\"case\\\": \\\"window49\\\", \\\"state\\\": \\\"PASS\\\", \\\"checks\\\": 227, \\\"source_sha256\\\": \\\"1e32e2c23476a2c8390111d4b9a57e877dbb3dd80426929a75bfb647da33274a\\\", \\\"report_sha256\\\": \\\"21dd4f020209912ee8c927da09fc8d58b54c1cddc8a2e0150e969b2655d35160\\\", \\\"guest_exit\\\": 0, \\\"approval_timeout_seconds\\\": 900, \\\"real_human_approval_proven\\\": false}, {\\\"case\\\": \\\"core111\\\", \\\"state\\\": \\\"PASS\\\", \\\"checks\\\": 111, \\\"source_sha256\\\": \\\"1e32e2c23476a2c8390111d4b9a57e877dbb3dd80426929a75bfb647da33274a\\\", \\\"report_sha256\\\": \\\"b83239c9459bcf3472b1738f3fe6758ebd9b938ef0923f6129061a78af3f14d5\\\", \\\"guest_exit\\\": 0, \\\"approval_timeout_seconds\\\": null, \\\"real_human_approval_proven\\\": false}, {\\\"case\\\": \\\"denial26\\\", \\\"state\\\": \\\"PASS\\\", \\\"checks\\\": 26, \\\"source_sha256\\\": \\\"1e32e2c23476a2c8390111d4b9a57e877dbb3dd80426929a75bfb647da33274a\\\", \\\"report_sha256\\\": \\\"4908b760942eef9e80636167bf53a24d9aaad525a1f425a6678fa175aa73bd1f\\\", \\\"guest_exit\\\": 0, \\\"approval_timeout_seconds\\\": null, \\\"real_human_approval_proven\\\": false}, {\\\"case\\\": \\\"resume27\\\", \\\"state\\\": \\\"PASS\\\", \\\"checks\\\": 27, \\\"source_sha256\\\": \\\"1e32e2c23476a2c8390111d4b9a57e877dbb3dd80426929a75bfb647da33274a\\\", \\\"report_sha256\\\": \\\"275db8ebf9d05d525bca9727b2729bccbd985ed477578926d881bb33320d27a2\\\", \\\"guest_exit\\\": 0, \\\"approval_timeout_seconds\\\": null, \\\"real_human_approval_proven\\\": false}, {\\\"case\\\": \\\"startup68\\\", \\\"state\\\": \\\"PASS\\\", \\\"checks\\\": 68, \\\"source_sha256\\\": \\\"1e32e2c23476a2c8390111d4b9a57e877dbb3dd80426929a75bfb647da33274a\\\", \\\"report_sha256\\\": \\\"21653c258c2cf1e7e5294b26c8717194deda0f727ae6eed5c9a3986853e53e01\\\", \\\"guest_exit\\\": 0, \\\"approval_timeout_seconds\\\": null, \\\"real_human_approval_proven\\\": false}], \\\"total_checks\\\": 459, \\\"live_agent_touched\\\": false}\\r\",\"timed_out\":false,\"total_lines\":1}",
+      "human_approval_state": "APPROVED",
+      "local_authorization_mode": "PERSISTENT_TRUSTED",
+      "authorization_source": "DEVICE_ENROLLMENT_POLICY"
+    },
+    "customer_services_relay": false,
+    "bridge_receipt_sha256": "3c4b8e66522a60c2c62c6eed5759f353cfb5d683dc82a1fcd1fa7a2a0c1f9eeb",
+    "computer": "nucleo-a",
+    "product": {
+      "plan_code": "FOUNDER_INTERNAL",
+      "entitlement_id": "HARA-ENTITLEMENT-XPK",
+      "quota": {
+        "ok": true,
+        "state": "UNMETERED",
+        "mode": "UNMETERED",
+        "units": 0,
+        "cloud_quota_transaction": false
+      }
+    }
+  },
+  "stage_receipt": {
+    "state": "PASS",
+    "operational_authority": "HARA_COMMANDER",
+    "execution_authority": "HARA_COMMANDER_AGENT",
+    "runtime_authority_from_chatgpt": false,
+    "mutation_performed": false,
+    "result": {
+      "function_id": "process.output",
+      "risk_class": "READ_ONLY",
+      "process_exit_code": 0,
+      "domain_success_inferred": false,
+      "stdout": "{\"base_line\":0,\"buffer_truncated\":false,\"exit_code\":0,\"next_offset\":1,\"offset\":0,\"partial\":\"\",\"pid\":312236,\"session_id\":\"HARA-PROC-1e5e538b5fc04e29952ebeffff5af657\",\"state\":\"EXITED\",\"text\":\"{\\\"guest_root\\\": \\\"C:\\\\\\\\ProgramData\\\\\\\\HaraLabs\\\\\\\\CommanderWinLab\\\\\\\\20261012\\\\\\\\native49-isolated\\\\\\\\matrix-r2\\\", \\\"inputs\\\": {\\\"cases\\\": [{\\\"args\\\": [\\\"-ExpectedSourceSha256\\\", \\\"1e32e2c23476a2c8390111d4b9a57e877dbb3dd80426929a75bfb647da33274a\\\"], \\\"name\\\": \\\"window49\\\", \\\"script\\\": \\\"test_windows_049_approval_window_fixture-r5.ps1\\\"}, {\\\"args\\\": [], \\\"name\\\": \\\"core111\\\", \\\"script\\\": \\\"test_windows_local_approval_expiry.ps1\\\"}, {\\\"args\\\": [], \\\"name\\\": \\\"denial26\\\", \\\"script\\\": \\\"test_windows_full_tool_denial_fixture.ps1\\\"}, {\\\"args\\\": [\\\"-ExpectedBehavior\\\", \\\"Candidate049\\\"], \\\"name\\\": \\\"resume27\\\", \\\"script\\\": \\\"test_windows_existing_console_resume_fixture.ps1\\\"}, {\\\"args\\\": [\\\"-ExpectedBehavior\\\", \\\"Candidate049\\\", \\\"-ExpectedSourceSha256\\\", \\\"1e32e2c23476a2c8390111d4b9a57e877dbb3dd80426929a75bfb647da33274a\\\"], \\\"name\\\": \\\"startup68\\\", \\\"script\\\": \\\"test_windows_operator_session_startup_fixture.ps1\\\"}], \\\"files\\\": [{\\\"name\\\": \\\"windows-final49.ps1\\\", \\\"sha256\\\": \\\"1e32e2c23476a2c8390111d4b9a57e877dbb3dd80426929a75bfb647da33274a\\\"}, {\\\"name\\\": \\\"test_windows_049_approval_window_fixture-r5.ps1\\\", \\\"sha256\\\": \\\"910f2eaaa9b866318e15321ab152abc776935ea85af337499dcc29dbd0e91d75\\\"}, {\\\"name\\\": \\\"test_windows_local_approval_expiry.ps1\\\", \\\"sha256\\\": \\\"3cfe01817a58127fc5dcd08c1143ae1b92fdd0b95e0248689e8bbecf32e2d7cf\\\"}, {\\\"name\\\": \\\"test_windows_full_tool_denial_fixture.ps1\\\", \\\"sha256\\\": \\\"1aaa77e61a77ff04ab7360ad20baae12ffee7ae4f464cd0f7c45a3fef5b87845\\\"}, {\\\"name\\\": \\\"test_windows_existing_console_resume_fixture.ps1\\\", \\\"sha256\\\": \\\"f7ea82058a3ad1a581f311988d68ba403870ad45b8c9ce3b1f8e92d0e905108b\\\"}, {\\\"name\\\": \\\"test_windows_operator_session_startup_fixture.ps1\\\", \\\"sha256\\\": \\\"08af12f9f146f23ee1682c4cd7ea01b6eb80a731dbafc1c2e9505317f2c6c4c5\\\"}], \\\"source_name\\\": \\\"windows-final49.ps1\\\", \\\"source_sha256\\\": \\\"1e32e2c23476a2c8390111d4b9a57e877dbb3dd80426929a75bfb647da33274a\\\"}, \\\"installed_agent_or_ipc_touched\\\": false, \\\"native_parser\\\": {\\\"powershell_version\\\": \\\"5.1.26100.9444\\\", \\\"rows\\\": [{\\\"name\\\": \\\"windows-final49.ps1\\\", \\\"parse_error_count\\\": 0, \\\"sha256\\\": \\\"1e32e2c23476a2c8390111d4b9a57e877dbb3dd80426929a75bfb647da33274a\\\"}, {\\\"name\\\": \\\"test_windows_049_approval_window_fixture-r5.ps1\\\", \\\"parse_error_count\\\": 0, \\\"sha256\\\": \\\"910f2eaaa9b866318e15321ab152abc776935ea85af337499dcc29dbd0e91d75\\\"}, {\\\"name\\\": \\\"test_windows_local_approval_expiry.ps1\\\", \\\"parse_error_count\\\": 0, \\\"sha256\\\": \\\"3cfe01817a58127fc5dcd08c1143ae1b92fdd0b95e0248689e8bbecf32e2d7cf\\\"}, {\\\"name\\\": \\\"test_windows_full_tool_denial_fixture.ps1\\\", \\\"parse_error_count\\\": 0, \\\"sha256\\\": \\\"1aaa77e61a77ff04ab7360ad20baae12ffee7ae4f464cd0f7c45a3fef5b87845\\\"}, {\\\"name\\\": \\\"test_windows_existing_console_resume_fixture.ps1\\\", \\\"parse_error_count\\\": 0, \\\"sha256\\\": \\\"f7ea82058a3ad1a581f311988d68ba403870ad45b8c9ce3b1f8e92d0e905108b\\\"}, {\\\"name\\\": \\\"test_windows_operator_session_startup_fixture.ps1\\\", \\\"parse_error_count\\\": 0, \\\"sha256\\\": \\\"08af12f9f146f23ee1682c4cd7ea01b6eb80a731dbafc1c2e9505317f2c6c4c5\\\"}]}, \\\"schema\\\": \\\"hara.commander-native49-fixture-stage.v1\\\", \\\"state\\\": \\\"PASS\\\"}\\r\",\"total_lines\":1,\"truncated_before\":false}"
+    },
+    "customer_services_relay": false,
+    "bridge_receipt_sha256": "6fe0c66b889415bf70a367383ed858d806acbaaf8256062711251191735d8682",
+    "computer": "nucleo-a",
+    "product": {
+      "plan_code": "FOUNDER_INTERNAL",
+      "entitlement_id": "HARA-ENTITLEMENT-XPK",
+      "quota": {
+        "ok": true,
+        "state": "UNMETERED",
+        "mode": "UNMETERED",
+        "units": 0,
+        "cloud_quota_transaction": false
+      }
+    }
+  },
+  "fixture900_sha256": "910f2eaaa9b866318e15321ab152abc776935ea85af337499dcc29dbd0e91d75",
+  "fake_clock_used_for_900_seconds": true,
+  "real_15_minute_wait_performed": false,
+  "installed_agent_source_modified": false,
+  "live_agent_tasks_config_ipc_touched": false,
+  "real_human_approval_proven": false,
+  "raw_synthetic_keyboard_transcript_persisted": false
+}

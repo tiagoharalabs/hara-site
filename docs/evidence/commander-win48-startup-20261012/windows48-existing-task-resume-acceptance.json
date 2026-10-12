@@ -1,0 +1,469 @@
+{
+  "schema": "hara.commander-win48-existing-task-resume-acceptance.v1",
+  "state": "RESUME_PASS_PENDING_CALL_UNCLAIMED_AT_CAPTURE",
+  "task_resume_count": 1,
+  "operator_pid": 8184,
+  "operator_started_at_utc": "2026-10-12T17:23:02.2031480Z",
+  "new_consumer_pid": 6456,
+  "new_consumer_started_at_utc": "2026-10-12T18:05:45.2932270Z",
+  "source48_pinned": true,
+  "config_xml_policy_preserved": true,
+  "new_mcp_call_generated": false,
+  "approval_generated": false,
+  "notification_sent": false,
+  "pending_active_observed": false,
+  "same_queued_call_id": "HARA-CALL-894f394e-0ddc-437b-8310-7a642b248812",
+  "unclaimed_call": {
+    "call_id": "HARA-CALL-894f394e-0ddc-437b-8310-7a642b248812",
+    "request_id": "HARA-CUSTOMER-MCP-1x-I9N9VadESKSpV-hz3pqREnFr-UN7O9bqJDNiFCmg",
+    "computer": "HARA_WIN11",
+    "tool_id": "hara.process.run",
+    "state": "PENDING",
+    "created_at_utc": "2026-10-12T17:37:10.999Z",
+    "claimed_at_utc": null,
+    "completed_at_utc": null,
+    "error_code": null
+  },
+  "control_plane_before_resume": {
+    "state": "PASS",
+    "operational_authority": "HARA_SERVICES",
+    "execution_authority": "HARA_SERVICES",
+    "runtime_authority_from_chatgpt": false,
+    "mutation_performed": false,
+    "customer_services_relay": false,
+    "result": {
+      "count": 30,
+      "calls": [
+        {
+          "call_id": "HARA-CALL-894f394e-0ddc-437b-8310-7a642b248812",
+          "request_id": "HARA-CUSTOMER-MCP-1x-I9N9VadESKSpV-hz3pqREnFr-UN7O9bqJDNiFCmg",
+          "computer": "HARA_WIN11",
+          "tool_id": "hara.process.run",
+          "state": "PENDING",
+          "created_at_utc": "2026-10-12T17:37:10.999Z",
+          "claimed_at_utc": null,
+          "completed_at_utc": null,
+          "error_code": null
+        },
+        {
+          "call_id": "HARA-CALL-0784bd5f-28ef-4f17-811e-c1afe26fbc1a",
+          "request_id": "HARA-CUSTOMER-MCP-DHAH0-ENqa2l5LkKun5G6BVLCHEctcsX1WNlM1pJbSs",
+          "computer": "HARA_WIN11",
+          "tool_id": "hara.device.info",
+          "state": "COMPLETED",
+          "created_at_utc": "2026-10-12T17:24:05.136Z",
+          "claimed_at_utc": "2026-10-12T17:24:12.855Z",
+          "completed_at_utc": "2026-10-12T17:24:13.458Z",
+          "error_code": null
+        },
+        {
+          "call_id": "HARA-CALL-302bc7bb-dd32-41e2-b8f2-8729f2fd3a93",
+          "request_id": "HARA-CUSTOMER-MCP-MNsxifd19N0FxudWKW0SEjAJV55fy9gRhYaYSsFab08",
+          "computer": "HARA_WIN11",
+          "tool_id": "hara.process.sessions",
+          "state": "COMPLETED",
+          "created_at_utc": "2026-10-12T17:24:05.134Z",
+          "claimed_at_utc": "2026-10-12T17:24:09.822Z",
+          "completed_at_utc": "2026-10-12T17:24:10.472Z",
+          "error_code": null
+        },
+        {
+          "call_id": "HARA-CALL-332e2d6a-7d35-40ff-87da-529bc725c97a",
+          "request_id": "HARA-CUSTOMER-MCP-gx11iRWHo8qx7czNIa4AQcRD1McZfmpuBC7MYqfJTFA",
+          "computer": "HARA_WIN11",
+          "tool_id": "hara.device.info",
+          "state": "EXPIRED",
+          "created_at_utc": "2026-10-12T16:17:00.404Z",
+          "claimed_at_utc": null,
+          "completed_at_utc": "2026-10-12T17:17:38.738Z",
+          "error_code": "DEVICE_CALL_EXPIRED"
+        },
+        {
+          "call_id": "HARA-CALL-fe21f952-3233-4fbb-a6d4-8d2b9078abcb",
+          "request_id": "HARA-CUSTOMER-MCP-IW3ym2WkRa_V2fLLhoScE29iISZnpug-t5SUs9KvYaE",
+          "computer": "HARA_WIN11",
+          "tool_id": "hara.ping",
+          "state": "EXPIRED",
+          "created_at_utc": "2026-10-12T16:17:00.067Z",
+          "claimed_at_utc": null,
+          "completed_at_utc": "2026-10-12T17:17:38.738Z",
+          "error_code": "DEVICE_CALL_EXPIRED"
+        },
+        {
+          "call_id": "HARA-CALL-43c74efe-5ef1-4a9a-bd16-8b5c1472c3a6",
+          "request_id": "HARA-CUSTOMER-MCP-IeudPBD05IKUau_D-Qpsy6X1HsNxbrvZd7F840_RALk",
+          "computer": "HARA_WIN11",
+          "tool_id": "hara.process.run",
+          "state": "FAILED",
+          "created_at_utc": "2026-10-12T15:58:33.457Z",
+          "claimed_at_utc": "2026-10-12T15:58:38.483Z",
+          "completed_at_utc": "2026-10-12T15:59:09.339Z",
+          "error_code": "LOCAL_ACTION_APPROVAL_EXPIRED"
+        },
+        {
+          "call_id": "HARA-CALL-96e00e8c-43e4-4e19-8439-85a4359ccedc",
+          "request_id": "HARA-CUSTOMER-MCP-Ay3ilCSsI1WP2e1ASNd9mRK6cPh2t9sZFKVDvKR_A-M",
+          "computer": "HARA_WIN11",
+          "tool_id": "hara.ping",
+          "state": "COMPLETED",
+          "created_at_utc": "2026-10-12T05:29:01.159Z",
+          "claimed_at_utc": "2026-10-12T05:29:11.839Z",
+          "completed_at_utc": "2026-10-12T05:29:12.423Z",
+          "error_code": null
+        },
+        {
+          "call_id": "HARA-CALL-d28b4089-0833-438b-a6f9-beedb60d67f3",
+          "request_id": "HARA-CUSTOMER-MCP-Oi1o71vnO1o50XVIDsF8YzIKCYEnU8se8_jsjRtT02A",
+          "computer": "HARA_WIN11",
+          "tool_id": "hara.device.info",
+          "state": "COMPLETED",
+          "created_at_utc": "2026-10-12T05:29:00.868Z",
+          "claimed_at_utc": "2026-10-12T05:29:08.924Z",
+          "completed_at_utc": "2026-10-12T05:29:09.483Z",
+          "error_code": null
+        },
+        {
+          "call_id": "HARA-CALL-c7d7800a-2b4e-45bb-acac-1e16f1a2312d",
+          "request_id": "HARA-CUSTOMER-MCP-YRI64jO7-HiNAYDcxOtH2JiMQVi8wGgHkW6FhITx4bA",
+          "computer": "HARA_WIN11",
+          "tool_id": "hara.process.sessions",
+          "state": "COMPLETED",
+          "created_at_utc": "2026-10-12T05:06:58.154Z",
+          "claimed_at_utc": "2026-10-12T05:07:03.750Z",
+          "completed_at_utc": "2026-10-12T05:07:04.292Z",
+          "error_code": null
+        },
+        {
+          "call_id": "HARA-CALL-d9784020-500f-434a-94ba-e5b7b172764a",
+          "request_id": "HARA-CUSTOMER-MCP-ASQEPyQ-e5duLA0NOtMKIfPgkfjYnyBuQVJF6Tfsf10",
+          "computer": "HARA_WIN11",
+          "tool_id": "hara.process.run",
+          "state": "FAILED",
+          "created_at_utc": "2026-10-12T04:46:22.077Z",
+          "claimed_at_utc": "2026-10-12T04:46:22.616Z",
+          "completed_at_utc": "2026-10-12T04:46:53.284Z",
+          "error_code": "LOCAL_ACTION_APPROVAL_EXPIRED"
+        },
+        {
+          "call_id": "HARA-CALL-9cd8194c-c53a-463e-b6e6-e49123dbc8d3",
+          "request_id": "HARA-CUSTOMER-MCP-9V7sCE7A8RwWIOsPSO-ZUr7w885Cs0yvscWUDR9h5uQ",
+          "computer": "HARA_WIN11",
+          "tool_id": "hara.process.sessions",
+          "state": "COMPLETED",
+          "created_at_utc": "2026-10-12T04:46:08.654Z",
+          "claimed_at_utc": "2026-10-12T04:46:12.889Z",
+          "completed_at_utc": "2026-10-12T04:46:13.458Z",
+          "error_code": null
+        },
+        {
+          "call_id": "HARA-CALL-2cc4bd1d-20d6-4010-b009-aafa16054d6a",
+          "request_id": "HARA-CUSTOMER-MCP-FYsnH1iYgzTrDBEEGs5pHeXYBEopdWEQDq1DSKr0vuI",
+          "computer": "HARA_WIN11",
+          "tool_id": "hara.device.info",
+          "state": "COMPLETED",
+          "created_at_utc": "2026-10-12T04:46:08.622Z",
+          "claimed_at_utc": "2026-10-12T04:46:09.917Z",
+          "completed_at_utc": "2026-10-12T04:46:10.525Z",
+          "error_code": null
+        },
+        {
+          "call_id": "HARA-CALL-4ea93468-2003-4c58-928f-9ce6911c378a",
+          "request_id": "HARA-CUSTOMER-MCP-pNmk7MPzQkccsGKxqqO8Xv4DCHkebOvDfFva3zDGrX8",
+          "computer": "HARA_WIN11",
+          "tool_id": "hara.process.run",
+          "state": "EXPIRED",
+          "created_at_utc": "2026-10-12T03:47:18.460Z",
+          "claimed_at_utc": "2026-10-12T03:47:25.136Z",
+          "completed_at_utc": "2026-10-12T04:17:35.456Z",
+          "error_code": "DEVICE_CALL_EXPIRED"
+        },
+        {
+          "call_id": "HARA-CALL-825f2a0e-504c-4605-9a34-3f89c5506bc5",
+          "request_id": "HARA-CUSTOMER-MCP-wjtXdiM7G6wQBLwPqznwCIVnJjGFTLLfDzEk7rrgBGA",
+          "computer": "HARA_WIN11",
+          "tool_id": "hara.process.sessions",
+          "state": "COMPLETED",
+          "created_at_utc": "2026-10-12T03:39:47.621Z",
+          "claimed_at_utc": "2026-10-12T03:39:50.473Z",
+          "completed_at_utc": "2026-10-12T03:39:51.073Z",
+          "error_code": null
+        },
+        {
+          "call_id": "HARA-CALL-aa2264e4-54f4-4c28-b861-59a4c868efb5",
+          "request_id": "HARA-CUSTOMER-MCP-rZ-U6oR3_22k2yC047dM28YFNBuE1wK4nLN5_F3y10U",
+          "computer": "HARA_WIN11",
+          "tool_id": "hara.device.info",
+          "state": "COMPLETED",
+          "created_at_utc": "2026-10-12T03:39:47.621Z",
+          "claimed_at_utc": "2026-10-12T03:39:53.409Z",
+          "completed_at_utc": "2026-10-12T03:39:53.944Z",
+          "error_code": null
+        },
+        {
+          "call_id": "HARA-CALL-f44a7221-518e-4e86-b138-38ab41333dfc",
+          "request_id": "HARA-CUSTOMER-MCP-IoCUjwcqb4xX3IBzU3Z23W86r3N-6_lNLEW02FKX_Yo",
+          "computer": "HARA_WIN11",
+          "tool_id": "hara.process.run",
+          "state": "FAILED",
+          "created_at_utc": "2026-10-12T03:34:46.172Z",
+          "claimed_at_utc": "2026-10-12T03:34:52.879Z",
+          "completed_at_utc": "2026-10-12T03:35:23.657Z",
+          "error_code": "LOCAL_ACTION_APPROVAL_EXPIRED"
+        },
+        {
+          "call_id": "HARA-CALL-14ae1a36-12e3-4399-a3ff-41751f0ac2e2",
+          "request_id": "HARA-CUSTOMER-MCP-ctL_fuGD1pm4bMv7GWaoTHwbKShVjxE-yeIMatZkMs4",
+          "computer": "HARA_WIN11",
+          "tool_id": "hara.device.info",
+          "state": "COMPLETED",
+          "created_at_utc": "2026-10-12T03:20:48.717Z",
+          "claimed_at_utc": "2026-10-12T03:20:54.398Z",
+          "completed_at_utc": "2026-10-12T03:20:54.957Z",
+          "error_code": null
+        },
+        {
+          "call_id": "HARA-CALL-9634f084-6a32-49d8-b290-06814e26988c",
+          "request_id": "HARA-CUSTOMER-MCP-Y2F3NuS1gus3cbBRjSqFDlbe03NuwNA4L7mwB9fpt0o",
+          "computer": "HARA_WIN11",
+          "tool_id": "hara.ping",
+          "state": "COMPLETED",
+          "created_at_utc": "2026-10-12T03:20:48.157Z",
+          "claimed_at_utc": "2026-10-12T03:20:51.377Z",
+          "completed_at_utc": "2026-10-12T03:20:52.049Z",
+          "error_code": null
+        },
+        {
+          "call_id": "HARA-CALL-d7453f61-4ba3-4ce8-bc91-059c48a0ff03",
+          "request_id": "HARA-CUSTOMER-MCP-r32aH1ggl0MiamyKib_mSVvro750_30t8-B2bnPhkog",
+          "computer": "HARA_WIN11",
+          "tool_id": "hara.process.sessions",
+          "state": "COMPLETED",
+          "created_at_utc": "2026-10-12T02:33:34.081Z",
+          "claimed_at_utc": "2026-10-12T02:33:38.156Z",
+          "completed_at_utc": "2026-10-12T02:33:38.720Z",
+          "error_code": null
+        },
+        {
+          "call_id": "HARA-CALL-6321bab3-4e30-4dd0-9b47-64a97edfabc6",
+          "request_id": "HARA-CUSTOMER-MCP-S7cgGQjbEzknaWd6zBLZ5gOd-EWO4ZSwl0b1m4EJjtQ",
+          "computer": "HARA_WIN11",
+          "tool_id": "hara.device.info",
+          "state": "COMPLETED",
+          "created_at_utc": "2026-10-12T02:33:33.971Z",
+          "claimed_at_utc": "2026-10-12T02:33:35.280Z",
+          "completed_at_utc": "2026-10-12T02:33:35.818Z",
+          "error_code": null
+        },
+        {
+          "call_id": "HARA-CALL-8c5b916b-c179-4062-af52-426d97ed89a6",
+          "request_id": "HARA-CUSTOMER-MCP-Vxd5_QA2Bv5dwlnfT7Hf0MCygJhiz-YeegtnFMDw0_A",
+          "computer": "HARA_WIN11",
+          "tool_id": "hara.process.run",
+          "state": "FAILED",
+          "created_at_utc": "2026-10-12T02:25:54.945Z",
+          "claimed_at_utc": "2026-10-12T02:26:02.315Z",
+          "completed_at_utc": "2026-10-12T02:26:33.135Z",
+          "error_code": "LOCAL_ACTION_APPROVAL_EXPIRED"
+        },
+        {
+          "call_id": "HARA-CALL-3b222cd4-d896-4c8a-ae90-72985ed6cddc",
+          "request_id": "HARA-CUSTOMER-MCP-_uAAUTABAmCC8RZYzdABgnALYLYtbWoG_TCrsLCOTt8",
+          "computer": "HARA_WIN11",
+          "tool_id": "hara.process.sessions",
+          "state": "COMPLETED",
+          "created_at_utc": "2026-10-12T02:23:33.007Z",
+          "claimed_at_utc": "2026-10-12T02:23:39.960Z",
+          "completed_at_utc": "2026-10-12T02:23:40.532Z",
+          "error_code": null
+        },
+        {
+          "call_id": "HARA-CALL-f887c68c-bc05-4d0c-89f4-fb2650138df5",
+          "request_id": "HARA-CUSTOMER-MCP-rVcacqY5tCoyEflS9_PEMb1t-Y6G0j0NMIAWsgWdGr4",
+          "computer": "HARA_WIN11",
+          "tool_id": "hara.device.info",
+          "state": "COMPLETED",
+          "created_at_utc": "2026-10-12T02:23:32.989Z",
+          "claimed_at_utc": "2026-10-12T02:23:37.008Z",
+          "completed_at_utc": "2026-10-12T02:23:37.539Z",
+          "error_code": null
+        },
+        {
+          "call_id": "HARA-CALL-1b61900a-9f45-4e5b-a57e-ee98246dc065",
+          "request_id": "HARA-CUSTOMER-MCP-cwJebnq_yIU9znEmR8iyp4aLF6SoYJQQ_c48go6Rlj8",
+          "computer": "HARA_WIN11",
+          "tool_id": "hara.device.info",
+          "state": "COMPLETED",
+          "created_at_utc": "2026-10-12T02:11:22.760Z",
+          "claimed_at_utc": "2026-10-12T02:11:25.057Z",
+          "completed_at_utc": "2026-10-12T02:11:25.646Z",
+          "error_code": null
+        },
+        {
+          "call_id": "HARA-CALL-4f1ee14f-c80a-4fdb-a18e-0953237c65f3",
+          "request_id": "HARA-CUSTOMER-MCP-OTbJWHx1_yOG9aY_XbTKEkGGNC5dbrTufgfgOWbYhSI",
+          "computer": "HARA_WIN11",
+          "tool_id": "hara.ping",
+          "state": "COMPLETED",
+          "created_at_utc": "2026-10-12T02:11:21.628Z",
+          "claimed_at_utc": "2026-10-12T02:11:22.178Z",
+          "completed_at_utc": "2026-10-12T02:11:22.724Z",
+          "error_code": null
+        },
+        {
+          "call_id": "HARA-CALL-221f3471-f87e-4017-ba60-6d00b8c8f82a",
+          "request_id": "HARA-CUSTOMER-MCP-zOzr6QE1eNjNyoSfWVCunpuOQww7WieYcOP4zw9XOTc",
+          "computer": "HARA_WIN11",
+          "tool_id": "hara.process.sessions",
+          "state": "COMPLETED",
+          "created_at_utc": "2026-10-12T02:09:39.202Z",
+          "claimed_at_utc": "2026-10-12T02:09:50.280Z",
+          "completed_at_utc": "2026-10-12T02:09:50.846Z",
+          "error_code": null
+        },
+        {
+          "call_id": "HARA-CALL-fae71066-a69b-42c0-9a68-0375315a28b0",
+          "request_id": "HARA-CUSTOMER-MCP-YRWrJeq2blDtsb8ZF1ITPEQAqyiQQy96xzuWmYHZTuQ",
+          "computer": "HARA_WIN11",
+          "tool_id": "hara.device.info",
+          "state": "COMPLETED",
+          "created_at_utc": "2026-10-12T02:09:39.159Z",
+          "claimed_at_utc": "2026-10-12T02:09:47.318Z",
+          "completed_at_utc": "2026-10-12T02:09:47.931Z",
+          "error_code": null
+        },
+        {
+          "call_id": "HARA-CALL-399c7dc4-aa10-45ad-99fd-8586544b414b",
+          "request_id": "HARA-CUSTOMER-MCP-VgseYljy3TSJ2p3T7XNHs6OIkWIE8oWsjaIMWMDmDps",
+          "computer": "HARA_WIN11",
+          "tool_id": "hara.device.info",
+          "state": "COMPLETED",
+          "created_at_utc": "2026-10-12T01:51:10.213Z",
+          "claimed_at_utc": "2026-10-12T01:51:12.867Z",
+          "completed_at_utc": "2026-10-12T01:51:13.450Z",
+          "error_code": null
+        },
+        {
+          "call_id": "HARA-CALL-4e4da5af-92af-46ec-986c-348b2346d751",
+          "request_id": "HARA-CUSTOMER-MCP-9pKM2VNXki6dlFxCF00I38hTk5bYnE5sVcyUj2Nd3i8",
+          "computer": "HARA_WIN11",
+          "tool_id": "hara.ping",
+          "state": "COMPLETED",
+          "created_at_utc": "2026-10-12T01:51:09.758Z",
+          "claimed_at_utc": "2026-10-12T01:51:09.929Z",
+          "completed_at_utc": "2026-10-12T01:51:10.526Z",
+          "error_code": null
+        },
+        {
+          "call_id": "HARA-CALL-402fa41c-e9ca-47c7-8c42-605b33ddbe28",
+          "request_id": "HARA-CUSTOMER-MCP-C0yxwUAN1SnWklhxPtMLCCoz0SralUOR4JEeTA78jEQ",
+          "computer": "HARA_WIN11",
+          "tool_id": "hara.process.start",
+          "state": "FAILED",
+          "created_at_utc": "2026-10-12T01:49:22.059Z",
+          "claimed_at_utc": "2026-10-12T01:49:29.177Z",
+          "completed_at_utc": "2026-10-12T01:49:59.879Z",
+          "error_code": "LOCAL_ACTION_APPROVAL_EXPIRED"
+        }
+      ]
+    },
+    "product": {
+      "plan_code": "FOUNDER_INTERNAL",
+      "entitlement_id": "HARA-ENTITLEMENT-XPK",
+      "quota": null
+    }
+  },
+  "linux_wrapper_execution": {
+    "state": "PASS",
+    "operational_authority": "HARA_COMMANDER",
+    "execution_authority": "HARA_COMMANDER_AGENT",
+    "runtime_authority_from_chatgpt": false,
+    "mutation_performed": true,
+    "result": {
+      "function_id": "process.run",
+      "risk_class": "PROCESS_EXECUTION",
+      "process_exit_code": -9,
+      "domain_success_inferred": false,
+      "stdout": "{\"command_preview\":\"python3 /tmp_hara/commander-win48-private-rc-20261012-r1/commander_win48_resume_existing_task_with_watch.py --action Resume --root-confirmed-call-pending-unclaimed --notify-on-active\",\"command_sha256\":\"92771f73867a22721e14e099e44c86aead4ba9e00078dd12eb6e60fbc1d1b28d\",\"cwd\":\"/home/sartorius\",\"exit_code\":-9,\"output_truncated\":false,\"partial\":\"\",\"pid\":239214,\"run_id\":\"HARA-PROC-bb7daea927514dbfa27c1e265cf239b6\",\"session_retained\":false,\"state\":\"TIMED_OUT\",\"text\":\"{\\\"metadata_task_only\\\": true, \\\"no_input_or_approval\\\": true, \\\"state\\\": \\\"STARTED\\\"}\\r\\n{\\\"resume_result\\\": {\\\"action\\\": \\\"Resume\\\", \\\"agent_task_started\\\": true, \\\"approval_generated\\\": false, \\\"config_xml_policy_preserved\\\": true, \\\"consumer_pid\\\": 6456, \\\"consumer_started_at_utc\\\": \\\"2026-10-12T18:05:45.2932270Z\\\", \\\"historical_sessions_receipt\\\": \\\"84c0feeaffdfa757fc26e64f9548a851233a005fc9d9f5ea51157f8d01a0364b\\\", \\\"historical_sessions_zero_only\\\": true, \\\"new_mcp_call_generated\\\": false, \\\"operator_preserved\\\": true, \\\"pending_call_replayed_by_helper\\\": false, \\\"schema\\\": \\\"hara.commander-win48-existing-task-resume.v1\\\", \\\"state\\\": \\\"PASS\\\"}}\\r\",\"timed_out\":true,\"total_lines\":2}",
+      "human_approval_state": "APPROVED",
+      "local_authorization_mode": "PERSISTENT_TRUSTED",
+      "authorization_source": "DEVICE_ENROLLMENT_POLICY"
+    },
+    "customer_services_relay": false,
+    "bridge_receipt_sha256": "f2a62afad34adc0432174a05f393d28662a1c50f664ad6506431305c3e76fb96",
+    "computer": "nucleo-a",
+    "product": {
+      "plan_code": "FOUNDER_INTERNAL",
+      "entitlement_id": "HARA-ENTITLEMENT-XPK",
+      "quota": {
+        "ok": true,
+        "state": "UNMETERED",
+        "mode": "UNMETERED",
+        "units": 0,
+        "cloud_quota_transaction": false
+      }
+    }
+  },
+  "immediate_sampler": {
+    "state": "PASS",
+    "operational_authority": "HARA_COMMANDER",
+    "execution_authority": "HARA_COMMANDER_AGENT",
+    "runtime_authority_from_chatgpt": false,
+    "mutation_performed": true,
+    "result": {
+      "function_id": "process.run",
+      "risk_class": "PROCESS_EXECUTION",
+      "process_exit_code": 0,
+      "domain_success_inferred": false,
+      "stdout": "{\"command_preview\":\"python3 /tmp_hara/commander-win48-private-rc-20261012-r1/commander_win48_user_pending_watch_dynamic.py sample --notify-on-active\",\"command_sha256\":\"b2502be25d718d142f4a93853a0b1303353cd5b2608758c66fb2baab5fd17c01\",\"cwd\":\"/home/sartorius\",\"exit_code\":0,\"output_truncated\":false,\"partial\":\"\",\"pid\":239866,\"run_id\":\"HARA-PROC-0f7e16acf7c44f0cb043bb97d003a58b\",\"session_retained\":false,\"state\":\"EXITED\",\"text\":\"{\\\"approval_generated\\\": false, \\\"notification_sent\\\": false, \\\"pending_active\\\": false, \\\"private_values_exposed\\\": false, \\\"qga_sample_elapsed_ms\\\": 709, \\\"remaining_ms\\\": 0, \\\"source48_pinned\\\": true, \\\"state\\\": \\\"READ_ONLY\\\", \\\"task_running\\\": false}\\r\",\"timed_out\":false,\"total_lines\":1}",
+      "human_approval_state": "APPROVED",
+      "local_authorization_mode": "PERSISTENT_TRUSTED",
+      "authorization_source": "DEVICE_ENROLLMENT_POLICY"
+    },
+    "customer_services_relay": false,
+    "bridge_receipt_sha256": "2807817e5b8970ef12cb54e6615c48966218540d74d8154d01e89151206e600d",
+    "computer": "nucleo-a",
+    "product": {
+      "plan_code": "FOUNDER_INTERNAL",
+      "entitlement_id": "HARA-ENTITLEMENT-XPK",
+      "quota": {
+        "ok": true,
+        "state": "UNMETERED",
+        "mode": "UNMETERED",
+        "units": 0,
+        "cloud_quota_transaction": false
+      }
+    }
+  },
+  "independent_postconditions": {
+    "state": "PASS",
+    "operational_authority": "HARA_COMMANDER",
+    "execution_authority": "HARA_COMMANDER_AGENT",
+    "runtime_authority_from_chatgpt": false,
+    "mutation_performed": true,
+    "result": {
+      "function_id": "process.run",
+      "risk_class": "PROCESS_EXECUTION",
+      "process_exit_code": 0,
+      "domain_success_inferred": false,
+      "stdout": "{\"command_preview\":\"python3 /tmp_hara/commander-win48-private-rc-20261012-r1/windows48-post-resume-readonly.py\",\"command_sha256\":\"e611a5c9eabf1f1030dd95718310eb6521ecc987f02391cdf9a8aff878907896\",\"cwd\":\"/home/sartorius\",\"exit_code\":0,\"output_truncated\":false,\"partial\":\"\",\"pid\":241076,\"run_id\":\"HARA-PROC-1fbc6f938c5042c883fafdc998b46183\",\"session_retained\":false,\"state\":\"EXITED\",\"text\":\"OPERATOR_USER_ACTION inspect QGA_EXIT 0\\r\\nRESULT {\\\"approval_generated\\\": false, \\\"consumer6456_alive\\\": true, \\\"events\\\": [{\\\"at_utc\\\": \\\"2026-10-12T17:24:10.0038897Z\\\", \\\"error_code\\\": \\\"\\\", \\\"event\\\": \\\"PASS\\\", \\\"request_id\\\": \\\"HARA-CUSTOMER-MCP-MNsxifd19N0FxudWKW0SEjAJV55fy9gRhYaYSsFab08\\\", \\\"state\\\": \\\"COMPLETED\\\", \\\"tool_id\\\": \\\"hara.process.sessions\\\"}, {\\\"at_utc\\\": \\\"2026-10-12T17:24:12.5539663Z\\\", \\\"error_code\\\": \\\"\\\", \\\"event\\\": \\\"RECEIVED\\\", \\\"request_id\\\": \\\"HARA-CUSTOMER-MCP-DHAH0-ENqa2l5LkKun5G6BVLCHEctcsX1WNlM1pJbSs\\\", \\\"state\\\": \\\"PENDING\\\", \\\"tool_id\\\": \\\"hara.device.info\\\"}, {\\\"at_utc\\\": \\\"2026-10-12T17:24:12.5879259Z\\\", \\\"error_code\\\": \\\"\\\", \\\"event\\\": \\\"EXECUTING\\\", \\\"request_id\\\": \\\"HARA-CUSTOMER-MCP-DHAH0-ENqa2l5LkKun5G6BVLCHEctcsX1WNlM1pJbSs\\\", \\\"state\\\": \\\"EXECUTING\\\", \\\"tool_id\\\": \\\"hara.device.info\\\"}, {\\\"at_utc\\\": \\\"2026-10-12T17:24:12.9934367Z\\\", \\\"error_code\\\": \\\"\\\", \\\"event\\\": \\\"PASS\\\", \\\"request_id\\\": \\\"HARA-CUSTOMER-MCP-DHAH0-ENqa2l5LkKun5G6BVLCHEctcsX1WNlM1pJbSs\\\", \\\"state\\\": \\\"COMPLETED\\\", \\\"tool_id\\\": \\\"hara.device.info\\\"}, {\\\"at_utc\\\": \\\"2026-10-12T18:05:46.4247116Z\\\", \\\"error_code\\\": \\\"\\\", \\\"event\\\": \\\"AGENT_ONLINE\\\", \\\"request_id\\\": \\\"\\\", \\\"state\\\": \\\"AUTHORIZED\\\", \\\"tool_id\\\": \\\"\\\"}], \\\"marker_owner8184_matches\\\": true, \\\"observed_at_utc\\\": \\\"2026-10-12T18:07:22.3220558Z\\\", \\\"owner8184_alive\\\": true, \\\"owner8184_start_matches\\\": true, \\\"pending_exists\\\": false, \\\"processes\\\": [{\\\"current_user_sid_matches\\\": true, \\\"installed_source_in_command\\\": true, \\\"pid\\\": 8184, \\\"session_id\\\": 1, \\\"started_at_utc\\\": \\\"2026-10-12T17:23:02.2031480Z\\\"}, {\\\"current_user_sid_matches\\\": true, \\\"installed_source_in_command\\\": true, \\\"pid\\\": 6456, \\\"session_id\\\": 1, \\\"started_at_utc\\\": \\\"2026-10-12T18:05:45.2932270Z\\\"}], \\\"reply_exists\\\": false, \\\"runtime\\\": {\\\"agent_version\\\": \\\"0.3.48\\\", \\\"updated_at_utc\\\": \\\"2026-10-12T18:06:49.3432761Z\\\"}, \\\"source48_pinned\\\": true, \\\"state\\\": \\\"READ_ONLY\\\", \\\"task_last_result\\\": 267009, \\\"task_last_result_hex\\\": \\\"0x00041301\\\", \\\"task_last_run_utc\\\": \\\"2026-10-12T18:05:45.0000000Z\\\", \\\"task_state\\\": \\\"Running\\\"}\\r\",\"timed_out\":false,\"total_lines\":2}",
+      "human_approval_state": "APPROVED",
+      "local_authorization_mode": "PERSISTENT_TRUSTED",
+      "authorization_source": "DEVICE_ENROLLMENT_POLICY"
+    },
+    "customer_services_relay": false,
+    "bridge_receipt_sha256": "3094b17ac0fbb6679e7ee759618cc484a48d7ac33618ac92c7850ea21a2e7737",
+    "computer": "nucleo-a",
+    "product": {
+      "plan_code": "FOUNDER_INTERNAL",
+      "entitlement_id": "HARA-ENTITLEMENT-XPK",
+      "quota": {
+        "ok": true,
+        "state": "UNMETERED",
+        "mode": "UNMETERED",
+        "units": 0,
+        "cloud_quota_transaction": false
+      }
+    }
+  },
+  "limitation": "Linux wrapper reached its10s timeout after resume PASS. Early observer TaskRunning=false was not evidence of worker death; independent18:07:22 metadata confirms TaskRunning and exact consumer6456 alive. No restart retry. Prompt and notification not observed."
+}
