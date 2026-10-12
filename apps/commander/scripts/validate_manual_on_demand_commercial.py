@@ -44,8 +44,17 @@ need('else { "ASK_EVERY_ACTION" }' in WINDOWS_INSTALL, "WINDOWS_MUTATION_DEFAULT
 need("function Start-ManualOperatorConsole" in WINDOWS_AGENT, "WINDOWS_MANUAL_ENTRYPOINT")
 need('Start-ScheduledTask -TaskName $AgentTaskName' in WINDOWS_AGENT,
      "WINDOWS_MANUAL_TASK_START")
-need('$startedHere -and $currentTask -and -not $currentTask.Triggers' in WINDOWS_AGENT,
-     "WINDOWS_MANUAL_EXIT_CLEANUP")
+# The active Windows source stops only a task started by the console that
+# actually claimed a session, and preserves any other currently active owner.
+windows_manual = WINDOWS_AGENT.split("function Start-ManualOperatorConsole", 1)[1].split("\nfunction ", 1)[0]
+need(all(token in windows_manual for token in (
+    "$startedHere -and $sessionOpenedHere",
+    "Start-OperatorConsole ([ref]$sessionOpenedHere)",
+    "Invoke-WithLocalApprovalLock",
+    "$active=Get-OperatorSession",
+    "$currentTask -and -not $currentTask.Triggers -and -not $active",
+    "Stop-ScheduledTask -TaskName $AgentTaskName",
+)), "WINDOWS_MANUAL_EXIT_CLEANUP")
 need("Stop-ScheduledTask -TaskName $AgentTaskName" in WINDOWS_AGENT,
      "WINDOWS_EXPLICIT_STOP")
 

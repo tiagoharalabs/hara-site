@@ -1,0 +1,89 @@
+{
+  "schema": "hara.commander-win47-console-resume-closure-races-acceptance.v1",
+  "state": "PASS",
+  "fixture": {
+    "schema": "hara.commander-windows-existing-console-resume-fixture.v1",
+    "state": "PASS",
+    "checks": 27,
+    "passed_checks": [
+      "EXISTING_OPERATOR_SESSION_GENUINELY_ACTIVE",
+      "READY_CANDIDATE_RESUME_RETURNS",
+      "READY_CANDIDATE_EXISTING_CONSOLE_NOT_REPLACED",
+      "READY_CANDIDATE_AGENT_REMAINS_RUNNING",
+      "READY_CANDIDATE_STARTS_ONLY_READY_AGENT",
+      "READY_SESSION_IDENTITY_UNCHANGED",
+      "READY_DEVICE_CONFIG_UNCHANGED",
+      "READY_ASK_EVERY_ACTION_PRESERVED",
+      "READY_NO_APPROVAL_IPC_CREATED",
+      "RUNNING_CANDIDATE_RESUME_RETURNS",
+      "RUNNING_CANDIDATE_EXISTING_CONSOLE_NOT_REPLACED",
+      "RUNNING_CANDIDATE_AGENT_REMAINS_RUNNING",
+      "RUNNING_CANDIDATE_STARTS_ONLY_READY_AGENT",
+      "RUNNING_SESSION_IDENTITY_UNCHANGED",
+      "RUNNING_DEVICE_CONFIG_UNCHANGED",
+      "RUNNING_ASK_EVERY_ACTION_PRESERVED",
+      "RUNNING_NO_APPROVAL_IPC_CREATED",
+      "CLOSE_DURING_TASK_START_NEW_CONSOLE_RETURNS",
+      "CLOSE_DURING_TASK_START_FRESH_CONSOLE_OPENED",
+      "OWN_CONSOLE_CLOSE_STOPS_OWN_TRIGGERLESS_TASK",
+      "CLOSE_DURING_TASK_START_NO_STALE_RESUMED_MESSAGE",
+      "OWN_CONSOLE_CLOSE_REMOVES_OWN_SESSION",
+      "FOREIGN_SESSION_REPLACEMENT_CONSOLE_RETURNS",
+      "FOREIGN_SESSION_REPLACEMENT_PRESERVES_RUNNING_TASK",
+      "FOREIGN_SESSION_REPLACEMENT_ACTUAL_CONSOLE_PATH_USED",
+      "FOREIGN_SESSION_REPLACEMENT_IDENTITY_PRESERVED",
+      "RACE_DEVICE_IDENTITY_AND_POLICY_UNCHANGED"
+    ],
+    "expected_behavior": "Candidate047",
+    "scenarios": [
+      {
+        "initial_task_state": "Ready",
+        "final_task_state": "Running",
+        "started": 1,
+        "stopped": 0,
+        "console_called": 0,
+        "error_code": null
+      },
+      {
+        "initial_task_state": "Running",
+        "final_task_state": "Running",
+        "started": 0,
+        "stopped": 0,
+        "console_called": 0,
+        "error_code": null
+      }
+    ],
+    "source_sha256": "254517c46acf47102ebed5fe31fcb5d880ca0de47b98debeebdcaf4b1b324e36",
+    "powershell_version": "5.1.26100.9444",
+    "scope": "SYNTHETIC_TASK_APIS_REAL_AST_MANUAL_AND_OPERATOR_SESSION_FUNCTIONS",
+    "frozen046_bug_reproduced": false,
+    "task_apis_mocked": true,
+    "console_event_and_offline_boundaries_mocked": true,
+    "agent_main_loop_executed": false,
+    "real_task_touched": false,
+    "live_profile_touched": false,
+    "real_human_approval_proven": false,
+    "production_action_executed": false
+  },
+  "files": [
+    {
+      "bytes": 91954,
+      "name": "windows-candidate.ps1",
+      "sha256": "254517c46acf47102ebed5fe31fcb5d880ca0de47b98debeebdcaf4b1b324e36"
+    },
+    {
+      "bytes": 11706,
+      "name": "test_windows_existing_console_resume_fixture.ps1",
+      "sha256": "1242e68bbbea74b9185151bf550589fa1e654c00a7aa405902bb1c15234b5143"
+    }
+  ],
+  "commander_direct_stage_receipt_sha256": "d1ee55e0e15f498a59b85e5c28e2a1f03aef9b0b1a8634c90d541f037fd8dea7",
+  "commander_direct_start_receipt_sha256": "efc12b6c71dc9c05e832f8eb47aaf0eb48c063658ee1a49e9157e210998815f2",
+  "commander_direct_result_receipt_sha256": "7cbb2a9b7f308c99d9eccbe5c5ee650221091f0ca6270c932b79630126e89e36",
+  "guest_exit_code": 0,
+  "stderr_present": false,
+  "live_profile_touched": false,
+  "real_task_touched": false,
+  "raw_console_transcript_persisted": false,
+  "real_positive_human_approval_proven": false
+}

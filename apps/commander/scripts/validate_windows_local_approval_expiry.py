@@ -15,7 +15,7 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_SOURCE = ROOT / "apps/commander/public/agent/windows.ps1"
+DEFAULT_SOURCE = ROOT / "apps/commander/release-bundles/commercial-0.3.46-v6-rc/agent/windows.ps1"
 SCRIPT_DIR = ROOT / "apps/commander/scripts"
 FIELDS = (
     "schema", "nonce", "challenge", "request_id", "tool_id", "arguments_sha256",
@@ -136,7 +136,7 @@ def main() -> int:
     need("MANAGED_START_COMPILE_BEFORE_CONSENT",
          managed_start.index("Initialize-WindowsManagedProcessType")
          < managed_start.index("Assert-StarterMutationAuthorized"))
-    harness = SCRIPT_DIR / "test_windows_local_approval_expiry.ps1"
+    harness = SCRIPT_DIR / "test_windows_local_approval_expiry_046.ps1"
     fixture = harness.read_text(encoding="utf-8")
     need("HARNESS_ISOLATED_AST_ONLY",
          "Parser]::ParseFile" in fixture and "hara-synthetic-approval-" in fixture

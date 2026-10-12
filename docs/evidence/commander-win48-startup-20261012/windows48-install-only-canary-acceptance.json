@@ -1,0 +1,195 @@
+{
+  "schema": "hara.commander-win48-install-only-canary-acceptance.v1",
+  "state": "PASS",
+  "helper_sha256": "71d617c2a665b0787612192bab0f5b0bfc11f401ee75a4c2d660ab01a4ea18fb",
+  "native_import_probe": {
+    "live_profile_touched": false,
+    "parser": [
+      {
+        "file": "windows_048_signed_user_cutover_r1.ps1",
+        "parse_errors": 0,
+        "sha256": "71d617c2a665b0787612192bab0f5b0bfc11f401ee75a4c2d660ab01a4ea18fb"
+      },
+      {
+        "file": "windows_048_marker_lock_import_probe_final.ps1",
+        "parse_errors": 0,
+        "sha256": "f28b2f97582aabccd6a2354f124fa1a435f86886eb1f2170b7ce4539162a2fbd"
+      }
+    ],
+    "probe": {
+      "agent_top_level_executed": false,
+      "canary_main_executed": false,
+      "functions_available_after_import_return": true,
+      "helper_sha256": "71d617c2a665b0787612192bab0f5b0bfc11f401ee75a4c2d660ab01a4ea18fb",
+      "live_profile_touched": false,
+      "lock_scriptblock_argument_bound": true,
+      "nonempty_hash_argument_bound": true,
+      "state": "PASS",
+      "synthetic_paths_only": true,
+      "task_apis_called": false
+    },
+    "probe_exit": 0,
+    "state": "PASS",
+    "stderr_present": false
+  },
+  "native_import_probe_receipt": "85e99060e6f6330682ff223bef5df23f38be92b6cbe229cbd503fd75a1aba606",
+  "control": {
+    "sha": "f31110a42fbf0b4ca7234ff3df93e6f2158949adefc2f04afef4d6ef02e3b737",
+    "at": "2026-10-12T17:21:21.386Z"
+  },
+  "inspect": {
+    "action": "Inspect",
+    "any_action_autoapproved": false,
+    "exit_code": 0,
+    "output_truncated": false,
+    "result": {
+      "action": "Inspect",
+      "agent_or_task_launched": false,
+      "agent_top_level_imported": false,
+      "approval_generated": false,
+      "backup_sha_verified": false,
+      "config_byte_identical": true,
+      "config_sha256": "e8810f67c0ccaa8780a401f767e5ff99660def8d8815b7288c7a9e4d156bc7f8",
+      "expected_owner_pid": 8768,
+      "expected_owner_started_at_utc": "2026-10-12T16:15:33.0239441Z",
+      "historical_product_sessions_count": 0,
+      "historical_product_sessions_receipt_sha256": "0f6b76d01407dbe77d031d6dd5c0ca9e528cee4321c4d8eabf19a74dfb49058f",
+      "human_start_required": true,
+      "inspect_observed_at_utc": "2026-10-12T17:21:29.6034061Z",
+      "inspection_sha256": "8f22a8d29418bf776daf5929060f7aca2e084d3c947318d5fadea49c2244222f",
+      "manifest_sha256": "5e65b1862c40bc9164609cdcd1401bb55e02e409b44f1b58bca15151e40de32c",
+      "marker_custody_verified": false,
+      "new_source_sha256": "f54e5ff8c170e09a3dc795004af426851d111c89ae78408559886e0d693bf805",
+      "old_source_sha256": "254517c46acf47102ebed5fe31fcb5d880ca0de47b98debeebdcaf4b1b324e36",
+      "owned_dead_marker_removed": false,
+      "product_sessions_fresh_claimed": false,
+      "reason": "READY_FOR_ROOT_REVIEW",
+      "rollback_old_agent_verified": false,
+      "root_control_plane_metadata_provenance": "ROOT_NORMALIZED_CONTROL_PLANE_METADATA_NOT_AGENT_RECEIPT",
+      "root_control_plane_metadata_sha256": "f31110a42fbf0b4ca7234ff3df93e6f2158949adefc2f04afef4d6ef02e3b737",
+      "schema": "hara.commander-win48-install-only-canary.v1",
+      "secrets_in_result": false,
+      "state": "PASS",
+      "task_definition_preserved": true,
+      "task_definition_sha256": "9bcc1704ecbb8afb3ce5edd4cb1f7a21ed4d470fc91870ff354d9da24d5dfa08",
+      "task_state_after": "Ready",
+      "zero_targets_before_replace": false
+    },
+    "schema": "hara.commander-win48-user-canary-qga-result.v1",
+    "stderr_present": true
+  },
+  "inspect_receipt": "aecc265f2307c6d4fa853de5d7e1e174f3979f17ac7eb26ae7f544c6bb7a785a",
+  "apply": {
+    "action": "Apply",
+    "any_action_autoapproved": false,
+    "exit_code": 0,
+    "output_truncated": false,
+    "result": {
+      "action": "Apply",
+      "agent_or_task_launched": false,
+      "agent_top_level_imported": false,
+      "approval_generated": false,
+      "backup_sha_verified": true,
+      "config_byte_identical": true,
+      "config_sha256": "e8810f67c0ccaa8780a401f767e5ff99660def8d8815b7288c7a9e4d156bc7f8",
+      "expected_owner_pid": 8768,
+      "expected_owner_started_at_utc": "2026-10-12T16:15:33.0239441Z",
+      "historical_product_sessions_count": 0,
+      "historical_product_sessions_receipt_sha256": "0f6b76d01407dbe77d031d6dd5c0ca9e528cee4321c4d8eabf19a74dfb49058f",
+      "human_start_required": true,
+      "manifest_sha256": "5e65b1862c40bc9164609cdcd1401bb55e02e409b44f1b58bca15151e40de32c",
+      "marker_custody_verified": true,
+      "new_source_sha256": "f54e5ff8c170e09a3dc795004af426851d111c89ae78408559886e0d693bf805",
+      "old_source_sha256": "254517c46acf47102ebed5fe31fcb5d880ca0de47b98debeebdcaf4b1b324e36",
+      "owned_dead_marker_removed": true,
+      "product_sessions_fresh_claimed": false,
+      "reason": "INSTALLED_AWAITING_HUMAN_START",
+      "rollback_old_agent_verified": false,
+      "root_control_plane_metadata_provenance": "ROOT_NORMALIZED_CONTROL_PLANE_METADATA_NOT_AGENT_RECEIPT",
+      "root_control_plane_metadata_sha256": "f31110a42fbf0b4ca7234ff3df93e6f2158949adefc2f04afef4d6ef02e3b737",
+      "schema": "hara.commander-win48-install-only-canary.v1",
+      "secrets_in_result": false,
+      "state": "PASS",
+      "task_definition_preserved": true,
+      "task_definition_sha256": "9bcc1704ecbb8afb3ce5edd4cb1f7a21ed4d470fc91870ff354d9da24d5dfa08",
+      "task_state_after": "Ready",
+      "zero_targets_before_replace": true
+    },
+    "schema": "hara.commander-win48-user-canary-qga-result.v1",
+    "stderr_present": true
+  },
+  "apply_receipt": "b15f64ebf94e76cd20d085415c8f5ecf209587381d8e9d506f9515211c4d7924",
+  "desktop_rename": {
+    "metadata": {
+      "approval_generated": false,
+      "bytes_preserved": true,
+      "cmd_executed": false,
+      "destination_preexisted": false,
+      "files_overwritten": false,
+      "new_filename": "Abrir_HARA_Commander.cmd",
+      "pending_exists": false,
+      "response_exists": false,
+      "session_marker_exists": false,
+      "sha256": "68eec4f71d42584166048ce18e6c77fe4586fda9da4f2865396b0bac17f44edd",
+      "source48_sha256": "f54e5ff8c170e09a3dc795004af426851d111c89ae78408559886e0d693bf805",
+      "source_or_task_launched": false,
+      "state": "PASS",
+      "task_state": "Ready"
+    },
+    "commander_direct_receipt_sha256": "36b8ab4a76c3c0cc5babb7282f0283a3eb09d2e4e0aa2553115866138310df3d"
+  },
+  "independent_postconditions": {
+    "metadata": {
+      "approval_mode": "ASK_EVERY_ACTION",
+      "at_utc": "2026-10-12T17:23:06.2511239Z",
+      "config_sha256": "e8810f67c0ccaa8780a401f767e5ff99660def8d8815b7288c7a9e4d156bc7f8",
+      "current_user_is_system": false,
+      "current_user_matches_task": true,
+      "interactive_session_id": 1,
+      "mutated": false,
+      "operator_metadata": {
+        "owner_alive": true,
+        "owner_main_window_handle_present": false,
+        "owner_pid": 8184,
+        "owner_session_id": 1,
+        "owner_start_matches": true,
+        "owner_started_at_utc": "2026-10-12T17:23:02.2031480Z",
+        "owner_window_title_present": false,
+        "schema": "hara.commander-operator-session.v1"
+      },
+      "pending_exists": false,
+      "response_exists": false,
+      "session_marker_exists": true,
+      "source_sha256": "f54e5ff8c170e09a3dc795004af426851d111c89ae78408559886e0d693bf805",
+      "state": "READ_ONLY",
+      "target_processes": [
+        {
+          "agent_start": true,
+          "commandline_sha256": "71aff9baf6d3f5a3b03312c7e4277a87933407d57326eab5887cc7f11da0bfed",
+          "pid": 8184,
+          "session_id": 1,
+          "sid_matches": true,
+          "start": "2026-10-12T17:23:02.2031480Z"
+        },
+        {
+          "agent_start": false,
+          "commandline_sha256": "4e974292dd4246dc109646e7651b401cbbce1e428bea41635dbd3f919b5edadc",
+          "pid": 4896,
+          "session_id": 1,
+          "sid_matches": true,
+          "start": "2026-10-12T17:23:03.4989964Z"
+        }
+      ],
+      "task_last_result": 267009,
+      "task_last_run_utc": "2026-10-12T17:23:03.0000000Z",
+      "task_logon": "Interactive",
+      "task_runlevel": "Limited",
+      "task_state": "Running",
+      "task_xml_sha256": "9bcc1704ecbb8afb3ce5edd4cb1f7a21ed4d470fc91870ff354d9da24d5dfa08"
+    },
+    "commander_direct_receipt_sha256": "3abdc87f37a2a017d0901a95a59d7a98f8ac612780529072bd4c8c40b73b4aee"
+  },
+  "manual_start_observed": true,
+  "operator_or_task_started_by_helper": false,
+  "real_positive_human_approval_proven": false
+}

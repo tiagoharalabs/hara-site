@@ -1,0 +1,22 @@
+{
+  "schema": "hara.commander-win46-readonly-evidence.v1",
+  "diagnostic": {
+    "approval_generated": false,
+    "current_operator_alive": true,
+    "current_operator_pid": 3332,
+    "current_operator_start_matches": true,
+    "current_operator_started_at_utc": "2026-10-12T04:50:29.9435744Z",
+    "nonce_payload_or_credentials_exposed": false,
+    "pending_present": false,
+    "response_present": false,
+    "session_present": true,
+    "source_or_task_changed": false,
+    "state": "READ_ONLY",
+    "task_state": "Running",
+    "timestamp_utc": "2026-10-12T04:51:44.3417789Z"
+  },
+  "commander_direct_receipt_sha256": "61d846db4ff312af9a279c9cfc86e141018de575404116d67d2ffe8deb609b04",
+  "task_or_operator_modified_by_inspection": false,
+  "real_positive_human_approval_proven": false,
+  "external_change_origin": "UNKNOWN"
+}

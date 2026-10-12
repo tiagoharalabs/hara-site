@@ -1,0 +1,70 @@
+{
+  "schema": "hara.commander-windows47-ps51-fixture-acceptance.v1",
+  "state": "PASS",
+  "checks": 26,
+  "fixture": {
+    "schema": "hara.commander-windows-full-tool-denial-fixture.v1",
+    "state": "PASS",
+    "checks": 26,
+    "passed_checks": [
+      "SOURCE_DISPATCH_INCLUDES_EXECUTING",
+      "RUN_NEGATIVE_BEFORE_DEADLINE",
+      "RUN_NEGATIVE_REPLY_PUBLISHED",
+      "RUN_COMPLETE_CALLED_ONCE",
+      "RUN_COMPLETE_STATE_FAILED",
+      "RUN_COMPLETE_HUMAN_DENIED_CODE",
+      "RUN_RESULT_DENIED_NO_MUTATION",
+      "RUN_OWNED_IPC_CLEANUP",
+      "RUN_COMMAND_NEVER_EXECUTED",
+      "RUN_NO_MANAGED_PROCESS_CREATED",
+      "RUN_EXECUTING_EVENT_PRESENT",
+      "RUN_DENIED_EVENT_PRESENT",
+      "RUN_NO_PASS_EVENT",
+      "START_NEGATIVE_BEFORE_DEADLINE",
+      "START_NEGATIVE_REPLY_PUBLISHED",
+      "START_COMPLETE_CALLED_ONCE",
+      "START_COMPLETE_STATE_FAILED",
+      "START_COMPLETE_HUMAN_DENIED_CODE",
+      "START_RESULT_DENIED_NO_MUTATION",
+      "START_OWNED_IPC_CLEANUP",
+      "START_COMMAND_NEVER_EXECUTED",
+      "START_NO_MANAGED_PROCESS_CREATED",
+      "START_EXECUTING_EVENT_PRESENT",
+      "START_DENIED_EVENT_PRESENT",
+      "START_NO_PASS_EVENT",
+      "START_REAL_CSHARP_WRAPPER_COMPILED_BEFORE_DENIAL"
+    ],
+    "source_sha256": "254517c46acf47102ebed5fe31fcb5d880ca0de47b98debeebdcaf4b1b324e36",
+    "powershell_version": "5.1.26100.9444",
+    "scope": "CANDIDATE047_AST_FULL_TOOLS_AND_EXACT_DISPATCH_TRY_CATCH",
+    "transport_mocked": true,
+    "local_activity_store_mocked": true,
+    "agent_main_loop_executed": false,
+    "agent_task_touched": false,
+    "real_human_approval_proven": false,
+    "live_profile_touched": false,
+    "production_action_executed": false
+  },
+  "files": [
+    {
+      "bytes": 91954,
+      "name": "windows-candidate.ps1",
+      "sha256": "254517c46acf47102ebed5fe31fcb5d880ca0de47b98debeebdcaf4b1b324e36"
+    },
+    {
+      "bytes": 9537,
+      "name": "test_windows_full_tool_denial_fixture.ps1",
+      "sha256": "874d897ed6621130f3612df0c24bf7c43a16e8a2b4205ce74efe26960a8e28d8"
+    }
+  ],
+  "commander_direct_stage_receipt_sha256": "3b5d10252f649d62f71e459167fcdb3b44373934f120d0a5033959a1f8484356",
+  "commander_direct_start_receipt_sha256": "be605f075568f14736cd8f95c19c4d6bcee36e7025d9fcf4782b7bd17ff1cb53",
+  "commander_direct_result_receipt_sha256": "20b745784d1e85b678aac052c9cf6653b8692f39fa71736b4d2f278941fbdce2",
+  "guest_exit_code": 0,
+  "stderr_present": false,
+  "output_truncated": false,
+  "live_profile_touched": false,
+  "agent_transport_executed": false,
+  "real_human_approval_proven": false,
+  "synthetic_prompt_transcript_persisted": false
+}

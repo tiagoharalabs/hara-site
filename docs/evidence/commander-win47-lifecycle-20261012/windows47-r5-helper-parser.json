@@ -1,0 +1,16 @@
+{
+  "schema": "hara.commander-win47-r5-helper-parser.v1",
+  "state": "PASS",
+  "parser": {
+    "bytes": 24156,
+    "installed_agent_modified": false,
+    "parse_errors": 0,
+    "powershell_version": "5.1.26100.9444",
+    "sha256": "b686d68a73004019b8e5001192314a19abd2f6ad7957c04bafb464bab1ea6be4",
+    "state": "PARSED"
+  },
+  "commander_direct_receipt_sha256": "6783bb20c0ae6293a9d28a1bb19f0160fd19a8113f514acd063f8adcb48c8fee",
+  "controller_sha256": "bddffe1a14ec03a476741854b749251e4d347b92c21ad98ae22826b0b9aa318f",
+  "profile_modified": false,
+  "root_review_and_terminal_noipc_required_before_apply": true
+}

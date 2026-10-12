@@ -1,0 +1,80 @@
+{
+  "schema": "hara.commander-windows47-ps51-fixture-acceptance.v1",
+  "state": "PASS",
+  "checks": 17,
+  "fixture": {
+    "schema": "hara.commander-windows-existing-console-resume-fixture.v1",
+    "state": "PASS",
+    "checks": 17,
+    "passed_checks": [
+      "EXISTING_OPERATOR_SESSION_GENUINELY_ACTIVE",
+      "READY_CANDIDATE_RESUME_RETURNS",
+      "READY_CANDIDATE_EXISTING_CONSOLE_NOT_REPLACED",
+      "READY_CANDIDATE_AGENT_REMAINS_RUNNING",
+      "READY_CANDIDATE_STARTS_ONLY_READY_AGENT",
+      "READY_SESSION_IDENTITY_UNCHANGED",
+      "READY_DEVICE_CONFIG_UNCHANGED",
+      "READY_ASK_EVERY_ACTION_PRESERVED",
+      "READY_NO_APPROVAL_IPC_CREATED",
+      "RUNNING_CANDIDATE_RESUME_RETURNS",
+      "RUNNING_CANDIDATE_EXISTING_CONSOLE_NOT_REPLACED",
+      "RUNNING_CANDIDATE_AGENT_REMAINS_RUNNING",
+      "RUNNING_CANDIDATE_STARTS_ONLY_READY_AGENT",
+      "RUNNING_SESSION_IDENTITY_UNCHANGED",
+      "RUNNING_DEVICE_CONFIG_UNCHANGED",
+      "RUNNING_ASK_EVERY_ACTION_PRESERVED",
+      "RUNNING_NO_APPROVAL_IPC_CREATED"
+    ],
+    "expected_behavior": "Candidate047",
+    "scenarios": [
+      {
+        "initial_task_state": "Ready",
+        "final_task_state": "Running",
+        "started": 1,
+        "stopped": 0,
+        "console_called": 0,
+        "error_code": null
+      },
+      {
+        "initial_task_state": "Running",
+        "final_task_state": "Running",
+        "started": 0,
+        "stopped": 0,
+        "console_called": 0,
+        "error_code": null
+      }
+    ],
+    "source_sha256": "254517c46acf47102ebed5fe31fcb5d880ca0de47b98debeebdcaf4b1b324e36",
+    "powershell_version": "5.1.26100.9444",
+    "scope": "SYNTHETIC_TASK_APIS_REAL_AST_MANUAL_AND_OPERATOR_SESSION_FUNCTIONS",
+    "frozen046_bug_reproduced": false,
+    "task_apis_mocked": true,
+    "agent_main_loop_executed": false,
+    "real_task_touched": false,
+    "live_profile_touched": false,
+    "real_human_approval_proven": false,
+    "production_action_executed": false
+  },
+  "files": [
+    {
+      "bytes": 91954,
+      "name": "windows-candidate.ps1",
+      "sha256": "254517c46acf47102ebed5fe31fcb5d880ca0de47b98debeebdcaf4b1b324e36"
+    },
+    {
+      "bytes": 8181,
+      "name": "test_windows_existing_console_resume_fixture.ps1",
+      "sha256": "636c61ee10e31fc068c684b2e2f0478ca70b9aa3b0d2dce8cada98fdc8403ba5"
+    }
+  ],
+  "commander_direct_stage_receipt_sha256": "1c6bc330010f713f01ccf2f7e279dd10e2a97139073ec83273569b00d756a633",
+  "commander_direct_start_receipt_sha256": "532c1b3f3f5ea998f968da4333cdfd5a2ed8bb66816b430b2c01085f9d21a3f3",
+  "commander_direct_result_receipt_sha256": "e2a9bdd5a304a32adbdeb4e86113b7cea93f444b85670a15b99c78f65fcf1456",
+  "guest_exit_code": 0,
+  "stderr_present": false,
+  "output_truncated": false,
+  "live_profile_touched": false,
+  "agent_transport_executed": false,
+  "real_human_approval_proven": false,
+  "synthetic_prompt_transcript_persisted": false
+}

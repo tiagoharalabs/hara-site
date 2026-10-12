@@ -1,0 +1,52 @@
+{
+  "schema": "hara.commander-win47-canary-attempt-evidence.v1",
+  "report": {
+    "config_or_task_or_process_changed": false,
+    "current_operator_pid": 3332,
+    "current_operator_start": "2026-10-12T04:50:29.9435744Z",
+    "installed_source_sha256": "71998b7c5e2dae4f4cbcfe80e5413ab1c6ff8e28ad903734cc1f026dfe8765aa",
+    "matching_processes": [
+      {
+        "alive": true,
+        "contains_installed_target": true,
+        "has_47_wrapper": false,
+        "has_noexit": true,
+        "has_old46_wrapper": false,
+        "is_inspector": false,
+        "is_session_owner": true,
+        "parent_pid": 6688,
+        "pid": 3332,
+        "session_id": 1,
+        "start_at_utc": "2026-10-12T04:50:29.9435744Z"
+      },
+      {
+        "alive": true,
+        "contains_installed_target": true,
+        "has_47_wrapper": false,
+        "has_noexit": false,
+        "has_old46_wrapper": false,
+        "is_inspector": false,
+        "is_session_owner": false,
+        "parent_pid": 1476,
+        "pid": 7700,
+        "session_id": 1,
+        "start_at_utc": "2026-10-12T05:16:44.3126006Z"
+      }
+    ],
+    "nonce_payload_or_credentials_exposed": false,
+    "pending_present": false,
+    "response_present": false,
+    "schema": "hara.commander-win47-canary-consumer-precheck-diagnostic.v1",
+    "state": "READ_ONLY",
+    "task_state": "Running",
+    "timestamp_utc": "2026-10-12T05:18:59.6262751Z"
+  },
+  "commander_direct_receipt_sha256": "39b22ea6f1bd69908d57b02798acde3b8a31c68643e666aa5e389dc1d8c10184",
+  "canary_helper_sha256": "962ad5ef6cf27b64f6f86decedc5b69bb28c8db02c7098c7322fc64528a04d2f",
+  "installed47": false,
+  "old46_preserved": true,
+  "extra_consumer_identity_at_failure": "UNKNOWN",
+  "stop_latency_proven": false,
+  "real_positive_human_approval_proven": false,
+  "private_preimage_contents_not_exported": true
+}

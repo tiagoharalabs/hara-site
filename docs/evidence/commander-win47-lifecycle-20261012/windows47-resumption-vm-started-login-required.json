@@ -1,0 +1,54 @@
+{
+  "schema": "hara.commander-win47-post-resumption-login-blocked.v1",
+  "state": "HOLD_HUMAN_WINDOWS_LOGIN_REQUIRED",
+  "vm_state": "running",
+  "vm_started_by_authorized_root_action": true,
+  "boot_commander_direct_receipt_sha256": "3b4e8dd5b9c1a71a6e419949b210977c323f70da7c838f50cdeeb022fbfa48eb",
+  "qga_ready": true,
+  "guest_metadata": {
+    "state": "READ_ONLY",
+    "timestamp_utc": "2026-10-12T15:43:28.5496599Z",
+    "logged_on_user_present": false,
+    "logged_on_user_matches_task_sid": false,
+    "task_state": "Ready",
+    "task_logon_type": "Interactive",
+    "task_run_level": "Limited",
+    "interactive_explorer_session_ids": [],
+    "task_modified": false,
+    "user_or_sid_value_exposed": false
+  },
+  "snapshot_commander_direct_receipt_sha256": "c1ba3b7c5b94b06562137978681ddeb40a8da5ca2f7cda83a11cb0828ed8e4de",
+  "helper_r4": {
+    "filename": "windows_047_signed_user_canary_r4.ps1",
+    "sha256": "b8b0fb8010dbe734ee4f52807714824a8a8ccf94c24f05a4da473171eca18327",
+    "parser": {
+      "exit_code": 0,
+      "stderr_present": false,
+      "metadata": {
+        "state": "PARSED",
+        "parse_errors": 0,
+        "sha256": "b8b0fb8010dbe734ee4f52807714824a8a8ccf94c24f05a4da473171eca18327",
+        "bytes": 21674,
+        "powershell_version": "5.1.26100.9444",
+        "installed_agent_modified": false
+      }
+    },
+    "parser_commander_direct_receipt_sha256": "9cec356c42a5a7e5b1e342b631dcbfd7958b60c29416b39beb7e20d55f7944a9"
+  },
+  "expected_pins": {
+    "source_old46": "71998b7c5e2dae4f4cbcfe80e5413ab1c6ff8e28ad903734cc1f026dfe8765aa",
+    "source_new47": "254517c46acf47102ebed5fe31fcb5d880ca0de47b98debeebdcaf4b1b324e36",
+    "manifest47": "62433a8dc4e2b39c37f1ce8be7538c92eb207541bfcc5f7babb78cee83bb8e7e",
+    "config": "e8810f67c0ccaa8780a401f767e5ff99660def8d8815b7288c7a9e4d156bc7f8",
+    "task_xml": "9bcc1704ecbb8afb3ce5edd4cb1f7a21ed4d470fc91870ff354d9da24d5dfa08"
+  },
+  "expected_profile_pins_verified_after_boot": false,
+  "old_pid3332_assumed_current": false,
+  "credentials_entered": false,
+  "autologin_modified": false,
+  "r4_inspect_performed": false,
+  "r4_apply_performed": false,
+  "real_positive_human_approval_proven": false,
+  "login_user_confirmed_absent": true,
+  "other_hosts_or_vms_changed": false
+}

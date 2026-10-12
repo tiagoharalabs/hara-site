@@ -1,0 +1,40 @@
+{
+  "actual_runtime_restarted": false,
+  "assertions": 34,
+  "at_utc": "2026-10-12T16:07:16.520248+00:00",
+  "bridge_receipt_sha256": "38283cda1792b60719bc7e0436a107966a4884cf7fd814830825a61400a27b00",
+  "cases": [
+    "Reconnect at 1h54 preserves initial ~6h deadline and occurs before 7h TTL.",
+    "A later reconnect preserves the most recent successful liveness checkpoint.",
+    "Failed send remains due and retries on the next socket keepalive.",
+    "Six consecutive failed sends use the existing reconnect backoff and close sockets.",
+    "300 idle keepalives cause no extra durable HTTP read and no early liveness.",
+    "Standalone bounded-session caller remains compatible."
+  ],
+  "limits": [
+    "Successful socket send is not a D1 acknowledgement.",
+    "Checkpoint is process-local; a new process begins its existing startup cadence.",
+    "No live fleet or multi-tenant soak is claimed."
+  ],
+  "negative_control": {
+    "adapter": "Clock injection only; baseline liveness logic and per-socket reset unchanged.",
+    "bridge_receipt_sha256": "6c651002c3bf6c5b035241cc4cb4e576e8ab020eb4bafb5cd5aaa87535a3df2b",
+    "failure": "RECONNECT_RESET_DURABLE_DEADLINE",
+    "previous_source_sha256": "cd9ae70961cf4c68851df9866777ecc99b872656cf4f32700ac0cf394d579e76",
+    "state": "PASS_DETECTED_PREVIOUS_RECONNECT_BUG"
+  },
+  "offline_gate": {
+    "checked": 94,
+    "failed": 0,
+    "passed": 94,
+    "path": "offline-gate-presence-final.json",
+    "sha256": "29abde49b811b1ea2eef55baa8babb5a20b83a44f7916d9f2fba0b7b753a3cba"
+  },
+  "production_mutation": false,
+  "scenarios": 6,
+  "schema": "hara.commander-event-v2-presence-regression.v1",
+  "scope": "OFFLINE_ACTUAL_LOOP_FAKE_MONOTONIC_AND_SOCKET_REAL_RECONNECT_POLICY",
+  "source_sha256": "f1a7d9fc4faf57185d0d2bcb17e741882db866c627967bf02e1d98754d212950",
+  "state": "PASS",
+  "validator_sha256": "8fadfd09e7396bdf5bbe4efa1728280eb53eb96b46c64e787f6b4fe3ef56d454"
+}

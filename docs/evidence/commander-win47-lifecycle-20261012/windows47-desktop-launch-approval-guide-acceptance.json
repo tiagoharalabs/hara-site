@@ -1,0 +1,66 @@
+{
+  "schema": "hara.commander-win47-user-desktop-launch-approval-guide.v1",
+  "state": "PASS",
+  "metadata": {
+    "approval_generated": false,
+    "cmd_executed": false,
+    "file_creation_mode": "CreateNew",
+    "files_overwritten": false,
+    "files_preexisted": false,
+    "input_generated": false,
+    "new_files": [
+      {
+        "bytes": 172,
+        "name": "HARA_Commander_Abrir_047.cmd",
+        "sha256": "68eec4f71d42584166048ce18e6c77fe4586fda9da4f2865396b0bac17f44edd"
+      },
+      {
+        "bytes": 525,
+        "name": "HARA_Commander_Como_Aprovar_047.txt",
+        "sha256": "a513ecb55edaf40c1c50f7de6a28265cc8f77749c8ae13429e2c25602617c771"
+      }
+    ],
+    "policy_modified": false,
+    "source47_sha256": "254517c46acf47102ebed5fe31fcb5d880ca0de47b98debeebdcaf4b1b324e36",
+    "state": "PASS",
+    "desktop_path_redacted": true,
+    "desktop_resolved_from_current_user": true,
+    "desktop_is_onedrive": true
+  },
+  "commander_direct_receipt_sha256": "c92d0891a5df1424fd70a4133be7f6bcc0887230583f53aad20b354d74df10e1",
+  "previous_readonly_snapshot": {
+    "approval_mode": "ASK_EVERY_ACTION",
+    "at_utc": "2026-10-12T16:10:13.3601076Z",
+    "config_sha256": "e8810f67c0ccaa8780a401f767e5ff99660def8d8815b7288c7a9e4d156bc7f8",
+    "current_user_is_system": false,
+    "current_user_matches_task": true,
+    "interactive_session_id": 1,
+    "mutated": false,
+    "operator_metadata": {
+      "owner_alive": false,
+      "owner_main_window_handle_present": false,
+      "owner_pid": 8592,
+      "owner_session_id": -1,
+      "owner_start_matches": false,
+      "owner_started_at_utc": "2026-10-12T16:04:09.0468065Z",
+      "owner_window_title_present": false,
+      "schema": "hara.commander-operator-session.v1"
+    },
+    "pending_exists": false,
+    "response_exists": false,
+    "session_marker_exists": true,
+    "source_sha256": "254517c46acf47102ebed5fe31fcb5d880ca0de47b98debeebdcaf4b1b324e36",
+    "state": "READ_ONLY",
+    "target_processes": [],
+    "task_last_result": 3221225786,
+    "task_last_run_utc": "2026-10-12T16:04:08.0000000Z",
+    "task_logon": "Interactive",
+    "task_runlevel": "Limited",
+    "task_state": "Ready",
+    "task_xml_sha256": "9bcc1704ecbb8afb3ce5edd4cb1f7a21ed4d470fc91870ff354d9da24d5dfa08"
+  },
+  "previous_snapshot_receipt": "4ca33f5c30eb72538a30135676d34a8fe6e91242a8f3cdcecaa5e5197c16fe99",
+  "interruption_origin": "UNKNOWN",
+  "manual_launch_required": true,
+  "no_real_positive_approval_claim": true
+}

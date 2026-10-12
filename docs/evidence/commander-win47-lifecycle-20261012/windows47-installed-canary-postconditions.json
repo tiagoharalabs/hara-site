@@ -1,0 +1,52 @@
+{
+  "schema": "hara.commander-win47-installed-canary-readonly-postconditions.v1",
+  "state": "PASS",
+  "metadata": {
+    "approval_mode": "ASK_EVERY_ACTION",
+    "at_utc": "2026-10-12T16:06:03.2222225Z",
+    "config_sha256": "e8810f67c0ccaa8780a401f767e5ff99660def8d8815b7288c7a9e4d156bc7f8",
+    "current_user_is_system": false,
+    "current_user_matches_task": true,
+    "interactive_session_id": 1,
+    "mutated": false,
+    "operator_metadata": {
+      "owner_alive": true,
+      "owner_pid": 8592,
+      "owner_session_id": 1,
+      "owner_start_matches": true,
+      "owner_started_at_utc": "2026-10-12T16:04:09.0468065Z",
+      "schema": "hara.commander-operator-session.v1"
+    },
+    "pending_exists": false,
+    "response_exists": false,
+    "session_marker_exists": true,
+    "source_sha256": "254517c46acf47102ebed5fe31fcb5d880ca0de47b98debeebdcaf4b1b324e36",
+    "state": "READ_ONLY",
+    "target_processes": [
+      {
+        "agent_start": false,
+        "commandline_sha256": "4e974292dd4246dc109646e7651b401cbbce1e428bea41635dbd3f919b5edadc",
+        "pid": 1368,
+        "session_id": 1,
+        "sid_matches": true,
+        "start": "2026-10-12T16:04:08.3097562Z"
+      },
+      {
+        "agent_start": false,
+        "commandline_sha256": "ed32e872c704995d63051cf3bff8f61fe7110744160cda0325922823143a4486",
+        "pid": 8592,
+        "session_id": 1,
+        "sid_matches": true,
+        "start": "2026-10-12T16:04:09.0468065Z"
+      }
+    ],
+    "task_last_result": 267009,
+    "task_last_run_utc": "2026-10-12T16:04:08.0000000Z",
+    "task_logon": "Interactive",
+    "task_runlevel": "Limited",
+    "task_state": "Running",
+    "task_xml_sha256": "9bcc1704ecbb8afb3ce5edd4cb1f7a21ed4d470fc91870ff354d9da24d5dfa08"
+  },
+  "commander_direct_receipt_sha256": "497f440d83b0c438e2a47852cc8fb40d10d453317e7eaafcdcf8b32cc83ca93e",
+  "real_positive_human_approval_proven": false
+}

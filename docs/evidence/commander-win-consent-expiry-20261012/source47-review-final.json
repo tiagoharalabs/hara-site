@@ -1,0 +1,23 @@
+{
+  "schema": "hara.commander-windows47-source-review.v1",
+  "state": "PASS",
+  "source_sha256": "254517c46acf47102ebed5fe31fcb5d880ca0de47b98debeebdcaf4b1b324e36",
+  "base_frozen_windows46_sha256": "71998b7c5e2dae4f4cbcfe80e5413ab1c6ff8e28ad903734cc1f026dfe8765aa",
+  "root_readback_verified": true,
+  "independent_peer_review": "PASS",
+  "scope": [
+    "resume_existing_console_without_stopping_its_worker",
+    "stop_only_task_started_here_with_session_opened_here_and_no_current_active_session",
+    "recheck_session_after_task_resume",
+    "bind_pending_response_to_consumer_pid_and_start_time",
+    "reject_dead_or_changed_consumer",
+    "exact_phrase_with_local_code_and_30_second_deadline_preserved",
+    "mutex_parameter_and_locals_avoid_dynamic_scope_collision"
+  ],
+  "limits": [
+    "PowerShell 5.1 runtime fixtures recorded separately",
+    "real human positive approval not certified by source review",
+    "console47 must replace console46 during canary",
+    "durable claim recovery and idempotent completion retry deferred; timeout outcome remains unknown until product reconciliation"
+  ]
+}

@@ -80,6 +80,8 @@ function New-FixturePending([double]$Seconds=5) {
     request_id="SYNTHETIC-"+[guid]::NewGuid().ToString("N");tool_id="hara.files.write"
     arguments_sha256=("b"*64);owner_pid=$PID
     owner_started_at_utc=[string]$session.owner_started_at_utc
+    consumer_pid=$PID
+    consumer_started_at_utc=(Get-Process -Id $PID).StartTime.ToUniversalTime().ToString("o")
     created_at_utc=[DateTime]::UtcNow.ToString("o")
     expires_at_utc=[DateTime]::UtcNow.AddSeconds($Seconds).ToString("o")
     action_summary="SYNTHETIC_FIXTURE_ONLY_NO_CUSTOMER_ACTION"
@@ -146,11 +148,12 @@ try {
   Assert-Fixture (-not (Test-Path -LiteralPath $ApprovalResponsePath)) "LATE_REPLY_FILE_ABSENT"
 
   foreach($field in @("schema","nonce","request_id","tool_id","arguments_sha256","owner_pid",
-                     "owner_started_at_utc","created_at_utc","expires_at_utc","challenge","action_summary")) {
+                     "owner_started_at_utc","consumer_pid","consumer_started_at_utc",
+                     "created_at_utc","expires_at_utc","challenge","action_summary")) {
     Reset-Fixture
     $pending=New-FixturePending
     $replacement=Copy-Fixture $pending
-    if ($field -eq "owner_pid") { $replacement.$field=$PID+1000000 }
+    if ($field -in @("owner_pid","consumer_pid")) { $replacement.$field=$PID+1000000 }
     elseif ($field -eq "expires_at_utc") { $replacement.$field=[DateTime]::UtcNow.AddMinutes(1).ToString("o") }
     else { $replacement.$field=([string]$replacement.$field+"-REPLACED") }
     Write-FixtureJson $PendingApprovalPath $replacement
@@ -282,6 +285,14 @@ try {
 
   Reset-Fixture
   $pending=New-FixturePending
+  Add-FixtureText "APROVAR"
+  $hostOutput=(& { Respond-ToLocalApprovalRequest } 6>&1|Out-String)
+  $reply=Get-Content -Raw -LiteralPath $ApprovalResponsePath|ConvertFrom-Json
+  Assert-Fixture ($reply.approved -ceq $false) "APROVAR_WITHOUT_CHALLENGE_DENIED"
+  Assert-Fixture ($hostOutput -notmatch "APROVACAO_INDIVIDUAL=(CONCEDIDA|ENVIADA)") "APROVAR_ALONE_NEVER_REPORTS_SENT"
+
+  Reset-Fixture
+  $pending=New-FixturePending
   $script:BufferedKeys.Enqueue((New-Object ConsoleKeyInfo -ArgumentList @([char]13,[ConsoleKey]::Enter,$false,$false,$false)))
   Add-FixtureText ("APROVAR "+$pending.challenge)
   $answer=Read-LocalApprovalResponse $pending
@@ -346,7 +357,8 @@ try {
   # Only synthetic response files, with no transport or product operation.
   $ApprovalTimeoutSeconds=5
   foreach($variant in @("string_bool","request_id","arguments_sha256","owner_pid",
-                       "owner_started_at_utc","time_before","time_after","time_future","time_invalid")) {
+                       "owner_started_at_utc","consumer_pid","consumer_started_at_utc",
+                       "time_before","time_after","time_future","time_invalid")) {
     Reset-Fixture
     $script:ResponseVariant=$variant
     $script:SleepHook={
@@ -359,6 +371,8 @@ try {
         "arguments_sha256" {$reply.arguments_sha256=("c"*64)}
         "owner_pid" {$reply.owner_pid=$PID+1000000}
         "owner_started_at_utc" {$reply.owner_started_at_utc="OTHER-SYNTHETIC"}
+        "consumer_pid" {$reply.consumer_pid=$PID+1000000}
+        "consumer_started_at_utc" {$reply.consumer_started_at_utc="OTHER-SYNTHETIC-CONSUMER"}
         "time_before" {$reply.responded_at_utc=[DateTime]::Parse($p.created_at_utc).AddSeconds(-1).ToString("o")}
         "time_after" {$reply.responded_at_utc=[DateTime]::Parse($p.expires_at_utc).AddSeconds(1).ToString("o")}
         "time_future" {$reply.responded_at_utc=[DateTime]::UtcNow.AddSeconds(2).ToString("o")}
@@ -371,6 +385,37 @@ try {
       -not (Test-Path -LiteralPath $ApprovalResponsePath)) ("INVALID_REPLY_"+$variant+"_CLEANUP")
   }
   $ApprovalTimeoutSeconds=0.5
+
+  Reset-Fixture
+  $script:ReplacementProcess=Start-Process -FilePath (Join-Path $PSHOME "powershell.exe") -ArgumentList @("-NoProfile","-NonInteractive","-Command","[Threading.Thread]::Sleep(15000)") -WindowStyle Hidden -PassThru
+  try {
+    $consumer=Get-Process -Id $script:ReplacementProcess.Id
+    $marker=$consumer.StartTime.ToUniversalTime().ToString("o")
+    $pending=New-FixturePending 5
+    $pending.consumer_pid=$consumer.Id
+    $pending.consumer_started_at_utc=$marker
+    Write-FixtureJson $PendingApprovalPath $pending
+    Assert-Fixture (Test-LocalApprovalRequestCurrent $pending) "DISTINCT_CONSUMER_PROCESS_ALIVE"
+    $pending.consumer_started_at_utc=[DateTime]::UtcNow.AddMinutes(-1).ToString("o")
+    Write-FixtureJson $PendingApprovalPath $pending
+    Assert-Fixture (-not (Test-LocalApprovalRequestCurrent $pending)) "CONSUMER_START_MARKER_MISMATCH_REJECTED"
+    Assert-Fixture (-not (Publish-LocalApprovalResponse $pending $true)) "CONSUMER_REPLACED_MARKER_NO_REPLY"
+    Assert-Fixture (-not (Test-Path -LiteralPath $ApprovalResponsePath)) "CONSUMER_REPLACED_MARKER_REPLY_ABSENT"
+    $pending.consumer_started_at_utc=$marker
+    Write-FixtureJson $PendingApprovalPath $pending
+    Assert-Fixture (Test-LocalApprovalRequestCurrent $pending) "CONSUMER_ORIGINAL_START_MARKER_RESTORED"
+    Stop-Process -Id $script:ReplacementProcess.Id -Force -ErrorAction Stop
+    $script:ReplacementProcess.WaitForExit(1000)|Out-Null
+    Assert-Fixture (-not (Test-LocalApprovalRequestCurrent $pending)) "DEAD_CONSUMER_REQUEST_REJECTED"
+    Assert-Fixture (-not (Publish-LocalApprovalResponse $pending $true)) "DEAD_CONSUMER_NEVER_PUBLISHES_REPLY"
+    Assert-Fixture (-not (Test-Path -LiteralPath $ApprovalResponsePath)) "DEAD_CONSUMER_REPLY_ABSENT"
+  } finally {
+    if ($script:ReplacementProcess) {
+      Stop-Process -Id $script:ReplacementProcess.Id -Force -ErrorAction SilentlyContinue
+      $script:ReplacementProcess.Dispose()
+      $script:ReplacementProcess=$null
+    }
+  }
 
   $ApprovalTimeoutSeconds=5
   $askConfig=[pscustomobject]@{approval_mode="ASK_EVERY_ACTION"}

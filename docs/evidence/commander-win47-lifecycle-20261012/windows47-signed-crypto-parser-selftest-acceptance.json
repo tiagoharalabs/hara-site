@@ -1,0 +1,60 @@
+{
+  "schema": "hara.commander-win47-private-rc-evidence.v1",
+  "report": {
+    "agent_transport_started": false,
+    "err_truncated": false,
+    "exit_code": 0,
+    "installed_agent_modified": false,
+    "out_truncated": false,
+    "schema": "hara.commander-win47-private-rc-guest-result.v1",
+    "state": "PASS",
+    "validation": {
+      "schema": "hara.commander-win47-private-rc-windows-validation.v1",
+      "state": "PASS",
+      "powershell_version": "5.1.26100.9444",
+      "manifest_sha256": "62433a8dc4e2b39c37f1ce8be7538c92eb207541bfcc5f7babb78cee83bb8e7e",
+      "signature_algorithm": "RS256_RSA3072",
+      "pinned_authority": "commander-release-v2",
+      "files": [
+        {
+          "path": "agent/linux.py",
+          "bytes": 218938,
+          "sha256": "3e0db700dd568a85e23212a5400f1d256546fef77b7f59f574ceed29e04c15b7",
+          "parse_errors": 0
+        },
+        {
+          "path": "agent/windows.ps1",
+          "bytes": 91954,
+          "sha256": "254517c46acf47102ebed5fe31fcb5d880ca0de47b98debeebdcaf4b1b324e36",
+          "parse_errors": 0
+        },
+        {
+          "path": "install/linux.sh",
+          "bytes": 36363,
+          "sha256": "534e14433da9f86eb4342c6d9400e89ecf164545605e02e22f1646510284aba5",
+          "parse_errors": 0
+        },
+        {
+          "path": "install/windows.ps1",
+          "bytes": 23774,
+          "sha256": "4651d11e4be34ff7b78511c05b767e655e36f179c2da3bb47def5893a25de235",
+          "parse_errors": 0
+        }
+      ],
+      "installed_agent_modified": false,
+      "agent_transport_started": false,
+      "self_test": {
+        "state": "PASS",
+        "marker": "COMMANDER_WINDOWS_AGENT_SELF_TEST=PASS",
+        "root_fixture_guaranteed": true,
+        "agent_transport_started": false,
+        "installed_agent_modified": false
+      }
+    }
+  },
+  "commander_direct_receipt_sha256": "8bb152e11501b654f0a77f67e7f2575df453a90536ab1b45780bedef29c11c79",
+  "reviewed_canary_helper_sha256": "962ad5ef6cf27b64f6f86decedc5b69bb28c8db02c7098c7322fc64528a04d2f",
+  "reviewed_validator_sha256": "60431aa16d1a1090a2b5038677e16115f2b8664fe3b6a27ba324b5774f1be7ec",
+  "apply_executed": false,
+  "real_positive_human_approval_proven": false
+}

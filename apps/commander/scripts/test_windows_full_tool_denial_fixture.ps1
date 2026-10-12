@@ -8,8 +8,8 @@ if ($PSVersionTable.PSVersion.Major -ne 5 -or $PSVersionTable.PSVersion.Minor -n
 }
 $source=(Resolve-Path -LiteralPath $AgentSource).Path
 $sourceSha=(Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash.ToLowerInvariant()
-if ($sourceSha -cne "71998b7c5e2dae4f4cbcfe80e5413ab1c6ff8e28ad903734cc1f026dfe8765aa") {
-  throw "FULL_TOOL_FIXTURE_SOURCE_NOT_FROZEN_046"
+if ($sourceSha -cne "f54e5ff8c170e09a3dc795004af426851d111c89ae78408559886e0d693bf805") {
+  throw "FULL_TOOL_FIXTURE_SOURCE_NOT_CANDIDATE_048"
 }
 $tokens=$null;$parseErrors=$null
 $ast=[Management.Automation.Language.Parser]::ParseFile($source,[ref]$tokens,[ref]$parseErrors)
@@ -158,7 +158,7 @@ try {
     schema="hara.commander-windows-full-tool-denial-fixture.v1"
     state="PASS";checks=$script:Passed;passed_checks=@($script:Checks)
     source_sha256=$sourceSha;powershell_version=$PSVersionTable.PSVersion.ToString()
-    scope="FROZEN046_AST_FULL_TOOLS_AND_EXACT_DISPATCH_TRY_CATCH"
+    scope="CANDIDATE048_AST_FULL_TOOLS_AND_EXACT_DISPATCH_TRY_CATCH"
     transport_mocked=$true;local_activity_store_mocked=$true
     agent_main_loop_executed=$false;agent_task_touched=$false
     real_human_approval_proven=$false;live_profile_touched=$false

@@ -1,0 +1,65 @@
+{
+  "schema": "hara.commander-windows48-direct-readback.v1",
+  "observed_at_utc": "2026-10-12T17:27:02.821Z",
+  "direct_plugin": "H.A.R.A. Commander",
+  "reads": [
+    {
+      "state": "PASS",
+      "operational_authority": "HARA_SERVICES",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "runtime_authority_from_chatgpt": false,
+      "mutation_performed": false,
+      "result": {
+        "function_id": "device.info",
+        "risk_class": "READ_ONLY",
+        "process_exit_code": 0,
+        "domain_success_inferred": false,
+        "stdout": "{\"device_id\":\"HARA-DEVICE-64adbd7a-02b1-4890-acdb-9543e8b48d00\",\"architecture\":\"x64\",\"tunnel_mode\":\"OUTBOUND_RELAY\",\"agent_version\":\"0.3.48\",\"platform_release\":\"Microsoft Windows NT 10.0.26300.0\",\"platform\":\"WINDOWS\",\"hostname\":\"HARA_WIN11\",\"powershell_version\":\"5.1.26100.9444\"}"
+      },
+      "customer_services_relay": false,
+      "bridge_receipt_sha256": "37c611aa98f5c2052f0c41a498e5f91ff13885b14402efa7fe777f705a25223a",
+      "computer": "HARA_WIN11",
+      "product": {
+        "plan_code": "FOUNDER_INTERNAL",
+        "entitlement_id": "HARA-ENTITLEMENT-XPK",
+        "quota": {
+          "ok": true,
+          "state": "UNMETERED",
+          "mode": "UNMETERED",
+          "units": 0,
+          "cloud_quota_transaction": false
+        }
+      }
+    },
+    {
+      "state": "PASS",
+      "operational_authority": "HARA_SERVICES",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "runtime_authority_from_chatgpt": false,
+      "mutation_performed": false,
+      "result": {
+        "function_id": "process.sessions",
+        "risk_class": "READ_ONLY",
+        "process_exit_code": 0,
+        "domain_success_inferred": false,
+        "stdout": "{\"count\":0,\"sessions\":[]}"
+      },
+      "customer_services_relay": false,
+      "bridge_receipt_sha256": "84c0feeaffdfa757fc26e64f9548a851233a005fc9d9f5ea51157f8d01a0364b",
+      "computer": "HARA_WIN11",
+      "product": {
+        "plan_code": "FOUNDER_INTERNAL",
+        "entitlement_id": "HARA-ENTITLEMENT-XPK",
+        "quota": {
+          "ok": true,
+          "state": "UNMETERED",
+          "mode": "UNMETERED",
+          "units": 0,
+          "cloud_quota_transaction": false
+        }
+      }
+    }
+  ],
+  "human_positive_mutation_proven": false,
+  "baseline_used": false
+}

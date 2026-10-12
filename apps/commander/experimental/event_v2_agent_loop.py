@@ -106,6 +106,7 @@ def run_connected_session(
     max_steps: int | None = None,
     monotonic=time.monotonic,
     reconnected=False,
+    liveness_state: dict[str, float] | None = None,
 ) -> dict:
     sock = transport.open_event_socket(
         config["HARA_COMMANDER_URL"],
@@ -131,7 +132,11 @@ def run_connected_session(
     safe_telemetry_add(telemetry, "connections")
     if reconnected:
         safe_telemetry_add(telemetry, "reconnects")
-    last_liveness = connected_at
+    if liveness_state is None:
+        # Standalone callers start the same six-hour cadence as before.
+        liveness_state = {"last_liveness_at": connected_at}
+    # The process loop shares this checkpoint across sockets. A reconnect is
+    # not a durable presence write and must not postpone the next LIVENESS.
     last_duration_checkpoint = connected_at
     liveness_interval = durable_liveness_interval(
         config.get("HARA_DEVICE_ID", ""),
@@ -157,7 +162,7 @@ def run_connected_session(
                 # Transport PING is an RFC6455 control frame, never a D1 write.
                 safe_telemetry_add(telemetry, "transport_pings")
 
-            if now - last_liveness >= liveness_interval:
+            if now - liveness_state["last_liveness_at"] >= liveness_interval:
                 safe_telemetry_add(telemetry, "liveness_attempts")
                 summary = None
                 if telemetry is not None:
@@ -170,7 +175,9 @@ def run_connected_session(
                 else:
                     # Piggyback once per ~6h; never create an extra HTTP poll.
                     transport.send_liveness(sock, summary)
-                last_liveness = now
+                # Advance only after the transport accepted the complete send;
+                # a failed send remains due on the next connected socket.
+                liveness_state["last_liveness_at"] = now
 
             if frame is not None:
                 event = transport.parse_event_frame(frame)
@@ -220,22 +227,31 @@ def run_forever(
     *,
     sleep=time.sleep,
     random_unit=None,
+    monotonic=time.monotonic,
 ) -> None:
     policy = transport.ReconnectPolicy()
     entropy = random.SystemRandom()
     random_unit = random_unit or entropy.random
     attempt = 0
     had_session = False
+    # One startup baseline, followed only by successful LIVENESS sends. Keep
+    # it outside the reconnect loop even when the initial Upgrade fails.
+    liveness_state = {"last_liveness_at": monotonic()}
 
     while True:
-        started = time.monotonic()
+        started = monotonic()
         try:
-            run_connected_session(transport, agent, config, reconnected=had_session)
-            connected_seconds = time.monotonic() - started
+            run_connected_session(
+                transport, agent, config,
+                reconnected=had_session,
+                monotonic=monotonic,
+                liveness_state=liveness_state,
+            )
+            connected_seconds = monotonic() - started
         except KeyboardInterrupt:
             raise
         except Exception as exc:
-            connected_seconds = time.monotonic() - started
+            connected_seconds = monotonic() - started
             code = agent.safe_error_code(exc)
             agent.try_write_runtime_status(error_code=code, error_at=agent.utcnow())
             agent.try_write_event_v2_status(

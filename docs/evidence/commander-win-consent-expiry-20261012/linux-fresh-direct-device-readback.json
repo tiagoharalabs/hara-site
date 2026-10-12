@@ -1,0 +1,194 @@
+{
+  "schema": "hara.commander-linux-fresh-device-readback.v1",
+  "plugin": "H.A.R.A. Commander",
+  "baseline_used": false,
+  "scope": "Read-only real device.info; no Agent restart or modification",
+  "computers": [
+    {
+      "computer": "services",
+      "result": {
+        "state": "PASS",
+        "operational_authority": "HARA_COMMANDER",
+        "execution_authority": "HARA_COMMANDER_AGENT",
+        "runtime_authority_from_chatgpt": false,
+        "mutation_performed": false,
+        "result": {
+          "function_id": "device.info",
+          "risk_class": "READ_ONLY",
+          "process_exit_code": 0,
+          "domain_success_inferred": false,
+          "stdout": "{\"agent_version\":\"0.3.46\",\"approval_mode\":\"PERSISTENT_TRUSTED\",\"architecture\":\"x86_64\",\"device_id\":\"HARA-DEVICE-ad55f2aa-9a83-46e1-a6ab-f78d422950fe\",\"hostname\":\"services\",\"platform\":\"LINUX\",\"platform_release\":\"6.8.0-146-generic\",\"python_version\":\"3.12.3\",\"tunnel_mode\":\"EVENT_V2\"}"
+        },
+        "customer_services_relay": false,
+        "bridge_receipt_sha256": "c6752e8e615cb121f91305b46077aa55c8dd2c5f257487d3ab9131b07c147f34",
+        "computer": "services",
+        "product": {
+          "plan_code": "FOUNDER_INTERNAL",
+          "entitlement_id": "HARA-ENTITLEMENT-XPK",
+          "quota": {
+            "ok": true,
+            "state": "UNMETERED",
+            "mode": "UNMETERED",
+            "units": 0,
+            "cloud_quota_transaction": false
+          }
+        }
+      }
+    },
+    {
+      "computer": "nucleo-a",
+      "result": {
+        "state": "PASS",
+        "operational_authority": "HARA_COMMANDER",
+        "execution_authority": "HARA_COMMANDER_AGENT",
+        "runtime_authority_from_chatgpt": false,
+        "mutation_performed": false,
+        "result": {
+          "function_id": "device.info",
+          "risk_class": "READ_ONLY",
+          "process_exit_code": 0,
+          "domain_success_inferred": false,
+          "stdout": "{\"agent_version\":\"0.3.46\",\"approval_mode\":\"PERSISTENT_TRUSTED\",\"architecture\":\"x86_64\",\"device_id\":\"HARA-DEVICE-e032ffff-f2d2-43ad-b2a8-f5385a900f62\",\"hostname\":\"nucleo-a\",\"platform\":\"LINUX\",\"platform_release\":\"7.1.5-76070105-generic\",\"python_version\":\"3.12.3\",\"tunnel_mode\":\"EVENT_V2\"}"
+        },
+        "customer_services_relay": false,
+        "bridge_receipt_sha256": "8eb908b80c312cffbe8bb81a2bc2bae1db8fb910fa4a6c8798f2a006670650ed",
+        "computer": "nucleo-a",
+        "product": {
+          "plan_code": "FOUNDER_INTERNAL",
+          "entitlement_id": "HARA-ENTITLEMENT-XPK",
+          "quota": {
+            "ok": true,
+            "state": "UNMETERED",
+            "mode": "UNMETERED",
+            "units": 0,
+            "cloud_quota_transaction": false
+          }
+        }
+      }
+    },
+    {
+      "computer": "sentinela-a",
+      "result": {
+        "state": "PASS",
+        "operational_authority": "HARA_COMMANDER",
+        "execution_authority": "HARA_COMMANDER_AGENT",
+        "runtime_authority_from_chatgpt": false,
+        "mutation_performed": false,
+        "result": {
+          "function_id": "device.info",
+          "risk_class": "READ_ONLY",
+          "process_exit_code": 0,
+          "domain_success_inferred": false,
+          "stdout": "{\"agent_version\":\"0.3.46\",\"approval_mode\":\"PERSISTENT_TRUSTED\",\"architecture\":\"x86_64\",\"device_id\":\"HARA-DEVICE-1cb60bbf-5c30-43ab-8e05-5b414b190749\",\"hostname\":\"sentinela-a\",\"platform\":\"LINUX\",\"platform_release\":\"7.1.1-76070101-generic\",\"python_version\":\"3.10.12\",\"tunnel_mode\":\"EVENT_V2\"}"
+        },
+        "customer_services_relay": false,
+        "bridge_receipt_sha256": "8ff0ddff92b15aefb4915f9d97fd6b825a448979ac1c5d6446290e3b59770b1d",
+        "computer": "sentinela-a",
+        "product": {
+          "plan_code": "FOUNDER_INTERNAL",
+          "entitlement_id": "HARA-ENTITLEMENT-XPK",
+          "quota": {
+            "ok": true,
+            "state": "UNMETERED",
+            "mode": "UNMETERED",
+            "units": 0,
+            "cloud_quota_transaction": false
+          }
+        }
+      }
+    },
+    {
+      "computer": "sentinela-b",
+      "result": {
+        "state": "PASS",
+        "operational_authority": "HARA_COMMANDER",
+        "execution_authority": "HARA_COMMANDER_AGENT",
+        "runtime_authority_from_chatgpt": false,
+        "mutation_performed": false,
+        "result": {
+          "function_id": "device.info",
+          "risk_class": "READ_ONLY",
+          "process_exit_code": 0,
+          "domain_success_inferred": false,
+          "stdout": "{\"agent_version\":\"0.3.46\",\"approval_mode\":\"PERSISTENT_TRUSTED\",\"architecture\":\"x86_64\",\"device_id\":\"HARA-DEVICE-f1d9ecb6-f1e9-4867-9398-8ed10b785c5a\",\"hostname\":\"sentinela-b\",\"platform\":\"LINUX\",\"platform_release\":\"7.1.1-76070101-generic\",\"python_version\":\"3.10.12\",\"tunnel_mode\":\"EVENT_V2\"}"
+        },
+        "customer_services_relay": false,
+        "bridge_receipt_sha256": "885aaa185036896bca847ded3ed6a87bcb51a1ed6e18c4dbad59e5e483ee803d",
+        "computer": "sentinela-b",
+        "product": {
+          "plan_code": "FOUNDER_INTERNAL",
+          "entitlement_id": "HARA-ENTITLEMENT-XPK",
+          "quota": {
+            "ok": true,
+            "state": "UNMETERED",
+            "mode": "UNMETERED",
+            "units": 0,
+            "cloud_quota_transaction": false
+          }
+        }
+      }
+    },
+    {
+      "computer": "sentinela-c",
+      "result": {
+        "state": "PASS",
+        "operational_authority": "HARA_COMMANDER",
+        "execution_authority": "HARA_COMMANDER_AGENT",
+        "runtime_authority_from_chatgpt": false,
+        "mutation_performed": false,
+        "result": {
+          "function_id": "device.info",
+          "risk_class": "READ_ONLY",
+          "process_exit_code": 0,
+          "domain_success_inferred": false,
+          "stdout": "{\"agent_version\":\"0.3.46\",\"approval_mode\":\"PERSISTENT_TRUSTED\",\"architecture\":\"x86_64\",\"device_id\":\"HARA-DEVICE-11bbcaed-a0d5-4540-9d5a-40b84f1bdf74\",\"hostname\":\"sentinela-c\",\"platform\":\"LINUX\",\"platform_release\":\"7.1.1-76070101-generic\",\"python_version\":\"3.10.12\",\"tunnel_mode\":\"EVENT_V2\"}"
+        },
+        "customer_services_relay": false,
+        "bridge_receipt_sha256": "bd3ca25133795cb38e64566f48637e651aa05e186541f21138be833f5bd90af7",
+        "computer": "sentinela-c",
+        "product": {
+          "plan_code": "FOUNDER_INTERNAL",
+          "entitlement_id": "HARA-ENTITLEMENT-XPK",
+          "quota": {
+            "ok": true,
+            "state": "UNMETERED",
+            "mode": "UNMETERED",
+            "units": 0,
+            "cloud_quota_transaction": false
+          }
+        }
+      }
+    },
+    {
+      "computer": "sentinela-d",
+      "result": {
+        "state": "PASS",
+        "operational_authority": "HARA_COMMANDER",
+        "execution_authority": "HARA_COMMANDER_AGENT",
+        "runtime_authority_from_chatgpt": false,
+        "mutation_performed": false,
+        "result": {
+          "function_id": "device.info",
+          "risk_class": "READ_ONLY",
+          "process_exit_code": 0,
+          "domain_success_inferred": false,
+          "stdout": "{\"agent_version\":\"0.3.46\",\"approval_mode\":\"PERSISTENT_TRUSTED\",\"architecture\":\"x86_64\",\"device_id\":\"HARA-DEVICE-e1aeceb4-0a90-411e-badc-90716260f5e0\",\"hostname\":\"sentinela-d\",\"platform\":\"LINUX\",\"platform_release\":\"6.17.0-42-generic\",\"python_version\":\"3.12.3\",\"tunnel_mode\":\"EVENT_V2\"}"
+        },
+        "customer_services_relay": false,
+        "bridge_receipt_sha256": "252af6455657566a163fa342d69f23d072c5b8dbca0faa4f0e19cbb078e55931",
+        "computer": "sentinela-d",
+        "product": {
+          "plan_code": "FOUNDER_INTERNAL",
+          "entitlement_id": "HARA-ENTITLEMENT-XPK",
+          "quota": {
+            "ok": true,
+            "state": "UNMETERED",
+            "mode": "UNMETERED",
+            "units": 0,
+            "cloud_quota_transaction": false
+          }
+        }
+      }
+    }
+  ]
+}

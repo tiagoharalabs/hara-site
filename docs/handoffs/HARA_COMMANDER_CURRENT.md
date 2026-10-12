@@ -1,3 +1,31 @@
+# H.A.R.A. Commander — CURRENT (12/10/2026; Windows 0.3.48 instalada, acesso direto confirmado)
+
+Documento atual: **docs/operations/HARA_COMMANDER_WINDOWS_048_STARTUP_RC_20261012.md**. A falha de abertura mostrada na imagem (`InvokeMethodOnNull` por StartTime indisponível) foi corrigida na .48, preservando PID e início exatos da sessão. **232 verificações Windows passaram** (68 abertura, 111 consentimento, 26 recusa, 27 retomada), além do controle negativo .47 e do **gate offline 97/97**. RC privada v8 assinada, fonte SHA `f54e5ff8c170e09a3dc795004af426851d111c89ae78408559886e0d693bf805`.
+
+Canário InstallOnly aplicado às 17:21 UTC, com preimagens e configuração/XML da tarefa preservados. Tentativas com metadados vencidos abortaram sem trocar a .47. O usuário abriu manualmente o botão **Abrir_HARA_Commander.cmd** no Desktop às 17:23; operador e consumidor vivos, tarefa Running e fonte .48 confirmados independentemente. Não houve mudança de ASK_EVERY_ACTION nem aprovação automatizada.
+
+**H.A.R.A. Commander direto**: device.info PASS/Agent .48, receipt `37c611aa98f5c2052f0c41a498e5f91ff13885b14402efa7fe777f705a25223a`; process.sessions PASS/count0, receipt `84c0feeaffdfa757fc26e64f9548a851233a005fc9d9f5ea51157f8d01a0364b`. Aprovação humana positiva, escrita CAS e terminal interativo Windows pelo MCP permanecem pendentes. O aviso GNOME foi pré-validado; o primeiro monitor QGASYSTEM falhou por metadados indisponíveis e não enviou notificação. Monitor em contexto do usuário em preparação.
+
+Frota Linux: 7/7 responderam às 16:40 UTC; seis .46/EVENT_V2, B .41/OUTBOUND_RELAY. Terminal B passou 120 linhas, UTF-8, paginação e exit0. Limite de linhas inicial de sessões gerenciadas é ignorado pelo mapeamento atual; registrado como melhoria pendente. Patch Linux de presença passou 34 verificações e conserva prazo entre reconexões do processo vivo; ainda não instalado no runtime.
+
+Downloads Windows públicos seguem .43-v3. Stripe, escala real de mil clientes e limites de presença após restart não foram homologados nesta frente. Baseline não foi usado para as provas desta continuidade. Outras frentes e Storage preservados.
+
+## Registro anterior preservado
+
+# H.A.R.A. Commander — CURRENT (12/10/2026, 16:30 UTC; Windows .47 com falha de abertura, correção .48 em testes)
+
+Documento atual: **docs/operations/HARA_COMMANDER_WINDOWS_047_LIFECYCLE_RC_20261012.md**. A RC privada .47 foi instalada na VM com fonte assinada e configuração/tarefa preservadas. Consentimento PS5.1 **111/111**, recusa integral **26/26**, retomada **17/17**, corridas **27/27**. Gate completo após patch de presença Linux: **94/94 PASS**.
+
+A imagem real do usuário revelou `InvokeMethodOnNull` na recuperação de sessão: `Get-OperatorSession` dereferencia StartTime indisponível. A .48 está em preparação com descarte seguro de metadados ausentes/inválidos, mantendo PID e início exatos. **Windows ainda não homologado pelo MCP mutante com aceite humano positivo.** O último hostname .46 expirou às 15:59:09Z. Interrupção do consumidor .47 às16:10 (`0xC000013A`) continua sem causa comprovada.
+
+A VM foi ligada e o viewer aberto a pedido do usuário. Foram criados no Desktop Windows `HARA_Commander_Abrir_047.cmd` e instruções da frase completa de aprovação. O CMD aponta ao caminho instalado e dispensa clipboard. Não foi automatizado aceite local; `ASK_EVERY_ACTION` e 30s permanecem.
+
+Services respondeu novamente via H.A.R.A. Commander direto às16:25 com heartbeat normal, sem restart. O patch de reconexão Linux conserva o prazo do processo vivo, com **6 cenários/34 checks** e controle negativo; ainda não instalado no runtime. Reinício do processo e ausência de ACKD1 continuam limites documentados.
+
+Somente **H.A.R.A. Commander direto**, não Baseline, conta como prova comercial. Downloads Windows públicos permanecem .43-v3. Stripe e escala de mil clientes continuam independentes/pendentes. Arquivos de outras frentes e releases históricas foram preservados.
+
+## Registro anterior preservado
+
 # H.A.R.A. Commander — CURRENT (12/10/2026, Windows canário 0.3.46; aceite humano pendente)
 
 ## Windows 0.3.46-v6 — expiração corrigida, canário privado aplicado

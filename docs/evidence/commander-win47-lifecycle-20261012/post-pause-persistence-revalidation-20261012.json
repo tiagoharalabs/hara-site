@@ -1,0 +1,66 @@
+{
+  "canary_acceptance_not_inferred": true,
+  "canonical_head": "bf91d52394b457fd7f0cfc76f786ab58ff2d0559",
+  "canonical_index_empty": true,
+  "captured_at_utc": "2026-10-12T15:31:40.803169+00:00",
+  "commit_or_push_performed": false,
+  "diff_check_pass": true,
+  "frozen_manifest_sha256": "62433a8dc4e2b39c37f1ce8be7538c92eb207541bfcc5f7babb78cee83bb8e7e",
+  "github_exact_readback": "bf91d52394b457fd7f0cfc76f786ab58ff2d0559",
+  "github_read_method": "git_ls_remote_normal_https_readonly_exit0",
+  "held7": [
+    {
+      "expected_sha256": "ee6d392d1ad8b78877b426ccff94812e9968078c76f2f40bb8f87344e9023d4f",
+      "matches_pre_pause": true,
+      "path": "apps/commander/candidate/install_windows_rc.ps1",
+      "sha256": "ee6d392d1ad8b78877b426ccff94812e9968078c76f2f40bb8f87344e9023d4f"
+    },
+    {
+      "expected_sha256": "a4dcf789a6b653b7f84281198f162626ea4a3fc518a381f9154bfd6b542ee260",
+      "matches_pre_pause": true,
+      "path": "apps/commander/experimental/event_v2_windows_agent.ps1",
+      "sha256": "a4dcf789a6b653b7f84281198f162626ea4a3fc518a381f9154bfd6b542ee260"
+    },
+    {
+      "expected_sha256": "6251bfd1fe46c055fe75233a3bba1e10c7f5fe9925186375ce2b6ec0c536697e",
+      "matches_pre_pause": true,
+      "path": "apps/commander/scripts/validate_windows_local_activity_store.py",
+      "sha256": "6251bfd1fe46c055fe75233a3bba1e10c7f5fe9925186375ce2b6ec0c536697e"
+    },
+    {
+      "expected_sha256": "c7de159d407b6a13d694c3869745c3e7bf649b96a46a7d4a8b2aa32af067f888",
+      "matches_pre_pause": true,
+      "path": "docs/operations/HARA_COMMANDER_WINDOWS_044_APPROVAL_AND_PTY_RC_20261012.md",
+      "sha256": "c7de159d407b6a13d694c3869745c3e7bf649b96a46a7d4a8b2aa32af067f888"
+    },
+    {
+      "expected_sha256": "a96d796312195730578dba9842cba0e53037ecba5ef9a4289d3488462ad7b7e3",
+      "matches_pre_pause": true,
+      "path": "apps/commander/scripts/test_commander_commercial_readiness_gate.py",
+      "sha256": "a96d796312195730578dba9842cba0e53037ecba5ef9a4289d3488462ad7b7e3"
+    },
+    {
+      "expected_sha256": "9456b5d54343083a72b95694ae17695b67e75f9facebbbb972277f77d7a9d8ac",
+      "matches_pre_pause": true,
+      "path": "apps/commander/scripts/validate_event_v2_windows_ps51_compat.py",
+      "sha256": "9456b5d54343083a72b95694ae17695b67e75f9facebbbb972277f77d7a9d8ac"
+    },
+    {
+      "expected_sha256": "a7e526d36db2ce88c221c4e0ca7f39e376564d418c3ce61eb9f775b1bd6cb8a8",
+      "matches_pre_pause": true,
+      "path": "docs/evidence/commander-win44-canary-20261011/acceptance.json",
+      "sha256": "a7e526d36db2ce88c221c4e0ca7f39e376564d418c3ce61eb9f775b1bd6cb8a8"
+    }
+  ],
+  "held7_modified": false,
+  "new_tests_run": false,
+  "readback_run_id": "HARA-PROC-5229ba12a6b345aa8f55328630d104ae",
+  "schema": "hara.commander-post-pause-persistence-revalidation.v1",
+  "source_sha256": "254517c46acf47102ebed5fe31fcb5d880ca0de47b98debeebdcaf4b1b324e36",
+  "state": "PASS",
+  "storage_operation": false,
+  "windows_call_made": false,
+  "worktree": "/tmp_hara/commander-win47-lifecycle-20261012",
+  "worktree_head": "1dd5b8729d24966cb1a2cf7fba3bfd2a64798c5c",
+  "worktree_index_empty": true
+}

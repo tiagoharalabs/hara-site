@@ -1,0 +1,20 @@
+{
+  "schema": "hara.commander-win47-private-rc-evidence.v1",
+  "report": {
+    "exit_code": 0,
+    "stderr_present": false,
+    "metadata": {
+      "state": "PARSED",
+      "parse_errors": 0,
+      "sha256": "962ad5ef6cf27b64f6f86decedc5b69bb28c8db02c7098c7322fc64528a04d2f",
+      "bytes": 19505,
+      "powershell_version": "5.1.26100.9444",
+      "installed_agent_modified": false
+    }
+  },
+  "commander_direct_receipt_sha256": "cc9a627abb0c9ab2da4a6892cad2c9e965e03816be40b33f5cd5d2dfccb837a5",
+  "reviewed_canary_helper_sha256": "962ad5ef6cf27b64f6f86decedc5b69bb28c8db02c7098c7322fc64528a04d2f",
+  "reviewed_validator_sha256": "60431aa16d1a1090a2b5038677e16115f2b8664fe3b6a27ba324b5774f1be7ec",
+  "apply_executed": false,
+  "real_positive_human_approval_proven": false
+}

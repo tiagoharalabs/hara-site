@@ -1,0 +1,57 @@
+{
+  "active_source_byte_identical": true,
+  "agent_version": "0.3.48",
+  "approved_source_sha256": "f54e5ff8c170e09a3dc795004af426851d111c89ae78408559886e0d693bf805",
+  "artifacts": [
+    {
+      "bytes": 92151,
+      "path": "agent/windows.ps1",
+      "sha256": "f54e5ff8c170e09a3dc795004af426851d111c89ae78408559886e0d693bf805"
+    },
+    {
+      "bytes": 23774,
+      "path": "install/windows.ps1",
+      "sha256": "1ff4c187de3731634564709f2dc0eb4929058a0859fcdd04432d508d78b6f1c0"
+    },
+    {
+      "bytes": 765,
+      "path": "release/agent-manifest.json",
+      "sha256": "5e65b1862c40bc9164609cdcd1401bb55e02e409b44f1b58bca15151e40de32c"
+    },
+    {
+      "bytes": 725,
+      "path": "release/agent-manifest.sig.json",
+      "sha256": "eeaabb12343adc37f5d1c7e82cd660ab768f703d9e9241df2d7b3543dd5333a3"
+    }
+  ],
+  "captured_at_utc": "2026-10-12T16:41:27.604078+00:00",
+  "commit48_performed": false,
+  "historical_bundles_byte_identical_to_commit": [
+    "commercial-0.3.43-v3",
+    "commercial-0.3.44-v4-rc",
+    "commercial-0.3.45-v5-rc",
+    "commercial-0.3.46-v6-rc",
+    "commercial-0.3.47-v7-rc"
+  ],
+  "historical_commit": "82030189ad1b25c25176fc4875e4a34aa272570b",
+  "key_rotated": false,
+  "linux_assets_byte_identical": true,
+  "live_acceptance_is_separate": true,
+  "manifest_sha256": "5e65b1862c40bc9164609cdcd1401bb55e02e409b44f1b58bca15151e40de32c",
+  "private_key_exported": false,
+  "product_receipts": {
+    "freeze": "acf99a8fe7e509aa035c1279186fdd1e6cdd1a61aeccb5d3c6656bb2eb7aa09c",
+    "prepare": "fc200c7259f3a10021323cb296d20fcf4e3577982a7f46ca6a7573c61297eccc",
+    "sign": "07da593792b2c24beb377d4227e272f1c54b1e8ca1a3a6ffe588f25a0cb2b4fa",
+    "validation": "b9b41e9f63b5adef47e7ddbd8e4395b1cf34157fdd67635247668d17fa4fdd5d"
+  },
+  "production_deployment": false,
+  "release_authority": "commander-release-v2",
+  "release_bundle": "apps/commander/release-bundles/commercial-0.3.48-v8-rc",
+  "schema": "hara.commander-windows048-private-rc-release-evidence.v1",
+  "signature_algorithm": "RS256_RSA3072",
+  "state": "PASS",
+  "storage_mutation": false,
+  "total_bundle_bytes": 374065,
+  "vm_apply_performed_by_release_builder": false
+}

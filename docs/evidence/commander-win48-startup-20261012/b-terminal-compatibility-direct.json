@@ -1,0 +1,255 @@
+{
+  "schema": "hara.commander-sentinela-b-terminal-compatibility-direct.v1",
+  "recorded_at_utc": "2026-10-12T16:47:23.584Z",
+  "surface": "H.A.R.A. Commander direct plugin",
+  "tool_prefix": "mcp__codex_apps__h_a_r_a__commander__h_a_r_a_commander_",
+  "baseline_used": false,
+  "computer": "sentinela-b",
+  "before_agent_info": {
+    "computer": "sentinela-b",
+    "retrieved_at_utc": "2026-10-12T16:40:05.261Z",
+    "state": "PASS",
+    "execution_authority": "HARA_COMMANDER_AGENT",
+    "operational_authority": "HARA_SERVICES",
+    "mutation_performed": false,
+    "customer_services_relay": false,
+    "bridge_receipt_sha256": "3d595608f869bb01800cd07602c9e2c83fb924458da3f45917953a345b8271fd",
+    "list_state": "ONLINE",
+    "last_seen_at_utc": "2026-10-12T16:37:52.699Z",
+    "agent_version": "0.3.41",
+    "tunnel_mode": "OUTBOUND_RELAY",
+    "approval_mode": "PERSISTENT_TRUSTED",
+    "platform": "LINUX",
+    "hostname": "sentinela-b",
+    "device_id": "HARA-DEVICE-f1d9ecb6-f1e9-4867-9398-8ed10b785c5a"
+  },
+  "post_agent_info": {
+    "retrieved_at_utc": "2026-10-12T16:46:34.458Z",
+    "state": "PASS",
+    "execution_authority": "HARA_COMMANDER_AGENT",
+    "mutation_performed": false,
+    "customer_services_relay": false,
+    "bridge_receipt_sha256": "5f7803f5eaec52265ae090d6b53248c5efa2d511557d6590c7c0f1522d2fe395",
+    "result": {
+      "agent_version": "0.3.41",
+      "approval_mode": "PERSISTENT_TRUSTED",
+      "architecture": "x86_64",
+      "device_id": "HARA-DEVICE-f1d9ecb6-f1e9-4867-9398-8ed10b785c5a",
+      "hostname": "sentinela-b",
+      "platform": "LINUX",
+      "platform_release": "7.1.1-76070101-generic",
+      "python_version": "3.10.12",
+      "tunnel_mode": "OUTBOUND_RELAY"
+    }
+  },
+  "fixture": {
+    "marker": "B_TERM_COMPAT_20261012164449316",
+    "command": "python3 -u -c 'print(\"B_TERM_COMPAT_20261012164449316:BEGIN\",flush=True);print(\"UNICODE: ação, çãá, ✓\",flush=True);[print(\"B_TERM_COMPAT_20261012164449316:LINE:%03d\"%i,flush=True) for i in range(1,121)];print(\"B_TERM_COMPAT_20261012164449316:END\",flush=True)'",
+    "started_at_utc": "2026-10-12T16:44:49.316Z",
+    "expected_count": 120,
+    "unicode": "UNICODE: ação, çãá, ✓",
+    "read_process_output_calls": 3,
+    "requested_start": {
+      "interactive": true,
+      "timeout_ms": 1000,
+      "max_lines": 10
+    },
+    "writes_files": false,
+    "reads_environment": false,
+    "makes_network_requests": false,
+    "processes_killed": 0,
+    "machines_restarted": 0,
+    "agents_updated": false,
+    "windows_target_calls": 0
+  },
+  "state": "PASS",
+  "checks": {
+    "expected123_lines": true,
+    "start_output_exact": true,
+    "paged_output_exact": true,
+    "unicode_exact_in_start_and_paged": true,
+    "all_numbered_lines_001_to_120_in_order": true,
+    "begin_and_tail_end_present": true,
+    "follow_offset_from_start_next_offset": true,
+    "paging_offsets_exact": true,
+    "total_lines_stable": true,
+    "no_buffer_truncation": true,
+    "natural_exit_zero": true,
+    "post_test_agent_041": true
+  },
+  "observed_behavior": {
+    "start_requested_max_lines": 10,
+    "start_returned_lines": 123,
+    "interactive_start_max_lines_limited_output": false,
+    "paging_read_requested_and_returned_lines": [
+      {
+        "offset": 0,
+        "requested": 42,
+        "returned": 42
+      },
+      {
+        "offset": 42,
+        "requested": 81,
+        "returned": 81
+      }
+    ],
+    "note": "The interactive start returned all 123 lines despite max_lines=10; bounded output paging subsequently honored 42/81 lines. This observation is retained separately from the tested output-integrity result."
+  },
+  "calls": [
+    {
+      "sequence": 1,
+      "tool": "start_process",
+      "state": "PASS",
+      "operational_authority": "HARA_SERVICES",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "mutation_performed": true,
+      "customer_services_relay": false,
+      "bridge_receipt_sha256": "a7bd17c1fdbe7bb719e551c8780dffcef2ed962566c0981d6cd40f97bbfbdfcd",
+      "product_quota": {
+        "ok": true,
+        "state": "UNMETERED",
+        "mode": "UNMETERED",
+        "units": 0,
+        "cloud_quota_transaction": false
+      },
+      "result": {
+        "base_line": 0,
+        "buffer_truncated": false,
+        "command_preview": "python3 -u -c 'print(\"B_TERM_COMPAT_20261012164449316:BEGIN\",flush=True);print(\"UNICODE: ação, çãá, ✓\",flush=True);[print(\"B_TERM_COMPAT_20261012164449316:LINE:%03d\"%i,flush=True) for i in range(1,121)];print(\"B_TERM_COMPAT_2026101216444...",
+        "command_sha256": "84f2cdce26910eceee5681f0ea7d97e978170d2a6716333af244e2bdd4a92d3a",
+        "cwd": "/home/sartorius",
+        "exit_code": null,
+        "next_offset": 123,
+        "offset": 0,
+        "partial": "",
+        "pid": 669183,
+        "session_id": "HARA-PROC-2725478a635443b5881e1f767c59ed09",
+        "state": "RUNNING",
+        "text": "B_TERM_COMPAT_20261012164449316:BEGIN\r\nUNICODE: ação, çãá, ✓\r\nB_TERM_COMPAT_20261012164449316:LINE:001\r\nB_TERM_COMPAT_20261012164449316:LINE:002\r\nB_TERM_COMPAT_20261012164449316:LINE:003\r\nB_TERM_COMPAT_20261012164449316:LINE:004\r\nB_TERM_COMPAT_20261012164449316:LINE:005\r\nB_TERM_COMPAT_20261012164449316:LINE:006\r\nB_TERM_COMPAT_20261012164449316:LINE:007\r\nB_TERM_COMPAT_20261012164449316:LINE:008\r\nB_TERM_COMPAT_20261012164449316:LINE:009\r\nB_TERM_COMPAT_20261012164449316:LINE:010\r\nB_TERM_COMPAT_20261012164449316:LINE:011\r\nB_TERM_COMPAT_20261012164449316:LINE:012\r\nB_TERM_COMPAT_20261012164449316:LINE:013\r\nB_TERM_COMPAT_20261012164449316:LINE:014\r\nB_TERM_COMPAT_20261012164449316:LINE:015\r\nB_TERM_COMPAT_20261012164449316:LINE:016\r\nB_TERM_COMPAT_20261012164449316:LINE:017\r\nB_TERM_COMPAT_20261012164449316:LINE:018\r\nB_TERM_COMPAT_20261012164449316:LINE:019\r\nB_TERM_COMPAT_20261012164449316:LINE:020\r\nB_TERM_COMPAT_20261012164449316:LINE:021\r\nB_TERM_COMPAT_20261012164449316:LINE:022\r\nB_TERM_COMPAT_20261012164449316:LINE:023\r\nB_TERM_COMPAT_20261012164449316:LINE:024\r\nB_TERM_COMPAT_20261012164449316:LINE:025\r\nB_TERM_COMPAT_20261012164449316:LINE:026\r\nB_TERM_COMPAT_20261012164449316:LINE:027\r\nB_TERM_COMPAT_20261012164449316:LINE:028\r\nB_TERM_COMPAT_20261012164449316:LINE:029\r\nB_TERM_COMPAT_20261012164449316:LINE:030\r\nB_TERM_COMPAT_20261012164449316:LINE:031\r\nB_TERM_COMPAT_20261012164449316:LINE:032\r\nB_TERM_COMPAT_20261012164449316:LINE:033\r\nB_TERM_COMPAT_20261012164449316:LINE:034\r\nB_TERM_COMPAT_20261012164449316:LINE:035\r\nB_TERM_COMPAT_20261012164449316:LINE:036\r\nB_TERM_COMPAT_20261012164449316:LINE:037\r\nB_TERM_COMPAT_20261012164449316:LINE:038\r\nB_TERM_COMPAT_20261012164449316:LINE:039\r\nB_TERM_COMPAT_20261012164449316:LINE:040\r\nB_TERM_COMPAT_20261012164449316:LINE:041\r\nB_TERM_COMPAT_20261012164449316:LINE:042\r\nB_TERM_COMPAT_20261012164449316:LINE:043\r\nB_TERM_COMPAT_20261012164449316:LINE:044\r\nB_TERM_COMPAT_20261012164449316:LINE:045\r\nB_TERM_COMPAT_20261012164449316:LINE:046\r\nB_TERM_COMPAT_20261012164449316:LINE:047\r\nB_TERM_COMPAT_20261012164449316:LINE:048\r\nB_TERM_COMPAT_20261012164449316:LINE:049\r\nB_TERM_COMPAT_20261012164449316:LINE:050\r\nB_TERM_COMPAT_20261012164449316:LINE:051\r\nB_TERM_COMPAT_20261012164449316:LINE:052\r\nB_TERM_COMPAT_20261012164449316:LINE:053\r\nB_TERM_COMPAT_20261012164449316:LINE:054\r\nB_TERM_COMPAT_20261012164449316:LINE:055\r\nB_TERM_COMPAT_20261012164449316:LINE:056\r\nB_TERM_COMPAT_20261012164449316:LINE:057\r\nB_TERM_COMPAT_20261012164449316:LINE:058\r\nB_TERM_COMPAT_20261012164449316:LINE:059\r\nB_TERM_COMPAT_20261012164449316:LINE:060\r\nB_TERM_COMPAT_20261012164449316:LINE:061\r\nB_TERM_COMPAT_20261012164449316:LINE:062\r\nB_TERM_COMPAT_20261012164449316:LINE:063\r\nB_TERM_COMPAT_20261012164449316:LINE:064\r\nB_TERM_COMPAT_20261012164449316:LINE:065\r\nB_TERM_COMPAT_20261012164449316:LINE:066\r\nB_TERM_COMPAT_20261012164449316:LINE:067\r\nB_TERM_COMPAT_20261012164449316:LINE:068\r\nB_TERM_COMPAT_20261012164449316:LINE:069\r\nB_TERM_COMPAT_20261012164449316:LINE:070\r\nB_TERM_COMPAT_20261012164449316:LINE:071\r\nB_TERM_COMPAT_20261012164449316:LINE:072\r\nB_TERM_COMPAT_20261012164449316:LINE:073\r\nB_TERM_COMPAT_20261012164449316:LINE:074\r\nB_TERM_COMPAT_20261012164449316:LINE:075\r\nB_TERM_COMPAT_20261012164449316:LINE:076\r\nB_TERM_COMPAT_20261012164449316:LINE:077\r\nB_TERM_COMPAT_20261012164449316:LINE:078\r\nB_TERM_COMPAT_20261012164449316:LINE:079\r\nB_TERM_COMPAT_20261012164449316:LINE:080\r\nB_TERM_COMPAT_20261012164449316:LINE:081\r\nB_TERM_COMPAT_20261012164449316:LINE:082\r\nB_TERM_COMPAT_20261012164449316:LINE:083\r\nB_TERM_COMPAT_20261012164449316:LINE:084\r\nB_TERM_COMPAT_20261012164449316:LINE:085\r\nB_TERM_COMPAT_20261012164449316:LINE:086\r\nB_TERM_COMPAT_20261012164449316:LINE:087\r\nB_TERM_COMPAT_20261012164449316:LINE:088\r\nB_TERM_COMPAT_20261012164449316:LINE:089\r\nB_TERM_COMPAT_20261012164449316:LINE:090\r\nB_TERM_COMPAT_20261012164449316:LINE:091\r\nB_TERM_COMPAT_20261012164449316:LINE:092\r\nB_TERM_COMPAT_20261012164449316:LINE:093\r\nB_TERM_COMPAT_20261012164449316:LINE:094\r\nB_TERM_COMPAT_20261012164449316:LINE:095\r\nB_TERM_COMPAT_20261012164449316:LINE:096\r\nB_TERM_COMPAT_20261012164449316:LINE:097\r\nB_TERM_COMPAT_20261012164449316:LINE:098\r\nB_TERM_COMPAT_20261012164449316:LINE:099\r\nB_TERM_COMPAT_20261012164449316:LINE:100\r\nB_TERM_COMPAT_20261012164449316:LINE:101\r\nB_TERM_COMPAT_20261012164449316:LINE:102\r\nB_TERM_COMPAT_20261012164449316:LINE:103\r\nB_TERM_COMPAT_20261012164449316:LINE:104\r\nB_TERM_COMPAT_20261012164449316:LINE:105\r\nB_TERM_COMPAT_20261012164449316:LINE:106\r\nB_TERM_COMPAT_20261012164449316:LINE:107\r\nB_TERM_COMPAT_20261012164449316:LINE:108\r\nB_TERM_COMPAT_20261012164449316:LINE:109\r\nB_TERM_COMPAT_20261012164449316:LINE:110\r\nB_TERM_COMPAT_20261012164449316:LINE:111\r\nB_TERM_COMPAT_20261012164449316:LINE:112\r\nB_TERM_COMPAT_20261012164449316:LINE:113\r\nB_TERM_COMPAT_20261012164449316:LINE:114\r\nB_TERM_COMPAT_20261012164449316:LINE:115\r\nB_TERM_COMPAT_20261012164449316:LINE:116\r\nB_TERM_COMPAT_20261012164449316:LINE:117\r\nB_TERM_COMPAT_20261012164449316:LINE:118\r\nB_TERM_COMPAT_20261012164449316:LINE:119\r\nB_TERM_COMPAT_20261012164449316:LINE:120\r\nB_TERM_COMPAT_20261012164449316:END\r",
+        "total_lines": 123,
+        "truncated_before": false
+      }
+    },
+    {
+      "sequence": 2,
+      "tool": "read_process_output",
+      "state": "PASS",
+      "operational_authority": "HARA_SERVICES",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "mutation_performed": false,
+      "customer_services_relay": false,
+      "bridge_receipt_sha256": "6b651bf44b64d7dd390a11116fe450e4fc73675bf7afbfb4d4b1691278d60205",
+      "product_quota": {
+        "ok": true,
+        "state": "UNMETERED",
+        "mode": "UNMETERED",
+        "units": 0,
+        "cloud_quota_transaction": false
+      },
+      "result": {
+        "base_line": 0,
+        "buffer_truncated": false,
+        "exit_code": 0,
+        "next_offset": 123,
+        "offset": 123,
+        "partial": "",
+        "pid": 669183,
+        "session_id": "HARA-PROC-2725478a635443b5881e1f767c59ed09",
+        "state": "EXITED",
+        "text": "",
+        "total_lines": 123,
+        "truncated_before": false
+      }
+    },
+    {
+      "sequence": 3,
+      "tool": "read_process_output",
+      "state": "PASS",
+      "operational_authority": "HARA_SERVICES",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "mutation_performed": false,
+      "customer_services_relay": false,
+      "bridge_receipt_sha256": "b3827a53c8f38c92fd9936081083c0ec8a925479def5b605e5a080cef270c004",
+      "product_quota": {
+        "ok": true,
+        "state": "UNMETERED",
+        "mode": "UNMETERED",
+        "units": 0,
+        "cloud_quota_transaction": false
+      },
+      "result": {
+        "base_line": 0,
+        "buffer_truncated": false,
+        "exit_code": 0,
+        "next_offset": 42,
+        "offset": 0,
+        "partial": "",
+        "pid": 669183,
+        "session_id": "HARA-PROC-2725478a635443b5881e1f767c59ed09",
+        "state": "EXITED",
+        "text": "B_TERM_COMPAT_20261012164449316:BEGIN\r\nUNICODE: ação, çãá, ✓\r\nB_TERM_COMPAT_20261012164449316:LINE:001\r\nB_TERM_COMPAT_20261012164449316:LINE:002\r\nB_TERM_COMPAT_20261012164449316:LINE:003\r\nB_TERM_COMPAT_20261012164449316:LINE:004\r\nB_TERM_COMPAT_20261012164449316:LINE:005\r\nB_TERM_COMPAT_20261012164449316:LINE:006\r\nB_TERM_COMPAT_20261012164449316:LINE:007\r\nB_TERM_COMPAT_20261012164449316:LINE:008\r\nB_TERM_COMPAT_20261012164449316:LINE:009\r\nB_TERM_COMPAT_20261012164449316:LINE:010\r\nB_TERM_COMPAT_20261012164449316:LINE:011\r\nB_TERM_COMPAT_20261012164449316:LINE:012\r\nB_TERM_COMPAT_20261012164449316:LINE:013\r\nB_TERM_COMPAT_20261012164449316:LINE:014\r\nB_TERM_COMPAT_20261012164449316:LINE:015\r\nB_TERM_COMPAT_20261012164449316:LINE:016\r\nB_TERM_COMPAT_20261012164449316:LINE:017\r\nB_TERM_COMPAT_20261012164449316:LINE:018\r\nB_TERM_COMPAT_20261012164449316:LINE:019\r\nB_TERM_COMPAT_20261012164449316:LINE:020\r\nB_TERM_COMPAT_20261012164449316:LINE:021\r\nB_TERM_COMPAT_20261012164449316:LINE:022\r\nB_TERM_COMPAT_20261012164449316:LINE:023\r\nB_TERM_COMPAT_20261012164449316:LINE:024\r\nB_TERM_COMPAT_20261012164449316:LINE:025\r\nB_TERM_COMPAT_20261012164449316:LINE:026\r\nB_TERM_COMPAT_20261012164449316:LINE:027\r\nB_TERM_COMPAT_20261012164449316:LINE:028\r\nB_TERM_COMPAT_20261012164449316:LINE:029\r\nB_TERM_COMPAT_20261012164449316:LINE:030\r\nB_TERM_COMPAT_20261012164449316:LINE:031\r\nB_TERM_COMPAT_20261012164449316:LINE:032\r\nB_TERM_COMPAT_20261012164449316:LINE:033\r\nB_TERM_COMPAT_20261012164449316:LINE:034\r\nB_TERM_COMPAT_20261012164449316:LINE:035\r\nB_TERM_COMPAT_20261012164449316:LINE:036\r\nB_TERM_COMPAT_20261012164449316:LINE:037\r\nB_TERM_COMPAT_20261012164449316:LINE:038\r\nB_TERM_COMPAT_20261012164449316:LINE:039\r\nB_TERM_COMPAT_20261012164449316:LINE:040\r",
+        "total_lines": 123,
+        "truncated_before": false
+      }
+    },
+    {
+      "sequence": 4,
+      "tool": "read_process_output",
+      "state": "PASS",
+      "operational_authority": "HARA_SERVICES",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "mutation_performed": false,
+      "customer_services_relay": false,
+      "bridge_receipt_sha256": "1e458fc991a62fba181db7a705fa8b212abd5152c14e0769837e1e423c4d8d1f",
+      "product_quota": {
+        "ok": true,
+        "state": "UNMETERED",
+        "mode": "UNMETERED",
+        "units": 0,
+        "cloud_quota_transaction": false
+      },
+      "result": {
+        "base_line": 0,
+        "buffer_truncated": false,
+        "exit_code": 0,
+        "next_offset": 123,
+        "offset": 42,
+        "partial": "",
+        "pid": 669183,
+        "session_id": "HARA-PROC-2725478a635443b5881e1f767c59ed09",
+        "state": "EXITED",
+        "text": "B_TERM_COMPAT_20261012164449316:LINE:041\r\nB_TERM_COMPAT_20261012164449316:LINE:042\r\nB_TERM_COMPAT_20261012164449316:LINE:043\r\nB_TERM_COMPAT_20261012164449316:LINE:044\r\nB_TERM_COMPAT_20261012164449316:LINE:045\r\nB_TERM_COMPAT_20261012164449316:LINE:046\r\nB_TERM_COMPAT_20261012164449316:LINE:047\r\nB_TERM_COMPAT_20261012164449316:LINE:048\r\nB_TERM_COMPAT_20261012164449316:LINE:049\r\nB_TERM_COMPAT_20261012164449316:LINE:050\r\nB_TERM_COMPAT_20261012164449316:LINE:051\r\nB_TERM_COMPAT_20261012164449316:LINE:052\r\nB_TERM_COMPAT_20261012164449316:LINE:053\r\nB_TERM_COMPAT_20261012164449316:LINE:054\r\nB_TERM_COMPAT_20261012164449316:LINE:055\r\nB_TERM_COMPAT_20261012164449316:LINE:056\r\nB_TERM_COMPAT_20261012164449316:LINE:057\r\nB_TERM_COMPAT_20261012164449316:LINE:058\r\nB_TERM_COMPAT_20261012164449316:LINE:059\r\nB_TERM_COMPAT_20261012164449316:LINE:060\r\nB_TERM_COMPAT_20261012164449316:LINE:061\r\nB_TERM_COMPAT_20261012164449316:LINE:062\r\nB_TERM_COMPAT_20261012164449316:LINE:063\r\nB_TERM_COMPAT_20261012164449316:LINE:064\r\nB_TERM_COMPAT_20261012164449316:LINE:065\r\nB_TERM_COMPAT_20261012164449316:LINE:066\r\nB_TERM_COMPAT_20261012164449316:LINE:067\r\nB_TERM_COMPAT_20261012164449316:LINE:068\r\nB_TERM_COMPAT_20261012164449316:LINE:069\r\nB_TERM_COMPAT_20261012164449316:LINE:070\r\nB_TERM_COMPAT_20261012164449316:LINE:071\r\nB_TERM_COMPAT_20261012164449316:LINE:072\r\nB_TERM_COMPAT_20261012164449316:LINE:073\r\nB_TERM_COMPAT_20261012164449316:LINE:074\r\nB_TERM_COMPAT_20261012164449316:LINE:075\r\nB_TERM_COMPAT_20261012164449316:LINE:076\r\nB_TERM_COMPAT_20261012164449316:LINE:077\r\nB_TERM_COMPAT_20261012164449316:LINE:078\r\nB_TERM_COMPAT_20261012164449316:LINE:079\r\nB_TERM_COMPAT_20261012164449316:LINE:080\r\nB_TERM_COMPAT_20261012164449316:LINE:081\r\nB_TERM_COMPAT_20261012164449316:LINE:082\r\nB_TERM_COMPAT_20261012164449316:LINE:083\r\nB_TERM_COMPAT_20261012164449316:LINE:084\r\nB_TERM_COMPAT_20261012164449316:LINE:085\r\nB_TERM_COMPAT_20261012164449316:LINE:086\r\nB_TERM_COMPAT_20261012164449316:LINE:087\r\nB_TERM_COMPAT_20261012164449316:LINE:088\r\nB_TERM_COMPAT_20261012164449316:LINE:089\r\nB_TERM_COMPAT_20261012164449316:LINE:090\r\nB_TERM_COMPAT_20261012164449316:LINE:091\r\nB_TERM_COMPAT_20261012164449316:LINE:092\r\nB_TERM_COMPAT_20261012164449316:LINE:093\r\nB_TERM_COMPAT_20261012164449316:LINE:094\r\nB_TERM_COMPAT_20261012164449316:LINE:095\r\nB_TERM_COMPAT_20261012164449316:LINE:096\r\nB_TERM_COMPAT_20261012164449316:LINE:097\r\nB_TERM_COMPAT_20261012164449316:LINE:098\r\nB_TERM_COMPAT_20261012164449316:LINE:099\r\nB_TERM_COMPAT_20261012164449316:LINE:100\r\nB_TERM_COMPAT_20261012164449316:LINE:101\r\nB_TERM_COMPAT_20261012164449316:LINE:102\r\nB_TERM_COMPAT_20261012164449316:LINE:103\r\nB_TERM_COMPAT_20261012164449316:LINE:104\r\nB_TERM_COMPAT_20261012164449316:LINE:105\r\nB_TERM_COMPAT_20261012164449316:LINE:106\r\nB_TERM_COMPAT_20261012164449316:LINE:107\r\nB_TERM_COMPAT_20261012164449316:LINE:108\r\nB_TERM_COMPAT_20261012164449316:LINE:109\r\nB_TERM_COMPAT_20261012164449316:LINE:110\r\nB_TERM_COMPAT_20261012164449316:LINE:111\r\nB_TERM_COMPAT_20261012164449316:LINE:112\r\nB_TERM_COMPAT_20261012164449316:LINE:113\r\nB_TERM_COMPAT_20261012164449316:LINE:114\r\nB_TERM_COMPAT_20261012164449316:LINE:115\r\nB_TERM_COMPAT_20261012164449316:LINE:116\r\nB_TERM_COMPAT_20261012164449316:LINE:117\r\nB_TERM_COMPAT_20261012164449316:LINE:118\r\nB_TERM_COMPAT_20261012164449316:LINE:119\r\nB_TERM_COMPAT_20261012164449316:LINE:120\r\nB_TERM_COMPAT_20261012164449316:END\r",
+        "total_lines": 123,
+        "truncated_before": false
+      }
+    }
+  ],
+  "scope": "Real child stdout was checked by marker, exact UTF-8 text, ordered 001..120 lines, END marker, retained-output paging and natural EXITED/0. No input-interaction, cancellation, long-command stress, all-tool parity or installation of .46 fixes is claimed.",
+  "source_review": {
+    "scope": "Read-only worktree48 source review, not a byte/hash attestation of the installed Sentinela B .41 files.",
+    "state": "CONSISTENT_WITH_OBSERVED_INITIAL_OUTPUT_LIMIT_MISMATCH",
+    "probable_cause": "Managed process start does not carry max_lines through canonical payload normalization and the Linux managed-start implementation requests a fixed initial 200-line snapshot. max_lines is forwarded only for bounded one-shot process.run.",
+    "findings": [
+      {
+        "path": "apps/commander/src/worker.js",
+        "line": 3564,
+        "detail": "hara.process.start canonical payload includes command/cwd/timeout_ms and omits max_lines; process.run includes it.",
+        "bridge_receipt_sha256": "53104079df19825ec2bd438b21c7992896b21f69d05ecc44d892feb6bbc30935"
+      },
+      {
+        "path": "apps/commander/public/agent/linux.py",
+        "line": 1846,
+        "detail": "process_start requests _process_output_payload(..., length=200, wait_ms=timeout_ms).",
+        "bridge_receipt_sha256": "b04f067852f2670ef2576dc55efb5811041ba6c9116cf66dde05139d05a51341"
+      },
+      {
+        "path": "apps/commander/public/agent/linux.py",
+        "line": 3278,
+        "detail": "The local MCP mapper forwards max_lines only when not managed; this separately shows the same source contract.",
+        "bridge_receipt_sha256": "e34e00d6edcfcf5f457dc427d0ad610b0ba2974cfd9a0afe74ccd33211731ad9"
+      }
+    ],
+    "code_changed": false,
+    "recommendation": "A future change should define and forward an initial managed-output limit consistently through MCP mapping, Worker canonical payload and both platform implementations, while keeping correct next_offset and retaining undisplayed output. Until then, use read_process_output length to bound subsequent pages."
+  }
+}

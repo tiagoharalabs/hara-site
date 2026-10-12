@@ -11,7 +11,7 @@ $ApprovalTimeoutSeconds = 30
 $OperationsDb = Join-Path $Root "operations.sqlite3"
 $AgentTaskName = "HARA Commander Agent"
 $SessionMaxHours = 12
-$AgentVersion = "0.3.46"
+$AgentVersion = "0.3.48"
 $SloProfile = "INTERNAL_BETA_V1"
 $SloMinSuccessPercent = 99.0
 $SloP50MaxMs = 1000
@@ -105,10 +105,16 @@ function Get-OperatorSession {
   if ([string]$session.schema -ne "hara.commander-operator-session.v1") { return $null }
   try { $started=[DateTime]::Parse([string]$session.started_at_utc).ToUniversalTime() } catch { return $null }
   if (([DateTime]::UtcNow-$started).TotalHours -gt $SessionMaxHours) { return $null }
-  $proc=Get-OperatorProcess ([int]$session.owner_pid)
-  if (-not $proc) { return $null }
-  $marker=$proc.StartTime.ToUniversalTime().ToString("o")
-  if ($marker -ne [string]$session.owner_started_at_utc) { return $null }
+  try {
+    $ownerPid=[int]$session.owner_pid
+    if ($ownerPid -le 1) { return $null }
+    $proc=Get-OperatorProcess $ownerPid
+    if (-not $proc) { return $null }
+    $ownerStarted=$proc.StartTime
+    if ($ownerStarted -isnot [DateTime]) { return $null }
+    $marker=$ownerStarted.ToUniversalTime().ToString("o")
+    if ($marker -ne [string]$session.owner_started_at_utc) { return $null }
+  } catch { return $null }
   return $session
 }
 
@@ -610,9 +616,10 @@ function Format-ConsoleEvent($Entry) {
 }
 
 function Start-ManualOperatorConsole {
-  # The commercial Windows task has no boot/login trigger by default.
-  # Explicit "start" activates it before opening the operator console.
+  # Repeated start resumes the worker behind an existing operator console.
+  # It neither renews that session nor stops another console's worker.
   if (-not (Test-Path -LiteralPath $ConfigPath -PathType Leaf)) { throw "DEVICE_NOT_ENROLLED" }
+  $existing=Get-OperatorSession
   $task = Get-ScheduledTask -TaskName $AgentTaskName -ErrorAction SilentlyContinue
   if (-not $task) { throw "AGENT_TASK_NOT_INSTALLED" }
   $startedHere = [string]$task.State -ne "Running"
@@ -622,17 +629,34 @@ function Start-ManualOperatorConsole {
     $nowRunning = Get-ScheduledTask -TaskName $AgentTaskName -ErrorAction SilentlyContinue
     if (-not $nowRunning -or [string]$nowRunning.State -ne "Running") { throw "AGENT_TASK_START_FAILED" }
   }
+  # The prior console may have closed while the scheduled task was starting.
+  $existing=Get-OperatorSession
+  if ($existing) {
+    Write-Host "HARA_COMMANDER_SESSION=ACTIVE"
+    Write-Host $(if ($startedHere) {"HARA_COMMANDER_AGENT=RESUMED"} else {"HARA_COMMANDER_AGENT=RUNNING"})
+    Write-Host "Use a janela do operador que ja esta aberta para aprovar cada acao."
+    return
+  }
+  $sessionOpenedHere=$false
   try {
-    Start-OperatorConsole
+    Start-OperatorConsole ([ref]$sessionOpenedHere)
   } finally {
-    $currentTask = Get-ScheduledTask -TaskName $AgentTaskName -ErrorAction SilentlyContinue
-    if ($startedHere -and $currentTask -and -not $currentTask.Triggers) {
-      Stop-ScheduledTask -TaskName $AgentTaskName -ErrorAction SilentlyContinue
+    # A competing start can acquire the session after the initial check.
+    # Only the caller that actually opened a session may stop its own task,
+    # and it must preserve any other active operator session.
+    if ($startedHere -and $sessionOpenedHere) {
+      Invoke-WithLocalApprovalLock {
+        $currentTask = Get-ScheduledTask -TaskName $AgentTaskName -ErrorAction SilentlyContinue
+        $active=Get-OperatorSession
+        if ($currentTask -and -not $currentTask.Triggers -and -not $active) {
+          Stop-ScheduledTask -TaskName $AgentTaskName -ErrorAction SilentlyContinue
+        }
+      } | Out-Null
     }
   }
 }
 
-function Start-OperatorConsole {
+function Start-OperatorConsole([ref]$SessionOpened=$null) {
   $cfg=Get-Content -Raw -LiteralPath $ConfigPath | ConvertFrom-Json
   New-Item -ItemType Directory -Path $Root -Force | Out-Null
   $session=[ordered]@{
@@ -647,6 +671,7 @@ function Start-OperatorConsole {
     $existing=Get-OperatorSession
     if ($existing -and [int]$existing.owner_pid -ne $PID) { throw "OPERATOR_SESSION_ALREADY_ACTIVE" }
     $session | ConvertTo-Json -Compress | Set-Content -LiteralPath $SessionPath -Encoding UTF8
+    if ($null -ne $SessionOpened) { $SessionOpened.Value=$true }
   } | Out-Null
   Write-ConsoleEvent "SESSION_OPEN" $null "AUTHORIZED"
   Write-Host ""
@@ -746,22 +771,33 @@ function Get-ApprovalMode($Cfg) {
   return $mode
 }
 
-function Invoke-WithLocalApprovalLock([scriptblock]$Action) {
-  # The worker and operator console may run in different Windows sessions.
-  # Only short file-state transactions hold this per-profile global mutex.
-  $identity=[IO.Path]::GetFullPath($script:PendingApprovalPath).ToUpperInvariant()
-  $mutexName="Global\HARACommanderApproval_"+(Get-Utf8Sha256 $identity)
-  $mutex=New-Object -TypeName System.Threading.Mutex -ArgumentList @($false,$mutexName)
-  $held=$false
+function Invoke-WithLocalApprovalLock([Alias("Action")][scriptblock]$ApprovalCriticalSection) {
+  # Prefix private locals so caller scriptblocks cannot resolve unrelated names.
+  $approvalMutexIdentity=[IO.Path]::GetFullPath($script:PendingApprovalPath).ToUpperInvariant()
+  $approvalMutexName="Global\HARACommanderApproval_"+(Get-Utf8Sha256 $approvalMutexIdentity)
+  $approvalMutexObject=New-Object -TypeName System.Threading.Mutex -ArgumentList @($false,$approvalMutexName)
+  $approvalMutexHeld=$false
   try {
-    try { $held=$mutex.WaitOne(2000) }
-    catch [Threading.AbandonedMutexException] { $held=$true }
-    if (-not $held) { throw "LOCAL_APPROVAL_LOCK_BUSY" }
-    & $Action
+    try { $approvalMutexHeld=$approvalMutexObject.WaitOne(2000) }
+    catch [Threading.AbandonedMutexException] { $approvalMutexHeld=$true }
+    if (-not $approvalMutexHeld) { throw "LOCAL_APPROVAL_LOCK_BUSY" }
+    & $ApprovalCriticalSection
   } finally {
-    if ($held) { $mutex.ReleaseMutex() }
-    $mutex.Dispose()
+    if ($approvalMutexHeld) { $approvalMutexObject.ReleaseMutex() }
+    $approvalMutexObject.Dispose()
   }
+}
+
+function Test-LocalApprovalConsumerAlive($Pending) {
+  # Consent cannot be sent to a consumer that died while its prompt was open.
+  try {
+    if ([int]$Pending.consumer_pid -le 1 -or
+        [string]::IsNullOrWhiteSpace([string]$Pending.consumer_started_at_utc)) { return $false }
+    $consumer=Get-OperatorProcess ([int]$Pending.consumer_pid)
+    if (-not $consumer) { return $false }
+    $marker=$consumer.StartTime.ToUniversalTime().ToString("o")
+    return $marker -ceq [string]$Pending.consumer_started_at_utc
+  } catch { return $false }
 }
 
 function Test-LocalApprovalRequestCurrent($Pending) {
@@ -781,11 +817,13 @@ function Test-LocalApprovalRequestCurrent($Pending) {
     $current=Get-Content -Raw -LiteralPath $PendingApprovalPath | ConvertFrom-Json
     foreach($field in @(
       "schema","nonce","challenge","request_id","tool_id","arguments_sha256",
-      "owner_started_at_utc","created_at_utc","expires_at_utc","action_summary"
+      "owner_started_at_utc","consumer_started_at_utc","created_at_utc","expires_at_utc","action_summary"
     )) {
       if ([string]$current.$field -cne [string]$Pending.$field) { return $false }
     }
-    if ([int]$current.owner_pid -ne [int]$Pending.owner_pid) { return $false }
+    if ([int]$current.owner_pid -ne [int]$Pending.owner_pid -or
+        [int]$current.consumer_pid -ne [int]$Pending.consumer_pid) { return $false }
+    if (-not (Test-LocalApprovalConsumerAlive $Pending)) { return $false }
     $active=Get-OperatorSession
     if (-not $active -or [int]$active.owner_pid -ne [int]$Pending.owner_pid -or
         [string]$active.owner_started_at_utc -cne [string]$Pending.owner_started_at_utc) { return $false }
@@ -829,6 +867,8 @@ function Invoke-LocalActionApproval($Call) {
     arguments_sha256=$digest
     owner_pid=[int]$session.owner_pid
     owner_started_at_utc=[string]$session.owner_started_at_utc
+    consumer_pid=$PID
+    consumer_started_at_utc=(Get-Process -Id $PID).StartTime.ToUniversalTime().ToString("o")
     created_at_utc=[DateTime]::UtcNow.ToString("o")
     expires_at_utc=$expires.ToString("o")
     action_summary=Get-LocalActionSummary $Call
@@ -868,7 +908,9 @@ function Invoke-LocalActionApproval($Call) {
             [string]$answer.request_id -cne [string]$pending.request_id -or
             [string]$answer.arguments_sha256 -cne $digest -or
             [int]$answer.owner_pid -ne [int]$pending.owner_pid -or
-            [string]$answer.owner_started_at_utc -cne [string]$pending.owner_started_at_utc) {
+            [string]$answer.owner_started_at_utc -cne [string]$pending.owner_started_at_utc -or
+            [int]$answer.consumer_pid -ne [int]$pending.consumer_pid -or
+            [string]$answer.consumer_started_at_utc -cne [string]$pending.consumer_started_at_utc) {
           throw "LOCAL_ACTION_APPROVAL_RESPONSE_INVALID"
         }
         try { $responded=[DateTime]::Parse([string]$answer.responded_at_utc).ToUniversalTime() }
@@ -953,7 +995,7 @@ function Read-LocalApprovalResponse($Pending) {
   Clear-LocalApprovalConsoleInput
   $text=""
   $expires=[DateTime]::Parse([string]$Pending.expires_at_utc).ToUniversalTime()
-  Write-Host ("Para autorizar, digite APROVAR "+[string]$Pending.challenge+" (Enter nega): ") -NoNewline
+  Write-Host ("Digite a frase completa APROVAR "+[string]$Pending.challenge+" (APROVAR sozinho nao autoriza; Enter nega): ") -NoNewline
   try {
     while ([DateTime]::UtcNow -lt $expires) {
       $current=Invoke-WithLocalApprovalLock { Test-LocalApprovalRequestCurrent $Pending }
@@ -1009,6 +1051,8 @@ function Publish-LocalApprovalResponse($Pending,[bool]$Approved) {
       arguments_sha256=[string]$Pending.arguments_sha256
       owner_pid=$PID
       owner_started_at_utc=[string]$Pending.owner_started_at_utc
+      consumer_pid=[int]$Pending.consumer_pid
+      consumer_started_at_utc=[string]$Pending.consumer_started_at_utc
       approved=[bool]$Approved
       responded_at_utc=[DateTime]::UtcNow.ToString("o")
     }

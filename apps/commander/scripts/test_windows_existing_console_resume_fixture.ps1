@@ -2,7 +2,7 @@
 [CmdletBinding()]
 param(
   [Parameter(Mandatory=$true)][string]$AgentSource,
-  [ValidateSet("Frozen046","Candidate047")][string]$ExpectedBehavior="Frozen046"
+  [ValidateSet("Frozen046","Candidate047","Candidate048")][string]$ExpectedBehavior="Frozen046"
 )
 $ErrorActionPreference="Stop"
 if ($PSVersionTable.PSVersion.Major -ne 5 -or $PSVersionTable.PSVersion.Minor -ne 1) {
@@ -15,8 +15,14 @@ if ($ExpectedBehavior -ceq "Frozen046") {
   if ($sourceSha -cne "71998b7c5e2dae4f4cbcfe80e5413ab1c6ff8e28ad903734cc1f026dfe8765aa") {
     throw "RESUME_FIXTURE_SOURCE46_NOT_FROZEN"
   }
-} elseif ($sourceText -notmatch '(?m)^\$AgentVersion = "0[.]3[.]47"$') {
-  throw "RESUME_FIXTURE_SOURCE47_VERSION_MISSING"
+} else {
+  if ($ExpectedBehavior -ceq "Candidate048" -and $sourceSha -cne "f54e5ff8c170e09a3dc795004af426851d111c89ae78408559886e0d693bf805") {
+    throw "RESUME_FIXTURE_SOURCE48_NOT_PINNED"
+  }
+  $expectedVersion=if ($ExpectedBehavior -ceq "Candidate048") {"48"} else {"47"}
+  if ($sourceText -notmatch ('(?m)^\$AgentVersion = "0[.]3[.]'+$expectedVersion+'"$')) {
+    throw ("RESUME_FIXTURE_SOURCE"+$expectedVersion+"_VERSION_MISSING")
+  }
 }
 $tokens=$null;$parseErrors=$null
 $ast=[Management.Automation.Language.Parser]::ParseFile($source,[ref]$tokens,[ref]$parseErrors)
@@ -45,11 +51,14 @@ $ApprovalResponsePath=Join-Path $Root "synthetic-response.json"
 $ConsoleEvents=Join-Path $Root "synthetic-events.jsonl"
 $AgentTaskName="SYNTHETIC_TASK_NEVER_REGISTERED_"+[guid]::NewGuid().ToString("N")
 $SessionMaxHours=12
-$AgentVersion=if ($ExpectedBehavior -ceq "Frozen046") {"0.3.46"} else {"0.3.47"}
+$AgentVersion=if ($ExpectedBehavior -ceq "Frozen046") {"0.3.46"} elseif ($ExpectedBehavior -ceq "Candidate048") {"0.3.48"} else {"0.3.47"}
 $script:Passed=0
 $script:Checks=New-Object 'System.Collections.Generic.List[string]'
 $script:States=New-Object 'System.Collections.Generic.List[object]'
 $script:FixtureChild=$null
+$script:DropExistingAtStartup=$false
+$script:CloseOwnOnPoll=$false
+$script:SwapOtherOnPoll=$false
 
 function Assert-Fixture([bool]$Condition,[string]$Code) {
   if (-not $Condition) { throw ("RESUME_FIXTURE_ASSERT:"+$Code) }
@@ -74,10 +83,29 @@ function Stop-ScheduledTask {
   if ($TaskName -cne $AgentTaskName) { throw "RESUME_FIXTURE_REAL_TASK_NAME_DENIED" }
   $script:Stopped++;$script:TaskState="Ready"
 }
-function Start-Sleep { param([double]$Seconds=0,[int]$Milliseconds=0) }
-function Start-OperatorConsole {
+function Start-Sleep {
+  param([double]$Seconds=0,[int]$Milliseconds=0)
+  if ($Seconds -gt 0 -and $script:DropExistingAtStartup) {
+    $script:DropExistingAtStartup=$false
+    Remove-Item -LiteralPath $SessionPath -Force
+  }
+  if ($Milliseconds -gt 0 -and $script:CloseOwnOnPoll) {
+    $script:CloseOwnOnPoll=$false
+    Remove-Item -LiteralPath $SessionPath -Force
+  } elseif ($Milliseconds -gt 0 -and $script:SwapOtherOnPoll) {
+    $script:SwapOtherOnPoll=$false
+    Write-FixtureJson $SessionPath $script:ExistingFixtureSession
+  }
+}
+# Synthetic console boundary adapters only; no approval or transport is invoked.
+function Write-ConsoleEvent { param([string]$Event,$Call=$null,[string]$State="",[string]$ErrorCode="",[string]$ReceiptSha="") }
+function Set-DeviceOffline { param($Cfg=$null) return $true }
+function Respond-ToLocalApprovalRequest {
+  if (Test-Path -LiteralPath $PendingApprovalPath) { throw "RESUME_FIXTURE_UNEXPECTED_APPROVAL_REQUEST" }
+}
+function Start-OperatorConsole([ref]$SessionOpened=$null) {
   $script:ConsoleCalled++
-  & $script:OriginalConsole
+  & $script:OriginalConsole $SessionOpened
 }
 
 try {
@@ -96,6 +124,7 @@ try {
     device_id=$cfg.device_id;authorization="LOCAL_OPERATOR_TERMINAL"
   }
   Write-FixtureJson $SessionPath $session
+  $script:ExistingFixtureSession=$session
   $sessionSha=(Get-FileHash -LiteralPath $SessionPath -Algorithm SHA256).Hash
   $configSha=(Get-FileHash -LiteralPath $ConfigPath -Algorithm SHA256).Hash
   Assert-Fixture ($null -ne (Get-OperatorSession)) "EXISTING_OPERATOR_SESSION_GENUINELY_ACTIVE"
@@ -128,6 +157,34 @@ try {
       error_code=$errorCode
     })
   }
+  if ($ExpectedBehavior -in @("Candidate047","Candidate048")) {
+    # Existing console closes during the Task-start sleep: fresh lookup must
+    # open this caller's own console, rather than reporting stale ACTIVE.
+    Write-FixtureJson $SessionPath $script:ExistingFixtureSession
+    $script:TaskState="Ready";$script:Started=0;$script:Stopped=0;$script:ConsoleCalled=0
+    $script:DropExistingAtStartup=$true;$script:CloseOwnOnPoll=$true
+    $errorCode=$null
+    $hostOutput=(& {try {Start-ManualOperatorConsole} catch {$script:ScenarioError=$_.Exception.Message}} 6>&1|Out-String)
+    $errorCode=$script:ScenarioError;$script:ScenarioError=$null
+    Assert-Fixture ($null -eq $errorCode) "CLOSE_DURING_TASK_START_NEW_CONSOLE_RETURNS"
+    Assert-Fixture ($script:ConsoleCalled -eq 1) "CLOSE_DURING_TASK_START_FRESH_CONSOLE_OPENED"
+    Assert-Fixture ($script:Started -eq 1 -and $script:Stopped -eq 1 -and $script:TaskState -ceq "Ready") "OWN_CONSOLE_CLOSE_STOPS_OWN_TRIGGERLESS_TASK"
+    Assert-Fixture ($hostOutput -notmatch "HARA_COMMANDER_AGENT=RESUMED") "CLOSE_DURING_TASK_START_NO_STALE_RESUMED_MESSAGE"
+    Assert-Fixture ($null -eq (Get-OperatorSession)) "OWN_CONSOLE_CLOSE_REMOVES_OWN_SESSION"
+
+    # A different active session replaces our console before its loop ends.
+    # Source finally must preserve both that session and the running worker.
+    Remove-Item -LiteralPath $SessionPath -Force -ErrorAction SilentlyContinue
+    $script:TaskState="Ready";$script:Started=0;$script:Stopped=0;$script:ConsoleCalled=0
+    $script:SwapOtherOnPoll=$true
+    try {Start-ManualOperatorConsole} catch {$script:ScenarioError=$_.Exception.Message}
+    $errorCode=$script:ScenarioError;$script:ScenarioError=$null
+    Assert-Fixture ($null -eq $errorCode) "FOREIGN_SESSION_REPLACEMENT_CONSOLE_RETURNS"
+    Assert-Fixture ($script:Started -eq 1 -and $script:Stopped -eq 0 -and $script:TaskState -ceq "Running") "FOREIGN_SESSION_REPLACEMENT_PRESERVES_RUNNING_TASK"
+    Assert-Fixture ($script:ConsoleCalled -eq 1) "FOREIGN_SESSION_REPLACEMENT_ACTUAL_CONSOLE_PATH_USED"
+    Assert-Fixture ((Get-FileHash -LiteralPath $SessionPath -Algorithm SHA256).Hash -ceq $sessionSha) "FOREIGN_SESSION_REPLACEMENT_IDENTITY_PRESERVED"
+    Assert-Fixture ((Get-FileHash -LiteralPath $ConfigPath -Algorithm SHA256).Hash -ceq $configSha -and (Get-ApprovalMode $cfg) -ceq "ASK_EVERY_ACTION") "RACE_DEVICE_IDENTITY_AND_POLICY_UNCHANGED"
+  }
   [ordered]@{
     schema="hara.commander-windows-existing-console-resume-fixture.v1"
     state="PASS";checks=$script:Passed;passed_checks=@($script:Checks)
@@ -135,7 +192,8 @@ try {
     source_sha256=$sourceSha;powershell_version=$PSVersionTable.PSVersion.ToString()
     scope="SYNTHETIC_TASK_APIS_REAL_AST_MANUAL_AND_OPERATOR_SESSION_FUNCTIONS"
     frozen046_bug_reproduced=($ExpectedBehavior -ceq "Frozen046")
-    task_apis_mocked=$true;agent_main_loop_executed=$false
+    task_apis_mocked=$true;console_event_and_offline_boundaries_mocked=$true
+    agent_main_loop_executed=$false
     real_task_touched=$false;live_profile_touched=$false
     real_human_approval_proven=$false;production_action_executed=$false
   }|ConvertTo-Json -Depth 6 -Compress|Write-Output

@@ -1,0 +1,75 @@
+{
+  "schema": "hara.commander-win47-startup-starttime-diagnostic-readonly.v1",
+  "state": "READ_ONLY",
+  "observed_current_marker": {
+    "metadata": {
+      "at_utc": "2026-10-12T16:22:24.7312693Z",
+      "current_session_id": 1,
+      "current_user_is_system": false,
+      "current_user_matches_task": true,
+      "ipc_mutated": false,
+      "marker_exists": true,
+      "marker_metadata": {
+        "owner_pid": 8768,
+        "owner_started_at_utc": "2026-10-12T16:15:33.0239441Z",
+        "schema": "hara.commander-operator-session.v1"
+      },
+      "marker_mutated": false,
+      "marker_sha256": "8c52d00a5015ddafafd85840f90edf6305101990a99635fe0112f9b426467d0c",
+      "pending_exists": false,
+      "process_metadata": {
+        "cim_creation_time_available": true,
+        "cim_found": true,
+        "process_found": true,
+        "process_name": "powershell.exe",
+        "process_name_allowlisted": true,
+        "process_sid_check_completed": true,
+        "process_sid_matches_current": true,
+        "queried_pid": 8768,
+        "session_id": 1,
+        "start_matches_marker": true,
+        "start_time_access_threw": false,
+        "start_time_available": true,
+        "start_time_utc": "2026-10-12T16:15:33.0239441Z"
+      },
+      "response_exists": false,
+      "sid_values_exposed": false,
+      "source_invoked": false,
+      "source_sha256": "254517c46acf47102ebed5fe31fcb5d880ca0de47b98debeebdcaf4b1b324e36",
+      "state": "READ_ONLY",
+      "task_last_result": 3221225786,
+      "task_last_run_utc": "2026-10-12T16:16:13.0000000Z",
+      "task_mutated": false,
+      "task_state": "Ready"
+    },
+    "receipt": "fe0ce274b7346c604feed88229e5b341ed4ec7a76b97363364dacd272877e7a0"
+  },
+  "historical_pid_8592": {
+    "metadata": {
+      "at_utc": "2026-10-12T16:24:01.6787093Z",
+      "cim_found": false,
+      "historical_pid": 8592,
+      "historical_start_matches": false,
+      "marker_changed": false,
+      "process_found": false,
+      "process_name_allowlisted": false,
+      "process_sid_check_complete": false,
+      "process_sid_matches_current": false,
+      "process_stopped": false,
+      "session_id": -1,
+      "start_time_access_threw": false,
+      "start_time_available": false,
+      "start_time_utc": "",
+      "state": "READ_ONLY",
+      "values_private": true
+    },
+    "receipt": "690aedf42541fc0e2b03e32e3ff34c2049dffe0accc1f1759d3d6f0da1e82dab"
+  },
+  "historical_failure_from_user_screenshot": "Get-OperatorSession line110 InvokeMethodOnNull StartTime",
+  "historical_failure_reproduced_in_current_snapshot": false,
+  "marker_or_ipc_deleted": false,
+  "start_command_executed": false,
+  "approval_generated": false,
+  "interruption_origin": "UNKNOWN",
+  "source_version": "0.3.47"
+}

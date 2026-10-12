@@ -40,8 +40,16 @@ A listagem pelo Commander direto marcou Sentinela C e Ninja Blue como OFFLINE; i
 
 O canário privado v6 foi aplicado na VM: Agent 0.3.46 assinado, backup v5 verificado, configuração e definição da tarefa byte a byte preservadas. Uma resposta NEGADA órfã da chamada antiga foi correlacionada com o registro FAILED/EXPIRED, custodiada e reconciliada sem gerar aceite. A tarefa e o operador mudaram enquanto o diagnóstico estava em curso; a origem dessa mudança não foi atribuída sem evidência.
 
-Depois da troca, `device.info` e `process.sessions` passaram pelo Commander direto. Uma chamada `hostname` expirou sem confirmação; a inspeção posterior confirmou pedido e resposta limpos, operador ativo e tarefa Running. A caption exata da janela 0.3.46 não foi localizada, portanto visibilidade/foco não estão comprovados. Aprovação positiva, escrita e terminal Windows mutantes via MCP ainda pendentes. A v6 não foi publicada no Cloudflare por esta frente; Stripe e outros tenants não foram alterados.
+Depois da troca, `device.info` e `process.sessions` passaram pelo Commander direto. Uma chamada `hostname` expirou sem confirmação; a inspeção posterior confirmou pedido e resposta limpos, operador ativo e tarefa Running. A captura enviada pelo usuário mostrou a janela H.A.R.A. Commander - Sessão e o pedido de aprovação. A busca pela caption exata da versão não havia localizado essa janela; foco e digitação correta não foram comprovados. Aprovação positiva, escrita e terminal Windows mutantes via MCP ainda pendentes. A v6 não foi publicada no Cloudflare por esta frente; Stripe e outros tenants não foram alterados.
 
 Próxima prova: confirmar que o console local 0.3.46 está visível e em primeiro plano, uma chamada `hostname` pelo Commander direto e aprovação manual do desafio local. Depois: escrita sintética com SHA, terminal gerenciado/interação/saída, negação e recuperação, cada ação com seu próprio consentimento. Não repetir escrita após timeout sem reconciliar o estado.
 
 Alterações não commitadas das outras frentes foram inventariadas por SHA e devem permanecer intactas. Publicação Git deve incluir somente os arquivos desta frente; nunca staging global, limpeza ou force-push.
+
+## Atualização posterior: canal retomado e RC .47
+
+A chamada `HARA-CALL-4ea93468-2003-4c58-928f-9ce6911c378a` recebeu recusa local após entrada incompleta (`APROVAR` sem o código), mas ficou sem conclusão no produto e deixou IPC órfão. O Commander confirmou posteriormente EXPIRED/DEVICE_CALL_EXPIRED às 04:17:35.456Z. A causa da interrupção original segue desconhecida. Um teste adicional de cadeia completa em PS5.1 passou 26/26: recusa, DENIED, CompleteCall FAILED e limpeza, com transporte simulado.
+
+Foi encontrado separadamente um bug reproduzível: repetir start com console ativo e tarefa Ready retoma e imediatamente pára a tarefa. A correção será validada na RC .47, sem alterar os bytes congelados do bundle .46. A reconciliação exata dos IPC expirados e a retomada da tarefa existente preservaram configuração, XML, operador e ASK_EVERY_ACTION; as leituras comerciais seguintes passaram. Novo hostname às 04:46:22Z expirou e concluiu FAILED/LOCAL_ACTION_APPROVAL_EXPIRED às 04:46:53.284Z, com limpeza local comprovada.
+
+Ver [continuidade e validação .47](HARA_COMMANDER_WINDOWS_047_LIFECYCLE_RC_20261012.md). A aprovação humana positiva permanece pendente até existir comando executado e recibo correspondente pelo plugin comercial.

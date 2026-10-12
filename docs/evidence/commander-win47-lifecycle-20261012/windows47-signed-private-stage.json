@@ -1,0 +1,83 @@
+{
+  "schema": "hara.commander-win47-private-rc-evidence.v1",
+  "report": {
+    "agent_transport_started": false,
+    "files": [
+      {
+        "bytes": 388,
+        "parse_errors": 0,
+        "path": "README.md",
+        "sha256": "7771d33fee56ae0d602ac61a09ef08d1ae04b872a96be231c7c0dfe3f1ebcb1c"
+      },
+      {
+        "bytes": 218938,
+        "parse_errors": 0,
+        "path": "agent/linux.py",
+        "sha256": "3e0db700dd568a85e23212a5400f1d256546fef77b7f59f574ceed29e04c15b7"
+      },
+      {
+        "bytes": 91954,
+        "parse_errors": 0,
+        "path": "agent/windows.ps1",
+        "sha256": "254517c46acf47102ebed5fe31fcb5d880ca0de47b98debeebdcaf4b1b324e36"
+      },
+      {
+        "bytes": 36363,
+        "parse_errors": 0,
+        "path": "install/linux.sh",
+        "sha256": "534e14433da9f86eb4342c6d9400e89ecf164545605e02e22f1646510284aba5"
+      },
+      {
+        "bytes": 23774,
+        "parse_errors": 0,
+        "path": "install/windows.ps1",
+        "sha256": "4651d11e4be34ff7b78511c05b767e655e36f179c2da3bb47def5893a25de235"
+      },
+      {
+        "bytes": 334,
+        "parse_errors": 0,
+        "path": "release/SHA256SUMS",
+        "sha256": "3a3f25ac2ed901fd335342977c84c052e05dee5d779d1d077d910d19027d09f2"
+      },
+      {
+        "bytes": 765,
+        "parse_errors": 0,
+        "path": "release/agent-manifest.json",
+        "sha256": "62433a8dc4e2b39c37f1ce8be7538c92eb207541bfcc5f7babb78cee83bb8e7e"
+      },
+      {
+        "bytes": 725,
+        "parse_errors": 0,
+        "path": "release/agent-manifest.sig.json",
+        "sha256": "5ecef8a789fa4938e30d74f74cd9af065c6702ca5d99ffbaecd1bbb6619b12a9"
+      },
+      {
+        "bytes": 624,
+        "parse_errors": 0,
+        "path": "release/release-signing-public.jwk",
+        "sha256": "4e68608fa891f1b7a1e89c75936a089daeab0ba862a764f9bb31eca849cdfb9b"
+      },
+      {
+        "bytes": 6335,
+        "parse_errors": 0,
+        "path": "windows_047_private_rc_validate.ps1",
+        "sha256": "60431aa16d1a1090a2b5038677e16115f2b8664fe3b6a27ba324b5774f1be7ec"
+      },
+      {
+        "bytes": 18815,
+        "parse_errors": 0,
+        "path": "windows_047_signed_user_canary.ps1",
+        "sha256": "9c58be5913ebacca31d844f51d83c4c03750885fcdfc644a33e08be6ba68c5bf"
+      }
+    ],
+    "installed_agent_modified": false,
+    "powershell_version": "5.1.26100.9444",
+    "schema": "hara.commander-win47-private-rc-stage.v1",
+    "state": "PASS"
+  },
+  "commander_direct_receipt_sha256": "c8faef4d0576f9a4ec712e1df617ca8182343c628f612ebedc1896f1d6f399e9",
+  "reviewed_canary_helper_sha256": "962ad5ef6cf27b64f6f86decedc5b69bb28c8db02c7098c7322fc64528a04d2f",
+  "reviewed_validator_sha256": "60431aa16d1a1090a2b5038677e16115f2b8664fe3b6a27ba324b5774f1be7ec",
+  "apply_executed": false,
+  "real_positive_human_approval_proven": false
+}

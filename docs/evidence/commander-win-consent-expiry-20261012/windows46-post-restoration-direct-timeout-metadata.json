@@ -1,0 +1,92 @@
+{
+  "schema": "hara.commander-win46-readonly-evidence.v1",
+  "diagnostic": {
+    "approval_generated": false,
+    "gui_automation_performed": false,
+    "inspection_file_race": false,
+    "last_events": [
+      {
+        "at_utc": "2026-10-12T04:46:09.4979359Z",
+        "error_code": "",
+        "event": "RECEIVED",
+        "request_id": "HARA-CUSTOMER-MCP-FYsnH1iYgzTrDBEEGs5pHeXYBEopdWEQDq1DSKr0vuI",
+        "state": "PENDING"
+      },
+      {
+        "at_utc": "2026-10-12T04:46:09.5516598Z",
+        "error_code": "",
+        "event": "EXECUTING",
+        "request_id": "HARA-CUSTOMER-MCP-FYsnH1iYgzTrDBEEGs5pHeXYBEopdWEQDq1DSKr0vuI",
+        "state": "EXECUTING"
+      },
+      {
+        "at_utc": "2026-10-12T04:46:09.9461085Z",
+        "error_code": "",
+        "event": "PASS",
+        "request_id": "HARA-CUSTOMER-MCP-FYsnH1iYgzTrDBEEGs5pHeXYBEopdWEQDq1DSKr0vuI",
+        "state": "COMPLETED"
+      },
+      {
+        "at_utc": "2026-10-12T04:46:12.4654896Z",
+        "error_code": "",
+        "event": "RECEIVED",
+        "request_id": "HARA-CUSTOMER-MCP-9V7sCE7A8RwWIOsPSO-ZUr7w885Cs0yvscWUDR9h5uQ",
+        "state": "PENDING"
+      },
+      {
+        "at_utc": "2026-10-12T04:46:12.5208285Z",
+        "error_code": "",
+        "event": "EXECUTING",
+        "request_id": "HARA-CUSTOMER-MCP-9V7sCE7A8RwWIOsPSO-ZUr7w885Cs0yvscWUDR9h5uQ",
+        "state": "EXECUTING"
+      },
+      {
+        "at_utc": "2026-10-12T04:46:12.8783745Z",
+        "error_code": "",
+        "event": "PASS",
+        "request_id": "HARA-CUSTOMER-MCP-9V7sCE7A8RwWIOsPSO-ZUr7w885Cs0yvscWUDR9h5uQ",
+        "state": "COMPLETED"
+      },
+      {
+        "at_utc": "2026-10-12T04:46:22.1847995Z",
+        "error_code": "",
+        "event": "RECEIVED",
+        "request_id": "HARA-CUSTOMER-MCP-ASQEPyQ-e5duLA0NOtMKIfPgkfjYnyBuQVJF6Tfsf10",
+        "state": "PENDING"
+      },
+      {
+        "at_utc": "2026-10-12T04:46:22.2264408Z",
+        "error_code": "",
+        "event": "EXECUTING",
+        "request_id": "HARA-CUSTOMER-MCP-ASQEPyQ-e5duLA0NOtMKIfPgkfjYnyBuQVJF6Tfsf10",
+        "state": "EXECUTING"
+      },
+      {
+        "at_utc": "2026-10-12T04:46:52.3730675Z",
+        "error_code": "LOCAL_ACTION_APPROVAL_EXPIRED",
+        "event": "DENIED",
+        "request_id": "HARA-CUSTOMER-MCP-ASQEPyQ-e5duLA0NOtMKIfPgkfjYnyBuQVJF6Tfsf10",
+        "state": "FAILED"
+      }
+    ],
+    "nonce_payload_or_credentials_exposed": false,
+    "operator_alive": true,
+    "operator_pid": 7572,
+    "operator_start_matches": true,
+    "pending_created_at_utc": "",
+    "pending_expires_at_utc": "",
+    "pending_present": false,
+    "pending_request_id": "",
+    "response_approved": null,
+    "response_approved_is_bool": false,
+    "response_present": false,
+    "response_request_id": "",
+    "schema": "hara.commander-win46-after-restoration-call-metadata.v1",
+    "task_state": "Running",
+    "timestamp_utc": "2026-10-12T04:47:54.7819969Z"
+  },
+  "commander_direct_receipt_sha256": "7f982d19ddf8cd24e14d7170f16aaca7008b575771f9e38d3d10f75c45b69320",
+  "task_or_operator_modified_by_inspection": false,
+  "real_positive_human_approval_proven": false,
+  "external_change_origin": "UNKNOWN"
+}

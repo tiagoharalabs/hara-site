@@ -1,0 +1,54 @@
+{
+  "schema": "hara.commander-win48-signed-native-validation-acceptance.v1",
+  "state": "PASS",
+  "exit_code": 0,
+  "stderr_present": false,
+  "output_truncated": false,
+  "result": {
+    "schema": "hara.commander-win48-private-rc-windows-validation.v1",
+    "state": "PASS",
+    "powershell_version": "5.1.26100.9444",
+    "manifest_sha256": "5e65b1862c40bc9164609cdcd1401bb55e02e409b44f1b58bca15151e40de32c",
+    "signature_algorithm": "RS256_RSA3072",
+    "pinned_authority": "commander-release-v2",
+    "files": [
+      {
+        "path": "agent/linux.py",
+        "bytes": 218938,
+        "sha256": "3e0db700dd568a85e23212a5400f1d256546fef77b7f59f574ceed29e04c15b7",
+        "parse_errors": 0
+      },
+      {
+        "path": "agent/windows.ps1",
+        "bytes": 92151,
+        "sha256": "f54e5ff8c170e09a3dc795004af426851d111c89ae78408559886e0d693bf805",
+        "parse_errors": 0
+      },
+      {
+        "path": "install/linux.sh",
+        "bytes": 36363,
+        "sha256": "534e14433da9f86eb4342c6d9400e89ecf164545605e02e22f1646510284aba5",
+        "parse_errors": 0
+      },
+      {
+        "path": "install/windows.ps1",
+        "bytes": 23774,
+        "sha256": "1ff4c187de3731634564709f2dc0eb4929058a0859fcdd04432d508d78b6f1c0",
+        "parse_errors": 0
+      }
+    ],
+    "installed_agent_modified": false,
+    "agent_transport_started": false,
+    "self_test": {
+      "state": "PASS",
+      "marker": "COMMANDER_WINDOWS_AGENT_SELF_TEST=PASS",
+      "root_fixture_guaranteed": true,
+      "agent_transport_started": false,
+      "installed_agent_modified": false
+    }
+  },
+  "commander_direct_receipt_sha256": "b8d210c3c55c3106eb2579b3cac37cd5d9b23eba745561d3cb00c8d1b34e5ea5",
+  "validator_sha256": "ec9215034431c2478d435be5a7f0f799198394fd81e096cb0cd6fa8c286dce4d",
+  "helper_installed_agent_modified": false,
+  "real_positive_human_approval_proven": false
+}
