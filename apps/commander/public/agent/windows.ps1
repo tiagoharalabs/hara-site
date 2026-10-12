@@ -1274,8 +1274,8 @@ public sealed class HaraWindowsProcessSession : IDisposable {
     Child.StandardInput.Flush();
   }
 
-  public void Stop(bool force) {
-    if (Child.HasExited) return;
+  public bool Stop(bool force) {
+    if (Child.HasExited) return false;
     if (force) {
       Killed = true;
       Child.Kill();
@@ -1283,6 +1283,7 @@ public sealed class HaraWindowsProcessSession : IDisposable {
       Child.StandardInput.WriteLine("exit");
       Child.StandardInput.Flush();
     }
+    return true;
   }
 
   public Dictionary<string,object> Snapshot(int offset,int length,int waitMs) {
@@ -1400,8 +1401,10 @@ function Send-WindowsManagedSessionInput($Cfg,$Call,[string]$Id,[string]$InputTe
 function Stop-WindowsManagedSession($Cfg,$Call,[string]$Id,[bool]$Force=$false) {
   $session=Get-WindowsManagedSession $Id
   Assert-StarterMutationAuthorized $Cfg $Call
-  $session.Stop($Force)
-  return $session.Snapshot(0,200,200)
+  $mutationPerformed=$session.Stop($Force)
+  $snapshot=$session.Snapshot(0,200,200)
+  $snapshot["mutation_performed"]=$mutationPerformed
+  return $snapshot
 }
 
 function List-WindowsManagedSessions {
@@ -1677,6 +1680,8 @@ function Get-Receipt([string]$Identifier) {
 function Invoke-Tool($Cfg,$Call) {
   $tool=[string]$Call.tool_id
   $payload=$Call.payload
+  # Report completed effects, including explicit no-op outcomes, independently of risk.
+  $mutationPerformed=$false
   if ($tool -eq "hara.ping") {
     $result=New-DirectResult "device.ping" "READ_ONLY" (Get-WindowsPing $Cfg)
   } elseif ($tool -eq "hara.device.info") {
@@ -1696,17 +1701,23 @@ function Invoke-Tool($Cfg,$Call) {
     $result=New-DirectResult "filesystem.read" "READ_ONLY" (Read-WindowsTextFile ([string]$payload.path) $offset $length)
   } elseif ($tool -eq "hara.files.create_directory") {
     $parents=if ($null -ne $payload.parents) {[bool]$payload.parents} else {$true}
-    $result=New-DirectResult "filesystem.create_directory" "MUTATING" (New-WindowsDirectory $Cfg $Call ([string]$payload.path) $parents)
+    $directory=New-WindowsDirectory $Cfg $Call ([string]$payload.path) $parents
+    $mutationPerformed=$directory.created -eq $true
+    $result=New-DirectResult "filesystem.create_directory" "MUTATING" $directory
   } elseif ($tool -eq "hara.files.write") {
     $mode=if ($payload.mode) {[string]$payload.mode} else {"rewrite"}
     $expected=if ($payload.expected_sha256) {[string]$payload.expected_sha256} else {$null}
-    $result=New-DirectResult "filesystem.write" "MUTATING" (Write-WindowsTextFile $Cfg $Call ([string]$payload.path) ([string]$payload.content) $mode $expected)
+    $written=Write-WindowsTextFile $Cfg $Call ([string]$payload.path) ([string]$payload.content) $mode $expected
+    $mutationPerformed=$true
+    $result=New-DirectResult "filesystem.write" "MUTATING" $written
   } elseif ($tool -eq "hara.process.sessions") {
     $result=New-DirectResult "process.sessions" "READ_ONLY" (List-WindowsManagedSessions)
   } elseif ($tool -eq "hara.process.start") {
     $cwd=if ($payload.cwd) {[string]$payload.cwd} else {$null}
     $timeout=if ($null -ne $payload.timeout_ms) {[int]$payload.timeout_ms} else {1000}
-    $result=New-DirectResult "process.start" "PROCESS_EXECUTION" (Start-WindowsManagedSession $Cfg $Call ([string]$payload.command) $cwd $timeout)
+    $started=Start-WindowsManagedSession $Cfg $Call ([string]$payload.command) $cwd $timeout
+    $mutationPerformed=$true
+    $result=New-DirectResult "process.start" "PROCESS_EXECUTION" $started
   } elseif ($tool -eq "hara.process.output") {
     $offset=if ($null -ne $payload.offset) {[int]$payload.offset} else {0}
     $length=if ($null -ne $payload.length) {[int]$payload.length} else {200}
@@ -1714,15 +1725,20 @@ function Invoke-Tool($Cfg,$Call) {
     $result=New-DirectResult "process.output" "READ_ONLY" (Read-WindowsManagedSession ([string]$payload.session_id) $offset $length $wait)
   } elseif ($tool -eq "hara.process.interact") {
     $wait=if ($null -ne $payload.timeout_ms) {[int]$payload.timeout_ms} else {1000}
-    $result=New-DirectResult "process.interact" "PROCESS_EXECUTION" (Send-WindowsManagedSessionInput $Cfg $Call ([string]$payload.session_id) ([string]$payload.input) $wait)
+    $interaction=Send-WindowsManagedSessionInput $Cfg $Call ([string]$payload.session_id) ([string]$payload.input) $wait
+    $mutationPerformed=$true
+    $result=New-DirectResult "process.interact" "PROCESS_EXECUTION" $interaction
   } elseif ($tool -eq "hara.process.kill") {
     $force=$payload.force -eq $true
-    $result=New-DirectResult "process.kill" "PROCESS_EXECUTION" (Stop-WindowsManagedSession $Cfg $Call ([string]$payload.session_id) $force)
+    $stopped=Stop-WindowsManagedSession $Cfg $Call ([string]$payload.session_id) $force
+    $mutationPerformed=$stopped.mutation_performed -eq $true
+    $result=New-DirectResult "process.kill" "PROCESS_EXECUTION" $stopped
   } elseif ($tool -eq "hara.process.run") {
     $cwd=if ($payload.cwd) {[string]$payload.cwd} else {$null}
     $timeout=if ($null -ne $payload.timeout_ms) {[int]$payload.timeout_ms} else {3000}
     $maxLines=if ($null -ne $payload.max_lines) {[int]$payload.max_lines} else {200}
     $run=Invoke-WindowsOneShotProcess $Cfg $Call ([string]$payload.command) $cwd $timeout $maxLines
+    $mutationPerformed=$true
     $exit=if ($null -ne $run.exit_code) {[int]$run.exit_code} else {$null}
     $result=New-DirectResult "process.run" "PROCESS_EXECUTION" $run $exit
   } elseif ($tool -eq "hara.health") {
@@ -1749,7 +1765,7 @@ function Invoke-Tool($Cfg,$Call) {
   $receipt=New-Receipt $Cfg $Call "PASS" $result
   return @{
     state="PASS";operational_authority="HARA_SERVICES"
-    runtime_authority_from_chatgpt=$false;mutation_performed=$false
+    runtime_authority_from_chatgpt=$false;mutation_performed=$mutationPerformed
     result=$result;blocker=$null;bridge_receipt_sha256=$receipt
   }
 }
