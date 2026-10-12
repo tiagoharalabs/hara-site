@@ -1,0 +1,179 @@
+{
+  "at_utc": "2026-10-12T23:53:46.096299+00:00",
+  "auth_source_sha256": "04764bde18fd7a739a65d7085d230941cab5c0e980e528beafb27f1ad0ecd0dc",
+  "capacity_model_source_sha256": "028080b2bf669ead81077038796fc5fa38ada7badd890fa4e8da41c0456d0b0a",
+  "cloudflare_live_clients_tested": 0,
+  "database_probes": [
+    {
+      "devices": 2000,
+      "exact_source_session_lookups": 1000,
+      "lookup_local_sqlite_mean_ms": 0.025843,
+      "lookup_local_sqlite_p95_ms": 0.027723,
+      "lookup_local_sqlite_p99_ms": 0.031671,
+      "lookup_query_plan": [
+        "SEARCH s USING INDEX sqlite_autoindex_portal_sessions_1 (session_hash=?)",
+        "SEARCH u USING INDEX sqlite_autoindex_users_1 (subject_id=?)",
+        "SEARCH t USING INDEX sqlite_autoindex_tenants_1 (tenant_id=?)"
+      ],
+      "retention_local_sqlite_ms": 0.266221,
+      "retention_query_plan": [
+        "SEARCH portal_sessions USING COVERING INDEX sqlite_autoindex_portal_sessions_1 (session_hash=?)",
+        "LIST SUBQUERY 4",
+        "COMPOUND QUERY",
+        "LEFT-MOST SUBQUERY",
+        "CO-ROUTINE (subquery-1)",
+        "SEARCH portal_sessions USING INDEX idx_portal_sessions_expiry (expires_at_utc<?)",
+        "SCAN (subquery-1)",
+        "UNION ALL",
+        "CO-ROUTINE (subquery-3)",
+        "SEARCH portal_sessions USING INDEX idx_portal_sessions_revoked (revoked_at_utc>? AND revoked_at_utc<?)",
+        "SCAN (subquery-3)"
+      ],
+      "sessions_before_cleanup": 21000,
+      "tenant_identity_mismatches": 0,
+      "tenants": 1000,
+      "terminal_rows_deleted_in_one_statement": 100,
+      "users": 1000,
+      "valid_sessions_preserved": 1000
+    },
+    {
+      "devices": 20000,
+      "exact_source_session_lookups": 10000,
+      "lookup_local_sqlite_mean_ms": 0.025793,
+      "lookup_local_sqlite_p95_ms": 0.028445,
+      "lookup_local_sqlite_p99_ms": 0.031741,
+      "lookup_query_plan": [
+        "SEARCH s USING INDEX sqlite_autoindex_portal_sessions_1 (session_hash=?)",
+        "SEARCH u USING INDEX sqlite_autoindex_users_1 (subject_id=?)",
+        "SEARCH t USING INDEX sqlite_autoindex_tenants_1 (tenant_id=?)"
+      ],
+      "retention_local_sqlite_ms": 0.358788,
+      "retention_query_plan": [
+        "SEARCH portal_sessions USING COVERING INDEX sqlite_autoindex_portal_sessions_1 (session_hash=?)",
+        "LIST SUBQUERY 4",
+        "COMPOUND QUERY",
+        "LEFT-MOST SUBQUERY",
+        "CO-ROUTINE (subquery-1)",
+        "SEARCH portal_sessions USING INDEX idx_portal_sessions_expiry (expires_at_utc<?)",
+        "SCAN (subquery-1)",
+        "UNION ALL",
+        "CO-ROUTINE (subquery-3)",
+        "SEARCH portal_sessions USING INDEX idx_portal_sessions_revoked (revoked_at_utc>? AND revoked_at_utc<?)",
+        "SCAN (subquery-3)"
+      ],
+      "sessions_before_cleanup": 210000,
+      "tenant_identity_mismatches": 0,
+      "tenants": 10000,
+      "terminal_rows_deleted_in_one_statement": 100,
+      "users": 10000,
+      "valid_sessions_preserved": 10000
+    }
+  ],
+  "event_v2_canary_restricted": true,
+  "event_v2_configured": true,
+  "open_gates": [
+    "choose and verify customer transport mix (LOCAL_TUNNEL vs OUTBOUND_RELAY)",
+    "commercial Event V2 rollout for high-volume relay users",
+    "real multi-tenant DEV ramp and soak",
+    "D1 service-time and rows-written measurements under real load",
+    "Identity login-burst and recovery tests"
+  ],
+  "production_load_certification": false,
+  "schema": "hara.commander-1k-10k-capacity-evidence.v1",
+  "scope": "LOCAL_SQLITE_EXACT_SOURCE_SQL_PLUS_EXPLICIT_TRAFFIC_MODEL",
+  "signed_linux_source_sha256": "3e0db700dd568a85e23212a5400f1d256546fef77b7f59f574ceed29e04c15b7",
+  "source_git_head": "0f918c302318663ee068d31da5df7688acdded9b",
+  "state": "PASS",
+  "traffic_scenarios": [
+    {
+      "all_assumed_devices_online": 2000,
+      "assumed_online_devices_per_user": 2,
+      "assumed_peak_portal_users": 250,
+      "assumed_portal_requests_per_user_per_minute": 6,
+      "cost_exclusions": [
+        "Workers CPU",
+        "D1",
+        "Durable Objects",
+        "Identity hosting",
+        "other account traffic",
+        "taxes",
+        "tool execution traffic"
+      ],
+      "local_tunnel_contract": {
+        "local_tunnel_hourly_telemetry_interval_seconds": 3600,
+        "local_tunnel_queue_polling_enabled": false
+      },
+      "local_tunnel_hourly_telemetry_only_average_http_rps": 0.555556,
+      "local_tunnel_telemetry_exclusions": [
+        "START/STOP lifecycle bursts",
+        "retries and queued events",
+        "lease and metering operations",
+        "portal HTTP",
+        "tunnel provider traffic",
+        "useful tool execution"
+      ],
+      "maintenance_limits_note": "Maximums, not guaranteed throughput; 5s soft wall budget between rounds, D1 service time and overlapping terminal sets may reduce achieved rows.",
+      "new_oidc_cleanup_nominal_max_per_day": 48000,
+      "new_session_cleanup_nominal_max_per_day": 96000,
+      "old_oidc_cleanup_nominal_max_per_day": 2400,
+      "old_session_cleanup_nominal_max_per_day": 2400,
+      "polling_scenario_transport": "OUTBOUND_RELAY_ONLY_NOT_LOCAL_TUNNEL",
+      "portal_http_rps": 25.0,
+      "pricing_source": "https://developers.cloudflare.com/workers/platform/pricing/",
+      "pricing_verified_on": "2026-10-11",
+      "public_linux_hot_poll_seconds": 2,
+      "public_linux_idle_poll_seconds": 10,
+      "public_linux_presence_heartbeat_seconds": 60,
+      "registered_users": 1000,
+      "relay_linux_hot_transport_http_rps": 1033.333,
+      "relay_linux_idle_http_requests_month_8h_day": 201600000,
+      "relay_linux_idle_transport_http_rps": 233.333,
+      "relay_workers_request_only_usd_month_8h_day": 62.48
+    },
+    {
+      "all_assumed_devices_online": 20000,
+      "assumed_online_devices_per_user": 2,
+      "assumed_peak_portal_users": 2000,
+      "assumed_portal_requests_per_user_per_minute": 6,
+      "cost_exclusions": [
+        "Workers CPU",
+        "D1",
+        "Durable Objects",
+        "Identity hosting",
+        "other account traffic",
+        "taxes",
+        "tool execution traffic"
+      ],
+      "local_tunnel_contract": {
+        "local_tunnel_hourly_telemetry_interval_seconds": 3600,
+        "local_tunnel_queue_polling_enabled": false
+      },
+      "local_tunnel_hourly_telemetry_only_average_http_rps": 5.555556,
+      "local_tunnel_telemetry_exclusions": [
+        "START/STOP lifecycle bursts",
+        "retries and queued events",
+        "lease and metering operations",
+        "portal HTTP",
+        "tunnel provider traffic",
+        "useful tool execution"
+      ],
+      "maintenance_limits_note": "Maximums, not guaranteed throughput; 5s soft wall budget between rounds, D1 service time and overlapping terminal sets may reduce achieved rows.",
+      "new_oidc_cleanup_nominal_max_per_day": 48000,
+      "new_session_cleanup_nominal_max_per_day": 96000,
+      "old_oidc_cleanup_nominal_max_per_day": 2400,
+      "old_session_cleanup_nominal_max_per_day": 2400,
+      "polling_scenario_transport": "OUTBOUND_RELAY_ONLY_NOT_LOCAL_TUNNEL",
+      "portal_http_rps": 200.0,
+      "pricing_source": "https://developers.cloudflare.com/workers/platform/pricing/",
+      "pricing_verified_on": "2026-10-11",
+      "public_linux_hot_poll_seconds": 2,
+      "public_linux_idle_poll_seconds": 10,
+      "public_linux_presence_heartbeat_seconds": 60,
+      "registered_users": 10000,
+      "relay_linux_hot_transport_http_rps": 10333.333,
+      "relay_linux_idle_http_requests_month_8h_day": 2016000000,
+      "relay_linux_idle_transport_http_rps": 2333.333,
+      "relay_workers_request_only_usd_month_8h_day": 606.8
+    }
+  ]
+}

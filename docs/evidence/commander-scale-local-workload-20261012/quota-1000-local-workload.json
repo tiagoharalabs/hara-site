@@ -1,0 +1,62 @@
+{
+  "aggregate_query_plan": [
+    "SEARCH period_usage USING INDEX sqlite_autoindex_period_usage_1 (period_key=?)"
+  ],
+  "approval_relay_sha256": "28bc2e9249087f7725bedc4c238d3e4dae32d3fee26546f0f13b11e4cd1a9580",
+  "assertions": 44504,
+  "at_utc": "2026-10-12T23:53:05.109Z",
+  "authenticated_agents_tested": 0,
+  "authenticated_cloud_tenants_tested": 0,
+  "cleanup_verified": true,
+  "cloud_soak_hours": 0,
+  "diagnostic_memory_rss_bytes": 221646848,
+  "fairness_scope": "independent quota balances only; no real scheduler, cloud latency or authentication fairness",
+  "local_elapsed_ms": 3211.109,
+  "local_simultaneously_open_objects": 1000,
+  "local_sqlite_objects_closed": 1000,
+  "measured_cloud_cost": false,
+  "phases": [
+    {
+      "local_wall_ms": 336.063,
+      "phase": "create_1000_simultaneously_open_isolated_sqlite_objects"
+    },
+    {
+      "local_wall_ms": 2074.367,
+      "phase": "same_ids_independent_accounting_and_terminal_replay"
+    },
+    {
+      "local_wall_ms": 328.911,
+      "phase": "foreign_subject_function_period_conflicts_do_not_change_rows"
+    },
+    {
+      "local_wall_ms": 62.737,
+      "phase": "noisy_object_500_denials_do_not_consume_quiet_object_quota"
+    },
+    {
+      "local_wall_ms": 121.282,
+      "phase": "15min_pending_replay_keeps_original_30min_quota_reservation"
+    },
+    {
+      "local_wall_ms": 273.905,
+      "phase": "exact_30min_expiry_maintains_terminal_receipts_and_aggregate"
+    }
+  ],
+  "preserved_committed_receipts": 5000,
+  "production_load_certification": false,
+  "production_quota_class_sha256": "d85bff76a07ce83d92763dba7ccd2dbb2d17159c7a1fae1e69a856ef6e7ff855",
+  "production_worker_sha256": "9bfd38d5adb3e0b2d990f586683cbec1c211d0d06c5429d1309780395d0da7d6",
+  "quota_method_calls": 39499,
+  "real_network_reconnect_tested": false,
+  "schema": "hara.commander-quota-1000-local-object-workload.v1",
+  "scope": "EXACT_PRODUCTION_TENANTQUOTA_CLASS_INDEPENDENT_LOCAL_SQLITE_OBJECTS",
+  "source_git_head": "0f918c302318663ee068d31da5df7688acdded9b",
+  "sql_statements": 115999,
+  "state": "PASS",
+  "synthetic_subjects": 1000,
+  "terminal_rows": {
+    "COMMITTED": 5000,
+    "DENIED": 1500,
+    "RELEASED": 3000
+  },
+  "validator_sha256": "66dda11fc4852190dde877cc64b0591f9711585ec8ac74e021b5a865b7212b27"
+}

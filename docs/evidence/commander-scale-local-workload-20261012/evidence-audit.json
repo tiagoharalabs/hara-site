@@ -1,0 +1,20 @@
+{
+  "at_utc": "2026-10-12T23:55:41.141009+00:00",
+  "declared_wrangler_env_names": [],
+  "event_v2_canary_restricted": true,
+  "json_files_inspected_under_512k": 220,
+  "local_workload_cannot_pass_cloud_soak_gate": true,
+  "next_real_acceptance_blocker": "Separate authenticated DEV tenant/device with tenant-scoped receipts and denied cross-tenant requests, before controlled multi-tenant ramp",
+  "proof_only_no_cloud_auth_or_billing_change": true,
+  "schema": "hara.commander-scale-evidence-audit.v1",
+  "scope": "COMMITTED_REPOSITORY_AND_ISOLATED_LOCAL_WORKLOAD",
+  "soak_schema_evidence": [],
+  "source_git_head": "0f918c302318663ee068d31da5df7688acdded9b",
+  "source_hashes": {
+    "apps/commander/scripts/commander_commercial_readiness_gate.py": "3a0a396e6a3280acab16fc77098df4f1d98f4a2226820265838fd865c81aa321",
+    "apps/commander/scripts/test_quota_1000_local_workload.mjs": "66dda11fc4852190dde877cc64b0591f9711585ec8ac74e021b5a865b7212b27",
+    "apps/commander/src/auth.js": "04764bde18fd7a739a65d7085d230941cab5c0e980e528beafb27f1ad0ecd0dc",
+    "apps/commander/src/worker.js": "9bfd38d5adb3e0b2d990f586683cbec1c211d0d06c5429d1309780395d0da7d6"
+  },
+  "windows_gate_schema_evidence": []
+}
