@@ -1,0 +1,34 @@
+{
+  "schema": "hara.commander-win49-native-private-acl-fixture-acceptance.v1",
+  "report": {
+    "approval_generated": false,
+    "config_sha256": "e8810f67c0ccaa8780a401f767e5ff99660def8d8815b7288c7a9e4d156bc7f8",
+    "failure": null,
+    "fixture_root": "C:\\Users\\sarti\\AppData\\Local\\Temp\\hara-canary49-acl-fixture-9e099201d58e406fa7a96740e8366406",
+    "helper_sha256": "7a505555aa850a73ca727b49d5d74159a0dfaec4a12c94c4a3ae1f1ce2ad0834",
+    "live_agent_or_preimage_modified": false,
+    "live_preimage_directory_exists": false,
+    "live_preimage_files": [],
+    "old_process_ids_alive": [],
+    "pending_exists": false,
+    "powershell_version": "5.1.26100.9444",
+    "private_values_exposed": false,
+    "raw_error_custody_private": false,
+    "raw_error_custody_sha256": "",
+    "response_exists": false,
+    "schema": "hara.commander-win49-native-acl-fixture.v1",
+    "source_sha256": "f54e5ff8c170e09a3dc795004af426851d111c89ae78408559886e0d693bf805",
+    "state": "PASS",
+    "successful_phases": [
+      "SET_DIRECTORY_PRIVATE_ACL",
+      "SET_FILE_PRIVATE_ACL",
+      "COPY_INNOCUOUS_SOURCE",
+      "WRITE_XML_STRING"
+    ],
+    "task_definition_sha256": "9bcc1704ecbb8afb3ce5edd4cb1f7a21ed4d470fc91870ff354d9da24d5dfa08",
+    "task_state": "Ready"
+  },
+  "authority": "AUTHORIZED_LAB_QGA_USER_CONTEXT_NOT_WINDOWS_PRODUCT_EXECUTION",
+  "bridge_receipt_sha256": "b85be1587f083e9ad7a7d4af565b518227f71802607f674d5b47b11098e48cb6",
+  "real_human_approval_proven": false
+}

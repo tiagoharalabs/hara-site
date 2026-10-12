@@ -1,3 +1,17 @@
+# H.A.R.A. Commander — CURRENT (12/10/2026; backend 15min implantado, canário 49 pendente)
+
+Documento atual: **docs/operations/HARA_COMMANDER_WINDOWS_049_APPROVAL15M_RC_20261012.md**. O backend de chamadas de 15 minutos está implantado: Worker 338e2b88-eae9-41b1-868d-947098fe68a3 em 100%, migração 0035 aplicada e validação de health/auth/assets públicos 43 aprovada. A RC privada 49 está assinada e preparada; **instalação 49 e aprovação humana positiva continuam pendentes**.
+
+As duas inspeções de canário, associadas aos controles d060 e85b, passaram. A tentativa Apply com controle 85b terminou em **CANARY_RUNTIME_FAILED** antes de backup, stop da tarefa, substituição de fonte ou launch. A causa original permanece **UNKNOWN**. Os flags de preservação não estabelecidos no Apply não demonstram alteração de configuração ou XML; a leitura posterior confirmou seus hashes intactos. Não houve aprovação automatizada.
+
+A inspeção somente leitura às 20:40:18.053Z encontrou a tarefa **Ready**, zero processos-alvo e o marcador antigo de operador sem processo vivo. A fonte instalada continua 48, SHA f54e5ff8c170e09a3dc795004af426851d111c89ae78408559886e0d693bf805; configuração e XML da tarefa foram preservados. Esse snapshot de laboratório não comprova disponibilidade comercial atual, nem identifica quem encerrou a sessão antiga. O fixture de ACL privada passou no sandbox; esse resultado não identifica a causa da tentativa abortada. A próxima variante de instalação com a tarefa parada está em preparação, sem resultado de instalação nesta atualização.
+
+Evidências sanitizadas em **docs/evidence/commander-win49-approval15m-20261012/**: dois Inspect, Apply, fixture ACL e inspeção pós-aborto. O controle Root R3 SHA 85b57e255187a1e9d00dc69047b03aabe52bf049b463dbb0ab95176244c5cc11 é histórico das 20:31, sem assumir freshness posterior. Os registros anteriores foram preservados.
+
+O código permanece no checkpoint 34c282b2e91c7ff5032fde5a73a7511d1fb012fc, com CI 38303773972 **SUCCESS / 105 checks**. Fonte 49 SHA 7b51d2f243228f27aaf742086fe012c73bc17cd8c180a4f9abbcb1e2c51f3080 e manifesto d0f375fd95e1e7842abb566359cd8edf2f14c4d10853e844cf2c425d0f9d6124 continuam congelados. Este followup altera documentação e evidências. Os testes humanos de aceite positivo, CAS, terminal e recuperação seguem pendentes. Downloads públicos 43-v3, sete alterações de outra frente e StorageHOLD preservados.
+
+## Registro anterior preservado — rollout do backend e preparação do canário
+
 # H.A.R.A. Commander — CURRENT (12/10/2026; canário49 assinado e preparado, runtime48, aceite humano pendente)
 
 Documento atual: **docs/operations/HARA_COMMANDER_WINDOWS_049_APPROVAL15M_RC_20261012.md**. O pedido de15 minutos por ação foi implementado na RC privada49 com prazo900s, texto completo+Enter e heartbeat durante a espera, mantendo ASK_EVERY_ACTION. Fonte7b51d2f243228f27aaf742086fe012c73bc17cd8c180a4f9abbcb1e2c51f3080; manifesto d0f375fd95e1e7842abb566359cd8edf2f14c4d10853e844cf2c425d0f9d6124; assinatura RS256/RSA3072/v2 autenticada também no PS5.1. Bundle privado49-v9 congelado; Linux e63 arquivos de bundles históricos preservados.

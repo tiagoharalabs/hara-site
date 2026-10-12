@@ -76,3 +76,20 @@ Fonte e backend estão integrados na worktree final. Backend55checks PASS; **gat
 production-validation.json SHAefdae1d9603121d4d4c2a4ab049b4ddca57eb64b383d6e901c3552930939bdd5 confirma a implantação, migração e duas leituras Linux diretas. A primeira tentativa de deploy foi interrompida pelo timeout10s do cliente; reconciliação confirmou nenhum upload/deploy, mantendo a migração aplicada. A tentativa gerenciada posterior passou com compiled identity match e100%. O snapshot de TimeTravel anterior35 foi preservado. Reverter runtime600s exige drenar/conciliar chamadas900s, conforme o recibo; migração aditiva permanece.
 
 ControleRootR2 às20:25:14.458Z registra20 chamadas terminais e nova listagem de sessões0. Usar windows49-root-fresh-cutover-control-r2.json SHAd0604f8d670822bf6023c77317a2ae0f64e86e406afde72fbf0c816dfe0b23be como prechecagem histórica desta etapa; o controle anterior foi preservado, sem assumir freshness depois desse instante. Backend real não prova aprovação humana Windows. Agent49 e aceite positivo continuam pendentes até recibos do canário/execução.
+
+
+## Tentativa de canário e inspeção posterior
+
+As inspeções com controles d060 (20:26) e85b (20:31) passaram, preservando identidade dos processos, fonte 48, configuração e XML. O Apply 85b retornou CANARY_RUNTIME_FAILED antes de backup/stop/substituição/launch; seu exit0 do wrapper não representa sucesso do domínio. A causa permanece UNKNOWN. Nenhum helper solicitou stop ou launch nessa tentativa e não foi gerada aprovação.
+
+Às20:40:18.053Z, a inspeção de laboratório encontrou Task Ready, zero processos-alvo e o antigo marcador de operador sem processo vivo. Fonte 48 SHA f54e5ff8c170e09a3dc795004af426851d111c89ae78408559886e0d693bf805, configuração e XML foram confirmados intactos. Não se atribui autoria ou causa ao encerramento da sessão. O sandbox nativo PS5.1 passou as operações de ACL privada/cópia/XML; isso não estabelece a causa do Apply abortado. Uma variante de instalação com a tarefa parada está em preparação; Agent 49 ainda não instalado nesta atualização.
+
+As leituras acima têm autoridade de laboratório QGA para metadados e não substituem recibos de execução comercial Windows. Os flags de preservação não estabelecidos no Apply são distintos do snapshot posterior que confirmou os bytes. Controle R3 SHA 85b57e255187a1e9d00dc69047b03aabe52bf049b463dbb0ab95176244c5cc11 conserva a prechecagem histórica 20:31; não comprova freshness depois dela. Aprovação humana positiva, CAS, terminal e recuperação continuam pendentes.
+
+| Evidência | SHA-256 |
+| --- | --- |
+| windows49-cutover-inspect-d0604f8d670822bf-result.json | 799a295c4df8469f5709524fb33adad6185e64f7c3c07bd7b2db413da18ff9a2 |
+| windows49-cutover-inspect-85b57e255187a1e9-result.json | c43428eaebee45a69d24a128caf8293018901fbf167e002c7c42ff08caf1f2f3 |
+| windows49-cutover-apply-85b57e255187a1e9-result.json | 83f7262ffd66b556c2f06f666e5320d58a385b5ff2c03f18ec226867fcd520ab |
+| windows49-native-private-acl-fixture-acceptance.json | 4f8e07c9b38d6f0481c8dedb5ab14dbd7d58f2763e2a8d60d87965a51caf79d2 |
+| windows49-post-abort-readonly-state-acceptance.json | bdc39fbc50055872ce80aca5073ed64cfcaec5db87426f83479a1ccfc34bd11b |
