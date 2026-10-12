@@ -1,0 +1,39 @@
+{
+  "schema": "hara.commander-windows51-ci-portable-release-guard.v1",
+  "state": "TARGETED_PASS_HOSTED_PENDING",
+  "failed_run": 38321663602,
+  "failed_head": "2cb15d99f33179d1ae9deec4a16c861aca673906",
+  "failed_validator": "test_windows_051_release_guards.py",
+  "cause": "test required Services-only /tmp_hara directory; standard GitHub runner lacks it",
+  "change": "use system temporary directory; all13 tamper/scope/immutable-source guards retained",
+  "agent_source_changed": false,
+  "signed_bundle_changed": false,
+  "local_validation": {
+    "state": "PASS",
+    "operational_authority": "HARA_COMMANDER",
+    "execution_authority": "HARA_COMMANDER_AGENT",
+    "runtime_authority_from_chatgpt": false,
+    "mutation_performed": false,
+    "result": {
+      "function_id": "process.output",
+      "risk_class": "READ_ONLY",
+      "process_exit_code": 0,
+      "domain_success_inferred": false,
+      "stdout": "{\"base_line\":0,\"buffer_truncated\":false,\"exit_code\":0,\"next_offset\":1,\"offset\":0,\"partial\":\"\",\"pid\":2264560,\"session_id\":\"HARA-PROC-5815faf295a942b5a44de8871bcca506\",\"state\":\"EXITED\",\"text\":\"{\\\"state\\\": \\\"PASS\\\", \\\"exit_code\\\": 0, \\\"stdout\\\": \\\"WINDOWS_0_3_51_V11_RC_STAGE_PREPARED\\\\n{\\\\\\\"checks\\\\\\\": 13, \\\\\\\"passed_checks\\\\\\\": [\\\\\\\"UNTAMPERED_UNSIGNED_STAGE_ACCEPTED\\\\\\\", \\\\\\\"NO_SIGNATURE_OR_KEY_OPERATION\\\\\\\", \\\\\\\"STAGING_SOURCE_DRIFT:agent/linux.py\\\\\\\", \\\\\\\"STAGING_SOURCE_DRIFT:agent/windows.ps1\\\\\\\", \\\\\\\"STAGING_SOURCE_DRIFT:install/linux.sh\\\\\\\", \\\\\\\"STAGING_SOURCE_DRIFT:install/windows.ps1\\\\\\\", \\\\\\\"STAGING_MANIFEST_DRIFT\\\\\\\", \\\\\\\"STAGING_KEY_DRIFT\\\\\\\", \\\\\\\"STAGING_CHECKSUM_DRIFT\\\\\\\", \\\\\\\"IMMUTABLE_RELEASE_TARGET_EXISTS\\\\\\\", \\\\\\\"IMMUTABLE_RELEASE_TARGET_EXISTS\\\\\\\", \\\\\\\"REJECTED_MUTATIONS_PRESERVE_REVIEWED_STAGE\\\\\\\", \\\\\\\"SOURCE_INSTALLER_AND_LINUX_PRESERVED\\\\\\\"], \\\\\\\"production_action_executed\\\\\\\": false, \\\\\\\"schema\\\\\\\": \\\\\\\"hara.commander-windows051-unsigned-release-guards.v1\\\\\\\", \\\\\\\"signing_performed\\\\\\\": false, \\\\\\\"source_sha256\\\\\\\": \\\\\\\"4c563987986249d78c76258d062a4d360ffb88199539429ea97c2f346644656a\\\\\\\", \\\\\\\"state\\\\\\\": \\\\\\\"PASS\\\\\\\"}\\\\n\\\", \\\"stderr\\\": \\\"\\\"}\\r\",\"total_lines\":1,\"truncated_before\":false}"
+    },
+    "customer_services_relay": false,
+    "bridge_receipt_sha256": "222622a6cbfbd663448a31fa36e08edf78d632e7b5c0049a785d77b5e6f567b1",
+    "computer": "services",
+    "product": {
+      "plan_code": "FOUNDER_INTERNAL",
+      "entitlement_id": "HARA-ENTITLEMENT-XPK",
+      "quota": {
+        "ok": true,
+        "state": "UNMETERED",
+        "mode": "UNMETERED",
+        "units": 0,
+        "cloud_quota_transaction": false
+      }
+    }
+  }
+}
