@@ -1,3 +1,13 @@
+# H.A.R.A. Commander — CURRENT (12/10/2026; Windows51 núcleo funcional PASS)
+
+**Windows0.3.51 foi validado pelo H.A.R.A. Commander direto:** escrita UTF-8 com40 bytes/SHA exatos, CAS correto e hash antigo recusado, terminal interativo com Unicode e variáveis preservadas, saída após exit7, paginação, encerramento normal/forçado e recuperação do recibo anterior após reconexão. Fonte ativa4c563987986249d78c76258d062a4d360ffb88199539429ea97c2f346644656a corresponde à RC privada RS256; gate115/115PASS. Operação atual: **docs/operations/HARA_COMMANDER_WINDOWS_051_PRODUCT_VALIDATION_20261012.md**. Evidência própria: **docs/evidence/commander-win51-product-validation-20261012-root/real-mcp-acceptance.json**.
+
+Aprovação individual de15 minutos teve aceite humano positivo na49, com espera observada de126s; não se afirma teste real dos900s completos. Os testes51 usaram a configuração atual SESSION_TRUSTED, preservada. A instalação51 foi observada na frente paralela; os drafts/helper Root abortados não são sua origem.
+
+Downloads assinados43-v3 foram restaurados após regressão numa publicação paralela: **15/15 assets públicos normais CURRENT**, oito assinados exatos, UI/bindings preservados, WorkerUTF8 f5f667e4-1e65-4a84-a850-8fef6877598d em100%. Sem reboot, Stripe ou atualização Linux. Metadados mutation_performed/risk_class ainda têm defeitos documentados; ConPTY, cobrança, soak e mil clientes reais não são homologados por esta aceitação.
+
+## Registro anterior preservado — aceite humano49 e testes anteriores
+
 # H.A.R.A. Commander — CURRENT (12/10/2026; Windows 49 real e aceite humano positivo, testes em curso)
 
 **O primeiro aceite humano positivo pelo MCP foi comprovado no Windows 49.** A chamada própria de teste hostname, HARA-CALL-6843883f-641b-42e2-a7a1-45a94a3675c0, recebeu claim às 21:21:17.259Z e mostrou PASS local às 21:23:23Z. A imagem enviada pelo usuário mostrou a janela de 15 minutos e a confirmação ENVIADA. O resultado real retornou HARA_WIN11, exit0, sem timeout nem truncamento; recibo 4963b1d2f09e21f27f3507d38c3c62cdddb810462fd08adec30319ac2ddf8dd1. O hostname passou após cerca de 126 segundos, além da antiga janela de 30 segundos; esse teste não esperou os 900 segundos completos.
