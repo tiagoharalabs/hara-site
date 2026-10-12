@@ -1,5 +1,13 @@
 # H.A.R.A. Commander — CURRENT (11/10/2026, Windows 0.3.45 online; consentimento humano HOLD)
 
+## Handoff para próxima frente — GitHub e canário Windows (11/10/2026)
+
+Documento de continuidade consolidado: **docs/handoffs/HARA_COMMANDER_WIN45_CONSENT_COMMERCIAL_HANDOFF_20261011.md**. Ele contém status live da frota, Worker DEV/PROD, releases assinadas, GitHub e CI, provas e limitações do Windows, procedimentos de consentimento humano e de teste E2E, riscos de UX/Read-Host, entregas pendentes de escala/Stripe/OpenAI e arquivos das outras frentes que devem ser preservados.
+
+**Resumo autoritativo:** Linux Founder 7/7 ONLINE em 0.3.46; HARA_WIN11 ONLINE em 0.3.45 assinada, leitura e process.sessions com recibos. Aprovação local positiva de hostname/escrita/sessão pelo MCP ainda **HOLD**; duas tentativas expiraram sem execução. Console do operador permanece ativo, janela H.A.R.A. detectada como visível, mas foco no viewer não comprovado. Nenhum modo de aprovação foi relaxado e não houve deploy adicional nesta atualização documental. A frente seguinte deve começar pelo handoff, não por versões históricas abaixo.
+
+
+
 ## Operador Windows: janela anterior encerrada, nova sessão visível (11/10/2026)
 
 A sessão obsoleta do operador da VM `commander-win11` foi encerrada por processo-alvo verificado e a marcação obsoleta removida depois da saída. Uma nova sessão foi iniciada no usuário local, com título `H.A.R.A. Commander 0.3.45 - APROVACAO LOCAL`, janela visível pela enumeração de janelas do próprio Windows; não é garantia de estar em primeiro plano no viewer. O Agent permanece ONLINE em 0.3.45, Linux 7/7 em 0.3.46, sem alteração de identidade ou `ASK_EVERY_ACTION`. Duas tentativas sintéticas `hostname` pelo MCP real **expiraram por falta de confirmação no console** (`LOCAL_ACTION_APPROVAL_EXPIRED`), sem execução. O último prompt expirado foi limpo por reinício controlado somente do console do operador. **Aprovação humana positiva AINDA NÃO realizada.**
