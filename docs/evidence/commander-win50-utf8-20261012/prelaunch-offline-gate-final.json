@@ -1,0 +1,795 @@
+{
+  "at_utc": "2026-10-12T22:26:22.318885+00:00",
+  "checked": 111,
+  "failed": 0,
+  "initial_gate_evidence_preserved": true,
+  "passed": 111,
+  "production_rollout_authorized": false,
+  "real_cloudflare_1k_clients_tested": false,
+  "real_multitenant_tested": false,
+  "retest_of_failed_checks": true,
+  "schema": "hara.commander-prelaunch-offline-gate.v1",
+  "scope": "LOCAL_ONLY_OFFLINE_NO_CLOUDFLARE_MUTATION",
+  "source_head": "680cf20df32b6ac1d221244c151fc6f4bb617ff6",
+  "stress_attempts_per_scenario": 1000,
+  "stress_threads": 24,
+  "tests": [
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.072,
+      "state": "PASS",
+      "test": "validate_signed_windows_044_v4_rc.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.072,
+      "state": "PASS",
+      "test": "validate_signed_windows_045_v5_rc.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.286,
+      "state": "PASS",
+      "test": "validate_signed_windows_046_v6_rc.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.563,
+      "state": "PASS",
+      "test": "validate_signed_windows_047_v7_rc.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 1.165,
+      "state": "PASS",
+      "test": "validate_signed_windows_048_v8_rc.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.021,
+      "state": "PASS",
+      "test": "validate_windows_044_approval_contract.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.021,
+      "state": "PASS",
+      "test": "validate_windows_045_privacy_contract.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.038,
+      "state": "PASS",
+      "test": "validate_windows_local_approval_expiry.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.037,
+      "state": "PASS",
+      "test": "validate_windows_047_approval_expiry.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.037,
+      "state": "PASS",
+      "test": "validate_windows_048_approval_expiry.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.034,
+      "state": "PASS",
+      "test": "validate_windows_048_operator_startup.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.044,
+      "state": "PASS",
+      "test": "validate_event_v2_terminal_release.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.853,
+      "state": "PASS",
+      "test": "validate_process_terminal_drain.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.031,
+      "state": "PASS",
+      "test": "validate_commander_submission_package.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.051,
+      "state": "PASS",
+      "test": "commander_paid_dev_health_ramp.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.049,
+      "state": "PASS",
+      "test": "validate_event_v2_telemetry_signed_release.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.168,
+      "state": "PASS",
+      "test": "validate_event_v2_local_telemetry.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.068,
+      "state": "PASS",
+      "test": "test_commander_cf_cost_audit.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 1.855,
+      "state": "PASS",
+      "test": "validate_portal_read_capacity.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.138,
+      "state": "PASS",
+      "test": "validate_canonical_functions_hardening.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.021,
+      "state": "PASS",
+      "test": "validate_mcp_process_risk_annotations.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.148,
+      "state": "PASS",
+      "test": "validate_manual_on_demand_commercial.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.099,
+      "state": "PASS",
+      "test": "verify_commander_public_artifacts.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.079,
+      "state": "PASS",
+      "test": "validate_signed_commercial_v2_bundle.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.068,
+      "state": "PASS",
+      "test": "validate_signed_commercial_v3_bundle.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.111,
+      "state": "PASS",
+      "test": "stage_signed_commercial_assets.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 8.387,
+      "state": "PASS",
+      "test": "commander_linux_clean_lifecycle.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.105,
+      "state": "PASS",
+      "test": "validate_process_output_memory_budgets.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.106,
+      "state": "PASS",
+      "test": "validate_preimage_storage_budget.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 8.729,
+      "state": "PASS",
+      "test": "validate_concurrent_device_queue_sql.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 2.772,
+      "state": "PASS",
+      "test": "validate_device_installers.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.145,
+      "state": "PASS",
+      "test": "validate_bootstrap_supply_chain.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.134,
+      "state": "PASS",
+      "test": "validate_linux_tunnel_start_modes.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.086,
+      "state": "PASS",
+      "test": "validate_clean_linux_lifecycle.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.027,
+      "state": "PASS",
+      "test": "validate_device_lifecycle_races.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.024,
+      "state": "PASS",
+      "test": "validate_claim_revoke_race.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.305,
+      "state": "PASS",
+      "test": "validate_session_retention.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.021,
+      "state": "PASS",
+      "test": "validate_human_scale_v2.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.025,
+      "state": "PASS",
+      "test": "validate_invite_claim_race.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.026,
+      "state": "PASS",
+      "test": "validate_multitenant_isolation.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.022,
+      "state": "PASS",
+      "test": "validate_quota_reservation_ttl.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.023,
+      "state": "PASS",
+      "test": "validate_tenant_quota_storage_efficiency.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.154,
+      "state": "PASS",
+      "test": "validate_local_budget_blocks.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.023,
+      "state": "PASS",
+      "test": "validate_agent_request_efficiency.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.129,
+      "state": "PASS",
+      "test": "validate_event_v2_websocket_client.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.025,
+      "state": "PASS",
+      "test": "validate_event_v2_wiring.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.029,
+      "state": "PASS",
+      "test": "validate_event_v2_persistent_guard.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.027,
+      "state": "PASS",
+      "test": "validate_event_v2_clean_shutdown.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.074,
+      "state": "PASS",
+      "test": "validate_event_v2_presence_reconnect.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.474,
+      "state": "PASS",
+      "test": "validate_event_v2_linux_rc_install.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.093,
+      "state": "PASS",
+      "test": "validate_event_v2_transient_rpc.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.023,
+      "state": "PASS",
+      "test": "validate_dev_config.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.021,
+      "state": "PASS",
+      "test": "validate_prod_contracts.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.03,
+      "state": "PASS",
+      "test": "validate_prod_static.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.051,
+      "state": "PASS",
+      "test": "validate_release_signature.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.112,
+      "state": "PASS",
+      "test": "validate_billing_v1.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.116,
+      "state": "PASS",
+      "test": "validate_local_activity_store.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.066,
+      "state": "PASS",
+      "test": "validate_first_device_preflight.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.031,
+      "state": "PASS",
+      "test": "validate_fresh_customer_acceptance.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 2.294,
+      "state": "PASS",
+      "test": "validate_signed_windows_049_v9_rc.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 4.515,
+      "state": "PASS",
+      "test": "validate_signed_windows_050_v10_rc.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 13.753,
+      "state": "PASS",
+      "test": "test_windows_050_release_guards.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.038,
+      "state": "PASS",
+      "test": "validate_windows_049_approval_expiry.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.035,
+      "state": "PASS",
+      "test": "validate_windows_049_operator_startup.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.036,
+      "state": "PASS",
+      "test": "validate_windows_049_approval_window.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.038,
+      "state": "PASS",
+      "test": "validate_windows_050_approval_expiry.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.034,
+      "state": "PASS",
+      "test": "validate_windows_050_operator_startup.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.036,
+      "state": "PASS",
+      "test": "validate_windows_050_approval_window.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.028,
+      "state": "PASS",
+      "test": "test_windows_044_capability_gate.mjs"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.044,
+      "state": "PASS",
+      "test": "test_no_stripe_technical_mode.mjs"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.04,
+      "state": "PASS",
+      "test": "test_portal_session_isolation.mjs"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.027,
+      "state": "PASS",
+      "test": "test_device_status_poll.mjs"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.035,
+      "state": "PASS",
+      "test": "test_recent_call_expiry_projection.mjs"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.051,
+      "state": "PASS",
+      "test": "test_device_telemetry.mjs"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.204,
+      "state": "PASS",
+      "test": "test_customer_mcp_admin_profile.mjs"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.37,
+      "state": "PASS",
+      "test": "test_customer_argument_pipeline.mjs"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.354,
+      "state": "PASS",
+      "test": "test_mcp_result_consistency.mjs"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.059,
+      "state": "PASS",
+      "test": "test_portal_read_boundaries.mjs"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.046,
+      "state": "PASS",
+      "test": "test_usage_activity_concurrency.mjs"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.083,
+      "state": "PASS",
+      "test": "test_device_version_observation.mjs"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.094,
+      "state": "PASS",
+      "test": "test_portal_read_coordinator.mjs"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.028,
+      "state": "PASS",
+      "test": "test_portal_history_read.mjs"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.049,
+      "state": "PASS",
+      "test": "test_devices_minimalist_ui.mjs"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.03,
+      "state": "PASS",
+      "test": "test_devices_setup_commands_ui.mjs"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.026,
+      "state": "PASS",
+      "test": "test_nav_no_duplicate_titles.mjs"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.028,
+      "state": "PASS",
+      "test": "test_plan_cards_centered_ui.mjs"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.085,
+      "state": "PASS",
+      "test": "test_oidc_helpers.mjs"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.046,
+      "state": "PASS",
+      "test": "test_auth_helpers.mjs"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.174,
+      "state": "PASS",
+      "test": "test_auth_retention_capacity.mjs"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.029,
+      "state": "PASS",
+      "test": "test_auth_maintenance_observer.mjs"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.047,
+      "state": "PASS",
+      "test": "test_hara_identity_customer_mcp.mjs"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.299,
+      "state": "PASS",
+      "test": "test_customer_mcp_simple_profile.mjs"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.025,
+      "state": "PASS",
+      "test": "test_customer_mcp_device_routing.mjs"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.029,
+      "state": "PASS",
+      "test": "validate_device_tool_contract.mjs"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.047,
+      "state": "PASS",
+      "test": "test_security_rate_limit.mjs"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.313,
+      "state": "PASS",
+      "test": "test_customer_mcp_edge.mjs"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.061,
+      "state": "PASS",
+      "test": "billing_sqlite_webhook_e2e.mjs"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.049,
+      "state": "PASS",
+      "test": "billing_v1_selftest.mjs"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.049,
+      "state": "PASS",
+      "test": "validate_event_v2_fleet_allowlist.mjs"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.053,
+      "state": "PASS",
+      "test": "test_approval_async_quota_ttl.mjs"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.052,
+      "state": "PASS",
+      "test": "test_approval_async_storage.mjs"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.044,
+      "state": "PASS",
+      "test": "test_approval_async_queue_claim.mjs"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.034,
+      "state": "PASS",
+      "test": "commander_scale_capacity_model.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 3.023,
+      "state": "PASS",
+      "test": "validate_commander_1k_10k_capacity.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.054,
+      "state": "PASS",
+      "test": "commander_event_v2_active_1k_model.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.295,
+      "state": "PASS",
+      "test": "commander_event_v2_reconnect_storm_model.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.068,
+      "state": "PASS",
+      "test": "commander_event_v2_dev_multidevice_lab.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.058,
+      "state": "PASS",
+      "test": "commander_event_v2_dev_multidevice_probe.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.056,
+      "state": "PASS",
+      "test": "commander_event_v2_dev_burst_probe.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.036,
+      "state": "PASS",
+      "test": "commander_event_v2_dev_latency_profile.py"
+    },
+    {
+      "error": null,
+      "exit_code": 0,
+      "seconds": 0.053,
+      "state": "PASS",
+      "test": "test_json_utf8_response.mjs"
+    }
+  ]
+}

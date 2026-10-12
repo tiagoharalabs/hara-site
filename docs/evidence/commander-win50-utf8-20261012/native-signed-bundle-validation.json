@@ -1,0 +1,43 @@
+{
+  "agent_transport_started": false,
+  "files": [
+    {
+      "bytes": 218938,
+      "parse_errors": 0,
+      "path": "agent/linux.py",
+      "sha256": "3e0db700dd568a85e23212a5400f1d256546fef77b7f59f574ceed29e04c15b7"
+    },
+    {
+      "bytes": 97581,
+      "parse_errors": 0,
+      "path": "agent/windows.ps1",
+      "sha256": "56a9b301e13328f0f840e1d4134343d309f317add92c22c546f39718ec844b60"
+    },
+    {
+      "bytes": 36363,
+      "parse_errors": 0,
+      "path": "install/linux.sh",
+      "sha256": "534e14433da9f86eb4342c6d9400e89ecf164545605e02e22f1646510284aba5"
+    },
+    {
+      "bytes": 23774,
+      "parse_errors": 0,
+      "path": "install/windows.ps1",
+      "sha256": "24df086a516d6481a3ae03925acf6c7daa16c9267248d94d42fef80817cd893e"
+    }
+  ],
+  "installed_agent_modified": false,
+  "manifest_sha256": "058a6a78b324a27d90dcf19e2aa63a756740b715b3dff3e6ae03b60b05ad586a",
+  "pinned_authority": "commander-release-v2",
+  "powershell_version": "5.1.26100.9444",
+  "schema": "hara.commander-win50-private-rc-windows-validation.v1",
+  "self_test": {
+    "agent_transport_started": false,
+    "installed_agent_modified": false,
+    "marker": "COMMANDER_WINDOWS_AGENT_SELF_TEST=PASS",
+    "root_fixture_guaranteed": true,
+    "state": "PASS"
+  },
+  "signature_algorithm": "RS256_RSA3072",
+  "state": "PASS"
+}

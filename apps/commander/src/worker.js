@@ -156,6 +156,7 @@ function json(payload, status = 200) {
     headers: {
       ...SECURITY_HEADERS,
       "cache-control": "no-store",
+      "content-type": "application/json; charset=utf-8",
       "access-control-allow-origin": "*",
       "access-control-allow-headers": "content-type,authorization",
       "access-control-allow-methods": "GET,POST,OPTIONS"

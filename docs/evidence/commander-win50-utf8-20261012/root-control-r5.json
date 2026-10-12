@@ -1,0 +1,85 @@
+{
+  "schema": "hara.commander-win50-root-control-metadata.v1",
+  "observed_at_utc": "2026-10-12T22:33:50.070Z",
+  "computer": "HARA_WIN11",
+  "calls": [
+    {
+      "call_id": "HARA-CALL-1bbd1ade-24df-45ea-9c64-a900c683dcd0",
+      "effective_state": "COMPLETED",
+      "tool_id": "hara.process.sessions",
+      "completed_at_utc": "2026-10-12T22:31:53.770Z"
+    },
+    {
+      "call_id": "HARA-CALL-683aec9d-9e1c-4739-8dbf-21f0a1655358",
+      "effective_state": "COMPLETED",
+      "tool_id": "hara.process.sessions",
+      "completed_at_utc": "2026-10-12T22:30:10.935Z"
+    },
+    {
+      "call_id": "HARA-CALL-d3a63d1f-1e4a-4a42-88ea-5c8e0813d7fc",
+      "effective_state": "COMPLETED",
+      "tool_id": "hara.process.sessions",
+      "completed_at_utc": "2026-10-12T22:27:03.510Z"
+    },
+    {
+      "call_id": "HARA-CALL-fb84d6a9-66db-40f6-9572-2733bd99a447",
+      "effective_state": "COMPLETED",
+      "tool_id": "hara.device.info",
+      "completed_at_utc": "2026-10-12T22:25:35.346Z"
+    },
+    {
+      "call_id": "HARA-CALL-6d6db3b3-dbdb-4b5f-8a1b-15a574b2407d",
+      "effective_state": "EXPIRED",
+      "tool_id": "hara.ping",
+      "completed_at_utc": null
+    },
+    {
+      "call_id": "HARA-CALL-181e0f34-184e-4446-9273-1b69aa2ae390",
+      "effective_state": "COMPLETED",
+      "tool_id": "hara.process.output",
+      "completed_at_utc": "2026-10-12T22:23:04.586Z"
+    },
+    {
+      "call_id": "HARA-CALL-b881b628-c571-48be-94fd-65a04e7f86bf",
+      "effective_state": "COMPLETED",
+      "tool_id": "hara.process.sessions",
+      "completed_at_utc": "2026-10-12T22:22:34.712Z"
+    },
+    {
+      "call_id": "HARA-CALL-81bde1dc-8442-4b2d-8fd8-f0782bfe09c2",
+      "effective_state": "COMPLETED",
+      "tool_id": "hara.process.sessions",
+      "completed_at_utc": "2026-10-12T22:21:16.548Z"
+    },
+    {
+      "call_id": "HARA-CALL-696b2b58-b635-479c-bc98-37bed8234935",
+      "effective_state": "COMPLETED",
+      "tool_id": "hara.process.kill",
+      "completed_at_utc": "2026-10-12T22:21:00.567Z"
+    },
+    {
+      "call_id": "HARA-CALL-1d0c3847-d6a8-4564-b60f-374cdc8cc1a3",
+      "effective_state": "COMPLETED",
+      "tool_id": "hara.process.interact",
+      "completed_at_utc": "2026-10-12T22:09:52.818Z"
+    },
+    {
+      "call_id": "HARA-CALL-8cfa6e81-0312-4bde-b3b2-3d2333aa9e62",
+      "effective_state": "COMPLETED",
+      "tool_id": "hara.process.output",
+      "completed_at_utc": "2026-10-12T22:09:24.959Z"
+    },
+    {
+      "call_id": "HARA-CALL-3f2fae60-7462-458d-aad7-23649448f9e5",
+      "effective_state": "COMPLETED",
+      "tool_id": "hara.process.interact",
+      "completed_at_utc": "2026-10-12T22:07:23.215Z"
+    }
+  ],
+  "all_recent_calls_terminal": true,
+  "historical_session_count": 0,
+  "active_session_count": 0,
+  "historical_sessions_all_exited": true,
+  "sessions": [],
+  "historical_sessions_receipt_sha256": "747e3f764d504230a9fe66d7ece44aa10c7161a6cb9de436d693e8f7a2dc4a83"
+}

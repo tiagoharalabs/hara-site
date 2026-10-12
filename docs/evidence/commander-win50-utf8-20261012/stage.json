@@ -1,0 +1,182 @@
+{
+  "guest_root": "C:\\ProgramData\\HaraLabs\\CommanderWinLab\\20261012\\private-050-native-fixtures-r6",
+  "inputs": {
+    "cases": [
+      {
+        "args": [],
+        "name": "unicode",
+        "script": "test_windows_050_process_unicode_fixture.ps1",
+        "source_parameter": "-AgentPath"
+      },
+      {
+        "args": [],
+        "name": "http",
+        "script": "test_windows_050_utf8_http_fixture.ps1",
+        "source_parameter": "-AgentPath"
+      },
+      {
+        "args": [
+          "-ExpectedBehavior",
+          "Diagnostic"
+        ],
+        "name": "input-diagnostic",
+        "script": "test_windows_050_managed_input_fixture.ps1",
+        "source_parameter": "-AgentPath"
+      },
+      {
+        "args": [
+          "-ExpectedBehavior",
+          "Candidate050"
+        ],
+        "name": "input-final",
+        "script": "test_windows_050_managed_input_fixture.ps1",
+        "source_parameter": "-AgentPath"
+      },
+      {
+        "args": [],
+        "name": "core",
+        "script": "test_windows_local_approval_expiry.ps1",
+        "source_parameter": "-AgentSource"
+      },
+      {
+        "args": [
+          "-ExpectedSourceSha256",
+          "56a9b301e13328f0f840e1d4134343d309f317add92c22c546f39718ec844b60"
+        ],
+        "name": "window",
+        "script": "test_windows_050_approval_window_fixture.ps1",
+        "source_parameter": "-AgentSource"
+      },
+      {
+        "args": [
+          "-ExpectedBehavior",
+          "Candidate050",
+          "-ExpectedSourceSha256",
+          "56a9b301e13328f0f840e1d4134343d309f317add92c22c546f39718ec844b60"
+        ],
+        "name": "startup",
+        "script": "test_windows_operator_session_startup_fixture_050.ps1",
+        "source_parameter": "-AgentSource"
+      },
+      {
+        "args": [],
+        "name": "denial",
+        "script": "test_windows_full_tool_denial_fixture_050.ps1",
+        "source_parameter": "-AgentSource"
+      },
+      {
+        "args": [
+          "-ExpectedBehavior",
+          "Candidate050"
+        ],
+        "name": "resume",
+        "script": "test_windows_existing_console_resume_fixture_050.ps1",
+        "source_parameter": "-AgentSource"
+      }
+    ],
+    "files": [
+      {
+        "bytes": 27221,
+        "name": "test_windows_050_approval_window_fixture.ps1",
+        "sha256": "4fc3137a32a02c8e48ec9638c9088b78a7d3d767e9e14b18079cb28c6fa37716"
+      },
+      {
+        "bytes": 8494,
+        "name": "test_windows_050_managed_input_fixture.ps1",
+        "sha256": "d364135d4b689b72698df921193291b64bc12575c7526ef949db0cd6f75055c3"
+      },
+      {
+        "bytes": 5636,
+        "name": "test_windows_050_process_unicode_fixture.ps1",
+        "sha256": "42fdea986310a1e00ec26cbb0f9a03adeef00a5701e9643be49261610a58a911"
+      },
+      {
+        "bytes": 9815,
+        "name": "test_windows_050_utf8_http_fixture.ps1",
+        "sha256": "450f13a3ef56200a3148d46abdc4b5c1a05ad15a6b8f6d9ea0d3b3a936cfc36c"
+      },
+      {
+        "bytes": 12114,
+        "name": "test_windows_existing_console_resume_fixture_050.ps1",
+        "sha256": "aca0a7cabe48fd3ee94594c9728ca713854ddddbeea8fab69e5a303b90c36a5d"
+      },
+      {
+        "bytes": 9537,
+        "name": "test_windows_full_tool_denial_fixture_050.ps1",
+        "sha256": "2d454b939025ba9653be69cd6c7c501296b0b31b976ef1429db3af33b2184091"
+      },
+      {
+        "bytes": 25725,
+        "name": "test_windows_local_approval_expiry.ps1",
+        "sha256": "3cfe01817a58127fc5dcd08c1143ae1b92fdd0b95e0248689e8bbecf32e2d7cf"
+      },
+      {
+        "bytes": 15302,
+        "name": "test_windows_operator_session_startup_fixture_050.ps1",
+        "sha256": "045f9dfddbc925f38ff40cc203c18dc5ebced28d957384beb6ec31ef8a1a1ff1"
+      },
+      {
+        "bytes": 97581,
+        "name": "windows.ps1",
+        "sha256": "56a9b301e13328f0f840e1d4134343d309f317add92c22c546f39718ec844b60"
+      }
+    ],
+    "installed_agent_or_ipc_touched": false,
+    "schema": "hara.commander-native50-isolated-inputs.v1",
+    "source_name": "windows.ps1",
+    "source_sha256": "56a9b301e13328f0f840e1d4134343d309f317add92c22c546f39718ec844b60"
+  },
+  "installed_agent_or_ipc_touched": false,
+  "native_parser": {
+    "powershell_version": "5.1.26100.9444",
+    "rows": [
+      {
+        "name": "test_windows_050_approval_window_fixture.ps1",
+        "parse_error_count": 0,
+        "sha256": "4fc3137a32a02c8e48ec9638c9088b78a7d3d767e9e14b18079cb28c6fa37716"
+      },
+      {
+        "name": "test_windows_050_managed_input_fixture.ps1",
+        "parse_error_count": 0,
+        "sha256": "d364135d4b689b72698df921193291b64bc12575c7526ef949db0cd6f75055c3"
+      },
+      {
+        "name": "test_windows_050_process_unicode_fixture.ps1",
+        "parse_error_count": 0,
+        "sha256": "42fdea986310a1e00ec26cbb0f9a03adeef00a5701e9643be49261610a58a911"
+      },
+      {
+        "name": "test_windows_050_utf8_http_fixture.ps1",
+        "parse_error_count": 0,
+        "sha256": "450f13a3ef56200a3148d46abdc4b5c1a05ad15a6b8f6d9ea0d3b3a936cfc36c"
+      },
+      {
+        "name": "test_windows_existing_console_resume_fixture_050.ps1",
+        "parse_error_count": 0,
+        "sha256": "aca0a7cabe48fd3ee94594c9728ca713854ddddbeea8fab69e5a303b90c36a5d"
+      },
+      {
+        "name": "test_windows_full_tool_denial_fixture_050.ps1",
+        "parse_error_count": 0,
+        "sha256": "2d454b939025ba9653be69cd6c7c501296b0b31b976ef1429db3af33b2184091"
+      },
+      {
+        "name": "test_windows_local_approval_expiry.ps1",
+        "parse_error_count": 0,
+        "sha256": "3cfe01817a58127fc5dcd08c1143ae1b92fdd0b95e0248689e8bbecf32e2d7cf"
+      },
+      {
+        "name": "test_windows_operator_session_startup_fixture_050.ps1",
+        "parse_error_count": 0,
+        "sha256": "045f9dfddbc925f38ff40cc203c18dc5ebced28d957384beb6ec31ef8a1a1ff1"
+      },
+      {
+        "name": "windows.ps1",
+        "parse_error_count": 0,
+        "sha256": "56a9b301e13328f0f840e1d4134343d309f317add92c22c546f39718ec844b60"
+      }
+    ]
+  },
+  "schema": "hara.commander-native50-isolated-stage.v1",
+  "state": "PASS"
+}

@@ -15,7 +15,7 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_SOURCE = ROOT / "apps/commander/public/agent/windows.ps1"
+DEFAULT_SOURCE = ROOT / "apps/commander/release-bundles/commercial-0.3.49-v9-rc/agent/windows.ps1"
 SCRIPT_DIR = ROOT / "apps/commander/scripts"
 FIELDS = (
     "schema", "nonce", "challenge", "request_id", "tool_id", "arguments_sha256",

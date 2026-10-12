@@ -1,0 +1,13 @@
+{
+  "case": "unicode",
+  "guest_exit": 0,
+  "installed_agent_or_ipc_touched": false,
+  "real_human_approval_tested": false,
+  "schema": "hara.commander-native50-isolated-result.v1",
+  "source_sha256": "56a9b301e13328f0f840e1d4134343d309f317add92c22c546f39718ec844b60",
+  "state": "PASS",
+  "stderr": "",
+  "stderr_truncated": false,
+  "stdout": "{\"schema\":\"hara.commander.windows-process-unicode-fixture.v1\",\"state\":\"PASS\",\"source_sha256\":\"56a9b301e13328f0f840e1d4134343d309f317add92c22c546f39718ec844b60\",\"source_path\":\"C:\\\\ProgramData\\\\HaraLabs\\\\CommanderWinLab\\\\20261012\\\\private-050-native-fixtures-r6\\\\windows.ps1\",\"powershell_version\":\"5.1.26100.9444\",\"parent_input_encoding\":\"ibm850\",\"parent_output_encoding\":\"ibm850\",\"parent_pipeline_encoding\":\"us-ascii\",\"assertions\":7,\"checks\":[{\"name\":\"native_windows_powershell_51\",\"passed\":true},{\"name\":\"source_parser_clean\",\"passed\":true},{\"name\":\"one_shot_exits_zero\",\"passed\":true},{\"name\":\"one_shot_keeps_original_command_sha\",\"passed\":true},{\"name\":\"managed_exits_zero_and_drains\",\"passed\":true},{\"name\":\"one_shot_preserves_unicode_without_json_transport\",\"passed\":true},{\"name\":\"managed_preserves_unicode_without_json_transport\",\"passed\":true}],\"observations\":{\"one_shot\":{\"state\":\"EXITED\",\"exit_code\":0,\"output_text\":\"Ol\ufffd - a\ufffd\ufffdo - ??\",\"utf8_base64\":\"T2zDoSAtIGHDp8OjbyAtIPCfmoA=\",\"expected_utf8_base64\":\"T2zDoSAtIGHDp8OjbyAtIPCfmoA=\",\"exact\":true,\"command_sha256\":\"2826305b116a19c631908fc798fcd98dc8edf129932e2044ae79ec7b8b02fd46\",\"expected_command_sha256\":\"2826305b116a19c631908fc798fcd98dc8edf129932e2044ae79ec7b8b02fd46\"},\"managed\":{\"state\":\"EXITED\",\"exit_code\":0,\"output_pending\":false,\"total_lines\":1,\"output_text\":\"Ol\ufffd - a\ufffd\ufffdo - ??\",\"utf8_base64\":\"T2zDoSAtIGHDp8OjbyAtIPCfmoA=\",\"expected_utf8_base64\":\"T2zDoSAtIGHDp8OjbyAtIPCfmoA=\",\"exact\":true}},\"error\":null,\"command_payload_ascii\":true,\"json_transport_used\":false,\"agent_entrypoint_executed\":false,\"installed_agent_modified\":false,\"session_or_consent_state_modified\":false,\"owned_children_disposed\":true}",
+  "stdout_truncated": false
+}

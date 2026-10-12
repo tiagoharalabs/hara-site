@@ -84,11 +84,17 @@ PYTHON = (
     "validate_first_device_preflight.py",
     "validate_fresh_customer_acceptance.py",
     "validate_signed_windows_049_v9_rc.py",
+    "validate_signed_windows_050_v10_rc.py",
+    "test_windows_050_release_guards.py",
     "validate_windows_049_approval_expiry.py",
     "validate_windows_049_operator_startup.py",
     "validate_windows_049_approval_window.py",
+    "validate_windows_050_approval_expiry.py",
+    "validate_windows_050_operator_startup.py",
+    "validate_windows_050_approval_window.py",
 )
 JS = (
+    "test_json_utf8_response.mjs",
     "test_windows_044_capability_gate.mjs",
     "test_no_stripe_technical_mode.mjs",
     "test_portal_session_isolation.mjs",

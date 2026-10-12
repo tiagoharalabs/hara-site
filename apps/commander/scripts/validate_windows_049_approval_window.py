@@ -11,7 +11,7 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_SOURCE = ROOT / "apps/commander/public/agent/windows.ps1"
+DEFAULT_SOURCE = ROOT / "apps/commander/release-bundles/commercial-0.3.49-v9-rc/agent/windows.ps1"
 HARNESS = Path(__file__).with_name("test_windows_049_approval_window_fixture.ps1")
 LABELS = (
     "SOURCE_TIMEOUT_LITERAL_900_SECONDS",

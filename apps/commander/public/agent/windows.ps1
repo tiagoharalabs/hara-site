@@ -11,7 +11,7 @@ $ApprovalTimeoutSeconds = 900
 $OperationsDb = Join-Path $Root "operations.sqlite3"
 $AgentTaskName = "HARA Commander Agent"
 $SessionMaxHours = 12
-$AgentVersion = "0.3.49"
+$AgentVersion = "0.3.50"
 $SloProfile = "INTERNAL_BETA_V1"
 $SloMinSuccessPercent = 99.0
 $SloP50MaxMs = 1000
@@ -1217,6 +1217,8 @@ public sealed class HaraWindowsProcessSession : IDisposable {
     Child.StartInfo.RedirectStandardInput = true;
     Child.StartInfo.RedirectStandardOutput = true;
     Child.StartInfo.RedirectStandardError = true;
+    Child.StartInfo.StandardOutputEncoding = new UTF8Encoding(false);
+    Child.StartInfo.StandardErrorEncoding = new UTF8Encoding(false);
     if (!string.IsNullOrEmpty(cwd)) Child.StartInfo.WorkingDirectory = cwd;
     Child.OutputDataReceived += new DataReceivedEventHandler(OnStdout);
     Child.ErrorDataReceived += new DataReceivedEventHandler(OnStderr);
@@ -1224,6 +1226,7 @@ public sealed class HaraWindowsProcessSession : IDisposable {
     Child.BeginOutputReadLine();
     Child.BeginErrorReadLine();
     Child.StandardInput.AutoFlush = true;
+    Child.StandardInput.WriteLine("Invoke-Expression ([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('JFByb2dyZXNzUHJlZmVyZW5jZT0nU2lsZW50bHlDb250aW51ZSc7W0NvbnNvbGVdOjpJbnB1dEVuY29kaW5nPVtUZXh0LlVURjhFbmNvZGluZ106Om5ldygkZmFsc2UpO1tDb25zb2xlXTo6T3V0cHV0RW5jb2Rpbmc9W1RleHQuVVRGOEVuY29kaW5nXTo6bmV3KCRmYWxzZSk7JE91dHB1dEVuY29kaW5nPVtUZXh0LlVURjhFbmNvZGluZ106Om5ldygkZmFsc2UpOw==')))" );
     Child.StandardInput.WriteLine(command);
   }
 
@@ -1373,12 +1376,12 @@ function Read-WindowsManagedSession([string]$Id,[int]$Offset=0,[int]$Length=200,
   return $session.Snapshot($Offset,$Length,$WaitMs)
 }
 
-function Send-WindowsManagedSessionInput($Cfg,$Call,[string]$Id,[string]$Input,[int]$WaitMs=1000) {
+function Send-WindowsManagedSessionInput($Cfg,$Call,[string]$Id,[string]$InputText,[int]$WaitMs=1000) {
   if ($WaitMs -lt 0 -or $WaitMs -gt 3000){throw "PROCESS_TIMEOUT_INVALID"}
-  if ($Input.Length -gt 4096 -or $Input.Contains([char]0)){throw "PROCESS_INPUT_INVALID"}
+  if ($InputText.Length -gt 4096 -or $InputText.Contains([char]0)){throw "PROCESS_INPUT_INVALID"}
   $session=Get-WindowsManagedSession $Id
   Assert-StarterMutationAuthorized $Cfg $Call
-  $session.Input($Input)
+  $session.Input($InputText)
   return $session.Snapshot(0,100,$WaitMs)
 }
 
@@ -1523,7 +1526,8 @@ function Invoke-WindowsOneShotProcess($Cfg,$Call,[string]$Command,[string]$Cwd=$
   if ([string]::IsNullOrWhiteSpace($Command) -or $Command.Length -gt 4096) { throw "FUNCTION_ARGUMENTS_DENIED" }
   $TimeoutMs=[Math]::Max(100,[Math]::Min(10000,$TimeoutMs))
   $MaxLines=[Math]::Max(1,[Math]::Min(500,$MaxLines))
-  $bytes=[Text.Encoding]::Unicode.GetBytes($Command)
+  $utf8Bootstrap="`$ProgressPreference='SilentlyContinue';[Console]::InputEncoding=[Text.UTF8Encoding]::new(`$false);[Console]::OutputEncoding=[Text.UTF8Encoding]::new(`$false);`$OutputEncoding=[Text.UTF8Encoding]::new(`$false);"
+  $bytes=[Text.Encoding]::Unicode.GetBytes($utf8Bootstrap+$Command)
   $encoded=[Convert]::ToBase64String($bytes)
   $psi=New-Object Diagnostics.ProcessStartInfo
   $psi.FileName="powershell.exe"
@@ -1531,6 +1535,8 @@ function Invoke-WindowsOneShotProcess($Cfg,$Call,[string]$Command,[string]$Cwd=$
   $psi.UseShellExecute=$false
   $psi.RedirectStandardOutput=$true
   $psi.RedirectStandardError=$true
+  $psi.StandardOutputEncoding=New-Object Text.UTF8Encoding($false)
+  $psi.StandardErrorEncoding=New-Object Text.UTF8Encoding($false)
   $psi.CreateNoWindow=$true
   if ($Cwd) {
     $resolved=(Resolve-Path -LiteralPath $Cwd -ErrorAction Stop).Path
@@ -1738,7 +1744,9 @@ function Invoke-Tool($Cfg,$Call) {
 function Send-Json([string]$Url,[string]$Token,$Body,[int]$Timeout=25) {
   $headers=@{Accept="application/json";Authorization="Bearer $Token"}
   $json=$Body | ConvertTo-Json -Depth 10 -Compress
-  return Invoke-RestMethod -Uri $Url -Method Post -ContentType "application/json" -Headers $headers -Body $json -TimeoutSec $Timeout -MaximumRedirection 0
+  # Windows PowerShell 5.1 otherwise falls back to its legacy body encoding.
+  $bytes=[Text.Encoding]::UTF8.GetBytes($json)
+  return Invoke-RestMethod -Uri $Url -Method Post -ContentType "application/json; charset=utf-8" -Headers $headers -Body $bytes -TimeoutSec $Timeout -MaximumRedirection 0
 }
 
 function Set-DeviceOffline($Cfg=$null) {

@@ -101,7 +101,7 @@ print("WINDOWS_INSTALLER_DEVICE_TOKEN_MEMORY_HYGIENE=PASS")
 assert MANIFEST.get("schema") == "hara.commander-agent-release.v1"
 assert MANIFEST.get("agent_version") == "0.3.41"
 assert 'AGENT_VERSION = "0.3.43"' in LINUX_AGENT
-assert '$AgentVersion = "0.3.49"' in WINDOWS_AGENT
+assert '$AgentVersion = "0.3.50"' in WINDOWS_AGENT
 entries = {item["path"]: item for item in MANIFEST.get("files", [])}
 for rel in ("agent/linux.py", "agent/windows.ps1", "install/linux.sh", "install/windows.ps1"):
     assert rel in entries, f"RELEASE_MANIFEST_MISSING:{rel}"
@@ -153,8 +153,12 @@ for func in (node for node in ast.walk(tree) if isinstance(node, (ast.FunctionDe
             assert all(not (isinstance(kw, ast.keyword) and kw.arg == "shell") for kw in node.keywords), "LINUX_AGENT_SUBPROCESS_SHELL"
             subprocess_call_functions.append(func.name)
 assert subprocess_call_functions and set(subprocess_call_functions).issubset(allowed_subprocess_functions), "LINUX_AGENT_SUBPROCESS_GOVERNANCE_UNPROVEN"
+# Only this fixed, independently specified console-encoding bootstrap may use Invoke-Expression.
+FIXED_UTF8_BOOTSTRAP_LINE = '    Child.StandardInput.WriteLine("Invoke-Expression ([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String(\'JFByb2dyZXNzUHJlZmVyZW5jZT0nU2lsZW50bHlDb250aW51ZSc7W0NvbnNvbGVdOjpJbnB1dEVuY29kaW5nPVtUZXh0LlVURjhFbmNvZGluZ106Om5ldygkZmFsc2UpO1tDb25zb2xlXTo6T3V0cHV0RW5jb2Rpbmc9W1RleHQuVVRGOEVuY29kaW5nXTo6bmV3KCRmYWxzZSk7JE91dHB1dEVuY29kaW5nPVtUZXh0LlVURjhFbmNvZGluZ106Om5ldygkZmFsc2UpOw==\')))" );'
+assert WINDOWS_AGENT.count(FIXED_UTF8_BOOTSTRAP_LINE) == 1, "WINDOWS_UTF8_BOOTSTRAP_NOT_FIXED"
+WINDOWS_EXEC_SURFACE = WINDOWS_AGENT.replace(FIXED_UTF8_BOOTSTRAP_LINE, "")
 for forbidden in ("Invoke-Expression", "Start-Process", "cmd.exe", "powershell.exe -Command"):
-    assert forbidden not in WINDOWS_AGENT, f"WINDOWS_AGENT_ARBITRARY_EXEC:{forbidden}"
+    assert forbidden not in WINDOWS_EXEC_SURFACE, f"WINDOWS_AGENT_ARBITRARY_EXEC:{forbidden}"
 assert "UNKNOWN_FUNCTION_ID" in LINUX_AGENT and "UNKNOWN_FUNCTION_ID" in WINDOWS_AGENT
 for token in ("STDOUT_SHA256_V1", "result_stdout_sha256"):
     assert token in LINUX_AGENT, f"LINUX_AGENT_RECEIPT_RESULT_BINDING_MISSING:{token}"
