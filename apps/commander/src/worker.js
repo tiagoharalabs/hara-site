@@ -3533,7 +3533,7 @@ function projectCustomerToolResult(toolId, response) {
     operational_authority: value.operational_authority || null,
     execution_authority: "HARA_COMMANDER_AGENT",
     runtime_authority_from_chatgpt: value.runtime_authority_from_chatgpt === true,
-    mutation_performed: value.mutation_performed === true,
+    mutation_performed: typeof value.mutation_performed === "boolean" ? value.mutation_performed : null,
     result: projectedResult,
     customer_services_relay: false,
   };

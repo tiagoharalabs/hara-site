@@ -1,0 +1,128 @@
+{
+  "schema": "hara.commander-relay-effect-metadata-validation.v1",
+  "state": "PASS",
+  "base_commit": "0f918c302318663ee068d31da5df7688acdded9b",
+  "scope": "PRODUCTION_FUNCTIONS_WITH_IN_MEMORY_SQLITE",
+  "live_execution_tested": false,
+  "credential_values_used": false,
+  "tests": [
+    {
+      "script": "test_approval_async_storage.mjs",
+      "exit_code": 0,
+      "reports": [
+        {
+          "schema": "hara.commander-approval-async-storage-tests.v1",
+          "state": "PASS",
+          "scenarios": 30,
+          "checks": [
+            "tenant-subject-device-scopes-deny-before-usage-or-writes",
+            "pending-status-does-not-settle-redact-or-dispatch",
+            "original-success-settles-before-content-consumed",
+            "normalized-receipt-keeps-settlement-and-replay-consistent",
+            "quota-before-commit-fault-retains-content-for-safe-retry",
+            "quota-after-commit-fault-retains-content-for-safe-retry",
+            "two-concurrent-readers-have-one-content-winner",
+            "redacted-replay-preserves-original-receipt-and-tool",
+            "process-effect-true-survives-original-and-redacted-replay",
+            "process-effect-false-survives-original-and-redacted-replay",
+            "process-effect-null-survives-original-and-redacted-replay",
+            "process-effect-missing-survives-original-and-redacted-replay",
+            "process-effect-unknown-string-survives-original-and-redacted-replay",
+            "process-effect-string-false-survives-original-and-redacted-replay",
+            "process-effect-number-zero-survives-original-and-redacted-replay",
+            "process-effect-number-one-survives-original-and-redacted-replay",
+            "unrecognized-risk-unknown-is-redacted-without-a-guess",
+            "unrecognized-risk-object-is-redacted-without-a-guess",
+            "unclaimed-expiry-refunds-original-reservation-once",
+            "claimed-expiry-does-not-fabricate-refund-or-execution",
+            "legacy-redacted-result-is-explicitly-unavailable",
+            "malformed-json-metadata-does-not-trigger-settlement",
+            "wrong-bound-metadata-schema-cannot-charge-original-request",
+            "wrong-bound-metadata-call_id-cannot-charge-original-request",
+            "wrong-bound-metadata-request_id-cannot-charge-original-request",
+            "wrong-bound-metadata-tool_id-cannot-charge-original-request",
+            "wrong-bound-metadata-call_state-cannot-charge-original-request",
+            "concurrent-completions-settle-the-fresh-terminal-row",
+            "lost-completion-response-retries-after-terminal-persistence",
+            "completion-replay-with-conflicting-result-does-not-settle"
+          ],
+          "sqlite": "IN_MEMORY_REAL_SQLITE",
+          "production_module_exercised": true,
+          "remote_services_used": false,
+          "module_sha256": "25191785e7886dc0db68b69d440cdb1f2d07eb06412b4c50c30f50682f43fcab",
+          "worker_sha256": "ee036e2bcfba43e291cb3b131cb49de88c2948454e8a75c21b7b1db2ce4dc2cc"
+        }
+      ]
+    },
+    {
+      "script": "test_approval_async_quota_ttl.mjs",
+      "exit_code": 0,
+      "reports": [
+        {
+          "schema": "hara.commander-approval-async-quota-tests.v1",
+          "state": "PASS",
+          "scenarios": 16,
+          "checks": [
+            "fresh-schema-real-accounting-triggers",
+            "default-600-exact-expiry",
+            "approval-1800-survives-legacy-expiry",
+            "pending-replay-cannot-extend-original-600",
+            "pending-replay-cannot-shorten-original-1800",
+            "internal-ttl-enumeration-rejects-invalid-input-before-write",
+            "identity-function-period-replay-scoping",
+            "quota-capacity-and-denial-remain-unchanged",
+            "lost-commit-response-safe-terminal-replay",
+            "committed-reservation-does-not-expire",
+            "release-replay-refunds-once",
+            "legacy-schema-migration-preserves-default-600",
+            "mixed-legacy-and-profile-expiry-use-own-deadlines",
+            "completion-cross-month-settles-original-request-period",
+            "completion-cross-month-denial-refunds-original-period",
+            "late-completion-cannot-revive-expired-reservation"
+          ],
+          "sqlite": "IN_MEMORY_REAL_SQLITE",
+          "production_class_exercised": true,
+          "remote_services_used": false,
+          "worker_sha256": "ee036e2bcfba43e291cb3b131cb49de88c2948454e8a75c21b7b1db2ce4dc2cc"
+        }
+      ]
+    },
+    {
+      "script": "test_approval_async_queue_claim.mjs",
+      "exit_code": 0,
+      "reports": [
+        {
+          "state": "PASS",
+          "tests": 19,
+          "worker_sha256": "ee036e2bcfba43e291cb3b131cb49de88c2948454e8a75c21b7b1db2ce4dc2cc",
+          "sqlite": true,
+          "production_functions": [
+            "resolveCustomerTargetDevice",
+            "enqueueDeviceCall",
+            "claimNextDeviceCall"
+          ],
+          "production_mutation": false
+        }
+      ]
+    }
+  ],
+  "baseline_regressions": [
+    {
+      "defect": "effect_unknown_coerced_false",
+      "old_behavior_rejected": true,
+      "exit_code": 1,
+      "assertion_excerpt": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\nfalse !== null\n\n    at check.tool_id (file:///tmp_hara/commander-relay-effect-20261012/apps/commander/scripts/test_approval_async_storage.mjs:194:12)\n    at async check (file:///tmp_hara/commander-relay-effect-20261012/apps/commander/scripts/test_approval_async_storage.mjs:120:8"
+    },
+    {
+      "defect": "production_risk_dropped",
+      "old_behavior_rejected": true,
+      "exit_code": 1,
+      "assertion_excerpt": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n+ actual - expected\n\n+ null\n- 'FILESYSTEM_MUTATION'\n\n    at file:///tmp_hara/commander-relay-effect-20261012/apps/commander/scripts/test_approval_async_storage.mjs:150:10\n    at async check (file:///tmp_hara/commander-relay-effect-20261012/apps/commander/scripts/test_approval_asy"
+    }
+  ],
+  "source_sha256": {
+    "apps/commander/src/worker.js": "ee036e2bcfba43e291cb3b131cb49de88c2948454e8a75c21b7b1db2ce4dc2cc",
+    "apps/commander/src/approval-async-relay.mjs": "398d85c6d847503d0105c5d328fc02806837d7a361e9ca822d1502525950ad20",
+    "apps/commander/scripts/test_approval_async_storage.mjs": "164ba5e8185b6e5923ad5abbbf65ddbf524e51607c4335542cedf990b0ba338a"
+  }
+}
