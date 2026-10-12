@@ -1,4 +1,12 @@
-# H.A.R.A. Commander — CURRENT (11/10/2026, Windows v5 assinada em teste; comercial HOLD)
+# H.A.R.A. Commander — CURRENT (11/10/2026, Windows 0.3.45 online; consentimento humano HOLD)
+
+## Operador Windows: janela anterior encerrada, nova sessão visível (11/10/2026)
+
+A sessão obsoleta do operador da VM `commander-win11` foi encerrada por processo-alvo verificado e a marcação obsoleta removida depois da saída. Uma nova sessão foi iniciada no usuário local, com título `H.A.R.A. Commander 0.3.45 - APROVACAO LOCAL`, janela visível pela enumeração de janelas do próprio Windows; não é garantia de estar em primeiro plano no viewer. O Agent permanece ONLINE em 0.3.45, Linux 7/7 em 0.3.46, sem alteração de identidade ou `ASK_EVERY_ACTION`. Duas tentativas sintéticas `hostname` pelo MCP real **expiraram por falta de confirmação no console** (`LOCAL_ACTION_APPROVAL_EXPIRED`), sem execução. O último prompt expirado foi limpo por reinício controlado somente do console do operador. **Aprovação humana positiva AINDA NÃO realizada.**
+
+Próximo teste exige que o usuário já esteja com essa janela em primeiro plano, antes de a frente enviar a chamada (janela de 30s para digitar `APROVAR <desafio>`). Não contornar a aprovação por ferramentas auxiliares. A tentativa de trazer a janela automaticamente ao primeiro plano foi bloqueada pela plataforma. Corrigir posteriormente UX de `Read-Host` bloqueante e expiração. Evidência: `docs/operations/HARA_COMMANDER_WIN45_OPERATOR_WINDOW_AND_CONSENT_20261011.md`.
+
+
 
 ## Estado autoritativo Windows — homologação de privacidade 0.3.45-v5
 
@@ -6,7 +14,7 @@ O dispositivo `HARA_WIN11` **está ONLINE com Agent assinado 0.3.45**, atualizad
 
 Um ensaio sintético no Windows 11 identificou que o log local da 0.3.44 persistia prévia de comandos e caminhos privados apesar de `payload_values_exposed=false`. **A 0.3.45-v5 RC assinada corrige isso**, mantendo metadados e a prévia apenas no consentimento transitório, ampliando a janela a 30s. Windows PowerShell 5.1 validou os bytes assinados, SHA, parser e autoteste; a prova de log privado saiu de TRUE para FALSE e os 15/15 testes de recusa/nonce/timeout passaram. Gate local ampliado **89/89 PASS**. As releases v4/v3 e componentes Linux continuam preservados.
 
-A 0.3.45 está **instalada somente na VM canário, não distribuída ao público**, e o GitHub Actions `38191514098` passou no commit `a6d27e8` (89/89). Foi deixado no Desktop o arquivo `HARA Commander - COMO APROVAR v0.3.45.txt`; é necessário fechar a janela antiga do operador com Ctrl+C e abrir `HARA Commander - CONECTAR MANUALMENTE.cmd` para utilizar o novo console. Aprovação humana positiva, comandos mutantes e terminal interativo E2E pelo MCP ainda pendentes. Logs históricos anteriores não foram apagados. Veja `docs/operations/HARA_COMMANDER_WINDOWS_045_PRIVACY_RC_20261011.md` e `docs/evidence/commander-win45-20261011/acceptance.json`.
+A 0.3.45 está **instalada somente na VM canário, não distribuída ao público**, e o GitHub Actions `38191514098` passou no commit `a6d27e8` (89/89). Foi deixado no Desktop o arquivo `HARA Commander - COMO APROVAR v0.3.45.txt`; a janela antiga já foi encerrada e a nova sessão aberta. Basta selecionar a janela visível do H.A.R.A. na VM para a próxima prova. Aprovação humana positiva, comandos mutantes e terminal interativo E2E pelo MCP ainda pendentes. Logs históricos anteriores não foram apagados. Veja `docs/operations/HARA_COMMANDER_WINDOWS_045_PRIVACY_RC_20261011.md` e `docs/evidence/commander-win45-20261011/acceptance.json`.
 
 ## Histórico anterior (v4/v3) — não usar como status atual
 
