@@ -2,11 +2,11 @@
 
 ## Estado autoritativo Windows — homologação de privacidade 0.3.45-v5
 
-O dispositivo `HARA_WIN11` **está ONLINE com Agent assinado 0.3.44**, operações de leitura e `process.sessions` comprovadas pelo MCP com recibos, e backup da 0.3.43 mantido. A tentativa de execução `hostname` **não foi executada**, devido a `LOCAL_ACTION_APPROVAL_EXPIRED` após 22s, sem confirmação local. O modo `ASK_EVERY_ACTION` continua íntegro.
+O dispositivo `HARA_WIN11` **está ONLINE com Agent assinado 0.3.45**, atualizado a partir da 0.3.44 no usuário real da VM com configuração byte-idêntica, tarefa restaurada e backup da 0.3.44 preservado. `ping`, `device.info` e `process.sessions` passaram via MCP com recibos. A tentativa histórica de `hostname` na 0.3.44 **não foi executada** devido a `LOCAL_ACTION_APPROVAL_EXPIRED` após 22s. A 0.3.45 amplia o prazo a 30s, mantendo `ASK_EVERY_ACTION`, mas ainda sem prova humana positiva.
 
 Um ensaio sintético no Windows 11 identificou que o log local da 0.3.44 persistia prévia de comandos e caminhos privados apesar de `payload_values_exposed=false`. **A 0.3.45-v5 RC assinada corrige isso**, mantendo metadados e a prévia apenas no consentimento transitório, ampliando a janela a 30s. Windows PowerShell 5.1 validou os bytes assinados, SHA, parser e autoteste; a prova de log privado saiu de TRUE para FALSE e os 15/15 testes de recusa/nonce/timeout passaram. Gate local ampliado **89/89 PASS**. As releases v4/v3 e componentes Linux continuam preservados.
 
-A 0.3.45 **ainda não está instalada na identidade registrada nem publicada aos clientes**, e a confirmação positiva de um humano, comandos mutantes e terminal interativo pelo MCP ainda são gates pendentes. Veja `docs/operations/HARA_COMMANDER_WINDOWS_045_PRIVACY_RC_20261011.md` e `docs/evidence/commander-win45-20261011/acceptance.json`.
+A 0.3.45 está **instalada somente na VM canário, não distribuída ao público**, e o GitHub Actions `38191514098` passou no commit `a6d27e8` (89/89). Foi deixado no Desktop o arquivo `HARA Commander - COMO APROVAR v0.3.45.txt`; é necessário fechar a janela antiga do operador com Ctrl+C e abrir `HARA Commander - CONECTAR MANUALMENTE.cmd` para utilizar o novo console. Aprovação humana positiva, comandos mutantes e terminal interativo E2E pelo MCP ainda pendentes. Logs históricos anteriores não foram apagados. Veja `docs/operations/HARA_COMMANDER_WINDOWS_045_PRIVACY_RC_20261011.md` e `docs/evidence/commander-win45-20261011/acceptance.json`.
 
 ## Histórico anterior (v4/v3) — não usar como status atual
 

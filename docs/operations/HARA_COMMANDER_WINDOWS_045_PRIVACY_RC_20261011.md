@@ -1,6 +1,6 @@
 # H.A.R.A. Commander — Windows 0.3.45-v5 (candidata privada)
 
-Estado em 11/10/2026 (America/Sao_Paulo): **release RS256 assinada; Windows 11 VM dinâmica PASS; gate local 89/89 PASS; NÃO publicada/instalada no cliente real**.
+Estado em 11/10/2026 (America/Sao_Paulo): **release RS256 assinada, CI hospedado PASS, canário Windows 11 atualizado e ONLINE em 0.3.45, gate local 89/89 PASS; ainda NÃO distribuída ao público**.
 
 ## Problema de privacidade comprovado e correção
 
@@ -19,7 +19,7 @@ A versão 0.3.45 também melhora o resumo no pedido para `process.start`, `proce
 
 ## Estado real e limites
 
-O Agent **0.3.44** continua instalado e ONLINE na VM `HARA_WIN11`; o Windows público segue **0.3.43**, e o Worker PROD segue a revisão anterior, com publicação version-gated de sessões Windows >=0.3.44.
+O Agent **0.3.45** está instalado e ONLINE na VM `HARA_WIN11`, com recibos de ping/device.info/process.sessions. O Windows público segue **0.3.43**, e o Worker PROD não foi alterado nesta revisão, mantendo sessões Windows versionadas a partir de >=0.3.44.
 
 A aprovação positiva **não foi testada**: a tentativa de `hostname` no MCP real sob 0.3.44 expirou corretamente com `LOCAL_ACTION_APPROVAL_EXPIRED`. É necessário que a pessoa confirme na janela do operador da VM. Não se deve criar respostas artificiais, alterar `approval_mode` ou interpretar autorização do chat como confirmação local.
 
@@ -28,9 +28,22 @@ Também permanecem pendentes: transferência binária nativa entre máquinas, co
 ## Próximo gate
 
 1. GitHub CI do SHA exato 0.3.45-v5 deverá passar antes da instalação na VM.
-2. Preparar pacote e backup 0.3.44 dentro da VM, sem novos tokens ou pareamento.
-3. Instalar v5 somente como canário local, preservar configuração byte-idêntica e tarefa agendada.
+2. **Concluído:** pacote assinado e backup 0.3.44 no Windows real, sem novos tokens ou pareamento.
+3. **Concluído:** v5 instalada no canário local, configuração byte-idêntica, tarefa restaurada e MCP 0.3.45 ONLINE.
 4. Usuário local aprova um comando sintético, nega outro e confere o que foi executado; depois testar escrita, SHA/CAS e subprocesso interativo com recibos pelo MCP comercial.
 5. Só após estes critérios publicar em DEV, avaliar PROD comercial e distribuir a clientes; Stripe continua independente.
 
 Provas estruturadas: `docs/evidence/commander-win45-20261011/acceptance.json`.
+
+## Fechamento de CI e canário Windows (11/10/2026)
+
+- Fonte publicada com readback exato no GitHub no commit `a6d27e8b67ce05ae72f01bf4bdf12e7b93b753a5`; CI hospedado run `38191514098` **SUCCESS** com 89/89 validadores.
+- Instalação real na VM `commander-win11` pelo usuário conectado: Agent assinado `0.3.44 → 0.3.45`, SHA da candidata verificado, arquivo anterior em backup, configuração do dispositivo byte-idêntica, modo de aprovação `ASK_EVERY_ACTION` e tarefa agendada no estado original; sem novo pareamento.
+- O produto MCP comercial retornou `HARA_WIN11 ONLINE` 0.3.45 e recibos em ping, device.info e process.sessions, com zero sessões ativas.
+- Atalho de instruções de aprovação criado no Desktop Público Windows, `HARA Commander - COMO APROVAR v0.3.45.txt`, SHA256 `235b447155bb815feb8657921731bb16aa9889bf2039afcb4e289b67b81c975c`.
+- A janela do operador existente pode ainda ter sido aberta na versão antiga 0.3.44; o usuário deverá encerrar a janela antiga com Ctrl+C e reabrir `HARA Commander - CONECTAR MANUALMENTE.cmd` para utilizar o fluxo de consentimento da 0.3.45.
+- **Ainda aberto:** ação real aprovada por humano no console; nenhuma execução ou escrita Windows via MCP é alegada como aprovada. Não criar respostas artificiais para esse gate.
+- **Risco histórico separado:** a correção não apaga nem sanitiza eventos de versões anteriores já armazenados localmente. Qualquer limpeza exige processo específico que preserve a cadeia de auditoria e backup; não foi executada.
+- Worker PROD e assets públicos não mudaram: o Agent Windows distribuído permanece 0.3.43. Não houve alteração de Stripe, D1 nem hosts Linux.
+
+Evidência estruturada atualizada: `docs/evidence/commander-win45-20261011/acceptance.json`.

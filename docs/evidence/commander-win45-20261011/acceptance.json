@@ -61,11 +61,12 @@
     "report_path_local": "/tmp_hara/commander-win45-v5-offline-gate-20261011.json"
   },
   "deployment": {
-    "installed_windows_vm": "0.3.44",
+    "installed_windows_vm": "0.3.45",
     "public_customer_windows": "0.3.43",
     "worker_prod_version_change": false,
     "cloudflare_deployed_v45": false,
-    "github_published_v45": false
+    "github_published_v45": true,
+    "github_head": "a6d27e8b67ce05ae72f01bf4bdf12e7b93b753a5"
   },
   "outstanding": [
     "human positive on-device approval",
@@ -73,5 +74,34 @@
     "Windows dynamic reconnect + output retaining after Agent restart",
     "Windows general distribution gate",
     "one thousand customers authenticated soak"
-  ]
+  ],
+  "hosted_ci": {
+    "run_id": 38191514098,
+    "conclusion": "success",
+    "source_sha": "a6d27e8b67ce05ae72f01bf4bdf12e7b93b753a5",
+    "local_validator_count": 89,
+    "scope": "OFFLINE_ONLY"
+  },
+  "real_mcp_canary": {
+    "computer": "HARA_WIN11",
+    "agent_version": "0.3.45",
+    "state": "ONLINE",
+    "ping": "PASS",
+    "device_info": "PASS",
+    "process_sessions": "PASS",
+    "sessions_active": 0,
+    "receipts_observed": true,
+    "device_identity_preserved": true,
+    "device_config_byte_identical": true,
+    "backup_pre_v45_ready": true,
+    "previous_task_state_restored": true,
+    "new_enrollment": false
+  },
+  "vm_desktop_guide": {
+    "state": "CREATED",
+    "filename": "HARA Commander - COMO APROVAR v0.3.45.txt",
+    "sha256": "235b447155bb815feb8657921731bb16aa9889bf2039afcb4e289b67b81c975c",
+    "user_action_needed": "Close prior operator console and reopen manual session, explicitly approve one benign action"
+  },
+  "historical_local_console_logs_sanitized": false
 }
