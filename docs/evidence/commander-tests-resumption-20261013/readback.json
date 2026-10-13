@@ -1,0 +1,275 @@
+{
+  "schema": "hara.commander-test-resumption.v1",
+  "captured_at_utc": "2026-10-13T06:24:54.857Z",
+  "source": {
+    "repository": "tiagoharalabs/hara-site",
+    "branch": "local/commander-product-current",
+    "sha": "e2606d9f6aa643f521e025794e68ac060e83f8a5",
+    "local_path": "/srv/hara/repos/local-git-gateway/worktrees/hara-site/commander-product-current"
+  },
+  "owners": {
+    "windows_acceptance": "hara-site#240",
+    "continuation": "hara-site#310"
+  },
+  "route": {
+    "plugin": "H.A.R.A. Commander",
+    "desktop_commander_used": false,
+    "baseline_plugin_used": false,
+    "cloud_mcp_url_not_revalidated": true
+  },
+  "fresh_observations": {
+    "windows_device_info": {
+      "state": "PASS",
+      "operational_authority": "HARA_SERVICES",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "customer_services_relay": false,
+      "receipt_sha256": "f1502572500ac4e83c0d89b2cade42411f242334471a85b9815f8d4adea4196c",
+      "blocker": null,
+      "device": {
+        "device_id": "HARA-DEVICE-64adbd7a-02b1-4890-acdb-9543e8b48d00",
+        "architecture": "x64",
+        "tunnel_mode": "OUTBOUND_RELAY",
+        "agent_version": "0.3.51",
+        "platform_release": "Microsoft Windows NT 10.0.26300.0",
+        "platform": "WINDOWS",
+        "hostname": "HARA_WIN11",
+        "powershell_version": "5.1.26100.9444"
+      },
+      "process": null
+    },
+    "windows_get_command": {
+      "state": "PASS",
+      "operational_authority": "HARA_SERVICES",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "customer_services_relay": false,
+      "receipt_sha256": "0f04e7cb98836cbbe33ff1ff588dbf0a0f16dc26441726abb117ab47d4a0f3d5",
+      "blocker": null,
+      "device": null,
+      "process": {
+        "exit_code": 1,
+        "timed_out": false,
+        "session_retained": false,
+        "state": "EXITED"
+      }
+    },
+    "windows_runtime_read": {
+      "state": "PASS",
+      "operational_authority": "HARA_SERVICES",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "customer_services_relay": false,
+      "receipt_sha256": "01ebe0bb84b2f79282cab4fc578e63ee68008378bcff1851b133dd2a7081e8f8",
+      "blocker": null,
+      "device": null,
+      "process": null
+    },
+    "windows_latest_sessions": {
+      "state": "UNAVAILABLE",
+      "customer_services_relay": false,
+      "receipt_sha256": null,
+      "blocker": {
+        "code": "DEVICE_OFFLINE",
+        "category": "DEVICE_AVAILABILITY",
+        "retryable": true
+      },
+      "device": null,
+      "process": null
+    },
+    "nucleo_device_info": {
+      "state": "PASS",
+      "operational_authority": "HARA_COMMANDER",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "customer_services_relay": false,
+      "receipt_sha256": "c49d461b86a477a1392835b03adfccafc07d4d34234d336e07bc18226e85db85",
+      "blocker": null,
+      "device": {
+        "agent_version": "0.3.46",
+        "approval_mode": "PERSISTENT_TRUSTED",
+        "architecture": "x86_64",
+        "device_id": "HARA-DEVICE-e032ffff-f2d2-43ad-b2a8-f5385a900f62",
+        "hostname": "nucleo-a",
+        "platform": "LINUX",
+        "platform_release": "7.1.5-76070105-generic",
+        "python_version": "3.12.3",
+        "tunnel_mode": "EVENT_V2"
+      },
+      "process": null
+    },
+    "linux_services": {
+      "state": "PASS",
+      "operational_authority": "HARA_COMMANDER",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "customer_services_relay": false,
+      "receipt_sha256": "7c184d50f6df9cbde6e39a8ea87a50c83559a2874ced471c667985b48346b4ea",
+      "blocker": null,
+      "device": {
+        "agent_version": "0.3.46",
+        "approval_mode": "PERSISTENT_TRUSTED",
+        "architecture": "x86_64",
+        "device_id": "HARA-DEVICE-ad55f2aa-9a83-46e1-a6ab-f78d422950fe",
+        "hostname": "services",
+        "platform": "LINUX",
+        "platform_release": "6.8.0-146-generic",
+        "python_version": "3.12.3",
+        "tunnel_mode": "EVENT_V2"
+      },
+      "process": null
+    },
+    "linux_sentinela_b": {
+      "state": "PASS",
+      "operational_authority": "HARA_SERVICES",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "customer_services_relay": false,
+      "receipt_sha256": "5d27fb315f3839407d1bd37133651e350678ca5230c8b1cf90fd95c82f1b01fb",
+      "blocker": null,
+      "device": {
+        "agent_version": "0.3.41",
+        "approval_mode": "PERSISTENT_TRUSTED",
+        "architecture": "x86_64",
+        "device_id": "HARA-DEVICE-f1d9ecb6-f1e9-4867-9398-8ed10b785c5a",
+        "hostname": "sentinela-b",
+        "platform": "LINUX",
+        "platform_release": "7.1.1-76070101-generic",
+        "python_version": "3.10.12",
+        "tunnel_mode": "OUTBOUND_RELAY"
+      },
+      "process": null
+    },
+    "linux_sentinela_c": {
+      "state": "PASS",
+      "operational_authority": "HARA_COMMANDER",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "customer_services_relay": false,
+      "receipt_sha256": "548cf7d0a8ebdbdbd45014aba8754f2c5db607fa5bdc57de0176135a6edd2bb6",
+      "blocker": null,
+      "device": {
+        "agent_version": "0.3.46",
+        "approval_mode": "PERSISTENT_TRUSTED",
+        "architecture": "x86_64",
+        "device_id": "HARA-DEVICE-11bbcaed-a0d5-4540-9d5a-40b84f1bdf74",
+        "hostname": "sentinela-c",
+        "platform": "LINUX",
+        "platform_release": "7.1.1-76070101-generic",
+        "python_version": "3.10.12",
+        "tunnel_mode": "EVENT_V2"
+      },
+      "process": null
+    }
+  },
+  "latest_catalog": [
+    {
+      "computer": "services",
+      "state": "ONLINE",
+      "agent_version": "0.3.46",
+      "last_seen_at_utc": "2026-10-13T05:27:33.245Z"
+    },
+    {
+      "computer": "ninja-blue",
+      "state": "ONLINE",
+      "agent_version": "0.3.46",
+      "last_seen_at_utc": "2026-10-13T05:06:51.026Z"
+    },
+    {
+      "computer": "sentinela-c",
+      "state": "ONLINE",
+      "agent_version": "0.3.46",
+      "last_seen_at_utc": "2026-10-13T05:49:25.150Z"
+    },
+    {
+      "computer": "sentinela-b",
+      "state": "ONLINE",
+      "agent_version": "0.3.41",
+      "last_seen_at_utc": "2026-10-13T06:20:39.948Z"
+    },
+    {
+      "computer": "sentinela-a",
+      "state": "ONLINE",
+      "agent_version": "0.3.46",
+      "last_seen_at_utc": "2026-10-13T05:32:47.283Z"
+    },
+    {
+      "computer": "HARA_WIN11",
+      "state": "OFFLINE",
+      "agent_version": "0.3.51",
+      "last_seen_at_utc": "2026-10-13T06:17:32.443Z"
+    },
+    {
+      "computer": "sentinela-d",
+      "state": "OFFLINE",
+      "agent_version": "0.3.46",
+      "last_seen_at_utc": "2026-10-12T22:58:00.639Z"
+    },
+    {
+      "computer": "nucleo-a",
+      "state": "ONLINE",
+      "agent_version": "0.3.46",
+      "last_seen_at_utc": "2026-10-13T05:37:43.258Z"
+    }
+  ],
+  "prior_evidence_preserved": {
+    "windows51_basic_mcp": {
+      "status": "PASS_PREVIOUSLY_PROVEN",
+      "source": "docs/handoffs/HARA_COMMANDER_WINDOWS_051_HANDOFF_20261012.md"
+    },
+    "windows52_native_tests": {
+      "passed": 520,
+      "total": 520,
+      "rerun_in_this_round": false,
+      "source": "docs/operations/HARA_COMMANDER_WINDOWS_052_EFFECT_METADATA_AND_SCALE_20261012.md"
+    },
+    "windows52_integrated_gate": {
+      "passed": 121,
+      "total": 121,
+      "rerun_in_this_round": false
+    },
+    "windows52_signed_agent_sha256": "817325667ea552136efa10d807148fa4dc6d035aca24046c884f444a4fb61ebc",
+    "windows52_installed_mcp_acceptance": "PENDING",
+    "public_agent_release_last_documented": "0.3.43",
+    "commercial_acceptance": "OPEN"
+  },
+  "continuation": [
+    {
+      "step": 1,
+      "scope": "Resolve current Windows availability and existing managed-session owner before any canary replacement",
+      "status": "PENDING_DEVICE_OFFLINE",
+      "actions_performed": false
+    },
+    {
+      "step": 2,
+      "scope": "Install admitted signed private 0.3.52 canary with preimage/rollback, then prove real effects/no-op/replay by product MCP",
+      "status": "PENDING",
+      "actions_performed": false
+    },
+    {
+      "step": 3,
+      "scope": "Qualify exact clean install/reinstall/uninstall and managed-process parity on isolated Windows and fresh Linux",
+      "status": "PENDING",
+      "actions_performed": false
+    },
+    {
+      "step": 4,
+      "scope": "Reconcile Sentinela B 0.3.41/OUTBOUND_RELAY against intended admitted Linux release",
+      "status": "PENDING",
+      "actions_performed": false
+    },
+    {
+      "step": 5,
+      "scope": "Authenticated second tenant, Stripe TEST, cloud ramp/24h soak and measured latency/error/cost",
+      "status": "PENDING_INDEPENDENT_GATES",
+      "actions_performed": false
+    }
+  ],
+  "source_worktree_unrelated_changes_preserved": [
+    "M apps/commander/candidate/install_windows_rc.ps1",
+    " M apps/commander/experimental/event_v2_windows_agent.ps1",
+    " M apps/commander/scripts/validate_windows_local_activity_store.py",
+    " M docs/operations/HARA_COMMANDER_WINDOWS_044_APPROVAL_AND_PTY_RC_20261012.md",
+    "?? apps/commander/scripts/test_commander_commercial_readiness_gate.py",
+    "?? apps/commander/scripts/validate_event_v2_windows_ps51_compat.py",
+    "?? docs/evidence/commander-win44-canary-20261011/"
+  ],
+  "no_agent_restart": true,
+  "no_install_or_uninstall": true,
+  "no_gameplay_process_change": true,
+  "no_cloud_load": true,
+  "no_billing_change": true
+}
