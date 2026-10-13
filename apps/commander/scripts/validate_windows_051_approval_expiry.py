@@ -15,7 +15,7 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_SOURCE = ROOT / "apps/commander/public/agent/windows.ps1"
+DEFAULT_SOURCE = ROOT / "apps/commander/release-bundles/commercial-0.3.51-v11-rc/agent/windows.ps1"
 SCRIPT_DIR = ROOT / "apps/commander/scripts"
 FIELDS = (
     "schema", "nonce", "challenge", "request_id", "tool_id", "arguments_sha256",
@@ -44,6 +44,8 @@ def main() -> int:
     if args.source.is_symlink() or not source_path.is_file():
         raise AssertionError("WINDOWS_APPROVAL_SOURCE_NOT_REGULAR")
     raw = source_path.read_bytes()
+    if hashlib.sha256(raw).hexdigest() != "4c563987986249d78c76258d062a4d360ffb88199539429ea97c2f346644656a":
+        raise AssertionError("HISTORICAL_WINDOWS_051_IMMUTABLE_SOURCE_DRIFT")
     source = raw.decode("utf-8-sig")
     if not re.search(r'(?m)^\$AgentVersion = "0[.]3[.]51"$', source):
         raise AssertionError("WINDOWS_APPROVAL_SOURCE51_VERSION_MISSING")

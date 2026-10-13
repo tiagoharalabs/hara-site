@@ -24,6 +24,7 @@ import {
 } from "./mcp-hara-identity-dev.mjs";
 import {
   haraIdentityCustomerMcpEnabled,
+  haraIdentityCustomerMcpAllowedHosts,
   haraIdentityCustomerMcpProtectedResourceMetadata,
   haraIdentityCustomerMcpUnauthorized,
   verifyHaraIdentityCustomerMcpBearer,
@@ -5475,7 +5476,7 @@ export default {
             clientId: identity.client_id,
             scopes: identity.scopes,
           },
-          allowedHosts: ["commander.haralabs.com.br"],
+          allowedHosts: haraIdentityCustomerMcpAllowedHosts(env),
           executeTool: async ({
             tool_id,
             arguments: toolArguments,

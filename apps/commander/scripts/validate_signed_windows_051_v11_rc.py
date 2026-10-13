@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify private Windows 0.3.51-v11 signature and strict active-source identity."""
+"""Verify private Windows 0.3.51-v11 signature and strict historical frozen-source identity."""
 from __future__ import annotations
 import json
 from pathlib import Path
@@ -74,7 +74,8 @@ def main():
         "state": "PASS", "agent_version": "0.3.51",
         "signature": "RS256_RSA3072", "authority": "commander-release-v2",
         "four_files_authenticated": True,
-        "active_windows_source_byte_identical": True,
+        "historical_windows_source_byte_identical": True,
+        "active_source_claim": False,
         "utf8_json_transport_pinned": True,
         "linux_agent_byte_identical": True, "linux_installer_byte_identical": True,
         "old_v3_v4_v5_v6_v7_v8_v9_preserved": True, "approval_deadline_revalidation_pinned": True,

@@ -1,3 +1,13 @@
+# H.A.R.A. Commander — Product Current (12/10/2026, 22:49 BRT)
+
+**O checklist autoritativo desta rodada está em [HARA_COMMANDER_CURRENT.md](../handoffs/HARA_COMMANDER_CURRENT.md).** Ele registra critérios, provas e próximos fechamentos em um único lugar.
+
+A .53 R3 assinada está publicada e conferida em DEV, Worker `97471c0a-b739-4906-90aa-41384a8a1cb1`, com [119/119 verificações PASS](../evidence/commander-full-acceptance-20261012/full-053/prelaunch-offline-gate-r3.json). OAuth real, cadastro normal QA2 e contrato MCP de 33 ferramentas passaram no escopo exercitado. O ciclo Windows limpo QA2 segue em curso; O ciclo completo Linux .53 passou; há um defeito separado no max_lines inicial de terminal gerenciado, com candidato isolado em testes.
+
+O run 002 terminou FAIL após cerca de19min com erro interno em probe, ambos Agents vivos/conectados e cleanup PASS. A causa segue em diagnóstico; não há resultado24/72h nem soak ativo neste checkpoint. A rampa 100/100 não certifica 1.000 clientes por 24h. Stripe pago e aprovação pública OpenAI têm critérios próprios; Direct/Secure MCP Tunnel é opção avançada Linux, conforme a decisão Cloud-first aprovada em 09/10, e não bloqueia o beta técnico. Publicação PROD da .53 e CI desta revisão devem ser confirmados pelo fechamento da rodada.
+
+## Histórico preservado — estados anteriores; não usar como status atual
+
 # H.A.R.A. Commander — Product Current
 
 Date: 2026-10-08

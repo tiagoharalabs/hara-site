@@ -379,19 +379,38 @@ async function ensurePrimaryIdentityBinding(env, subjectId, issuer, externalSubj
   ).run();
 }
 
+export function selfServiceIdentityEnvironment(env, subject) {
+  if (String(env.ENVIRONMENT || "") === "PROD") return "PRODUCTION";
+  if (
+    String(env.ENVIRONMENT || "") !== "DEV"
+    || String(env.CUSTOMER_MCP_EDGE_DEV_ACCEPTANCE_ENABLED || "").trim().toLowerCase() !== "true"
+  ) return null;
+  const subjects = [...new Set(String(env.DEV_ACCEPTANCE_SELF_SERVICE_SUBJECTS || "")
+    .split(",").map((value) => value.trim()).filter(Boolean))];
+  if (!subjects.length || subjects.length > 2
+      || subjects.some((value) => !/^[0-9]{1,30}$/.test(value))) return null;
+  return subjects.includes(String(subject)) ? "DEV" : null;
+}
+
 async function provisionProductionIdentity(env, claims, issuer, subject, email) {
-  if (String(env.ENVIRONMENT || "") !== "PROD") return null;
+  const tenantEnvironment = selfServiceIdentityEnvironment(env, subject);
+  if (!tenantEnvironment) return null;
   const fingerprint = await sha256(issuer + "\n" + subject);
   const planCode = await productionProvisioningPlan(env, issuer, subject);
   const tenantId = "HARA-TENANT-" + fingerprint.slice(0, 24).toUpperCase();
   const subjectId = "HARA-SUBJECT-" + fingerprint.slice(24, 48).toUpperCase();
-  const entitlementId = "HARA-ENTITLEMENT-" + fingerprint.slice(40, 64).toUpperCase();
+  // Preserve all 256 bits and base64url case; existing identities retain their IDs.
+  const entitlementId = "HARA-ENTITLEMENT-" + fingerprint;
   const displayName = String(claims.name || claims.nickname || email).slice(0, 200);
   const createdAt = nowIso();
 
   await env.PRODUCT_DB.batch([
     env.PRODUCT_DB.prepare(
-      `INSERT OR IGNORE INTO tenants
+      tenantEnvironment === "DEV"
+        ? `INSERT OR IGNORE INTO tenants
+            (tenant_id, display_name, state, environment, created_at_utc)
+           VALUES (?, ?, 'ACTIVE', 'DEV', ?)`
+        : `INSERT OR IGNORE INTO tenants
         (tenant_id, display_name, state, environment, created_at_utc)
        VALUES (?, ?, 'ACTIVE', 'PRODUCTION', ?)`
     ).bind(tenantId, displayName || "Commander", createdAt),

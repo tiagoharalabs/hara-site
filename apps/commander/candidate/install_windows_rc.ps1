@@ -29,10 +29,10 @@ function Assert-ExistingIdentity {
   }
   $cfg = Get-Content -Raw -LiteralPath $StableConfig | ConvertFrom-Json
   if (
-    -not $cfg.device_id
-    -or -not $cfg.encrypted_device_token
-    -or -not $cfg.base_url
-    -or -not $cfg.architecture
+    -not $cfg.device_id -or
+    -not $cfg.encrypted_device_token -or
+    -not $cfg.base_url -or
+    -not $cfg.architecture
   ) { throw "WINDOWS_RC_DEVICE_IDENTITY_INVALID" }
   return $cfg
 }
@@ -129,11 +129,11 @@ function Wait-EventConnection([string]$PreviousUpdated,[int]$Seconds=20) {
       try {
         $obj = Get-Content -Raw -LiteralPath $EventStatus | ConvertFrom-Json
         if (
-          [string]$obj.schema -eq "hara.commander-event-v2-runtime-status.v1"
-          -and [string]$obj.transport_mode -eq "EVENT_V2"
-          -and $obj.connected -eq $true
-          -and [string]$obj.updated_at_utc
-          -and [string]$obj.updated_at_utc -ne $PreviousUpdated
+          [string]$obj.schema -eq "hara.commander-event-v2-runtime-status.v1" -and
+          [string]$obj.transport_mode -eq "EVENT_V2" -and
+          $obj.connected -eq $true -and
+          [string]$obj.updated_at_utc -and
+          [string]$obj.updated_at_utc -ne $PreviousUpdated
         ) { return $true }
       } catch {}
     }
@@ -148,11 +148,11 @@ function Wait-EventDisconnection([string]$PreviousUpdated,[int]$Seconds=10) {
       try {
         $obj = Get-Content -Raw -LiteralPath $EventStatus | ConvertFrom-Json
         if (
-          [string]$obj.schema -eq "hara.commander-event-v2-runtime-status.v1"
-          -and [string]$obj.transport_mode -eq "EVENT_V2"
-          -and $obj.connected -eq $false
-          -and [string]$obj.updated_at_utc
-          -and [string]$obj.updated_at_utc -ne $PreviousUpdated
+          [string]$obj.schema -eq "hara.commander-event-v2-runtime-status.v1" -and
+          [string]$obj.transport_mode -eq "EVENT_V2" -and
+          $obj.connected -eq $false -and
+          [string]$obj.updated_at_utc -and
+          [string]$obj.updated_at_utc -ne $PreviousUpdated
         ) { return $true }
       } catch {}
     }
@@ -274,9 +274,9 @@ function Activate-EventV2 {
 function Show-Status {
   $identityPresent = Test-Path -LiteralPath $StableConfig -PathType Leaf
   $installed = (
-    (Test-Path -LiteralPath $RcAgent -PathType Leaf)
-    -and (Test-Path -LiteralPath $RcEventAgent -PathType Leaf)
-    -and (Test-Path -LiteralPath $RcTransport -PathType Leaf)
+    (Test-Path -LiteralPath $RcAgent -PathType Leaf) -and
+    (Test-Path -LiteralPath $RcEventAgent -PathType Leaf) -and
+    (Test-Path -LiteralPath $RcTransport -PathType Leaf)
   )
   $connected = "UNKNOWN"
   if (Test-Path -LiteralPath $EventStatus -PathType Leaf) {

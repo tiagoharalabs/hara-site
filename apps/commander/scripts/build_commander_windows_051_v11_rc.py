@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prepare a privately signed Windows 0.3.51-v11 RC from final reviewed source.
+"""Verify and replay the historical frozen Windows 0.3.51-v11 reviewed source.
 
 Preserve historical signed bundles and Linux bytes. Reuse the custodied v2
 signer; public/customer distribution and installed Agents are never modified.
@@ -66,7 +66,7 @@ def expected_installer():
     return source.replace(OLD_ANCHOR, NEW_ANCHOR)
 
 def pin_canonical_installer():
-    path = APP / "public/install/windows.ps1"
+    path = APP / "release-bundles/commercial-0.3.49-v9-rc/install/windows.ps1"
     if not path.is_file() or path.is_symlink():
         fail("CANONICAL_INSTALLER_INVALID")
     raw = path.read_bytes()
@@ -80,9 +80,9 @@ def pin_canonical_installer():
     return raw
 
 def expected_agent():
-    path = APP / "public/agent/windows.ps1"
+    path = APP / "release-bundles/commercial-0.3.51-v11-rc/agent/windows.ps1"
     if not path.is_file() or path.is_symlink():
-        fail("CANONICAL_AGENT_INVALID")
+        fail("FROZEN_051_AGENT_INVALID")
     source = path.read_bytes()
     if not re.fullmatch(r"[0-9a-f]{64}", APPROVED_SOURCE_SHA256):
         fail("FINAL_SOURCE_REVIEW_PIN_MISSING")

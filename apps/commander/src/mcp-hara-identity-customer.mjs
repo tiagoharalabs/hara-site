@@ -118,15 +118,27 @@ export function validateOpaqueIntrospection({
 }
 
 export function haraIdentityCustomerMcpEnabled(env) {
+  if (
+    String(env?.ENVIRONMENT || "") === "DEV"
+    && String(env?.CUSTOMER_MCP_EDGE_DEV_ACCEPTANCE_ENABLED || "").trim().toLowerCase() === "true"
+  ) return true;
   return (
     String(env?.ENVIRONMENT || "") === "PROD"
     && String(env?.CUSTOMER_MCP_EDGE_ENABLED || "").trim().toLowerCase() === "true"
   );
 }
 
+export function haraIdentityCustomerMcpAllowedHosts(env) {
+  return String(env?.ENVIRONMENT || "") === "DEV"
+    ? ["hara-commander-dev-v2.tiago-sartori.workers.dev"]
+    : ["commander.haralabs.com.br"];
+}
+
 export function haraIdentityCustomerMcpResource(request, env) {
+  const actual = new URL(PROD_MCP_PATH, new URL(request.url).origin).toString();
+  if (String(env?.ENVIRONMENT || "") === "DEV") return actual;
   const configured = String(env?.CUSTOMER_MCP_RESOURCE || "").trim();
-  return configured || new URL(PROD_MCP_PATH, new URL(request.url).origin).toString();
+  return configured || actual;
 }
 
 export function haraIdentityCustomerMcpMetadataUrl(request) {

@@ -31,33 +31,50 @@
     "AUTH_CLIENT_AUTH": "BASIC",
     "CUSTOMER_MCP_HARA_IDENTITY_AUTH": "true",
     "DEVICE_EVENT_V2_ENABLED": "true",
-    "DEVICE_EVENT_V2_TRANSIENT_RPC_ENABLED": "true"
+    "DEVICE_EVENT_V2_TRANSIENT_RPC_ENABLED": "true",
+    "CUSTOMER_MCP_EDGE_DEV_ACCEPTANCE_ENABLED": "true",
+    "DEV_ACCEPTANCE_SELF_SERVICE_SUBJECTS": "394859086664957956,394861028946477060"
   },
   "ratelimits": [
     {
       "name": "RATE_LIMIT_LOGIN",
       "namespace_id": "1892611",
-      "simple": { "limit": 30, "period": 60 }
+      "simple": {
+        "limit": 30,
+        "period": 60
+      }
     },
     {
       "name": "RATE_LIMIT_DEVICE_ENROLL_CLIENT",
       "namespace_id": "1892612",
-      "simple": { "limit": 60, "period": 60 }
+      "simple": {
+        "limit": 60,
+        "period": 60
+      }
     },
     {
       "name": "RATE_LIMIT_DEVICE_ENROLL_TOKEN",
       "namespace_id": "1892613",
-      "simple": { "limit": 10, "period": 60 }
+      "simple": {
+        "limit": 10,
+        "period": 60
+      }
     },
     {
       "name": "RATE_LIMIT_PORTAL_MUTATION",
       "namespace_id": "1892614",
-      "simple": { "limit": 60, "period": 60 }
+      "simple": {
+        "limit": 60,
+        "period": 60
+      }
     },
     {
       "name": "RATE_LIMIT_MCP_AUTH_FAILURE",
       "namespace_id": "1892615",
-      "simple": { "limit": 20, "period": 60 }
+      "simple": {
+        "limit": 20,
+        "period": 60
+      }
     }
   ],
   "d1_databases": [

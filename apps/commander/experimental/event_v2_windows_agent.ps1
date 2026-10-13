@@ -1,6 +1,8 @@
 param([switch]$SelfTest)
 
 $ErrorActionPreference = "Stop"
+# A dot-sourced transport has its own SelfTest parameter in this scope.
+$AgentSelfTestRequested = [bool]($SelfTest -or ($args -contains "--self-test"))
 
 $Here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $StableRoot = Join-Path $env:LOCALAPPDATA "HARA Commander"
@@ -13,7 +15,7 @@ $ReceiptDir = Join-Path $Root "receipts"
 $RuntimeStatus = Join-Path $Root "runtime-status.json"
 $EventStatus = Join-Path $Root "event-v2-status.json"
 $TransientLedgerDir = Join-Path $Root "transient-ledger"
-$AgentVersion = "0.3.7"
+$AgentVersion = $null
 $FunctionId = "device.info"
 $OperationalAuthority = "HARA_COMMANDER"
 $ExecutionAuthority = "HARA_COMMANDER_AGENT"
@@ -43,6 +45,17 @@ function Import-StableAgentFunctions {
   )
   if ($errors.Count -gt 0) { throw "WINDOWS_EVENT_V2_STABLE_AGENT_PARSE_FAILED" }
 
+  $versionNode = $ast.Find({
+    param($n)
+    $n -is [System.Management.Automation.Language.AssignmentStatementAst] -and
+      $n.Left -is [System.Management.Automation.Language.VariableExpressionAst] -and
+      $n.Left.VariablePath.UserPath -eq "AgentVersion"
+  }, $false)
+  if ($null -eq $versionNode) { throw "WINDOWS_EVENT_V2_STABLE_AGENT_VERSION_MISSING" }
+  $versionMatch = [regex]::Match($versionNode.Right.Extent.Text.Trim(),'^"([0-9]+\.[0-9]+\.[0-9]+)"$')
+  if (-not $versionMatch.Success) { throw "WINDOWS_EVENT_V2_STABLE_AGENT_VERSION_INVALID" }
+  $script:AgentVersion = $versionMatch.Groups[1].Value
+
   $required = @(
     "Get-PlainText",
     "Get-SafeErrorCode",
@@ -63,7 +76,7 @@ function Import-StableAgentFunctions {
     $n -is [System.Management.Automation.Language.FunctionDefinitionAst]
   }, $true)) {
     if ($required -contains $node.Name) {
-      $functions[$node.Name] = $node.Extent.Text
+      $functions[$node.Name] = $node.Extent.Text -replace "^function\s+", "function script:"
     }
   }
 
@@ -92,7 +105,7 @@ function Get-EventV2Config {
 function Get-DurableLivenessSeconds($Cfg) {
   [uint32]$hash = 2166136261
   foreach ($b in [Text.Encoding]::UTF8.GetBytes([string]$Cfg.device_id)) {
-    $hash = [uint32](([uint64]($hash -bxor [uint32]$b) * 16777619) -band 0xffffffff)
+    $hash = [uint32](([uint64]($hash -bxor [uint32]$b) * 16777619) -band [uint64]4294967295)
   }
   $spread = (2 * $DurableLivenessJitterSeconds) + 1
   $offset = [int]($hash % [uint32]$spread) - $DurableLivenessJitterSeconds
@@ -110,7 +123,8 @@ function Set-EventV2Status(
   [bool]$Connected,
   [string]$ConnectedAtUtc=$null,
   [string]$DisconnectedAtUtc=$null,
-  [string]$ErrorCode=$null
+  [string]$ErrorCode=$null,
+  [string]$TransportErrorClass=$null
 ) {
   New-Item -ItemType Directory -Path $Root -Force | Out-Null
   $existing = $null
@@ -125,6 +139,7 @@ function Set-EventV2Status(
     connected_at_utc = if ($ConnectedAtUtc) { $ConnectedAtUtc } elseif ($existing) { [string]$existing.connected_at_utc } else { $null }
     disconnected_at_utc = if ($DisconnectedAtUtc) { $DisconnectedAtUtc } elseif ($existing) { [string]$existing.disconnected_at_utc } else { $null }
     last_error_code = $ErrorCode
+    transport_error_class = if ($TransportErrorClass) { $TransportErrorClass } elseif ($existing) { [string]$existing.transport_error_class } else { $null }
     updated_at_utc = [DateTime]::UtcNow.ToString("o")
   }
   $tmp = $EventStatus + ".tmp"
@@ -435,10 +450,37 @@ function New-LocalShutdownPipe {
   )
 }
 
+function Get-EventV2TransportErrorClass($ErrorRecord) {
+  # Persist only allowlisted .NET enum names. Never persist messages, paths,
+  # stack traces, payloads or HTTP bodies from transport failures.
+  $exception = $ErrorRecord.Exception
+  $classification = "UNKNOWN"
+  for ($depth = 0; $null -ne $exception -and $depth -lt 8; $depth++) {
+    if ($exception -is [System.Net.Sockets.SocketException]) {
+      $code = $exception.SocketErrorCode
+      if ([Enum]::IsDefined([System.Net.Sockets.SocketError],$code)) {
+        $classification = "SOCKET_" + $code.ToString().ToUpperInvariant()
+      }
+    } elseif ($exception -is [System.Net.WebSockets.WebSocketException]) {
+      $code = $exception.WebSocketErrorCode
+      if ([Enum]::IsDefined([System.Net.WebSockets.WebSocketError],$code)) {
+        $classification = "WEBSOCKET_" + $code.ToString().ToUpperInvariant()
+      }
+    }
+    $exception = $exception.InnerException
+  }
+  return $classification
+}
+
 function Get-ReconnectDelaySeconds([int]$Attempt) {
   if ($Attempt -lt 0) { throw "WINDOWS_EVENT_V2_RECONNECT_ATTEMPT_INVALID" }
   $cap = [Math]::Min($ReconnectMaxSeconds, $ReconnectBaseSeconds * [Math]::Pow(2,[Math]::Min($Attempt,20)))
-  return ([Security.Cryptography.RandomNumberGenerator]::GetInt32(0,1000000) / 1000000.0) * $cap
+  # RandomNumberGenerator.GetInt32 is unavailable on Windows PowerShell 5.1.
+  $rng = [Security.Cryptography.RandomNumberGenerator]::Create()
+  $randomBytes = New-Object byte[] 4
+  try { $rng.GetBytes($randomBytes) }
+  finally { $rng.Dispose() }
+  return ([BitConverter]::ToUInt32($randomBytes,0) / 4294967296.0) * $cap
 }
 
 function Invoke-ConnectedSession($Cfg,[string]$Token) {
@@ -562,7 +604,7 @@ function Invoke-AgentSelfTest {
   Write-Host "COMMANDER_WINDOWS_EVENT_V2_LEARNING_CUSTOMER_CONTENT=FALSE"
 }
 
-if ($SelfTest -or ($args -contains "--self-test")) {
+if ($AgentSelfTestRequested) {
   Invoke-AgentSelfTest
   exit 0
 }
@@ -582,7 +624,7 @@ while ($true) {
       $script:ShutdownRequested = $true
     } else {
       Try-SetRuntimeStatus -ErrorCode $code -ErrorAt ([DateTime]::UtcNow.ToString("o")) | Out-Null
-      try { Set-EventV2Status -Connected $false -DisconnectedAtUtc ([DateTime]::UtcNow.ToString("o")) -ErrorCode $code } catch {}
+      try { Set-EventV2Status -Connected $false -DisconnectedAtUtc ([DateTime]::UtcNow.ToString("o")) -ErrorCode $code -TransportErrorClass (Get-EventV2TransportErrorClass $_) } catch {}
     }
   } finally {
     $token = $null

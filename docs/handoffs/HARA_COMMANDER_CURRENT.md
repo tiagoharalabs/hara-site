@@ -1,3 +1,28 @@
+# H.A.R.A. Commander — CURRENT (12/10/2026, 22:49 BRT)
+
+**A versão .53 R3 passou no gate de 119/119 verificações e está publicada em DEV. A homologação completa ainda depende dos critérios abaixo.** Este é o checklist único da rodada; entradas posteriores ao histórico registram estados anteriores.
+
+DEV: Worker `97471c0a-b739-4906-90aa-41384a8a1cb1`, pacote comercial assinado `commercial-0.3.53-v13-rc-r3`. A distribuição PROD desta versão e o fechamento de CI/publicação devem ser confirmados separadamente.
+
+| Critério | Estado neste checkpoint | Evidência / próximo fechamento |
+| --- | --- | --- |
+| Regressão, assinatura e assets .53 R3 em DEV | **PASS — 119/119** | [Gate R3](../evidence/commander-full-acceptance-20261012/full-053/prelaunch-offline-gate-r3.json), [deploy](../evidence/commander-full-acceptance-20261012/full-053/dev-deployment-r3.json), [readback](../evidence/commander-full-acceptance-20261012/full-053/dev-readback-r3.json). |
+| Cliente real: OAuth, cadastro normal QA2 e contrato MCP de 33 ferramentas | **PASS no escopo exercitado** | [OAuth real](../evidence/commander-full-acceptance-20261012/real-oauth/idp_oauth_real_proof.json), [cadastro QA2](../evidence/commander-full-acceptance-20261012/client-quota/qa2-organic-signup-d1-readback.json). [MCP/pairing normal](../evidence/commander-full-acceptance-20261012/real-oauth/normal_signup_mcp_pairing_proof.json). Não significa execução das 33 ferramentas no Windows novo. |
+| Isolamento entre tenants, Free/Pro, quota e replay | **PASS em DEV** | [Cliente/quota](../evidence/commander-full-acceptance-20261012/client-quota/README.md). Limite controlado de uma unidade validou concorrência, commit e replay; não representa dez mil operações. |
+| Windows .53: instalação limpa QA2 e ciclo completo | **EM CURSO** | [Windows limpo](../evidence/commander-full-acceptance-20261012/windows-clean/README.md). Fechar enrollment normal, roundtrip MCP, arquivos/processos/terminal, reconexão, replay e uninstall. As provas anteriores do Windows principal permanecem válidas no seu escopo. |
+| Linux .53: atualização e ciclo completo | **PASS** | [Resumo lifecycle](../evidence/commander-full-acceptance-20261012/linux-clean/native-053-lifecycle-summary.json): upgrade, uninstall, fresh install, core, rollback, re-enroll, 19 checks MCP e 62 testes FS. |
+| Continuidade prolongada .53/backend fixado | **PILOTO 002 FAIL; diagnóstico em curso** | [Status run 002](../evidence/commander-full-acceptance-20261012/real-dev-soak/soak-20261012-root-002/status.json): erro interno em probe após 1155,971 s; dois Agents vivos/conectados. Cleanup dos dois fixtures PASS. Nenhum soak ativo ou resultado de 24/72h neste checkpoint. |
+| Terminal gerenciado Linux: max_lines solicitado | **DEFEITO ABERTO** | Na .53 interactive usa cap inicial200 e ignora max_lines20; drain120 PASS. Correção isolada em testes, sem alterar pacote assinado. |
+| Capacidade de 1.000 clientes por 24h | **PENDENTE** | [Rampa real](../evidence/commander-full-acceptance-20261012/real-dev-soak/README.md): 100/100 tenants/Agents passaram em um host, com identidades QA. Nem essa rampa nem o soak de dois Agents certificam 1.000 clientes. |
+| Checkout/assinatura paga Stripe | **PENDENTE — gate comercial pago/GA** | [Separação do beta técnico](../operations/HARA_COMMANDER_STRIPE_INDEPENDENT_VALIDATION_20261011.md). Exige checkout TEST, webhook, entitlement e cancelamento; pagamento real não foi comprovado. |
+| Publicação pública OpenAI | **PENDENTE EXTERNA** | Revisão/submissão e verificação empresarial são separadas do funcionamento técnico do MCP. Não declarar aprovação pública. |
+
+O piloto 002 terminou com falha às 22:41 BRT; os marcos futuros de duração desse run foram cancelados. A causa do erro interno ainda não está comprovada.
+
+O caminho principal aprovado é **ChatGPT → MCP HTTPS/OAuth HARA → Cloudflare → Agent local**. Secure MCP Tunnel/Direct permanece opção avançada Linux e não bloqueia o beta técnico, conforme [decisão Cloud-first](../operations/HARA_COMMANDER_CLOUD_FIRST_PUBLIC_PLUGIN_20261009.md). A paridade integral do adaptador Windows Event V2 experimental também deve ser acompanhada separadamente da aceitação da versão estável.
+
+## Histórico preservado — estados anteriores; não usar como checklist atual
+
 # H.A.R.A. Commander — CURRENT (12/10/2026; Windows 49 real e aceite humano positivo, testes em curso)
 
 **O primeiro aceite humano positivo pelo MCP foi comprovado no Windows 49.** A chamada própria de teste hostname, HARA-CALL-6843883f-641b-42e2-a7a1-45a94a3675c0, recebeu claim às 21:21:17.259Z e mostrou PASS local às 21:23:23Z. A imagem enviada pelo usuário mostrou a janela de 15 minutos e a confirmação ENVIADA. O resultado real retornou HARA_WIN11, exit0, sem timeout nem truncamento; recibo 4963b1d2f09e21f27f3507d38c3c62cdddb810462fd08adec30319ac2ddf8dd1. O hostname passou após cerca de 126 segundos, além da antiga janela de 30 segundos; esse teste não esperou os 900 segundos completos.

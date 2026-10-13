@@ -22,11 +22,11 @@ def main():
             checks.append(code)
         else:
             raise AssertionError("EXPECTED_DENIAL_MISSING:"+code)
-    with tempfile.TemporaryDirectory(prefix="commander-win50-unsigned-test-", dir="/tmp_hara") as temp:
+    with tempfile.TemporaryDirectory(prefix="commander-win51-historical-unsigned-test-", dir="/tmp_hara") as temp:
         root = Path(temp)
         stage = root/"stage"
         original_new = release.NEW
-        release.NEW = root/"immutable50"
+        release.NEW = root/"immutable51"
         try:
             release.prepare(stage)
             release.validate_stage_source(stage)
@@ -69,6 +69,7 @@ def main():
     print(json.dumps({"schema":"hara.commander-windows051-unsigned-release-guards.v1",
                       "state":"PASS","checks":len(checks),"passed_checks":checks,
                       "source_sha256":release.APPROVED_SOURCE_SHA256,
+                      "historical_frozen_source":True,"active_source_claim":False,
                       "signing_performed":False,"production_action_executed":False},sort_keys=True))
 
 if __name__ == "__main__":
