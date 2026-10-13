@@ -1,0 +1,200 @@
+{
+  "after": [
+    {
+      "n": 0,
+      "table_name": "billing_connections"
+    },
+    {
+      "n": 0,
+      "table_name": "commander_beta_access_requests"
+    },
+    {
+      "n": 0,
+      "table_name": "commander_device_agent_telemetry"
+    },
+    {
+      "n": 0,
+      "table_name": "commander_device_authorization_codes"
+    },
+    {
+      "n": 0,
+      "table_name": "commander_device_budget_blocks"
+    },
+    {
+      "n": 0,
+      "table_name": "commander_device_calls"
+    },
+    {
+      "n": 0,
+      "table_name": "commander_device_metering_events"
+    },
+    {
+      "n": 0,
+      "table_name": "commander_device_selections"
+    },
+    {
+      "n": 0,
+      "table_name": "commander_device_telemetry_snapshot"
+    },
+    {
+      "n": 0,
+      "table_name": "commander_device_usage_daily"
+    },
+    {
+      "n": 0,
+      "table_name": "commander_device_usage_totals"
+    },
+    {
+      "n": 0,
+      "table_name": "commander_devices"
+    },
+    {
+      "n": 0,
+      "table_name": "commander_slo_incidents"
+    },
+    {
+      "n": 0,
+      "table_name": "commander_slo_state"
+    },
+    {
+      "n": 0,
+      "table_name": "commander_support_reports"
+    },
+    {
+      "n": 0,
+      "table_name": "commander_tenant_budget_baselines"
+    },
+    {
+      "n": 0,
+      "table_name": "device_pairing_tokens"
+    },
+    {
+      "n": 0,
+      "table_name": "entitlements"
+    },
+    {
+      "n": 0,
+      "table_name": "identity_bindings"
+    },
+    {
+      "n": 0,
+      "table_name": "portal_sessions"
+    },
+    {
+      "n": 0,
+      "table_name": "tenants"
+    },
+    {
+      "n": 0,
+      "table_name": "users"
+    }
+  ],
+  "at_utc": "2026-10-13T04:22:55.630760+00:00",
+  "before": [
+    {
+      "n": 0,
+      "table_name": "billing_connections"
+    },
+    {
+      "n": 0,
+      "table_name": "commander_beta_access_requests"
+    },
+    {
+      "n": 0,
+      "table_name": "commander_device_agent_telemetry"
+    },
+    {
+      "n": 0,
+      "table_name": "commander_device_authorization_codes"
+    },
+    {
+      "n": 0,
+      "table_name": "commander_device_budget_blocks"
+    },
+    {
+      "n": 7,
+      "table_name": "commander_device_calls"
+    },
+    {
+      "n": 0,
+      "table_name": "commander_device_metering_events"
+    },
+    {
+      "n": 0,
+      "table_name": "commander_device_selections"
+    },
+    {
+      "n": 0,
+      "table_name": "commander_device_telemetry_snapshot"
+    },
+    {
+      "n": 0,
+      "table_name": "commander_device_usage_daily"
+    },
+    {
+      "n": 0,
+      "table_name": "commander_device_usage_totals"
+    },
+    {
+      "n": 2,
+      "table_name": "commander_devices"
+    },
+    {
+      "n": 0,
+      "table_name": "commander_slo_incidents"
+    },
+    {
+      "n": 0,
+      "table_name": "commander_slo_state"
+    },
+    {
+      "n": 0,
+      "table_name": "commander_support_reports"
+    },
+    {
+      "n": 0,
+      "table_name": "commander_tenant_budget_baselines"
+    },
+    {
+      "n": 3,
+      "table_name": "device_pairing_tokens"
+    },
+    {
+      "n": 2,
+      "table_name": "entitlements"
+    },
+    {
+      "n": 2,
+      "table_name": "identity_bindings"
+    },
+    {
+      "n": 3,
+      "table_name": "portal_sessions"
+    },
+    {
+      "n": 2,
+      "table_name": "tenants"
+    },
+    {
+      "n": 2,
+      "table_name": "users"
+    }
+  ],
+  "credential_values_exposed": false,
+  "identities": [
+    {
+      "oidc_subject": "394859086664957956",
+      "subject_id": "HARA-ACCEPT-S-20261013001608-ea8cefa9",
+      "tenant_id": "HARA-ACCEPT-T-20261013001608-ea8cefa9"
+    },
+    {
+      "oidc_subject": "394861028946477060",
+      "subject_id": "HARA-SUBJECT-NECJJGQPSMLXM5NBYEU",
+      "tenant_id": "HARA-TENANT-BNRKHV5P7_1SBJSL8FZ_HYYR"
+    }
+  ],
+  "other_tenants_targeted": false,
+  "owned_private_fixture_files_removed": 1,
+  "prod_changed": false,
+  "state": "PASS"
+}

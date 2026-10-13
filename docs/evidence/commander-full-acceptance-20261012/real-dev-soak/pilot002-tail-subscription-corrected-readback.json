@@ -1,0 +1,21 @@
+{
+  "schema": "hara.pilot002-readonly-tail-subscription.v1",
+  "scope": "DEV POST pinnedversion only; no new product calls; sampling filter omitted; raw stdout/stderr discarded",
+  "capture_bound_seconds": 348,
+  "event_count": 191,
+  "exception_count": 0,
+  "outcomes": {
+    "ok": 191
+  },
+  "statuses": {
+    "200": 49,
+    "201": 3,
+    "204": 139
+  },
+  "tail_exit_code": 0,
+  "stderr_class": "NONE",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "private_safe_path": "/tmp_hara/commander-win50-utf8-20261012/.generated/pilot002-diagnostics/corrected-tail-sanitized.json",
+  "raw_bytes_discarded": 854103,
+  "initial_tail_gap": "invalid sampling-rate1 exited before subscription"
+}

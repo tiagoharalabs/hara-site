@@ -1,0 +1,102 @@
+{
+  "at_utc": "2026-10-13T04:37:23+00:00",
+  "current_experimental_manager_controller_tested": false,
+  "network_load_started": false,
+  "reports": [
+    {
+      "agent_processes_launched": 0,
+      "alias": "sentinela-b",
+      "cloud_requests": 0,
+      "home": "/home/sartorius",
+      "hostname": "sentinela-b",
+      "installed_Agent_modified": false,
+      "private_sandbox": "/home/sartorius/hara-capacity1000-compat",
+      "python": "3.10.12",
+      "schema": "hara.commander-capacity-native-python-compat.v1",
+      "scope": "ISOLATED_OWN_SOURCE_IMPORT_NO_AGENT_START",
+      "source_checks": [
+        {
+          "imported": true,
+          "parsed": true,
+          "sha256": "62e1a836ef92fc8b72638fd116a6f0097fcf9e9f0ef0f4259ca8e0f6712b4229",
+          "source": "public/agent/linux.py"
+        },
+        {
+          "imported": true,
+          "parsed": true,
+          "sha256": "96b10a826e8cb2063cd6e19f6c71967e98c0b843c6cd94f997e2d24a7f316ea9",
+          "source": "experimental/event_v2_websocket.py"
+        },
+        {
+          "imported": true,
+          "parsed": true,
+          "sha256": "f1a7d9fc4faf57185d0d2bcb17e741882db866c627967bf02e1d98754d212950",
+          "source": "experimental/event_v2_agent_loop.py"
+        },
+        {
+          "imported": true,
+          "parsed": true,
+          "sha256": "1170e771181e86b02c87d5307c9b22783788a73487f8325e73f29217046069d2",
+          "source": "experimental/event_v2_customer_agent.py"
+        },
+        {
+          "imported": true,
+          "parsed": true,
+          "sha256": "4bb47248f2a690df680d8c6cd0144522e2cd82286bb563f391bbea9a200fa499",
+          "source": "experimental/event_v2_telemetry.py"
+        }
+      ],
+      "state": "PASS_PARSE_IMPORT_ONLY",
+      "uid": 1002
+    },
+    {
+      "agent_processes_launched": 0,
+      "alias": "ninja-blue",
+      "cloud_requests": 0,
+      "home": "/home/sartorius",
+      "hostname": "ninja-blue",
+      "installed_Agent_modified": false,
+      "private_sandbox": "/home/sartorius/hara-capacity1000-compat",
+      "python": "3.14.7",
+      "schema": "hara.commander-capacity-native-python-compat.v1",
+      "scope": "ISOLATED_OWN_SOURCE_IMPORT_NO_AGENT_START",
+      "source_checks": [
+        {
+          "imported": true,
+          "parsed": true,
+          "sha256": "62e1a836ef92fc8b72638fd116a6f0097fcf9e9f0ef0f4259ca8e0f6712b4229",
+          "source": "public/agent/linux.py"
+        },
+        {
+          "imported": true,
+          "parsed": true,
+          "sha256": "96b10a826e8cb2063cd6e19f6c71967e98c0b843c6cd94f997e2d24a7f316ea9",
+          "source": "experimental/event_v2_websocket.py"
+        },
+        {
+          "imported": true,
+          "parsed": true,
+          "sha256": "f1a7d9fc4faf57185d0d2bcb17e741882db866c627967bf02e1d98754d212950",
+          "source": "experimental/event_v2_agent_loop.py"
+        },
+        {
+          "imported": true,
+          "parsed": true,
+          "sha256": "1170e771181e86b02c87d5307c9b22783788a73487f8325e73f29217046069d2",
+          "source": "experimental/event_v2_customer_agent.py"
+        },
+        {
+          "imported": true,
+          "parsed": true,
+          "sha256": "4bb47248f2a690df680d8c6cd0144522e2cd82286bb563f391bbea9a200fa499",
+          "source": "experimental/event_v2_telemetry.py"
+        }
+      ],
+      "state": "PASS_PARSE_IMPORT_ONLY",
+      "uid": 1000
+    }
+  ],
+  "schema": "hara.commander-capacity-physical-python-compat-series.v1",
+  "source_freeze_scope": "SIGNED54_LINUX_AGENT_PLUS_FOUR_EVENT_V2_MODULES",
+  "state": "PASS"
+}

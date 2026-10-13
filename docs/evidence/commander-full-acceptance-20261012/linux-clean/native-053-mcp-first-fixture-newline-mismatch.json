@@ -1,0 +1,38 @@
+{
+  "schema": "hara.commander-linux-clean-native-mcp.v1",
+  "backend": "installed_product_MCP_LOCAL_STDIO_with_real_DEV_enrollment",
+  "systemctl_backend": "real",
+  "human_ASK_response_generated": false,
+  "authorization": "explicit_QA_SESSION_TRUSTED_until_CLI_close",
+  "checks": [
+    {
+      "check": "actual-CLI-bounded-QA-session",
+      "state": "PASS"
+    },
+    {
+      "check": "MCP-operation-receipt-PASS",
+      "state": "PASS"
+    },
+    {
+      "check": "MCP-operation-receipt-PASS",
+      "state": "PASS"
+    },
+    {
+      "check": "session-authorization-source",
+      "state": "PASS"
+    },
+    {
+      "check": "MCP-operation-receipt-PASS",
+      "state": "PASS"
+    }
+  ],
+  "receipt_sha256": [
+    "29650bae294f17c208971eb64c42a454af046a75530e252e1339398293784d97",
+    "c907cf18065a725c14411a040770d3cf62237fb3a48003d4aa853902972a8d8b",
+    "476b060bca14269714c6267517bccbfa7010fc7cc98c837bdcfb2c763824db3f"
+  ],
+  "state": "FAIL_NATIVE_LINUX_MCP_53",
+  "error_type": "AssertionError",
+  "error_code": "Unicode-write-read-exact",
+  "governed_transport": "H.A.R.A. Commander DIRECT -> Services -> SSH nucleo-a -> exclusive real Linux QA"
+}

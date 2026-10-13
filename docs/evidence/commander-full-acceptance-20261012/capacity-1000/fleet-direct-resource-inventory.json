@@ -1,0 +1,214 @@
+{
+  "schema": "hara.commander-real-fleet-stress-inventory.v1",
+  "at_utc": "2026-10-13T04:33:09.667Z",
+  "user_authorized_all_fleet": true,
+  "scope": "DIRECT product Agent discovery and readonly resource commands; no stress load launched by this inventory",
+  "device_info": [
+    {
+      "computer": "services",
+      "state": "PASS",
+      "metadata": {
+        "agent_version": "0.3.46",
+        "approval_mode": "PERSISTENT_TRUSTED",
+        "architecture": "x86_64",
+        "device_id": "HARA-DEVICE-ad55f2aa-9a83-46e1-a6ab-f78d422950fe",
+        "hostname": "services",
+        "platform": "LINUX",
+        "platform_release": "6.8.0-146-generic",
+        "python_version": "3.12.3",
+        "tunnel_mode": "EVENT_V2"
+      },
+      "receipt_sha256": "b47c656f6232d296c230ea99c612e72082fa6daa6e3bde08243e8643013cdbc8"
+    },
+    {
+      "computer": "nucleo-a",
+      "state": "PASS",
+      "metadata": {
+        "agent_version": "0.3.46",
+        "approval_mode": "PERSISTENT_TRUSTED",
+        "architecture": "x86_64",
+        "device_id": "HARA-DEVICE-e032ffff-f2d2-43ad-b2a8-f5385a900f62",
+        "hostname": "nucleo-a",
+        "platform": "LINUX",
+        "platform_release": "7.1.5-76070105-generic",
+        "python_version": "3.12.3",
+        "tunnel_mode": "EVENT_V2"
+      },
+      "receipt_sha256": "6642e2878dab5858ec6f6a07fd0a4875de6e938f296a8ff2a5511c9a4a496d07"
+    },
+    {
+      "computer": "ninja-blue",
+      "state": "PASS",
+      "metadata": {
+        "agent_version": "0.3.46",
+        "approval_mode": "PERSISTENT_TRUSTED",
+        "architecture": "x86_64",
+        "device_id": "HARA-DEVICE-f275d879-b7f9-4c77-a08f-6408ff3471c0",
+        "hostname": "ninja-blue",
+        "platform": "LINUX",
+        "platform_release": "7.2.3-ogc3.1.fc44.x86_64",
+        "python_version": "3.14.7",
+        "tunnel_mode": "EVENT_V2"
+      },
+      "receipt_sha256": "be39192b5ecf732047c2ad1d11540d0faf928b0e2120ba9a286466c7dc393518"
+    },
+    {
+      "computer": "sentinela-a",
+      "state": "UNAVAILABLE",
+      "metadata": {},
+      "blocker": {
+        "code": "DEVICE_OFFLINE",
+        "category": "DEVICE_AVAILABILITY",
+        "retryable": true
+      }
+    },
+    {
+      "computer": "sentinela-b",
+      "state": "PASS",
+      "metadata": {
+        "agent_version": "0.3.41",
+        "approval_mode": "PERSISTENT_TRUSTED",
+        "architecture": "x86_64",
+        "device_id": "HARA-DEVICE-f1d9ecb6-f1e9-4867-9398-8ed10b785c5a",
+        "hostname": "sentinela-b",
+        "platform": "LINUX",
+        "platform_release": "7.1.1-76070101-generic",
+        "python_version": "3.10.12",
+        "tunnel_mode": "OUTBOUND_RELAY"
+      },
+      "receipt_sha256": "872a29a836e2bea84d9d464dbe04539ddabe2b2194d5d5c20652991b5b0a3b51"
+    },
+    {
+      "computer": "sentinela-c",
+      "state": "UNAVAILABLE",
+      "metadata": {},
+      "blocker": {
+        "code": "DEVICE_OFFLINE",
+        "category": "DEVICE_AVAILABILITY",
+        "retryable": true
+      }
+    },
+    {
+      "computer": "sentinela-d",
+      "state": "PASS",
+      "metadata": {
+        "agent_version": "0.3.46",
+        "approval_mode": "PERSISTENT_TRUSTED",
+        "architecture": "x86_64",
+        "device_id": "HARA-DEVICE-e1aeceb4-0a90-411e-badc-90716260f5e0",
+        "hostname": "sentinela-d",
+        "platform": "LINUX",
+        "platform_release": "6.17.0-42-generic",
+        "python_version": "3.12.3",
+        "tunnel_mode": "EVENT_V2"
+      },
+      "receipt_sha256": "b65597edb5bbaeff674a243a0c68fea4cc830fed70edeedaefb46b0172ebd30f"
+    },
+    {
+      "computer": "HARA_WIN11",
+      "state": "UNAVAILABLE",
+      "metadata": {},
+      "blocker": {
+        "code": "DEVICE_OFFLINE",
+        "category": "DEVICE_AVAILABILITY",
+        "retryable": true
+      }
+    }
+  ],
+  "resources": [
+    {
+      "computer": "services",
+      "state": "PASS",
+      "process_exit_code": 0,
+      "resource_metadata": {
+        "hostname": "services",
+        "cpu_count": 12,
+        "load_1m": 0.9091796875,
+        "memory_total_bytes": 32899932160,
+        "memory_available_bytes": 28762546176,
+        "python_version": "3.12.3",
+        "open_files_hard": 1048576,
+        "cgroup_v2": true
+      },
+      "receipt_sha256": "cb70087a4b3aa82e6598d349216557a0824a0b745dac9e5f1ad568055b27126e"
+    },
+    {
+      "computer": "nucleo-a",
+      "state": "PASS",
+      "process_exit_code": 0,
+      "resource_metadata": {
+        "hostname": "nucleo-a",
+        "cpu_count": 16,
+        "load_1m": 5.3828125,
+        "memory_total_bytes": 134860640256,
+        "memory_available_bytes": 81421651968,
+        "python_version": "3.12.3",
+        "open_files_hard": 1048576,
+        "cgroup_v2": true
+      },
+      "receipt_sha256": "c2295816a40a03dfc233d303e23b4d5e6ebbc71a41f92822e9ffe99641b6952a"
+    },
+    {
+      "computer": "ninja-blue",
+      "state": "PASS",
+      "process_exit_code": 0,
+      "resource_metadata": {
+        "hostname": "ninja-blue",
+        "cpu_count": 16,
+        "load_1m": 0.21142578125,
+        "memory_total_bytes": 26984112128,
+        "memory_available_bytes": 23060348928,
+        "python_version": "3.14.7",
+        "open_files_hard": 1048576,
+        "cgroup_v2": true
+      },
+      "receipt_sha256": "1f51cbc429d485c7fce1ceb2d8f1a905fc39908890547648d4ff3ebee1d2a1cf"
+    },
+    {
+      "computer": "sentinela-b",
+      "state": "PASS",
+      "process_exit_code": 0,
+      "resource_metadata": {
+        "hostname": "sentinela-b",
+        "cpu_count": 12,
+        "load_1m": 1.05517578125,
+        "memory_total_bytes": 67315351552,
+        "memory_available_bytes": 59294900224,
+        "python_version": "3.10.12",
+        "open_files_hard": 1048576,
+        "cgroup_v2": true
+      },
+      "receipt_sha256": "9465735b5b37356968a380eeb046958f5ab939fa993a5d12e78019406fddfed8"
+    },
+    {
+      "computer": "sentinela-d",
+      "state": "PASS",
+      "process_exit_code": 0,
+      "resource_metadata": {
+        "hostname": "sentinela-d",
+        "cpu_count": 16,
+        "load_1m": 0.9306640625,
+        "memory_total_bytes": 130726776832,
+        "memory_available_bytes": 61580820480,
+        "python_version": "3.12.3",
+        "open_files_hard": 1048576,
+        "cgroup_v2": true
+      },
+      "receipt_sha256": "c3808a562803d47e4500b516864d12d8ce759cf1bd8fc6d64dc44d201893120c"
+    }
+  ],
+  "offline_candidates": [
+    "sentinela-a",
+    "sentinela-c",
+    "HARA_WIN11"
+  ],
+  "suggested_initial_shards": {
+    "nucleo_owned_vm": 250,
+    "sentinela-d": 300,
+    "sentinela-b": 300,
+    "ninja-blue": 100,
+    "services": 50
+  },
+  "actual_1000_agents_tested": false,
+  "preserve_installed_authorization_policy": true
+}

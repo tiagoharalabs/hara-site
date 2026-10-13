@@ -287,14 +287,16 @@ class Runner:
         values=",".join("("+",".join(q(v) for v in (r["tenant_id"],r["subject_id"],r["device_id"],now()))+")" for r in rows)
         fixtures.fresh.d1("INSERT INTO commander_device_selections (tenant_id,subject_id,device_id,selected_at_utc) VALUES "+values+" ON CONFLICT(tenant_id,subject_id) DO UPDATE SET device_id=excluded.device_id,selected_at_utc=excluded.selected_at_utc;")
 
-    def health(self,row):
+    def health(self,row,request_id=None):
+        request_id=request_id or "SOAK-HEALTH-"+secrets.token_hex(12)
         self.cloud_budget(1)
         start=time.perf_counter()
-        result=probe.transient_call(self.token,row["subject"],"SOAK-HEALTH-"+secrets.token_hex(12),"hara.health",{})
+        result=probe.transient_call(self.token,row["subject"],request_id,"hara.health",{})
         probe.require_transient_common(result)
         require(result.get("state")=="COMPLETED","SOAK_HEALTH_STATE")
         require(result.get("device_id")==row["device_id"],"SOAK_CROSS_TENANT_DEVICE")
-        return dict(success=True,latency_ms=(time.perf_counter()-start)*1000)
+        return dict(success=True,latency_ms=(time.perf_counter()-start)*1000,
+                    request_id=request_id)
 
     def full_probe(self,row):
         self.cloud_budget(3)
@@ -305,16 +307,48 @@ class Runner:
 
     def wave(self,rows,full=False):
         results=[]; errors=[]
+        waves=self.audit.setdefault("probe_waves",[])
+        attempts=[dict(index=row["index"],device_id=row.get("device_id"),
+                       tool_id=None if full else "hara.health",
+                       request_id=None if full else "SOAK-HEALTH-"+secrets.token_hex(12),
+                       request_id_known_before_dispatch=not full,state="PENDING")
+                  for row in rows]
+        record=dict(sequence=len(waves)+1,phase=self.audit["state"],
+                    kind="FULL" if full else "HEALTH",started_at_utc=now(),
+                    state="RUNNING",attempts=attempts)
+        waves.append(record)
+        # IDs and the pending wave survive a process failure; no payloads/tokens.
+        self.emit()
+        def execute(row,attempt):
+            started=time.perf_counter(); attempt["started_at_utc"]=now()
+            try:
+                return self.full_probe(row) if full else self.health(row,attempt["request_id"])
+            finally:
+                attempt.update(completed_at_utc=now(),elapsed_ms=(time.perf_counter()-started)*1000)
         with concurrent.futures.ThreadPoolExecutor(max_workers=min(20,len(rows))) as pool:
-            future_map={pool.submit(self.full_probe if full else self.health,row):row for row in rows}
+            future_map={pool.submit(execute,row,attempt):attempt for row,attempt in zip(rows,attempts)}
             for f in concurrent.futures.as_completed(future_map):
-                try: results.append(f.result())
-                except Exception as exc: errors.append(error_code(exc))
+                attempt=future_map[f]
+                try:
+                    result=f.result(); results.append(result)
+                    attempt.update(state="PASS",request_id=result.get("request_id",attempt["request_id"]))
+                except Exception as exc:
+                    code=error_code(exc); errors.append(code)
+                    attempt.update(state="FAIL",error_code=code,error_class=type(exc).__name__)
+                    if isinstance(exc, probe.ProbeError) and exc.safe_diagnostics:
+                        attempt["http_diagnostics"] = dict(exc.safe_diagnostics)
         latencies=sorted(r["latency_ms"] for r in results)
         percentile=lambda p:latencies[min(len(latencies)-1,max(0,math.ceil(len(latencies)*p)-1))] if latencies else None
         summary=dict(count=len(rows),successful=len(results),errors=errors,
                      success_fraction=len(results)/len(rows),p95_ms=percentile(.95),p99_ms=percentile(.99),
-                     request_and_receipt_bindings=[dict(request_id=r["request_id"],receipt_sha256=r["receipt_sha256"]) for r in results if "request_id" in r])
+                     request_and_receipt_bindings=[dict(request_id=r["request_id"],receipt_sha256=r["receipt_sha256"]) for r in results if "receipt_sha256" in r])
+        failed=bool(errors) or summary["success_fraction"]<.99 or (
+            summary["p95_ms"] is None or summary["p95_ms"]>6000 or summary["p99_ms"]>12000)
+        record.update(state="FAIL" if failed else "PASS",completed_at_utc=now(),summary=summary)
+        if failed:self.audit["failed_wave_sequence"]=record["sequence"]
+        # Persist failures before the SLO assertions and the destructive cleanup.
+        # Full probe IDs remain unavailable on failure until probe.run exposes a hook.
+        self.emit()
         require(not errors,"SOAK_PROBE_ERROR__"+(errors[0] if errors else "NONE"))
         require(summary["success_fraction"]>=.99,"SOAK_SUCCESS_SLO")
         require(summary["p95_ms"]<=6000 and summary["p99_ms"]<=12000,"SOAK_LATENCY_SLO")
@@ -446,6 +480,8 @@ class Runner:
             terminal_error=error_code(exc)
             self.audit["agent_status_at_error"]=self.connection_snapshot([r for r in self.rows if not r.get("cleaned")])
             self.audit["state"]="FAIL";self.audit["error_code"]=terminal_error
+            self.audit["failed_at_utc"]=now()
+            self.emit()
         finally:
             try:
                 self.cleanup_rows([r for r in self.rows if not r.get("cleaned")])

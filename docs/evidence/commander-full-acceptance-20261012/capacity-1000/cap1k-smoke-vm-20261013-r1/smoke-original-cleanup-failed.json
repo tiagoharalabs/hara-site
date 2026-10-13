@@ -1,0 +1,352 @@
+{
+  "D1_statement_counter": "UNKNOWN_NOT_CERTIFIED",
+  "WS_control_frame_counter": "UNKNOWN_NOT_CERTIFIED",
+  "actual_human_oauth_logins": 0,
+  "application_http_and_d1_commands": 28,
+  "auth_mode": "EXACT_OWNED_PRESEEDED_QA",
+  "backend_end": {
+    "checked_at_utc": "2026-10-13T04:52:55Z",
+    "version_id": "6f6e68e3-0777-4fb3-820d-a288ca5f7fab"
+  },
+  "backend_start": {
+    "checked_at_utc": "2026-10-13T04:52:08Z",
+    "version_id": "6f6e68e3-0777-4fb3-820d-a288ca5f7fab"
+  },
+  "cleanup_commands": 1,
+  "cleanup_error_code": "D1_EXECUTE_FAILED",
+  "cleanup_reserved_commands": 1024,
+  "cleanup_state": "FAIL",
+  "cloud_internal_rpc_counter": "UNKNOWN_NOT_CERTIFIED",
+  "cloud_metrics_collected": false,
+  "customer_payloads_exported": false,
+  "elapsed_seconds": 52.872,
+  "environment": "DEV",
+  "expected_backend_version": "6f6e68e3-0777-4fb3-820d-a288ca5f7fab",
+  "finished_at_utc": "2026-10-13T04:52:57Z",
+  "free_and_pro_quota_cases": false,
+  "gate_verdict": {
+    "actual_human_OAuth_logins_certified": false,
+    "all_public_transports_certified": false,
+    "checks": {
+      "actual_1000_agents": false,
+      "actual_1000_independent_tenants": false,
+      "actual_1000_live_connections": false,
+      "bounded_cleanup": false,
+      "coverage_every_agent_receipt": false,
+      "duration": false,
+      "exact_pinned_backend": true,
+      "no_agent_loss": true,
+      "no_duplicate_execution_or_charge": true,
+      "no_tenant_or_receipt_mismatch": true,
+      "p95_SLO": true,
+      "p99_SLO": true,
+      "signed_agent_sources_match": true,
+      "unexpected_errors_zero": true
+    },
+    "gate": "REAL_1000_SHORT",
+    "seventy_two_hour_stability_certified": false,
+    "state": "HOLD"
+  },
+  "latest_host_runtime_pin": {
+    "at_unix": 1791867169.3621638,
+    "cpu_count": 16,
+    "current_memory_kib": 62914560,
+    "memory_available_bytes": 80974553088,
+    "memory_kib": 62914560,
+    "period": 100000,
+    "quota": 400000,
+    "uuid": "c8bcefb4-3f25-41b0-a07a-58c0d7956662",
+    "vcpus": 8
+  },
+  "max_agents": 2,
+  "max_create_concurrency": 2,
+  "max_probe_concurrency": 20,
+  "mode": "short",
+  "observation": {
+    "actual_agents": 2,
+    "actual_tenants": 2,
+    "agent_losses": 0,
+    "agents_with_valid_receipts": 2,
+    "backend_pin_unchanged": true,
+    "cleanup_state": "FAIL",
+    "cloud_metrics_collected": false,
+    "connected_agents": 2,
+    "continuous_seconds": 34.625236202031374,
+    "duplicate_executions_or_charges": 0,
+    "free_and_pro_quota_cases": false,
+    "owned_mutation_replay_cases": false,
+    "p95_ms": 1450.8608679752797,
+    "p99_ms": 1450.8608679752797,
+    "recovery_cases_pass": false,
+    "source_pins_match": true,
+    "tenant_or_receipt_mismatches": 0,
+    "unexpected_errors": 0
+  },
+  "observations": [
+    {
+      "at_utc": "2026-10-13T04:52:25Z",
+      "connected_agents": 2,
+      "elapsed_seconds": 3.9891953070182353,
+      "probe": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 1447.5244969362393,
+        "p99_ms": 1447.5244969362393,
+        "successful": 2
+      },
+      "resources": {
+        "at_unix": 1791867141.727574,
+        "bound_domain_uuid": "c8bcefb4-3f25-41b0-a07a-58c0d7956662",
+        "cgroup_controllers": [
+          "cpuset",
+          "cpu",
+          "io",
+          "memory",
+          "hugetlb",
+          "pids",
+          "rdma",
+          "misc"
+        ],
+        "cgroup_v2": true,
+        "cpu_count": 8,
+        "disk_available_bytes": 22079143936,
+        "libvirt_nominal_memory_verified": true,
+        "load_1m": 0.080078125,
+        "memory_available_bytes": 62280196096,
+        "memory_total_bytes": 63199559680,
+        "nominal_vm_memory_bytes": 64424509440,
+        "open_files_hard": 8192,
+        "open_files_soft": 8192,
+        "role": "Guest",
+        "schema": "hara.commander-capacity-resource-snapshot.v1",
+        "swap_free_bytes": 0,
+        "swap_total_bytes": 0
+      }
+    }
+  ],
+  "owned_mutation_replay_cases": false,
+  "physical_agent_hosts": 1,
+  "real_1000_24h_passed": false,
+  "real_1000_short_passed": false,
+  "real_72h_passed": false,
+  "recovery_cases_pass": false,
+  "run_id": "cap1k-smoke-vm-20261013-r1",
+  "schema": "hara.commander-real-1000-execution.v1",
+  "source_sha256": {
+    "experimental/event_v2_agent_loop.py": "f1a7d9fc4faf57185d0d2bcb17e741882db866c627967bf02e1d98754d212950",
+    "experimental/event_v2_customer_agent.py": "1170e771181e86b02c87d5307c9b22783788a73487f8325e73f29217046069d2",
+    "experimental/event_v2_telemetry.py": "4bb47248f2a690df680d8c6cd0144522e2cd82286bb563f391bbea9a200fa499",
+    "experimental/event_v2_websocket.py": "96b10a826e8cb2063cd6e19f6c71967e98c0b843c6cd94f997e2d24a7f316ea9",
+    "public/agent/linux.py": "62e1a836ef92fc8b72638fd116a6f0097fcf9e9f0ef0f4259ca8e0f6712b4229",
+    "scripts/commander_event_v2_transient_live_probe.py": "33fb67958def9ab03856437705302a7f41be042f109afa81b11567152977fadc",
+    "scripts/commander_fresh_customer_dev_acceptance.py": "ab50d2eb51ec693bb6947640613a5b1a6a7d1fd7ed12d968c6624b64dc7adaba",
+    "scripts/commander_real_1000_capacity_plan.py": "ba324edc21a6e66ad4bb783067bb34f4e6c743c416486ada8eb0ea4d65583589",
+    "scripts/commander_real_1000_controller.py": "c0d143e3e84319057cef7facefdae72b81d8543cd7be678a915d9993a683b682",
+    "scripts/commander_real_1000_vm_manager.py": "031b4cc8e56de09bd33654d452d0135618d7a173c8a1a6fc45f40274e3669cd0",
+    "scripts/full_acceptance_dev_fixtures.py": "c8b0e8ab1858b5b6bc4707bd2488072dd1b3549905c00dee3973553f7ae8fc77",
+    "wrangler.dev.jsonc": "6db8d2d157bbf259bfa571771692e6a2e008c8dcb805f350ae2f9da791676b93"
+  },
+  "stages": [
+    {
+      "agents": 2,
+      "at_utc": "2026-10-13T04:52:21Z",
+      "probe": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 1450.8608679752797,
+        "p99_ms": 1450.8608679752797,
+        "successful": 2
+      },
+      "resources": {
+        "at_unix": 1791867137.6906796,
+        "bound_domain_uuid": "c8bcefb4-3f25-41b0-a07a-58c0d7956662",
+        "cgroup_controllers": [
+          "cpuset",
+          "cpu",
+          "io",
+          "memory",
+          "hugetlb",
+          "pids",
+          "rdma",
+          "misc"
+        ],
+        "cgroup_v2": true,
+        "cpu_count": 8,
+        "disk_available_bytes": 22079193088,
+        "libvirt_nominal_memory_verified": true,
+        "load_1m": 0.080078125,
+        "memory_available_bytes": 62303977472,
+        "memory_total_bytes": 63199559680,
+        "nominal_vm_memory_bytes": 64424509440,
+        "open_files_hard": 8192,
+        "open_files_soft": 8192,
+        "role": "Guest",
+        "schema": "hara.commander-capacity-resource-snapshot.v1",
+        "swap_free_bytes": 0,
+        "swap_total_bytes": 0
+      },
+      "rss_total_bytes": 83222528,
+      "state": "PASS",
+      "tenants": 2
+    }
+  ],
+  "started_at_utc": "2026-10-13T04:52:04Z",
+  "state": "SMOKE_COMPLETED",
+  "updated_at_utc": "2026-10-13T04:52:57Z",
+  "vm_cleanup": {
+    "credentials_removed": true,
+    "remaining": 0,
+    "state": "PASS"
+  },
+  "vm_supervisor": {
+    "credentials_received": 0,
+    "deadline_unix": 1791874329.523429,
+    "state": "PASS",
+    "unit": "hara-cap1k-659d5a26cdd86bc52402"
+  },
+  "vm_uuid": "c8bcefb4-3f25-41b0-a07a-58c0d7956662",
+  "waves": [
+    {
+      "attempts": [
+        {
+          "completed_at_utc": "2026-10-13T04:52:20Z",
+          "cycle_ms": 2632.168515934609,
+          "elapsed_ms": 2632.175368955359,
+          "exact_one_free_debit": true,
+          "health_request_id": "CAP1K-HEALTH-938ebbd7acdf486cbf57c1758da1a0a8",
+          "index": 0,
+          "invoke_request_id": "CAP1K-INVOKE-1da45c2ae69b4d80a53b110cc7493823",
+          "latency_ms": 1288.954503950663,
+          "receipt_sha256": "a844531029ee4f96c2075350bfeca66f99eb2f8df518cccad87ebae95d544b74",
+          "state": "PASS"
+        },
+        {
+          "completed_at_utc": "2026-10-13T04:52:20Z",
+          "cycle_ms": 2629.240715992637,
+          "elapsed_ms": 2629.2503050062805,
+          "exact_one_free_debit": true,
+          "health_request_id": "CAP1K-HEALTH-dab67753ace94e28a7f2dc9093f550cd",
+          "index": 1,
+          "invoke_request_id": "CAP1K-INVOKE-67734a5eab3a4766a1c27ddc6a02e0be",
+          "latency_ms": 1450.8608679752797,
+          "receipt_sha256": "541ea3bccd273d8681e3073c6f31fe25bdb0973ef91516811fcef31ec5c45f7d",
+          "state": "PASS"
+        }
+      ],
+      "completed_at_utc": "2026-10-13T04:52:20Z",
+      "kind": "FULL",
+      "local_ledger_bindings": [
+        {
+          "index": 0,
+          "receipt_sha256": "a844531029ee4f96c2075350bfeca66f99eb2f8df518cccad87ebae95d544b74",
+          "request_id": "CAP1K-INVOKE-1da45c2ae69b4d80a53b110cc7493823",
+          "sha256": "7056e99e1582aa99e0c597603d59c2f3ac305f6dacf06a42e5b964775d7f5e49"
+        },
+        {
+          "index": 1,
+          "receipt_sha256": "541ea3bccd273d8681e3073c6f31fe25bdb0973ef91516811fcef31ec5c45f7d",
+          "request_id": "CAP1K-INVOKE-67734a5eab3a4766a1c27ddc6a02e0be",
+          "sha256": "a4e57f1418f897d904a79ddaa8dcc81a2da6e4634f1f5d55a44c753101ed1eec"
+        }
+      ],
+      "sequence": 1,
+      "started_at_utc": "2026-10-13T04:52:18Z",
+      "state": "PASS",
+      "summary": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 1450.8608679752797,
+        "p99_ms": 1450.8608679752797,
+        "successful": 2
+      }
+    },
+    {
+      "attempts": [
+        {
+          "completed_at_utc": "2026-10-13T04:52:25Z",
+          "elapsed_ms": 1447.5258899619803,
+          "health_request_id": "CAP1K-HEALTH-427da619ce294d3784afd2221e71f1b3",
+          "index": 0,
+          "invoke_request_id": "CAP1K-INVOKE-cec0aff144e248c3ad4f486b50d62662",
+          "latency_ms": 1447.5244969362393,
+          "state": "PASS"
+        },
+        {
+          "completed_at_utc": "2026-10-13T04:52:24Z",
+          "elapsed_ms": 544.3872960750014,
+          "health_request_id": "CAP1K-HEALTH-5c0f13ed23034fa18172c8cbc82edacb",
+          "index": 1,
+          "invoke_request_id": "CAP1K-INVOKE-70f01ffd0a9a42e3ade4ff74173d79e1",
+          "latency_ms": 544.3857130594552,
+          "state": "PASS"
+        }
+      ],
+      "completed_at_utc": "2026-10-13T04:52:25Z",
+      "kind": "HEALTH",
+      "sequence": 2,
+      "started_at_utc": "2026-10-13T04:52:23Z",
+      "state": "PASS",
+      "summary": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 1447.5244969362393,
+        "p99_ms": 1447.5244969362393,
+        "successful": 2
+      }
+    },
+    {
+      "attempts": [
+        {
+          "completed_at_utc": "2026-10-13T04:52:53Z",
+          "cycle_ms": 2016.4697139989585,
+          "elapsed_ms": 2016.4804649539292,
+          "exact_one_free_debit": true,
+          "health_request_id": "CAP1K-HEALTH-2f0443c942ff4bcb940d813032879cf7",
+          "index": 0,
+          "invoke_request_id": "CAP1K-INVOKE-71d413ff761446349897bb60e59deaac",
+          "latency_ms": 814.9811209877953,
+          "receipt_sha256": "002986421b39ee5d0d004ac6ba610911b56ed31841972c65143039b1c51955de",
+          "state": "PASS"
+        },
+        {
+          "completed_at_utc": "2026-10-13T04:52:53Z",
+          "cycle_ms": 2291.288123000413,
+          "elapsed_ms": 2291.3027110043913,
+          "exact_one_free_debit": true,
+          "health_request_id": "CAP1K-HEALTH-45d94e0ed2594b67b369b525a58408b8",
+          "index": 1,
+          "invoke_request_id": "CAP1K-INVOKE-0b73f5e072b04e059206dd8a7e859a47",
+          "latency_ms": 1070.5231620231643,
+          "receipt_sha256": "bb6768a0a9d619a0b87b603c42475f4db07cb4085561231fca1cd63a00389c64",
+          "state": "PASS"
+        }
+      ],
+      "completed_at_utc": "2026-10-13T04:52:53Z",
+      "kind": "FULL",
+      "local_ledger_bindings": [
+        {
+          "index": 0,
+          "receipt_sha256": "002986421b39ee5d0d004ac6ba610911b56ed31841972c65143039b1c51955de",
+          "request_id": "CAP1K-INVOKE-71d413ff761446349897bb60e59deaac",
+          "sha256": "ca807d3df1fbdc8193a22fd1d943be60bf4a556fcb03181109897ded440d18b2"
+        },
+        {
+          "index": 1,
+          "receipt_sha256": "bb6768a0a9d619a0b87b603c42475f4db07cb4085561231fca1cd63a00389c64",
+          "request_id": "CAP1K-INVOKE-0b73f5e072b04e059206dd8a7e859a47",
+          "sha256": "f88ac8e5fcb1e2b019c7449e73f31789cd22bb4473656b7269f8ac825ed8a95e"
+        }
+      ],
+      "sequence": 3,
+      "started_at_utc": "2026-10-13T04:52:51Z",
+      "state": "PASS",
+      "summary": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 1070.5231620231643,
+        "p99_ms": 1070.5231620231643,
+        "successful": 2
+      }
+    }
+  ]
+}

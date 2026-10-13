@@ -1,0 +1,20 @@
+{
+  "VM_rebooted": false,
+  "after": {
+    "global_period": "100000",
+    "global_quota": "400000"
+  },
+  "agents_launched": 0,
+  "at_utc": "2026-10-13T04:30:07+00:00",
+  "before": {
+    "global_period": "100000",
+    "global_quota": "600000"
+  },
+  "domain": "commander-capacity1000-20261013",
+  "host_cpu_count": 16,
+  "host_policy_modified": false,
+  "maximum_physical_cpu_percent": 25,
+  "other_VM_modified": false,
+  "schema": "hara.commander-real1000-ownvm-cpu-distributed-scope.v1",
+  "state": "PASS_OWN_VM_QUOTA_ONLY"
+}

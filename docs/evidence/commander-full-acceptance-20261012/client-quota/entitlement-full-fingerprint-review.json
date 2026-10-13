@@ -1,0 +1,25 @@
+{
+  "schema": "hara.entitlement-full-fingerprint-review.v1",
+  "state": "FAVORABLE_MINIMAL_PATCH_REVIEW",
+  "reviewed_at_utc": "2026-10-13T01:25:58.583348+00:00",
+  "dev_auth_sha256": "0abad1978968c676c8500dc9ff27323c862a202cd74ff1fc4d8fbca59dfe45ca",
+  "prod_frozen_auth_base_observed_sha256": "04764bde18fd7a739a65d7085d230941cab5c0e980e528beafb27f1ad0ecd0dc",
+  "change": "New entitlement IDs use full SHA256 base64url fingerprint, case preserved; no truncation or uppercase folding.",
+  "existing_accounts": "resolveOrClaimIdentity returns existing ACTIVE user before provisioning; one-line ID change does not recalculate existing entitlement or plan.",
+  "tests": {
+    "reviewed_file": "apps/commander/scripts/test_dev_qa_self_service_provisioning.mjs",
+    "sha256": "7ce773771c03896841e8e1d716a9efc265cd4601105165e56f945da72811413c",
+    "reviewed_cases": [
+      "exact full fingerprint ID",
+      "two distinct tenant entitlements",
+      "repeat provisioning idempotency",
+      "PROD TRIAL and Founder plan preserved",
+      "DEV opt-in and two-subject allowlist"
+    ],
+    "root_reported_checks": 43,
+    "root_reported_integrated_gate": 119,
+    "rerun_by_reviewer": false
+  },
+  "audit": "active-users-entitlement-aggregate-readback.json",
+  "limitations": "Aggregate audit found no ACTIVE users lacking ACTIVE or current-valid entitlement. Origin of self-service-shaped historical IDs remains unverified; absence alone would not prove collision. No production mutation or migration by reviewer."
+}

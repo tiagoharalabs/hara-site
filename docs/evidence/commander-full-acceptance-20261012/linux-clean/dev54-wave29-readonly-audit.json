@@ -1,0 +1,71 @@
+{
+  "api_status_poll_performed": false,
+  "at_utc": "2026-10-13T03:49:21+00:00",
+  "budgets": [
+    {
+      "budget_id": "HARA-BUDGET-f4573e38-1219-4384-a512-ca4205fe6556",
+      "expires_at_utc": "2026-11-01T00:00:00.000Z",
+      "period_key": "2026-10",
+      "state": "ACTIVE",
+      "units_allocated": 100,
+      "units_issued": 1
+    }
+  ],
+  "calls": [
+    {
+      "call_id": "HARA-CALL-3195afba-95d8-4fa0-b1c4-ee98149b2b5c",
+      "claimed_at_utc": "2026-10-13T03:32:31.721Z",
+      "completed_at_utc": "2026-10-13T03:32:32.328Z",
+      "created_at_utc": "2026-10-13T03:32:24.004Z",
+      "device_id": "HARA-DEVICE-962202bc-274a-486b-9794-b73d9f3a5889",
+      "error_code": null,
+      "expires_at_utc": "2026-10-13T03:33:14.004Z",
+      "request_id": "HARA-QA-LINUX-RO-55bc6a8703d059ad4e459f43",
+      "state": "COMPLETED",
+      "subject_id": "HARA-ACCEPT-S-20261012234227-4f4e7600",
+      "tenant_id": "HARA-ACCEPT-T-20261012234227-4f4e7600",
+      "tool_id": "hara.device.info",
+      "usage_budget_id": null,
+      "usage_mode": "CLOUD_QUOTA",
+      "usage_period_key": "2026-10",
+      "usage_units": 1
+    },
+    {
+      "call_id": "HARA-CALL-3085f5a7-899d-4c73-8910-258fc7077b5c",
+      "claimed_at_utc": "2026-10-13T03:42:27.835Z",
+      "completed_at_utc": "2026-10-13T03:42:28.497Z",
+      "created_at_utc": "2026-10-13T03:42:23.986Z",
+      "device_id": "HARA-DEVICE-962202bc-274a-486b-9794-b73d9f3a5889",
+      "error_code": null,
+      "expires_at_utc": "2026-10-13T03:43:13.986Z",
+      "request_id": "HARA-QA-LINUX-RO-c686216c5b34c010edb21697",
+      "state": "COMPLETED",
+      "subject_id": "HARA-ACCEPT-S-20261012234227-4f4e7600",
+      "tenant_id": "HARA-ACCEPT-T-20261012234227-4f4e7600",
+      "tool_id": "hara.device.info",
+      "usage_budget_id": "HARA-BUDGET-f4573e38-1219-4384-a512-ca4205fe6556",
+      "usage_mode": "LOCAL_BUDGET",
+      "usage_period_key": "2026-10",
+      "usage_units": 1
+    }
+  ],
+  "customer_content_collected": false,
+  "d1_mutations": 0,
+  "d1_reads": 3,
+  "device_id": "HARA-DEVICE-962202bc-274a-486b-9794-b73d9f3a5889",
+  "device_metadata": [
+    {
+      "agent_version": "0.3.53",
+      "device_id": "HARA-DEVICE-962202bc-274a-486b-9794-b73d9f3a5889",
+      "last_seen_at_utc": "2026-10-13T03:48:45.860Z",
+      "platform": "LINUX",
+      "revoked_at_utc": null,
+      "state": "ACTIVE",
+      "tunnel_mode": "OUTBOUND_RELAY"
+    }
+  ],
+  "payload_or_result_content_read": false,
+  "schema": "hara.commander-linux-dev54-wave29-readonly-audit.v1",
+  "scope": "EXACT_OWN_DEV_FIXTURE_ONLY",
+  "worker_source_sha256": "7d984c9b7da3680a3c32a6bb2b0db98d4a3bbd1ed5b367e80248ce4aa637ab20"
+}

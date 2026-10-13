@@ -1,0 +1,8 @@
+{
+  "agent_processes_launched": 0,
+  "host_memory_floor_bytes": 17179869184,
+  "memory_available_after_full_vm_allocation_bytes": 25390567424,
+  "state": "PASS_RESOURCE_PREFLIGHT_ONLY",
+  "vm_created": false,
+  "vm_memory_bytes": 64424509440
+}

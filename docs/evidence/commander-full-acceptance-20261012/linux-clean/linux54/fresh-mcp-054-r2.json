@@ -1,0 +1,148 @@
+{
+  "schema": "hara.commander-linux-clean54-native-mcp.v1",
+  "backend": "installed_public_product_MCP_LOCAL_STDIO_with_real_DEV_enrollment",
+  "systemctl_backend": "real",
+  "cli_entrypoint": "/home/commanderqa/.local/bin/hara commander",
+  "human_ASK_response_generated": false,
+  "authorization": "explicit_QA_SESSION_TRUSTED_until_own_CLI_close",
+  "managed_max_lines_contract": "requested_20_initial_then_100_retained_numbered_lines",
+  "checks": [
+    {
+      "check": "public-default-ASK-get",
+      "state": "PASS"
+    },
+    {
+      "check": "public-approval-mode-session-set-and-get",
+      "state": "PASS"
+    },
+    {
+      "check": "public-CLI-bounded-QA-session-identity",
+      "state": "PASS",
+      "owner_pid": 4596,
+      "owner_start_marker": "313809"
+    },
+    {
+      "check": "MCP-operation-receipt-PASS",
+      "state": "PASS"
+    },
+    {
+      "check": "MCP-operation-receipt-PASS",
+      "state": "PASS"
+    },
+    {
+      "check": "session-authorization-source",
+      "state": "PASS"
+    },
+    {
+      "check": "MCP-operation-receipt-PASS",
+      "state": "PASS"
+    },
+    {
+      "check": "Unicode-write-read-exact",
+      "state": "PASS"
+    },
+    {
+      "check": "MCP-operation-receipt-PASS",
+      "state": "PASS"
+    },
+    {
+      "check": "stale-SHA-conflict-preserves-file",
+      "state": "PASS"
+    },
+    {
+      "check": "MCP-operation-receipt-PASS",
+      "state": "PASS"
+    },
+    {
+      "check": "bounded-run-line-cap-20",
+      "state": "PASS"
+    },
+    {
+      "check": "MCP-operation-receipt-PASS",
+      "state": "PASS"
+    },
+    {
+      "check": "managed-requested-initial-20-lines",
+      "state": "PASS"
+    },
+    {
+      "check": "MCP-operation-receipt-PASS",
+      "state": "PASS"
+    },
+    {
+      "check": "managed-retains-exactly-next-100-numbered-lines",
+      "state": "PASS",
+      "retained_numbered_line_count": 100
+    },
+    {
+      "check": "MCP-operation-receipt-PASS",
+      "state": "PASS"
+    },
+    {
+      "check": "interactive-PTY-ready-before-input",
+      "state": "PASS"
+    },
+    {
+      "check": "MCP-operation-receipt-PASS",
+      "state": "PASS"
+    },
+    {
+      "check": "MCP-operation-receipt-PASS",
+      "state": "PASS"
+    },
+    {
+      "check": "MCP-operation-receipt-PASS",
+      "state": "PASS"
+    },
+    {
+      "check": "interactive-PTY-120-lines-complete-once",
+      "state": "PASS",
+      "numbered_line_count": 120
+    },
+    {
+      "check": "interactive-UTF8-input-roundtrip",
+      "state": "PASS"
+    },
+    {
+      "check": "all-PASS-MCP-operations-have-distinct-receipts",
+      "state": "PASS",
+      "PASS_tool_call_count": 11,
+      "preexecution_conflict_count": 1
+    },
+    {
+      "check": "public-close-revokes-own-session",
+      "state": "PASS"
+    },
+    {
+      "check": "public-approval-mode-ask-set-and-get",
+      "state": "PASS"
+    }
+  ],
+  "receipt_sha256": [
+    "72d36ace61be6898d1f24fec9d3e023954d83dc201e05296c852224c75ce7f35",
+    "ee959da3d54f5d12992c69f735a080cac32146b30b18a1878e3e77528f3a50bc",
+    "2fba473be8ae1e890fb5793b97653a36c326c2045dff556c679d841c6aba9f81",
+    "7398a21b92f075fbfdaf4b93d0f70ee2af37983e6b853dcf8cc3acc0fb14d57b",
+    "2857fafde467e27f074caf5e5fe533b526b83fd31c7cef807bfffe96c047e54e",
+    "4f4d8f2dfdb5710bb02791666ebcfed492b4b4c848c74d1e30d01ba8d8270173",
+    "db533ba627015dd606845de5cab566da3bc5358aafb73a23b8a4bca29db7f080",
+    "53630c8cd64935dc49d31db7f4e657327d4a06427850f6eb3b24602f772a5782",
+    "1cf5c7bc571f51bae2148af7cd6545b986ba4da5d5c08adb2fd687eb82f5891f",
+    "744406b3ddfc8e5f79b95de417b87c4c63e81bbbb5bd9baa45059fe043cb4fd3",
+    "8f9c96c50d2ca40f3cc7ba318630f11f53b0a47c9b1ebedc2886165ca658c68e"
+  ],
+  "state": "PASS_NATIVE_LINUX_MCP_54",
+  "agent_version": "0.3.54",
+  "managed_initial_numbered_lines": 20,
+  "managed_retained_numbered_lines": 100,
+  "total_numbered_lines": 120,
+  "tool_call_count": 12,
+  "PASS_tool_call_count": 11,
+  "preexecution_conflict_count": 1,
+  "qa_policy_restored_ASK_and_session_closed": true,
+  "governed_transport": "H.A.R.A. Commander DIRECT -> Services -> SSH nucleo-a -> exclusive real Linux54 QA",
+  "new_qa_vm_uuid": "f1fc631b-9442-468a-82dc-e99d021ea8f5",
+  "runner_sha256": "b5a54c4756fb35d400c37696cfc527364fad48955a234e0a6376866037687bb1",
+  "release_agent_pin": "62e1a836ef92fc8b72638fd116a6f0097fcf9e9f0ef0f4259ca8e0f6712b4229",
+  "release_installer_pin": "d2057adfff5c2b475d1520ae44f1ed76a7ec0ecc673f65cf08631d7a0083d0fa"
+}

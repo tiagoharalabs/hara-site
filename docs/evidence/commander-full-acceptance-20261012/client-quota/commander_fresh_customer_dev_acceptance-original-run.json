@@ -1,0 +1,14 @@
+{
+  "schema": "hara.dev-acceptance-measured.v1",
+  "probe": "commander_fresh_customer_dev_acceptance.py",
+  "started_at": "2026-10-12T23:37:49.734755+00:00",
+  "completed_at": "2026-10-12T23:37:54.269511+00:00",
+  "environment": "DEV",
+  "exit_code": 1,
+  "error": "D1_EXECUTE_FAILED",
+  "checks": [
+    "FRESH_CUSTOMER_DEV_FIXTURE_CLEANUP=PASS"
+  ],
+  "secret_output": false,
+  "prod_mutated": false
+}

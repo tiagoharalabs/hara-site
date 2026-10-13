@@ -68,7 +68,7 @@ def repinned_installer(raw, rel, jwk):
         need(count == 1, "INSTALLER_SIGNER_PIN_SCOPE")
     return raw
 
-def verify_bundle(bundle, *, compare_active=True):
+def verify_bundle(bundle, *, compare_active=False):
     blobs = {rel: regular(bundle, rel) for rel in (*FILESET, *EXTRA)}
     public_raw = blobs["release/release-signing-public.jwk"]
     need(sha(public_raw) == PUBLIC_KEY_BYTES_SHA256, "PINNED_PUBLIC_KEY_BYTES")
@@ -126,6 +126,16 @@ def verify_bundle(bundle, *, compare_active=True):
          "WINDOWS_INSTALLER_VERSION_SCOPE")
     need(len(re.findall(rb'agent_version"\s*:\s*"0[.]3[.]53"', blobs["install/linux.sh"])) == 3,
          "LINUX_INSTALLER_VERSION_SCOPE")
+    if not compare_active:
+        need(sha(raw) == "eebd7f4b209158b4a9a02b986365291c14e70bcad45106271078b2a373b6a257", "HISTORICAL_R3_MANIFEST_PIN")
+        pinned = {
+            "agent/linux.py": "db91714140b63684917e46d6a327778183a5829dbf2b298098b31da4d463985e",
+            "agent/windows.ps1": "f67ebcee909ee2ce93187262c951b57b38bc976fec73413bd30555d9bcf62299",
+            "install/linux.sh": "dae0a39f12a02920261a8051834d5b8426866a07e8a0d0acb9676c6605c8e3f8",
+            "install/windows.ps1": "dd92242225cf518e104f8f574aa9f661e6e3c9647f2cdce2afdb6ba88d0d9710",
+        }
+        for rel, digest in pinned.items():
+            need(sha(blobs[rel]) == digest, "HISTORICAL_R3_SOURCE_PIN:" + rel)
     if compare_active:
         for rel in FILESET:
             public = regular(APP / "public", rel)

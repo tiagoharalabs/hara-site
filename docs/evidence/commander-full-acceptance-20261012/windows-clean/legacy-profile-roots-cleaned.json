@@ -1,0 +1,11 @@
+{
+  "clone_uuid": "d35599c8-b9ea-45e5-9ae9-fa047e84b8ba",
+  "commander_root_residues_remaining": 0,
+  "config_contents_read": false,
+  "inherited_device_config_files": 0,
+  "schema": "hara.windows-clean-legacy-root-cleanup.v1",
+  "source_modified": false,
+  "state": "PASS_NO_INHERITED_COMMANDER_ROOTS",
+  "tokens_used": false,
+  "unenrolled_auxiliary_commander_roots_removed": 1
+}

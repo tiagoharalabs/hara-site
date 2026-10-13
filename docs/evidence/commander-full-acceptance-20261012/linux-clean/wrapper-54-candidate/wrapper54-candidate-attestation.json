@@ -1,0 +1,67 @@
+{
+  "agent_service_start_stop_operations": 0,
+  "artifact_sha256": {
+    "legacy43-real-fs-result.json": "e2d828e367dc56ffe46c2b7a0e46affbc8c03e34121da5fd15b21e60db772f47",
+    "linux-install-053-baseline.sh": "7600f844c24696c7d2e0113328fb39425fa3182ae4e93ab8573d7ce4b74926a2",
+    "linux-install-wrapper-054-candidate.patch": "0d17438df6f124c5da9e3592b9d93afe66198c24d3fa4bfa914989b7496683a8",
+    "linux-install-wrapper-054-candidate.sh": "495069185d82d888cf53e1db156b60a264ec0fbfd7caf5b243e307bb07398cf0",
+    "managed53-real-fs-result.json": "3fbbc70dbc686e1fc4eea0ccf37a0510fa4ac89a2e5f3896c4ca8d05eac5d4ee",
+    "prepare_wrapper54_candidate.py": "72d1daf6c343863f20728db429861d31581e478317f38deb5f40fdf6dad7446a",
+    "test_wrapper54_native_private.py": "b11d503a0416be81c60f101d2080af8fd4939dfc717d305cc780bc747d326a4b",
+    "test_wrapper_054_legacy43_real_fs.py": "b3a30207aa6ac75d72a63394ed597f1c39e281855766738237b82189560441e2",
+    "test_wrapper_054_managed53_real_fs.py": "6833dedb5309dbc652a06221849875e887157a2349298d2b8bd3e59d99240fd8",
+    "wrapper54-private-native-result.json": "c9d92e76d2cc73cee297b36ad9e38ba1c8064e661eca476c7fae7a038fb35bbb"
+  },
+  "atomic_safety_functions_unchanged": [
+    "identity",
+    "new_wrapper_at",
+    "open_owned_directory",
+    "read_owned_regular_at",
+    "rename_noreplace",
+    "report",
+    "restore_if_empty",
+    "write_new_file_at"
+  ],
+  "changed_helper_functions": [
+    "preimage_target",
+    "manage"
+  ],
+  "changed_shell_outside_helper": "THREE_AGENT_VERSION_METADATA_LITERALS_053_TO_054_ONLY",
+  "external_acceptance_claimed": false,
+  "governed_execution_receipts": [
+    "8b5b22340700c1b3abe5d0ed6e4837bd47f3bcea24ab3cf5536ec2245142502c",
+    "e423acd3efa082bce2de694d9dcc525238299d8cbdfb58b228872f8d59cf0f44",
+    "d9f1c3d35b54e80c4c23479522ec23a4faabaeaea5051a52857a8e15c05c133d",
+    "07c0bb2d7b1880839a053ee5a27a6ca507d07905b1dd081f3d3b78427b886c9c",
+    "ca83c09b0d0119ec2b6ae66d8060480b55ad567cac6097bfc5ce693203b232d5"
+  ],
+  "network_operations": 0,
+  "public_agent_unchanged_sha256": "db91714140b63684917e46d6a327778183a5829dbf2b298098b31da4d463985e",
+  "public_installer_unchanged_sha256": "7600f844c24696c7d2e0113328fb39425fa3182ae4e93ab8573d7ce4b74926a2",
+  "scope": "UNIT_PRIVATE_FIXTURES_NATIVE_WRAPPER_AND_AGENT_GETTER_SETTER_NO_EXTERNAL_ACCEPTANCE",
+  "signed_bundle_edit_operations": 0,
+  "state": "PASS_CANDIDATE_UNIT_REVIEW_PENDING",
+  "systemctl_operations": 0,
+  "test_summary": {
+    "legacy43-real-fs-result.json": {
+      "checks": 61,
+      "skips": [
+        "foreign-UID-real-chown-unavailable"
+      ],
+      "state": "PASS"
+    },
+    "managed53-real-fs-result.json": {
+      "checks": 61,
+      "skips": [
+        "foreign-UID-real-chown-unavailable"
+      ],
+      "state": "PASS"
+    },
+    "wrapper54-private-native-result.json": {
+      "checks": 32,
+      "skips": [],
+      "state": "PASS"
+    }
+  },
+  "vm_operations": 0
+}

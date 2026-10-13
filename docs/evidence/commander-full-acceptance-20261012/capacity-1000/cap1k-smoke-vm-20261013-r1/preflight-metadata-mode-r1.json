@@ -1,0 +1,14 @@
+{
+  "Agent_processes_started": 0,
+  "at_utc": "2026-10-13T04:51:26+00:00",
+  "cloud_fixture_mutations": 0,
+  "code": "CAPACITY_PRIVATE_FILE",
+  "controller_source_changed": false,
+  "corrected_only_owned_proof_mode": "0664_to0600",
+  "journal_rows": 0,
+  "journal_state": "PREPARED",
+  "manager_source_changed": false,
+  "proof_contents_sha256": "9a6a32448c59b79899277286357bc9bb9c06102853009ab593c2fe324b7e148e",
+  "schema": "hara.commander-real1000-smoke-preflight-metadata-mode.v1",
+  "state": "HOLD_BEFORE_ANY_PRODUCT_DISPATCH"
+}

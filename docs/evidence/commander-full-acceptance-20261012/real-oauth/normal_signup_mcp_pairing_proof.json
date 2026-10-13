@@ -1,0 +1,1184 @@
+{
+  "schema": "hara.commander.real-oauth.normal-signup-customer-mcp.v1",
+  "state": "PASS_REAL_ORGANIC_SIGNUP_PAIRING_WINDOWS53_OAUTH_MCP_READ_RECEIPT",
+  "qa1_seeded_d1_identity": true,
+  "qa2_seeded_d1_identity": false,
+  "qa2_idp_subject": "394861028946477060",
+  "qa2_product_subject": "HARA-SUBJECT-NECJJGQPSMLXM5NBYEU",
+  "qa2_tenant": "HARA-TENANT-BNRKHV5P7_1SBJSL8FZ_HYYR",
+  "qa2_plan": "TRIAL",
+  "normal_portal_oauth_events": [
+    {
+      "event": "HTTP",
+      "at_utc": "2026-10-13T00:59:01.178610+00:00",
+      "method": "POST",
+      "path": "/auth/v1/permissions/zitadel/me/_search",
+      "http_status": 200,
+      "safe_error_code": null
+    },
+    {
+      "event": "PORTAL_HTTP",
+      "at_utc": "2026-10-13T00:59:03.456843+00:00",
+      "method": "GET",
+      "path": "/auth/login",
+      "http_status": 302,
+      "safe_error_code": null
+    },
+    {
+      "event": "PORTAL_HTTP",
+      "at_utc": "2026-10-13T00:59:04.004942+00:00",
+      "method": "GET",
+      "path": "/oauth/v2/authorize",
+      "http_status": 302,
+      "safe_error_code": null
+    },
+    {
+      "event": "HTTP",
+      "at_utc": "2026-10-13T00:59:04.147305+00:00",
+      "method": "GET",
+      "path": "/v2/oidc/auth_requests/V2_394863763800457220",
+      "http_status": 200,
+      "safe_error_code": null
+    },
+    {
+      "event": "HTTP",
+      "at_utc": "2026-10-13T00:59:05.169193+00:00",
+      "method": "POST",
+      "path": "/v2/sessions",
+      "http_status": 201,
+      "safe_error_code": null
+    },
+    {
+      "event": "HTTP",
+      "at_utc": "2026-10-13T00:59:05.452339+00:00",
+      "method": "GET",
+      "path": "/v2/sessions/394863764639318020",
+      "http_status": 200,
+      "safe_error_code": null
+    },
+    {
+      "event": "HTTP",
+      "at_utc": "2026-10-13T00:59:05.738815+00:00",
+      "method": "POST",
+      "path": "/v2/oidc/auth_requests/V2_394863763800457220",
+      "http_status": 200,
+      "safe_error_code": null
+    },
+    {
+      "event": "PORTAL_HTTP",
+      "at_utc": "2026-10-13T00:59:07.245124+00:00",
+      "method": "GET",
+      "path": "/auth/callback",
+      "http_status": 302,
+      "safe_error_code": null
+    },
+    {
+      "event": "PORTAL_NORMAL_CALLBACK_PASS",
+      "at_utc": "2026-10-13T00:59:07.245788+00:00",
+      "subject_id": "394861028946477060",
+      "portal_client_id": "391790882505949187",
+      "callback_http_status": 302,
+      "state_cookie_preserved": true,
+      "server_pkce_nonce_used": true,
+      "portal_session_cookie_present": true,
+      "d1_seed_performed": false,
+      "credential_values_exposed": false
+    },
+    {
+      "event": "PORTAL_HTTP",
+      "at_utc": "2026-10-13T00:59:07.879106+00:00",
+      "method": "GET",
+      "path": "/api/portal/session",
+      "http_status": 200,
+      "safe_error_code": null
+    },
+    {
+      "event": "PORTAL_AUTHENTICATED_READBACK",
+      "at_utc": "2026-10-13T00:59:07.879553+00:00",
+      "endpoint": "/api/portal/session",
+      "metadata": {
+        "tenant": {
+          "tenant_id": "HARA-TENANT-BNRKHV5P7_1SBJSL8FZ_HYYR"
+        },
+        "subject": {
+          "subject_id": "HARA-SUBJECT-NECJJGQPSMLXM5NBYEU"
+        }
+      }
+    },
+    {
+      "event": "PORTAL_HTTP",
+      "at_utc": "2026-10-13T00:59:09.893764+00:00",
+      "method": "GET",
+      "path": "/api/portal/bootstrap",
+      "http_status": 200,
+      "safe_error_code": null
+    },
+    {
+      "event": "PORTAL_AUTHENTICATED_READBACK",
+      "at_utc": "2026-10-13T00:59:09.894590+00:00",
+      "endpoint": "/api/portal/bootstrap",
+      "metadata": {
+        "entitlement": {
+          "state": "ACTIVE",
+          "plan_code": "TRIAL"
+        },
+        "tenant": {
+          "tenant_id": "HARA-TENANT-BNRKHV5P7_1SBJSL8FZ_HYYR",
+          "state": "ACTIVE"
+        },
+        "subject": {
+          "subject_id": "HARA-SUBJECT-NECJJGQPSMLXM5NBYEU"
+        }
+      }
+    }
+  ],
+  "qa1_mcp_protocol_events": [
+    {
+      "event": "MCP_HTTP",
+      "at_utc": "2026-10-13T01:08:46.424007+00:00",
+      "http_status": 200,
+      "method": "initialize",
+      "request_id": "qa-init",
+      "jsonrpc_error_code": null,
+      "credential_values_exposed": false
+    },
+    {
+      "event": "MCP_HTTP",
+      "at_utc": "2026-10-13T01:08:48.181622+00:00",
+      "http_status": 202,
+      "method": "notifications/initialized",
+      "request_id": null,
+      "jsonrpc_error_code": null,
+      "credential_values_exposed": false
+    },
+    {
+      "event": "MCP_HTTP",
+      "at_utc": "2026-10-13T01:08:48.673813+00:00",
+      "http_status": 200,
+      "method": "tools/list",
+      "request_id": "qa-tools",
+      "jsonrpc_error_code": null,
+      "credential_values_exposed": false
+    },
+    {
+      "event": "CUSTOMER_MCP_PROTOCOL_PASS",
+      "at_utc": "2026-10-13T01:08:48.675564+00:00",
+      "schema": "hara.real-oauth.customer-mcp.protocol.v1",
+      "state": "PASS_REAL_OAUTH_CUSTOMER_MCP",
+      "qa": "qa1",
+      "subject_id": "394859086664957956",
+      "client_id": "394859085289226244",
+      "endpoint": "https://hara-commander-dev-v2.tiago-sartori.workers.dev/api/mcp?profile=simple",
+      "protocol_version": "2025-03-26",
+      "tool_count": 33,
+      "tool_names": [
+        "list_devices",
+        "get_config",
+        "get_usage_stats",
+        "get_activity",
+        "get_device_telemetry",
+        "ping",
+        "get_device_info",
+        "get_system_uptime",
+        "get_system_resources",
+        "inspect_workspace",
+        "hash_file",
+        "diff_files",
+        "read_file",
+        "read_multiple_files",
+        "write_file",
+        "edit_block",
+        "create_directory",
+        "list_directory",
+        "move_file",
+        "copy_file",
+        "delete_file",
+        "list_file_preimages",
+        "rollback_file",
+        "search",
+        "get_file_info",
+        "list_processes",
+        "start_process",
+        "read_process_output",
+        "interact_with_process",
+        "kill_process",
+        "list_sessions",
+        "get_recent_tool_calls",
+        "get_receipt"
+      ],
+      "mcp_session_header_present": false,
+      "seeded_d1_identity": true,
+      "credential_values_exposed": false
+    }
+  ],
+  "qa2_real_token_issue_events": [
+    {
+      "event": "HTTP",
+      "at_utc": "2026-10-13T01:09:15.891626+00:00",
+      "method": "POST",
+      "path": "/auth/v1/permissions/zitadel/me/_search",
+      "http_status": 200,
+      "safe_error_code": null
+    },
+    {
+      "event": "HTTP",
+      "at_utc": "2026-10-13T01:09:16.943770+00:00",
+      "method": "POST",
+      "path": "/v2/sessions",
+      "http_status": 201,
+      "safe_error_code": null
+    },
+    {
+      "event": "HTTP",
+      "at_utc": "2026-10-13T01:09:17.068027+00:00",
+      "method": "GET",
+      "path": "/v2/sessions/394864790935175172",
+      "http_status": 200,
+      "safe_error_code": null
+    },
+    {
+      "event": "HTTP",
+      "at_utc": "2026-10-13T01:09:17.205511+00:00",
+      "method": "GET",
+      "path": "/oauth/v2/authorize",
+      "http_status": 302,
+      "safe_error_code": null
+    },
+    {
+      "event": "HTTP",
+      "at_utc": "2026-10-13T01:09:17.332956+00:00",
+      "method": "GET",
+      "path": "/v2/oidc/auth_requests/V2_394864792914886660",
+      "http_status": 200,
+      "safe_error_code": null
+    },
+    {
+      "event": "HTTP",
+      "at_utc": "2026-10-13T01:09:18.453286+00:00",
+      "method": "POST",
+      "path": "/v2/oidc/auth_requests/V2_394864792914886660",
+      "http_status": 200,
+      "safe_error_code": null
+    },
+    {
+      "event": "HTTP",
+      "at_utc": "2026-10-13T01:09:18.813246+00:00",
+      "method": "POST",
+      "path": "/oauth/v2/token",
+      "http_status": 200,
+      "safe_error_code": null
+    },
+    {
+      "event": "HTTP",
+      "at_utc": "2026-10-13T01:09:19.002468+00:00",
+      "method": "GET",
+      "path": "/oidc/v1/userinfo",
+      "http_status": 200,
+      "safe_error_code": null
+    },
+    {
+      "event": "HTTP",
+      "at_utc": "2026-10-13T01:09:19.380662+00:00",
+      "method": "POST",
+      "path": "/oauth/v2/introspect",
+      "http_status": 200,
+      "safe_error_code": null
+    },
+    {
+      "event": "REAL_OAUTH_PROOF",
+      "at_utc": "2026-10-13T01:09:19.381417+00:00",
+      "state": "PASS_REAL_OAUTH_PKCE_QA",
+      "subject_id": "394861028946477060",
+      "client_id": "394859085289226244",
+      "issuer": "https://auth.haralabs.com.br",
+      "audiences": [
+        "394417849373818884",
+        "392794504995799043",
+        "393956020499578884",
+        "394416432470884356",
+        "393658063434874884",
+        "394859085289226244",
+        "392945565756882947",
+        "392794504962310147"
+      ],
+      "scopes": "openid email profile urn:zitadel:iam:org:project:id:392794504962310147:aud",
+      "token_format": "OPAQUE",
+      "email_notification_requested": false,
+      "password_factor_verified": true,
+      "global_policy_changed": false,
+      "global_roles_added": false,
+      "credential_values_exposed": false
+    }
+  ],
+  "qa2_mcp_protocol_events": [
+    {
+      "event": "MCP_HTTP",
+      "at_utc": "2026-10-13T01:10:05.222041+00:00",
+      "http_status": 200,
+      "method": "initialize",
+      "request_id": "qa-init",
+      "jsonrpc_error_code": null,
+      "credential_values_exposed": false
+    },
+    {
+      "event": "MCP_HTTP",
+      "at_utc": "2026-10-13T01:10:05.865628+00:00",
+      "http_status": 202,
+      "method": "notifications/initialized",
+      "request_id": null,
+      "jsonrpc_error_code": null,
+      "credential_values_exposed": false
+    },
+    {
+      "event": "MCP_HTTP",
+      "at_utc": "2026-10-13T01:10:06.386331+00:00",
+      "http_status": 200,
+      "method": "tools/list",
+      "request_id": "qa-tools",
+      "jsonrpc_error_code": null,
+      "credential_values_exposed": false
+    },
+    {
+      "event": "CUSTOMER_MCP_PROTOCOL_PASS",
+      "at_utc": "2026-10-13T01:10:06.388391+00:00",
+      "schema": "hara.real-oauth.customer-mcp.protocol.v1",
+      "state": "PASS_REAL_OAUTH_CUSTOMER_MCP",
+      "qa": "qa2",
+      "subject_id": "394861028946477060",
+      "client_id": "394859085289226244",
+      "endpoint": "https://hara-commander-dev-v2.tiago-sartori.workers.dev/api/mcp?profile=simple",
+      "protocol_version": "2025-03-26",
+      "tool_count": 33,
+      "tool_names": [
+        "list_devices",
+        "get_config",
+        "get_usage_stats",
+        "get_activity",
+        "get_device_telemetry",
+        "ping",
+        "get_device_info",
+        "get_system_uptime",
+        "get_system_resources",
+        "inspect_workspace",
+        "hash_file",
+        "diff_files",
+        "read_file",
+        "read_multiple_files",
+        "write_file",
+        "edit_block",
+        "create_directory",
+        "list_directory",
+        "move_file",
+        "copy_file",
+        "delete_file",
+        "list_file_preimages",
+        "rollback_file",
+        "search",
+        "get_file_info",
+        "list_processes",
+        "start_process",
+        "read_process_output",
+        "interact_with_process",
+        "kill_process",
+        "list_sessions",
+        "get_recent_tool_calls",
+        "get_receipt"
+      ],
+      "mcp_session_header_present": false,
+      "seeded_d1_identity": false,
+      "credential_values_exposed": false
+    }
+  ],
+  "qa2_metadata_contract_events": [
+    {
+      "event": "MCP_HTTP",
+      "at_utc": "2026-10-13T01:20:11.261990+00:00",
+      "http_status": 200,
+      "method": "initialize",
+      "request_id": "qa-calls-init",
+      "jsonrpc_error_code": null,
+      "credential_values_exposed": false
+    },
+    {
+      "event": "MCP_HTTP",
+      "at_utc": "2026-10-13T01:20:12.361891+00:00",
+      "http_status": 202,
+      "method": "notifications/initialized",
+      "request_id": null,
+      "jsonrpc_error_code": null,
+      "credential_values_exposed": false
+    },
+    {
+      "event": "MCP_HTTP",
+      "at_utc": "2026-10-13T01:20:13.306178+00:00",
+      "http_status": 200,
+      "method": "tools/call",
+      "request_id": "qa-list",
+      "jsonrpc_error_code": null,
+      "credential_values_exposed": false
+    },
+    {
+      "event": "REAL_QA_MCP_CALL",
+      "at_utc": "2026-10-13T01:20:13.306290+00:00",
+      "tool": "list_devices",
+      "request_id": "qa-list",
+      "http_status": 200,
+      "jsonrpc_error_code": null,
+      "tool_is_error": null,
+      "result_state": "PASS",
+      "safe_result_code": null,
+      "blocker_code": null,
+      "device_count": null,
+      "context_metadata": [
+        {
+          "plan_code": "TRIAL"
+        }
+      ],
+      "metadata_privacy_disallowed_fields": [],
+      "caller_field_supplied": false,
+      "credential_values_exposed": false
+    },
+    {
+      "event": "MCP_HTTP",
+      "at_utc": "2026-10-13T01:20:14.839481+00:00",
+      "http_status": 200,
+      "method": "tools/call",
+      "request_id": "qa-usage",
+      "jsonrpc_error_code": null,
+      "credential_values_exposed": false
+    },
+    {
+      "event": "REAL_QA_MCP_CALL",
+      "at_utc": "2026-10-13T01:20:14.839926+00:00",
+      "tool": "get_usage_stats",
+      "request_id": "qa-usage",
+      "http_status": 200,
+      "jsonrpc_error_code": null,
+      "tool_is_error": null,
+      "result_state": "PASS",
+      "safe_result_code": null,
+      "blocker_code": null,
+      "device_count": null,
+      "context_metadata": [
+        {
+          "plan_code": "TRIAL"
+        },
+        {
+          "remaining_units": 10000
+        },
+        {
+          "plan_code": "TRIAL"
+        },
+        {
+          "remaining_units": 10000
+        }
+      ],
+      "metadata_privacy_disallowed_fields": [],
+      "caller_field_supplied": false,
+      "credential_values_exposed": false
+    },
+    {
+      "event": "MCP_HTTP",
+      "at_utc": "2026-10-13T01:20:20.862228+00:00",
+      "http_status": 200,
+      "method": "tools/call",
+      "request_id": "qa-usage",
+      "jsonrpc_error_code": null,
+      "credential_values_exposed": false
+    },
+    {
+      "event": "REAL_QA_MCP_CALL",
+      "at_utc": "2026-10-13T01:20:20.862642+00:00",
+      "tool": "get_usage_stats",
+      "request_id": "qa-usage",
+      "http_status": 200,
+      "jsonrpc_error_code": null,
+      "tool_is_error": null,
+      "result_state": "PASS",
+      "safe_result_code": null,
+      "blocker_code": null,
+      "device_count": null,
+      "context_metadata": [
+        {
+          "plan_code": "TRIAL"
+        },
+        {
+          "remaining_units": 10000
+        },
+        {
+          "plan_code": "TRIAL"
+        },
+        {
+          "remaining_units": 10000
+        }
+      ],
+      "metadata_privacy_disallowed_fields": [],
+      "caller_field_supplied": false,
+      "credential_values_exposed": false
+    },
+    {
+      "event": "MCP_HTTP",
+      "at_utc": "2026-10-13T01:20:21.701718+00:00",
+      "http_status": 200,
+      "method": "tools/call",
+      "request_id": "qa-activity",
+      "jsonrpc_error_code": null,
+      "credential_values_exposed": false
+    },
+    {
+      "event": "REAL_QA_MCP_CALL",
+      "at_utc": "2026-10-13T01:20:21.702055+00:00",
+      "tool": "get_activity",
+      "request_id": "qa-activity",
+      "http_status": 200,
+      "jsonrpc_error_code": null,
+      "tool_is_error": null,
+      "result_state": "PASS",
+      "safe_result_code": null,
+      "blocker_code": null,
+      "device_count": null,
+      "context_metadata": [
+        {
+          "plan_code": "TRIAL"
+        }
+      ],
+      "metadata_privacy_disallowed_fields": [],
+      "caller_field_supplied": false,
+      "credential_values_exposed": false
+    },
+    {
+      "event": "MCP_HTTP",
+      "at_utc": "2026-10-13T01:20:24.008352+00:00",
+      "http_status": 200,
+      "method": "tools/call",
+      "request_id": "qa-recent",
+      "jsonrpc_error_code": null,
+      "credential_values_exposed": false
+    },
+    {
+      "event": "REAL_QA_MCP_CALL",
+      "at_utc": "2026-10-13T01:20:24.008662+00:00",
+      "tool": "get_recent_tool_calls",
+      "request_id": "qa-recent",
+      "http_status": 200,
+      "jsonrpc_error_code": null,
+      "tool_is_error": null,
+      "result_state": "PASS",
+      "safe_result_code": null,
+      "blocker_code": null,
+      "device_count": null,
+      "context_metadata": [
+        {
+          "plan_code": "TRIAL"
+        }
+      ],
+      "metadata_privacy_disallowed_fields": [],
+      "caller_field_supplied": false,
+      "credential_values_exposed": false
+    },
+    {
+      "event": "MCP_HTTP",
+      "at_utc": "2026-10-13T01:20:25.120819+00:00",
+      "http_status": 200,
+      "method": "tools/call",
+      "request_id": "qa-caller",
+      "jsonrpc_error_code": null,
+      "credential_values_exposed": false
+    },
+    {
+      "event": "REAL_QA_MCP_CALL",
+      "at_utc": "2026-10-13T01:20:25.121132+00:00",
+      "tool": "list_devices",
+      "request_id": "qa-caller",
+      "http_status": 200,
+      "jsonrpc_error_code": null,
+      "tool_is_error": null,
+      "result_state": "PASS",
+      "safe_result_code": null,
+      "blocker_code": null,
+      "device_count": null,
+      "context_metadata": [
+        {
+          "plan_code": "TRIAL"
+        }
+      ],
+      "metadata_privacy_disallowed_fields": [],
+      "caller_field_supplied": true,
+      "credential_values_exposed": false
+    },
+    {
+      "event": "MCP_HTTP",
+      "at_utc": "2026-10-13T01:20:25.608630+00:00",
+      "http_status": 200,
+      "method": "tools/call",
+      "request_id": "qa-denied-mutation",
+      "jsonrpc_error_code": null,
+      "credential_values_exposed": false
+    },
+    {
+      "event": "REAL_QA_MCP_CALL",
+      "at_utc": "2026-10-13T01:20:25.608948+00:00",
+      "tool": "start_process",
+      "request_id": "qa-denied-mutation",
+      "http_status": 200,
+      "jsonrpc_error_code": null,
+      "tool_is_error": true,
+      "result_state": null,
+      "safe_result_code": null,
+      "blocker_code": null,
+      "device_count": null,
+      "context_metadata": [],
+      "metadata_privacy_disallowed_fields": [],
+      "caller_field_supplied": false,
+      "credential_values_exposed": false
+    },
+    {
+      "event": "REAL_QA_MCP_CONTRACT_PROOF",
+      "at_utc": "2026-10-13T01:20:25.612337+00:00",
+      "subject_id": "394861028946477060",
+      "calls": 7,
+      "replayed_readonly_id": true,
+      "no_mutating_action_targeted_real_device": true,
+      "credential_values_exposed": false
+    }
+  ],
+  "qa2_safe_shape_events": [
+    {
+      "event": "MCP_HTTP",
+      "at_utc": "2026-10-13T01:29:09.857485+00:00",
+      "http_status": 200,
+      "method": "tools/call",
+      "request_id": "qa-shape-list_devices",
+      "jsonrpc_error_code": null,
+      "credential_values_exposed": false
+    },
+    {
+      "event": "MCP_SAFE_SHAPE",
+      "at_utc": "2026-10-13T01:29:09.857751+00:00",
+      "tool": "list_devices",
+      "http_status": 200,
+      "tool_is_error": null,
+      "shape": [
+        {
+          "path": "/state",
+          "kind": "str",
+          "length": null
+        },
+        {
+          "path": "/operational_authority",
+          "kind": "str",
+          "length": null
+        },
+        {
+          "path": "/execution_authority",
+          "kind": "str",
+          "length": null
+        },
+        {
+          "path": "/runtime_authority_from_chatgpt",
+          "kind": "bool",
+          "length": null
+        },
+        {
+          "path": "/mutation_performed",
+          "kind": "bool",
+          "length": null
+        },
+        {
+          "path": "/customer_services_relay",
+          "kind": "bool",
+          "length": null
+        },
+        {
+          "path": "/result",
+          "kind": "dict",
+          "length": 2
+        },
+        {
+          "path": "/result/count",
+          "kind": "int",
+          "length": null
+        },
+        {
+          "path": "/result/computers",
+          "kind": "list",
+          "length": 1
+        },
+        {
+          "path": "/result/computers/0/device_id",
+          "kind": "str",
+          "length": null
+        },
+        {
+          "path": "/result/computers/0/computer",
+          "kind": "str",
+          "length": null
+        },
+        {
+          "path": "/result/computers/0/platform",
+          "kind": "str",
+          "length": null
+        },
+        {
+          "path": "/result/computers/0/architecture",
+          "kind": "str",
+          "length": null
+        },
+        {
+          "path": "/result/computers/0/agent_version",
+          "kind": "str",
+          "length": null
+        },
+        {
+          "path": "/result/computers/0/state",
+          "kind": "str",
+          "length": null
+        },
+        {
+          "path": "/result/computers/0/last_seen_at_utc",
+          "kind": "str",
+          "length": null
+        },
+        {
+          "path": "/product",
+          "kind": "dict",
+          "length": 3
+        },
+        {
+          "path": "/product/plan_code",
+          "kind": "str",
+          "length": null
+        },
+        {
+          "path": "/product/entitlement_id",
+          "kind": "str",
+          "length": null
+        },
+        {
+          "path": "/product/quota",
+          "kind": "NoneType",
+          "length": null
+        }
+      ],
+      "metadata_counts": [
+        {
+          "count": 1
+        },
+        {
+          "plan_code": "TRIAL"
+        }
+      ],
+      "array_lengths": [
+        {
+          "path": "/result/computers",
+          "length": 1
+        }
+      ],
+      "safe_uppercase_codes": [
+        "DEVICE",
+        "ENTITLEMENT",
+        "HARA",
+        "HARAQA5312",
+        "HARA_SERVICES",
+        "OFFLINE",
+        "PASS",
+        "TRIAL",
+        "WINDOWS"
+      ],
+      "credential_values_exposed": false
+    },
+    {
+      "event": "MCP_HTTP",
+      "at_utc": "2026-10-13T01:29:10.265873+00:00",
+      "http_status": 200,
+      "method": "tools/call",
+      "request_id": "qa-shape-start_process",
+      "jsonrpc_error_code": null,
+      "credential_values_exposed": false
+    },
+    {
+      "event": "MCP_SAFE_SHAPE",
+      "at_utc": "2026-10-13T01:29:10.266240+00:00",
+      "tool": "start_process",
+      "http_status": 200,
+      "tool_is_error": true,
+      "shape": [
+        {
+          "path": "/ok",
+          "kind": "bool",
+          "length": null
+        },
+        {
+          "path": "/code",
+          "kind": "str",
+          "length": null
+        }
+      ],
+      "metadata_counts": [
+        {
+          "code": "GRANT_MISSING"
+        }
+      ],
+      "array_lengths": [],
+      "safe_uppercase_codes": [
+        "GRANT_MISSING"
+      ],
+      "credential_values_exposed": false
+    }
+  ],
+  "normal_pairing_events": [
+    {
+      "event": "PORTAL_PAIRING_HTTP",
+      "at_utc": "2026-10-13T01:22:43.954223+00:00",
+      "http_status": 201,
+      "normal_portal_cookie_used": true,
+      "credential_values_exposed": false
+    },
+    {
+      "event": "NORMAL_PORTAL_PAIRING_CREATED",
+      "at_utc": "2026-10-13T01:22:43.957253+00:00",
+      "pairing_id": "HARA-PAIR-14cc1312-39ab-49bf-b8ec-7e07a01dcc21",
+      "expires_at_utc": "2026-10-13T01:32:43.779Z",
+      "one_time": true,
+      "private_file_mode": "0600",
+      "d1_seed_performed": false,
+      "credential_values_exposed": false
+    }
+  ],
+  "private_pairing_transfer": {
+    "state": "PRIVATE_QA2_PAIRING_TRANSFER_PASS",
+    "path": "/tmp_hara/commander-win50-utf8-20261012/apps/commander/.generated/full-acceptance-20261012/windows-clean/qa2-portal-pairing-20261013T012243Z.json",
+    "file_mode": "0600",
+    "pairing_id": "HARA-PAIR-14cc1312-39ab-49bf-b8ec-7e07a01dcc21",
+    "expires_at_utc": "2026-10-13T01:32:43.779Z",
+    "sha256": "03db812395a844eec2f9fd83dbdf5ab570eae283a37bea03e3dc85d6acf334bc",
+    "credential_values_exposed": false
+  },
+  "normal_portal_device_readback": {
+    "state": "NORMAL_QA2_PORTAL_DEVICE_READBACK",
+    "http_status": 200,
+    "device_count": 1,
+    "devices": [
+      {
+        "device_id": "HARA-DEVICE-6644a8cb-8a82-4f0f-8828-879a1c5a3261",
+        "device_name": "HARAQA5312",
+        "platform": "WINDOWS",
+        "architecture": "x64",
+        "agent_version": "0.3.53",
+        "state": "ACTIVE",
+        "online": true,
+        "last_seen_at_utc": "2026-10-13T02:10:25.804Z",
+        "approval_mode": "SESSION_TRUSTED",
+        "authorization_active": false
+      }
+    ],
+    "active_count": 1,
+    "online_count": 1,
+    "authorized_count": 0,
+    "credential_values_exposed": false
+  },
+  "interpretation": {
+    "first_406": "CLIENT_ACCEPT_HEADER_INCOMPLETE_NOT_PRODUCT_AUTH_FAILURE",
+    "mcp_protocol": "2025-03-26 initialize200/initialized202/toolsList200",
+    "mutating_process_grant_denied": "GRANT_MISSING",
+    "metadata_replay": "READONLY_JSONRPC_REQUEST_ID_REPEATED; remaining_units stayed10000",
+    "oauth_callback_replay": "PASS_OIDC_STATE_REPLAYED_NO_NEW_SESSION_COOKIE_TEMP_LOGOUT204",
+    "privacy": "NO_DISALLOWED_PAYLOAD_FIELDS_IN_RETURNED_METADATA_SCANNED",
+    "normal_device_enrollment": "PASSED_1_WINDOWS_DEVICE_0.3.53",
+    "real_device_execution": "WAITING_LOCAL_OPERATOR_SESSION_AND_ONLINE",
+    "signup_scope": "LEGITIMATE_QA2_IDP_USER_VIA_OFFICIAL_USERAPI_AND_NORMAL_PORTAL_CALLBACK; NOT_HOSTED_REGISTRATION_UI",
+    "normal_device_selection": "PASS_NORMAL_PORTAL_API200_SELECTED_TRUE",
+    "normal_first_signup": "QA2 normal portal login/callback created user, identity, tenant, portal session and TRIAL entitlement. No QA2 D1 seed; DEV acceptance allowlist was explicit and limited to two QA IdP users.",
+    "physical_end_to_end": "Normal portal pairing enrolled the disposable Windows clone; normal local signed Agent session served ping/device_info to the genuine QA2 OAuth customer MCP context. Receipt metadata bound computer HARAQA5312 and HARA_COMMANDER_AGENT.",
+    "quota": "One device_info debit committed, 9999 of 10000 Trial units remain; metadata/receipt reads did not change quota.",
+    "scope": "API exercised normal portal OAuth protocol and PKCE/state/cookies; browser-rendered login UX was not exercised.",
+    "validator": "The first physical helper expected device_id inside receipt.result. The product's normal minimized contract returns computer at the outer level; metadata-only read confirmed it. Actual device calls returned PASS."
+  },
+  "cleanup": {
+    "state": "PRESERVED_PENDING_ROOT_COORDINATED_LIFECYCLE_AND_CLEANUP",
+    "qa_user_count": 2,
+    "dcr_client_count": 1,
+    "private_values_exposed": false
+  },
+  "credential_values_exposed": false,
+  "qa2_oauth_callback_replay": {
+    "schema": "hara.real-portal-oauth.callback-replay-evidence.v1",
+    "events": [
+      {
+        "event": "HTTP",
+        "at_utc": "2026-10-13T01:42:14.967721+00:00",
+        "method": "POST",
+        "path": "/auth/v1/permissions/zitadel/me/_search",
+        "http_status": 200,
+        "safe_error_code": null
+      },
+      {
+        "event": "REPLAY_HTTP",
+        "at_utc": "2026-10-13T01:42:15.579985+00:00",
+        "path": "/auth/login",
+        "http_status": 302,
+        "safe_code": null,
+        "credential_values_exposed": false
+      },
+      {
+        "event": "REPLAY_HTTP",
+        "at_utc": "2026-10-13T01:42:15.671753+00:00",
+        "path": "/oauth/v2/authorize",
+        "http_status": 302,
+        "safe_code": null,
+        "credential_values_exposed": false
+      },
+      {
+        "event": "HTTP",
+        "at_utc": "2026-10-13T01:42:16.030571+00:00",
+        "method": "GET",
+        "path": "/v2/oidc/auth_requests/V2_394868112253517828",
+        "http_status": 200,
+        "safe_error_code": null
+      },
+      {
+        "event": "HTTP",
+        "at_utc": "2026-10-13T01:42:16.985221+00:00",
+        "method": "POST",
+        "path": "/v2/sessions",
+        "http_status": 201,
+        "safe_error_code": null
+      },
+      {
+        "event": "HTTP",
+        "at_utc": "2026-10-13T01:42:17.427820+00:00",
+        "method": "GET",
+        "path": "/v2/sessions/394868113058824196",
+        "http_status": 200,
+        "safe_error_code": null
+      },
+      {
+        "event": "HTTP",
+        "at_utc": "2026-10-13T01:42:17.508098+00:00",
+        "method": "POST",
+        "path": "/v2/oidc/auth_requests/V2_394868112253517828",
+        "http_status": 200,
+        "safe_error_code": null
+      },
+      {
+        "event": "REPLAY_HTTP",
+        "at_utc": "2026-10-13T01:42:18.725981+00:00",
+        "path": "/auth/callback",
+        "http_status": 302,
+        "safe_code": null,
+        "credential_values_exposed": false
+      },
+      {
+        "event": "REPLAY_HTTP",
+        "at_utc": "2026-10-13T01:42:18.930890+00:00",
+        "path": "/auth/callback",
+        "http_status": 302,
+        "safe_code": null,
+        "credential_values_exposed": false
+      },
+      {
+        "event": "OAUTH_CALLBACK_REPLAY_PROOF",
+        "at_utc": "2026-10-13T01:42:18.934202+00:00",
+        "schema": "hara.real-portal-oauth.callback-replay.v1",
+        "state": "PASS_REPLAY_REJECTED",
+        "subject_id": "394861028946477060",
+        "initial_callback_http_status": 302,
+        "replayed_callback_http_status": 302,
+        "safe_rejection_code": "OIDC_STATE_REPLAYED",
+        "new_session_cookie_on_replay": false,
+        "original_portal_cookie_file_preserved": true,
+        "credential_values_exposed": false
+      },
+      {
+        "event": "TEMPORARY_REPLAY_PORTAL_LOGOUT",
+        "at_utc": "2026-10-13T01:42:19.174232+00:00",
+        "http_status": 204,
+        "original_cookie_file_untouched": true,
+        "credential_values_exposed": false
+      }
+    ],
+    "source_sha256": "d3f36e5a3b1e0bff096f8f0b91507466dea3c0f77e9033d9275d58b1ba4c19d9",
+    "combined_source_sha256": "1bb43beb227caea69ca133e4163f8a058180df1796cf7fd07a69f06cf8888fc1",
+    "temporary_portal_logout": "204",
+    "original_portal_cookie_preserved": true,
+    "source_helper_first_attempt": "UnboundLocalError before transaction creation; fixed client helper",
+    "credential_values_exposed": false
+  },
+  "normal_pairing_transfer_attempts": {
+    "first": "SERVICES_OFFLINE_NO_EXECUTION",
+    "second": "SSH_REMOTE_CODE_QUOTING_FAILURE_NO_SECRET_FILE_TRANSFER",
+    "final": "PASS_PRIVATE_0600_TRANSFER"
+  },
+  "normal_portal_device_selection": {
+    "state": "NORMAL_QA2_DEVICE_SELECTION",
+    "http_status": 200,
+    "selected": true,
+    "device_id": "HARA-DEVICE-6644a8cb-8a82-4f0f-8828-879a1c5a3261",
+    "credential_values_exposed": false
+  },
+  "normal_windows_mcp_read_chain": {
+    "state": "PASS_NORMAL_SIGNUP_PAIRING_WINDOWS53_REAL_OAUTH_MCP_READ_RECEIPT",
+    "subject_id": "394861028946477060",
+    "tenant_id": "HARA-TENANT-BNRKHV5P7_1SBJSL8FZ_HYYR",
+    "device_id": "HARA-DEVICE-6644a8cb-8a82-4f0f-8828-879a1c5a3261",
+    "computer": "HARAQA5312",
+    "agent_version": "0.3.53",
+    "device_count": 1,
+    "only_owned_device": true,
+    "trial_grants_only": true,
+    "normal_portal_selection": true,
+    "normal_windows_session": {
+      "state": "ACTIVE",
+      "operator_pid": 2996,
+      "opened_at_utc": "2026-10-13T02:06:11.7370753Z",
+      "owner_pid_start_match": true,
+      "evidence_receipt_sha256": "7bb02dc96232c9ccd6926b4bc848a71fb3cbc25cba9b1007361ffda112bd3a97"
+    },
+    "calls": [
+      {
+        "event": "NORMAL_QA_DEVICE_MCP_CALL",
+        "at_utc": "2026-10-13T02:11:01.880961+00:00",
+        "tool": "list_devices",
+        "http_status": 200,
+        "tool_is_error": null,
+        "state": "PASS",
+        "blocker_code": null,
+        "safe_code": null,
+        "execution_authority": "HARA_SERVICES",
+        "receipt_sha256": null,
+        "readback_metadata": {},
+        "plan_metadata": [
+          {
+            "state": "PASS"
+          },
+          {
+            "state": "ONLINE"
+          },
+          {
+            "plan_code": "TRIAL"
+          }
+        ],
+        "credential_values_exposed": false
+      },
+      {
+        "event": "NORMAL_QA_DEVICE_MCP_CALL",
+        "at_utc": "2026-10-13T02:11:09.268570+00:00",
+        "tool": "ping",
+        "http_status": 200,
+        "tool_is_error": null,
+        "state": "PASS",
+        "blocker_code": null,
+        "safe_code": null,
+        "execution_authority": "HARA_COMMANDER_AGENT",
+        "receipt_sha256": "24a9b1ec6bf0c8d06272b22122cf4523b0b2d29ac5644a6b53c12608369ae9ab",
+        "readback_metadata": {
+          "agent_version": "0.3.53",
+          "hostname": "HARAQA5312",
+          "device_id": "HARA-DEVICE-6644a8cb-8a82-4f0f-8828-879a1c5a3261"
+        },
+        "plan_metadata": [
+          {
+            "state": "PASS"
+          },
+          {
+            "plan_code": "TRIAL"
+          }
+        ],
+        "credential_values_exposed": false
+      },
+      {
+        "event": "NORMAL_QA_DEVICE_MCP_CALL",
+        "at_utc": "2026-10-13T02:11:12.892353+00:00",
+        "tool": "get_device_info",
+        "http_status": 200,
+        "tool_is_error": null,
+        "state": "PASS",
+        "blocker_code": null,
+        "safe_code": null,
+        "execution_authority": "HARA_COMMANDER_AGENT",
+        "receipt_sha256": "63d763e83cbdad799d1d9a21a24c7f2f2bbc5adf842fde3a0f84eefcf0228c63",
+        "readback_metadata": {
+          "agent_version": "0.3.53",
+          "hostname": "HARAQA5312",
+          "platform": "WINDOWS",
+          "architecture": "x64",
+          "powershell_version": "5.1.26100.9444",
+          "device_id": "HARA-DEVICE-6644a8cb-8a82-4f0f-8828-879a1c5a3261"
+        },
+        "plan_metadata": [
+          {
+            "state": "PASS"
+          },
+          {
+            "plan_code": "TRIAL"
+          },
+          {
+            "state": "COMMITTED"
+          },
+          {
+            "consumed_units": 1
+          },
+          {
+            "remaining_units": 9999
+          }
+        ],
+        "credential_values_exposed": false
+      },
+      {
+        "event": "NORMAL_QA_DEVICE_MCP_CALL",
+        "at_utc": "2026-10-13T02:11:15.495753+00:00",
+        "tool": "get_receipt",
+        "http_status": 200,
+        "tool_is_error": null,
+        "state": "PASS",
+        "blocker_code": null,
+        "safe_code": null,
+        "execution_authority": "HARA_COMMANDER_AGENT",
+        "receipt_sha256": null,
+        "readback_metadata": {
+          "state": "PASS",
+          "mutation_class": "READ_ONLY_OR_NONE_V1",
+          "payload_values_persisted": false,
+          "tool_id": "hara.device.info"
+        },
+        "plan_metadata": [
+          {
+            "state": "PASS"
+          },
+          {
+            "state": "PASS"
+          },
+          {
+            "plan_code": "TRIAL"
+          }
+        ],
+        "credential_values_exposed": false
+      }
+    ],
+    "receipt_readback": {
+      "http_status": 200,
+      "fields": {
+        "/state": "PASS",
+        "/execution_authority": "HARA_COMMANDER_AGENT",
+        "/result/tool_id": "hara.device.info",
+        "/result/execution_authority": "HARA_COMMANDER_AGENT",
+        "/result/mutation_class": "READ_ONLY_OR_NONE_V1",
+        "/result/state": "PASS",
+        "/result/payload_values_persisted": false,
+        "/computer": "HARAQA5312",
+        "/product/plan_code": "TRIAL"
+      }
+    },
+    "usage_readback": {
+      "http_status": 200,
+      "consumed_units": 1,
+      "remaining_units": 9999
+    },
+    "transport_evidence": {
+      "physical_bridge_receipt_sha256": "340e85cad87da30ab3396693f7c9b38878c05399321d0df7f560ffc180bb4ecc",
+      "metadata_bridge_receipt_sha256": "18205319ae1fe115f2b56b40bf8497f9b584dd36304b21146842883f8cb6a5b6"
+    },
+    "validator_note": "The first helper expected device_id inside get_receipt.result. The normal receipt contract returns computer at the outer level. Actual calls all returned PASS. Subsequent metadata-only read confirmed computer HARAQA5312 and execution_authority HARA_COMMANDER_AGENT without repeating the metered device_info call.",
+    "credential_values_exposed": false
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "artifact_sha256": {
+    "linux-053-baseline.py": "db91714140b63684917e46d6a327778183a5829dbf2b298098b31da4d463985e",
+    "linux-managed-cap-candidate.patch": "1743449efa51e44660907caf7790825912a7934cf80ddf6b63d933fff7235daa",
+    "linux-managed-cap-candidate.py": "bbac34bc7e48d68a31f478e2c062905f30d4a7c486aada20e6f0e452e62ae71b",
+    "managed-cap-native-result.json": "55dc7162281533e8b66f15822d5dcd4b986cdaec7cd0ed83bc2c447651810048",
+    "test_managed_cap_native.py": "b71dc75f4db0778e8658e77148a6de16a518d9d191be4743f189326761274bcb"
+  },
+  "backend_calls": 0,
+  "changed_functions": [
+    "process_start",
+    "execute_tool",
+    "_local_simple_map"
+  ],
+  "external_acceptance_claimed": false,
+  "governed_execution_receipts": [
+    "9e2a84cc9c8d8c5b9c3d2342d83a83bcd1d5407b834aec87984ccc89de3cc3bc",
+    "ba2b8adafcd1e7502604f7fd5ab00b9cb707df55da6921f0b36aab0a6a4cc7f0"
+  ],
+  "installations": 0,
+  "scope": "UNIT_ORIGINAL_FUNCTIONS_NATIVE_PTY_PRIVATE_FIXTURES_NO_BACKEND",
+  "source_sha256": "db91714140b63684917e46d6a327778183a5829dbf2b298098b31da4d463985e",
+  "source_unmodified": true,
+  "state": "PASS_CANDIDATE_UNIT_NATIVE_PTY",
+  "vm_actions": 0
+}

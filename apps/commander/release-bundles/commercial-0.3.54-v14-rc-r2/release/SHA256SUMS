@@ -1,0 +1,4 @@
+62e1a836ef92fc8b72638fd116a6f0097fcf9e9f0ef0f4259ca8e0f6712b4229  agent/linux.py
+fe61f177c51f6b6a01f31a3ea1b3d081173446e8f8cb33e680744c1fb808ae62  agent/windows.ps1
+d2057adfff5c2b475d1520ae44f1ed76a7ec0ecc673f65cf08631d7a0083d0fa  install/linux.sh
+ea9f046bebf9ed85feefae05590ac915a75e9b491aefe1833d40bf316d414cc7  install/windows.ps1

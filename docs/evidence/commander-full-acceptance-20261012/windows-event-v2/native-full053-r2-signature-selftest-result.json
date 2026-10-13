@@ -1,0 +1,26 @@
+{
+  "exit_code": 0,
+  "stdout": "{\"schema\":\"hara.commander-full053-native-signature-and-selftest.v1\",\"state\":\"PASS\",\"powershell\":\"5.1.26100.9444\",\"clr\":\"4.0.30319.42000\",\"manifest_sha256\":\"d8f6d0165253b13a5efcade628564900f41dfbeacf4a062f61439486fb1ad395\",\"version\":\"0.3.53\",\"signature\":\"RS256_RSA3072\",\"four_files_authenticated\":true,\"windows_parser\":true,\"installer_parser\":true,\"windows_source_sha256\":\"f67ebcee909ee2ce93187262c951b57b38bc976fec73413bd30555d9bcf62299\",\"windows_agent_self_test_exit\":0,\"windows_agent_self_test_marker\":true,\"live_profile_touched\":false,\"global_task_touched\":false,\"private_key_accessed\":false,\"signing_performed\":false,\"production_deployed\":false,\"utc\":\"2026-10-13T00:33:11.0911066Z\"}",
+  "stderr_present": false,
+  "native": {
+    "schema": "hara.commander-full053-native-signature-and-selftest.v1",
+    "state": "PASS",
+    "powershell": "5.1.26100.9444",
+    "clr": "4.0.30319.42000",
+    "manifest_sha256": "d8f6d0165253b13a5efcade628564900f41dfbeacf4a062f61439486fb1ad395",
+    "version": "0.3.53",
+    "signature": "RS256_RSA3072",
+    "four_files_authenticated": true,
+    "windows_parser": true,
+    "installer_parser": true,
+    "windows_source_sha256": "f67ebcee909ee2ce93187262c951b57b38bc976fec73413bd30555d9bcf62299",
+    "windows_agent_self_test_exit": 0,
+    "windows_agent_self_test_marker": true,
+    "live_profile_touched": false,
+    "global_task_touched": false,
+    "private_key_accessed": false,
+    "signing_performed": false,
+    "production_deployed": false,
+    "utc": "2026-10-13T00:33:11.0911066Z"
+  }
+}

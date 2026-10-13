@@ -1,0 +1,321 @@
+{
+  "schema": "hara.commander.expired_read.diagnostic.v1",
+  "call_metadata": {
+    "call_id": "HARA-CALL-8fc82367-c9b8-4f99-a16b-ad89d29cfc5c",
+    "request_id": "HARA-CUSTOMER-MCP-DAC864JGc0Vcr1AZ_7hS-TyXVUanRQdtbiJ3jmXJkU4",
+    "computer": "HARA_WIN11",
+    "tool_id": "hara.files.read",
+    "state": "EXPIRED",
+    "effective_state": "EXPIRED",
+    "persisted_state": "EXPIRED",
+    "expires_at_utc": "2026-10-12T23:15:27.581Z",
+    "expiry_origin": null,
+    "created_at_utc": "2026-10-12T23:14:37.581Z",
+    "claimed_at_utc": "2026-10-12T23:14:39.662Z",
+    "completed_at_utc": "2026-10-12T23:17:03.872Z",
+    "error_code": "DEVICE_CALL_EXPIRED"
+  },
+  "owner_agent_diagnostics": {
+    "schema": "hara.windows-expiry-readonly-diagnostic.v1",
+    "collected_at_utc": "2026-10-12T23:49:08.8854383Z",
+    "request_id": "HARA-CUSTOMER-MCP-DAC864JGc0Vcr1AZ_7hS-TyXVUanRQdtbiJ3jmXJkU4",
+    "profiles_examined": 1,
+    "roots_with_commander": 1,
+    "profiles": [
+      {
+        "profile_index": 1,
+        "loaded": true,
+        "special": false,
+        "console_exists": true,
+        "event_tail_limit": 15000,
+        "event_tail_at_limit": false,
+        "event_parse_errors": 0,
+        "target_events": [],
+        "window_events": [
+          {
+            "at_utc": "2026-10-12T23:14:05.5121866Z",
+            "event": "RECEIVED",
+            "state": "PENDING",
+            "tool_id": "hara.process.run",
+            "request_id": "HARA-CUSTOMER-MCP-bvIoYgDbc-HnFI033xoTInf5vSnbWL9wx_G2hleNsoQ",
+            "error_code": null,
+            "receipt_sha256": null
+          },
+          {
+            "at_utc": "2026-10-12T23:14:05.5501172Z",
+            "event": "EXECUTING",
+            "state": "EXECUTING",
+            "tool_id": "hara.process.run",
+            "request_id": "HARA-CUSTOMER-MCP-bvIoYgDbc-HnFI033xoTInf5vSnbWL9wx_G2hleNsoQ",
+            "error_code": null,
+            "receipt_sha256": null
+          },
+          {
+            "at_utc": "2026-10-12T23:14:06.5272048Z",
+            "event": "PASS",
+            "state": "COMPLETED",
+            "tool_id": "hara.process.run",
+            "request_id": "HARA-CUSTOMER-MCP-bvIoYgDbc-HnFI033xoTInf5vSnbWL9wx_G2hleNsoQ",
+            "error_code": null,
+            "receipt_sha256": "9207b454ac84fb18bb12a328f2a64d651fec1fd1d3a701b719237ef5c52ed8a3"
+          },
+          {
+            "at_utc": "2026-10-12T23:14:28.7659471Z",
+            "event": "RECEIVED",
+            "state": "PENDING",
+            "tool_id": "hara.files.create_directory",
+            "request_id": "HARA-CUSTOMER-MCP-Tv00dWR-Da44wEb6A3sTHPhGujqLuBwtswela7EUQdo",
+            "error_code": null,
+            "receipt_sha256": null
+          },
+          {
+            "at_utc": "2026-10-12T23:14:28.8018967Z",
+            "event": "EXECUTING",
+            "state": "EXECUTING",
+            "tool_id": "hara.files.create_directory",
+            "request_id": "HARA-CUSTOMER-MCP-Tv00dWR-Da44wEb6A3sTHPhGujqLuBwtswela7EUQdo",
+            "error_code": null,
+            "receipt_sha256": null
+          },
+          {
+            "at_utc": "2026-10-12T23:14:29.3156427Z",
+            "event": "PASS",
+            "state": "COMPLETED",
+            "tool_id": "hara.files.create_directory",
+            "request_id": "HARA-CUSTOMER-MCP-Tv00dWR-Da44wEb6A3sTHPhGujqLuBwtswela7EUQdo",
+            "error_code": null,
+            "receipt_sha256": "b265c7cbb31f93e38270687eb5123046e14a61c53b70f79fe5b04e7c5c9ebb70"
+          },
+          {
+            "at_utc": "2026-10-12T23:14:49.3080853Z",
+            "event": "RECEIVED",
+            "state": "PENDING",
+            "tool_id": "hara.files.write",
+            "request_id": "HARA-CUSTOMER-MCP-GQZomVFxSV8wo1vscNZdTQifTcew-mJg4fNHZWpaRTo",
+            "error_code": null,
+            "receipt_sha256": null
+          },
+          {
+            "at_utc": "2026-10-12T23:14:49.3517515Z",
+            "event": "EXECUTING",
+            "state": "EXECUTING",
+            "tool_id": "hara.files.write",
+            "request_id": "HARA-CUSTOMER-MCP-GQZomVFxSV8wo1vscNZdTQifTcew-mJg4fNHZWpaRTo",
+            "error_code": null,
+            "receipt_sha256": null
+          },
+          {
+            "at_utc": "2026-10-12T23:14:49.8304059Z",
+            "event": "PASS",
+            "state": "COMPLETED",
+            "tool_id": "hara.files.write",
+            "request_id": "HARA-CUSTOMER-MCP-GQZomVFxSV8wo1vscNZdTQifTcew-mJg4fNHZWpaRTo",
+            "error_code": null,
+            "receipt_sha256": "c841941490f4c79f9308d6f7366361d51b2969ddf7062acd216aab6ef7272983"
+          },
+          {
+            "at_utc": "2026-10-12T23:15:11.6641663Z",
+            "event": "RECEIVED",
+            "state": "PENDING",
+            "tool_id": "hara.process.start",
+            "request_id": "HARA-CUSTOMER-MCP-2MTjhR4AbcWtFW5U7l-bh_Fewqrfh3bzdHWnWD249J4",
+            "error_code": null,
+            "receipt_sha256": null
+          },
+          {
+            "at_utc": "2026-10-12T23:15:11.7060526Z",
+            "event": "EXECUTING",
+            "state": "EXECUTING",
+            "tool_id": "hara.process.start",
+            "request_id": "HARA-CUSTOMER-MCP-2MTjhR4AbcWtFW5U7l-bh_Fewqrfh3bzdHWnWD249J4",
+            "error_code": null,
+            "receipt_sha256": null
+          },
+          {
+            "at_utc": "2026-10-12T23:15:12.8387064Z",
+            "event": "PASS",
+            "state": "COMPLETED",
+            "tool_id": "hara.process.start",
+            "request_id": "HARA-CUSTOMER-MCP-2MTjhR4AbcWtFW5U7l-bh_Fewqrfh3bzdHWnWD249J4",
+            "error_code": null,
+            "receipt_sha256": "ca3b15c3482989756297be59ef065ba496011e9571c5b006db134a494d228837"
+          },
+          {
+            "at_utc": "2026-10-12T23:15:27.5823928Z",
+            "event": "RECEIVED",
+            "state": "PENDING",
+            "tool_id": "hara.process.output",
+            "request_id": "HARA-CUSTOMER-MCP-Bc2mCHfRAghNtGxBr1r-ZV7bpQ61HKE9MkTCJwM1vrU",
+            "error_code": null,
+            "receipt_sha256": null
+          },
+          {
+            "at_utc": "2026-10-12T23:15:27.6182174Z",
+            "event": "EXECUTING",
+            "state": "EXECUTING",
+            "tool_id": "hara.process.output",
+            "request_id": "HARA-CUSTOMER-MCP-Bc2mCHfRAghNtGxBr1r-ZV7bpQ61HKE9MkTCJwM1vrU",
+            "error_code": null,
+            "receipt_sha256": null
+          },
+          {
+            "at_utc": "2026-10-12T23:15:28.0898671Z",
+            "event": "PASS",
+            "state": "COMPLETED",
+            "tool_id": "hara.process.output",
+            "request_id": "HARA-CUSTOMER-MCP-Bc2mCHfRAghNtGxBr1r-ZV7bpQ61HKE9MkTCJwM1vrU",
+            "error_code": null,
+            "receipt_sha256": "8f2da5fe26a782fbe14b6d328ab5a8bfcdbe3fc75e7dd21d4fb1b1a01b58153d"
+          },
+          {
+            "at_utc": "2026-10-12T23:15:30.7375684Z",
+            "event": "RECEIVED",
+            "state": "PENDING",
+            "tool_id": "hara.files.write",
+            "request_id": "HARA-CUSTOMER-MCP-3igjyXFGMglEDjR-wHecgFO7CCOm23EHYkC2Ep_u74c",
+            "error_code": null,
+            "receipt_sha256": null
+          },
+          {
+            "at_utc": "2026-10-12T23:15:30.7711807Z",
+            "event": "EXECUTING",
+            "state": "EXECUTING",
+            "tool_id": "hara.files.write",
+            "request_id": "HARA-CUSTOMER-MCP-3igjyXFGMglEDjR-wHecgFO7CCOm23EHYkC2Ep_u74c",
+            "error_code": null,
+            "receipt_sha256": null
+          },
+          {
+            "at_utc": "2026-10-12T23:15:31.2566346Z",
+            "event": "PASS",
+            "state": "COMPLETED",
+            "tool_id": "hara.files.write",
+            "request_id": "HARA-CUSTOMER-MCP-3igjyXFGMglEDjR-wHecgFO7CCOm23EHYkC2Ep_u74c",
+            "error_code": null,
+            "receipt_sha256": "7c26d66728044ae449af8bec5714a90c0eaae919d8be0dda0f8c5a3810c998f7"
+          }
+        ],
+        "recent_error_events": [
+          {
+            "at_utc": "2026-10-12T21:27:07.8661082Z",
+            "event": "DENIED",
+            "state": "FAILED",
+            "tool_id": "hara.files.info",
+            "request_id": "HARA-CUSTOMER-MCP-E2sbWZBXBgnbgjs4oL-xwNi0IdS955M8MVX01g1xixw",
+            "error_code": "ITEMNOTFOUNDEXCEPTION",
+            "receipt_sha256": null
+          },
+          {
+            "at_utc": "2026-10-12T21:50:41.2450577Z",
+            "event": "DENIED",
+            "state": "FAILED",
+            "tool_id": "hara.files.write",
+            "request_id": "HARA-CUSTOMER-MCP-y7LhGMNNhQQFGe3IPE2jvKcJk3DzMiuLTyB1NWfuZy0",
+            "error_code": "FILE_PRECONDITION_FAILED",
+            "receipt_sha256": null
+          },
+          {
+            "at_utc": "2026-10-12T21:59:52.1267988Z",
+            "event": "DENIED",
+            "state": "FAILED",
+            "tool_id": "hara.files.write",
+            "request_id": "HARA-CUSTOMER-MCP-QsJXDbXbFdgOL94kITC0DToeqEnn9bhhkLqzkGaSUmM",
+            "error_code": "FILE_PRECONDITION_FAILED",
+            "receipt_sha256": null
+          },
+          {
+            "at_utc": "2026-10-12T22:43:33.4670460Z",
+            "event": "DENIED",
+            "state": "FAILED",
+            "tool_id": "hara.files.write",
+            "request_id": "HARA-CUSTOMER-MCP-OzGMHLmzxkO8P4YvHgfMfzopYgOa0jV9Z8qdzeBWpsM",
+            "error_code": "FILE_PRECONDITION_FAILED",
+            "receipt_sha256": null
+          },
+          {
+            "at_utc": "2026-10-12T22:54:07.7468654Z",
+            "event": "DENIED",
+            "state": "FAILED",
+            "tool_id": "hara.files.write",
+            "request_id": "HARA-CUSTOMER-MCP-e31Ee_jSCK7oG7RpKX4SB__H-1m--jD20iwuTfq8Lfs",
+            "error_code": "FILE_PRECONDITION_FAILED",
+            "receipt_sha256": null
+          },
+          {
+            "at_utc": "2026-10-12T23:03:59.2758133Z",
+            "event": "DENIED",
+            "state": "FAILED",
+            "tool_id": "hara.process.output",
+            "request_id": "HARA-CUSTOMER-MCP-7_mEUoEdxeSs5854wB_AZuYqn-E81ld5xKM2-KXuAaU",
+            "error_code": "IOEXCEPTION",
+            "receipt_sha256": null
+          },
+          {
+            "at_utc": "2026-10-12T23:13:55.9593901Z",
+            "event": "DENIED",
+            "state": "FAILED",
+            "tool_id": "hara.files.write",
+            "request_id": "HARA-CUSTOMER-MCP-SL0IYTrwVkYYma6I6WRr_zhO4CzfkYFmJcymX2qYV5U",
+            "error_code": "FILE_PRECONDITION_FAILED",
+            "receipt_sha256": null
+          },
+          {
+            "at_utc": "2026-10-12T23:16:06.0559412Z",
+            "event": "DENIED",
+            "state": "FAILED",
+            "tool_id": "hara.files.write",
+            "request_id": "HARA-CUSTOMER-MCP-M9_TGTx3iJdWbG7mndnEECT6blPUUQ7SFZIITRUj1LA",
+            "error_code": "FILE_PRECONDITION_FAILED",
+            "receipt_sha256": null
+          }
+        ],
+        "receipt_files_count": 184,
+        "receipt_scan_limit": 20000,
+        "matching_receipts": []
+      }
+    ],
+    "secrets_exposed": false,
+    "payload_values_exposed": false
+  },
+  "owner_diagnostic_product_receipt_sha256": "f2c6d3e05e1007f49d1eb24aac41f9e454db921cba9ecdb5b151bea5f8da0dfa",
+  "installed_source_sha256": "4c563987986249d78c76258d062a4d360ffb88199539429ea97c2f346644656a",
+  "qga_helper_sha256": "b1aa2855dfffaaa92cc5afa016eab6e19720ac86b0bf283e15fdf7be4dcdb827",
+  "qga_access": {
+    "run_as_system": true,
+    "commander_root_exists": true,
+    "console_events_read_denied": true,
+    "acl_not_modified": true
+  },
+  "findings": {
+    "target_console_events_count": 0,
+    "target_owner_receipts_count": 0,
+    "owner_receipt_files_examined": 184,
+    "source_receipt_creation_precedes_http_completion": true,
+    "source_received_event_precedes_tool_invocation": true,
+    "server_claim_records_consumer_identity": false,
+    "experimental_event_v2_can_claim_durable_queue": true,
+    "causal_attribution": "UNPROVEN",
+    "observed_extra_pids_causal_support": false
+  },
+  "limits": [
+    "Only the active owner's normal Agent receipt directory was inspected successfully.",
+    "The server call metadata has no process or transport-specific consumer identity.",
+    "No production command was retried and no installed Agent, task, session or ACL was modified.",
+    "Absence of local receipt/events cannot by itself distinguish claim-response loss, consumer competition or failure before logging."
+  ],
+  "observed_process_review": {
+    "snapshot_at_utc": "2026-10-12T23:43:16Z",
+    "extra_pids": [
+      {
+        "pid": 7572,
+        "started_at_utc": "2026-10-12T23:43:14.3073650Z"
+      },
+      {
+        "pid": 2912,
+        "started_at_utc": "2026-10-12T23:43:15.1738780Z"
+      }
+    ],
+    "both_started_after_expired_claim": true,
+    "classification": "Possible diagnostic scripts; no established EventV2 runtime at claim time"
+  }
+}

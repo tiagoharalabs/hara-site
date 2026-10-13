@@ -1,0 +1,19 @@
+{
+  "at_utc": "2026-10-13T03:33:53.096924+00:00",
+  "cause": "Embedded Linux self-test retained the old managed-start max_lines omission assertion after the cap propagation fix; normal install invokes this self-test.",
+  "change_scope": "Self-test assertions only; verifies default200 and explicit20 through bounded, interactive and automatic managed routes.",
+  "linux_sha256_after": "62e1a836ef92fc8b72638fd116a6f0097fcf9e9f0ef0f4259ca8e0f6712b4229",
+  "linux_sha256_before": "6aecef8f8dd05bf8f2ab0c1b9c71308647892e70a0b34e2ccbe4322ad826df2e",
+  "r1_deployed": false,
+  "r1_offline_gate": {
+    "checked": 130,
+    "failed": [
+      "validate_device_installers.py",
+      "commander_linux_clean_lifecycle.py"
+    ],
+    "passed": 128
+  },
+  "signed_r1_changed": false,
+  "state": "SOURCE_SELFTEST_CORRECTED_R2_SIGNING_PENDING",
+  "windows_changed": false
+}

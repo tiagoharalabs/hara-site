@@ -1,0 +1,24 @@
+{
+  "bundle": "apps/commander/release-bundles/commercial-0.3.54-v14-rc-r1",
+  "historical_bundles_changed": false,
+  "manifest_sha256": "ff88de00063b45bb38cf872d73cb70ba6cdb036a2a883afcbf6eb4057ad522d3",
+  "platform_versions_match_manifest": true,
+  "private_key_printed": false,
+  "production_deployed": false,
+  "schema": "hara.full-platform-054-preparation.v1",
+  "signature_sha256": "5710137656fbdaeabb814c68559102b71f15e512be2eafbd39274fa836bfd43d",
+  "signed_files": {
+    "agent/linux.py": "6aecef8f8dd05bf8f2ab0c1b9c71308647892e70a0b34e2ccbe4322ad826df2e",
+    "agent/windows.ps1": "fe61f177c51f6b6a01f31a3ea1b3d081173446e8f8cb33e680744c1fb808ae62",
+    "install/linux.sh": "d2057adfff5c2b475d1520ae44f1ed76a7ec0ecc673f65cf08631d7a0083d0fa",
+    "install/windows.ps1": "ea9f046bebf9ed85feefae05590ac915a75e9b491aefe1833d40bf316d414cc7"
+  },
+  "source_files": {
+    "agent/linux.py": "6aecef8f8dd05bf8f2ab0c1b9c71308647892e70a0b34e2ccbe4322ad826df2e",
+    "agent/windows.ps1": "fe61f177c51f6b6a01f31a3ea1b3d081173446e8f8cb33e680744c1fb808ae62",
+    "install/linux.sh": "495069185d82d888cf53e1db156b60a264ec0fbfd7caf5b243e307bb07398cf0",
+    "install/windows.ps1": "2c7ab4534d8865392d4afa02e00b5ea155054a81e2bc35d4266fc28321b57ba4"
+  },
+  "state": "SIGNED_PREPARED_NOT_DEPLOYED",
+  "version": "0.3.54"
+}

@@ -1,0 +1,17 @@
+{
+  "at_utc": "2026-10-13T03:52:29.732820+00:00",
+  "network_calls": 0,
+  "offline_only": true,
+  "probe_sha256": "33fb67958def9ab03856437705302a7f41be042f109afa81b11567152977fadc",
+  "runner_sha256": "3783d5411434202b6e7a41cf820bea7f1c5046c750040866e15a6c6e78410467",
+  "state": "PASS",
+  "test_cases": 3,
+  "test_sha256": "748a1d0a1457bc7f1f65fe8f6330351792d3fb765f60c0dc4287b0dc3c0bb53c",
+  "verified": [
+    "PENDING correlated requests persist before any dispatch",
+    "HTTP500 failure and whitelistedincident survive exception beforecleanup",
+    "one attempt perrow, no retry",
+    "latency failure persists before SLOassertion",
+    "successful waves remainPASS"
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "cause": "UNKNOWN_UNLESS_CORRELATED_SAFE_EXCEPTION_FOUND",
+  "elapsed_seconds": 0.0,
+  "environment": "DEV",
+  "error_code": "FILEEXISTSERROR",
+  "exception_class": "FileExistsError",
+  "finished_at_utc": "2026-10-13T02:01:27Z",
+  "max_agents": 2,
+  "pilot_seconds_required": 1200,
+  "prod_mutations": false,
+  "raw_headers_payloads_messages_saved": false,
+  "requests": [],
+  "retry_count": 0,
+  "root_runner_changed": false,
+  "run_id": "soak-pilot002-diagnostic-001",
+  "schema": "hara.soak-pilot002-bounded-diagnostic.v1",
+  "started_at_utc": "2026-10-13T02:01:27Z",
+  "state": "FAIL",
+  "tail": {
+    "enabled": false,
+    "events": 0,
+    "exception_events": 0,
+    "exit_before_stop": null,
+    "parse_errors": 0
+  },
+  "worker_changed": false,
+  "failure_scope": "LOCAL_DIAGNOSTIC_SETUP",
+  "created_fixtures": 0,
+  "product_calls": 0
+}

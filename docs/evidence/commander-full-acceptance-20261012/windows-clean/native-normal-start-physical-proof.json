@@ -1,0 +1,15 @@
+{
+  "name": "native-normal-start.txt",
+  "raw_sha256": "8ad80cf1d9d9ba9754352f6405a6ca10daae3aab30d597452a81446d0cd4aa19",
+  "values": {
+    "ACTUAL_OPERATOR_PID": "2996",
+    "CLI_EXIT_CODE": "259",
+    "CLI_PID": "2996",
+    "HARA_COMMANDER_SESSION": "ACTIVE",
+    "NORMAL_START_OWNER_MATCH": "True",
+    "OPERATOR_STARTED_UTC": "2026-10-13T02:06:09.6455195Z",
+    "QA_USERNAME": "HARAQA",
+    "SECRET_MATERIAL_EXPOSED": "FALSE",
+    "SESSION_STARTED_AT_UTC": "2026-10-13T02:06:11.7370753Z"
+  }
+}

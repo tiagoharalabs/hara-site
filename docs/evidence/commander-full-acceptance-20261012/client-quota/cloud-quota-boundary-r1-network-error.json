@@ -1,0 +1,17 @@
+{
+  "schema": "hara.dev-cloud-quota-boundary.v1",
+  "started_at": "2026-10-13T00:00:16.956327+00:00",
+  "environment": "DEV",
+  "plan": "DEV_ONE_UNIT",
+  "unit_limit": 1,
+  "scope": "LIVE_QUOTA_CONTRACT_LIMIT_ONE_NOT_10000_COMPLETED_FREE_OPERATIONS",
+  "oauth_frontend_exercised": false,
+  "identity_setup": "ISOLATED_QA_D1_SEED",
+  "prod_mutated": false,
+  "founder_mutated": false,
+  "secret_output": false,
+  "checks": {},
+  "state": "FAIL",
+  "error": "QUOTA_PROBE_NETWORK_ERROR",
+  "completed_at": "2026-10-13T00:00:38.763975+00:00"
+}

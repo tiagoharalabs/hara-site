@@ -1,0 +1,24 @@
+{
+  "exit_code": 0,
+  "guest_pid": 4108,
+  "output_truncated": false,
+  "raw_logs_private": true,
+  "result": {
+    "chars": 20,
+    "main_agent_or_task_touched": false,
+    "native_console_write_success": true,
+    "real_pairing_token_used": false,
+    "schema": "hara.windows-clean-console-input-probe.v1",
+    "secure": true,
+    "secure_readhost_completed": true,
+    "state": "PASS",
+    "synthetic_input_only": true
+  },
+  "state": "EXITED",
+  "stderr_present": false,
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout_sha256": "92e3b955e391d16f698c16616cc85049fa4ae07f3a70a5e50d9700590510701e",
+  "vm": "commander-win11",
+  "nucleo_commander_receipt_sha256": "ee192bd3fd233c3516d4508b3b9c334a257835e29701918b71e2869fbbd2c798",
+  "evidence_authority": "WINDOWS_PS51_NATIVE_QGA"
+}

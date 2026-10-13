@@ -1,0 +1,12 @@
+{
+  "state": "STARTED_PENDING_PILOT",
+  "pid": 2730587,
+  "script_sha256": "631ad1b25ecda2c92e4809a21d61fed95ee48b7ab20ab25a9cc8a5d3a9656b05",
+  "max_applications": 200,
+  "pilot_seconds": 1200,
+  "soak_interval_seconds": 600,
+  "content_retained": false,
+  "normal_DEV_route": true,
+  "source_or_installer_patched": false,
+  "process_start_marker": "85106700"
+}

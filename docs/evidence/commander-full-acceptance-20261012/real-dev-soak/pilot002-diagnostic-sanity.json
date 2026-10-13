@@ -1,0 +1,13 @@
+{
+  "schema": "hara.pilot002-diagnostic-sanity.v1",
+  "state": "PASS",
+  "checks": 4,
+  "script_sha256": "f020fea1d39b9b3b9af736dc1f33707830ca5fb477a7b22aa709641a0133e952",
+  "checks_scope": [
+    "Python compile/import",
+    "tail removes raw headers/query/message/stack/logs",
+    "safe exception classification and digest",
+    "unsafe error code rejected"
+  ],
+  "after_setup_fix_compile": "PASS"
+}

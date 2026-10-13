@@ -29,7 +29,7 @@ from datetime import datetime, timezone, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-AGENT_VERSION = "0.3.53"
+AGENT_VERSION = "0.3.54"
 CONFIG_FILE = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home()/".config"))) / "hara-commander/device.env"
 DATA_DIR = Path(os.environ.get("XDG_DATA_HOME", str(Path.home()/".local/share"))) / "hara-commander"
 RECEIPT_DIR = DATA_DIR / "receipts"
@@ -1823,7 +1823,8 @@ def _process_output_payload(session,offset=None,length=200,wait_ms=0):
     state="EXITED" if session.get("exit_code") is not None else "RUNNING"
     return {"session_id":session["session_id"],"pid":session["pid"],"state":state,"exit_code":session.get("exit_code"),"offset":start,"next_offset":next_offset,"base_line":base,"total_lines":base+len(lines),"text":"\n".join(selected),"partial":session.get("partial","")[:1000],"truncated_before":truncated_before,"buffer_truncated":bool(session.get("truncated"))}
 
-def process_start(command,cwd=None,timeout_ms=1000):
+def process_start(command,cwd=None,timeout_ms=1000,max_lines=200):
+    max_lines=max(1,min(500,int(max_lines)))
     command=str(command or "")
     if not command or len(command)>4096 or "\x00" in command: raise ValueError("PROCESS_COMMAND_INVALID")
     _prune_process_sessions()
@@ -1843,7 +1844,7 @@ def process_start(command,cwd=None,timeout_ms=1000):
     sid="HARA-PROC-"+uuid.uuid4().hex
     session={"session_id":sid,"pid":pid,"fd":fd,"started_at_utc":utcnow(),"command_sha256":hashlib.sha256(command.encode()).hexdigest(),"cwd":str(work),"lines":[],"partial":"","base_line":0,"cursor":0,"truncated":False,"exit_code":None}
     PROCESS_SESSIONS[sid]=session
-    output=_process_output_payload(session,offset=None,length=200,wait_ms=timeout_ms)
+    output=_process_output_payload(session,offset=None,length=max_lines,wait_ms=timeout_ms)
     return {**output,"cwd":str(work),"command_sha256":session["command_sha256"],"command_preview":_redact_command_preview(command)}
 
 def process_run(command,cwd=None,timeout_ms=3000,max_lines=200):
@@ -2856,8 +2857,8 @@ def execute_tool(config, call):
         data=process_run(str(payload["command"]),payload.get("cwd"),int(payload.get("timeout_ms",3000)),int(payload.get("max_lines",200)))
         result={"function_id":"process.run","risk_class":"PROCESS_EXECUTION","process_exit_code":data.get("exit_code") if isinstance(data.get("exit_code"),int) else None,"stdout":json.dumps(data,sort_keys=True,separators=(",",":"),ensure_ascii=False),"domain_success_inferred":False}
     elif tool=="hara.process.start":
-        if "command" not in payload or any(k not in ("command","cwd","timeout_ms") for k in payload): raise ValueError("FUNCTION_ARGUMENTS_DENIED")
-        data=process_start(str(payload["command"]),payload.get("cwd"),int(payload.get("timeout_ms",1000)))
+        if "command" not in payload or any(k not in ("command","cwd","timeout_ms","max_lines") for k in payload): raise ValueError("FUNCTION_ARGUMENTS_DENIED")
+        data=process_start(str(payload["command"]),payload.get("cwd"),int(payload.get("timeout_ms",1000)),int(payload.get("max_lines",200)))
         result={"function_id":"process.start","risk_class":"PROCESS_EXECUTION","process_exit_code":data.get("exit_code") if isinstance(data.get("exit_code"),int) else None,"stdout":json.dumps(data,sort_keys=True,separators=(",",":"),ensure_ascii=False),"domain_success_inferred":False}
     elif tool=="hara.process.output":
         if "session_id" not in payload or any(k not in ("session_id","offset","length","timeout_ms") for k in payload): raise ValueError("FUNCTION_ARGUMENTS_DENIED")
@@ -3139,7 +3140,11 @@ def self_test():
     assert schemas["read_process_output"]["session_id"]["maxLength"]==180 and schemas["read_process_output"]["timeout_ms"]["maximum"]==3000
     assert schemas["interact_with_process"]["input"]["maxLength"]==4096 and schemas["interact_with_process"]["timeout_ms"]["maximum"]==3000
     long_tool,long_payload=_local_simple_map({"HARA_DEVICE_ID":"selftest"},"start_process",{"command":"sleep 12","timeout_ms":20000})
-    assert long_tool=="hara.process.start" and long_payload["timeout_ms"]==3000 and "max_lines" not in long_payload
+    assert long_tool=="hara.process.start" and long_payload["timeout_ms"]==3000 and long_payload["max_lines"]==200
+    for bounds_args in ({"max_lines":20},{"interactive":True,"max_lines":20},{"timeout_ms":20000,"max_lines":20}):
+        bounded_tool,bounded_payload=_local_simple_map({"HARA_DEVICE_ID":"selftest"},"start_process",{"command":"printf hi",**bounds_args})
+        assert bounded_payload["max_lines"]==20
+        assert bounded_tool==("hara.process.start" if bounds_args.get("interactive") or bounds_args.get("timeout_ms",0)>10000 else "hara.process.run")
     missing_state=local_mcp_operational_error("FILENOTFOUNDERROR","get_file_info",{"path":"/tmp/missing"})
     assert missing_state["state"]=="NOT_FOUND" and missing_state["blocker"]["retryable"] is False
     session_state=local_mcp_operational_error("PROCESS_SESSION_NOT_FOUND","read_process_output",{"session_id":"missing"})
@@ -3275,7 +3280,7 @@ def _local_simple_map(config,name,args):
         managed=bool(args.get("interactive",False)) or requested_timeout>10000
         payload={"command":str(args["command"]),"timeout_ms":min(requested_timeout,3000) if managed else requested_timeout}
         if args.get("cwd"): payload["cwd"]=str(args["cwd"])
-        if not managed: payload["max_lines"]=int(args.get("max_lines",200))
+        payload["max_lines"]=int(args.get("max_lines",200))
         return ("hara.process.start" if managed else "hara.process.run"),payload
     if name=="read_process_output":
         return "hara.process.output",{"session_id":str(args["session_id"]),**({"offset":int(args["offset"])} if "offset" in args else {}),**({"length":int(args["length"])} if "length" in args else {}),**({"timeout_ms":int(args["timeout_ms"])} if "timeout_ms" in args else {})}

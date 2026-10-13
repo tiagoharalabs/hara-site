@@ -1,0 +1,518 @@
+{
+  "schema": "hara.commander-owned-fleet-direct-concurrency-warmup.v1",
+  "at_utc": "2026-10-13T04:39:50.588Z",
+  "state": "PASS",
+  "actual_physical_computers": 5,
+  "actual_tool_calls": 50,
+  "max_concurrency": 5,
+  "elapsed_ms": 37439,
+  "p95_ms": 4542,
+  "p99_ms": 5181,
+  "unique_receipts": 50,
+  "rows": [
+    {
+      "wave": 1,
+      "computer": "services",
+      "state": "PASS",
+      "latency_ms": 3255,
+      "agent_version": "0.3.46",
+      "device_id": "HARA-DEVICE-ad55f2aa-9a83-46e1-a6ab-f78d422950fe",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "4f0504cc25624ae6c8864a3374bd54b200819abba06ffa2d37b936c56f38c5f4"
+    },
+    {
+      "wave": 1,
+      "computer": "nucleo-a",
+      "state": "PASS",
+      "latency_ms": 3134,
+      "agent_version": "0.3.46",
+      "device_id": "HARA-DEVICE-e032ffff-f2d2-43ad-b2a8-f5385a900f62",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "bf301cbb68b16bb7504861d6d917f5234450cdfaf21ba2a8c2633d5b508a42ea"
+    },
+    {
+      "wave": 1,
+      "computer": "ninja-blue",
+      "state": "PASS",
+      "latency_ms": 2977,
+      "agent_version": "0.3.46",
+      "device_id": "HARA-DEVICE-f275d879-b7f9-4c77-a08f-6408ff3471c0",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "ac6371af7f596831628c83a75f4dcadb5d42e47ffbce186be693f9d51c6db4a7"
+    },
+    {
+      "wave": 1,
+      "computer": "sentinela-b",
+      "state": "PASS",
+      "latency_ms": 4542,
+      "agent_version": "0.3.41",
+      "device_id": "HARA-DEVICE-f1d9ecb6-f1e9-4867-9398-8ed10b785c5a",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "8c6e13223483d4b2df2ea22c7849d731b2501e14b673e08a6b0093678bc98392"
+    },
+    {
+      "wave": 1,
+      "computer": "sentinela-d",
+      "state": "PASS",
+      "latency_ms": 2932,
+      "agent_version": "0.3.46",
+      "device_id": "HARA-DEVICE-e1aeceb4-0a90-411e-badc-90716260f5e0",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "4f0ffb05b96e00a93110e63b8bc3931cad4be200eb48c78fdc3b325667509006"
+    },
+    {
+      "wave": 2,
+      "computer": "services",
+      "state": "PASS",
+      "latency_ms": 2917,
+      "agent_version": "0.3.46",
+      "device_id": "HARA-DEVICE-ad55f2aa-9a83-46e1-a6ab-f78d422950fe",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "50e118c4dd9930b3799566b4e6fa256a7942869511f775eb2686cdbff3aafaf3"
+    },
+    {
+      "wave": 2,
+      "computer": "nucleo-a",
+      "state": "PASS",
+      "latency_ms": 3236,
+      "agent_version": "0.3.46",
+      "device_id": "HARA-DEVICE-e032ffff-f2d2-43ad-b2a8-f5385a900f62",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "2f1b05f153feae76716df867cd63a7e268338346cce18bc7dad533b213784822"
+    },
+    {
+      "wave": 2,
+      "computer": "ninja-blue",
+      "state": "PASS",
+      "latency_ms": 3157,
+      "agent_version": "0.3.46",
+      "device_id": "HARA-DEVICE-f275d879-b7f9-4c77-a08f-6408ff3471c0",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "91c55f8ca385b87ec6600725aed425e9daf3b8be8e8f70b55e0f3b2fdfff7054"
+    },
+    {
+      "wave": 2,
+      "computer": "sentinela-b",
+      "state": "PASS",
+      "latency_ms": 3101,
+      "agent_version": "0.3.41",
+      "device_id": "HARA-DEVICE-f1d9ecb6-f1e9-4867-9398-8ed10b785c5a",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "3b8f8ec99344f43c3af0accf544e9cf5cf9546de0845bd2d158afe5a337bcf34"
+    },
+    {
+      "wave": 2,
+      "computer": "sentinela-d",
+      "state": "PASS",
+      "latency_ms": 3205,
+      "agent_version": "0.3.46",
+      "device_id": "HARA-DEVICE-e1aeceb4-0a90-411e-badc-90716260f5e0",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "2ff600386e82178186f2b93d060dee11631a7737fd8d314e82966f02bab788a9"
+    },
+    {
+      "wave": 3,
+      "computer": "services",
+      "state": "PASS",
+      "latency_ms": 3125,
+      "agent_version": "0.3.46",
+      "device_id": "HARA-DEVICE-ad55f2aa-9a83-46e1-a6ab-f78d422950fe",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "8fef25ed8cfbe53cd5650268d4ee0bcdccb305e21b21f1eea9b9532c980afec8"
+    },
+    {
+      "wave": 3,
+      "computer": "nucleo-a",
+      "state": "PASS",
+      "latency_ms": 2882,
+      "agent_version": "0.3.46",
+      "device_id": "HARA-DEVICE-e032ffff-f2d2-43ad-b2a8-f5385a900f62",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "c900dab8f9b3dcb4312bc07c485beb868a9236ebe072655a664d11017c3f00d7"
+    },
+    {
+      "wave": 3,
+      "computer": "ninja-blue",
+      "state": "PASS",
+      "latency_ms": 2945,
+      "agent_version": "0.3.46",
+      "device_id": "HARA-DEVICE-f275d879-b7f9-4c77-a08f-6408ff3471c0",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "b49bc27ca28ca33ca4db67b0eb5f3d2e9c2555b97dea3ec1f2b4856f42aba1f8"
+    },
+    {
+      "wave": 3,
+      "computer": "sentinela-b",
+      "state": "PASS",
+      "latency_ms": 3142,
+      "agent_version": "0.3.41",
+      "device_id": "HARA-DEVICE-f1d9ecb6-f1e9-4867-9398-8ed10b785c5a",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "04e4f438d0de797db510437f761c5bb54ecd8393f6aa41fe3639c885d2e22f75"
+    },
+    {
+      "wave": 3,
+      "computer": "sentinela-d",
+      "state": "PASS",
+      "latency_ms": 3207,
+      "agent_version": "0.3.46",
+      "device_id": "HARA-DEVICE-e1aeceb4-0a90-411e-badc-90716260f5e0",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "912e066d6068d62e5533eddc83f552762574bf38fe61ac5ad2ff61aa68386e95"
+    },
+    {
+      "wave": 4,
+      "computer": "services",
+      "state": "PASS",
+      "latency_ms": 3218,
+      "agent_version": "0.3.46",
+      "device_id": "HARA-DEVICE-ad55f2aa-9a83-46e1-a6ab-f78d422950fe",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "03153c381e8307592ddc1c0dbbcc96ad6752261060ba2bbaac52f6fdd4cc1ab6"
+    },
+    {
+      "wave": 4,
+      "computer": "nucleo-a",
+      "state": "PASS",
+      "latency_ms": 3000,
+      "agent_version": "0.3.46",
+      "device_id": "HARA-DEVICE-e032ffff-f2d2-43ad-b2a8-f5385a900f62",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "473444b18d8c75883243413bea4b64baa2b1e0be33372350f04f053da0bb79a8"
+    },
+    {
+      "wave": 4,
+      "computer": "ninja-blue",
+      "state": "PASS",
+      "latency_ms": 3258,
+      "agent_version": "0.3.46",
+      "device_id": "HARA-DEVICE-f275d879-b7f9-4c77-a08f-6408ff3471c0",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "17dca7645a5507d725762a965c58b8bdcbfc9e23e2f877a555c3aaedd59861b3"
+    },
+    {
+      "wave": 4,
+      "computer": "sentinela-b",
+      "state": "PASS",
+      "latency_ms": 3104,
+      "agent_version": "0.3.41",
+      "device_id": "HARA-DEVICE-f1d9ecb6-f1e9-4867-9398-8ed10b785c5a",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "5d3a2294d14b6512afeee49d0eb63e272f5da7ff1b779a7b143c75016970ab28"
+    },
+    {
+      "wave": 4,
+      "computer": "sentinela-d",
+      "state": "PASS",
+      "latency_ms": 3180,
+      "agent_version": "0.3.46",
+      "device_id": "HARA-DEVICE-e1aeceb4-0a90-411e-badc-90716260f5e0",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "2e99b513fb6b22c93644884fbb2c7abbe5e668a2bf590bffa26ac3c11691f0c7"
+    },
+    {
+      "wave": 5,
+      "computer": "services",
+      "state": "PASS",
+      "latency_ms": 2894,
+      "agent_version": "0.3.46",
+      "device_id": "HARA-DEVICE-ad55f2aa-9a83-46e1-a6ab-f78d422950fe",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "1721cf5344776e8f5bce7a81454c8b1878214d16110b347dc537abeb01e1a2a6"
+    },
+    {
+      "wave": 5,
+      "computer": "nucleo-a",
+      "state": "PASS",
+      "latency_ms": 2952,
+      "agent_version": "0.3.46",
+      "device_id": "HARA-DEVICE-e032ffff-f2d2-43ad-b2a8-f5385a900f62",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "7225e0f253d02bf806b98cc8dfa383c0b41a67282aa8762cfbe558b8f1906264"
+    },
+    {
+      "wave": 5,
+      "computer": "ninja-blue",
+      "state": "PASS",
+      "latency_ms": 3129,
+      "agent_version": "0.3.46",
+      "device_id": "HARA-DEVICE-f275d879-b7f9-4c77-a08f-6408ff3471c0",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "04e8deda74a607dbdc547b4a87209bd84a2308994e13f34743cdbb5cca53e3fd"
+    },
+    {
+      "wave": 5,
+      "computer": "sentinela-b",
+      "state": "PASS",
+      "latency_ms": 5181,
+      "agent_version": "0.3.41",
+      "device_id": "HARA-DEVICE-f1d9ecb6-f1e9-4867-9398-8ed10b785c5a",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "63ee3397b9c3712ccc73e6edcfea90628c6b2361b99629471d74eb90262cf64c"
+    },
+    {
+      "wave": 5,
+      "computer": "sentinela-d",
+      "state": "PASS",
+      "latency_ms": 2918,
+      "agent_version": "0.3.46",
+      "device_id": "HARA-DEVICE-e1aeceb4-0a90-411e-badc-90716260f5e0",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "b01e9e9028401a6b43ba772473da56b3a70e34180a6d4136f10d649c27fbde3d"
+    },
+    {
+      "wave": 6,
+      "computer": "services",
+      "state": "PASS",
+      "latency_ms": 2953,
+      "agent_version": "0.3.46",
+      "device_id": "HARA-DEVICE-ad55f2aa-9a83-46e1-a6ab-f78d422950fe",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "804a29bb9c45a3d9e647b9009db02efadc072c649c4daa5cc0e79cb6ba5005b6"
+    },
+    {
+      "wave": 6,
+      "computer": "nucleo-a",
+      "state": "PASS",
+      "latency_ms": 2932,
+      "agent_version": "0.3.46",
+      "device_id": "HARA-DEVICE-e032ffff-f2d2-43ad-b2a8-f5385a900f62",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "ba5119dc03262267e3b37a5bedd67b407959935d8129f56b64cc43cf70f168c0"
+    },
+    {
+      "wave": 6,
+      "computer": "ninja-blue",
+      "state": "PASS",
+      "latency_ms": 2954,
+      "agent_version": "0.3.46",
+      "device_id": "HARA-DEVICE-f275d879-b7f9-4c77-a08f-6408ff3471c0",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "878222b38a95bb505c2dce8608ea1639718a7723998b41320055f14115e55ba0"
+    },
+    {
+      "wave": 6,
+      "computer": "sentinela-b",
+      "state": "PASS",
+      "latency_ms": 3119,
+      "agent_version": "0.3.41",
+      "device_id": "HARA-DEVICE-f1d9ecb6-f1e9-4867-9398-8ed10b785c5a",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "d0beb26046d67d040d4b01f430469842c9baf2b81543b3fe523b00f642be609a"
+    },
+    {
+      "wave": 6,
+      "computer": "sentinela-d",
+      "state": "PASS",
+      "latency_ms": 3039,
+      "agent_version": "0.3.46",
+      "device_id": "HARA-DEVICE-e1aeceb4-0a90-411e-badc-90716260f5e0",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "d0611b81334fd33a3c1941ceca7f202ecac3672794ebcaa0aa9531031febc92e"
+    },
+    {
+      "wave": 7,
+      "computer": "services",
+      "state": "PASS",
+      "latency_ms": 3223,
+      "agent_version": "0.3.46",
+      "device_id": "HARA-DEVICE-ad55f2aa-9a83-46e1-a6ab-f78d422950fe",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "27f36d6fa0c8aa77704a5af6c6dc2cd5b970087dee062832a17da1130ea1a2f9"
+    },
+    {
+      "wave": 7,
+      "computer": "nucleo-a",
+      "state": "PASS",
+      "latency_ms": 2903,
+      "agent_version": "0.3.46",
+      "device_id": "HARA-DEVICE-e032ffff-f2d2-43ad-b2a8-f5385a900f62",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "002e3193b320a20202e223574d6394232afa575de8dab870d9f1c4385955337f"
+    },
+    {
+      "wave": 7,
+      "computer": "ninja-blue",
+      "state": "PASS",
+      "latency_ms": 3017,
+      "agent_version": "0.3.46",
+      "device_id": "HARA-DEVICE-f275d879-b7f9-4c77-a08f-6408ff3471c0",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "997a20137a2bef9a8a5802d49e72d12ebea068223f83c29e055f4123cb010a21"
+    },
+    {
+      "wave": 7,
+      "computer": "sentinela-b",
+      "state": "PASS",
+      "latency_ms": 3391,
+      "agent_version": "0.3.41",
+      "device_id": "HARA-DEVICE-f1d9ecb6-f1e9-4867-9398-8ed10b785c5a",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "6cfc1687f3516dba6c6b09e31eca353e5197cc14acca61ba5550704f2a54ff73"
+    },
+    {
+      "wave": 7,
+      "computer": "sentinela-d",
+      "state": "PASS",
+      "latency_ms": 3165,
+      "agent_version": "0.3.46",
+      "device_id": "HARA-DEVICE-e1aeceb4-0a90-411e-badc-90716260f5e0",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "6dfeaaff7f1942c3855ede5b2e53b8a7039f2f43d37cd0c1fdb09641b7534670"
+    },
+    {
+      "wave": 8,
+      "computer": "services",
+      "state": "PASS",
+      "latency_ms": 3295,
+      "agent_version": "0.3.46",
+      "device_id": "HARA-DEVICE-ad55f2aa-9a83-46e1-a6ab-f78d422950fe",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "d84e6b30be2d604d91850f370140957ebc374fc3ebc137764e2f2b4d268dcaa0"
+    },
+    {
+      "wave": 8,
+      "computer": "nucleo-a",
+      "state": "PASS",
+      "latency_ms": 3201,
+      "agent_version": "0.3.46",
+      "device_id": "HARA-DEVICE-e032ffff-f2d2-43ad-b2a8-f5385a900f62",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "7effe7d2c29019be37364d8e8504cc2b807f837d96f661c32e7b55eca7e9eaa2"
+    },
+    {
+      "wave": 8,
+      "computer": "ninja-blue",
+      "state": "PASS",
+      "latency_ms": 2895,
+      "agent_version": "0.3.46",
+      "device_id": "HARA-DEVICE-f275d879-b7f9-4c77-a08f-6408ff3471c0",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "b2a26ea4ae7808637763823c3ff187baa3347cf740195747f8890f72ac9e3957"
+    },
+    {
+      "wave": 8,
+      "computer": "sentinela-b",
+      "state": "PASS",
+      "latency_ms": 2411,
+      "agent_version": "0.3.41",
+      "device_id": "HARA-DEVICE-f1d9ecb6-f1e9-4867-9398-8ed10b785c5a",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "2428fbaecc43ba161659314e68ded31024732e379ab92aed1d24e1b0421f88e5"
+    },
+    {
+      "wave": 8,
+      "computer": "sentinela-d",
+      "state": "PASS",
+      "latency_ms": 2842,
+      "agent_version": "0.3.46",
+      "device_id": "HARA-DEVICE-e1aeceb4-0a90-411e-badc-90716260f5e0",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "7658101da241d722d1e52b869829dd83fab574577fb0b5ebb2bd21c357110101"
+    },
+    {
+      "wave": 9,
+      "computer": "services",
+      "state": "PASS",
+      "latency_ms": 3139,
+      "agent_version": "0.3.46",
+      "device_id": "HARA-DEVICE-ad55f2aa-9a83-46e1-a6ab-f78d422950fe",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "b761686abf715127ece70026faaa1ffecb33832eaf4cb43973345f458609b6fa"
+    },
+    {
+      "wave": 9,
+      "computer": "nucleo-a",
+      "state": "PASS",
+      "latency_ms": 3433,
+      "agent_version": "0.3.46",
+      "device_id": "HARA-DEVICE-e032ffff-f2d2-43ad-b2a8-f5385a900f62",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "f08fbfb97bdc15438ec70a7ef92cf9080615423b6a9c3ce34c1376055840d1ac"
+    },
+    {
+      "wave": 9,
+      "computer": "ninja-blue",
+      "state": "PASS",
+      "latency_ms": 2948,
+      "agent_version": "0.3.46",
+      "device_id": "HARA-DEVICE-f275d879-b7f9-4c77-a08f-6408ff3471c0",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "1a4e7c5a2285d13ea9504bc55c7e0cba388a88b031942ad065b8495abdc173d5"
+    },
+    {
+      "wave": 9,
+      "computer": "sentinela-b",
+      "state": "PASS",
+      "latency_ms": 2517,
+      "agent_version": "0.3.41",
+      "device_id": "HARA-DEVICE-f1d9ecb6-f1e9-4867-9398-8ed10b785c5a",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "8456b4dc1f1c64bb460caeec27afb5a6082bbd7e96087c38c30e784361db169d"
+    },
+    {
+      "wave": 9,
+      "computer": "sentinela-d",
+      "state": "PASS",
+      "latency_ms": 3268,
+      "agent_version": "0.3.46",
+      "device_id": "HARA-DEVICE-e1aeceb4-0a90-411e-badc-90716260f5e0",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "e80a7ce7b5dbad70195cdde43f4c744fa97005096023a0b1769328c273227e90"
+    },
+    {
+      "wave": 10,
+      "computer": "services",
+      "state": "PASS",
+      "latency_ms": 3197,
+      "agent_version": "0.3.46",
+      "device_id": "HARA-DEVICE-ad55f2aa-9a83-46e1-a6ab-f78d422950fe",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "8b39491e87a5b10ed4fede695fa69ac3414ebef4294b032d2b98d34ef7578cb3"
+    },
+    {
+      "wave": 10,
+      "computer": "nucleo-a",
+      "state": "PASS",
+      "latency_ms": 2938,
+      "agent_version": "0.3.46",
+      "device_id": "HARA-DEVICE-e032ffff-f2d2-43ad-b2a8-f5385a900f62",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "acbcba24e6c905209f587fe65ca108491a0beadb618bd278bbc623bd182ca99c"
+    },
+    {
+      "wave": 10,
+      "computer": "ninja-blue",
+      "state": "PASS",
+      "latency_ms": 2972,
+      "agent_version": "0.3.46",
+      "device_id": "HARA-DEVICE-f275d879-b7f9-4c77-a08f-6408ff3471c0",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "7e70cbf97631887f7332d037e9676404421aad4d7a84756dc5abc859bc8f8818"
+    },
+    {
+      "wave": 10,
+      "computer": "sentinela-b",
+      "state": "PASS",
+      "latency_ms": 4774,
+      "agent_version": "0.3.41",
+      "device_id": "HARA-DEVICE-f1d9ecb6-f1e9-4867-9398-8ed10b785c5a",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "f270e45fbbf2eb569fd24648cbec5112512eb4662d88e8dcda6b8a0dc3b2b1e3"
+    },
+    {
+      "wave": 10,
+      "computer": "sentinela-d",
+      "state": "PASS",
+      "latency_ms": 2869,
+      "agent_version": "0.3.46",
+      "device_id": "HARA-DEVICE-e1aeceb4-0a90-411e-badc-90716260f5e0",
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "a165a919f072cd88c3bfb0a37e2280f2a1e13b4d6d2c02e7719e788e20d7bffd"
+    }
+  ],
+  "scope": "Existing Founder Agents; real readonly device.info through DIRECT product tools. Warmup only; not1000 tenants orresource saturation.",
+  "quota_mode": "FOUNDER_INTERNAL_UNMETERED",
+  "actual_1000_tested": false,
+  "customer_content_saved": false
+}

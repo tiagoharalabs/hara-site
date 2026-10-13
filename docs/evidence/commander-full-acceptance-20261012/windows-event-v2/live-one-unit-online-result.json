@@ -1,0 +1,17 @@
+{
+  "state": "PASS",
+  "device_id": "HARA-DEVICE-7602945a-3a4e-4500-bd72-bb1611cd82ff",
+  "fixture_pid": 5644,
+  "process_exited": false,
+  "exit_code": null,
+  "stderr_present": false,
+  "event_status": {
+    "schema": "hara.commander-event-v2-runtime-status.v1",
+    "transport_mode": "EVENT_V2",
+    "connected": true,
+    "connected_at_utc": "2026-10-12T23:59:02.8044121Z",
+    "disconnected_at_utc": null,
+    "last_error_code": "",
+    "updated_at_utc": "2026-10-12T23:59:04.3398228Z"
+  }
+}

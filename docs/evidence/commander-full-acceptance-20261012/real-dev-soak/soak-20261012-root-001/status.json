@@ -1,0 +1,781 @@
+{
+  "actual_oauth_human_logins": 0,
+  "actual_physical_machines": 1,
+  "auth_mode": "PRESEEDED_QA_IDENTITIES",
+  "cleaned_fixture_count": 100,
+  "cleanup_state": "PASS",
+  "cloud_application_http_and_d1_commands": 785,
+  "credentials_removed": true,
+  "customer_content_saved": false,
+  "d1_commands": 164,
+  "elapsed_seconds": 471.73,
+  "environment": "DEV",
+  "error_code": "SOAK_AGENT_DISCONNECTED",
+  "finished_at_utc": "2026-10-13T00:03:31Z",
+  "hard_deadline_utc": "2026-10-15T23:59:57.203319+00:00",
+  "max_agents": 100,
+  "max_cloud_http": 3000,
+  "max_probe_concurrency": 20,
+  "observations": [
+    {
+      "at_utc": "2026-10-12T23:59:57Z",
+      "elapsed_seconds": 257.318813696038,
+      "probe": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 659.8335319431499,
+        "p99_ms": 659.8335319431499,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      },
+      "resources": {
+        "agent_rss_bytes": 83910656,
+        "cpu_count": 12,
+        "load_1m": 1.35693359375,
+        "memory_available_bytes": 28636192768
+      }
+    },
+    {
+      "at_utc": "2026-10-13T00:00:57Z",
+      "elapsed_seconds": 317.9808676430257,
+      "probe": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 2771.036203019321,
+        "p99_ms": 2771.036203019321,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      },
+      "resources": {
+        "agent_rss_bytes": 83910656,
+        "cpu_count": 12,
+        "load_1m": 2.09716796875,
+        "memory_available_bytes": 28753707008
+      }
+    },
+    {
+      "at_utc": "2026-10-13T00:02:00Z",
+      "elapsed_seconds": 380.7544626700692,
+      "probe": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 1838.1742539349943,
+        "p99_ms": 1838.1742539349943,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      },
+      "resources": {
+        "agent_rss_bytes": 83910656,
+        "cpu_count": 12,
+        "load_1m": 1.8779296875,
+        "memory_available_bytes": 28523806720
+      }
+    }
+  ],
+  "own_agents_remaining": 0,
+  "pilot_required_seconds": 1200,
+  "prod_mutations": false,
+  "recovery": [
+    {
+      "kind": "PROCESS_RESTART",
+      "ledger_unchanged": true,
+      "new_pid": 2339115,
+      "old_pid": 2327268,
+      "replay_only": true,
+      "request_id": "TRANSIENT-INVOKE-769d4d9a626a466782d07a246e16aa75",
+      "same_receipt": true
+    },
+    {
+      "kind": "DISCONNECT",
+      "ledger_unchanged": true,
+      "new_pid": 2339485,
+      "old_pid": 2327269,
+      "replay_only": true,
+      "request_id": "TRANSIENT-INVOKE-144ea7e4044041bfbfd37ca59aab92bd",
+      "same_receipt": true
+    }
+  ],
+  "retained_agents": 2,
+  "run_id": "soak-20261012-root-001",
+  "schema": "hara.commander-real-dev-soak.v1",
+  "script_sha256": "1e448f5234f9bca439fcfda38b64ebedc5e43f251d11612fb341c0c490130e56",
+  "seventy_two_hours_passed": false,
+  "soak_requested_hours": 72,
+  "soak_started_at_utc": "2026-10-12T23:59:57Z",
+  "source_sha256": {
+    "experimental/event_v2_agent_loop.py": "f1a7d9fc4faf57185d0d2bcb17e741882db866c627967bf02e1d98754d212950",
+    "experimental/event_v2_customer_agent.py": "1170e771181e86b02c87d5307c9b22783788a73487f8325e73f29217046069d2",
+    "experimental/event_v2_telemetry.py": "4bb47248f2a690df680d8c6cd0144522e2cd82286bb563f391bbea9a200fa499",
+    "experimental/event_v2_websocket.py": "96b10a826e8cb2063cd6e19f6c71967e98c0b843c6cd94f997e2d24a7f316ea9",
+    "public/agent/linux.py": "1572d70e60fb299edb262a8a817bd7aa1740a4c2dda3635d50beb2f3476ffe3b"
+  },
+  "stages": [
+    {
+      "agent_count": 2,
+      "completed_at_utc": "2026-10-12T23:55:48Z",
+      "independent_tenants": 2,
+      "probe": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 1832.8602280234918,
+        "p99_ms": 1832.8602280234918,
+        "request_and_receipt_bindings": [
+          {
+            "receipt_sha256": "b7a06fede05d14b075a571093a669d99588e25e152f5ce51b9d97d30ad890d2f",
+            "request_id": "TRANSIENT-INVOKE-a8e9b2502e8444deaf393e66bc390d38"
+          },
+          {
+            "receipt_sha256": "a2585d1d5d6fedf2f1fef4a70d5d42f7b6f7781daca0f66a76e3f884751bc2da",
+            "request_id": "TRANSIENT-INVOKE-16748cdef7f847e1af9cacdf7c140a93"
+          }
+        ],
+        "success_fraction": 1.0,
+        "successful": 2
+      },
+      "resources_after": {
+        "agent_rss_bytes": 83877888,
+        "cpu_count": 12,
+        "load_1m": 1.333984375,
+        "memory_available_bytes": 28920475648
+      },
+      "resources_before": {
+        "agent_rss_bytes": 0,
+        "cpu_count": 12,
+        "load_1m": 1.27587890625,
+        "memory_available_bytes": 29089275904
+      },
+      "state": "PASS"
+    },
+    {
+      "agent_count": 10,
+      "completed_at_utc": "2026-10-12T23:56:06Z",
+      "independent_tenants": 10,
+      "probe": {
+        "count": 10,
+        "errors": [],
+        "p95_ms": 2303.500178968534,
+        "p99_ms": 2303.500178968534,
+        "request_and_receipt_bindings": [
+          {
+            "receipt_sha256": "11095cacec4c5979eb273f158a909b46cb18260546f016538ae40a16b1589e27",
+            "request_id": "TRANSIENT-INVOKE-496b34834fec432a9099d810cc990037"
+          },
+          {
+            "receipt_sha256": "e1826d89457e9cb047c4d1cd143876d09118f5f1b05e0bca46073618924912d3",
+            "request_id": "TRANSIENT-INVOKE-021fd211571e4b07aca7f72e4d463937"
+          },
+          {
+            "receipt_sha256": "fae9a83b6c7ca218ff48dc137683e68e76d95ad5b42b25c2ef66a1801c5aed12",
+            "request_id": "TRANSIENT-INVOKE-9afa369262e84e1495e01c3ca36a3f34"
+          },
+          {
+            "receipt_sha256": "cd624bf4fc6dcda6c2dd256f5392b0e6203407c071e6f051ccd8e7d37d384257",
+            "request_id": "TRANSIENT-INVOKE-c23d2ae7ba8643a7aacac3fa82e23a3d"
+          },
+          {
+            "receipt_sha256": "62d367bcd534d719b275ad54206776367ffb6d4da39b1575855624e0c27f123d",
+            "request_id": "TRANSIENT-INVOKE-0d71da5b049a4b37a81abece39127c9c"
+          },
+          {
+            "receipt_sha256": "230eefce1b6dcf71ef1e514c3c5bb6900fc8732d02bba5cfc798b5c90ba8adc3",
+            "request_id": "TRANSIENT-INVOKE-803653ed72c545548f671c0cfc265345"
+          },
+          {
+            "receipt_sha256": "48cbf26d85fee6657884b0410fa2a465e62f5d0358103490bc55239542d2e8e1",
+            "request_id": "TRANSIENT-INVOKE-28886575e10c451baf15b08184bee74b"
+          },
+          {
+            "receipt_sha256": "9ffce7da2ab43b8286c8dbbfc495640ac8b5a54cc095fc5dbfef80e4cd7e84dc",
+            "request_id": "TRANSIENT-INVOKE-e34ea9ec3a23445fbfc9dd3922cc4678"
+          },
+          {
+            "receipt_sha256": "ce69353b2e9be2527b9003d6b4291226b5b54b2e7eebee49e764afafb8df9293",
+            "request_id": "TRANSIENT-INVOKE-253f53ea301a41b0b1a517001d3a0190"
+          },
+          {
+            "receipt_sha256": "ffaa2034917b0024a9eed57e717674fb02db80fcebf106f91179c3af9eb57f81",
+            "request_id": "TRANSIENT-INVOKE-e640f06589564ef5a4642881d81a7e3b"
+          }
+        ],
+        "success_fraction": 1.0,
+        "successful": 10
+      },
+      "resources_after": {
+        "agent_rss_bytes": 419041280,
+        "cpu_count": 12,
+        "load_1m": 1.3896484375,
+        "memory_available_bytes": 28813234176
+      },
+      "resources_before": {
+        "agent_rss_bytes": 83877888,
+        "cpu_count": 12,
+        "load_1m": 1.333984375,
+        "memory_available_bytes": 28941299712
+      },
+      "state": "PASS"
+    },
+    {
+      "agent_count": 25,
+      "completed_at_utc": "2026-10-12T23:56:38Z",
+      "independent_tenants": 25,
+      "probe": {
+        "count": 25,
+        "errors": [],
+        "p95_ms": 2096.1813530884683,
+        "p99_ms": 2112.416145973839,
+        "request_and_receipt_bindings": [
+          {
+            "receipt_sha256": "e362f1e4c33bffda3cffcb6262ecebae6fa169cd07ec9ff38a818cceb8d145b2",
+            "request_id": "TRANSIENT-INVOKE-290c6fbc86454d1f9e3aaaa1c76b10d4"
+          },
+          {
+            "receipt_sha256": "c54b02f26158957f298e96ea7db4a341e0b851230e05b6f511c3b70d8f1f072f",
+            "request_id": "TRANSIENT-INVOKE-e99008a5290143078be2a0fae080a102"
+          },
+          {
+            "receipt_sha256": "ae0194023e6fda45ee78665ad2800133c4c623c1cff4554bc004fa04e585f1dd",
+            "request_id": "TRANSIENT-INVOKE-6aa35bb0765a43cb9c2b7a1ea6fc5085"
+          },
+          {
+            "receipt_sha256": "012ddd9edb45873cf526c726e59fc5e9906ee9ef7f9ae85c7f81ddb5f7f61fd4",
+            "request_id": "TRANSIENT-INVOKE-b7f2b56532274de2bb9856e6d3f775bc"
+          },
+          {
+            "receipt_sha256": "3b23324c898fb81e4330cec42d6bd4bb21f15ee87acd3168b9a616695e89f034",
+            "request_id": "TRANSIENT-INVOKE-f7bf8d7dc6c94212972a33119ff1f108"
+          },
+          {
+            "receipt_sha256": "212e652702e14508e2e5d14afb8c2f41002e2761cb915f01242fe0ea31f78c03",
+            "request_id": "TRANSIENT-INVOKE-8a327e75174e448fa53885161651aa99"
+          },
+          {
+            "receipt_sha256": "020c8c3628443ee2fc312258e45604f8e67714b3f0de83d40531e37f8184b4ee",
+            "request_id": "TRANSIENT-INVOKE-11fb359e7a74453c91f3094e6d348406"
+          },
+          {
+            "receipt_sha256": "fb9726776197afc06c574594a103a4cf479ca36457c9b728b08d957402bdb127",
+            "request_id": "TRANSIENT-INVOKE-9f8dbe57c9b04f2d856cdd1a5fbafe12"
+          },
+          {
+            "receipt_sha256": "587f23b9c6ecf3c6298e8b07da6a3c439da595b02e4cb0d6506271c343e1aa6c",
+            "request_id": "TRANSIENT-INVOKE-743d5a14cdde43908af0026d2d070ebd"
+          },
+          {
+            "receipt_sha256": "21ea5c5428762a923a60244bf059758ed27a3346c0919401b8a98f80c83b8e24",
+            "request_id": "TRANSIENT-INVOKE-4a19d9caa58846109b382e158b800f75"
+          },
+          {
+            "receipt_sha256": "e8420aaf55db4374781d9d135664800ca1496c31bb70ef322ee49b2ec5d3b393",
+            "request_id": "TRANSIENT-INVOKE-df5e3ff54e4349afae1c05146b723437"
+          },
+          {
+            "receipt_sha256": "16baf3e91d056c865657d766800be1b12e379c1689ccca7fa6a509a5e3da6ffb",
+            "request_id": "TRANSIENT-INVOKE-dc8e75faba884e0bad70c78668f87f86"
+          },
+          {
+            "receipt_sha256": "1bc67d06a1e7818c6cde88543fcdab47d34ecb2bd7f3a1b7562fd609b88faddd",
+            "request_id": "TRANSIENT-INVOKE-309335e1d55142068935df95917a4e04"
+          },
+          {
+            "receipt_sha256": "eb133c2a0061b7c3e9f75aa884a2549cf94fadcc1690d565a9d8a2d4ccfd9349",
+            "request_id": "TRANSIENT-INVOKE-e23d8f96c551485bb2b19cf99ada7501"
+          },
+          {
+            "receipt_sha256": "dd3afef9bc076693f110c06a9b4dd7b4415c66170add28928fb2079ac180ebeb",
+            "request_id": "TRANSIENT-INVOKE-c3c43627e8b54122a18afb8d9268175c"
+          },
+          {
+            "receipt_sha256": "34db2cb73f7dbbb02430ab5363a09a540189a586fd49e5efaf721bd2a46cb321",
+            "request_id": "TRANSIENT-INVOKE-a058fa16f6e9460f9430a09f051295b8"
+          },
+          {
+            "receipt_sha256": "8e43ceef18e92087d5c2177dc85bfc57e800b69bdbb2fb87368bcb1951c572c9",
+            "request_id": "TRANSIENT-INVOKE-154130af288940919eee17c90c88b659"
+          },
+          {
+            "receipt_sha256": "2923cdaacea04a76ddb757322bd3ee7f83c30c547c066e93f93a37147d518bc1",
+            "request_id": "TRANSIENT-INVOKE-018444d69c1d4e0b9b0a832b2df366cf"
+          },
+          {
+            "receipt_sha256": "f252cefac9a48733aac9a621122fb4214fe8f64d15b5bf43f5315d571436b9c0",
+            "request_id": "TRANSIENT-INVOKE-be7cd2c992cc46deaf575634b4539d06"
+          },
+          {
+            "receipt_sha256": "85da2a1c40fa2bfc214e5059d7e567a3cf9944ff1a3e126f631fb37f95e947c1",
+            "request_id": "TRANSIENT-INVOKE-691ac58cb2d34b3aadf18a9c013b1c3d"
+          },
+          {
+            "receipt_sha256": "6393ba77acc80d27ddb137d547bd71945f359ac4d1ddf3e8635ffbf6b9f3158d",
+            "request_id": "TRANSIENT-INVOKE-ed8aa3fb1a4c4682ae34aaabf1feb748"
+          },
+          {
+            "receipt_sha256": "dd42350d7d07278a1c20d581de3d4418ca73c9f40af5ab271dc7617296e7dcb9",
+            "request_id": "TRANSIENT-INVOKE-34be89a9e19e482984b1ce30f9a68c8b"
+          },
+          {
+            "receipt_sha256": "5b55befdb9268fb877a3bbbf8d01d319726fccf74ef7a72ef4ade0f2a80ddb72",
+            "request_id": "TRANSIENT-INVOKE-6947d670826e41a5b6695c499516d7ae"
+          },
+          {
+            "receipt_sha256": "f0f4d6be767d35c91a35a58cd776ffcc0e76f77902a4208d6369eb34ca0e4a75",
+            "request_id": "TRANSIENT-INVOKE-449f145726f6403291436552dac9b7b1"
+          },
+          {
+            "receipt_sha256": "80b5e4322fb972553bb91293c13e10bfef23e3c95c80efc64f99ddd135064e1b",
+            "request_id": "TRANSIENT-INVOKE-daf3e9be7e834f68bf795b4ab049d17f"
+          }
+        ],
+        "success_fraction": 1.0,
+        "successful": 25
+      },
+      "resources_after": {
+        "agent_rss_bytes": 1046171648,
+        "cpu_count": 12,
+        "load_1m": 1.25634765625,
+        "memory_available_bytes": 28313886720
+      },
+      "resources_before": {
+        "agent_rss_bytes": 419041280,
+        "cpu_count": 12,
+        "load_1m": 1.2783203125,
+        "memory_available_bytes": 28838797312
+      },
+      "state": "PASS"
+    },
+    {
+      "agent_count": 100,
+      "completed_at_utc": "2026-10-12T23:59:05Z",
+      "independent_tenants": 100,
+      "probe": {
+        "count": 100,
+        "errors": [],
+        "p95_ms": 2331.1837901128456,
+        "p99_ms": 3564.8459400981665,
+        "request_and_receipt_bindings": [
+          {
+            "receipt_sha256": "ffaef5985c6fc3155f40686b20809dda6861b09fa59ba1475479e26e0929ed2f",
+            "request_id": "TRANSIENT-INVOKE-711557a491cf4ba9b16401a885765895"
+          },
+          {
+            "receipt_sha256": "4a194ea64a336aa5b6586b39c8b9ef1ff392ead9ca06d599aed72c2e26bc4653",
+            "request_id": "TRANSIENT-INVOKE-935820645ef6428fbdf4edb93d2b9fdb"
+          },
+          {
+            "receipt_sha256": "f6859c89efe7cf7ad6f7457b34fec2955923a940c5f1d341cb0d29a46f20d06d",
+            "request_id": "TRANSIENT-INVOKE-aca8adcb5d3a4ebfbe26a74ea7235b5b"
+          },
+          {
+            "receipt_sha256": "d2d65946d1d38522e613c96d206dd4a91c08905d72ee24728b5b8529cdbb35c9",
+            "request_id": "TRANSIENT-INVOKE-de1b8a6fdd4644c9b7afb8e5460a18b7"
+          },
+          {
+            "receipt_sha256": "912a56ae02a96e09d907fcf5403f9277f52675513ba2ec5bb2ec026b1ff63f90",
+            "request_id": "TRANSIENT-INVOKE-9237707a2dc8407c83b3aaf9c8b95019"
+          },
+          {
+            "receipt_sha256": "89789418226bb778d8faf02c2073fbe98cc873466633cfe87490366078a0c62d",
+            "request_id": "TRANSIENT-INVOKE-1e443918e2fb4e0e8c8eae1e98a640d7"
+          },
+          {
+            "receipt_sha256": "f557572c8ed798828305f845490fff12c11ed9d273d362109719d52c16683e21",
+            "request_id": "TRANSIENT-INVOKE-c9ae0358a6c54b9a80b7c85c47cfd6ab"
+          },
+          {
+            "receipt_sha256": "eb4f79f1c0ae583af5210c3e9c05a510045f5f86a0283cdc0cd70309a53fe0ac",
+            "request_id": "TRANSIENT-INVOKE-769d4d9a626a466782d07a246e16aa75"
+          },
+          {
+            "receipt_sha256": "254125f76ada41129e8d1646ffadc17cc28e2a0a5605d712825bf26f714bc8b4",
+            "request_id": "TRANSIENT-INVOKE-824140ce6c33477eb0f5bcd95f112609"
+          },
+          {
+            "receipt_sha256": "a001e352e55f3edfb65f2d614f7d6e61093815fcee5f8d6e85b958f75dd57ce6",
+            "request_id": "TRANSIENT-INVOKE-26560245618348559cb6b10eb3aacb40"
+          },
+          {
+            "receipt_sha256": "c666bb030e2244976a04ae4d961da7e1422c8fa321837e777375fdc896818f60",
+            "request_id": "TRANSIENT-INVOKE-cab8372559ff47eaa791aca90f656de0"
+          },
+          {
+            "receipt_sha256": "09a774c823e6d6632efb67e9b8c18f91aeb2dab1ed51847751149c70846900d9",
+            "request_id": "TRANSIENT-INVOKE-c9956810138f4942848f53b445adf64c"
+          },
+          {
+            "receipt_sha256": "3abcb23c502cd714fc70546c98d4c36baa5e173958da6248f6b4edde318131db",
+            "request_id": "TRANSIENT-INVOKE-55a3042018ac4622acea7a344be7be6f"
+          },
+          {
+            "receipt_sha256": "43f23385d531d881a47fd7a7dc345a312a6303373a4c9446115477ad2fcd900b",
+            "request_id": "TRANSIENT-INVOKE-7f1dc0e0f1374a6dab6648ca66d74648"
+          },
+          {
+            "receipt_sha256": "6641e85bce1d9bb721290da5133f0cda55f6746b644630e08f2ded4171c3007e",
+            "request_id": "TRANSIENT-INVOKE-e93e6697d3c14cabb67748ad0435174a"
+          },
+          {
+            "receipt_sha256": "a3e6e2afc28057b2103c3456c84e4faf55dad391e6fa35ac81f4876d0517df7d",
+            "request_id": "TRANSIENT-INVOKE-2ac6cebff93540b8bf8167a2ff66a704"
+          },
+          {
+            "receipt_sha256": "c717c68425564f73306aaadae9e7c257c20d96495560f49209ce7b22a20b09ab",
+            "request_id": "TRANSIENT-INVOKE-9e2f87295c7042019f731cafa48bd6d7"
+          },
+          {
+            "receipt_sha256": "a3ec85a36d14696aae5a5e8071f6448d90bce44b2dfe77c03f6b4cde6e0b2496",
+            "request_id": "TRANSIENT-INVOKE-144ea7e4044041bfbfd37ca59aab92bd"
+          },
+          {
+            "receipt_sha256": "525260a29fd3fe47d7a1db6eb485119782efffbd6aa9756e85bd6b788a779892",
+            "request_id": "TRANSIENT-INVOKE-5abaad78918142c68716f2a8caf2d7ed"
+          },
+          {
+            "receipt_sha256": "862422d40c0258e1768da2a1194f7cd267e8cb2ea92d97d90c8b721cc3b1fa76",
+            "request_id": "TRANSIENT-INVOKE-a3a128d3b3844569ad8707dca2255f93"
+          },
+          {
+            "receipt_sha256": "fecbe57b85038763c76857eb16aeec80e4b9cd89d3e0df0d9562c8b4ea74dbb8",
+            "request_id": "TRANSIENT-INVOKE-67e85626d0cd44cf9b492085cf55c898"
+          },
+          {
+            "receipt_sha256": "a8e82067953b48f03183dbf9196e1e16da4523333bd11018448af5e6db9f9e76",
+            "request_id": "TRANSIENT-INVOKE-44ee064f202b4038a52077109a7f8fd3"
+          },
+          {
+            "receipt_sha256": "d97777f1cf99ac956101725fd81602a078ccae833c9a36543ee6b706aa0b2f4e",
+            "request_id": "TRANSIENT-INVOKE-ef7af3db01644ca3abc5e444d138e8bc"
+          },
+          {
+            "receipt_sha256": "aafb0d3d719da355eebdd6332b6c845377600b05e273264eed702ba98abff29b",
+            "request_id": "TRANSIENT-INVOKE-c7dd8eaa98684b879d0945e4c88eab7f"
+          },
+          {
+            "receipt_sha256": "39d9161095279f6f014af56e88b6c993e4451ba0f9de4a40a74aacd1c9f79c85",
+            "request_id": "TRANSIENT-INVOKE-05dcb58b60b141178a69e1e5ebd9c31d"
+          },
+          {
+            "receipt_sha256": "bf565864a6a85d7307b4ec798fd1d2bba9b677e562b390ece538a8139f50add2",
+            "request_id": "TRANSIENT-INVOKE-839ccb23c1ac4b1685e8510f897821ad"
+          },
+          {
+            "receipt_sha256": "f7197ff9dc652201a012e184b906d3dfbb711e4a4b83276718464247fd9a9e5c",
+            "request_id": "TRANSIENT-INVOKE-58ece817b2ba4ed286926f9951b5e1ac"
+          },
+          {
+            "receipt_sha256": "b5a41590801214ee56a459cb092c115251c70705cd8c3a08d1110d69dab98686",
+            "request_id": "TRANSIENT-INVOKE-2a9c101878e64616804404d5a9ba4a95"
+          },
+          {
+            "receipt_sha256": "b80e157a75f2163c6c1a5f5c307a0f9e025eba5aee5045191354edc1ac785226",
+            "request_id": "TRANSIENT-INVOKE-dc4defdc0648421198b8db350a9c18d2"
+          },
+          {
+            "receipt_sha256": "3d24968b6d7083a92c816530f88691b8c36ccdd4addb3981a8295f8b161fe669",
+            "request_id": "TRANSIENT-INVOKE-0e1d8359de564788b6d48a9bc5e7f3aa"
+          },
+          {
+            "receipt_sha256": "d86aa402125454f59f55b0326fcbb77e57ab755885d8325b4ee4a28d3269e3ee",
+            "request_id": "TRANSIENT-INVOKE-f0fdebf1a4e042489724d740a2416a81"
+          },
+          {
+            "receipt_sha256": "836606dd20d2872fe6e1d97d0fb13d47732dcadad36d4ca772096b13fa3091d9",
+            "request_id": "TRANSIENT-INVOKE-bf6ad7b2dced45188d043d4c02fa45d0"
+          },
+          {
+            "receipt_sha256": "c29ef71d91c20dfa57c3da3b676845f6e390ccacce1994d810ae734bcf89b24c",
+            "request_id": "TRANSIENT-INVOKE-92910846e9ac42c8a36e8b87bf9a3779"
+          },
+          {
+            "receipt_sha256": "371af79da91e2ab32e113276e4d7d3b2be5508e5c7265a2470c5afdbe2da1c46",
+            "request_id": "TRANSIENT-INVOKE-0205affbb5f9426f8ab5389111e48c4e"
+          },
+          {
+            "receipt_sha256": "588d3c5777417259b823a44169ef5c2be36a7140100550817a939a4487851786",
+            "request_id": "TRANSIENT-INVOKE-f5897b9c7db24a9f9ebf6b52418b250e"
+          },
+          {
+            "receipt_sha256": "247833dd3ecaa9a39b616594aa0bf7d46acaf5a2b7352aa65d252f39f734cdb7",
+            "request_id": "TRANSIENT-INVOKE-bc42d3e026c240398a65c2fb0ceea1ca"
+          },
+          {
+            "receipt_sha256": "ae8cd7bfc454c9d10caf78947e8570fcb3fcfb15197d36edbf6fce9095c984d9",
+            "request_id": "TRANSIENT-INVOKE-b41901576e264ec68fa16b197726f0f1"
+          },
+          {
+            "receipt_sha256": "e4cb3bdbb8500daf7c2b7af79d31bbec3ba7a79528968741293d2fc7a0449777",
+            "request_id": "TRANSIENT-INVOKE-c78a943fc0ab4f2a9b625ca745e52b0c"
+          },
+          {
+            "receipt_sha256": "72ec6da8a4317a5203dd3ea253f285168aed2a1aba4180b27608d54653be4e99",
+            "request_id": "TRANSIENT-INVOKE-eaadb8c04ae14d5fb077af61db14df06"
+          },
+          {
+            "receipt_sha256": "40f38a8665058d09e8c7ad8fab8828b36a6da2d492cfa24cb3a847c9ce7aee8c",
+            "request_id": "TRANSIENT-INVOKE-53a8f684981c456092688d17318b0cf7"
+          },
+          {
+            "receipt_sha256": "f2020110859f3378c0a7ed3c187eba089bff0caff4411dc6e48154d943375ca9",
+            "request_id": "TRANSIENT-INVOKE-bb4fc30243bb41d0a27fe0a346439516"
+          },
+          {
+            "receipt_sha256": "e840184f4cd13443249d480dea4fa5110987ce9e88e791b7d9908c6422f1d323",
+            "request_id": "TRANSIENT-INVOKE-3fb595b01cd1406cbad0546e30fce738"
+          },
+          {
+            "receipt_sha256": "43a9a521a44ed5b8c84921be59f2e8c954ef402bdcb9a9bfc24ff58c1dcaf56f",
+            "request_id": "TRANSIENT-INVOKE-bdb5b261c1984d61815bf3a4944561ce"
+          },
+          {
+            "receipt_sha256": "20dc7b2819dcb535da3a142fa68ceae25f2fd58c654e9246272071aa19bc29fb",
+            "request_id": "TRANSIENT-INVOKE-86c0d78164d14c1d99b2e1afc53756e2"
+          },
+          {
+            "receipt_sha256": "277f2a1f77076a0ccc1a30e57891daebae20bdd7f2a77e056bbffc8dcbbde169",
+            "request_id": "TRANSIENT-INVOKE-cbb1725416684571841cfb779de7014c"
+          },
+          {
+            "receipt_sha256": "7e7f600e11a3d1f32a898c04fd33b368dd2b98961bc744ab6faa0486dc6717dc",
+            "request_id": "TRANSIENT-INVOKE-a4e1935fd4664a5eb739e0cb08529ced"
+          },
+          {
+            "receipt_sha256": "f5158290c6d148ca3319fed237d313096c6fbb129801059b35e9c4d521b9f386",
+            "request_id": "TRANSIENT-INVOKE-3d17a552ec184ad68949fa11ecb03ad4"
+          },
+          {
+            "receipt_sha256": "41c59f102974a5139022c8a0d6a938ea7e2704016c4aebc77e48999a9c3103a0",
+            "request_id": "TRANSIENT-INVOKE-24f64913b17e45889b7771b53e0ebbc9"
+          },
+          {
+            "receipt_sha256": "6c4114481214dd6d1618e614b956d802df3c2b0db4d69ca33aa811457b2abd03",
+            "request_id": "TRANSIENT-INVOKE-85e2cdd32fe84f1ea474903b1a3142ff"
+          },
+          {
+            "receipt_sha256": "6ee235e707c7d75fb5a598f4a83b875b17339452a21de249c6773f3e8bd9bc0f",
+            "request_id": "TRANSIENT-INVOKE-dcd470225c3a4a56a1e90795479b6513"
+          },
+          {
+            "receipt_sha256": "6ba3f5f93b04fbaa246eb5cec4cdc0a189c55f3158b5354a119e448040101b25",
+            "request_id": "TRANSIENT-INVOKE-9a58572681d2409ba8e47069eca41276"
+          },
+          {
+            "receipt_sha256": "a1f3bf28cf12afe86d5601b4ec333a07eb3da54220e4e213ec53515364221d46",
+            "request_id": "TRANSIENT-INVOKE-498952b7ed444a1fa964c11f7539fc43"
+          },
+          {
+            "receipt_sha256": "eaf54264ca57a6153a183511f4e234be2b5c3f710fb9ddf76e97351985cefcdb",
+            "request_id": "TRANSIENT-INVOKE-0727b632bc8f4afd89dcf01ed865a9e3"
+          },
+          {
+            "receipt_sha256": "1bfeb9e4f027206762d8436456cdbad65ab77770f6b2c09e7659a8d304eb12bb",
+            "request_id": "TRANSIENT-INVOKE-e83bdbbe7e4a44f08d106324bd79e9c8"
+          },
+          {
+            "receipt_sha256": "13ce4712aa663d401bbd5895cab4c94201805e24cef8789c9d5351eca1452fb5",
+            "request_id": "TRANSIENT-INVOKE-700e6e8386b84b8aa440a90f57f7e915"
+          },
+          {
+            "receipt_sha256": "5c2df2354fb831cfedb7ea307fb0fe81da004addaa9d1da4102197b2765e1790",
+            "request_id": "TRANSIENT-INVOKE-9ea22275466c4388b032d91e5e8a193e"
+          },
+          {
+            "receipt_sha256": "1e27c95bd456cd52d71a1d6e0e113adfe2fbfd16162c3585d5b352603df9b156",
+            "request_id": "TRANSIENT-INVOKE-fe272fc5e1004e8e93077b873c874946"
+          },
+          {
+            "receipt_sha256": "95b27a83a2b866240170ffacedfa3bf11e423870331a9a8346dcebed14044303",
+            "request_id": "TRANSIENT-INVOKE-cb55c31ecb18491cb687f2930732d698"
+          },
+          {
+            "receipt_sha256": "4969a37214dead073fdfe65a6544b0f0d26a6ee4e0be2565a382c91bfecddfd5",
+            "request_id": "TRANSIENT-INVOKE-9dbc733e431043fdaf26ebdc55331f52"
+          },
+          {
+            "receipt_sha256": "d8f9c31722f61ba20384f7619bacb64e39c04fc4e86ea27fc278fc24d6c25e86",
+            "request_id": "TRANSIENT-INVOKE-75fe629cb5a846e2b448ebc8250428d5"
+          },
+          {
+            "receipt_sha256": "6d9793953ee7759aa1cf138184482e3b9e71a30f88a92f3bbc2d1cbc50a38712",
+            "request_id": "TRANSIENT-INVOKE-07a92ec05fd74e788413688ac0a15977"
+          },
+          {
+            "receipt_sha256": "19697c9d357159bec881ecc20b630512f9e37af4419223f7ccff5cd9ac9d915f",
+            "request_id": "TRANSIENT-INVOKE-65ab7820a1bc4d9aa5e1cd40ec0d5a0d"
+          },
+          {
+            "receipt_sha256": "c9ba7c21fc221732daf96a91d72d46eae5c7095093698dcd474dfdc4a3b68b3d",
+            "request_id": "TRANSIENT-INVOKE-abfb4b6e84c446bd9de1a41b8939d18f"
+          },
+          {
+            "receipt_sha256": "11253e8c2dd34484848fb07fbe0d6b86eb83d3ad64ee38ceff64536907d60aae",
+            "request_id": "TRANSIENT-INVOKE-6b43903824ec4e828277a1ba9b7b9499"
+          },
+          {
+            "receipt_sha256": "567e27e23311525323191df8c2a71d59cf0a2ff4e8c89480ab2e8f2cb8d8f45e",
+            "request_id": "TRANSIENT-INVOKE-47f4ed554c464733ba5ed64a1e1f143f"
+          },
+          {
+            "receipt_sha256": "e067d8263386bce820738be0207be3bf1df1af030890221b61085fe34a71871e",
+            "request_id": "TRANSIENT-INVOKE-937f108fda4c4be2977162c9535314bc"
+          },
+          {
+            "receipt_sha256": "eee4a1fd9e102f93f5a06da4b0eccb53e011cfa556bf877aa887fdb4c7c4539b",
+            "request_id": "TRANSIENT-INVOKE-4586c0baf8f341708f777a19cab67bcc"
+          },
+          {
+            "receipt_sha256": "fe3d6e2b5ab174e5606bcdded5e1ecdca27dd1f13307552b2832299c713450c2",
+            "request_id": "TRANSIENT-INVOKE-82363748096a45fdb705894a469f7c45"
+          },
+          {
+            "receipt_sha256": "9e91df09bcdafcfda680a99b4a20d12c961d2a8df6f5d5ba3176d81c78518e4c",
+            "request_id": "TRANSIENT-INVOKE-d0064da4098c452099199e2b143efbc4"
+          },
+          {
+            "receipt_sha256": "802c5b9e7e68824042e9926ce194a4e5614e69cd06bb8c577fef8bece3fb9803",
+            "request_id": "TRANSIENT-INVOKE-39b53ec761d146a998453aa6dcee31bc"
+          },
+          {
+            "receipt_sha256": "44e9e7609c8078cf72c13ac8e02512026dbeabad4d4263c78ca5a61c3ed70549",
+            "request_id": "TRANSIENT-INVOKE-e69c94b727cc488e87e15d09745c8de5"
+          },
+          {
+            "receipt_sha256": "4c4bfb26e95a51fb73d8cc4bc5e8f4cc2b67e85b8b25373ebf138a3a741ef822",
+            "request_id": "TRANSIENT-INVOKE-5adc4df839c14e938365948ee42f34e0"
+          },
+          {
+            "receipt_sha256": "0a938e89fa447aee9ef4d74a1d3151ab4a9290f7c288c2fa9b22a1dd385daa09",
+            "request_id": "TRANSIENT-INVOKE-fa120f383ccb4125ad443e249614593c"
+          },
+          {
+            "receipt_sha256": "14edcb8ca2dff4121e505ec3d3f1681b2919b5ae76acf0d378b9a2f0355a8161",
+            "request_id": "TRANSIENT-INVOKE-0231a7772ec3494db96c7488f8638aae"
+          },
+          {
+            "receipt_sha256": "a2801543401057c46d75e96ac3f8a313c87fee45c7fc9195b8d63454e599a628",
+            "request_id": "TRANSIENT-INVOKE-79cb386871fb43698c3185a2c7fcd6d2"
+          },
+          {
+            "receipt_sha256": "c1131e66149f7feabc9bcb2f620ea2b310abaa847ef20db25cdbc217614c57f9",
+            "request_id": "TRANSIENT-INVOKE-d8581b42cbdb43aaa382c159549dce21"
+          },
+          {
+            "receipt_sha256": "1977d5e1cb618d1b1c2c2eae44b3b9bc4ce1fe5aa16466213d288b11bc7c499b",
+            "request_id": "TRANSIENT-INVOKE-24de7460fc764e87bd29d98c95a5a7cc"
+          },
+          {
+            "receipt_sha256": "aa57b7ffefe4f83aadfa8048f9e2a3416f129e13966dffa8bc31e7c3d4e840cd",
+            "request_id": "TRANSIENT-INVOKE-3b9b9239d9c34aebbb2514d8ceed4f16"
+          },
+          {
+            "receipt_sha256": "4dbbc0620bdbeecdcb0d14a7df3864bee2f0e476880de2a34bd62157a081e249",
+            "request_id": "TRANSIENT-INVOKE-e44d096659554ae68ab19127dbcde5cd"
+          },
+          {
+            "receipt_sha256": "fefec461b3bc00b933f9d5d7cb79f6d63f72b2646dd7cc1728d35cf4550651f1",
+            "request_id": "TRANSIENT-INVOKE-1cd0bed9d2204021aa3b4341181814f7"
+          },
+          {
+            "receipt_sha256": "008fa776b352b0d34a0b0c2ecffe66437d4453e4603a25d965fee617fe4b7732",
+            "request_id": "TRANSIENT-INVOKE-9e70ba1061b841b79effc50bfdc2fef3"
+          },
+          {
+            "receipt_sha256": "2b4107d2e1b50a73665fd6b9c1c94920bdf71072d72df5125136da855336115b",
+            "request_id": "TRANSIENT-INVOKE-d0c220714f7e4adeb76af10efd2b089d"
+          },
+          {
+            "receipt_sha256": "c2a88066639ebb2b4505c9746eb99bbc4b3136b04e802f679fa6a8110930e3d9",
+            "request_id": "TRANSIENT-INVOKE-1e34b6721f9644fea751a7c904d98acb"
+          },
+          {
+            "receipt_sha256": "da8f086b53fe344de79e0d51c3e2e9a8a10e011191a0201919f5450805c904ad",
+            "request_id": "TRANSIENT-INVOKE-ee0b581b3d53416988a163e3d875a59e"
+          },
+          {
+            "receipt_sha256": "8a8a99fb1131a1b3217fa7fc089f357f2db6eaaf697c48691bae54b495d87e33",
+            "request_id": "TRANSIENT-INVOKE-48edb3ca233344acb857d642bb16c41b"
+          },
+          {
+            "receipt_sha256": "85a34d7217f25652bf18c6ebec5499c328e67ea9938b121ae0850524d51ab2ff",
+            "request_id": "TRANSIENT-INVOKE-b4b15fb476f34bc3ad2304642f2c5e79"
+          },
+          {
+            "receipt_sha256": "7fd37fdea0a94b7225f8e72212fed34a3ce454dac1f79728452a8db3ae720d48",
+            "request_id": "TRANSIENT-INVOKE-3b2693d36c7f46c6ba17371064d68df7"
+          },
+          {
+            "receipt_sha256": "148842245d9fbb5629bc2eae91a5693eb14e77cc7f5ef44f530549702530412b",
+            "request_id": "TRANSIENT-INVOKE-a82eec22dc48435c92a787f45789d34b"
+          },
+          {
+            "receipt_sha256": "7eac706e06ee2b0b14830e2c139f726bfa7c6ce9d43f544541dbb3a3f7e9b31e",
+            "request_id": "TRANSIENT-INVOKE-e9000e3ee9a242638485a786c206d32c"
+          },
+          {
+            "receipt_sha256": "37755ba44a71a9859a065b38c42f9c7c95dd45518461eef15558f3af13d2a0db",
+            "request_id": "TRANSIENT-INVOKE-422d6a53ee774f83a483ff10110fc429"
+          },
+          {
+            "receipt_sha256": "910c39034dab17b0e3b7fd6c9d636c692ff3c780c8abb7621766e91383d6a0c9",
+            "request_id": "TRANSIENT-INVOKE-79460b876c4d4bf8b603d7bd92a393ab"
+          },
+          {
+            "receipt_sha256": "f3dc1d12ea494f7e1abccf7cce877f6c9588fe3e120fac27ce1769f139b773b7",
+            "request_id": "TRANSIENT-INVOKE-da014f2495c540cd95395e8d3aab61ed"
+          },
+          {
+            "receipt_sha256": "ddd5ffd4e26020990d84e6c2552842db6174e3bf0be6e24eab84414b532f0780",
+            "request_id": "TRANSIENT-INVOKE-14737cc2433c4a919d18d83a3b0d4a56"
+          },
+          {
+            "receipt_sha256": "f6f0b2e8756e11dcd34b306ec7c610f4ab66096fe2d00bfdeb24804f7e53f115",
+            "request_id": "TRANSIENT-INVOKE-4f58ae3d99864a7ba638b09914465e5d"
+          },
+          {
+            "receipt_sha256": "31fd8c7dec2de5426291282aee6cd196edff059957ea60d884ec63333f351c17",
+            "request_id": "TRANSIENT-INVOKE-9a51cff51c9e40b9b9c5ad6f56eae171"
+          },
+          {
+            "receipt_sha256": "ff4cd9c791fbe5b6b35850b6ebd5bf84d1c5c6aefa3b73a8848f5e8ef906b71e",
+            "request_id": "TRANSIENT-INVOKE-96d10a5cd53746928c36846801082a19"
+          },
+          {
+            "receipt_sha256": "31a83c94a3968fb3162ce167bb4dcd0e37c8f921395fe66413c7b39128e344d4",
+            "request_id": "TRANSIENT-INVOKE-7d86427e76be4ca8ad846f38e20fe46b"
+          },
+          {
+            "receipt_sha256": "471a0a42e50e6155fdf756d7e50a5bad683767f06734ba3a57892e7feb944969",
+            "request_id": "TRANSIENT-INVOKE-d42225406d77477081bfd6b9072be6cd"
+          },
+          {
+            "receipt_sha256": "7f5c0d728d3d5b5c4ad02bee72b53ebb1b9916168ff0f58bc29a0baaa214426a",
+            "request_id": "TRANSIENT-INVOKE-3f13ab95647445b982805336fe0bc139"
+          },
+          {
+            "receipt_sha256": "bbeacb39ceb2d73b265c9824b9be854c23b2b45d4539fde02ce3cbb5c7a1f93a",
+            "request_id": "TRANSIENT-INVOKE-49f008c93a564186bf603bdcbfa92f47"
+          }
+        ],
+        "success_fraction": 1.0,
+        "successful": 100
+      },
+      "resources_after": {
+        "agent_rss_bytes": 4183265280,
+        "cpu_count": 12,
+        "load_1m": 1.19482421875,
+        "memory_available_bytes": 26301067264
+      },
+      "resources_before": {
+        "agent_rss_bytes": 1046171648,
+        "cpu_count": 12,
+        "load_1m": 1.31591796875,
+        "memory_available_bytes": 28399276032
+      },
+      "state": "PASS"
+    }
+  ],
+  "started_at_utc": "2026-10-12T23:55:39Z",
+  "state": "FAIL",
+  "twenty_four_hours_passed": false,
+  "updated_at_utc": "2026-10-13T00:03:31Z"
+}

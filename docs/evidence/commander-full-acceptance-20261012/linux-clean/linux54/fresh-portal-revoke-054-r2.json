@@ -1,0 +1,10 @@
+{
+  "schema": "hara.commander-linux054-normal-portal-revocation.v1",
+  "device_id": "HARA-DEVICE-0a164dbf-f497-4e5f-9194-447e6285cac5",
+  "http": 200,
+  "portal_fixture_session_scope": "seeded_QA_2h; not_OAuth_proof",
+  "secret_material_exposed": false,
+  "own_new_qa_tenant_guard": true,
+  "state": "PASS",
+  "revoked_at_utc": "2026-10-13T04:18:07.326Z"
+}

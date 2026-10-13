@@ -1,0 +1,96 @@
+{
+  "exit_code": 0,
+  "guest_pid": 6960,
+  "not_full_install_proof": true,
+  "output_truncated": false,
+  "raw_logs_private": true,
+  "result": {
+    "agent_sha256": "f67ebcee909ee2ce93187262c951b57b38bc976fec73413bd30555d9bcf62299",
+    "agent_transport_started": false,
+    "cases": [
+      {
+        "name": "installer_immutable",
+        "pass": true
+      },
+      {
+        "name": "agent_immutable",
+        "pass": true
+      },
+      {
+        "name": "installer_parser",
+        "pass": true
+      },
+      {
+        "name": "key_ReleaseSigningKid_single",
+        "pass": true
+      },
+      {
+        "name": "key_ReleaseSigningN_single",
+        "pass": true
+      },
+      {
+        "name": "key_ReleaseSigningE_single",
+        "pass": true
+      },
+      {
+        "name": "function_Convert-Base64UrlBytes_single",
+        "pass": true
+      },
+      {
+        "name": "function_Assert-ReleaseManifestSignature_single",
+        "pass": true
+      },
+      {
+        "name": "function_Assert-AgentSelfTest_single",
+        "pass": true
+      },
+      {
+        "name": "signed_manifest_positive",
+        "pass": true
+      },
+      {
+        "name": "manifest_byte_tamper_rejected",
+        "pass": true
+      },
+      {
+        "name": "wrong_key_id_rejected",
+        "pass": true
+      },
+      {
+        "name": "wrong_manifest_digest_rejected",
+        "pass": true
+      },
+      {
+        "name": "invalid_signature_rejected",
+        "pass": true
+      },
+      {
+        "name": "actual_agent_selftest_isolated",
+        "pass": true
+      },
+      {
+        "name": "no_device_enrollment",
+        "pass": true
+      }
+    ],
+    "checks": 16,
+    "founder_config_read": false,
+    "installer_sha256": "dd92242225cf518e104f8f574aa9f661e6e3c9647f2cdce2afdb6ba88d0d9710",
+    "main_task_modified": false,
+    "real_powershell_version": "5.1.26100.9444",
+    "schema": "hara.windows-clean-native-crypto.v1",
+    "scope": "REAL_SIGNED_CODE_NATIVE_FIXTURE_NOT_EXTERNAL_CLEAN_INSTALL",
+    "secrets_printed": false,
+    "secure_readhost_fixture_timed_out": true,
+    "secure_readhost_redirect_supported": false,
+    "state": "PASS"
+  },
+  "state": "EXITED",
+  "stderr_present": false,
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout_sha256": "48314ac13c3984d71c30ac5eeb20a9eaf20913fbad606d78cec28d3578cfba5c",
+  "tested_manifest_sha256": "d8f6d0165253b13a5efcade628564900f41dfbeacf4a062f61439486fb1ad395",
+  "tested_signature_sha256": "837b54872b2071b96795fc159de1a8944ea837f4f4b9adfde15427b787fdc8a3",
+  "tested_signed_stage": "0.3.53-r2",
+  "vm": "hara-win51-clean-20261012-r1"
+}

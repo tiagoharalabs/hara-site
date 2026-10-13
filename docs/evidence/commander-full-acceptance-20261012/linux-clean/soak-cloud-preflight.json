@@ -1,0 +1,34 @@
+{
+  "schema": "hara.linux-real-cloud-probe-preflight.v1",
+  "device_id": "HARA-DEVICE-962202bc-274a-486b-9794-b73d9f3a5889",
+  "enqueue_http": 201,
+  "enqueue_code": null,
+  "call_id": "HARA-CALL-a5c5597f-d0f6-48f3-98f7-06bc0fedefb9",
+  "usage_mode": "CLOUD_QUOTA",
+  "usage_units": 1,
+  "tool": "hara.device.info",
+  "secrets_printed": false,
+  "status_http": 200,
+  "terminal_state": "COMPLETED",
+  "error_code": null,
+  "proof_state": "PASS",
+  "receipt_sha256": "aa96e054a24cdfa934911fea2c1d3c7e06094b781e7720af35f9eea96f0ef178",
+  "proof_fields": [
+    "blocker",
+    "bridge_receipt_sha256",
+    "mutation_performed",
+    "operational_authority",
+    "result",
+    "runtime_authority_from_chatgpt",
+    "state"
+  ],
+  "result_fields": [
+    "domain_success_inferred",
+    "function_id",
+    "process_exit_code",
+    "risk_class",
+    "stdout"
+  ],
+  "status_device_id": "HARA-DEVICE-962202bc-274a-486b-9794-b73d9f3a5889",
+  "state": "PASS"
+}

@@ -1,0 +1,15 @@
+{
+  "existing_identity_ids_preserved": true,
+  "fix": "Use full case-preserved fingerprint for new entitlement identifiers.",
+  "original_evidence_sha256": "d0724fa98afcf34ce8f4e512da614280d0893a45d18d4f7432533febbe4a2c19",
+  "production_fixed_version": "70564d5b-bf87-42dd-837e-717d3615ecad",
+  "raw_subjects_and_hash_cases_included": false,
+  "schema": "hara.entitlement-defensive-offline-summary.v1",
+  "scope": "SYNTHETIC_OFFLINE",
+  "state": "DEFECT_FIXED",
+  "validation": {
+    "prod_dev_active_users_missing_current_entitlement": 0,
+    "sqlite_checks": 43,
+    "two_independent_tenants_and_idempotency": "PASS"
+  }
+}

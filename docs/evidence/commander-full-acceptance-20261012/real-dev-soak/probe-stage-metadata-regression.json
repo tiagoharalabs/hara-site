@@ -1,0 +1,36 @@
+{
+  "schema": "hara.commander-probe-stage-metadata-regression.v1",
+  "state": "PASS",
+  "scope": "OFFLINE_NO_NETWORK",
+  "at_utc": "2026-10-13T03:44:35+00:00",
+  "checks": 24,
+  "original_checks": 8,
+  "additional_checks": 16,
+  "stage_wrappers_tested": [
+    "HEALTH",
+    "INVOKE_FIRST",
+    "INVOKE_REPLAY"
+  ],
+  "unchanged_contracts": {
+    "error_code_prefixes": true,
+    "http_status_and_response_contract": true,
+    "attempt_count_no_retry": true
+  },
+  "raw_headers_payloads_exported": false,
+  "arbitrary_wrapper_metadata_revalidated": true,
+  "source_sha256": {
+    "probe_before": "c58c6c8c0f3191c831fb398aa069ec32a401af7cba57794850953d99f9bdb5d6",
+    "probe_after": "33fb67958def9ab03856437705302a7f41be042f109afa81b11567152977fadc",
+    "test_before": "5a64b3291353e5109c43eac510ab5693405a6c7f44e3933c9e5d6417c7863c84",
+    "test_after": "ee7d8e843b827da8301928ddabf800b775050b53c992ce5c36433a5cf742f553"
+  },
+  "test_command": "python3 -B apps/commander/scripts/test_probe_error_metadata.py",
+  "test_output": {
+    "state": "PASS",
+    "checks": 24,
+    "scope": "OFFLINE_NO_NETWORK",
+    "raw_headers_payloads_exported": false
+  },
+  "dev_or_prod_deployment_performed": false,
+  "original_backend_500_cause_resolved": false
+}

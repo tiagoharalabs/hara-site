@@ -1,0 +1,33 @@
+{
+  "schema": "hara.commander-linux053-planned-dev-cutover-observation.v1",
+  "state": "RECORDED_WITH_ONE_PROBE_METADATA_FAILURE",
+  "planned": true,
+  "old_backend_version_id": "97471c0a-b739-4906-90aa-41384a8a1cb1",
+  "new_backend_version_id": "6f6e68e3-0777-4fb3-820d-a288ca5f7fab",
+  "new_backend_deployment_at_utc": "2026-10-13T03:40:32Z",
+  "new_public_readback_at_utc": "2026-10-13T03:41:59.444430+00:00",
+  "public_readback_evidence": "../full-054/dev-readback-r2.json",
+  "device_id": "HARA-DEVICE-962202bc-274a-486b-9794-b73d9f3a5889",
+  "retained_agent_version": "0.3.53",
+  "retained_agent_sha256": "db91714140b63684917e46d6a327778183a5829dbf2b298098b31da4d463985e",
+  "agent_source_or_session_or_identity_modified": false,
+  "before_probe": {
+    "application_count": 28,
+    "success_count": 28,
+    "failure_count": 0,
+    "last_observed_at_utc": "2026-10-13T03:32:33Z"
+  },
+  "after_probe": {
+    "application_count": 29,
+    "success_count": 28,
+    "failure_count": 1,
+    "last_observed_at_utc": "2026-10-13T03:42:24Z",
+    "error_code": "QA_QUOTA_CALL_METADATA_INVALID",
+    "identity_failures": 0,
+    "receipt_failures": 0
+  },
+  "interpretation": "Temporal correlation with planned cutover; causality pending DEV owner audit. Enqueue returned 200/201 and call_id, quota metadata check failed before status/receipt polling; application29 execution result unknown to this probe.",
+  "probe_counter_or_history_reset": false,
+  "soak_loop_still_running": true,
+  "content_or_secret_material_retained": false
+}

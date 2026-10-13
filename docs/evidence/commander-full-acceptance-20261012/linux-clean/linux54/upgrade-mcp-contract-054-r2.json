@@ -1,0 +1,64 @@
+{
+  "schema": "hara.commander-linux-clean54-native-mcp.v1",
+  "backend": "installed_public_product_MCP_LOCAL_STDIO_with_real_DEV_enrollment",
+  "systemctl_backend": "real",
+  "cli_entrypoint": "/home/commanderqa/.local/bin/hara commander",
+  "human_ASK_response_generated": false,
+  "authorization": "explicit_QA_SESSION_TRUSTED_until_own_CLI_close",
+  "managed_max_lines_contract": "requested_20_initial_then_100_retained_numbered_lines",
+  "checks": [
+    {
+      "check": "public-default-ASK-get",
+      "state": "PASS"
+    },
+    {
+      "check": "public-approval-mode-session-set-and-get",
+      "state": "PASS"
+    },
+    {
+      "check": "public-CLI-bounded-QA-session-identity",
+      "state": "PASS",
+      "owner_pid": 2932,
+      "owner_start_marker": "243013"
+    },
+    {
+      "check": "MCP-operation-receipt-PASS",
+      "state": "PASS"
+    },
+    {
+      "check": "MCP-operation-receipt-PASS",
+      "state": "PASS"
+    },
+    {
+      "check": "session-authorization-source",
+      "state": "PASS"
+    },
+    {
+      "check": "MCP-operation-receipt-PASS",
+      "state": "PASS"
+    },
+    {
+      "check": "Unicode-write-read-exact",
+      "state": "PASS"
+    },
+    {
+      "check": "MCP-operation-receipt-PASS",
+      "state": "PASS"
+    }
+  ],
+  "receipt_sha256": [
+    "5ce1bd1f003d1b6290af97e980bf169b1350eb0e06dc2da3841c9095ec6553b2",
+    "fb4a99c55dab41ac0073b56e03080c778d1b7ba4406335bd8a8ebfea4610b4c1",
+    "43c9e6ac5f84ea0cacbf33c6187125c3efc5d4605a38899888f9cadb2b4433ef",
+    "64d59795acc5d90528683f404743689638cad37234a5f854480e02966fa67ea4"
+  ],
+  "state": "FAIL_NATIVE_LINUX_MCP_54",
+  "error_type": "RuntimeError",
+  "error_code": "NATIVE_MCP_PHASE_FAILED",
+  "qa_policy_restored_ASK_and_session_closed": true,
+  "governed_transport": "H.A.R.A. Commander DIRECT -> Services -> SSH nucleo-a -> exclusive real Linux54 QA",
+  "new_qa_vm_uuid": "f1fc631b-9442-468a-82dc-e99d021ea8f5",
+  "runner_sha256": "e8bc5ecc9fb634a9496737420c056ba0c50a15da07f26b699165d11bc06f3445",
+  "release_agent_pin": "62e1a836ef92fc8b72638fd116a6f0097fcf9e9f0ef0f4259ca8e0f6712b4229",
+  "release_installer_pin": "d2057adfff5c2b475d1520ae44f1ed76a7ec0ecc673f65cf08631d7a0083d0fa"
+}

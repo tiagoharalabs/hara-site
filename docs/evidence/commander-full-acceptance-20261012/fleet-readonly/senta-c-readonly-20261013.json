@@ -1,0 +1,297 @@
+{
+  "schema": "hara.fleet-readonly-diagnostic.v1",
+  "created_at_utc": "2026-10-13T05:55:31.175Z",
+  "scope": "READ_ONLY_METADATA_NO_PRODUCT_RESTART_OR_POLICY_CHANGE",
+  "historical_phase": {
+    "observed_at_utc": "2026-10-13T05:43:43.357Z",
+    "entry_computer": "nucleo-a",
+    "entry_uid": 1000,
+    "ssh_options": {
+      "StrictHostKeyChecking": "yes",
+      "BatchMode": "yes",
+      "ConnectTimeout": 8
+    },
+    "targets": [
+      {
+        "computer": "sentinela-a",
+        "configured_hostname": "192.168.10.21",
+        "configured_user": "sartorius",
+        "port": 22,
+        "known_host_alias_record": false,
+        "known_host_address_record": false,
+        "ssh_exit": 255,
+        "remote_command_executed": false
+      },
+      {
+        "computer": "sentinela-c",
+        "configured_hostname": "192.168.10.24",
+        "configured_user": "sartorius",
+        "port": 22,
+        "known_host_alias_record": false,
+        "known_host_address_record": false,
+        "ssh_exit": 255,
+        "remote_command_executed": false
+      }
+    ],
+    "registry": [
+      {
+        "device_id": "HARA-DEVICE-11bbcaed-a0d5-4540-9d5a-40b84f1bdf74",
+        "computer": "sentinela-c",
+        "platform": "LINUX",
+        "architecture": "x86_64",
+        "agent_version": "0.3.46",
+        "state": "OFFLINE",
+        "last_seen_at_utc": "2026-10-12T20:28:54.140Z"
+      },
+      {
+        "device_id": "HARA-DEVICE-1cb60bbf-5c30-43ab-8e05-5b414b190749",
+        "computer": "sentinela-a",
+        "platform": "LINUX",
+        "architecture": "x86_64",
+        "agent_version": "0.3.46",
+        "state": "ONLINE",
+        "last_seen_at_utc": "2026-10-13T05:32:47.283Z"
+      }
+    ],
+    "reason": "HOST_KEY_NOT_ESTABLISHED",
+    "host_keys_accepted": false
+  },
+  "final_direct_phase": {
+    "sentinela_a": {
+      "observed_at_utc": "2026-10-13T05:51:15.594988+00:00",
+      "identity": {
+        "agent_version": "0.3.46",
+        "approval_mode": "PERSISTENT_TRUSTED",
+        "architecture": "x86_64",
+        "device_id": "HARA-DEVICE-1cb60bbf-5c30-43ab-8e05-5b414b190749",
+        "hostname": "sentinela-a",
+        "platform": "LINUX",
+        "platform_release": "7.1.1-76070101-generic",
+        "python_version": "3.10.12",
+        "tunnel_mode": "EVENT_V2"
+      },
+      "profile": {
+        "uid": 1000,
+        "euid": 1000,
+        "home": "/home/sartorius"
+      },
+      "units": {
+        "hara-commander-agent-v2.service": {
+          "ActiveState": "active",
+          "FragmentPath": "/home/sartorius/.config/systemd/user/hara-commander-agent-v2.service",
+          "LoadState": "loaded",
+          "MainPID": "1140",
+          "SubState": "running",
+          "UnitFileState": "enabled",
+          "agent_sources": [
+            {
+              "agent_version": null,
+              "path": "/home/sartorius/.local/share/hara-commander/releases/0.3.46-fleet-event-v2/candidate/linux_founder_event_v2.py",
+              "sha256": "9e23376bc8c6d78b6868590f21b9cc954c52d3748ebdcde114faafbeea2bb6c5"
+            }
+          ],
+          "process_uid": 1000,
+          "start_marker": "1175"
+        },
+        "hara-commander-agent.service": {
+          "ActiveState": "inactive",
+          "FragmentPath": "/home/sartorius/.config/systemd/user/hara-commander-agent.service",
+          "LoadState": "loaded",
+          "MainPID": "0",
+          "SubState": "dead",
+          "UnitFileState": "disabled"
+        }
+      },
+      "config_metadata": {
+        "HARA_COMMANDER_APPROVAL_MODE": "PERSISTENT_TRUSTED",
+        "HARA_COMMANDER_URL": "https://commander.haralabs.com.br",
+        "HARA_DEVICE_ID": "HARA-DEVICE-1cb60bbf-5c30-43ab-8e05-5b414b190749"
+      },
+      "config_sha256": "c0de8c9663711001ba08dbb962e298b3e9020257ea6b27aa925d407690c6ffd2",
+      "runtime": {
+        "event-v2-status.json": {
+          "connected": true,
+          "connected_at_utc": "2026-10-13T05:50:05.064244+00:00",
+          "disconnected_at_utc": "2026-10-13T05:49:58.005846+00:00",
+          "last_error_code": null,
+          "transport_mode": "EVENT_V2",
+          "updated_at_utc": "2026-10-13T05:50:05.064680+00:00"
+        },
+        "runtime-status.json": {
+          "agent_version": "0.3.46",
+          "last_runtime_error_at_utc": "2026-10-13T05:49:58.005672+00:00",
+          "last_runtime_error_code": "EVENT_V2_SOCKET_CLOSED",
+          "last_successful_heartbeat_at_utc": "2026-10-10T03:54:01.738433+00:00",
+          "started_at_utc": "2026-10-09T20:48:56.516268+00:00",
+          "updated_at_utc": "2026-10-13T05:49:58.005722+00:00"
+        }
+      },
+      "operator_session": {
+        "exists": false
+      },
+      "cli": {
+        "--version": {
+          "exit": 0,
+          "metadata": {},
+          "raw_output_retained": false,
+          "versions": [
+            "0.3.41"
+          ]
+        },
+        "approval-mode": {
+          "exit": 0,
+          "metadata": {
+            "HARA_COMMANDER_APPROVAL_MODE": "PERSISTENT_TRUSTED"
+          },
+          "raw_output_retained": false,
+          "versions": []
+        },
+        "status": {
+          "exit": 0,
+          "metadata": {
+            "HARA_COMMANDER_SESSION": "INACTIVE",
+            "SECRET_MATERIAL_EXPOSED": "FALSE"
+          },
+          "raw_output_retained": false,
+          "versions": []
+        }
+      },
+      "wrapper_sha256": "f2e30d042dd00e894c5916afb81ed193ff46f0949bd048a98c3c51722e42acaf",
+      "legacy_cli_source": {
+        "bytes": 163048,
+        "path": "/home/sartorius/.local/share/hara-commander/hara-commander-agent",
+        "sha256": "e1f44e4695266717c6585f8d0de1e664d99123e36e75b152e136a4428f7b2730"
+      },
+      "legacy_session_max_seconds": 43200
+    },
+    "sentinela_c": {
+      "observed_at_utc": "2026-10-13T05:53:46.292091+00:00",
+      "identity": {
+        "agent_version": "0.3.46",
+        "approval_mode": "PERSISTENT_TRUSTED",
+        "architecture": "x86_64",
+        "device_id": "HARA-DEVICE-11bbcaed-a0d5-4540-9d5a-40b84f1bdf74",
+        "hostname": "sentinela-c",
+        "platform": "LINUX",
+        "platform_release": "7.1.1-76070101-generic",
+        "python_version": "3.10.12",
+        "tunnel_mode": "EVENT_V2"
+      },
+      "profile": {
+        "uid": 1000,
+        "euid": 1000,
+        "home": "/home/sartorius"
+      },
+      "units": {
+        "hara-commander-agent-v2.service": {
+          "ActiveState": "active",
+          "LoadState": "loaded",
+          "MainPID": "987",
+          "SubState": "running",
+          "UnitFileState": "enabled",
+          "agent_sources": [
+            {
+              "path": "/home/sartorius/.local/share/hara-commander/releases/0.3.46-fleet-event-v2/candidate/linux_founder_event_v2.py",
+              "sha256": "08928943fa1b0e90dd5a8e5f6fbb4bb8cb9c9516db600678333d921f466c8701"
+            }
+          ],
+          "process_uid": 1000,
+          "start_marker": "1169"
+        },
+        "hara-commander-agent.service": {
+          "ActiveState": "inactive",
+          "LoadState": "loaded",
+          "MainPID": "0",
+          "SubState": "dead",
+          "UnitFileState": "disabled"
+        }
+      },
+      "config_metadata": {
+        "HARA_COMMANDER_APPROVAL_MODE": "PERSISTENT_TRUSTED",
+        "HARA_COMMANDER_URL": "https://commander.haralabs.com.br",
+        "HARA_DEVICE_ID": "HARA-DEVICE-11bbcaed-a0d5-4540-9d5a-40b84f1bdf74"
+      },
+      "config_sha256": "0c987b13f302f8b4e86db0a083a5009f93bc7bec21f467c749822b6c1e7ead91",
+      "runtime": {
+        "event-v2-status.json": {
+          "connected": true,
+          "connected_at_utc": "2026-10-13T05:49:25.249427+00:00",
+          "disconnected_at_utc": "2026-10-13T05:49:15.326495+00:00",
+          "last_error_code": null,
+          "transport_mode": "EVENT_V2",
+          "updated_at_utc": "2026-10-13T05:49:25.249555+00:00"
+        },
+        "runtime-status.json": {
+          "agent_version": "0.3.46",
+          "last_runtime_error_at_utc": "2026-10-13T05:49:15.326273+00:00",
+          "last_runtime_error_code": "EVENT_V2_SOCKET_CLOSED",
+          "last_successful_heartbeat_at_utc": "2026-10-10T03:45:55.499986+00:00",
+          "started_at_utc": "2026-10-09T20:48:13.522770+00:00",
+          "updated_at_utc": "2026-10-13T05:49:15.326334+00:00"
+        }
+      },
+      "operator_session": {
+        "exists": false
+      },
+      "cli": {
+        "--version": {
+          "exit": 0,
+          "metadata": {},
+          "versions": [
+            "0.3.41"
+          ]
+        },
+        "approval-mode": {
+          "exit": 0,
+          "metadata": {
+            "HARA_COMMANDER_APPROVAL_MODE": "PERSISTENT_TRUSTED"
+          },
+          "versions": []
+        },
+        "status": {
+          "exit": 0,
+          "metadata": {
+            "HARA_COMMANDER_SESSION": "INACTIVE",
+            "SECRET_MATERIAL_EXPOSED": "FALSE"
+          },
+          "versions": []
+        }
+      },
+      "wrapper_sha256": "f2e30d042dd00e894c5916afb81ed193ff46f0949bd048a98c3c51722e42acaf",
+      "legacy_cli_source": {
+        "path": "/home/sartorius/.local/share/hara-commander/hara-commander-agent",
+        "sha256": "e1f44e4695266717c6585f8d0de1e664d99123e36e75b152e136a4428f7b2730"
+      },
+      "legacy_session_max_seconds": 43200
+    }
+  },
+  "findings": {
+    "normal_cli_available": true,
+    "normal_cli_version": "0.3.41",
+    "connected_agent_version": "0.3.46",
+    "normal_status_reports_session_not_daemon_health": true,
+    "both_session_files_absent": true,
+    "both_event_v2_connected_at_observation": true,
+    "offline_root_cause_confirmed": false,
+    "active_candidate_hashes_differ": true,
+    "active_candidate_hash_difference_cause": "NOT_INVESTIGATED",
+    "heartbeat_cache_does_not_establish_current_offline": true,
+    "no_key_acceptance": true,
+    "no_product_or_policy_change": true
+  },
+  "privacy": {
+    "raw_environment_retained": false,
+    "device_tokens_retained": false,
+    "raw_journals_retained": false,
+    "customer_payloads_retained": false
+  },
+  "receipts": [
+    "220360d5eb397d02a0c9d00b9c0d1b953f66712367dd0494b2e806ea7ab1fd6b",
+    "ba9e318248fe8b164a6ce3ba8d6b4519bed90d826ea9f94d9e3f9996ffa46f74",
+    "ab1a5f0f35676c5cbb3ac97b2e011f8060007149cd32d3f79533f79b2d3fa388",
+    "e170e57afc13e79e138714bc3bc18153c8c27fc7d34b7362c30139da10944fc1",
+    "27b2b58e13451dadd0856f74e3aead7a0ffa7e35a546492285bf794348dcd760",
+    "3f16105df2634630ebb922224ccc41964a3630fb4a430699b239fc8e92f86e5e",
+    "2f2ff594eaecfbdd2b7ddaaa1abd3ea4dfc4a8e4ddc5c87687c45e767d32401a"
+  ]
+}

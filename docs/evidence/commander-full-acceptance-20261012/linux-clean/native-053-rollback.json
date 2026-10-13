@@ -1,0 +1,20 @@
+{
+  "schema": "hara.commander-linux-clean-native-rollback.v1",
+  "backend": "remote_DEV_worker",
+  "systemctl_backend": "real",
+  "fault": "one SIGKILL against real QA Agent after successful systemd startup",
+  "signed_agent_edited": false,
+  "signed_installer_edited": false,
+  "same_version_update": true,
+  "agent_version": "0.3.53",
+  "update_exit_code": 7,
+  "output": "HARA_COMMANDER_AGENT_INTEGRITY=PASS\nHARA_COMMANDER_CLI_WRAPPER_STATE=ALREADY_MANAGED\nHARA_COMMANDER_CLI=/home/commanderqa/.local/bin/hara-commander\nHARA_COMMANDER_AGENT_UPDATE_ROLLBACK=PASS\nHARA Commander Agent failed after update; previous agent restored when available.\n",
+  "fault_consumed": true,
+  "service_active_after_rollback": true,
+  "agent_sha256": "db91714140b63684917e46d6a327778183a5829dbf2b298098b31da4d463985e",
+  "rollback_backup_consumed": true,
+  "state": "PASS_NATIVE_SIGNED_UPDATE_ROLLBACK",
+  "qa_fault_removed": true,
+  "real_agent_source_intact": true,
+  "governed_transport": "H.A.R.A. Commander DIRECT -> Services -> SSH nucleo-a -> exclusive real Linux QA"
+}

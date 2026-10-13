@@ -1,0 +1,24 @@
+{
+  "schema": "hara.commander-linux054-owned-vm-teardown.v1",
+  "state": "PASS_OWNED_QA54_TEARDOWN",
+  "VM_name": "commander-linux54-clean-20261013",
+  "VM_uuid": "f1fc631b-9442-468a-82dc-e99d021ea8f5",
+  "graceful_shutdown": true,
+  "domain_undefined": true,
+  "removed_owned_paths": [
+    "/var/lib/libvirt/images/commander-linux54-clean-20261013/root.qcow2",
+    "/var/lib/libvirt/images/commander-linux54-clean-20261013/seed.iso",
+    "/tmp_hara/commander-linux54-clean-20261013/qa_ed25519",
+    "/tmp_hara/commander-linux54-clean-20261013/qa_ed25519.pub",
+    "/tmp_hara/commander-linux54-clean-20261013/known_hosts",
+    "/tmp_hara/commander-linux54-clean-20261013/creation.json",
+    "/tmp_hara/commander-linux54-clean-20261013/domain.xml",
+    "/tmp_hara/commander-linux54-clean-20261013/seed.iso",
+    "/tmp_hara/commander-linux54-clean-20261013/seed/user-data",
+    "/tmp_hara/commander-linux54-clean-20261013/seed/meta-data"
+  ],
+  "preserved_unknown_or_nonregular_paths": [],
+  "verified_base_image_removed": false,
+  "other_domains_modified": false,
+  "Founder_or_production_modified": false
+}

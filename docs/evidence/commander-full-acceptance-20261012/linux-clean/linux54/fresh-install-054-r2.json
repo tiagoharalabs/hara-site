@@ -1,0 +1,23 @@
+{
+  "schema": "hara.commander-linux-clean54-native-installer.v1",
+  "action": "install",
+  "state": "PASS",
+  "exit_code": 0,
+  "pairing_prompt_received": true,
+  "approval_mode": "ASK_EVERY_ACTION",
+  "device_id": "HARA-DEVICE-0a164dbf-f497-4e5f-9194-447e6285cac5",
+  "device_token_exposed": false,
+  "human_action_approval_generated": false,
+  "systemctl_backend": "real",
+  "backend": "remote_DEV_worker",
+  "installer_sha256": "d2057adfff5c2b475d1520ae44f1ed76a7ec0ecc673f65cf08631d7a0083d0fa",
+  "agent_sha256": "62e1a836ef92fc8b72638fd116a6f0097fcf9e9f0ef0f4259ca8e0f6712b4229",
+  "expected_version": "0.3.54",
+  "output": "HARA Commander \u2014 Linux device pairing\r\nApproval mode: ASK_EVERY_ACTION\r\nPairing token: \r\nHARA_COMMANDER_AGENT_INTEGRITY=PASS\r\nHARA_COMMANDER_CLI_WRAPPER_STATE=FRESH_CREATED\r\nHARA_COMMANDER_CLI=/home/commanderqa/.local/bin/hara-commander\r\nHARA_COMMANDER_AGENT_STARTUP_ATTESTATION=PASS\r\nHARA_COMMANDER_DEVICE_ENROLLMENT=PASS\r\nHARA_COMMANDER_AGENT_SERVICE=ACTIVE_LOCAL_CONTROL_PLANE\r\nHARA_COMMANDER_AGENT_AUTOSTART=OFF\r\nHARA_COMMANDER_AGENT_START_MODE=MANUAL_AFTER_INSTALL\r\nDEVICE_ID=HARA-DEVICE-0a164dbf-f497-4e5f-9194-447e6285cac5\r\nDEVICE_TOKEN_EXPOSED=FALSE\r\nHARA_COMMANDER_APPROVAL_MODE=ASK_EVERY_ACTION\r\nHARA_COMMANDER_TRANSPORT_MODE=OUTBOUND_RELAY\r\nHARA_COMMANDER_TUNNEL_AUTOSTART=OFF\r\nHARA_COMMANDER_CLOUD_PLUGIN_MODE=TRUE\r\nOPENAI_PLATFORM_API_KEY_REQUIRED=FALSE\r\nNEXT_STEP=Abra hara-commander start no terminal para conectar e autorizar a sess\u00e3o; depois conecte o plugin via HARA Identity OAuth\r\nCUSTOMER_MCP_ENDPOINT=https://commander.haralabs.com.br/api/mcp?profile=simple\r\nOPERATOR_SESSION_COMMAND=hara-commander start\r\nMANUAL_CONNECTION_COMMAND=hara-commander start\r\nSTATUS_COMMAND=hara-commander status\r\nSTOP_COMMAND=hara-commander stop\r\nLOCAL_MCP_COMMAND=hara-commander mcp\r\nAUTHORIZATION_COMMAND=hara-commander authorize\r\nSESSION_AUTHORITY=LOCAL_OPERATOR_TERMINAL\r\n",
+  "public_wrapper_sha256": "19463b9d3c9f1c4072bb2017029ecc71da6a07c8dd7f61c4140e4f48c7fda8ae",
+  "governed_transport": "H.A.R.A. Commander DIRECT -> Services -> SSH nucleo-a -> exclusive real Linux54 QA",
+  "new_qa_vm_uuid": "f1fc631b-9442-468a-82dc-e99d021ea8f5",
+  "runner_sha256": "85064bfadf971df85ae0cfd45cad5974fae5602c9bb1bf69327fbb536c93088d",
+  "release_agent_pin": "62e1a836ef92fc8b72638fd116a6f0097fcf9e9f0ef0f4259ca8e0f6712b4229",
+  "release_installer_pin": "d2057adfff5c2b475d1520ae44f1ed76a7ec0ecc673f65cf08631d7a0083d0fa"
+}

@@ -1,0 +1,59 @@
+{
+  "environment": "DEV",
+  "mutations": false,
+  "bearer_supplied": false,
+  "endpoints": [
+    {
+      "path": "/api/mcp?profile=simple",
+      "http": 404,
+      "json": {
+        "ok": false,
+        "code": "NOT_FOUND"
+      },
+      "content_type": "application/json",
+      "www_authenticate": null,
+      "body_sha256": "c3313af6c14e9b773e497ada51f240f21fae4a2f6ec73e037c07701cf05fbf8b"
+    },
+    {
+      "path": "/api/dev/mcp",
+      "http": 401,
+      "json": {
+        "error": "invalid_token",
+        "error_description": "Missing or invalid access token"
+      },
+      "content_type": "application/json; charset=utf-8",
+      "www_authenticate": "Bearer realm=\"HARA Commander DEV\", error=\"invalid_token\", resource_metadata=\"https://hara-commander-dev-v2.tiago-sartori.workers.dev/.well-known/oauth-protected-resource/api/dev/mcp\"",
+      "body_sha256": "fde5a2f4681d6c07ac053684ff82e9c3a1b6d6141388f8551d551f27e3d3ad45"
+    },
+    {
+      "path": "/.well-known/oauth-protected-resource/api/mcp",
+      "http": 404,
+      "json": {
+        "ok": false,
+        "code": "NOT_FOUND"
+      },
+      "content_type": "application/json",
+      "www_authenticate": null,
+      "body_sha256": "c3313af6c14e9b773e497ada51f240f21fae4a2f6ec73e037c07701cf05fbf8b"
+    },
+    {
+      "path": "/.well-known/oauth-protected-resource/api/dev/mcp",
+      "http": 200,
+      "json": {
+        "resource": "https://hara-commander-dev-v2.tiago-sartori.workers.dev/api/dev/mcp",
+        "authorization_servers": [
+          "https://auth.haralabs.com.br"
+        ],
+        "bearer_methods_supported": [
+          "header"
+        ],
+        "scopes_supported": [
+          "openid"
+        ]
+      },
+      "content_type": "application/json",
+      "www_authenticate": null,
+      "body_sha256": "b47b3195ff8524a80bd7475223515abfc90d0fa3775d761ac44af6f8d0556234"
+    }
+  ]
+}

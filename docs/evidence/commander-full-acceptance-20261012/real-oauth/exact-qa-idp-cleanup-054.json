@@ -1,0 +1,279 @@
+{
+  "at_utc": "2026-10-13T04:07:49.652364+00:00",
+  "credential_values_exposed": false,
+  "events": [
+    {
+      "action": "normal_portal_session_logout",
+      "at_utc": "2026-10-13T04:07:47.957812+00:00",
+      "credential_values_exposed": false,
+      "event": "EXACT_QA_CLEANUP_STEP",
+      "http_status": 204,
+      "passed": true
+    },
+    {
+      "at_utc": "2026-10-13T04:07:48.015755+00:00",
+      "event": "PORTAL_HTTP",
+      "http_status": 401,
+      "method": "GET",
+      "path": "/api/portal/session",
+      "safe_error_code": "AUTH_REQUIRED"
+    },
+    {
+      "action": "portal_session_no_longer_authenticated",
+      "at_utc": "2026-10-13T04:07:48.018707+00:00",
+      "credential_values_exposed": false,
+      "event": "EXACT_QA_CLEANUP_STEP",
+      "http_status": 401,
+      "passed": true
+    },
+    {
+      "at_utc": "2026-10-13T04:07:48.540586+00:00",
+      "event": "HTTP",
+      "http_status": 200,
+      "method": "POST",
+      "path": "/oauth/v2/revoke",
+      "safe_error_code": null
+    },
+    {
+      "action": "qa1_access_token_revoked",
+      "at_utc": "2026-10-13T04:07:48.543297+00:00",
+      "credential_values_exposed": false,
+      "event": "EXACT_QA_CLEANUP_STEP",
+      "http_status": 200,
+      "passed": true
+    },
+    {
+      "at_utc": "2026-10-13T04:07:48.618817+00:00",
+      "event": "HTTP",
+      "http_status": 200,
+      "method": "POST",
+      "path": "/oauth/v2/introspect",
+      "safe_error_code": null
+    },
+    {
+      "action": "qa1_access_token_inactive",
+      "at_utc": "2026-10-13T04:07:48.621262+00:00",
+      "credential_values_exposed": false,
+      "event": "EXACT_QA_CLEANUP_STEP",
+      "http_status": 200,
+      "passed": true
+    },
+    {
+      "at_utc": "2026-10-13T04:07:48.688890+00:00",
+      "event": "HTTP",
+      "http_status": 200,
+      "method": "POST",
+      "path": "/oauth/v2/revoke",
+      "safe_error_code": null
+    },
+    {
+      "action": "qa2_access_token_revoked",
+      "at_utc": "2026-10-13T04:07:48.691647+00:00",
+      "credential_values_exposed": false,
+      "event": "EXACT_QA_CLEANUP_STEP",
+      "http_status": 200,
+      "passed": true
+    },
+    {
+      "at_utc": "2026-10-13T04:07:48.768558+00:00",
+      "event": "HTTP",
+      "http_status": 200,
+      "method": "POST",
+      "path": "/oauth/v2/introspect",
+      "safe_error_code": null
+    },
+    {
+      "action": "qa2_access_token_inactive",
+      "at_utc": "2026-10-13T04:07:48.771309+00:00",
+      "credential_values_exposed": false,
+      "event": "EXACT_QA_CLEANUP_STEP",
+      "http_status": 200,
+      "passed": true
+    },
+    {
+      "at_utc": "2026-10-13T04:07:48.844953+00:00",
+      "event": "HTTP",
+      "http_status": 200,
+      "method": "DELETE",
+      "path": "/v2/sessions/394859090590826500",
+      "safe_error_code": null
+    },
+    {
+      "action": "qa_login_session_deleted",
+      "at_utc": "2026-10-13T04:07:48.847601+00:00",
+      "credential_values_exposed": false,
+      "event": "EXACT_QA_CLEANUP_STEP",
+      "http_status": 200,
+      "passed": true,
+      "session_id": "394859090590826500"
+    },
+    {
+      "at_utc": "2026-10-13T04:07:48.947128+00:00",
+      "event": "HTTP",
+      "http_status": 200,
+      "method": "DELETE",
+      "path": "/v2/sessions/394863764639318020",
+      "safe_error_code": null
+    },
+    {
+      "action": "qa_login_session_deleted",
+      "at_utc": "2026-10-13T04:07:48.949229+00:00",
+      "credential_values_exposed": false,
+      "event": "EXACT_QA_CLEANUP_STEP",
+      "http_status": 200,
+      "passed": true,
+      "session_id": "394863764639318020"
+    },
+    {
+      "at_utc": "2026-10-13T04:07:49.027849+00:00",
+      "event": "HTTP",
+      "http_status": 200,
+      "method": "DELETE",
+      "path": "/v2/sessions/394864790935175172",
+      "safe_error_code": null
+    },
+    {
+      "action": "qa_login_session_deleted",
+      "at_utc": "2026-10-13T04:07:49.029621+00:00",
+      "credential_values_exposed": false,
+      "event": "EXACT_QA_CLEANUP_STEP",
+      "http_status": 200,
+      "passed": true,
+      "session_id": "394864790935175172"
+    },
+    {
+      "at_utc": "2026-10-13T04:07:49.096655+00:00",
+      "event": "HTTP",
+      "http_status": 200,
+      "method": "DELETE",
+      "path": "/v2/sessions/394868113058824196",
+      "safe_error_code": null
+    },
+    {
+      "action": "qa_login_session_deleted",
+      "at_utc": "2026-10-13T04:07:49.098264+00:00",
+      "credential_values_exposed": false,
+      "event": "EXACT_QA_CLEANUP_STEP",
+      "http_status": 200,
+      "passed": true,
+      "session_id": "394868113058824196"
+    },
+    {
+      "at_utc": "2026-10-13T04:07:49.199988+00:00",
+      "event": "HTTP",
+      "http_status": 200,
+      "method": "DELETE",
+      "path": "/v2/users/394859086664957956",
+      "safe_error_code": null
+    },
+    {
+      "action": "qa1_regular_user_deleted",
+      "at_utc": "2026-10-13T04:07:49.201792+00:00",
+      "credential_values_exposed": false,
+      "event": "EXACT_QA_CLEANUP_STEP",
+      "http_status": 200,
+      "passed": true,
+      "subject_id": "394859086664957956"
+    },
+    {
+      "at_utc": "2026-10-13T04:07:49.293557+00:00",
+      "event": "HTTP",
+      "http_status": 404,
+      "method": "GET",
+      "path": "/v2/users/394859086664957956",
+      "safe_error_code": 5
+    },
+    {
+      "action": "qa1_regular_user_absent",
+      "at_utc": "2026-10-13T04:07:49.294609+00:00",
+      "credential_values_exposed": false,
+      "event": "EXACT_QA_CLEANUP_STEP",
+      "http_status": 404,
+      "passed": true,
+      "subject_id": "394859086664957956"
+    },
+    {
+      "at_utc": "2026-10-13T04:07:49.372327+00:00",
+      "event": "HTTP",
+      "http_status": 200,
+      "method": "DELETE",
+      "path": "/v2/users/394861028946477060",
+      "safe_error_code": null
+    },
+    {
+      "action": "qa2_regular_user_deleted",
+      "at_utc": "2026-10-13T04:07:49.374786+00:00",
+      "credential_values_exposed": false,
+      "event": "EXACT_QA_CLEANUP_STEP",
+      "http_status": 200,
+      "passed": true,
+      "subject_id": "394861028946477060"
+    },
+    {
+      "at_utc": "2026-10-13T04:07:49.485315+00:00",
+      "event": "HTTP",
+      "http_status": 404,
+      "method": "GET",
+      "path": "/v2/users/394861028946477060",
+      "safe_error_code": 5
+    },
+    {
+      "action": "qa2_regular_user_absent",
+      "at_utc": "2026-10-13T04:07:49.487164+00:00",
+      "credential_values_exposed": false,
+      "event": "EXACT_QA_CLEANUP_STEP",
+      "http_status": 404,
+      "passed": true,
+      "subject_id": "394861028946477060"
+    },
+    {
+      "at_utc": "2026-10-13T04:07:49.557427+00:00",
+      "event": "HTTP",
+      "http_status": 204,
+      "method": "DELETE",
+      "path": "/oauth/v2/register/394859085289226244",
+      "safe_error_code": null
+    },
+    {
+      "action": "disposable_public_dcr_client_deleted",
+      "at_utc": "2026-10-13T04:07:49.559661+00:00",
+      "client_id": "394859085289226244",
+      "credential_values_exposed": false,
+      "event": "EXACT_QA_CLEANUP_STEP",
+      "http_status": 204,
+      "passed": true
+    },
+    {
+      "at_utc": "2026-10-13T04:07:49.614763+00:00",
+      "event": "HTTP",
+      "http_status": 404,
+      "method": "GET",
+      "path": "/oauth/v2/register/394859085289226244",
+      "safe_error_code": null
+    },
+    {
+      "action": "disposable_public_dcr_client_absent",
+      "at_utc": "2026-10-13T04:07:49.617058+00:00",
+      "client_id": "394859085289226244",
+      "credential_values_exposed": false,
+      "event": "EXACT_QA_CLEANUP_STEP",
+      "http_status": 404,
+      "passed": true
+    },
+    {
+      "at_utc": "2026-10-13T04:07:49.617519+00:00",
+      "credential_values_exposed": false,
+      "dcr_clients": 1,
+      "event": "EXACT_QA_CLEANUP",
+      "global_policies_unchanged": true,
+      "login_sessions": 4,
+      "qa_users": 2,
+      "real_portal_client_untouched": true,
+      "state": "PASS_TWO_QA_USERS_TRACKED_SESSIONS_OAUTH_BEARERS_DCR_CLIENT_PRIVATE_STATE_REMOVED"
+    }
+  ],
+  "helper_sha256": "78c2789250f996d99c0d01c8ed6e98d044a4f8cd9e64afb8122c14e02ad6b88a",
+  "raw_stderr_saved": false,
+  "state": "PASS",
+  "windows54_uninstalled_and_portal_revoked_before_cleanup": true
+}

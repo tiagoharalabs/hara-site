@@ -1,0 +1,36 @@
+[
+  {
+    "purpose": "windows-event",
+    "devices_before_cleanup": [
+      {
+        "device_id": "HARA-DEVICE-cb8c2b8d-42eb-4651-a602-140d1aafac4a",
+        "state": "REVOKED"
+      }
+    ],
+    "cleanup": {
+      "fixture_cleanup": "PASS",
+      "remaining_tenants": 0
+    }
+  },
+  {
+    "purpose": "windows-cloud-quota",
+    "devices_before_cleanup": [
+      {
+        "device_id": "HARA-DEVICE-7602945a-3a4e-4500-bd72-bb1611cd82ff",
+        "state": "REVOKED"
+      }
+    ],
+    "cleanup": {
+      "fixture_cleanup": "PASS",
+      "remaining_tenants": 0
+    }
+  },
+  {
+    "purpose": "remote-quota",
+    "devices_before_cleanup": [],
+    "cleanup": {
+      "fixture_cleanup": "PASS",
+      "remaining_tenants": 0
+    }
+  }
+]

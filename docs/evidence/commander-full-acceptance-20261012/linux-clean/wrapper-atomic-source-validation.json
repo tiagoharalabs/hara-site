@@ -1,0 +1,10 @@
+{
+  "state": "PASS",
+  "source_installer_sha256": "7600f844c24696c7d2e0113328fb39425fa3182ae4e93ab8573d7ce4b74926a2",
+  "bash_syntax": "PASS",
+  "device_installer_validator": "PASS",
+  "validator_output_lines": 68,
+  "qa_real_fs_checks_expected": 62,
+  "signed_bundles_edited": false,
+  "baseline_043_mutated": false
+}

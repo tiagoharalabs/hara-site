@@ -1,0 +1,20 @@
+{
+  "schema": "hara.commander-linux053-soak-identity-witness.v1",
+  "state": "PASS_READ_ONLY",
+  "observed_at_utc": "2026-10-13T04:24:00Z",
+  "environment": "DEV",
+  "device_id": "HARA-DEVICE-962202bc-274a-486b-9794-b73d9f3a5889",
+  "agent_version": "0.3.53",
+  "agent_sha256": "db91714140b63684917e46d6a327778183a5829dbf2b298098b31da4d463985e",
+  "config_sha256": "a9ef1718628959756ab5b160511d88d78574f079dcbc5bea0767ab7f16067755",
+  "agent_pid": 7619,
+  "agent_start_marker": "780163",
+  "agent_started_at_utc": "2026-10-13T01:50:08.843818+00:00",
+  "operator_owner_pid": 7616,
+  "operator_owner_start_marker": "780152",
+  "operator_approval_mode": "ASK_EVERY_ACTION",
+  "operator_expires_at_utc": null,
+  "source_binding_valid": true,
+  "secret_material_exposed": false,
+  "agent_cli_or_session_modified": false
+}

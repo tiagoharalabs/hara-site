@@ -1,0 +1,12 @@
+{
+  "active_count": 0,
+  "at_utc": "2026-10-13T04:04:58.375830+00:00",
+  "credential_values_exposed": false,
+  "device_id": "HARA-DEVICE-e55b1d52-f6aa-4c93-873b-f1c12412faf0",
+  "device_state": "REVOKED",
+  "http_status": 200,
+  "normal_portal_cookie_used": true,
+  "online": false,
+  "online_count": 0,
+  "state": "PASS"
+}

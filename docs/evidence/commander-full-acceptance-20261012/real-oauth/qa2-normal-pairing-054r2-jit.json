@@ -1,0 +1,12 @@
+{
+  "at_utc": "2026-10-13T03:45:55.873388+00:00",
+  "credential_values_exposed": false,
+  "d1_seed_performed": false,
+  "expires_at_utc": "2026-10-13T03:55:55.695Z",
+  "helper_source_sha256": "85c4a94c1f80c4e8a3a9113b21423cb01a8347be4b43c129b43bb61b26686ae6",
+  "normal_portal_cookie_used": true,
+  "pairing_id": "HARA-PAIR-8346be93-25a3-42a0-9ddc-b33dd9c9c46b",
+  "private_file_mode": "0600",
+  "private_handoff_path": "/tmp_hara/commander-win50-utf8-20261012/apps/commander/.generated/full-acceptance-20261012/windows-clean/qa2-portal-pairing-054r2-jit.json",
+  "state": "PASS_NORMAL_PORTAL_QA2_PAIRING_CREATED"
+}

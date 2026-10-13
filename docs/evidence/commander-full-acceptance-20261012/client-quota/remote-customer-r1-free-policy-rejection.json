@@ -1,0 +1,39 @@
+{
+  "schema": "hara.dev-remote-customer-acceptance.v1",
+  "started_at": "2026-10-12T23:47:17.196525+00:00",
+  "environment": "DEV",
+  "oauth_frontend_exercised": false,
+  "identity_setup": "ISOLATED_QA_D1_SEED",
+  "prod_mutated": false,
+  "founder_mutated": false,
+  "secret_output": false,
+  "checks": {
+    "real_pairing_enrollment": "PASS",
+    "real_agent_online": "PASS"
+  },
+  "receipts": [],
+  "served_agent_version": "0.3.43",
+  "served_agent_sha256": "3e0db700dd568a85e23212a5400f1d256546fef77b7f59f574ceed29e04c15b7",
+  "transport": "OUTBOUND_RELAY",
+  "usage_before": {
+    "period_key": "2026-10",
+    "limit": 10000,
+    "consumed_units": 0,
+    "remaining_units": 10000,
+    "metered": true,
+    "available": true,
+    "consistency": "CLOUD_AUTHORITATIVE",
+    "cloud_legacy_consumed_units": 0,
+    "legacy_baseline_source": "TENANT_QUOTA_LIVE",
+    "local_budget_allocated_units": 0,
+    "local_budget_reported_units": 0,
+    "local_budget_unreported_capacity_units": 0
+  },
+  "state": "FAIL",
+  "error": "REAL_ENQUEUE_403_GRANT_MISSING",
+  "cleanup": {
+    "fixture_cleanup": "PASS",
+    "remaining_tenants": 0
+  },
+  "completed_at": "2026-10-12T23:47:35.291849+00:00"
+}

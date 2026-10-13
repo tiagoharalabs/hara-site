@@ -1,0 +1,58 @@
+{
+  "at_utc": "2026-10-13T04:48:28+00:00",
+  "bulk_load_started": false,
+  "reports": [
+    {
+      "alias": "sentinela-b",
+      "cloud_requests": 0,
+      "controller_sha256": "c0d143e3e84319057cef7facefdae72b81d8543cd7be678a915d9993a683b682",
+      "exit_code": 0,
+      "hostname": "sentinela-b",
+      "installed_Agent_modified": false,
+      "manager_sha256": "031b4cc8e56de09bd33654d452d0135618d7a173c8a1a6fc45f40274e3669cd0",
+      "proof": {
+        "SSH_calls": 0,
+        "agent_connections_started": 0,
+        "checks": 22,
+        "cloud_calls": 0,
+        "errors": 0,
+        "failures": 0,
+        "fixtures_created_in_D1": 0,
+        "own_native_children_guarded": true,
+        "state": "PASS"
+      },
+      "python": "3.10.12",
+      "raw_stdout_stderr_exported": false,
+      "schema": "hara.commander-real1000-native-helpers-safety.v1",
+      "test_sha256": "bcab5c3320fc9c1f2d0a81623cdb6bd3e46d1ab4ed92c4df2dbbd42a10e58daa",
+      "uid": 1002
+    },
+    {
+      "alias": "ninja-blue",
+      "cloud_requests": 0,
+      "controller_sha256": "c0d143e3e84319057cef7facefdae72b81d8543cd7be678a915d9993a683b682",
+      "exit_code": 0,
+      "hostname": "ninja-blue",
+      "installed_Agent_modified": false,
+      "manager_sha256": "031b4cc8e56de09bd33654d452d0135618d7a173c8a1a6fc45f40274e3669cd0",
+      "proof": {
+        "SSH_calls": 0,
+        "agent_connections_started": 0,
+        "checks": 22,
+        "cloud_calls": 0,
+        "errors": 0,
+        "failures": 0,
+        "fixtures_created_in_D1": 0,
+        "own_native_children_guarded": true,
+        "state": "PASS"
+      },
+      "python": "3.14.7",
+      "raw_stdout_stderr_exported": false,
+      "schema": "hara.commander-real1000-native-helpers-safety.v1",
+      "test_sha256": "bcab5c3320fc9c1f2d0a81623cdb6bd3e46d1ab4ed92c4df2dbbd42a10e58daa",
+      "uid": 1000
+    }
+  ],
+  "schema": "hara.commander-real1000-native-helper-safety-series.v1",
+  "state": "PASS"
+}

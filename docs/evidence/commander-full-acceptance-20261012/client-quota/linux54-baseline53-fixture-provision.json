@@ -1,0 +1,58 @@
+{
+  "schema": "hara.owned-dev-fixture-provision.v1",
+  "state": "PASS",
+  "purpose": "linux54-baseline53",
+  "private_path": "/tmp_hara/commander-win50-utf8-20261012/apps/commander/.generated/full-acceptance-20261012/linux54-baseline53-20261013033631-4f624d30.json",
+  "tenant_id": "HARA-ACCEPT-T-20261013033631-4f624d30",
+  "subject_id": "HARA-ACCEPT-S-20261013033631-4f624d30",
+  "dev_origin": "https://hara-commander-dev-v2.tiago-sartori.workers.dev",
+  "pairing_expires_at": "2026-10-13T03:46:32Z",
+  "file_mode": "0600",
+  "database_readback": [
+    {
+      "environment": "DEV",
+      "tenant_state": "ACTIVE",
+      "user_state": "ACTIVE",
+      "plan_code": "TRIAL",
+      "entitlement_state": "ACTIVE"
+    }
+  ],
+  "grants": [
+    {
+      "grant_code": "COMMANDER_DISCOVERY"
+    },
+    {
+      "grant_code": "COMMANDER_READ_ONLY_INVOKE"
+    },
+    {
+      "grant_code": "COMMANDER_RECEIPT_READ"
+    }
+  ],
+  "ownership": "Linux agent owns install/enroll/revoke lifecycle; fixture owner cleans exact DEV tenant only after Linux actor signal and root coordination",
+  "existing_53_holder_modified": false,
+  "qa2_oauth_modified": false,
+  "prod_modified": false,
+  "baseline53_actor_report": "Linux actor reports installer exit0,PASS,default ASK,exact53R3 pins and installed wrapper c69151; native proof owned by Linux actor.",
+  "baseline53_device_readback": [
+    {
+      "device_id": "HARA-DEVICE-1b987909-0cc0-46cd-8ac4-d09132640e45",
+      "tenant_id": "HARA-ACCEPT-T-20261013033631-4f624d30",
+      "enrolled_by_subject_id": "HARA-ACCEPT-S-20261013033631-4f624d30",
+      "platform": "LINUX",
+      "agent_version": "0.3.53",
+      "state": "ACTIVE",
+      "tunnel_mode": "OUTBOUND_RELAY_OFFLINE",
+      "created_at_utc": "2026-10-13T03:38:08.989Z"
+    }
+  ],
+  "baseline53_public_manifest_readback": {
+    "agent_version": "0.3.53",
+    "channel": "stable",
+    "manifest_sha256": "eebd7f4b209158b4a9a02b986365291c14e70bcad45106271078b2a373b6a257",
+    "linux_agent_sha256": "db91714140b63684917e46d6a327778183a5829dbf2b298098b31da4d463985e",
+    "linux_installer_sha256": "dae0a39f12a02920261a8051834d5b8426866a07e8a0d0acb9676c6605c8e3f8",
+    "url": "https://hara-commander-dev-v2.tiago-sartori.workers.dev/release/agent-manifest.json",
+    "readback_scope": "Public HTTPS manifest bytes only; signature/native install verification belongs to Linux actor; defaulturllib read403 corrected by installer UserAgent."
+  },
+  "cleanup_state": "PRESERVED_FOR_LINUX54_LIFECYCLE"
+}

@@ -1,0 +1,68 @@
+{
+  "schema": "hara.commander-linux-clean-native-lifecycle.v1",
+  "backend": "remote_DEV_worker",
+  "systemctl_backend": "real",
+  "checks": [
+    {
+      "check": "installed-default-ASK",
+      "state": "PASS"
+    },
+    {
+      "check": "installed-source-pin",
+      "state": "PASS"
+    },
+    {
+      "check": "installed-service-active-disabled",
+      "state": "PASS"
+    },
+    {
+      "check": "installed-no-operator-session",
+      "state": "PASS"
+    },
+    {
+      "check": "default-ASK-no-session-mutation-denied",
+      "state": "PASS",
+      "denial_code": "LOCAL_OPERATOR_SESSION_REQUIRED"
+    },
+    {
+      "check": "native-cli-stop-installed-service",
+      "state": "PASS"
+    },
+    {
+      "check": "offline-signed-update-preserves-offline",
+      "state": "PASS"
+    },
+    {
+      "check": "offline-update-preserves-source",
+      "state": "PASS"
+    },
+    {
+      "check": "native-cli-start-real-operator-session",
+      "state": "PASS"
+    },
+    {
+      "check": "native-MCP-readonly-device-info",
+      "state": "PASS"
+    },
+    {
+      "check": "active-signed-update-startup-attestation",
+      "state": "PASS"
+    },
+    {
+      "check": "active-update-preserves-source-policy",
+      "state": "PASS"
+    },
+    {
+      "check": "native-cli-stop-session",
+      "state": "PASS"
+    }
+  ],
+  "human_action_approval_generated": false,
+  "state": "PASS_NATIVE_LINUX_LIFECYCLE_CORE",
+  "device_id": "HARA-DEVICE-e3eacf31-f6b4-47df-96f7-c22aaacd9e4d",
+  "agent_version": "0.3.53",
+  "config_mode": "0o600",
+  "agent_mode": "0o700",
+  "manual_agent_boot": true,
+  "governed_transport": "H.A.R.A. Commander DIRECT -> Services -> SSH nucleo-a -> exclusive real Linux QA"
+}

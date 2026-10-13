@@ -1,0 +1,18 @@
+{
+  "schema": "hara.dev-safe-diagnostics-proposal.v1",
+  "state": "PASS_PROPOSED_ONLY",
+  "source_worker_sha256": "0b0977e358a557a3bc414224bdc74f6ed29fa36fc495af9bee0cfa487b4d9bfa",
+  "candidate_module_sha256": "4cb186b44cf2721ab36456db63e0df79be18b571f2ada4cef696859cef340fb7",
+  "patch_sha256": "bdc5881b4064b8ccb2818f70aad5799392f4691bc5a5437477a1b74e789b0b30",
+  "node_candidate_checks": 23,
+  "git_apply_check": "PASS",
+  "guard": "ENVIRONMENT=DEV and DEV_SAFE_ERROR_DIAGNOSTICS_ENABLED=true; absent flag disables; PROD disabled even with flag=true",
+  "response": "Existing status and public JSON preserved; DEV opt-in 5xx adds random x-hara-dev-incident-id correlated to safe console incident",
+  "emitted": "whitelisted class/cause, bounded message digest, up to4 whitelisted function+line/column frames, fixed route enum, random incident ID",
+  "never_emitted": "raw message, stack, URL, path, query, payload, headers, cookie, subject, tenant, device credential",
+  "applied": false,
+  "deployed": false,
+  "actual_worker_fetch_in_memory_checks": 21,
+  "actual_worker_fetch_scope": "Compared original Worker response status/body to proposed catch under synthetic D1 TypeError. DEV opt-in returns correlated incident header; DEV off and PROD emit no diagnostic. PROD transient route remains disabled by original guard.",
+  "response_scope": "Final generic JSON error branch only,5xx. Existing auth callback failure response and429 branches remain unchanged."
+}

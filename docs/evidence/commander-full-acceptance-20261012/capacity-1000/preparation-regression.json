@@ -1,0 +1,51 @@
+{
+  "at_utc": "2026-10-13T04:07:58+00:00",
+  "guest_preflight": "PASS_NATIVE_STAGE100_RESOURCE_ONLY",
+  "host_preflight": {
+    "agent_processes_launched": 0,
+    "host_memory_floor_bytes": 17179869184,
+    "memory_available_after_full_vm_allocation_bytes": 25390567424,
+    "state": "PASS_RESOURCE_PREFLIGHT_ONLY",
+    "vm_created": false,
+    "vm_memory_bytes": 64424509440
+  },
+  "native_review_history": {
+    "prior_checks": 70,
+    "prior_source_sha256": {
+      "planner": "ddd4d92331b93ad1a342e5438a3b99f157292b673e691c1b11741dee4daabf63",
+      "test": "79f586c3c8f48fa4436abdeb8e5c34866068aa2932fa09b4db313a6b41f0df87"
+    }
+  },
+  "prior_validation": {
+    "checks": 66,
+    "source_sha256": {
+      "planner": "4647f5e42be9f1a8895bebbfb2da203b999ed274bae6f340e6f51340a2af8172",
+      "test": "6791da8aaed1704a9976671c09f5932414cdd75a9fe573631bf367135567f5f1"
+    }
+  },
+  "real1000_24h_executed": false,
+  "real1000_executed": false,
+  "real_controller_vm_manager_smoke": "PENDING_IMPLEMENTATION_AND_REAL_SMOKE",
+  "review_at_utc": "2026-10-13T04:24:35+00:00",
+  "review_fixes": {
+    "continuous_duration_finite_guard": true,
+    "guest_RSS_ceiling_unchanged": true,
+    "guest_available_memory_floor_unchanged": true,
+    "guest_kernel_reserved_memory_max_bytes": 1610612736,
+    "paired_libvirt_nominal_memory_pin_required": true
+  },
+  "schema": "hara.commander-real1000-preparation-regression.v1",
+  "source_sha256": {
+    "planner": "ba324edc21a6e66ad4bb783067bb34f4e6c743c416486ada8eb0ea4d65583589",
+    "test": "95cbf7d00806a27f549bbc49711fcce85a2e3effdeb533b3deb683ad834e009d"
+  },
+  "state": "PASS",
+  "tests": {
+    "agent_processes_started": 0,
+    "checks": 72,
+    "cloud_requests": 0,
+    "scope": "OFFLINE_RESOURCE_BUDGET_DURATION_GUARDS",
+    "state": "PASS",
+    "vm_mutations": 0
+  }
+}

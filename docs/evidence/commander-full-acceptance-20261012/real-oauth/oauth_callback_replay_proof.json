@@ -1,0 +1,103 @@
+{
+  "schema": "hara.real-portal-oauth.callback-replay-evidence.v1",
+  "events": [
+    {
+      "event": "HTTP",
+      "at_utc": "2026-10-13T01:42:14.967721+00:00",
+      "method": "POST",
+      "path": "/auth/v1/permissions/zitadel/me/_search",
+      "http_status": 200,
+      "safe_error_code": null
+    },
+    {
+      "event": "REPLAY_HTTP",
+      "at_utc": "2026-10-13T01:42:15.579985+00:00",
+      "path": "/auth/login",
+      "http_status": 302,
+      "safe_code": null,
+      "credential_values_exposed": false
+    },
+    {
+      "event": "REPLAY_HTTP",
+      "at_utc": "2026-10-13T01:42:15.671753+00:00",
+      "path": "/oauth/v2/authorize",
+      "http_status": 302,
+      "safe_code": null,
+      "credential_values_exposed": false
+    },
+    {
+      "event": "HTTP",
+      "at_utc": "2026-10-13T01:42:16.030571+00:00",
+      "method": "GET",
+      "path": "/v2/oidc/auth_requests/V2_394868112253517828",
+      "http_status": 200,
+      "safe_error_code": null
+    },
+    {
+      "event": "HTTP",
+      "at_utc": "2026-10-13T01:42:16.985221+00:00",
+      "method": "POST",
+      "path": "/v2/sessions",
+      "http_status": 201,
+      "safe_error_code": null
+    },
+    {
+      "event": "HTTP",
+      "at_utc": "2026-10-13T01:42:17.427820+00:00",
+      "method": "GET",
+      "path": "/v2/sessions/394868113058824196",
+      "http_status": 200,
+      "safe_error_code": null
+    },
+    {
+      "event": "HTTP",
+      "at_utc": "2026-10-13T01:42:17.508098+00:00",
+      "method": "POST",
+      "path": "/v2/oidc/auth_requests/V2_394868112253517828",
+      "http_status": 200,
+      "safe_error_code": null
+    },
+    {
+      "event": "REPLAY_HTTP",
+      "at_utc": "2026-10-13T01:42:18.725981+00:00",
+      "path": "/auth/callback",
+      "http_status": 302,
+      "safe_code": null,
+      "credential_values_exposed": false
+    },
+    {
+      "event": "REPLAY_HTTP",
+      "at_utc": "2026-10-13T01:42:18.930890+00:00",
+      "path": "/auth/callback",
+      "http_status": 302,
+      "safe_code": null,
+      "credential_values_exposed": false
+    },
+    {
+      "event": "OAUTH_CALLBACK_REPLAY_PROOF",
+      "at_utc": "2026-10-13T01:42:18.934202+00:00",
+      "schema": "hara.real-portal-oauth.callback-replay.v1",
+      "state": "PASS_REPLAY_REJECTED",
+      "subject_id": "394861028946477060",
+      "initial_callback_http_status": 302,
+      "replayed_callback_http_status": 302,
+      "safe_rejection_code": "OIDC_STATE_REPLAYED",
+      "new_session_cookie_on_replay": false,
+      "original_portal_cookie_file_preserved": true,
+      "credential_values_exposed": false
+    },
+    {
+      "event": "TEMPORARY_REPLAY_PORTAL_LOGOUT",
+      "at_utc": "2026-10-13T01:42:19.174232+00:00",
+      "http_status": 204,
+      "original_cookie_file_untouched": true,
+      "credential_values_exposed": false
+    }
+  ],
+  "source_sha256": "d3f36e5a3b1e0bff096f8f0b91507466dea3c0f77e9033d9275d58b1ba4c19d9",
+  "combined_source_sha256": "1bb43beb227caea69ca133e4163f8a058180df1796cf7fd07a69f06cf8888fc1",
+  "temporary_portal_logout": "204",
+  "original_portal_cookie_preserved": true,
+  "source_helper_first_attempt": "UnboundLocalError before transaction creation; fixed client helper",
+  "credential_values_exposed": false
+}

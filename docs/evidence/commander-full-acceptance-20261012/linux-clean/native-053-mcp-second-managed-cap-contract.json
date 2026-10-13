@@ -1,0 +1,56 @@
+{
+  "schema": "hara.commander-linux-clean-native-mcp.v1",
+  "backend": "installed_product_MCP_LOCAL_STDIO_with_real_DEV_enrollment",
+  "systemctl_backend": "real",
+  "human_ASK_response_generated": false,
+  "authorization": "explicit_QA_SESSION_TRUSTED_until_CLI_close",
+  "checks": [
+    {
+      "check": "actual-CLI-bounded-QA-session",
+      "state": "PASS"
+    },
+    {
+      "check": "MCP-operation-receipt-PASS",
+      "state": "PASS"
+    },
+    {
+      "check": "MCP-operation-receipt-PASS",
+      "state": "PASS"
+    },
+    {
+      "check": "session-authorization-source",
+      "state": "PASS"
+    },
+    {
+      "check": "MCP-operation-receipt-PASS",
+      "state": "PASS"
+    },
+    {
+      "check": "Unicode-write-read-exact",
+      "state": "PASS"
+    },
+    {
+      "check": "MCP-operation-receipt-PASS",
+      "state": "PASS"
+    },
+    {
+      "check": "stale-SHA-conflict-preserves-file",
+      "state": "PASS"
+    },
+    {
+      "check": "MCP-operation-receipt-PASS",
+      "state": "PASS"
+    }
+  ],
+  "receipt_sha256": [
+    "73c5efdf7a8d6545be0600406f91e61f3b56bef2c991934333c69834967b56b6",
+    "5c27a52105c6fdb133ff17d8025ff9fa6c5b61a568830589e66f44a0916cf811",
+    "9de9c31670c8c66d90a76d4a36536857fffbc217ec1c09811ebb0e51b36013f9",
+    "dc7257609a7b508d5b4988788db5c4ed241f3f4260d7447832c6a69fb8620f62",
+    "ecd21572105e1ea0fb74be2cd08df014b537111443cd66965d3c1fa5ba460616"
+  ],
+  "state": "FAIL_NATIVE_LINUX_MCP_53",
+  "error_type": "AssertionError",
+  "error_code": "initial-output-line-cap-respected",
+  "governed_transport": "H.A.R.A. Commander DIRECT -> Services -> SSH nucleo-a -> exclusive real Linux QA"
+}

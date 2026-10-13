@@ -1,3 +1,4 @@
+import { emitDevSafeIncident } from "./dev-safe-error-diagnostics.mjs";
 import { DurableObject } from "cloudflare:workers";
 import {
   authCallbackFailureResponse,
@@ -6280,7 +6281,13 @@ export default {
       }
       const errorPayload = { ok: false, code };
       if (code === "DEVICE_BUSY") errorPayload.retry_after_ms = 1000;
-      return json(errorPayload, statusMap[code] || 500);
+      const errorStatus = statusMap[code] || 500;
+      const incidentId = errorStatus >= 500
+        ? await emitDevSafeIncident(error, env, requestUrl.pathname)
+        : null;
+      const errorResponse = json(errorPayload, errorStatus);
+      if (incidentId) errorResponse.headers.set("x-hara-dev-incident-id", incidentId);
+      return errorResponse;
     }
   },
   async scheduled(_event, env, ctx) {

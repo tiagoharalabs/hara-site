@@ -1,0 +1,61 @@
+{
+  "VM_autostart": false,
+  "agent_count": 0,
+  "at_utc": "2026-10-13T04:19:43+00:00",
+  "cloud_init": "status: done",
+  "creation": {
+    "actual_agent_count": 0,
+    "at_utc": "2026-10-13T04:14:30+00:00",
+    "autostart": false,
+    "disk_gib": 24,
+    "hostname": "commander-capacity1000",
+    "mac": "52:54:00:41:98:05",
+    "name": "commander-capacity1000-20261013",
+    "other_domains_touched": false,
+    "private_path": "/tmp_hara/commander-capacity1000-20261013",
+    "ram_mib": 61440,
+    "resource_preflight_immediately_before_define": {
+      "at_unix": 1791864870.294718,
+      "memory_available_bytes": 90385645568,
+      "nominal_vm_bytes": 64424509440,
+      "required_remaining_bytes": 17179869184
+    },
+    "resource_preflight_initial": {
+      "at_unix": 1791864868.2457533,
+      "memory_available_bytes": 90984398848,
+      "nominal_vm_bytes": 64424509440,
+      "required_remaining_bytes": 17179869184
+    },
+    "root_storage": "/var/lib/libvirt/images/commander-capacity1000-20261013",
+    "source_image_bytes": 625612288,
+    "source_image_sha256": "6a81c37564db9b1ee84e141922625e1d7c5b389b99bb3c572e0243607d5bb4d2",
+    "state": "PASS_OWN_VM_STARTED_CLOUD_INIT_PENDING",
+    "uid": 2000,
+    "user": "commanderqa",
+    "uuid": "c8bcefb4-3f25-41b0-a07a-58c0d7956662",
+    "vcpus": 8
+  },
+  "guest": {
+    "cgroup_v2": true,
+    "cpu_count": 8,
+    "hostname": "commander-capacity1000",
+    "memory": {
+      "MemAvailable": 62298812416,
+      "MemTotal": 63199559680
+    },
+    "open_files": [
+      8192,
+      8192
+    ],
+    "uid": 2000
+  },
+  "guest_user": "commanderqa",
+  "ip": "192.168.122.108",
+  "key_contents_exported": false,
+  "schema": "hara.commander-real1000-own-vm-boot.v1",
+  "ssh_known_hosts_path": "/tmp_hara/commander-capacity1000-20261013/private/known_hosts",
+  "ssh_private_key_path": "/tmp_hara/commander-capacity1000-20261013/private/qa_ed25519",
+  "state": "PASS_OWN_VM_BOOT_NO_PRODUCT_AGENTS",
+  "tenant_count": 0,
+  "user_systemd_controlgroup_present": true
+}

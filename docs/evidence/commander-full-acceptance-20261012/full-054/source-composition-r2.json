@@ -1,0 +1,15 @@
+{
+  "at_utc": "2026-10-13T03:36:17.691158+00:00",
+  "public_source_sha256": {
+    "agent/linux.py": "62e1a836ef92fc8b72638fd116a6f0097fcf9e9f0ef0f4259ca8e0f6712b4229",
+    "agent/windows.ps1": "fe61f177c51f6b6a01f31a3ea1b3d081173446e8f8cb33e680744c1fb808ae62",
+    "install/linux.sh": "495069185d82d888cf53e1db156b60a264ec0fbfd7caf5b243e307bb07398cf0",
+    "install/windows.ps1": "2c7ab4534d8865392d4afa02e00b5ea155054a81e2bc35d4266fc28321b57ba4"
+  },
+  "r1_composition_evidence": "source-composition.json",
+  "r1_composition_sha256": "4a30e54197bd28d7f81a203b05c6f8e36b3658d274f20b810cf65e6bcbb2e5cf",
+  "r1_preserved": true,
+  "schema": "hara.full054-r2-source-composition.v1",
+  "selftest_only_delta": "selftest-correction-r2.json",
+  "state": "SIGNED_R2_PREPARED_NOT_DEPLOYED"
+}

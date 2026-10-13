@@ -1,0 +1,23 @@
+{
+  "schema": "hara.commander-linux-clean-native-upgrade-043-053.v1",
+  "backend": "remote_DEV_worker",
+  "systemctl_backend": "real",
+  "device_id": "HARA-DEVICE-5fe78432-d0c1-487c-b29a-3f7e15599d7e",
+  "prior_version": "0.3.43",
+  "target_version": "0.3.53",
+  "old_wrapper_manually_changed": false,
+  "customer_secrets_exposed": false,
+  "update_exit_code": 0,
+  "output": "HARA_COMMANDER_AGENT_INTEGRITY=PASS\nHARA_COMMANDER_CLI_WRAPPER_STATE=LEGACY_MIGRATED\nHARA_COMMANDER_CLI=/home/commanderqa/.local/bin/hara-commander\nHARA_COMMANDER_AGENT_STARTUP_ATTESTATION=PASS\nHARA_COMMANDER_AGENT_UPDATE_SERVICE_WAS_ACTIVE=TRUE\nHARA_COMMANDER_AGENT_UPDATE=PASS\nHARA_COMMANDER_AGENT_UPDATE_ROLLBACK_READY=TRUE\nHARA_COMMANDER_DEVICE_ENROLLED=TRUE\nHARA_COMMANDER_AGENT_ACTIVE=TRUE\nHARA_COMMANDER_AGENT_ENABLED=FALSE\nHARA_COMMANDER_AGENT_VERSION=0.3.53\nHARA_COMMANDER_APPROVAL_MODE=ASK_EVERY_ACTION\nDEVICE_ID=HARA-DEVICE-5fe78432-d0c1-487c-b29a-3f7e15599d7e\nHARA_COMMANDER_SESSION=INACTIVE\nHARA_COMMANDER_AGENT_SERVICE_ACTIVE=TRUE\nHARA_COMMANDER_AGENT_AUTOSTART=OFF\nSECRET_MATERIAL_EXPOSED=FALSE\nDEVICE_TOKEN_EXPOSED=FALSE\n",
+  "state": "PASS_NATIVE_043_TO_SIGNED_053_LEGACY_MIGRATION",
+  "new_agent_sha256": "db91714140b63684917e46d6a327778183a5829dbf2b298098b31da4d463985e",
+  "signed_installer_sha256": "dae0a39f12a02920261a8051834d5b8426866a07e8a0d0acb9676c6605c8e3f8",
+  "legacy_preimage_sha256": "f2e30d042dd00e894c5916afb81ed193ff46f0949bd048a98c3c51722e42acaf",
+  "preimage_mode": "0600",
+  "preimage_owner_uid": 2000,
+  "legacy_actual_inode_preserved": true,
+  "source_version_attested": true,
+  "device_credentials_preserved": true,
+  "manual_boot_policy_preserved": true,
+  "governed_transport": "H.A.R.A. Commander DIRECT -> Services -> SSH nucleo-a -> exclusive real Linux QA"
+}

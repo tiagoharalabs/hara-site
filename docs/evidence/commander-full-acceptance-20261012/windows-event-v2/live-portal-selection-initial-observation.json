@@ -1,0 +1,40 @@
+{
+  "schema": "hara.commander.windows.event-v2-live-dev.v1",
+  "origin": "https://hara-commander-dev-v2.tiago-sartori.workers.dev",
+  "device_id": "HARA-DEVICE-cb8c2b8d-42eb-4651-a602-140d1aafac4a",
+  "utc": "2026-10-12T23:50:16Z",
+  "founder_runtime_mutated": false,
+  "founder_credentials_used": false,
+  "portal_oauth_login_real": false,
+  "portal_session_qa_preseed": true,
+  "windows_runtime": "PowerShell 5.1/CLR4",
+  "checks": [
+    {
+      "name": "native_wss_connected",
+      "passed": true,
+      "evidence": {
+        "state": "PASS",
+        "device_id": "HARA-DEVICE-cb8c2b8d-42eb-4651-a602-140d1aafac4a",
+        "fixture_pid": 7428,
+        "process_exited": false,
+        "exit_code": null,
+        "stderr_present": false,
+        "event_status": {
+          "schema": "hara.commander-event-v2-runtime-status.v1",
+          "transport_mode": "EVENT_V2",
+          "connected": true,
+          "connected_at_utc": "2026-10-12T23:48:59.9406724Z",
+          "disconnected_at_utc": null,
+          "last_error_code": "",
+          "updated_at_utc": "2026-10-12T23:49:01.2307196Z"
+        }
+      }
+    },
+    {
+      "name": "normal_portal_device_selection",
+      "passed": false,
+      "error_type": "RuntimeError",
+      "error_code": "SELECT_HTTP_403_UNKNOWN"
+    }
+  ]
+}

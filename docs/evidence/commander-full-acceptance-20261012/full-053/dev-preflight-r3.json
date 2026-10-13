@@ -1,0 +1,25 @@
+{
+  "at_utc": "2026-10-13T01:17:21.986953+00:00",
+  "compiled_sha256": "48904bbcd5f24e7ee6594d4336042e8b99631d39b2f2784cbe9ed635ee553dc4",
+  "prior_deployment": {
+    "annotations": {
+      "workers/message": "DEV real QA OAuth/signup opt-in; legacy signed public43 assets retained; 119 offline checks PASS",
+      "workers/triggered_by": "deployment"
+    },
+    "author_email": "tiago.sartori@haralabs.com.br",
+    "created_on": "2026-10-13T00:55:02.567456Z",
+    "id": "837be871-6aab-4bb2-85b2-b0f6b356075d",
+    "source": "wrangler",
+    "strategy": "percentage",
+    "versions": [
+      {
+        "percentage": 100,
+        "version_id": "9335b34a-54b5-46a0-9e2a-c36f67f9a161"
+      }
+    ]
+  },
+  "production_mutation": false,
+  "scope": "DEV_ONLY",
+  "snapshot_sha256": "c2865eeac1a31ff8ce7b41cf00a1e51b02bb18487b576b65650d450b57a635ce",
+  "state": "PASS_DRY_RUN"
+}

@@ -1,0 +1,79 @@
+{
+  "schema": "hara.dev-cloud-quota-boundary.v1",
+  "started_at": "2026-10-13T00:16:57.506045+00:00",
+  "environment": "DEV",
+  "plan": "DEV_ONE_UNIT",
+  "unit_limit": 1,
+  "scope": "LIVE_QUOTA_CONTRACT_LIMIT_ONE_NOT_10000_COMPLETED_FREE_OPERATIONS",
+  "oauth_frontend_exercised": false,
+  "identity_setup": "ISOLATED_QA_D1_SEED",
+  "prod_mutated": false,
+  "founder_mutated": false,
+  "secret_output": false,
+  "checks": {
+    "last_slot_8_concurrent_one_allowed": "PASS",
+    "reserve_idempotency": "PASS",
+    "release_and_terminal_replay": "PASS",
+    "authorize_real_invoke_receipt_commit": "PASS",
+    "idempotent_commit_no_double_charge": "PASS",
+    "over_limit_after_commit": "PASS"
+  },
+  "concurrency": {
+    "attempts": 8,
+    "allowed": 1,
+    "quota_denied": 7
+  },
+  "native_windows_quota_proof": {
+    "release_terminal": true,
+    "commit_state": "COMMITTED",
+    "idempotent_commit": true,
+    "double_charge": false,
+    "event_v2_call": true,
+    "receipt_bound": true,
+    "authority": "HARA_COMMANDER"
+  },
+  "final_usage": {
+    "ok": false,
+    "code": "QUOTA_EXCEEDED",
+    "existing": false,
+    "state": "DENIED",
+    "period_key": "2026-10",
+    "limit": 1,
+    "consumed_units": 1,
+    "remaining_units": 0
+  },
+  "state": "PASS_LIVE_CLOUD_QUOTA_BOUNDARY_NATIVE_RECEIPT",
+  "request_ids": [
+    "HARA-QA-LAST-SLOT-ad6640a3b16581ea57c52e4d",
+    "HARA-QA-LAST-SLOT-aff881c5c9d30217692085ae",
+    "HARA-QA-LAST-SLOT-42d7119c0862ed36f0858de5",
+    "HARA-QA-LAST-SLOT-18ada87137259f35aa884dcd",
+    "HARA-QA-LAST-SLOT-abb963a6e0f1bfedd3cbf24f",
+    "HARA-QA-LAST-SLOT-487c25d7896ae923a9f67deb",
+    "HARA-QA-LAST-SLOT-c5bf9e9abf01206fd9a2fa2c",
+    "HARA-QA-LAST-SLOT-60616b66ac34b813a7cb47e0",
+    "HARA-EV2-QUOTA-REL-c3dcf2ec-b625-4882-9ee6-b17392ac32d2",
+    "HARA-EV2-QUOTA-COMMIT-5c32ec08-10fd-4753-9b8b-a0d19f77c2c2",
+    "HARA-QA-OVER-LIMIT-ccb3b772364568ede04981e0"
+  ],
+  "completed_at": "2026-10-13T00:17:26.117979+00:00",
+  "native_receipt_sha256": "5554d7a544d929ad16f3c008de546806b2b6d72268428dbd46f2200d1465b083",
+  "native_commit_request_id": "HARA-EV2-QUOTA-COMMIT-5c32ec08-10fd-4753-9b8b-a0d19f77c2c2",
+  "committed_replay_metadata": {
+    "existing": true,
+    "state": "COMMITTED",
+    "consumed_units": 1,
+    "receipt_sha256": "5554d7a544d929ad16f3c008de546806b2b6d72268428dbd46f2200d1465b083"
+  },
+  "source_windows_version": "0.3.53",
+  "source_windows_sha256": "f67ebcee909ee2ce93187262c951b57b38bc976fec73413bd30555d9bcf62299",
+  "cleanup": {
+    "windows_native_pid_exit": 0,
+    "windows_device_revoked": true,
+    "windows_private_profile_removed": true,
+    "d1": {
+      "fixture_cleanup": "PASS",
+      "remaining_tenants": 0
+    }
+  }
+}

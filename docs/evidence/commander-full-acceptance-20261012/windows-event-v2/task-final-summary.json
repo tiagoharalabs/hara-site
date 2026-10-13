@@ -1,0 +1,26 @@
+{
+  "cloud_quota_proof_owner": "commander_homologation_review",
+  "diff_check": "PASS",
+  "full_windows_event_v2_tool_parity": false,
+  "long_duration_soak_closed": false,
+  "native_053_checks": 46,
+  "native_053_passed": 46,
+  "native_r2_crypto_and_selftest": "PASS",
+  "offline_checked": 119,
+  "offline_failed": 0,
+  "offline_passed": 119,
+  "public_release_deployed_by_this_task": false,
+  "qa_cleanup": {
+    "founder_runtime_mutated": false,
+    "global_tasks_created_by_this_task": false,
+    "qa_live_process_count": 0,
+    "qa_private_profile_r1_exists": false,
+    "qa_private_profile_r2_exists": false,
+    "qa_private_profile_r3_exists": false,
+    "utc": "2026-10-13T00:44:44.0077488Z"
+  },
+  "schema": "hara.windows-event-v2-full053-task-final.v1",
+  "signing_performed_by_this_task": false,
+  "state": "PASS",
+  "unsigned_tamper_checks": 13
+}

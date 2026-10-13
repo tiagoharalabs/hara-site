@@ -1,0 +1,65 @@
+{
+  "at_utc": "2026-10-13T06:35:30.883987+00:00",
+  "checked_files": 764,
+  "credential_values_printed": false,
+  "reviewed_false_positives": [
+    {
+      "classification": "EXISTING_OFFLINE_TEST_LITERAL",
+      "file": "apps/commander/scripts/test_hara_identity_customer_mcp.mjs",
+      "value_sha256": "2d3673a6a04b83cd37d464bb3fdd7b5613cfd19b9a187da8ad3ab62407f3bd85"
+    },
+    {
+      "classification": "EXISTING_OFFLINE_TEST_LITERAL",
+      "file": "apps/commander/scripts/storage_collect_agent_telemetry.py",
+      "value_sha256": "c521fad6d131d26feb018c5c8f105a95fdcc5b1a55b728def8eaf9049887885c"
+    },
+    {
+      "classification": "EXISTING_OFFLINE_TEST_LITERAL",
+      "file": "apps/commander/scripts/test_mcp_result_consistency.mjs",
+      "value_sha256": "673c0de2de06cb699b054ab414c950d480d84f5b66609fa7c9bcee9eb3280e17"
+    },
+    {
+      "classification": "QA_SESSION_POLICY_DESCRIPTION",
+      "field": "root.authorization",
+      "file": "docs/evidence/commander-full-acceptance-20261012/linux-clean/native-053-mcp.json"
+    },
+    {
+      "classification": "QA_SESSION_POLICY_DESCRIPTION",
+      "field": "root.authorization",
+      "file": "docs/evidence/commander-full-acceptance-20261012/linux-clean/native-053-mcp-first-fixture-newline-mismatch.json"
+    },
+    {
+      "classification": "QA_SESSION_POLICY_DESCRIPTION",
+      "field": "root.authorization",
+      "file": "docs/evidence/commander-full-acceptance-20261012/linux-clean/native-053-mcp-prior-previous.json"
+    },
+    {
+      "classification": "QA_SESSION_POLICY_DESCRIPTION",
+      "field": "root.authorization",
+      "file": "docs/evidence/commander-full-acceptance-20261012/linux-clean/native-053-mcp-second-managed-cap-contract.json"
+    },
+    {
+      "classification": "QA_SESSION_POLICY_DESCRIPTION",
+      "field": "root.authorization",
+      "file": "docs/evidence/commander-full-acceptance-20261012/linux-clean/linux54/upgrade-mcp-contract-054-r2.json"
+    },
+    {
+      "classification": "QA_SESSION_POLICY_DESCRIPTION",
+      "field": "root.authorization",
+      "file": "docs/evidence/commander-full-acceptance-20261012/linux-clean/linux54/upgrade-mcp-054-r2.json"
+    },
+    {
+      "classification": "QA_SESSION_POLICY_DESCRIPTION",
+      "field": "root.authorization",
+      "file": "docs/evidence/commander-full-acceptance-20261012/linux-clean/linux54/fresh-mcp-054-r2.json"
+    },
+    {
+      "classification": "QA_SESSION_POLICY_DESCRIPTION",
+      "field": "root.authorization",
+      "file": "docs/evidence/commander-full-acceptance-20261012/linux-clean/linux54/upgrade-mcp-contract-r2-054-r2.json"
+    }
+  ],
+  "scope": "Candidate source helpers and owned full-acceptance evidence; private generated custody excluded",
+  "state": "PASS",
+  "unresolved_candidates": []
+}

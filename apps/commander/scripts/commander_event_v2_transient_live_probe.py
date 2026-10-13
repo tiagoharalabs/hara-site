@@ -12,6 +12,7 @@ import argparse
 import ast
 import json
 import os
+import re
 import stat
 import time
 import uuid
@@ -26,7 +27,25 @@ WORKER = Path(__file__).resolve().parent.parent / "src" / "worker.js"
 
 
 class ProbeError(RuntimeError):
-    pass
+    def __init__(self, code, *, http_status=None, cf_ray=None, incident_id=None):
+        super().__init__(code)
+        self.safe_diagnostics = {}
+        if type(http_status) is int and 400 <= http_status <= 599:
+            self.safe_diagnostics["http_status"] = http_status
+        if isinstance(cf_ray, str) and re.fullmatch(r"[0-9a-fA-F]{16}-[A-Z]{3}", cf_ray):
+            self.safe_diagnostics["cf_ray"] = cf_ray
+        if isinstance(incident_id, str) and re.fullmatch(r"[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}", incident_id):
+            self.safe_diagnostics["incident_id"] = incident_id.lower()
+
+
+
+def stage_error(prefix: str, error: ProbeError) -> ProbeError:
+    """Carry already whitelisted correlation through a full-probe stage."""
+    diagnostics = error.safe_diagnostics
+    return ProbeError(prefix + str(error),
+        http_status=diagnostics.get("http_status"),
+        cf_ray=diagnostics.get("cf_ray"),
+        incident_id=diagnostics.get("incident_id"))
 
 
 def load_token(path: Path) -> str:
@@ -79,7 +98,11 @@ def post_json(path: str, token: str, body: dict) -> dict:
             obj = json.loads(raw or "{}")
         except json.JSONDecodeError:
             obj = {}
-        raise ProbeError(str(obj.get("code") or f"HTTP_{exc.code}")) from None
+        raise ProbeError(
+            str(obj.get("code") or f"HTTP_{exc.code}"),
+            http_status=exc.code, cf_ray=exc.headers.get("CF-Ray"),
+            incident_id=exc.headers.get("x-hara-dev-incident-id"),
+        ) from None
     except (URLError, TimeoutError) as exc:
         raise ProbeError("QUOTA_PROBE_NETWORK_ERROR") from exc
     try:
@@ -161,7 +184,7 @@ def run(token: str, subject: str, device_id: str, timeout: float) -> dict:
     try:
         health = transient_call(token, subject, health_req, "hara.health", {})
     except ProbeError as exc:
-        raise ProbeError("STAGE_HEALTH__" + str(exc)) from exc
+        raise stage_error("STAGE_HEALTH__", exc) from exc
     health_ms = (time.perf_counter() - health_started) * 1000.0
     require_transient_common(health)
     if health.get("state") != "COMPLETED":
@@ -177,7 +200,7 @@ def run(token: str, subject: str, device_id: str, timeout: float) -> dict:
             token, subject, invoke_req, "hara.functions.invoke", invoke_payload
         )
     except ProbeError as exc:
-        raise ProbeError("STAGE_INVOKE_FIRST__" + str(exc)) from exc
+        raise stage_error("STAGE_INVOKE_FIRST__", exc) from exc
     invoke_ms = (time.perf_counter() - invoke_started) * 1000.0
     require_transient_common(first)
     if first.get("state") != "COMPLETED":
@@ -199,7 +222,7 @@ def run(token: str, subject: str, device_id: str, timeout: float) -> dict:
             token, subject, invoke_req, "hara.functions.invoke", invoke_payload
         )
     except ProbeError as exc:
-        raise ProbeError("STAGE_INVOKE_REPLAY__" + str(exc)) from exc
+        raise stage_error("STAGE_INVOKE_REPLAY__", exc) from exc
     replay_ms = (time.perf_counter() - replay_started) * 1000.0
     require_transient_common(replay)
     if replay.get("state") != "COMPLETED":

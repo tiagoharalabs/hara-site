@@ -11,7 +11,7 @@ $ApprovalTimeoutSeconds = 900
 $OperationsDb = Join-Path $Root "operations.sqlite3"
 $AgentTaskName = "HARA Commander Agent"
 $SessionMaxHours = 12
-$AgentVersion = "0.3.53"
+$AgentVersion = "0.3.54"
 $SloProfile = "INTERNAL_BETA_V1"
 $SloMinSuccessPercent = 99.0
 $SloP50MaxMs = 1000
@@ -68,15 +68,17 @@ function Set-RuntimeStatus([string]$HeartbeatAt=$null,[string]$ErrorCode=$null,[
   if (Test-Path -LiteralPath $RuntimeStatus -PathType Leaf) {
     try { $existing=Get-Content -Raw -LiteralPath $RuntimeStatus | ConvertFrom-Json } catch { $existing=$null }
   }
-  $lastHeartbeat=if ($null -ne $HeartbeatAt) {$HeartbeatAt} elseif ($existing) {[string]$existing.last_successful_heartbeat_at_utc} else {$null}
-  $startedAt=if ($null -ne $StartedAt) {$StartedAt} elseif ($existing) {[string]$existing.started_at_utc} else {$null}
+  $lastHeartbeat=if ($PSBoundParameters.ContainsKey("HeartbeatAt")) {$HeartbeatAt} elseif ($existing) {[string]$existing.last_successful_heartbeat_at_utc} else {$null}
+  $runtimeStartedAt=if ($PSBoundParameters.ContainsKey("StartedAt")) {$StartedAt} elseif ($existing) {[string]$existing.started_at_utc} else {$null}
+  $runtimeErrorCode=if ($PSBoundParameters.ContainsKey("ErrorCode")) {$ErrorCode} elseif ($existing) {[string]$existing.last_runtime_error_code} else {$null}
+  $runtimeErrorAt=if ($PSBoundParameters.ContainsKey("ErrorAt")) {$ErrorAt} elseif ($existing) {[string]$existing.last_runtime_error_at_utc} else {$null}
   $payload=[ordered]@{
     schema="hara.commander-agent-runtime-status.v1"
     agent_version=$AgentVersion
-    started_at_utc=$startedAt
+    started_at_utc=$runtimeStartedAt
     last_successful_heartbeat_at_utc=$lastHeartbeat
-    last_runtime_error_code=$ErrorCode
-    last_runtime_error_at_utc=$ErrorAt
+    last_runtime_error_code=$runtimeErrorCode
+    last_runtime_error_at_utc=$runtimeErrorAt
     updated_at_utc=[DateTime]::UtcNow.ToString("o")
   }
   $tmp=$RuntimeStatus+".tmp"
@@ -86,7 +88,7 @@ function Set-RuntimeStatus([string]$HeartbeatAt=$null,[string]$ErrorCode=$null,[
 
 function Try-SetRuntimeStatus([string]$HeartbeatAt=$null,[string]$ErrorCode=$null,[string]$ErrorAt=$null,[string]$StartedAt=$null) {
   try {
-    Set-RuntimeStatus -HeartbeatAt $HeartbeatAt -ErrorCode $ErrorCode -ErrorAt $ErrorAt -StartedAt $StartedAt
+    Set-RuntimeStatus @PSBoundParameters
     return $true
   } catch {
     return $false
@@ -859,7 +861,7 @@ function Send-LocalApprovalConsumerHeartbeat($Cfg,[string]$ApprovalDeviceToken) 
       activity_snapshots=(Get-LocalActivityHeartbeatSnapshot)
     } 5 | Out-Null
     $script:LastHeartbeat=Get-Date
-    Try-SetRuntimeStatus -HeartbeatAt ([DateTime]::UtcNow.ToString("o")) | Out-Null
+    Try-SetRuntimeStatus -HeartbeatAt ([DateTime]::UtcNow.ToString("o")) -ErrorCode "" -ErrorAt "" | Out-Null
     return $true
   } catch {
     Try-SetRuntimeStatus -ErrorCode (Get-SafeErrorCode $_) -ErrorAt ([DateTime]::UtcNow.ToString("o")) | Out-Null
@@ -2018,7 +2020,7 @@ while ($true) {
       } 20 | Out-Null
       $LastHeartbeat=Get-Date
       $LastErrorCode=$null
-      Try-SetRuntimeStatus -HeartbeatAt ([DateTime]::UtcNow.ToString("o")) | Out-Null
+      Try-SetRuntimeStatus -HeartbeatAt ([DateTime]::UtcNow.ToString("o")) -ErrorCode "" -ErrorAt "" | Out-Null
     }
     try {
       $Call=Send-Json "$($Cfg.base_url)/api/device/calls/next" $DeviceToken @{} 25

@@ -1,0 +1,106 @@
+{
+  "schema": "hara.commander-linux-clean-real-053-lifecycle-summary.v1",
+  "state": "PASS_REAL_053_LIFECYCLE_PENDING_24H_SOAK",
+  "vm_uuid": "27acff5d-dd62-4426-99e8-4f73400bc8b2",
+  "vm_hostname": "commander-linux-clean",
+  "os": "Ubuntu 24.04.5 LTS",
+  "native_uid": 2000,
+  "systemctl_backend": "real",
+  "backend_enrollment": "real_remote_DEV",
+  "mcp_scope": "actual_installed_local_stdio_with_real_DEV_enrollment",
+  "signed_release": "commercial-0.3.53-v13-rc-r3",
+  "signed_installer_sha256": "dae0a39f12a02920261a8051834d5b8426866a07e8a0d0acb9676c6605c8e3f8",
+  "signed_agent_sha256": "db91714140b63684917e46d6a327778183a5829dbf2b298098b31da4d463985e",
+  "signed_manifest_sha256": "eebd7f4b209158b4a9a02b986365291c14e70bcad45106271078b2a373b6a257",
+  "qa_device_for_soak": "HARA-DEVICE-962202bc-274a-486b-9794-b73d9f3a5889",
+  "default_mode": "ASK_EVERY_ACTION",
+  "qa_mutation_mode": "SESSION_TRUSTED_only_during_explicit_QA_CLI",
+  "human_ASK_acceptance_generated": false,
+  "agent_autostart": false,
+  "VM_autostart": false,
+  "signed_product_source_modified": false,
+  "backend_mock_used": false,
+  "systemctl_shim_used": false,
+  "founder_workloads_changed": false,
+  "customer_secrets_exposed": false,
+  "evidence": {
+    "upgrade": {
+      "state": "PASS_NATIVE_043_TO_SIGNED_053_LEGACY_MIGRATION",
+      "evidence_file": "native-053-upgrade.json",
+      "evidence_sha256": "8e4a80855860bc6bed49a3cec02a1c01f0e387bc8c76048ec18b8cf9c84cc975",
+      "device_id": "HARA-DEVICE-5fe78432-d0c1-487c-b29a-3f7e15599d7e"
+    },
+    "fresh_install": {
+      "state": "PASS",
+      "evidence_file": "native-053-install.json",
+      "evidence_sha256": "6af742ed703c996d3982262523c85f7a9c00c5db56451580819555e64bb6c37a",
+      "device_id": "HARA-DEVICE-e3eacf31-f6b4-47df-96f7-c22aaacd9e4d"
+    },
+    "fresh_core": {
+      "state": "PASS_NATIVE_LINUX_LIFECYCLE_CORE",
+      "evidence_file": "native-053-core.json",
+      "evidence_sha256": "8851233413954283172c98bbe6084bbd30772b9a87aa5f1634586e18ceae3080",
+      "device_id": "HARA-DEVICE-e3eacf31-f6b4-47df-96f7-c22aaacd9e4d",
+      "checks": 13
+    },
+    "rollback": {
+      "state": "PASS_NATIVE_SIGNED_UPDATE_ROLLBACK",
+      "evidence_file": "native-053-rollback.json",
+      "evidence_sha256": "ddab4fb94efa26fb124cc7966746f5eaf22dc5719a9f7399c802699fc5cc71b7"
+    },
+    "reenroll": {
+      "state": "PASS",
+      "evidence_file": "native-053-re-enroll.json",
+      "evidence_sha256": "1ee13df0896cf9ef449512816bb47df4da6ca727347b7a774a00ee1971a5abd1",
+      "device_id": "HARA-DEVICE-962202bc-274a-486b-9794-b73d9f3a5889"
+    },
+    "fresh_mcp": {
+      "state": "PASS_NATIVE_LINUX_MCP_53",
+      "evidence_file": "native-053-mcp.json",
+      "evidence_sha256": "84bfc3817fdc54e67ed80b26efd91f0740ef39e2ed8d3abbe54064b8e2af2740",
+      "checks": 19
+    },
+    "upgrade_uninstall": {
+      "state": "PASS_NATIVE_LINUX_UNINSTALL_REVOKE_CLEANUP",
+      "evidence_file": "native-053-uninstall.json",
+      "evidence_sha256": "f727e09dc078b0c020ee7964cb5f25c8e1280dbb75ceddfeb140c21a075340e1",
+      "device_id": "HARA-DEVICE-5fe78432-d0c1-487c-b29a-3f7e15599d7e"
+    },
+    "wrapper_unit_fs": {
+      "state": "PASS",
+      "evidence_file": "wrapper-atomic-real-fs-uid2000.json",
+      "evidence_sha256": "93ef873e7898e7a8ac3f749672610dc5aaa60abe7d2eefd20e04f396f813aae0",
+      "checks": 62
+    }
+  },
+  "known_functional_defects": [
+    {
+      "code": "MANAGED_START_PROCESS_MAX_LINES_IGNORED",
+      "release": "0.3.53",
+      "managed_initial_cap": 200,
+      "bounded_max_lines_20_test": "PASS",
+      "managed_configurable_cap_20_test": "FAIL_preserved",
+      "next_action": "isolated_candidate_for_root_54_versioning"
+    },
+    {
+      "code": "PUBLIC_HARA_WRAPPER_DROPS_REMAINING_ARGV",
+      "release": "0.3.53",
+      "command_trigger": "hara commander approval-mode session",
+      "observed_effect": "session argument omitted; mode getter only",
+      "scope_of_existing_session_tests": "Agent CLI invoked directly with correct arguments",
+      "next_action": "isolated_wrapper54_candidate_32_native_and61plus61FS_passed; root_versioning_pending"
+    }
+  ],
+  "pending": [
+    "24-hour real VM transport with rotated actual CLI sessions",
+    "root-incorporated signed54 and external acceptance for both functional fixes",
+    "final own-fixture cleanup coordinated by root"
+  ],
+  "cloud_pilot20": {
+    "calls": 20,
+    "elapsed_seconds": 1201,
+    "state": "PASS",
+    "success": 20
+  },
+  "cloud_probe_scope": "normal_DEV_internal_bridge_to_actual_enrolled_VM_Agent; real quota call metadata, fixture portal cookie expired, not customer OAuth proof"
+}

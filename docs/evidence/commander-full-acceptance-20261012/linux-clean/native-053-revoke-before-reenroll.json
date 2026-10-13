@@ -1,0 +1,7 @@
+{
+  "state": "PASS",
+  "http": 200,
+  "device_id": "HARA-DEVICE-e3eacf31-f6b4-47df-96f7-c22aaacd9e4d",
+  "route": "normal_portal_revoke",
+  "secrets_printed": false
+}

@@ -1,0 +1,13 @@
+{
+  "exit_code": 0,
+  "runtime": {
+    "schema": "hara.commander-agent-runtime-status.v1",
+    "agent_version": "0.3.51",
+    "started_at_utc": "",
+    "last_successful_heartbeat_at_utc": "",
+    "last_runtime_error_code": "METHODINVOCATIONEXCEPTION",
+    "last_runtime_error_at_utc": "2026-10-13T00:03:04.4121248Z",
+    "updated_at_utc": "2026-10-13T00:03:04.4182012Z"
+  },
+  "stderr_present": false
+}

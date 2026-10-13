@@ -1,0 +1,14 @@
+{
+  "state": "STARTED_PENDING_READINESS",
+  "unit": "hara-commander-qa-soak-20261013.service",
+  "qa_device_id": "HARA-DEVICE-962202bc-274a-486b-9794-b73d9f3a5889",
+  "holder_sha256": "52ff08861572b4191efb675f096a03545f47901758f2dc891a98d1a34ea5d818",
+  "budget_seconds": 86400,
+  "qa_cli_rotation_seconds": 39600,
+  "product_TTL_changed": false,
+  "human_ASK_inputs_generated": false,
+  "automatic_final_cleanup": "normal_pinned_installer_self_revoke_and_uninstall",
+  "cloud_probe": "pending_separate_normal_DEV_route",
+  "vm_shutdown": "root_coordinator",
+  "source_or_installer_patched": false
+}

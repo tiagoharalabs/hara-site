@@ -1,0 +1,53 @@
+{
+  "agent_count": 0,
+  "at_utc": "2026-10-13T04:24:35+00:00",
+  "libvirt_memory_pin": {
+    "current_memory_kib": 62914560,
+    "memory_kib": 62914560,
+    "uuid": "c8bcefb4-3f25-41b0-a07a-58c0d7956662",
+    "vcpus": 8,
+    "xml_sha256": "917233299cc3466b6a1c20c697aae966ee239574ad56bbfbf68fa72ae9d00d31"
+  },
+  "manager_base": "/home/commanderqa/hara-capacity1000",
+  "private_ssh_config": "/tmp_hara/commander-capacity1000-20261013/private/ssh_config",
+  "resource_snapshot": {
+    "at_unix": 1791865475.2796907,
+    "at_utc": "2026-10-13T04:24:35+00:00",
+    "bound_domain_uuid": "c8bcefb4-3f25-41b0-a07a-58c0d7956662",
+    "cgroup_controllers": [
+      "cpuset",
+      "cpu",
+      "io",
+      "memory",
+      "hugetlb",
+      "pids",
+      "rdma",
+      "misc"
+    ],
+    "cgroup_v2": true,
+    "cpu_count": 8,
+    "disk_available_bytes": 22077673472,
+    "libvirt_nominal_memory_verified": true,
+    "load_1m": 0.0,
+    "memory_available_bytes": 62323544064,
+    "memory_total_bytes": 63199559680,
+    "nominal_vm_memory_bytes": 64424509440,
+    "open_files_hard": 8192,
+    "open_files_soft": 8192,
+    "role": "Guest",
+    "schema": "hara.commander-capacity-resource-snapshot.v1",
+    "swap_free_bytes": 0,
+    "swap_total_bytes": 0
+  },
+  "resource_verdict": {
+    "new_agents": 100,
+    "projected_per_agent_rss_bytes": 58720256,
+    "required_available_bytes": 10166992896,
+    "resource_estimate_is_not_capacity_evidence": true,
+    "stage_agents": 100,
+    "state": "PASS_RESOURCE_PREFLIGHT_ONLY"
+  },
+  "schema": "hara.commander-real1000-guest-preflight.v1",
+  "state": "PASS_NATIVE_GUEST_STAGE100_RESOURCE_ONLY",
+  "tenant_count": 0
+}

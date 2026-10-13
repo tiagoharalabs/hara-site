@@ -1,0 +1,30 @@
+{
+  "exit_code": 0,
+  "guest_pid": 4768,
+  "output_truncated": false,
+  "raw_logs_private": true,
+  "result": {
+    "clone_uuid": "d35599c8-b9ea-45e5-9ae9-fa047e84b8ba",
+    "commander_profile_and_enrollment_clean": true,
+    "configuration_or_password_printed": false,
+    "founder_configuration_contents_read": false,
+    "founder_device_tokens_used": false,
+    "inherited_commander_tasks_removed": 4,
+    "inherited_local_users_disabled": 1,
+    "inherited_profiles_removed": 1,
+    "network_up_adapters": 0,
+    "next_gate": "REBOOT_QA_PROFILE_THEN_DEV_NETWORK",
+    "preexisting_os_cloned": true,
+    "qa_account_created": true,
+    "qa_name": "HARAQA",
+    "schema": "hara.windows-clean-clone-sanitization.v1",
+    "state": "PASS_CLONE_SANITIZED_BEFORE_NETWORK"
+  },
+  "state": "EXITED",
+  "stderr_present": false,
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout_sha256": "be8d47ed590dcc543d2ba233e350b7a2af94ddf078a39f48aedd556f0d2fe253",
+  "vm": "hara-win51-clean-20261012-r1",
+  "nucleo_commander_receipt_sha256": "aba2b4cedda3ec4231fdb1d7c311b8ef331434ae84db7bd87f8beb8c231f1931",
+  "evidence_authority": "CLONE_WINDOWS_NATIVE_QGA"
+}

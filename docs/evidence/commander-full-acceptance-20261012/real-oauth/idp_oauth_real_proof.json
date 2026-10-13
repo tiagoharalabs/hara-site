@@ -1,0 +1,297 @@
+{
+  "schema": "hara.commander.real-oauth.idp-proof.v1",
+  "proof": {
+    "event": "REAL_OAUTH_PROOF",
+    "at_utc": "2026-10-13T00:12:42.202234+00:00",
+    "state": "PASS_REAL_OAUTH_PKCE_QA",
+    "subject_id": "394859086664957956",
+    "client_id": "394859085289226244",
+    "issuer": "https://auth.haralabs.com.br",
+    "audiences": [
+      "394859085289226244",
+      "392794504995799043",
+      "392945565756882947",
+      "393658063434874884",
+      "393956020499578884",
+      "394416432470884356",
+      "394417849373818884",
+      "392794504962310147"
+    ],
+    "scopes": "openid email profile urn:zitadel:iam:org:project:id:392794504962310147:aud",
+    "token_format": "OPAQUE",
+    "email_notification_requested": false,
+    "password_factor_verified": true,
+    "global_policy_changed": false,
+    "global_roles_added": false,
+    "credential_values_exposed": false
+  },
+  "events": [
+    {
+      "event": "HTTP",
+      "at_utc": "2026-10-13T00:12:34.634033+00:00",
+      "method": "GET",
+      "path": "/.well-known/openid-configuration",
+      "http_status": 200,
+      "safe_error_code": null
+    },
+    {
+      "event": "HTTP",
+      "at_utc": "2026-10-13T00:12:35.277373+00:00",
+      "method": "POST",
+      "path": "/oauth/v2/register",
+      "http_status": 201,
+      "safe_error_code": null
+    },
+    {
+      "event": "DCR_CLIENT_CREATED",
+      "at_utc": "2026-10-13T00:12:35.277809+00:00",
+      "client_id": "394859085289226244",
+      "public_pkce_client": true
+    },
+    {
+      "event": "HTTP",
+      "at_utc": "2026-10-13T00:12:37.022023+00:00",
+      "method": "POST",
+      "path": "/v2/users/human",
+      "http_status": 200,
+      "safe_error_code": null
+    },
+    {
+      "event": "QA_USER_CREATED",
+      "at_utc": "2026-10-13T00:12:37.023259+00:00",
+      "subject_id": "394859086664957956",
+      "no_email_requested": true,
+      "global_roles_added": false
+    },
+    {
+      "event": "HTTP",
+      "at_utc": "2026-10-13T00:12:37.741244+00:00",
+      "method": "POST",
+      "path": "/v2/users/394859086664957956/email/verify",
+      "http_status": 200,
+      "safe_error_code": null
+    },
+    {
+      "event": "HTTP",
+      "at_utc": "2026-10-13T00:12:39.723514+00:00",
+      "method": "POST",
+      "path": "/v2/sessions",
+      "http_status": 201,
+      "safe_error_code": null
+    },
+    {
+      "event": "HTTP",
+      "at_utc": "2026-10-13T00:12:39.808621+00:00",
+      "method": "GET",
+      "path": "/v2/sessions/394859090590826500",
+      "http_status": 200,
+      "safe_error_code": null
+    },
+    {
+      "event": "QA_PASSWORD_SESSION_VERIFIED",
+      "at_utc": "2026-10-13T00:12:39.809289+00:00",
+      "subject_id": "394859086664957956",
+      "password_verified": true,
+      "lifetime_seconds": 600
+    },
+    {
+      "event": "HTTP",
+      "at_utc": "2026-10-13T00:12:40.187886+00:00",
+      "method": "GET",
+      "path": "/oauth/v2/authorize",
+      "http_status": 302,
+      "safe_error_code": null
+    },
+    {
+      "event": "HTTP",
+      "at_utc": "2026-10-13T00:12:40.298902+00:00",
+      "method": "GET",
+      "path": "/v2/oidc/auth_requests/V2_394859093443018756",
+      "http_status": 200,
+      "safe_error_code": null
+    },
+    {
+      "event": "HTTP",
+      "at_utc": "2026-10-13T00:12:40.492605+00:00",
+      "method": "POST",
+      "path": "/v2/oidc/auth_requests/V2_394859093443018756",
+      "http_status": 200,
+      "safe_error_code": null
+    },
+    {
+      "event": "HTTP",
+      "at_utc": "2026-10-13T00:12:41.322407+00:00",
+      "method": "POST",
+      "path": "/oauth/v2/token",
+      "http_status": 200,
+      "safe_error_code": null
+    },
+    {
+      "event": "HTTP",
+      "at_utc": "2026-10-13T00:12:41.643868+00:00",
+      "method": "GET",
+      "path": "/oidc/v1/userinfo",
+      "http_status": 200,
+      "safe_error_code": null
+    },
+    {
+      "event": "HTTP",
+      "at_utc": "2026-10-13T00:12:42.200873+00:00",
+      "method": "POST",
+      "path": "/oauth/v2/introspect",
+      "http_status": 200,
+      "safe_error_code": null
+    },
+    {
+      "event": "REAL_OAUTH_PROOF",
+      "at_utc": "2026-10-13T00:12:42.202234+00:00",
+      "state": "PASS_REAL_OAUTH_PKCE_QA",
+      "subject_id": "394859086664957956",
+      "client_id": "394859085289226244",
+      "issuer": "https://auth.haralabs.com.br",
+      "audiences": [
+        "394859085289226244",
+        "392794504995799043",
+        "392945565756882947",
+        "393658063434874884",
+        "393956020499578884",
+        "394416432470884356",
+        "394417849373818884",
+        "392794504962310147"
+      ],
+      "scopes": "openid email profile urn:zitadel:iam:org:project:id:392794504962310147:aud",
+      "token_format": "OPAQUE",
+      "email_notification_requested": false,
+      "password_factor_verified": true,
+      "global_policy_changed": false,
+      "global_roles_added": false,
+      "credential_values_exposed": false
+    }
+  ],
+  "maintenance_preflight": {
+    "state": "READ_ONLY_PERMISSION_PREFLIGHT",
+    "http_status": 200,
+    "required_permissions_present": {
+      "user.read": true,
+      "user.write": true,
+      "user.delete": true,
+      "user.credential.write": true,
+      "session.write": true,
+      "session.link": false,
+      "session.delete": true,
+      "session.read": true
+    },
+    "permission_response_kind": "list",
+    "safe_api_error_code": null,
+    "credential_files_metadata_only": [
+      {
+        "name": "identity-owner.pat",
+        "mode": "0o600",
+        "root_owned": true,
+        "regular": true
+      },
+      {
+        "name": "mcp-introspection-client.json",
+        "mode": "0o600",
+        "root_owned": true,
+        "regular": true
+      }
+    ],
+    "credential_values_exposed": false
+  },
+  "login_client_preflight": {
+    "state": "READ_ONLY_LOGIN_PAT_PREFLIGHT",
+    "login_token_existing_mode": "0o644",
+    "root_owned": true,
+    "http_status": 200,
+    "required_permissions_present": {
+      "session.write": true,
+      "session.link": true,
+      "session.delete": true,
+      "user.write": true
+    },
+    "credential_values_exposed": false
+  },
+  "audience_lookup": {
+    "state": "READ_ONLY_PUBLIC_AUDIENCE_LOOKUP",
+    "projects_http_status": 200,
+    "projects_count": 4,
+    "bounded_projects_examined": 4,
+    "application_list_http_statuses": [
+      200,
+      200,
+      200,
+      200
+    ],
+    "matches": [
+      {
+        "project_id": "392794504962310147",
+        "introspection_client_id": "392945565756882947",
+        "app_id": "392945565756817411"
+      }
+    ],
+    "dcr_gateway": [
+      {
+        "container": "hara-identity-zitadel-dcr-gateway-1",
+        "policy_metadata": {
+          "HARA_DCR_GATEWAY_MODE": "guarded"
+        }
+      }
+    ],
+    "credential_values_exposed": false
+  },
+  "private_state_hygiene": {
+    "state": "PRIVATE_QA_STATE_HYGIENE_PASS",
+    "file_mode": "0o600",
+    "directory_mode": "0o700",
+    "root_owned": true,
+    "credential_values_read": false
+  },
+  "runner_sha256": "00b80c0967a01bd16272cc0d476307a151dc6fe9fd2bdda0cd81864db210f91a",
+  "product_transport_receipts": {
+    "prepare_start": "a079106b15195703611b1e15ba92670d12431204414a015b37cc013bf37cb5e8",
+    "prepare_output": "d448017b64ca4e7f68cf2efa6f96890bf8bd7b84b735571986548f81bbd40a59",
+    "private_state_hygiene": "be759e405912a31c0c040d951fe56e25c1cc0ee31fc9b8e66a4d00401728737a"
+  },
+  "mcp_customer_dev_state": "AWAITING_ROUTE_AND_D1_QA_BINDING",
+  "cleanup_state": "PENDING_AFTER_DEV_MCP_PROOF",
+  "secrets_or_codes_exposed": false,
+  "private_token_liveness": {
+    "state": "REAL_QA_TOKEN_LIVENESS",
+    "http_status": 200,
+    "active": true,
+    "subject_matches_created_qa": true,
+    "expires_at_utc": "2026-10-13T12:12:41+00:00",
+    "credential_values_exposed": false
+  },
+  "qa_identity_readback": {
+    "state": "READ_ONLY_QA_IDENTITY_READBACK",
+    "subject_id": "394859086664957956",
+    "rows": [
+      {
+        "path": "/v2/users/394859086664957956",
+        "http_status": 200,
+        "regular_human_present": true,
+        "subject_matches_created_qa": true,
+        "user_state": "USER_STATE_ACTIVE",
+        "email_verified": true,
+        "password_change_required": null
+      },
+      {
+        "path": "/management/v1/users/394859086664957956/memberships/_search",
+        "http_status": 200,
+        "membership_count": 0,
+        "safe_error_code": null
+      }
+    ],
+    "credential_values_exposed": false
+  },
+  "dev_d1_binding": {
+    "seeded_by": "commander_homologation_review",
+    "identity_subject_id": "394859086664957956",
+    "tenant_id": "HARA-ACCEPT-T-20261013001608-ea8cefa9",
+    "plan": "TRIAL",
+    "state": "EXPLICIT_DEV_QA_FIXTURE_SEED",
+    "oauth_bearer_fixture": false
+  }
+}

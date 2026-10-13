@@ -1,0 +1,48 @@
+{
+  "schema": "hara.commander-linux-clean-native-lifecycle.v1",
+  "backend": "remote_DEV_worker",
+  "systemctl_backend": "real",
+  "checks": [
+    {
+      "check": "installed-default-ASK",
+      "state": "PASS"
+    },
+    {
+      "check": "installed-source-pin",
+      "state": "PASS"
+    },
+    {
+      "check": "installed-service-active-disabled",
+      "state": "PASS"
+    },
+    {
+      "check": "installed-no-operator-session",
+      "state": "PASS"
+    },
+    {
+      "check": "default-ASK-no-session-mutation-denied",
+      "state": "PASS",
+      "denial_code": "LOCAL_MCP_TOOL_INVALID"
+    },
+    {
+      "check": "native-cli-stop-installed-service",
+      "state": "PASS"
+    },
+    {
+      "check": "offline-signed-update-preserves-offline",
+      "state": "PASS"
+    },
+    {
+      "check": "offline-update-preserves-source",
+      "state": "PASS"
+    },
+    {
+      "check": "native-cli-start-real-operator-session",
+      "state": "PASS"
+    }
+  ],
+  "human_action_approval_generated": false,
+  "state": "FAIL_NATIVE_LINUX_LIFECYCLE_CORE",
+  "error_type": "AssertionError",
+  "error_code": "native-MCP-readonly-device-info"
+}

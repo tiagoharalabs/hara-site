@@ -1,10 +1,14 @@
-# H.A.R.A. Commander — Product Current (12/10/2026, 22:49 BRT)
+# H.A.R.A. Commander — Product Current (13/10/2026, 01:51 BRT)
 
-**O checklist autoritativo desta rodada está em [HARA_COMMANDER_CURRENT.md](../handoffs/HARA_COMMANDER_CURRENT.md).** Ele registra critérios, provas e próximos fechamentos em um único lugar.
+Checkpoint 20261013T064138Z: teste real160calls/120PASS/40DEVICE_OFFLINE(SentD/Windows); seis máquinas20/20PASS. Novo pacote experimental corrige drift de liveness .46; canárioSentC com fontes/config verificadas, expansão em curso. Escala1000/24h pendente. Safe-tail encerrou05:58:53UTC; backend003/observerLinux53 continuam. OAuthWrangler expirado sob renovação existente. Evidência: capacity-1000/fleet-direct-burst-160-20261013T0621Z.json.
 
-A .53 R3 assinada está publicada e conferida em DEV, Worker `97471c0a-b739-4906-90aa-41384a8a1cb1`, com [119/119 verificações PASS](../evidence/commander-full-acceptance-20261012/full-053/prelaunch-offline-gate-r3.json). OAuth real, cadastro normal QA2 e contrato MCP de 33 ferramentas passaram no escopo exercitado. O ciclo Windows limpo QA2 segue em curso; O ciclo completo Linux .53 passou; há um defeito separado no max_lines inicial de terminal gerenciado, com candidato isolado em testes.
+**Windows e Linux .54R2: ciclo funcional real PASS em DEV. Homologação completa PENDENTE.** [Checklist único atual](../handoffs/HARA_COMMANDER_CURRENT.md).
 
-O run 002 terminou FAIL após cerca de19min com erro interno em probe, ambos Agents vivos/conectados e cleanup PASS. A causa segue em diagnóstico; não há resultado24/72h nem soak ativo neste checkpoint. A rampa 100/100 não certifica 1.000 clientes por 24h. Stripe pago e aprovação pública OpenAI têm critérios próprios; Direct/Secure MCP Tunnel é opção avançada Linux, conforme a decisão Cloud-first aprovada em 09/10, e não bloqueia o beta técnico. Publicação PROD da .53 e CI desta revisão devem ser confirmados pelo fechamento da rodada.
+DEV6f6e68e3… está fixado em100% com oito assets .54R2 exatos e gate133/133PASS. OAuth normalQA2, portal pairing/select, MCP realWindows54, recibo e quota1→2 passaram. VMs54 e QA1/QA2 foram saneados após os testes. PROD contém somente o patch mínimo de entitlement70564d5b…; downloads .43 preservados.
+
+O backend iniciou a nova rodada72h13/10 03:56:15UTC e completou o piloto20min;24/72h seguem em aberto. O holderLinux53 continua desde01:50:08UTC; falhas do observador de quota foram auditadas como orçamento local válido e permanecem registradas. A rampa100/100 e o aquecimento50/50 em cinco máquinas têm escopos próprios. O teste1.000tenants/Agents24h está em preparação distribuída autorizada em toda a frota, com recursos/cotas medidos porhost.
+
+Distribuição pública .54, custo/falhas prolongadas, StripeTEST pago e aprovação públicaOpenAI têm fechamentos próprios. [Operação .54R2](../operations/HARA_COMMANDER_FULL_ACCEPTANCE_054_20261013.md). A decisãoCloud-first09/10 continua vigente.
 
 ## Histórico preservado — estados anteriores; não usar como status atual
 

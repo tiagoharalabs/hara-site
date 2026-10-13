@@ -1,0 +1,30 @@
+{
+  "all_public_assets_preserved": true,
+  "at_utc": "2026-10-13T01:44:37.145656+00:00",
+  "auth_sha256": "2ebdb228ef855df9bb4a3a8ca365e7ebc2787fd7703ca5c79ae7dd6610f6e22e",
+  "changed_inputs": [
+    "src/auth.js"
+  ],
+  "compiled_sha256": "e0c7d1212649e2906cfcaad609d0b2e1a602e04aee8af7242a4204c22adcb823",
+  "d1_mutation": false,
+  "inputs_sha256": "452ff11085e2bc06066e650b82c2303dd1961d5b41abc23002643e8ff18a4a8e",
+  "prior": {
+    "annotations": {
+      "workers/message": "Commander truthful effect and replay risk metadata; signed public43 preserved",
+      "workers/triggered_by": "deployment"
+    },
+    "author_email": "tiago.sartori@haralabs.com.br",
+    "created_on": "2026-10-13T00:12:47.834637Z",
+    "id": "65406da5-6c8e-41df-b025-89e68d8fbba4",
+    "source": "wrangler",
+    "strategy": "percentage",
+    "versions": [
+      {
+        "percentage": 100,
+        "version_id": "99a19edb-d2cf-4806-8c98-861e4513a2f7"
+      }
+    ]
+  },
+  "production_mutation": false,
+  "state": "PASS_DRY_RUN"
+}

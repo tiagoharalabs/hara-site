@@ -1,0 +1,17 @@
+{
+  "dev_secret_name_list": "PASS",
+  "needed_metadata": {
+    "HARA_IDENTITY_MCP_DCR_PROJECT_AUD": false,
+    "HARA_IDENTITY_MCP_INTROSPECTION_CLIENT_ID": false,
+    "HARA_IDENTITY_MCP_INTROSPECTION_CLIENT_SECRET": false
+  },
+  "all_secret_names": [
+    "AUTH_CLIENT_SECRET",
+    "DEV_ACCESS_TOKEN",
+    "HARA_IDENTITY_MCP_DCR_CLIENT_ID",
+    "MCP_PRODUCT_CANARY_TOKEN",
+    "MCP_PRODUCT_TOKEN",
+    "PRODUCT_LEASE_PRIVATE_JWK"
+  ],
+  "secret_values_read": false
+}

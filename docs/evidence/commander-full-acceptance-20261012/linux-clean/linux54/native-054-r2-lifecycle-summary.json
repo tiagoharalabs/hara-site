@@ -1,0 +1,213 @@
+{
+  "schema": "hara.commander-linux054-r2-real-acceptance-summary.v1",
+  "state": "PASS_REAL_LINUX054_R2_NATIVE_ACCEPTANCE",
+  "completed_at_utc": "2026-10-13T04:27:57Z",
+  "scope": "actual_signed_installer_and_public_CLI_on_exclusive_real_Ubuntu_systemd_guest_with_normal_HTTPS_DEV_backend",
+  "release": {
+    "version": "0.3.54",
+    "manifest_sha256": "e1c7c23de1b4313093e2d8c52be1ec52f6419f72d5ef59d675c7e5a279b1a13d",
+    "agent_sha256": "62e1a836ef92fc8b72638fd116a6f0097fcf9e9f0ef0f4259ca8e0f6712b4229",
+    "installer_sha256": "d2057adfff5c2b475d1520ae44f1ed76a7ec0ecc673f65cf08631d7a0083d0fa",
+    "public_wrapper_sha256": "19463b9d3c9f1c4072bb2017029ecc71da6a07c8dd7f61c4140e4f48c7fda8ae"
+  },
+  "environment": {
+    "DEV_origin": "https://hara-commander-dev-v2.tiago-sartori.workers.dev",
+    "VM_name": "commander-linux54-clean-20261013",
+    "VM_uuid": "f1fc631b-9442-468a-82dc-e99d021ea8f5",
+    "guest_hostname": "commander-linux-clean54",
+    "guest_uid": 2000,
+    "systemctl_backend": "real",
+    "official_image_sha256": "6a81c37564db9b1ee84e141922625e1d7c5b389b99bb3c572e0243607d5bb4d2",
+    "bootstrap_mock_or_shim_used": false,
+    "production_or_Founder_modified": false,
+    "existing53_holder_modified": false
+  },
+  "phases": [
+    {
+      "phase": "baseline-053-install",
+      "state": "PASS",
+      "evidence": "baseline-053-install.json",
+      "evidence_sha256": "3e8c010d42907901b718affc5fcd859415c2d4d4570e3827c8c2da45054dd7c8",
+      "checks": 0,
+      "cleanup_checks": null,
+      "device_id": "HARA-DEVICE-1b987909-0cc0-46cd-8ac4-d09132640e45",
+      "runner_sha256": "9e9b0022df32914a463c74eaa7647f99e4a83d01d67f515af01de4c24a877a3f"
+    },
+    {
+      "phase": "upgrade-054-r2",
+      "state": "PASS_NATIVE_053_TO_SIGNED_054_MANAGED53_MIGRATION",
+      "evidence": "upgrade-054-r2.json",
+      "evidence_sha256": "496e8d013aec0aa8b0deefca8d83b6c008b79dc0cb0aa0fd946f19e362371849",
+      "checks": 0,
+      "cleanup_checks": null,
+      "device_id": "HARA-DEVICE-1b987909-0cc0-46cd-8ac4-d09132640e45",
+      "runner_sha256": "257a07b6ef7e3885c75d1a71cfd03f8df2f9fe722ca84fd97b2bf615ed6e2c37"
+    },
+    {
+      "phase": "upgrade-core-054-r2",
+      "state": "PASS_NATIVE_LINUX54_LIFECYCLE_CORE",
+      "evidence": "upgrade-core-054-r2.json",
+      "evidence_sha256": "f0fcde28cf8dec817ef498f74c0809a8b5a7301acb625549a03a7a8beb9a1f3c",
+      "checks": 13,
+      "cleanup_checks": null,
+      "device_id": "HARA-DEVICE-1b987909-0cc0-46cd-8ac4-d09132640e45",
+      "runner_sha256": "0d645972c0f1cb05a0a7075d950f0f7e1c9e91b0c43b76a463654eac6922690a"
+    },
+    {
+      "phase": "upgrade-rollback-054-r2",
+      "state": "PASS_NATIVE_SIGNED_UPDATE_ROLLBACK",
+      "evidence": "upgrade-rollback-054-r2.json",
+      "evidence_sha256": "7ef5e6635f0af8fa2f1d3e08bef7e95973f8c60e89a90706f1b53f146e882614",
+      "checks": 0,
+      "cleanup_checks": null,
+      "device_id": null,
+      "runner_sha256": "859ab4aa22a164a6ec1bb82d8e649e0c2dac29026f66312057986b017cd86424"
+    },
+    {
+      "phase": "upgrade-mcp-contract-r2-054-r2",
+      "state": "PASS_NATIVE_LINUX_MCP_54",
+      "evidence": "upgrade-mcp-contract-r2-054-r2.json",
+      "evidence_sha256": "a8d82519bcc27f7b720d30889816210682335337dd3d00d2d8fb60b7b668b42a",
+      "checks": 25,
+      "cleanup_checks": null,
+      "device_id": null,
+      "runner_sha256": "b5a54c4756fb35d400c37696cfc527364fad48955a234e0a6376866037687bb1"
+    },
+    {
+      "phase": "upgrade-uninstall-054-r2",
+      "state": "PASS_NATIVE_LINUX_UNINSTALL_REVOKE_CLEANUP",
+      "evidence": "upgrade-uninstall-054-r2.json",
+      "evidence_sha256": "f677b2c4f0f9550bacc125b7dddffcba58d8cb9f733273c961a6723664914b93",
+      "checks": 0,
+      "cleanup_checks": {
+        "config_removed": true,
+        "agent_data_removed": true,
+        "systemd_unit_removed": true,
+        "cli_removed": true,
+        "managed_wrapper_removed": true,
+        "unrelated_file_preserved": true,
+        "service_inactive": true
+      },
+      "device_id": "HARA-DEVICE-1b987909-0cc0-46cd-8ac4-d09132640e45",
+      "runner_sha256": "35bb1d4f02ecb2c4a6bd07010c6790813a48cc47aeb4362840134754ecc4f5ec"
+    },
+    {
+      "phase": "fresh-install-054-r2",
+      "state": "PASS",
+      "evidence": "fresh-install-054-r2.json",
+      "evidence_sha256": "0faaefbbc3141235efd943556eaf4f9bfd33411d907fb75d5417479545aa9696",
+      "checks": 0,
+      "cleanup_checks": null,
+      "device_id": "HARA-DEVICE-0a164dbf-f497-4e5f-9194-447e6285cac5",
+      "runner_sha256": "85064bfadf971df85ae0cfd45cad5974fae5602c9bb1bf69327fbb536c93088d"
+    },
+    {
+      "phase": "fresh-core-054-r2",
+      "state": "PASS_NATIVE_LINUX54_LIFECYCLE_CORE",
+      "evidence": "fresh-core-054-r2.json",
+      "evidence_sha256": "fe2a21fb1cc1053a0a4af4af2d8c333551f2e3255f0b3107322ae499bf625796",
+      "checks": 13,
+      "cleanup_checks": null,
+      "device_id": "HARA-DEVICE-0a164dbf-f497-4e5f-9194-447e6285cac5",
+      "runner_sha256": "0d645972c0f1cb05a0a7075d950f0f7e1c9e91b0c43b76a463654eac6922690a"
+    },
+    {
+      "phase": "fresh-portal-revoke-054-r2",
+      "state": "PASS",
+      "evidence": "fresh-portal-revoke-054-r2.json",
+      "evidence_sha256": "a87461551f413aea3b3e8b11a26097fb152085285608d1f4d4c3d53121ebe569",
+      "checks": 0,
+      "cleanup_checks": null,
+      "device_id": "HARA-DEVICE-0a164dbf-f497-4e5f-9194-447e6285cac5",
+      "runner_sha256": null
+    },
+    {
+      "phase": "fresh-re-enroll-054-r2",
+      "state": "PASS",
+      "evidence": "fresh-re-enroll-054-r2.json",
+      "evidence_sha256": "f003be3e2fdbc7d7703f759acf8219aac7ecc6ea09422088794bd045a5a9b8b8",
+      "checks": 0,
+      "cleanup_checks": null,
+      "device_id": "HARA-DEVICE-f6e9c35c-f76c-49e9-a658-3c92cbbf8aab",
+      "runner_sha256": "85064bfadf971df85ae0cfd45cad5974fae5602c9bb1bf69327fbb536c93088d"
+    },
+    {
+      "phase": "fresh-mcp-054-r2",
+      "state": "PASS_NATIVE_LINUX_MCP_54",
+      "evidence": "fresh-mcp-054-r2.json",
+      "evidence_sha256": "45aeecf16a15d7717026ddefa58006325652d6896a86ab8208f46aee11b0c7d4",
+      "checks": 26,
+      "cleanup_checks": null,
+      "device_id": null,
+      "runner_sha256": "b5a54c4756fb35d400c37696cfc527364fad48955a234e0a6376866037687bb1"
+    },
+    {
+      "phase": "fresh-uninstall-054-r2",
+      "state": "PASS_NATIVE_LINUX_UNINSTALL_REVOKE_CLEANUP",
+      "evidence": "fresh-uninstall-054-r2.json",
+      "evidence_sha256": "1db52e53ef20fcd733f7c03e1e00791bbd54cc4fb4c5f0f3059eba2ae8b61459",
+      "checks": 0,
+      "cleanup_checks": {
+        "config_removed": true,
+        "agent_data_removed": true,
+        "systemd_unit_removed": true,
+        "cli_removed": true,
+        "managed_wrapper_removed": true,
+        "unrelated_file_preserved": true,
+        "service_inactive": true
+      },
+      "device_id": "HARA-DEVICE-f6e9c35c-f76c-49e9-a658-3c92cbbf8aab",
+      "runner_sha256": "35bb1d4f02ecb2c4a6bd07010c6790813a48cc47aeb4362840134754ecc4f5ec"
+    }
+  ],
+  "contracts": {
+    "normal_HTTPS_signed_install_upgrade": true,
+    "managed53_wrapper_exact_preimage_inode_preserved": true,
+    "fresh54_default_ASK": true,
+    "no_session_mutation_denied": true,
+    "public_wrapper_approval_mode_session": true,
+    "own_real_CLI_SESSION_TRUSTED_bounded_until_close": true,
+    "human_ASK_response_generated": false,
+    "UTF8_write_read_input": true,
+    "SHA_precondition_conflict_no_mutation": true,
+    "PASS_operation_receipts_distinct": true,
+    "bounded_max_lines20": true,
+    "managed_max_lines20_then100_exactly120_once": true,
+    "same_version_real_systemd_crash_rollback": true,
+    "normal_portal_revoke_then_reenroll_old_credential_rejected": true,
+    "manual_agent_boot_policy_preserved": true,
+    "uninstall_wrapper_config_data_unit_removed_and_unrelated_file_preserved": true,
+    "signed_agent_or_installer_modified": false
+  },
+  "harness_history": {
+    "original_failure_evidence": [
+      "upgrade-mcp-054-r2.json",
+      "upgrade-mcp-contract-054-r2.json"
+    ],
+    "classification": "QA_CONTRACT_CHECK_ERRORS_PRESERVED",
+    "explanation": "First helper incorrectly required a receipt for a preexecution CONFLICT; first correction incorrectly read code/category at top level. Final helper validates blocker.code/category and separately counts exactly one nonexecuted staleSHA conflict. Both failed attempts restored ASK and closed their own session."
+  },
+  "runner_pins": {
+    "native_053_to_054_upgrade_runner.py": "257a07b6ef7e3885c75d1a71cfd03f8df2f9fe722ca84fd97b2bf615ed6e2c37",
+    "native_lifecycle_runner.py": "0d645972c0f1cb05a0a7075d950f0f7e1c9e91b0c43b76a463654eac6922690a",
+    "native_installer_runner.py": "85064bfadf971df85ae0cfd45cad5974fae5602c9bb1bf69327fbb536c93088d",
+    "native_rollback_runner.py": "859ab4aa22a164a6ec1bb82d8e649e0c2dac29026f66312057986b017cd86424",
+    "native_mcp_54_receipt_contract_r2_runner.py": "b5a54c4756fb35d400c37696cfc527364fad48955a234e0a6376866037687bb1",
+    "native_uninstall_runner.py": "35bb1d4f02ecb2c4a6bd07010c6790813a48cc47aeb4362840134754ecc4f5ec",
+    "run_native54_phase.py": "ef8033e995bed10a37bf085a7179badd6ef9bda34c18d22d9d15aca2370c646e",
+    "revoke_fresh_owned_device.py": "3df21c38cc4bc4bbccfb42c3c6c6e334f1a35a95ffe8304b541f708f7c88a105"
+  },
+  "coverage_limits": {
+    "MCP_mutating_matrix": "LOCAL_STDIO_authorized_QA_SESSION_TRUSTED_with_real_DEV_enrollment; not_cloud_TRIAL_mutation_permission_proof",
+    "portal_session": "seeded_QA_2h_cookie; not_OAuth_proof",
+    "long_duration": "existing53_holder24h_and_backend72h_are_separate_running_evidence; no_complete24h72h_claim_here"
+  },
+  "final_state": {
+    "last_device_id": "HARA-DEVICE-f6e9c35c-f76c-49e9-a658-3c92cbbf8aab",
+    "last_device_revoked": true,
+    "agent_uninstalled": true,
+    "managed_wrapper_removed": true,
+    "QA_VM_reusable_without_product_service": true,
+    "DEV_fixture_cleanup": "coordinate_unique_owner_after_audit; no53_fixture_cleanup"
+  }
+}

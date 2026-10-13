@@ -1,0 +1,15 @@
+{
+  "schema": "hara.windows-clean-console-input-probe.v1",
+  "state": "PASS",
+  "native_console_write_success": true,
+  "secure_readhost_completed": true,
+  "chars": 20,
+  "secure": true,
+  "synthetic_input_only": true,
+  "real_pairing_token_used": false,
+  "main_agent_or_task_touched": false,
+  "qa_identity": "HARAQA5312\\HARAQA",
+  "actual_qa_localappdata": "C:\\Users\\HARAQA\\AppData\\Local",
+  "source_sha256": "6a6423316660990297bdf1241e1f89a38f75e25449f762d6d02889c48458d651",
+  "bridge_receipt_sha256": "6dc46e9bb51240db7e0a643af75c32ed0bbec31cd0fe1c7f19bbf7bade0fdf3d"
+}

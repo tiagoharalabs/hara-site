@@ -1,0 +1,85 @@
+{
+  "archival_bytes_changed": false,
+  "at_utc": "2026-10-13T06:42:12.372728+00:00",
+  "files": [
+    {
+      "path": "apps/commander/scripts/windows_clean_install_054_r2_driver.py",
+      "reason": "Preserve the exact byte-hashed helper executed in native Windows acceptance; terminal CR bytes are archival evidence.",
+      "reviewed_lines": [
+        15
+      ],
+      "sha256": "24c18f7a807e3a0f7dee71d1945d06764cd9ca0dd3169203f6cb5a4e14b6391b"
+    },
+    {
+      "path": "apps/commander/scripts/windows_clean_minimal_lifecycle_054_r1.ps1",
+      "reason": "Preserve the exact byte-hashed helper executed in native Windows acceptance; terminal CR bytes are archival evidence.",
+      "reviewed_lines": [
+        108
+      ],
+      "sha256": "c9009cec0b37811064af364b6ea9eebd3ddfbca82f463735e3f1fadd9318dab2"
+    },
+    {
+      "path": "apps/commander/scripts/windows_clean_minimal_lifecycle_054_r2.ps1",
+      "reason": "Preserve the exact byte-hashed helper executed in native Windows acceptance; terminal CR bytes are archival evidence.",
+      "reviewed_lines": [
+        108
+      ],
+      "sha256": "970d3ad6aaade48418ea8cfeed5fa9107a7c488ff969b186b031179f8673adc9"
+    },
+    {
+      "path": "apps/commander/scripts/windows_clean_normal_start_054.ps1",
+      "reason": "Preserve the exact byte-hashed helper executed in native Windows acceptance; terminal CR bytes are archival evidence.",
+      "reviewed_lines": [
+        54
+      ],
+      "sha256": "d46ed0010e240e0645fbf8caa5051047571f5ddf7232a5fca3f07337e6f590ad"
+    },
+    {
+      "path": "apps/commander/scripts/windows_clean_read_native_scalar_proof_054.py",
+      "reason": "Preserve the exact byte-hashed helper executed in native Windows acceptance; terminal CR bytes are archival evidence.",
+      "reviewed_lines": [
+        12
+      ],
+      "sha256": "f351272aa8204c905e1cbc6c6166ae567deb092fade05b428f2208d28e836678"
+    },
+    {
+      "path": "apps/commander/scripts/windows_clean_system_task_metadata_054.py",
+      "reason": "Preserve the exact byte-hashed helper executed in native Windows acceptance; terminal CR bytes are archival evidence.",
+      "reviewed_lines": [
+        35
+      ],
+      "sha256": "57a409b58361f445fd8c66f6f2137d3facfd9f241337f44723807c20d02bd1a6"
+    },
+    {
+      "path": "docs/evidence/commander-full-acceptance-20261012/linux-clean/managed-cap-candidate/linux-managed-cap-candidate.patch",
+      "reason": "Unified diff empty context lines require the context prefix.",
+      "reviewed_lines": [
+        6,
+        20
+      ],
+      "sha256": "1743449efa51e44660907caf7790825912a7934cf80ddf6b63d933fff7235daa"
+    },
+    {
+      "path": "docs/evidence/commander-full-acceptance-20261012/linux-clean/wrapper-54-candidate/linux-install-wrapper-054-candidate.patch",
+      "reason": "Unified diff empty context lines require the context prefix.",
+      "reviewed_lines": [
+        18,
+        33
+      ],
+      "sha256": "0d17438df6f124c5da9e3592b9d93afe66198c24d3fa4bfa914989b7496683a8"
+    },
+    {
+      "path": "docs/evidence/commander-full-acceptance-20261012/real-dev-soak/runner-diagnostics-proposed.patch",
+      "reason": "Unified diff empty context lines require the context prefix.",
+      "reviewed_lines": [
+        7,
+        104
+      ],
+      "sha256": "9ede1cf341507126844f9a18cd8aef1609d17ba62105d0b8e7b2e605355bd8fd"
+    }
+  ],
+  "other_staged_whitespace": "PASS",
+  "schema": "hara.archival-whitespace-byte-review.v1",
+  "state": "PASS_WITH_EXACT_ARCHIVAL_EXCEPTIONS",
+  "warning_count": 12
+}

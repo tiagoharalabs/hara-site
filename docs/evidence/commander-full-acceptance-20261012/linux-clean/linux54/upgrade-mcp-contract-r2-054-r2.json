@@ -1,0 +1,143 @@
+{
+  "schema": "hara.commander-linux-clean54-native-mcp.v1",
+  "backend": "installed_public_product_MCP_LOCAL_STDIO_with_real_DEV_enrollment",
+  "systemctl_backend": "real",
+  "cli_entrypoint": "/home/commanderqa/.local/bin/hara commander",
+  "human_ASK_response_generated": false,
+  "authorization": "explicit_QA_SESSION_TRUSTED_until_own_CLI_close",
+  "managed_max_lines_contract": "requested_20_initial_then_100_retained_numbered_lines",
+  "checks": [
+    {
+      "check": "public-default-ASK-get",
+      "state": "PASS"
+    },
+    {
+      "check": "public-approval-mode-session-set-and-get",
+      "state": "PASS"
+    },
+    {
+      "check": "public-CLI-bounded-QA-session-identity",
+      "state": "PASS",
+      "owner_pid": 3134,
+      "owner_start_marker": "267551"
+    },
+    {
+      "check": "MCP-operation-receipt-PASS",
+      "state": "PASS"
+    },
+    {
+      "check": "MCP-operation-receipt-PASS",
+      "state": "PASS"
+    },
+    {
+      "check": "session-authorization-source",
+      "state": "PASS"
+    },
+    {
+      "check": "MCP-operation-receipt-PASS",
+      "state": "PASS"
+    },
+    {
+      "check": "Unicode-write-read-exact",
+      "state": "PASS"
+    },
+    {
+      "check": "MCP-operation-receipt-PASS",
+      "state": "PASS"
+    },
+    {
+      "check": "stale-SHA-conflict-preserves-file",
+      "state": "PASS"
+    },
+    {
+      "check": "MCP-operation-receipt-PASS",
+      "state": "PASS"
+    },
+    {
+      "check": "bounded-run-line-cap-20",
+      "state": "PASS"
+    },
+    {
+      "check": "MCP-operation-receipt-PASS",
+      "state": "PASS"
+    },
+    {
+      "check": "managed-requested-initial-20-lines",
+      "state": "PASS"
+    },
+    {
+      "check": "MCP-operation-receipt-PASS",
+      "state": "PASS"
+    },
+    {
+      "check": "managed-retains-exactly-next-100-numbered-lines",
+      "state": "PASS",
+      "retained_numbered_line_count": 100
+    },
+    {
+      "check": "MCP-operation-receipt-PASS",
+      "state": "PASS"
+    },
+    {
+      "check": "interactive-PTY-ready-before-input",
+      "state": "PASS"
+    },
+    {
+      "check": "MCP-operation-receipt-PASS",
+      "state": "PASS"
+    },
+    {
+      "check": "MCP-operation-receipt-PASS",
+      "state": "PASS"
+    },
+    {
+      "check": "interactive-PTY-120-lines-complete-once",
+      "state": "PASS",
+      "numbered_line_count": 120
+    },
+    {
+      "check": "interactive-UTF8-input-roundtrip",
+      "state": "PASS"
+    },
+    {
+      "check": "all-PASS-MCP-operations-have-distinct-receipts",
+      "state": "PASS",
+      "PASS_tool_call_count": 10,
+      "preexecution_conflict_count": 1
+    },
+    {
+      "check": "public-close-revokes-own-session",
+      "state": "PASS"
+    },
+    {
+      "check": "public-approval-mode-ask-set-and-get",
+      "state": "PASS"
+    }
+  ],
+  "receipt_sha256": [
+    "ece030a847352e975389c026db158ea0ba358e864ec2bc8ab6033365dfa43ce2",
+    "48cde0a39aa43873f89b75090fba5ccab77908a13ee74ffca5d94f8a41c96f2a",
+    "64403db147dc71bb4f36408a791444d411b9902f5afcfb365e47e5b955ff5661",
+    "64c568b6d3a2e64f21122425c019305a1538b11628b8f9c56c704d3451030744",
+    "fb9db0e30ac1dbd704498178e5fbd467c6adda9d5f741d225e133f1d3f4b5673",
+    "bbdd4a0d0cc9301095d6dc91f3ed45b7eac5a64b98189462c43fe04f35181974",
+    "86f2cfdc36d980ce63afae8a432155a3ecdc25f9430b49fddede59f5a4f0b07d",
+    "039ede024c27d40f92113121a8fe899e395c14bfd92de02186811b7ba0fa56ee",
+    "ae0c79294489286f01abcc86c7c1bb4de8cec019e4caf7d467c3b33c6b12739e",
+    "8c58d55bd7fcd6079cc5d03b67ff7b70ae47026de98c0d98e03f35f22313512b"
+  ],
+  "state": "PASS_NATIVE_LINUX_MCP_54",
+  "agent_version": "0.3.54",
+  "managed_initial_numbered_lines": 20,
+  "managed_retained_numbered_lines": 100,
+  "total_numbered_lines": 120,
+  "tool_call_count": 11,
+  "PASS_tool_call_count": 10,
+  "preexecution_conflict_count": 1,
+  "qa_policy_restored_ASK_and_session_closed": true,
+  "governed_transport": "H.A.R.A. Commander DIRECT -> Services -> SSH nucleo-a -> exclusive real Linux54 QA",
+  "new_qa_vm_uuid": "f1fc631b-9442-468a-82dc-e99d021ea8f5",
+  "runner_sha256": "b5a54c4756fb35d400c37696cfc527364fad48955a234e0a6376866037687bb1",
+  "release_agent_pin": "62e1a836ef92fc8b72638fd116a6f0097fcf9e9f0ef0f4259ca8e0f6712b4229",
+  "release_installer_pin": "d2057adfff5c2b475d1520ae44f1ed76a7ec0ecc673f65cf08631d7a0083d0fa"
+}

@@ -1,0 +1,37 @@
+import assert from "node:assert/strict";
+import { buildDevSafeIncident, emitDevSafeIncident, safeCauseClass, safeStackFrames } from "../src/dev-safe-error-diagnostics.mjs";
+let checks = 0;
+const eq = (a,b) => { assert.deepEqual(a,b); checks++; };
+const secret = "QA_CANARY_COOKIE_PAYLOAD_NEVER_EXPORTED";
+const error = new TypeError("D1_ERROR: UNIQUE constraint failed " + secret);
+error.stack = "TypeError: " + secret + "\n"
+  + Array.from({length:8},(_,i)=>"    at dispatchTransientDeviceCall (https://secret.invalid/" + secret + ":"+(700+i)+":18)").join("\n")
+  + "\n    at " + secret + " (/private/" + secret + ":11:22)";
+const env = { ENVIRONMENT: "DEV", DEV_SAFE_ERROR_DIAGNOSTICS_ENABLED: "true" };
+eq(await buildDevSafeIncident(error,{...env,ENVIRONMENT:"PROD"},"/api/internal/device/transient-call"),null);
+eq(await buildDevSafeIncident(error,{ENVIRONMENT:"DEV"},"/api/internal/device/transient-call"),null);
+eq(await buildDevSafeIncident(error,{...env,DEV_SAFE_ERROR_DIAGNOSTICS_ENABLED:"false"},"/api/internal/device/transient-call"),null);
+const incident = await buildDevSafeIncident(error,env,"/api/internal/device/transient-call");
+eq(incident.exception_class,"TypeError");
+eq(incident.safe_cause_class,"D1_CONSTRAINT");
+eq(incident.route,"TRANSIENT_CALL");
+eq(incident.stack_frames.length,4);
+eq(incident.stack_frames[0],{function:"dispatchTransientDeviceCall",line:700,column:18});
+eq(/^[0-9a-f]{64}$/.test(incident.message_sha256),true);
+eq(/^[0-9a-f-]{36}$/.test(incident.incident_id),true);
+eq(JSON.stringify(incident).includes(secret),false);
+eq(JSON.stringify(incident).includes("secret.invalid"),false);
+eq(safeStackFrames("at "+secret+" (/private/"+secret+":11:22)"),[]);
+eq(safeCauseClass("D1_ERROR: query timed out "+secret),"D1_TIMEOUT");
+eq(safeCauseClass("Durable Object reset "+secret),"DO_RESET");
+eq(safeCauseClass(secret),"UNKNOWN");
+eq((await buildDevSafeIncident({name:secret,message:secret,stack:""},env,"/arbitrary/"+secret)).exception_class,"Error");
+eq((await buildDevSafeIncident(error,env,"/arbitrary/"+secret)).route,"OTHER");
+const logs = [];
+const id = await emitDevSafeIncident(error,env,"/api/internal/device/transient-call",value=>logs.push(value));
+eq(logs.length,1);
+eq(JSON.parse(logs[0]).incident_id,id);
+eq(logs[0].includes(secret),false);
+eq(await emitDevSafeIncident(error,env,"/api/internal/device/transient-call",()=>{throw new Error("sink failure "+secret);}),null);
+eq(await emitDevSafeIncident(error,{...env,ENVIRONMENT:"PROD"},"/api/internal/device/transient-call",()=>{throw new Error("sink must not run");}),null);
+console.log(JSON.stringify({schema:"hara.dev-safe-error-diagnostic-tests.v1",state:"PASS",checks,scope:"actual helper; no Worker deploy or product probes"}));

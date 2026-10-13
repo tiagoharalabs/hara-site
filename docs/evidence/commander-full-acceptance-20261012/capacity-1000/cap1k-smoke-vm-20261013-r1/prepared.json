@@ -1,0 +1,25 @@
+{
+  "agent_processes_launched": 0,
+  "bulk_load_started": false,
+  "controller_sha256": "c0d143e3e84319057cef7facefdae72b81d8543cd7be678a915d9993a683b682",
+  "expected_backend_version": "6f6e68e3-0777-4fb3-820d-a288ca5f7fab",
+  "run_id": "cap1k-smoke-vm-20261013-r1",
+  "schema": "hara.commander-real-1000-frozen.v1",
+  "secrets_printed": false,
+  "source_frozen_at_utc": "2026-10-13T04:42:06Z",
+  "source_sha256": {
+    "experimental/event_v2_agent_loop.py": "f1a7d9fc4faf57185d0d2bcb17e741882db866c627967bf02e1d98754d212950",
+    "experimental/event_v2_customer_agent.py": "1170e771181e86b02c87d5307c9b22783788a73487f8325e73f29217046069d2",
+    "experimental/event_v2_telemetry.py": "4bb47248f2a690df680d8c6cd0144522e2cd82286bb563f391bbea9a200fa499",
+    "experimental/event_v2_websocket.py": "96b10a826e8cb2063cd6e19f6c71967e98c0b843c6cd94f997e2d24a7f316ea9",
+    "public/agent/linux.py": "62e1a836ef92fc8b72638fd116a6f0097fcf9e9f0ef0f4259ca8e0f6712b4229",
+    "scripts/commander_event_v2_transient_live_probe.py": "33fb67958def9ab03856437705302a7f41be042f109afa81b11567152977fadc",
+    "scripts/commander_fresh_customer_dev_acceptance.py": "ab50d2eb51ec693bb6947640613a5b1a6a7d1fd7ed12d968c6624b64dc7adaba",
+    "scripts/commander_real_1000_capacity_plan.py": "ba324edc21a6e66ad4bb783067bb34f4e6c743c416486ada8eb0ea4d65583589",
+    "scripts/commander_real_1000_controller.py": "c0d143e3e84319057cef7facefdae72b81d8543cd7be678a915d9993a683b682",
+    "scripts/commander_real_1000_vm_manager.py": "031b4cc8e56de09bd33654d452d0135618d7a173c8a1a6fc45f40274e3669cd0",
+    "scripts/full_acceptance_dev_fixtures.py": "c8b0e8ab1858b5b6bc4707bd2488072dd1b3549905c00dee3973553f7ae8fc77",
+    "wrangler.dev.jsonc": "6db8d2d157bbf259bfa571771692e6a2e008c8dcb805f350ae2f9da791676b93"
+  },
+  "state": "PREPARED_NOT_EXECUTED"
+}

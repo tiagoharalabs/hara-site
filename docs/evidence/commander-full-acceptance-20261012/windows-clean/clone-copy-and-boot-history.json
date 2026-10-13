@@ -1,0 +1,23 @@
+{
+  "bandwidth_mib_per_second": 128,
+  "booted_at_epoch": 1791850731.4767468,
+  "clone_name": "hara-win51-clean-20261012-r1",
+  "clone_uuid": "d35599c8-b9ea-45e5-9ae9-fa047e84b8ba",
+  "copied_at_epoch": 1791850488.089209,
+  "created_at_epoch": 1791849199.9201703,
+  "destination": "/var/lib/libvirt/images/hara-win51-clean-20261012-r1.qcow2",
+  "historical_stage_only": true,
+  "network_enabled_on_clone": false,
+  "pivot_requested": false,
+  "schema": "hara.windows-clean-clone-control.v1",
+  "scope": "PREEXISTING_WINDOWS_OS_LIVE_CLONE_FOR_CLEAN_COMMANDER_QA_PROFILE_AND_ENROLLMENT",
+  "source_disk": "/media/sartorius/MISC_2TB/hara_misc/VMs/commander-windows11/disks/commander-win11.qcow2",
+  "source_disk_unchanged": true,
+  "source_freeze_requested": false,
+  "source_inactive_xml_sha256": "2b23267db8c839e9d37876977755716ba69f9e09d882b4383aa7388f741fbc5e",
+  "source_name": "commander-win11",
+  "source_redefined": false,
+  "source_still_running": true,
+  "source_uuid": "4c76007a-1c12-445d-b1d5-3d94cca68856",
+  "state": "CLONE_BOOTED_WITHOUT_NETWORK"
+}

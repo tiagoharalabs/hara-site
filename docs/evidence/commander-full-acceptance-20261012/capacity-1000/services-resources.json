@@ -1,0 +1,26 @@
+{
+  "at_unix": 1791864478.1129642,
+  "at_utc": "2026-10-13T04:07:58+00:00",
+  "cgroup_controllers": [
+    "cpuset",
+    "cpu",
+    "io",
+    "memory",
+    "hugetlb",
+    "pids",
+    "rdma",
+    "misc"
+  ],
+  "cgroup_v2": true,
+  "cpu_count": 12,
+  "disk_available_bytes": 227767779328,
+  "load_1m": 1.291015625,
+  "memory_available_bytes": 28767985664,
+  "memory_total_bytes": 32899932160,
+  "open_files_hard": 1048576,
+  "open_files_soft": 1024,
+  "role": "Services",
+  "schema": "hara.commander-capacity-resource-snapshot.v1",
+  "swap_free_bytes": 16724516864,
+  "swap_total_bytes": 17179860992
+}

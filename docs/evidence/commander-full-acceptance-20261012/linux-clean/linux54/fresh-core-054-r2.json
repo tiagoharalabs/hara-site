@@ -1,0 +1,75 @@
+{
+  "schema": "hara.commander-linux-clean54-native-lifecycle.v1",
+  "backend": "remote_DEV_worker",
+  "systemctl_backend": "real",
+  "cli_entrypoint": "/home/commanderqa/.local/bin/hara commander",
+  "checks": [
+    {
+      "check": "installed-default-ASK",
+      "state": "PASS"
+    },
+    {
+      "check": "installed-source-version-and-wrapper-pins",
+      "state": "PASS"
+    },
+    {
+      "check": "installed-service-active-disabled",
+      "state": "PASS"
+    },
+    {
+      "check": "installed-no-operator-session",
+      "state": "PASS"
+    },
+    {
+      "check": "default-ASK-no-session-mutation-denied",
+      "state": "PASS",
+      "denial_code": "LOCAL_OPERATOR_SESSION_REQUIRED"
+    },
+    {
+      "check": "public-cli-stop-installed-service",
+      "state": "PASS"
+    },
+    {
+      "check": "offline-signed-update-preserves-offline",
+      "state": "PASS"
+    },
+    {
+      "check": "offline-update-preserves-source",
+      "state": "PASS"
+    },
+    {
+      "check": "public-cli-start-binds-own-real-session",
+      "state": "PASS",
+      "owner_pid": 3979,
+      "owner_start_marker": "289500"
+    },
+    {
+      "check": "public-MCP-readonly-device-info",
+      "state": "PASS"
+    },
+    {
+      "check": "active-signed-update-startup-attestation",
+      "state": "PASS"
+    },
+    {
+      "check": "active-update-preserves-source-policy",
+      "state": "PASS"
+    },
+    {
+      "check": "public-cli-stop-closes-own-session-and-service",
+      "state": "PASS"
+    }
+  ],
+  "human_action_approval_generated": false,
+  "state": "PASS_NATIVE_LINUX54_LIFECYCLE_CORE",
+  "device_id": "HARA-DEVICE-0a164dbf-f497-4e5f-9194-447e6285cac5",
+  "agent_version": "0.3.54",
+  "config_mode": "0o600",
+  "agent_mode": "0o700",
+  "manual_agent_boot": true,
+  "governed_transport": "H.A.R.A. Commander DIRECT -> Services -> SSH nucleo-a -> exclusive real Linux54 QA",
+  "new_qa_vm_uuid": "f1fc631b-9442-468a-82dc-e99d021ea8f5",
+  "runner_sha256": "0d645972c0f1cb05a0a7075d950f0f7e1c9e91b0c43b76a463654eac6922690a",
+  "release_agent_pin": "62e1a836ef92fc8b72638fd116a6f0097fcf9e9f0ef0f4259ca8e0f6712b4229",
+  "release_installer_pin": "d2057adfff5c2b475d1520ae44f1ed76a7ec0ecc673f65cf08631d7a0083d0fa"
+}

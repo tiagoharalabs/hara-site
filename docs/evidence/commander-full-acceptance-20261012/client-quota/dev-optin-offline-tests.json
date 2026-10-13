@@ -1,0 +1,41 @@
+{
+  "schema": "hara.customer-mcp-dev-optin-offline.v1",
+  "worker_deployed": false,
+  "secret_values_read": false,
+  "files_sha256": {
+    "apps/commander/src/mcp-hara-identity-customer.mjs": "27ecb6496c195633cdba3d21d1d9b0c8dac79f6b2c685760e32a9edbf8a15230",
+    "apps/commander/src/worker.js": "2824db7b0be1ba8c361c7326053bf58e5da6f5e6395cbc2290627b573b543b1e",
+    "apps/commander/wrangler.dev.jsonc": "8db28e48f717c1f574c017c41ec80c7a6068e8b8753b9cc82eeb7ee5d0a4073b",
+    "apps/commander/scripts/test_customer_mcp_dev_acceptance_gate.mjs": "47f9a0eb96a9f419e549d631d7b8c650b88fb73c9f67362fe2e36b4857378df3"
+  },
+  "tests": [
+    {
+      "test": "apps/commander/scripts/test_customer_mcp_dev_acceptance_gate.mjs",
+      "exit_code": 0,
+      "checks": [
+        "COMMANDER_CUSTOMER_MCP_DEV_OPTIN=PASS",
+        "COMMANDER_CUSTOMER_MCP_DEV_WITHOUT_OPTIN=404",
+        "COMMANDER_CUSTOMER_MCP_DEV_MISSING_REAL_BEARER=401",
+        "COMMANDER_CUSTOMER_MCP_PROD_GUARD_UNCHANGED=PASS",
+        "COMMANDER_CUSTOMER_MCP_DEV_RESOURCE_AND_HOST=PASS",
+        "COMMANDER_CUSTOMER_MCP_DEV_OPTIN_CHECKS=24"
+      ],
+      "stderr_bytes": 0
+    },
+    {
+      "test": "apps/commander/scripts/test_hara_identity_customer_mcp.mjs",
+      "exit_code": 0,
+      "checks": [
+        "COMMANDER_HARA_IDENTITY_PROD_MCP_METADATA=PASS",
+        "COMMANDER_HARA_IDENTITY_PROD_MCP_CHALLENGE=PASS",
+        "COMMANDER_HARA_IDENTITY_PROD_MCP_PROJECT_AUD=FAIL_CLOSED",
+        "COMMANDER_HARA_IDENTITY_PROD_MCP_DEV_ENABLE=DENY",
+        "COMMANDER_HARA_IDENTITY_OPAQUE_INTROSPECTION=PASS",
+        "COMMANDER_HARA_IDENTITY_INTROSPECTION_NEGATIVE_MATRIX=PASS"
+      ],
+      "stderr_bytes": 0
+    }
+  ],
+  "prod_guard_preserved": true,
+  "durable_object_base_stubbed_only": true
+}

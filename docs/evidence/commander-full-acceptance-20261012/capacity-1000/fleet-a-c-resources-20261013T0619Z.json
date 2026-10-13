@@ -1,0 +1,50 @@
+[
+  {
+    "computer": "sentinela-a",
+    "checked_at": "2026-10-13T06:19:56Z",
+    "hostname": "sentinela-a",
+    "uid": 1000,
+    "home": "/home/sartorius",
+    "cpu_count": 12,
+    "mem_total_bytes": 67332100096,
+    "mem_available_bytes": 57540509696,
+    "load_average": [
+      0.35009765625,
+      0.29052734375,
+      0.17138671875
+    ],
+    "rlimit_nofile": [
+      1024,
+      1048576
+    ],
+    "cgroup_v2": true,
+    "cgroup": "0::/user.slice/user-1000.slice/user@1000.service/app.slice/hara-commander-agent-v2.service",
+    "state": "PASS",
+    "process_exit_code": 0,
+    "receipt_sha256": "140605949317cfea2152660dfa396c2b3ce281d83eaa55b934bdee90f9fc9ad1"
+  },
+  {
+    "computer": "sentinela-c",
+    "checked_at": "2026-10-13T06:19:49Z",
+    "hostname": "sentinela-c",
+    "uid": 1000,
+    "home": "/home/sartorius",
+    "cpu_count": 12,
+    "mem_total_bytes": 134983860224,
+    "mem_available_bytes": 120697663488,
+    "load_average": [
+      1.9267578125,
+      2.10546875,
+      1.89794921875
+    ],
+    "rlimit_nofile": [
+      1024,
+      1048576
+    ],
+    "cgroup_v2": true,
+    "cgroup": "0::/user.slice/user-1000.slice/user@1000.service/app.slice/hara-commander-agent-v2.service",
+    "state": "PASS",
+    "process_exit_code": 0,
+    "receipt_sha256": "16934f674d737f29dfee864c97cc15cb75df003b4f71d869663e05d82266f0dd"
+  }
+]

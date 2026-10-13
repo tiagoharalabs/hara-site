@@ -1,0 +1,71 @@
+{
+  "schema": "hara.commander-linux-clean-external-environment.v1",
+  "state": "PASS_REAL_ISOLATED_GUEST_READY_PENDING_DEV_ENROLLMENT",
+  "source_head": "2cb15d99f33179d1ae9deec4a16c861aca673906",
+  "vm": {
+    "host": "nucleo-a",
+    "hypervisor": "libvirt/qemu:///system",
+    "name": "commander-linux-clean-20261012",
+    "uuid": "27acff5d-dd62-4426-99e8-4f73400bc8b2",
+    "ip": "192.168.122.180",
+    "vcpus": 2,
+    "ram_mib": 2048,
+    "disk_gib": 12,
+    "autostart": false,
+    "apparmor": "enforcing"
+  },
+  "guest": {
+    "os": "Ubuntu 24.04.5 LTS",
+    "user": "commanderqa",
+    "uid": 2000,
+    "cloud_init": "done",
+    "systemd_user_manager": "running",
+    "systemctl_backend": "real",
+    "clean_commander_profile": true,
+    "dbus_runtime": "/run/user/2000/bus",
+    "linger_for_qa_user": true
+  },
+  "official_image": {
+    "url": "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img",
+    "sha256": "6a81c37564db9b1ee84e141922625e1d7c5b389b99bb3c572e0243607d5bb4d2",
+    "bytes": 625612288,
+    "verification": "SHA256SUMS fetched independently over validated HTTPS from official cloud-images.ubuntu.com"
+  },
+  "linux_release": {
+    "bundle": "commercial-0.3.51-v11-rc",
+    "agent_version": "0.3.43",
+    "agent_sha256": "3e0db700dd568a85e23212a5400f1d256546fef77b7f59f574ceed29e04c15b7",
+    "installer_sha256": "534e14433da9f86eb4342c6d9400e89ecf164545605e02e22f1646510284aba5",
+    "byte_identity_to": "commercial-0.3.43-v3",
+    "signed_assets_edited": false
+  },
+  "safety": {
+    "founder_services_stopped": false,
+    "production_mutated": false,
+    "csotn_workloads_touched": false,
+    "windows_vm_stopped": false,
+    "customer_secrets_exposed": false,
+    "qa_ssh_key": "dedicated private key; never output",
+    "backend_mock_used": false,
+    "systemctl_shim_used": false
+  },
+  "provenance": {
+    "transport": "H.A.R.A. Commander direct -> Services Agent -> SSH nucleo-a -> isolated guest",
+    "commander_receipts": [
+      "91d5cddb572e38682a0fac5021c0a7e858cfecc0f1ea7efde94cedbf6c7ff042",
+      "469ffaad781dd281a2fc287d667d9f29690c95840f986a07d5f947350de4b1ac",
+      "b7817dc20d038e44c3686a6fdb2a2f25b702178b57605300363082523c85fbfe",
+      "70a850e0cd7ac593ae71b50800f8ebb9bf22618d24fc8240239bf66722ccf15a",
+      "e54b8af349fce2ee2b973fd98c2be6783b2111711eb040d0906cd5b869fab4b1",
+      "744436d3ac6e88971ba6653f42f77dad4a5b2b90e459fba5ae68755ae8b69886"
+    ]
+  },
+  "pending": [
+    "real DEV pairing/enrollment",
+    "official signed installer lifecycle on real systemd",
+    "24-hour soak on new exclusive DEV enrollment after lifecycle uninstall"
+  ],
+  "not_acceptance": [
+    "MockState/FAKE_SYSTEMCTL harness is excluded from external acceptance evidence"
+  ]
+}

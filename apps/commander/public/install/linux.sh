@@ -290,7 +290,10 @@ fi
 shift
 exec "$HOME/.local/bin/hara-commander" "${1:-status}"
 '''
-MANAGED_BODY=LEGACY_BODY.replace(b"#!/bin/sh\n",b"#!/bin/sh\n# HARA_COMMANDER_MANAGED_HARA_WRAPPER_V1\n",1)
+MANAGED53_BODY=LEGACY_BODY.replace(b"#!/bin/sh\n",b"#!/bin/sh\n# HARA_COMMANDER_MANAGED_HARA_WRAPPER_V1\n",1)
+MANAGED53_SHA256="c69151f87529aebc0ebbf5c54e7f5ad4ef1a897b37c47a9ec68d9a6959bf3953"
+assert hashlib.sha256(MANAGED53_BODY).hexdigest()==MANAGED53_SHA256
+MANAGED_BODY=MANAGED53_BODY.replace(b'exec "$HOME/.local/bin/hara-commander" "${1:-status}"\n',b'if [ "$#" -eq 0 ]; then\n  set -- status\nfi\nexec "$HOME/.local/bin/hara-commander" "$@"\n',1)
 MANAGED_SHA256=hashlib.sha256(MANAGED_BODY).hexdigest()
 assert hashlib.sha256(LEGACY_BODY).hexdigest()==LEGACY_SHA256
 _RACE_ERRORS={errno.ENOENT,errno.ELOOP,errno.ENOTDIR,errno.ESTALE,errno.ENXIO}
@@ -396,12 +399,15 @@ def new_wrapper_at(wfd,name):
         os.fsync(wfd);return True
     finally:os.close(fd)
 
-def preimage_target(pfd,legacy):
-    base="hara-wrapper-"+LEGACY_SHA256+".preimage" if legacy else "hara-wrapper-uninstall-"+secrets.token_hex(12)+".preimage"
+def preimage_target(pfd,legacy,managed53=False):
+    migrating=legacy or managed53
+    known_sha=LEGACY_SHA256 if legacy else MANAGED53_SHA256
+    known_body=LEGACY_BODY if legacy else MANAGED53_BODY
+    base="hara-wrapper-"+known_sha+".preimage" if migrating else "hara-wrapper-uninstall-"+secrets.token_hex(12)+".preimage"
     raw,st,kind=read_owned_regular_at(pfd,base)
     if kind=="MISSING":return base
-    if legacy and kind=="OWNED_REGULAR" and raw==LEGACY_BODY and stat.S_IMODE(st.st_mode)==0o600:
-        return "hara-wrapper-"+LEGACY_SHA256+"-"+secrets.token_hex(12)+".preimage"
+    if migrating and kind=="OWNED_REGULAR" and raw==known_body and stat.S_IMODE(st.st_mode)==0o600:
+        return "hara-wrapper-"+known_sha+"-"+secrets.token_hex(12)+".preimage"
     raise RuntimeError("CLI_WRAPPER_PREIMAGE_COLLISION")
 
 def manage(mode,path,preimages,external_hara=False):
@@ -417,8 +423,11 @@ def manage(mode,path,preimages,external_hara=False):
             if mode=="uninstall":return report("NOT_PRESENT")
             if external_hara:return report("PRESERVED_EXTERNAL_COMMAND")
             return report("FRESH_CREATED" if new_wrapper_at(wfd,path.name) else "PRESERVED_RACED")
-        sha=hashlib.sha256(raw).hexdigest();legacy=sha==LEGACY_SHA256;managed=sha==MANAGED_SHA256
-        if not legacy and not managed:return report("PRESERVED_UNRELATED")
+        sha=hashlib.sha256(raw).hexdigest()
+        legacy=sha==LEGACY_SHA256 and raw==LEGACY_BODY
+        managed53=sha==MANAGED53_SHA256 and raw==MANAGED53_BODY
+        managed=sha==MANAGED_SHA256 and raw==MANAGED_BODY
+        if not legacy and not managed53 and not managed:return report("PRESERVED_UNRELATED")
         if mode=="install" and managed:return report("ALREADY_MANAGED")
         # Both reviewed directories are bound before any namespace mutation.
         bfd=open_owned_directory(preimages.parent,create_leaf=True,private=True)
@@ -426,7 +435,7 @@ def manage(mode,path,preimages,external_hara=False):
         pfd=open_owned_directory(preimages,create_leaf=True,private=True)
         if os.fstat(wfd).st_dev!=os.fstat(pfd).st_dev:
             raise RuntimeError("CLI_WRAPPER_CROSS_FILESYSTEM_UNSUPPORTED")
-        target=preimage_target(pfd,legacy)
+        target=preimage_target(pfd,legacy,managed53)
         captured=".hara-cli-wrapper-displaced-"+secrets.token_hex(12)
         try:rename_noreplace(wfd,path.name,wfd,captured)
         except OSError as error:
@@ -459,7 +468,8 @@ def manage(mode,path,preimages,external_hara=False):
                 try:os.stat(path.name,dir_fd=wfd,follow_symlinks=False)
                 except FileNotFoundError:return report("LEGACY_REMOVED" if legacy else "MANAGED_REMOVED")
                 return report("PRESERVED_RACED_TARGET")
-            return report("LEGACY_MIGRATED" if new_wrapper_at(wfd,path.name) else "PRESERVED_RACED_TARGET")
+            if not new_wrapper_at(wfd,path.name):return report("PRESERVED_RACED_TARGET")
+            return report("LEGACY_MIGRATED" if legacy else "MANAGED53_MIGRATED")
         except BaseException:
             # Preserve availability on downstream errors without clobbering a new name.
             if owned_fd is not None and os.fstat(owned_fd).st_ino==moved_st.st_ino:
@@ -528,7 +538,7 @@ if not base or not token or not device_id:
     raise SystemExit(2)
 if action=="heartbeat":
     endpoint="/api/device/heartbeat"
-    payload={"device_id":device_id,"architecture":arch,"agent_version":"0.3.53","approval_mode":values.get("HARA_COMMANDER_APPROVAL_MODE","ASK_EVERY_ACTION")}
+    payload={"device_id":device_id,"architecture":arch,"agent_version":"0.3.54","approval_mode":values.get("HARA_COMMANDER_APPROVAL_MODE","ASK_EVERY_ACTION")}
 elif action=="revoke":
     endpoint="/api/device/revoke-self"
     payload={}
@@ -610,7 +620,7 @@ device_id=values.get("HARA_DEVICE_ID","")
 arch=values.get("HARA_DEVICE_ARCH","")
 if not base or not token or not device_id:
     print("REENROLL_LOCAL_ENROLLMENT_INVALID",file=sys.stderr); raise SystemExit(12)
-payload=json.dumps({"device_id":device_id,"architecture":arch,"agent_version":"0.3.53"},separators=(",",":")).encode()
+payload=json.dumps({"device_id":device_id,"architecture":arch,"agent_version":"0.3.54"},separators=(",",":")).encode()
 req=urllib.request.Request(
     base+"/api/device/heartbeat", data=payload, method="POST",
     headers={"content-type":"application/json","accept":"application/json",
@@ -895,7 +905,7 @@ print(json.dumps({
   "device_name": sys.argv[1],
   "platform": "LINUX",
   "architecture": sys.argv[2],
-  "agent_version": "0.3.53",
+  "agent_version": "0.3.54",
   "approval_mode": sys.argv[3],
 }, separators=(",",":")))
 ' "$DEVICE_NAME" "$ARCH" "$APPROVAL_MODE")"

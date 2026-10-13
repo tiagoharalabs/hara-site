@@ -1,0 +1,21 @@
+{
+  "schema": "hara.windows-clean-environment.v1",
+  "scope": "PREEXISTING_WINDOWS_OS_LIVE_CLONE_COMMANDER_PROFILE_AND_DEV_ENROLLMENT_CLEAN",
+  "source_vm": "commander-win11",
+  "source_uuid": "4c76007a-1c12-445d-b1d5-3d94cca68856",
+  "clone_vm": "hara-win51-clean-20261012-r1",
+  "clone_first_boot_network_interfaces": 0,
+  "copy_mode": "LIVE_BLOCKCOPY_NONPIVOT_FINISH_NO_SOURCE_FREEZE",
+  "copy_bandwidth_mib_per_second": 128,
+  "source_virtual_disk_bytes": 171798691840,
+  "source_allocated_disk_bytes_at_precheck": 62573043712,
+  "source_bitlocker_protection": "Off",
+  "source_bitlocker_lock_status": "Unlocked",
+  "source_keys_read": false,
+  "copy_managed_session": "HARA-PROC-5efcdd34b67e4392907e3dfa94eab23b",
+  "standalone_empty_vm_not_used": "hara-commander-win11",
+  "standalone_empty_vm_disk_allocated_bytes": 204800,
+  "founder_tokens_used_for_new_enrollment": false,
+  "dev_fixture_owner": "commander_homologation_review",
+  "clean_customer_external_machine_claimed": false
+}

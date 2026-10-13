@@ -1,0 +1,21 @@
+{
+  "exit_code": 0,
+  "guest_pid": 7920,
+  "output_truncated": false,
+  "raw_logs_private": true,
+  "result": {
+    "child_pid": 4080,
+    "clone_uuid": "d35599c8-b9ea-45e5-9ae9-fa047e84b8ba",
+    "configuration_or_token_contents_printed": false,
+    "error_code": "QA_POSTCONDITION_OR_REPORT_EXCEPTION",
+    "phase": "install",
+    "raw_logs_private": true,
+    "schema": "hara.windows-clean-real-installer-phase.v1",
+    "state": "FAIL"
+  },
+  "state": "EXITED",
+  "stderr_present": false,
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout_sha256": "23d906c739b2aa3d00a9ebce70d2c4dca228bb742d4a3e5691a468194c0f9624",
+  "vm": "hara-win51-clean-20261012-r1"
+}

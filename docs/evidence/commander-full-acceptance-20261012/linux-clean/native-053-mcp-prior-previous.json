@@ -1,0 +1,101 @@
+{
+  "schema": "hara.commander-linux-clean-native-mcp.v1",
+  "backend": "installed_product_MCP_LOCAL_STDIO_with_real_DEV_enrollment",
+  "systemctl_backend": "real",
+  "human_ASK_response_generated": false,
+  "authorization": "explicit_QA_SESSION_TRUSTED_until_CLI_close",
+  "managed_max_lines_contract": "fixed_200; configurable max_lines is bounded-run only",
+  "checks": [
+    {
+      "check": "actual-CLI-bounded-QA-session",
+      "state": "PASS"
+    },
+    {
+      "check": "MCP-operation-receipt-PASS",
+      "state": "PASS"
+    },
+    {
+      "check": "MCP-operation-receipt-PASS",
+      "state": "PASS"
+    },
+    {
+      "check": "session-authorization-source",
+      "state": "PASS"
+    },
+    {
+      "check": "MCP-operation-receipt-PASS",
+      "state": "PASS"
+    },
+    {
+      "check": "Unicode-write-read-exact",
+      "state": "PASS"
+    },
+    {
+      "check": "MCP-operation-receipt-PASS",
+      "state": "PASS"
+    },
+    {
+      "check": "stale-SHA-conflict-preserves-file",
+      "state": "PASS"
+    },
+    {
+      "check": "MCP-operation-receipt-PASS",
+      "state": "PASS"
+    },
+    {
+      "check": "bounded-run-line-cap-respected",
+      "state": "PASS"
+    },
+    {
+      "check": "MCP-operation-receipt-PASS",
+      "state": "PASS"
+    },
+    {
+      "check": "managed-default-output-line-cap-respected",
+      "state": "PASS"
+    },
+    {
+      "check": "MCP-operation-receipt-PASS",
+      "state": "PASS"
+    },
+    {
+      "check": "MCP-operation-receipt-PASS",
+      "state": "PASS"
+    },
+    {
+      "check": "MCP-operation-receipt-PASS",
+      "state": "PASS"
+    },
+    {
+      "check": "interactive-PTY-120-lines-complete",
+      "state": "PASS",
+      "line_count": 120
+    },
+    {
+      "check": "interactive-UTF8-input-roundtrip",
+      "state": "PASS"
+    },
+    {
+      "check": "all-successful-MCP-operations-have-receipts",
+      "state": "PASS"
+    },
+    {
+      "check": "close-session-revokes-scope",
+      "state": "PASS"
+    }
+  ],
+  "receipt_sha256": [
+    "f2b346e50d8f1eb67dd30f559774c3f77167fe5f49978b583e326d345e2ec7e4",
+    "8ad1e0eef6ffe9a5ad98f75a7b8603f3de04c0e6a28ac0804478d55b46c98d81",
+    "a8780e591464245e534f7b14f924df7cd685e6d34430efe18dd8e2a6355d779b",
+    "63f33e9a3b45415853e12db22ea4beda8dc66f15405b2c6afda48ad69e11e40f",
+    "8dfe5243e88081b5e2151e81c9d3c30ef8506ab9fabae9b2c191a3a01167cffe",
+    "d997005db5ff66924f60e58b72cea72f3baeb1b85c9caa0a6040cd02e943b022",
+    "7c78afd1be48888df6c8abf277a403719e47e8e11ea6518394574f7f1ed57a10",
+    "1a06ef14f82e37d7dbe8f368bf92621c5239b224b8f706cea5dc6930f48528fe",
+    "b7fde17927197682b35c5346b25cc57b212b1a7bdf30f4742e1b64516d2855f8"
+  ],
+  "state": "PASS_NATIVE_LINUX_MCP_53",
+  "agent_version": "0.3.53",
+  "governed_transport": "H.A.R.A. Commander DIRECT -> Services -> SSH nucleo-a -> exclusive real Linux QA"
+}

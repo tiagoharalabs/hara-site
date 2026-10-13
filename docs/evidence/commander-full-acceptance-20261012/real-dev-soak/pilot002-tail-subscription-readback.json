@@ -1,0 +1,11 @@
+{
+  "schema": "hara.pilot002-readonly-tail-subscription.v1",
+  "scope": "DEV POST current pinnedversion only; no new product calls; raw stdout/stderr discarded",
+  "event_count": 0,
+  "exception_count": 0,
+  "tail_exit_code": 1,
+  "stderr_class": "OTHER",
+  "stderr_sha256": "a7fbf2dd89714165e9b16530de38be8db836f097d31dbac04cfc9e02ef8c9a58",
+  "private_safe_path": "/tmp_hara/commander-win50-utf8-20261012/.generated/pilot002-diagnostics/unfiltered-tail-sanitized.json",
+  "raw_bytes_in_memory_discarded": 306
+}

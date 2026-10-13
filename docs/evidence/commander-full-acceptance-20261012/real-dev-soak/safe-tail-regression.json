@@ -1,0 +1,11 @@
+{
+  "at_utc": "2026-10-13T04:02:26.582428+00:00",
+  "network_calls": 0,
+  "raw_request_headers_body_messages_saved": false,
+  "retained_scope": "Only validated DEV-safe-incident schema, enums, digest, UUID, bounded whitelistedframes",
+  "state": "PASS_OFFLINE_SANITIZATION",
+  "subscription_started": false,
+  "tail_sha256": "43ed00dd7f9bc9b046c772a353b9d104ad66b06382a3e2dd37a270339db28a20",
+  "test_cases": 5,
+  "test_sha256": "acdb6f7e9a7d7e5d60da98d5464d796b052fdcc1b15b7f57ab60ae81879be9b7"
+}

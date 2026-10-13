@@ -1,0 +1,14 @@
+{
+  "candidate_installed": false,
+  "historical53_unchanged": true,
+  "production_deployed": false,
+  "schema": "hara.full054-source-composition.v1",
+  "source_sha256": {
+    "agent/linux.py": "6aecef8f8dd05bf8f2ab0c1b9c71308647892e70a0b34e2ccbe4322ad826df2e",
+    "agent/windows.ps1": "fe61f177c51f6b6a01f31a3ea1b3d081173446e8f8cb33e680744c1fb808ae62",
+    "install/linux.sh": "495069185d82d888cf53e1db156b60a264ec0fbfd7caf5b243e307bb07398cf0",
+    "install/windows.ps1": "2c7ab4534d8865392d4afa02e00b5ea155054a81e2bc35d4266fc28321b57ba4"
+  },
+  "state": "COMPOSED_SIGNING_PENDING",
+  "version": "0.3.54"
+}

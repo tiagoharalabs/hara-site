@@ -1,0 +1,92 @@
+{
+  "state": "EXITED",
+  "guest_pid": 6312,
+  "exit_code": 0,
+  "result": {
+    "schema": "hara.windows-clean-native-crypto.v1",
+    "state": "PASS",
+    "checks": 16,
+    "cases": [
+      {
+        "name": "installer_immutable",
+        "pass": true
+      },
+      {
+        "name": "agent_immutable",
+        "pass": true
+      },
+      {
+        "name": "installer_parser",
+        "pass": true
+      },
+      {
+        "name": "key_ReleaseSigningKid_single",
+        "pass": true
+      },
+      {
+        "name": "key_ReleaseSigningN_single",
+        "pass": true
+      },
+      {
+        "name": "key_ReleaseSigningE_single",
+        "pass": true
+      },
+      {
+        "name": "function_Convert-Base64UrlBytes_single",
+        "pass": true
+      },
+      {
+        "name": "function_Assert-ReleaseManifestSignature_single",
+        "pass": true
+      },
+      {
+        "name": "function_Assert-AgentSelfTest_single",
+        "pass": true
+      },
+      {
+        "name": "signed_manifest_positive",
+        "pass": true
+      },
+      {
+        "name": "manifest_byte_tamper_rejected",
+        "pass": true
+      },
+      {
+        "name": "wrong_key_id_rejected",
+        "pass": true
+      },
+      {
+        "name": "wrong_manifest_digest_rejected",
+        "pass": true
+      },
+      {
+        "name": "invalid_signature_rejected",
+        "pass": true
+      },
+      {
+        "name": "actual_agent_selftest_isolated",
+        "pass": true
+      },
+      {
+        "name": "no_device_enrollment",
+        "pass": true
+      }
+    ],
+    "installer_sha256": "2f0dae1684fae5a5b4fb716e54ca3d314eedd814eef23238ffa41e479a4346c4",
+    "agent_sha256": "4c563987986249d78c76258d062a4d360ffb88199539429ea97c2f346644656a",
+    "secure_readhost_redirect_supported": false,
+    "secure_readhost_fixture_timed_out": true,
+    "real_powershell_version": "5.1.26100.9444",
+    "scope": "REAL_SIGNED_CODE_NATIVE_FIXTURE_NOT_EXTERNAL_CLEAN_INSTALL",
+    "agent_transport_started": false,
+    "founder_config_read": false,
+    "main_task_modified": false,
+    "secrets_printed": false
+  },
+  "stdout_sha256": "ea314796dcb229d751ddb4c1b13f1036ef8a3e76d990c50c5001dddf4f01e37d",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stderr_present": false,
+  "raw_logs_private": true,
+  "evidence_authority": "NATIVE_QGA_PRIVATE_CUSTODY",
+  "original_nucleo_commander_receipt_sha256": "cb9fa32de996c1e937549d5520b7a19bc8fe7942c2f99078aecf5c218a4ee7a5"
+}

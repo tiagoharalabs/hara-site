@@ -1,0 +1,8 @@
+{
+  "state": "PASS_QA_NORMAL_PORTAL_REVOKE",
+  "device_id": "HARA-DEVICE-1fccac91-831c-4c9b-a4e7-c1c0d045e147",
+  "http_status": 200,
+  "server_state": "REVOKED",
+  "fixture_only": true,
+  "private_cookie_exposed": false
+}

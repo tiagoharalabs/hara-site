@@ -1,0 +1,1597 @@
+{
+  "actual_oauth_human_logins": 0,
+  "actual_physical_machines": 1,
+  "auth_mode": "PRESEEDED_QA_IDENTITIES",
+  "backend_at_start": {
+    "created_at_utc": "2026-10-13T03:40:32.488024Z",
+    "deployment_id": "8cba4bcc-6d6f-4cfb-8501-ac5e38fe5c23",
+    "version_id": "6f6e68e3-0777-4fb3-820d-a288ca5f7fab"
+  },
+  "cleanup_state": "PENDING",
+  "cloud_application_http_and_d1_commands": 68,
+  "connection_recoveries": [],
+  "customer_content_saved": false,
+  "d1_commands": 5,
+  "elapsed_seconds": 3018.627,
+  "environment": "DEV",
+  "hard_deadline_utc": "2026-10-16T03:56:15.401086+00:00",
+  "max_agents": 2,
+  "max_cloud_http": 3000,
+  "max_probe_concurrency": 20,
+  "observations": [
+    {
+      "at_utc": "2026-10-13T03:56:15Z",
+      "elapsed_seconds": 16.103385802940466,
+      "probe": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 527.788545936346,
+        "p99_ms": 527.788545936346,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      },
+      "resources": {
+        "agent_rss_bytes": 83845120,
+        "cpu_count": 12,
+        "load_1m": 1.44482421875,
+        "memory_available_bytes": 28968513536
+      }
+    },
+    {
+      "at_utc": "2026-10-13T03:57:15Z",
+      "elapsed_seconds": 76.63377810595557,
+      "probe": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 788.5699010221288,
+        "p99_ms": 788.5699010221288,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      },
+      "resources": {
+        "agent_rss_bytes": 83845120,
+        "cpu_count": 12,
+        "load_1m": 1.20751953125,
+        "memory_available_bytes": 28891774976
+      }
+    },
+    {
+      "at_utc": "2026-10-13T03:58:16Z",
+      "elapsed_seconds": 137.4253573839087,
+      "probe": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 568.0179110495374,
+        "p99_ms": 568.0179110495374,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      },
+      "resources": {
+        "agent_rss_bytes": 83845120,
+        "cpu_count": 12,
+        "load_1m": 1.4951171875,
+        "memory_available_bytes": 28932161536
+      }
+    },
+    {
+      "at_utc": "2026-10-13T03:59:17Z",
+      "elapsed_seconds": 197.99695371696725,
+      "probe": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 554.042409057729,
+        "p99_ms": 554.042409057729,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      },
+      "resources": {
+        "agent_rss_bytes": 83845120,
+        "cpu_count": 12,
+        "load_1m": 1.185546875,
+        "memory_available_bytes": 28967788544
+      }
+    },
+    {
+      "at_utc": "2026-10-13T04:00:17Z",
+      "elapsed_seconds": 258.5549430969404,
+      "probe": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 532.7007109299302,
+        "p99_ms": 532.7007109299302,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      },
+      "resources": {
+        "agent_rss_bytes": 83845120,
+        "cpu_count": 12,
+        "load_1m": 1.103515625,
+        "memory_available_bytes": 28960186368
+      }
+    },
+    {
+      "at_utc": "2026-10-13T04:01:18Z",
+      "elapsed_seconds": 319.0911386089865,
+      "probe": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 544.2271509673446,
+        "p99_ms": 544.2271509673446,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      },
+      "resources": {
+        "agent_rss_bytes": 83845120,
+        "cpu_count": 12,
+        "load_1m": 1.19580078125,
+        "memory_available_bytes": 28835577856
+      }
+    },
+    {
+      "at_utc": "2026-10-13T04:02:18Z",
+      "elapsed_seconds": 379.6388226709096,
+      "probe": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 569.5310389855877,
+        "p99_ms": 569.5310389855877,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      },
+      "resources": {
+        "agent_rss_bytes": 83845120,
+        "cpu_count": 12,
+        "load_1m": 0.978515625,
+        "memory_available_bytes": 28846780416
+      }
+    },
+    {
+      "at_utc": "2026-10-13T04:03:19Z",
+      "elapsed_seconds": 440.2130017369054,
+      "probe": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 649.2302519036457,
+        "p99_ms": 649.2302519036457,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      },
+      "resources": {
+        "agent_rss_bytes": 83845120,
+        "cpu_count": 12,
+        "load_1m": 0.822265625,
+        "memory_available_bytes": 28688453632
+      }
+    },
+    {
+      "at_utc": "2026-10-13T04:04:20Z",
+      "elapsed_seconds": 500.86644424998667,
+      "probe": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 550.1306129153818,
+        "p99_ms": 550.1306129153818,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      },
+      "resources": {
+        "agent_rss_bytes": 83845120,
+        "cpu_count": 12,
+        "load_1m": 0.7861328125,
+        "memory_available_bytes": 28673527808
+      }
+    },
+    {
+      "at_utc": "2026-10-13T04:05:20Z",
+      "elapsed_seconds": 561.4211112709017,
+      "probe": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 563.5433769784868,
+        "p99_ms": 563.5433769784868,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      },
+      "resources": {
+        "agent_rss_bytes": 83845120,
+        "cpu_count": 12,
+        "load_1m": 0.8994140625,
+        "memory_available_bytes": 28658933760
+      }
+    },
+    {
+      "at_utc": "2026-10-13T04:06:21Z",
+      "elapsed_seconds": 621.9883022719296,
+      "probe": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 532.9220059793442,
+        "p99_ms": 532.9220059793442,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      },
+      "resources": {
+        "agent_rss_bytes": 83845120,
+        "cpu_count": 12,
+        "load_1m": 1.08740234375,
+        "memory_available_bytes": 28726788096
+      }
+    },
+    {
+      "at_utc": "2026-10-13T04:07:21Z",
+      "elapsed_seconds": 682.5250973819057,
+      "probe": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 546.7078139772639,
+        "p99_ms": 546.7078139772639,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      },
+      "resources": {
+        "agent_rss_bytes": 83845120,
+        "cpu_count": 12,
+        "load_1m": 1.09619140625,
+        "memory_available_bytes": 28795727872
+      }
+    },
+    {
+      "at_utc": "2026-10-13T04:08:22Z",
+      "elapsed_seconds": 743.0766652399907,
+      "probe": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 541.4591280277818,
+        "p99_ms": 541.4591280277818,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      },
+      "resources": {
+        "agent_rss_bytes": 83845120,
+        "cpu_count": 12,
+        "load_1m": 1.16796875,
+        "memory_available_bytes": 28739375104
+      }
+    },
+    {
+      "at_utc": "2026-10-13T04:09:22Z",
+      "elapsed_seconds": 803.6231609230163,
+      "probe": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 538.8457630760968,
+        "p99_ms": 538.8457630760968,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      },
+      "resources": {
+        "agent_rss_bytes": 83845120,
+        "cpu_count": 12,
+        "load_1m": 1.0615234375,
+        "memory_available_bytes": 28756946944
+      }
+    },
+    {
+      "at_utc": "2026-10-13T04:10:23Z",
+      "elapsed_seconds": 864.166635358939,
+      "probe": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 533.6486890446395,
+        "p99_ms": 533.6486890446395,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      },
+      "resources": {
+        "agent_rss_bytes": 83845120,
+        "cpu_count": 12,
+        "load_1m": 1.15869140625,
+        "memory_available_bytes": 28776259584
+      }
+    },
+    {
+      "at_utc": "2026-10-13T04:11:24Z",
+      "elapsed_seconds": 924.7051116329385,
+      "probe": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 599.7750069946051,
+        "p99_ms": 599.7750069946051,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      },
+      "resources": {
+        "agent_rss_bytes": 83845120,
+        "cpu_count": 12,
+        "load_1m": 1.09912109375,
+        "memory_available_bytes": 28727980032
+      }
+    },
+    {
+      "at_utc": "2026-10-13T04:12:24Z",
+      "elapsed_seconds": 985.3098047459498,
+      "probe": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 607.046629069373,
+        "p99_ms": 607.046629069373,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      },
+      "resources": {
+        "agent_rss_bytes": 83845120,
+        "cpu_count": 12,
+        "load_1m": 1.01025390625,
+        "memory_available_bytes": 28748906496
+      }
+    },
+    {
+      "at_utc": "2026-10-13T04:13:25Z",
+      "elapsed_seconds": 1045.921793303918,
+      "probe": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 561.6085400106385,
+        "p99_ms": 561.6085400106385,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      },
+      "resources": {
+        "agent_rss_bytes": 83845120,
+        "cpu_count": 12,
+        "load_1m": 0.8251953125,
+        "memory_available_bytes": 28747812864
+      }
+    },
+    {
+      "at_utc": "2026-10-13T04:14:25Z",
+      "elapsed_seconds": 1106.488665285986,
+      "probe": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 541.9354820623994,
+        "p99_ms": 541.9354820623994,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      },
+      "resources": {
+        "agent_rss_bytes": 83845120,
+        "cpu_count": 12,
+        "load_1m": 0.91357421875,
+        "memory_available_bytes": 28711464960
+      }
+    },
+    {
+      "at_utc": "2026-10-13T04:15:26Z",
+      "elapsed_seconds": 1167.0354973509675,
+      "probe": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 543.0025159148499,
+        "p99_ms": 543.0025159148499,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      },
+      "resources": {
+        "agent_rss_bytes": 83845120,
+        "cpu_count": 12,
+        "load_1m": 0.923828125,
+        "memory_available_bytes": 28762415104
+      }
+    },
+    {
+      "at_utc": "2026-10-13T04:16:15Z",
+      "elapsed_seconds": 1216.1051278989762,
+      "probe": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 542.7258760901168,
+        "p99_ms": 542.7258760901168,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      },
+      "resources": {
+        "agent_rss_bytes": 83845120,
+        "cpu_count": 12,
+        "load_1m": 0.94384765625,
+        "memory_available_bytes": 28724953088
+      }
+    },
+    {
+      "at_utc": "2026-10-13T04:26:15Z",
+      "elapsed_seconds": 1816.6627353419317,
+      "probe": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 660.4987720493227,
+        "p99_ms": 660.4987720493227,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      },
+      "resources": {
+        "agent_rss_bytes": 83845120,
+        "cpu_count": 12,
+        "load_1m": 1.15576171875,
+        "memory_available_bytes": 28784562176
+      }
+    },
+    {
+      "at_utc": "2026-10-13T04:36:16Z",
+      "elapsed_seconds": 2417.3391695729224,
+      "probe": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 641.38417202048,
+        "p99_ms": 641.38417202048,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      },
+      "resources": {
+        "agent_rss_bytes": 83845120,
+        "cpu_count": 12,
+        "load_1m": 0.998046875,
+        "memory_available_bytes": 28764397568
+      }
+    },
+    {
+      "at_utc": "2026-10-13T04:46:17Z",
+      "elapsed_seconds": 3017.996324194013,
+      "probe": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 626.7540900735185,
+        "p99_ms": 626.7540900735185,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      },
+      "resources": {
+        "agent_rss_bytes": 83845120,
+        "cpu_count": 12,
+        "load_1m": 0.91650390625,
+        "memory_available_bytes": 28703461376
+      }
+    }
+  ],
+  "pilot_elapsed_seconds": 1200.0000881290762,
+  "pilot_passed": true,
+  "pilot_required_seconds": 1200,
+  "probe_waves": [
+    {
+      "attempts": [
+        {
+          "completed_at_utc": "2026-10-13T03:56:08Z",
+          "device_id": "HARA-DEVICE-ea6006d2-46e2-430a-9ffb-601a7c62383f",
+          "elapsed_ms": 2794.505796977319,
+          "index": 1,
+          "request_id": "TRANSIENT-INVOKE-2bdc5de17d7049698d4a42a08ccedcfa",
+          "request_id_known_before_dispatch": false,
+          "started_at_utc": "2026-10-13T03:56:06Z",
+          "state": "PASS",
+          "tool_id": null
+        },
+        {
+          "completed_at_utc": "2026-10-13T03:56:08Z",
+          "device_id": "HARA-DEVICE-e0f60adb-08e8-4996-b247-9c71ea94b5de",
+          "elapsed_ms": 2627.749500097707,
+          "index": 0,
+          "request_id": "TRANSIENT-INVOKE-c67d49bec5304706b7eed789e40f71ed",
+          "request_id_known_before_dispatch": false,
+          "started_at_utc": "2026-10-13T03:56:06Z",
+          "state": "PASS",
+          "tool_id": null
+        }
+      ],
+      "completed_at_utc": "2026-10-13T03:56:08Z",
+      "kind": "FULL",
+      "phase": "STARTING",
+      "sequence": 1,
+      "started_at_utc": "2026-10-13T03:56:06Z",
+      "state": "PASS",
+      "summary": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 1597.7834480581805,
+        "p99_ms": 1597.7834480581805,
+        "request_and_receipt_bindings": [
+          {
+            "receipt_sha256": "0da6dc0286a26bc08c96af589fccc0a795c836826ecb8301164e541761266c85",
+            "request_id": "TRANSIENT-INVOKE-c67d49bec5304706b7eed789e40f71ed"
+          },
+          {
+            "receipt_sha256": "0749d4c0cc68738f69d66a8e56cfcd14b8e46fe7ed78cac47249f2f19f3fda19",
+            "request_id": "TRANSIENT-INVOKE-2bdc5de17d7049698d4a42a08ccedcfa"
+          }
+        ],
+        "success_fraction": 1.0,
+        "successful": 2
+      }
+    },
+    {
+      "attempts": [
+        {
+          "completed_at_utc": "2026-10-13T03:56:15Z",
+          "device_id": "HARA-DEVICE-e0f60adb-08e8-4996-b247-9c71ea94b5de",
+          "elapsed_ms": 527.8132630046457,
+          "index": 0,
+          "request_id": "SOAK-HEALTH-07e9ca63d153deddaf34cc74",
+          "request_id_known_before_dispatch": true,
+          "started_at_utc": "2026-10-13T03:56:15Z",
+          "state": "PASS",
+          "tool_id": "hara.health"
+        },
+        {
+          "completed_at_utc": "2026-10-13T03:56:15Z",
+          "device_id": "HARA-DEVICE-ea6006d2-46e2-430a-9ffb-601a7c62383f",
+          "elapsed_ms": 519.9706599814817,
+          "index": 1,
+          "request_id": "SOAK-HEALTH-fc7e69d6b2418a3e37efa0ba",
+          "request_id_known_before_dispatch": true,
+          "started_at_utc": "2026-10-13T03:56:15Z",
+          "state": "PASS",
+          "tool_id": "hara.health"
+        }
+      ],
+      "completed_at_utc": "2026-10-13T03:56:15Z",
+      "kind": "HEALTH",
+      "phase": "PILOT_RUNNING",
+      "sequence": 2,
+      "started_at_utc": "2026-10-13T03:56:15Z",
+      "state": "PASS",
+      "summary": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 527.788545936346,
+        "p99_ms": 527.788545936346,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      }
+    },
+    {
+      "attempts": [
+        {
+          "completed_at_utc": "2026-10-13T03:57:16Z",
+          "device_id": "HARA-DEVICE-e0f60adb-08e8-4996-b247-9c71ea94b5de",
+          "elapsed_ms": 788.6015319963917,
+          "index": 0,
+          "request_id": "SOAK-HEALTH-4cc7b99451958247d7fbed4a",
+          "request_id_known_before_dispatch": true,
+          "started_at_utc": "2026-10-13T03:57:15Z",
+          "state": "PASS",
+          "tool_id": "hara.health"
+        },
+        {
+          "completed_at_utc": "2026-10-13T03:57:16Z",
+          "device_id": "HARA-DEVICE-ea6006d2-46e2-430a-9ffb-601a7c62383f",
+          "elapsed_ms": 750.6494099507108,
+          "index": 1,
+          "request_id": "SOAK-HEALTH-ef06eb4a1028ce099c7e7627",
+          "request_id_known_before_dispatch": true,
+          "started_at_utc": "2026-10-13T03:57:15Z",
+          "state": "PASS",
+          "tool_id": "hara.health"
+        }
+      ],
+      "completed_at_utc": "2026-10-13T03:57:16Z",
+      "kind": "HEALTH",
+      "phase": "PILOT_RUNNING",
+      "sequence": 3,
+      "started_at_utc": "2026-10-13T03:57:15Z",
+      "state": "PASS",
+      "summary": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 788.5699010221288,
+        "p99_ms": 788.5699010221288,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      }
+    },
+    {
+      "attempts": [
+        {
+          "completed_at_utc": "2026-10-13T03:58:17Z",
+          "device_id": "HARA-DEVICE-e0f60adb-08e8-4996-b247-9c71ea94b5de",
+          "elapsed_ms": 506.0027529252693,
+          "index": 0,
+          "request_id": "SOAK-HEALTH-a9ba1ccc8256dd4ac53583b8",
+          "request_id_known_before_dispatch": true,
+          "started_at_utc": "2026-10-13T03:58:16Z",
+          "state": "PASS",
+          "tool_id": "hara.health"
+        },
+        {
+          "completed_at_utc": "2026-10-13T03:58:17Z",
+          "device_id": "HARA-DEVICE-ea6006d2-46e2-430a-9ffb-601a7c62383f",
+          "elapsed_ms": 568.0437709670514,
+          "index": 1,
+          "request_id": "SOAK-HEALTH-8f1026b5c7da6024e60bdb8b",
+          "request_id_known_before_dispatch": true,
+          "started_at_utc": "2026-10-13T03:58:16Z",
+          "state": "PASS",
+          "tool_id": "hara.health"
+        }
+      ],
+      "completed_at_utc": "2026-10-13T03:58:17Z",
+      "kind": "HEALTH",
+      "phase": "PILOT_RUNNING",
+      "sequence": 4,
+      "started_at_utc": "2026-10-13T03:58:16Z",
+      "state": "PASS",
+      "summary": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 568.0179110495374,
+        "p99_ms": 568.0179110495374,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      }
+    },
+    {
+      "attempts": [
+        {
+          "completed_at_utc": "2026-10-13T03:59:17Z",
+          "device_id": "HARA-DEVICE-e0f60adb-08e8-4996-b247-9c71ea94b5de",
+          "elapsed_ms": 526.1679959949106,
+          "index": 0,
+          "request_id": "SOAK-HEALTH-6ba0d303ad5b75b1b67a58b5",
+          "request_id_known_before_dispatch": true,
+          "started_at_utc": "2026-10-13T03:59:17Z",
+          "state": "PASS",
+          "tool_id": "hara.health"
+        },
+        {
+          "completed_at_utc": "2026-10-13T03:59:17Z",
+          "device_id": "HARA-DEVICE-ea6006d2-46e2-430a-9ffb-601a7c62383f",
+          "elapsed_ms": 554.0688809705898,
+          "index": 1,
+          "request_id": "SOAK-HEALTH-dd5bfa0ff2237714aa8052bb",
+          "request_id_known_before_dispatch": true,
+          "started_at_utc": "2026-10-13T03:59:17Z",
+          "state": "PASS",
+          "tool_id": "hara.health"
+        }
+      ],
+      "completed_at_utc": "2026-10-13T03:59:17Z",
+      "kind": "HEALTH",
+      "phase": "PILOT_RUNNING",
+      "sequence": 5,
+      "started_at_utc": "2026-10-13T03:59:17Z",
+      "state": "PASS",
+      "summary": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 554.042409057729,
+        "p99_ms": 554.042409057729,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      }
+    },
+    {
+      "attempts": [
+        {
+          "completed_at_utc": "2026-10-13T04:00:18Z",
+          "device_id": "HARA-DEVICE-e0f60adb-08e8-4996-b247-9c71ea94b5de",
+          "elapsed_ms": 523.3259219676256,
+          "index": 0,
+          "request_id": "SOAK-HEALTH-fb6d9bc96f0ba0d3143c099e",
+          "request_id_known_before_dispatch": true,
+          "started_at_utc": "2026-10-13T04:00:17Z",
+          "state": "PASS",
+          "tool_id": "hara.health"
+        },
+        {
+          "completed_at_utc": "2026-10-13T04:00:18Z",
+          "device_id": "HARA-DEVICE-ea6006d2-46e2-430a-9ffb-601a7c62383f",
+          "elapsed_ms": 532.7328429557383,
+          "index": 1,
+          "request_id": "SOAK-HEALTH-ce898a0cfcdd81cba5e62f19",
+          "request_id_known_before_dispatch": true,
+          "started_at_utc": "2026-10-13T04:00:17Z",
+          "state": "PASS",
+          "tool_id": "hara.health"
+        }
+      ],
+      "completed_at_utc": "2026-10-13T04:00:18Z",
+      "kind": "HEALTH",
+      "phase": "PILOT_RUNNING",
+      "sequence": 6,
+      "started_at_utc": "2026-10-13T04:00:17Z",
+      "state": "PASS",
+      "summary": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 532.7007109299302,
+        "p99_ms": 532.7007109299302,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      }
+    },
+    {
+      "attempts": [
+        {
+          "completed_at_utc": "2026-10-13T04:01:18Z",
+          "device_id": "HARA-DEVICE-e0f60adb-08e8-4996-b247-9c71ea94b5de",
+          "elapsed_ms": 525.6436979398131,
+          "index": 0,
+          "request_id": "SOAK-HEALTH-55073a1a57c096fc7824bb74",
+          "request_id_known_before_dispatch": true,
+          "started_at_utc": "2026-10-13T04:01:18Z",
+          "state": "PASS",
+          "tool_id": "hara.health"
+        },
+        {
+          "completed_at_utc": "2026-10-13T04:01:18Z",
+          "device_id": "HARA-DEVICE-ea6006d2-46e2-430a-9ffb-601a7c62383f",
+          "elapsed_ms": 544.2555849440396,
+          "index": 1,
+          "request_id": "SOAK-HEALTH-20255523f5869f9500054912",
+          "request_id_known_before_dispatch": true,
+          "started_at_utc": "2026-10-13T04:01:18Z",
+          "state": "PASS",
+          "tool_id": "hara.health"
+        }
+      ],
+      "completed_at_utc": "2026-10-13T04:01:18Z",
+      "kind": "HEALTH",
+      "phase": "PILOT_RUNNING",
+      "sequence": 7,
+      "started_at_utc": "2026-10-13T04:01:18Z",
+      "state": "PASS",
+      "summary": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 544.2271509673446,
+        "p99_ms": 544.2271509673446,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      }
+    },
+    {
+      "attempts": [
+        {
+          "completed_at_utc": "2026-10-13T04:02:19Z",
+          "device_id": "HARA-DEVICE-e0f60adb-08e8-4996-b247-9c71ea94b5de",
+          "elapsed_ms": 569.5619579637423,
+          "index": 0,
+          "request_id": "SOAK-HEALTH-ccf16de51a66932812376ced",
+          "request_id_known_before_dispatch": true,
+          "started_at_utc": "2026-10-13T04:02:18Z",
+          "state": "PASS",
+          "tool_id": "hara.health"
+        },
+        {
+          "completed_at_utc": "2026-10-13T04:02:19Z",
+          "device_id": "HARA-DEVICE-ea6006d2-46e2-430a-9ffb-601a7c62383f",
+          "elapsed_ms": 558.9166110148653,
+          "index": 1,
+          "request_id": "SOAK-HEALTH-272e7a21492a303c51a3045e",
+          "request_id_known_before_dispatch": true,
+          "started_at_utc": "2026-10-13T04:02:18Z",
+          "state": "PASS",
+          "tool_id": "hara.health"
+        }
+      ],
+      "completed_at_utc": "2026-10-13T04:02:19Z",
+      "kind": "HEALTH",
+      "phase": "PILOT_RUNNING",
+      "sequence": 8,
+      "started_at_utc": "2026-10-13T04:02:18Z",
+      "state": "PASS",
+      "summary": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 569.5310389855877,
+        "p99_ms": 569.5310389855877,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      }
+    },
+    {
+      "attempts": [
+        {
+          "completed_at_utc": "2026-10-13T04:03:20Z",
+          "device_id": "HARA-DEVICE-e0f60adb-08e8-4996-b247-9c71ea94b5de",
+          "elapsed_ms": 523.1105659622699,
+          "index": 0,
+          "request_id": "SOAK-HEALTH-7d716f97186715a6fc83904a",
+          "request_id_known_before_dispatch": true,
+          "started_at_utc": "2026-10-13T04:03:19Z",
+          "state": "PASS",
+          "tool_id": "hara.health"
+        },
+        {
+          "completed_at_utc": "2026-10-13T04:03:20Z",
+          "device_id": "HARA-DEVICE-ea6006d2-46e2-430a-9ffb-601a7c62383f",
+          "elapsed_ms": 649.259538971819,
+          "index": 1,
+          "request_id": "SOAK-HEALTH-0bd2ee6a7d2b2813bcfbac7a",
+          "request_id_known_before_dispatch": true,
+          "started_at_utc": "2026-10-13T04:03:19Z",
+          "state": "PASS",
+          "tool_id": "hara.health"
+        }
+      ],
+      "completed_at_utc": "2026-10-13T04:03:20Z",
+      "kind": "HEALTH",
+      "phase": "PILOT_RUNNING",
+      "sequence": 9,
+      "started_at_utc": "2026-10-13T04:03:19Z",
+      "state": "PASS",
+      "summary": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 649.2302519036457,
+        "p99_ms": 649.2302519036457,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      }
+    },
+    {
+      "attempts": [
+        {
+          "completed_at_utc": "2026-10-13T04:04:20Z",
+          "device_id": "HARA-DEVICE-e0f60adb-08e8-4996-b247-9c71ea94b5de",
+          "elapsed_ms": 534.6196769969538,
+          "index": 0,
+          "request_id": "SOAK-HEALTH-18f5a5f278210899dc9fd861",
+          "request_id_known_before_dispatch": true,
+          "started_at_utc": "2026-10-13T04:04:20Z",
+          "state": "PASS",
+          "tool_id": "hara.health"
+        },
+        {
+          "completed_at_utc": "2026-10-13T04:04:20Z",
+          "device_id": "HARA-DEVICE-ea6006d2-46e2-430a-9ffb-601a7c62383f",
+          "elapsed_ms": 550.1567519968376,
+          "index": 1,
+          "request_id": "SOAK-HEALTH-652573470743781815032e4a",
+          "request_id_known_before_dispatch": true,
+          "started_at_utc": "2026-10-13T04:04:20Z",
+          "state": "PASS",
+          "tool_id": "hara.health"
+        }
+      ],
+      "completed_at_utc": "2026-10-13T04:04:20Z",
+      "kind": "HEALTH",
+      "phase": "PILOT_RUNNING",
+      "sequence": 10,
+      "started_at_utc": "2026-10-13T04:04:20Z",
+      "state": "PASS",
+      "summary": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 550.1306129153818,
+        "p99_ms": 550.1306129153818,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      }
+    },
+    {
+      "attempts": [
+        {
+          "completed_at_utc": "2026-10-13T04:05:21Z",
+          "device_id": "HARA-DEVICE-e0f60adb-08e8-4996-b247-9c71ea94b5de",
+          "elapsed_ms": 563.5754390386865,
+          "index": 0,
+          "request_id": "SOAK-HEALTH-f51508fe0babe959fa697af9",
+          "request_id_known_before_dispatch": true,
+          "started_at_utc": "2026-10-13T04:05:20Z",
+          "state": "PASS",
+          "tool_id": "hara.health"
+        },
+        {
+          "completed_at_utc": "2026-10-13T04:05:21Z",
+          "device_id": "HARA-DEVICE-ea6006d2-46e2-430a-9ffb-601a7c62383f",
+          "elapsed_ms": 526.2519699754193,
+          "index": 1,
+          "request_id": "SOAK-HEALTH-8ac14a46bc932e470492e305",
+          "request_id_known_before_dispatch": true,
+          "started_at_utc": "2026-10-13T04:05:20Z",
+          "state": "PASS",
+          "tool_id": "hara.health"
+        }
+      ],
+      "completed_at_utc": "2026-10-13T04:05:21Z",
+      "kind": "HEALTH",
+      "phase": "PILOT_RUNNING",
+      "sequence": 11,
+      "started_at_utc": "2026-10-13T04:05:20Z",
+      "state": "PASS",
+      "summary": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 563.5433769784868,
+        "p99_ms": 563.5433769784868,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      }
+    },
+    {
+      "attempts": [
+        {
+          "completed_at_utc": "2026-10-13T04:06:21Z",
+          "device_id": "HARA-DEVICE-e0f60adb-08e8-4996-b247-9c71ea94b5de",
+          "elapsed_ms": 532.9440280329436,
+          "index": 0,
+          "request_id": "SOAK-HEALTH-c4d9635368fb8f1690b58082",
+          "request_id_known_before_dispatch": true,
+          "started_at_utc": "2026-10-13T04:06:21Z",
+          "state": "PASS",
+          "tool_id": "hara.health"
+        },
+        {
+          "completed_at_utc": "2026-10-13T04:06:21Z",
+          "device_id": "HARA-DEVICE-ea6006d2-46e2-430a-9ffb-601a7c62383f",
+          "elapsed_ms": 530.2447800058872,
+          "index": 1,
+          "request_id": "SOAK-HEALTH-f994d1df93effed0a014ac86",
+          "request_id_known_before_dispatch": true,
+          "started_at_utc": "2026-10-13T04:06:21Z",
+          "state": "PASS",
+          "tool_id": "hara.health"
+        }
+      ],
+      "completed_at_utc": "2026-10-13T04:06:21Z",
+      "kind": "HEALTH",
+      "phase": "PILOT_RUNNING",
+      "sequence": 12,
+      "started_at_utc": "2026-10-13T04:06:21Z",
+      "state": "PASS",
+      "summary": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 532.9220059793442,
+        "p99_ms": 532.9220059793442,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      }
+    },
+    {
+      "attempts": [
+        {
+          "completed_at_utc": "2026-10-13T04:07:22Z",
+          "device_id": "HARA-DEVICE-e0f60adb-08e8-4996-b247-9c71ea94b5de",
+          "elapsed_ms": 510.11149189434946,
+          "index": 0,
+          "request_id": "SOAK-HEALTH-473e561fad46213dc6baf54c",
+          "request_id_known_before_dispatch": true,
+          "started_at_utc": "2026-10-13T04:07:21Z",
+          "state": "PASS",
+          "tool_id": "hara.health"
+        },
+        {
+          "completed_at_utc": "2026-10-13T04:07:22Z",
+          "device_id": "HARA-DEVICE-ea6006d2-46e2-430a-9ffb-601a7c62383f",
+          "elapsed_ms": 546.7481811065227,
+          "index": 1,
+          "request_id": "SOAK-HEALTH-d5791bb768685509e2287945",
+          "request_id_known_before_dispatch": true,
+          "started_at_utc": "2026-10-13T04:07:21Z",
+          "state": "PASS",
+          "tool_id": "hara.health"
+        }
+      ],
+      "completed_at_utc": "2026-10-13T04:07:22Z",
+      "kind": "HEALTH",
+      "phase": "PILOT_RUNNING",
+      "sequence": 13,
+      "started_at_utc": "2026-10-13T04:07:21Z",
+      "state": "PASS",
+      "summary": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 546.7078139772639,
+        "p99_ms": 546.7078139772639,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      }
+    },
+    {
+      "attempts": [
+        {
+          "completed_at_utc": "2026-10-13T04:08:22Z",
+          "device_id": "HARA-DEVICE-e0f60adb-08e8-4996-b247-9c71ea94b5de",
+          "elapsed_ms": 541.495849029161,
+          "index": 0,
+          "request_id": "SOAK-HEALTH-b7eeae98c435e2fa6bc883c9",
+          "request_id_known_before_dispatch": true,
+          "started_at_utc": "2026-10-13T04:08:22Z",
+          "state": "PASS",
+          "tool_id": "hara.health"
+        },
+        {
+          "completed_at_utc": "2026-10-13T04:08:22Z",
+          "device_id": "HARA-DEVICE-ea6006d2-46e2-430a-9ffb-601a7c62383f",
+          "elapsed_ms": 520.706295967102,
+          "index": 1,
+          "request_id": "SOAK-HEALTH-70569fc88b69e0aa8461a857",
+          "request_id_known_before_dispatch": true,
+          "started_at_utc": "2026-10-13T04:08:22Z",
+          "state": "PASS",
+          "tool_id": "hara.health"
+        }
+      ],
+      "completed_at_utc": "2026-10-13T04:08:22Z",
+      "kind": "HEALTH",
+      "phase": "PILOT_RUNNING",
+      "sequence": 14,
+      "started_at_utc": "2026-10-13T04:08:22Z",
+      "state": "PASS",
+      "summary": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 541.4591280277818,
+        "p99_ms": 541.4591280277818,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      }
+    },
+    {
+      "attempts": [
+        {
+          "completed_at_utc": "2026-10-13T04:09:23Z",
+          "device_id": "HARA-DEVICE-e0f60adb-08e8-4996-b247-9c71ea94b5de",
+          "elapsed_ms": 528.3980669919401,
+          "index": 0,
+          "request_id": "SOAK-HEALTH-f0cc9c7aae3c9956cd263a6d",
+          "request_id_known_before_dispatch": true,
+          "started_at_utc": "2026-10-13T04:09:22Z",
+          "state": "PASS",
+          "tool_id": "hara.health"
+        },
+        {
+          "completed_at_utc": "2026-10-13T04:09:23Z",
+          "device_id": "HARA-DEVICE-ea6006d2-46e2-430a-9ffb-601a7c62383f",
+          "elapsed_ms": 538.8763210503384,
+          "index": 1,
+          "request_id": "SOAK-HEALTH-dafe3e620f7942f99e2928f9",
+          "request_id_known_before_dispatch": true,
+          "started_at_utc": "2026-10-13T04:09:22Z",
+          "state": "PASS",
+          "tool_id": "hara.health"
+        }
+      ],
+      "completed_at_utc": "2026-10-13T04:09:23Z",
+      "kind": "HEALTH",
+      "phase": "PILOT_RUNNING",
+      "sequence": 15,
+      "started_at_utc": "2026-10-13T04:09:22Z",
+      "state": "PASS",
+      "summary": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 538.8457630760968,
+        "p99_ms": 538.8457630760968,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      }
+    },
+    {
+      "attempts": [
+        {
+          "completed_at_utc": "2026-10-13T04:10:23Z",
+          "device_id": "HARA-DEVICE-e0f60adb-08e8-4996-b247-9c71ea94b5de",
+          "elapsed_ms": 522.3335468908772,
+          "index": 0,
+          "request_id": "SOAK-HEALTH-579fb0bb98c8284589905a2a",
+          "request_id_known_before_dispatch": true,
+          "started_at_utc": "2026-10-13T04:10:23Z",
+          "state": "PASS",
+          "tool_id": "hara.health"
+        },
+        {
+          "completed_at_utc": "2026-10-13T04:10:24Z",
+          "device_id": "HARA-DEVICE-ea6006d2-46e2-430a-9ffb-601a7c62383f",
+          "elapsed_ms": 533.673117053695,
+          "index": 1,
+          "request_id": "SOAK-HEALTH-a912c8690b5b75aa184b0433",
+          "request_id_known_before_dispatch": true,
+          "started_at_utc": "2026-10-13T04:10:23Z",
+          "state": "PASS",
+          "tool_id": "hara.health"
+        }
+      ],
+      "completed_at_utc": "2026-10-13T04:10:24Z",
+      "kind": "HEALTH",
+      "phase": "PILOT_RUNNING",
+      "sequence": 16,
+      "started_at_utc": "2026-10-13T04:10:23Z",
+      "state": "PASS",
+      "summary": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 533.6486890446395,
+        "p99_ms": 533.6486890446395,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      }
+    },
+    {
+      "attempts": [
+        {
+          "completed_at_utc": "2026-10-13T04:11:24Z",
+          "device_id": "HARA-DEVICE-e0f60adb-08e8-4996-b247-9c71ea94b5de",
+          "elapsed_ms": 535.9706199960783,
+          "index": 0,
+          "request_id": "SOAK-HEALTH-fb6b253fd79c1c5e91ec09ec",
+          "request_id_known_before_dispatch": true,
+          "started_at_utc": "2026-10-13T04:11:24Z",
+          "state": "PASS",
+          "tool_id": "hara.health"
+        },
+        {
+          "completed_at_utc": "2026-10-13T04:11:24Z",
+          "device_id": "HARA-DEVICE-ea6006d2-46e2-430a-9ffb-601a7c62383f",
+          "elapsed_ms": 599.8022389831021,
+          "index": 1,
+          "request_id": "SOAK-HEALTH-a1168a6704a94b296e548915",
+          "request_id_known_before_dispatch": true,
+          "started_at_utc": "2026-10-13T04:11:24Z",
+          "state": "PASS",
+          "tool_id": "hara.health"
+        }
+      ],
+      "completed_at_utc": "2026-10-13T04:11:24Z",
+      "kind": "HEALTH",
+      "phase": "PILOT_RUNNING",
+      "sequence": 17,
+      "started_at_utc": "2026-10-13T04:11:24Z",
+      "state": "PASS",
+      "summary": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 599.7750069946051,
+        "p99_ms": 599.7750069946051,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      }
+    },
+    {
+      "attempts": [
+        {
+          "completed_at_utc": "2026-10-13T04:12:25Z",
+          "device_id": "HARA-DEVICE-e0f60adb-08e8-4996-b247-9c71ea94b5de",
+          "elapsed_ms": 547.7642730111256,
+          "index": 0,
+          "request_id": "SOAK-HEALTH-4fdc297ab9d3de5032b20c17",
+          "request_id_known_before_dispatch": true,
+          "started_at_utc": "2026-10-13T04:12:24Z",
+          "state": "PASS",
+          "tool_id": "hara.health"
+        },
+        {
+          "completed_at_utc": "2026-10-13T04:12:25Z",
+          "device_id": "HARA-DEVICE-ea6006d2-46e2-430a-9ffb-601a7c62383f",
+          "elapsed_ms": 607.0741410367191,
+          "index": 1,
+          "request_id": "SOAK-HEALTH-d72bc1a39b1e0ea5eadc0365",
+          "request_id_known_before_dispatch": true,
+          "started_at_utc": "2026-10-13T04:12:24Z",
+          "state": "PASS",
+          "tool_id": "hara.health"
+        }
+      ],
+      "completed_at_utc": "2026-10-13T04:12:25Z",
+      "kind": "HEALTH",
+      "phase": "PILOT_RUNNING",
+      "sequence": 18,
+      "started_at_utc": "2026-10-13T04:12:24Z",
+      "state": "PASS",
+      "summary": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 607.046629069373,
+        "p99_ms": 607.046629069373,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      }
+    },
+    {
+      "attempts": [
+        {
+          "completed_at_utc": "2026-10-13T04:13:25Z",
+          "device_id": "HARA-DEVICE-e0f60adb-08e8-4996-b247-9c71ea94b5de",
+          "elapsed_ms": 523.863538983278,
+          "index": 0,
+          "request_id": "SOAK-HEALTH-a9db4f9fe30f514752c65439",
+          "request_id_known_before_dispatch": true,
+          "started_at_utc": "2026-10-13T04:13:25Z",
+          "state": "PASS",
+          "tool_id": "hara.health"
+        },
+        {
+          "completed_at_utc": "2026-10-13T04:13:25Z",
+          "device_id": "HARA-DEVICE-ea6006d2-46e2-430a-9ffb-601a7c62383f",
+          "elapsed_ms": 561.6357229882851,
+          "index": 1,
+          "request_id": "SOAK-HEALTH-bce5bac3049133510f826117",
+          "request_id_known_before_dispatch": true,
+          "started_at_utc": "2026-10-13T04:13:25Z",
+          "state": "PASS",
+          "tool_id": "hara.health"
+        }
+      ],
+      "completed_at_utc": "2026-10-13T04:13:25Z",
+      "kind": "HEALTH",
+      "phase": "PILOT_RUNNING",
+      "sequence": 19,
+      "started_at_utc": "2026-10-13T04:13:25Z",
+      "state": "PASS",
+      "summary": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 561.6085400106385,
+        "p99_ms": 561.6085400106385,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      }
+    },
+    {
+      "attempts": [
+        {
+          "completed_at_utc": "2026-10-13T04:14:26Z",
+          "device_id": "HARA-DEVICE-e0f60adb-08e8-4996-b247-9c71ea94b5de",
+          "elapsed_ms": 537.913213018328,
+          "index": 0,
+          "request_id": "SOAK-HEALTH-a1c501fa39d975818552875e",
+          "request_id_known_before_dispatch": true,
+          "started_at_utc": "2026-10-13T04:14:25Z",
+          "state": "PASS",
+          "tool_id": "hara.health"
+        },
+        {
+          "completed_at_utc": "2026-10-13T04:14:26Z",
+          "device_id": "HARA-DEVICE-ea6006d2-46e2-430a-9ffb-601a7c62383f",
+          "elapsed_ms": 541.9567530043423,
+          "index": 1,
+          "request_id": "SOAK-HEALTH-ea281c8d7ec6270a73627eaf",
+          "request_id_known_before_dispatch": true,
+          "started_at_utc": "2026-10-13T04:14:25Z",
+          "state": "PASS",
+          "tool_id": "hara.health"
+        }
+      ],
+      "completed_at_utc": "2026-10-13T04:14:26Z",
+      "kind": "HEALTH",
+      "phase": "PILOT_RUNNING",
+      "sequence": 20,
+      "started_at_utc": "2026-10-13T04:14:25Z",
+      "state": "PASS",
+      "summary": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 541.9354820623994,
+        "p99_ms": 541.9354820623994,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      }
+    },
+    {
+      "attempts": [
+        {
+          "completed_at_utc": "2026-10-13T04:15:26Z",
+          "device_id": "HARA-DEVICE-e0f60adb-08e8-4996-b247-9c71ea94b5de",
+          "elapsed_ms": 525.883886963129,
+          "index": 0,
+          "request_id": "SOAK-HEALTH-a87c7d6423079366bf07e418",
+          "request_id_known_before_dispatch": true,
+          "started_at_utc": "2026-10-13T04:15:26Z",
+          "state": "PASS",
+          "tool_id": "hara.health"
+        },
+        {
+          "completed_at_utc": "2026-10-13T04:15:26Z",
+          "device_id": "HARA-DEVICE-ea6006d2-46e2-430a-9ffb-601a7c62383f",
+          "elapsed_ms": 543.0253701051697,
+          "index": 1,
+          "request_id": "SOAK-HEALTH-e39671ce5008df52171be797",
+          "request_id_known_before_dispatch": true,
+          "started_at_utc": "2026-10-13T04:15:26Z",
+          "state": "PASS",
+          "tool_id": "hara.health"
+        }
+      ],
+      "completed_at_utc": "2026-10-13T04:15:26Z",
+      "kind": "HEALTH",
+      "phase": "PILOT_RUNNING",
+      "sequence": 21,
+      "started_at_utc": "2026-10-13T04:15:26Z",
+      "state": "PASS",
+      "summary": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 543.0025159148499,
+        "p99_ms": 543.0025159148499,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      }
+    },
+    {
+      "attempts": [
+        {
+          "completed_at_utc": "2026-10-13T04:16:15Z",
+          "device_id": "HARA-DEVICE-e0f60adb-08e8-4996-b247-9c71ea94b5de",
+          "elapsed_ms": 512.8477840917185,
+          "index": 0,
+          "request_id": "SOAK-HEALTH-cc6c508f6cfe09df5b7c07ae",
+          "request_id_known_before_dispatch": true,
+          "started_at_utc": "2026-10-13T04:16:15Z",
+          "state": "PASS",
+          "tool_id": "hara.health"
+        },
+        {
+          "completed_at_utc": "2026-10-13T04:16:15Z",
+          "device_id": "HARA-DEVICE-ea6006d2-46e2-430a-9ffb-601a7c62383f",
+          "elapsed_ms": 542.7518049255013,
+          "index": 1,
+          "request_id": "SOAK-HEALTH-3b9f22a9ab264e938b458cc1",
+          "request_id_known_before_dispatch": true,
+          "started_at_utc": "2026-10-13T04:16:15Z",
+          "state": "PASS",
+          "tool_id": "hara.health"
+        }
+      ],
+      "completed_at_utc": "2026-10-13T04:16:15Z",
+      "kind": "HEALTH",
+      "phase": "SOAK_STARTED",
+      "sequence": 22,
+      "started_at_utc": "2026-10-13T04:16:15Z",
+      "state": "PASS",
+      "summary": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 542.7258760901168,
+        "p99_ms": 542.7258760901168,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      }
+    },
+    {
+      "attempts": [
+        {
+          "completed_at_utc": "2026-10-13T04:26:16Z",
+          "device_id": "HARA-DEVICE-e0f60adb-08e8-4996-b247-9c71ea94b5de",
+          "elapsed_ms": 644.2515710368752,
+          "index": 0,
+          "request_id": "SOAK-HEALTH-182c39b0794bd3e617ac1a6a",
+          "request_id_known_before_dispatch": true,
+          "started_at_utc": "2026-10-13T04:26:15Z",
+          "state": "PASS",
+          "tool_id": "hara.health"
+        },
+        {
+          "completed_at_utc": "2026-10-13T04:26:16Z",
+          "device_id": "HARA-DEVICE-ea6006d2-46e2-430a-9ffb-601a7c62383f",
+          "elapsed_ms": 660.523819969967,
+          "index": 1,
+          "request_id": "SOAK-HEALTH-3ed83b556815679d9ce8b6d2",
+          "request_id_known_before_dispatch": true,
+          "started_at_utc": "2026-10-13T04:26:15Z",
+          "state": "PASS",
+          "tool_id": "hara.health"
+        }
+      ],
+      "completed_at_utc": "2026-10-13T04:26:16Z",
+      "kind": "HEALTH",
+      "phase": "SOAK_STARTED",
+      "sequence": 23,
+      "started_at_utc": "2026-10-13T04:26:15Z",
+      "state": "PASS",
+      "summary": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 660.4987720493227,
+        "p99_ms": 660.4987720493227,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      }
+    },
+    {
+      "attempts": [
+        {
+          "completed_at_utc": "2026-10-13T04:36:17Z",
+          "device_id": "HARA-DEVICE-e0f60adb-08e8-4996-b247-9c71ea94b5de",
+          "elapsed_ms": 626.9017820013687,
+          "index": 0,
+          "request_id": "SOAK-HEALTH-f3b5f21683e3eb39785d0f9e",
+          "request_id_known_before_dispatch": true,
+          "started_at_utc": "2026-10-13T04:36:16Z",
+          "state": "PASS",
+          "tool_id": "hara.health"
+        },
+        {
+          "completed_at_utc": "2026-10-13T04:36:17Z",
+          "device_id": "HARA-DEVICE-ea6006d2-46e2-430a-9ffb-601a7c62383f",
+          "elapsed_ms": 641.4167850743979,
+          "index": 1,
+          "request_id": "SOAK-HEALTH-fc8bf5045101cd6d67ca5735",
+          "request_id_known_before_dispatch": true,
+          "started_at_utc": "2026-10-13T04:36:16Z",
+          "state": "PASS",
+          "tool_id": "hara.health"
+        }
+      ],
+      "completed_at_utc": "2026-10-13T04:36:17Z",
+      "kind": "HEALTH",
+      "phase": "SOAK_STARTED",
+      "sequence": 24,
+      "started_at_utc": "2026-10-13T04:36:16Z",
+      "state": "PASS",
+      "summary": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 641.38417202048,
+        "p99_ms": 641.38417202048,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      }
+    },
+    {
+      "attempts": [
+        {
+          "completed_at_utc": "2026-10-13T04:46:17Z",
+          "device_id": "HARA-DEVICE-e0f60adb-08e8-4996-b247-9c71ea94b5de",
+          "elapsed_ms": 624.0303840022534,
+          "index": 0,
+          "request_id": "SOAK-HEALTH-e3c2234fc76360e76f4fbafc",
+          "request_id_known_before_dispatch": true,
+          "started_at_utc": "2026-10-13T04:46:17Z",
+          "state": "PASS",
+          "tool_id": "hara.health"
+        },
+        {
+          "completed_at_utc": "2026-10-13T04:46:17Z",
+          "device_id": "HARA-DEVICE-ea6006d2-46e2-430a-9ffb-601a7c62383f",
+          "elapsed_ms": 626.7733669374138,
+          "index": 1,
+          "request_id": "SOAK-HEALTH-c2b44c1b4dcdc2bd32146cab",
+          "request_id_known_before_dispatch": true,
+          "started_at_utc": "2026-10-13T04:46:17Z",
+          "state": "PASS",
+          "tool_id": "hara.health"
+        }
+      ],
+      "completed_at_utc": "2026-10-13T04:46:17Z",
+      "kind": "HEALTH",
+      "phase": "SOAK_STARTED",
+      "sequence": 25,
+      "started_at_utc": "2026-10-13T04:46:17Z",
+      "state": "PASS",
+      "summary": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 626.7540900735185,
+        "p99_ms": 626.7540900735185,
+        "request_and_receipt_bindings": [],
+        "success_fraction": 1.0,
+        "successful": 2
+      }
+    }
+  ],
+  "prod_mutations": false,
+  "recovery": [
+    {
+      "kind": "PROCESS_RESTART",
+      "ledger_unchanged": true,
+      "new_pid": 3091419,
+      "old_pid": 3091234,
+      "replay_only": true,
+      "request_id": "TRANSIENT-INVOKE-c67d49bec5304706b7eed789e40f71ed",
+      "same_receipt": true
+    },
+    {
+      "kind": "DISCONNECT",
+      "ledger_unchanged": true,
+      "new_pid": 3091615,
+      "old_pid": 3091194,
+      "replay_only": true,
+      "request_id": "TRANSIENT-INVOKE-2bdc5de17d7049698d4a42a08ccedcfa",
+      "same_receipt": true
+    }
+  ],
+  "recovery_grace_seconds": 30.0,
+  "retained_agents": 2,
+  "run_id": "soak-20261013-root-003",
+  "schema": "hara.commander-real-dev-soak.v1",
+  "script_sha256": "3783d5411434202b6e7a41cf820bea7f1c5046c750040866e15a6c6e78410467",
+  "seventy_two_hours_passed": false,
+  "soak_elapsed_seconds": 3002.5239871030208,
+  "soak_requested_hours": 72,
+  "soak_started_at_utc": "2026-10-13T03:56:15Z",
+  "source_sha256": {
+    "experimental/event_v2_agent_loop.py": "f1a7d9fc4faf57185d0d2bcb17e741882db866c627967bf02e1d98754d212950",
+    "experimental/event_v2_customer_agent.py": "1170e771181e86b02c87d5307c9b22783788a73487f8325e73f29217046069d2",
+    "experimental/event_v2_telemetry.py": "4bb47248f2a690df680d8c6cd0144522e2cd82286bb563f391bbea9a200fa499",
+    "experimental/event_v2_websocket.py": "96b10a826e8cb2063cd6e19f6c71967e98c0b843c6cd94f997e2d24a7f316ea9",
+    "public/agent/linux.py": "62e1a836ef92fc8b72638fd116a6f0097fcf9e9f0ef0f4259ca8e0f6712b4229"
+  },
+  "stages": [
+    {
+      "agent_count": 2,
+      "completed_at_utc": "2026-10-13T03:56:08Z",
+      "independent_tenants": 2,
+      "probe": {
+        "count": 2,
+        "errors": [],
+        "p95_ms": 1597.7834480581805,
+        "p99_ms": 1597.7834480581805,
+        "request_and_receipt_bindings": [
+          {
+            "receipt_sha256": "0da6dc0286a26bc08c96af589fccc0a795c836826ecb8301164e541761266c85",
+            "request_id": "TRANSIENT-INVOKE-c67d49bec5304706b7eed789e40f71ed"
+          },
+          {
+            "receipt_sha256": "0749d4c0cc68738f69d66a8e56cfcd14b8e46fe7ed78cac47249f2f19f3fda19",
+            "request_id": "TRANSIENT-INVOKE-2bdc5de17d7049698d4a42a08ccedcfa"
+          }
+        ],
+        "success_fraction": 1.0,
+        "successful": 2
+      },
+      "resources_after": {
+        "agent_rss_bytes": 83738624,
+        "cpu_count": 12,
+        "load_1m": 1.43115234375,
+        "memory_available_bytes": 28869783552
+      },
+      "resources_before": {
+        "agent_rss_bytes": 0,
+        "cpu_count": 12,
+        "load_1m": 1.20703125,
+        "memory_available_bytes": 28907495424
+      },
+      "state": "PASS"
+    }
+  ],
+  "started_at_utc": "2026-10-13T03:55:59Z",
+  "state": "SOAK_STARTED",
+  "twenty_four_hours_passed": false,
+  "updated_at_utc": "2026-10-13T04:46:17Z"
+}

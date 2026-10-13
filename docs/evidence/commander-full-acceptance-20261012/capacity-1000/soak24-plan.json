@@ -1,0 +1,103 @@
+{
+  "agent_processes_launched": 0,
+  "at_utc": "2026-10-13T04:07:58+00:00",
+  "auth": "1000 exact-owned QA-preseeded DEV tenants; not1000 OAuth humans",
+  "baseline_100_agent_rss_bytes": 4183265280,
+  "baseline_100_rss_times10_bytes": 41832652800,
+  "baseline_extrapolation_certifies_capacity": false,
+  "budget": {
+    "application_http_and_d1_command_limit": 60000,
+    "cleanup_reserved_commands": 1024,
+    "components": {
+      "24h_ten_full_cycles_per_agent": 30000,
+      "bounded_restart_and_same_ID_replay": 204,
+      "cross_tenant_and_free_grant_denial_checks": 90,
+      "enrollment_http": 1000,
+      "exact_owned_selection_d1_batches": 4,
+      "final_full_cycle_1000": 3000,
+      "fixture_identity_collision_read_and_create_d1": 2000,
+      "full_cycle_all_agents_each_ramp_stage": 5550,
+      "initial_agent_durable_reconciliation_http": 1000,
+      "owned_Pro_mutation_replay_CAS_cases": 200,
+      "twenty_minute_pilot_20_health_calls_per_minute": 400,
+      "version_and_quota_observation_allowance": 500
+    },
+    "cost_or_invoice_certified": false,
+    "excluded_events_must_be_measured_separately": true,
+    "excluded_from_application_counter": [
+      "RFC6455 control frames",
+      "WSS liveness/telemetry messages",
+      "Worker internal RPCs",
+      "D1 statements executed inside HTTP routes",
+      "Cloudflare analytics operations"
+    ],
+    "planned_commands": 43948,
+    "unused_headroom_commands": 15028,
+    "ws_initial_upgrade_limit": 1000,
+    "ws_reconnect_upgrade_limit": 200
+  },
+  "bulk_load_started": false,
+  "cgroup": {
+    "CPUQuota_percent": 600,
+    "KillMode": "mixed",
+    "LimitNOFILE": 8192,
+    "MemoryHigh_bytes": 55834574848,
+    "MemoryMax_bytes": 60129542144,
+    "Restart": "no",
+    "RuntimeMaxSec": 90000,
+    "TasksMax": 8192
+  },
+  "cleanup": "stop exactPID+starttime+command+UID-owned processes; delete only exact journaled tenant/device IDs; validate zero rows and revoke credentials; remove only ownVM/runtime",
+  "environment": "DEV",
+  "expected_backend_version": null,
+  "fixture_enrollment_concurrency": 2,
+  "host_resource_snapshot": "nucleo-resources.json",
+  "isolated_vm": "commander-capacity1000-20261013",
+  "launch_prerequisites": [
+    "Root backend54 critical real tests closed",
+    "fresh host resource preflight",
+    "own VM image SHA/UUID/MAC/key/knownhosts; guest source/hash preflight",
+    "Services controller and isolatedVM Agent-manager transport smoke",
+    "pin backend/Agent/testhelpers; safe Worker diagnostics and sanitized observer",
+    "exact cleanup journal including partially created fixtures before mutation",
+    "count application requests/D1commands and separate WSS/control/RPC/metrics traffic"
+  ],
+  "mode": "soak24",
+  "origin": "https://hara-commander-dev-v2.tiago-sartori.workers.dev",
+  "physical_hosts": 1,
+  "probe_concurrency": 20,
+  "real_1000_24h_passed": false,
+  "real_1000_short_passed": false,
+  "real_72h_passed": false,
+  "required_continuous_seconds": 86400,
+  "resource_checks": {
+    "check_interval_seconds": 5,
+    "guest_floor_bytes": 4294967296,
+    "host_floor_bytes": 17179869184,
+    "snapshot_max_age_seconds": 120
+  },
+  "resource_snapshot_is_historical_not_launch_clearance": true,
+  "schema": "hara.commander-real-1000-plan.v1",
+  "source_sha256": {
+    "experimental/event_v2_agent_loop.py": "f1a7d9fc4faf57185d0d2bcb17e741882db866c627967bf02e1d98754d212950",
+    "experimental/event_v2_customer_agent.py": "1170e771181e86b02c87d5307c9b22783788a73487f8325e73f29217046069d2",
+    "experimental/event_v2_telemetry.py": "4bb47248f2a690df680d8c6cd0144522e2cd82286bb563f391bbea9a200fa499",
+    "experimental/event_v2_websocket.py": "96b10a826e8cb2063cd6e19f6c71967e98c0b843c6cd94f997e2d24a7f316ea9",
+    "public/agent/linux.py": "62e1a836ef92fc8b72638fd116a6f0097fcf9e9f0ef0f4259ca8e0f6712b4229",
+    "scripts/commander_event_v2_transient_live_probe.py": "33fb67958def9ab03856437705302a7f41be042f109afa81b11567152977fadc",
+    "scripts/commander_full_acceptance_real_dev_soak.py": "3783d5411434202b6e7a41cf820bea7f1c5046c750040866e15a6c6e78410467",
+    "scripts/full_acceptance_dev_fixtures.py": "c8b0e8ab1858b5b6bc4707bd2488072dd1b3549905c00dee3973553f7ae8fc77"
+  },
+  "stages": [
+    100,
+    250,
+    500,
+    1000
+  ],
+  "state": "PREPARED_NOT_EXECUTED",
+  "transport": "actual EventV2 WSS Agent processes; not SQLite records or HTTP health",
+  "vm_autostart": false,
+  "vm_disk_bytes": 25769803776,
+  "vm_memory_bytes": 64424509440,
+  "vm_vcpus": 8
+}

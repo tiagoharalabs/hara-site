@@ -1,0 +1,89 @@
+{
+  "schema": "hara.commander.windows.event-v2-live-recovery.v1",
+  "device_id": "HARA-DEVICE-cb8c2b8d-42eb-4651-a602-140d1aafac4a",
+  "founder_runtime_mutated": false,
+  "checks": [
+    {
+      "name": "graceful_disconnect_before_restart",
+      "passed": true,
+      "evidence": {
+        "state": "STOPPED",
+        "fixture_pid": 7428,
+        "exit_code": 0,
+        "stderr_present": false,
+        "event_status": {
+          "schema": "hara.commander-event-v2-runtime-status.v1",
+          "transport_mode": "EVENT_V2",
+          "connected": false,
+          "connected_at_utc": "2026-10-12T23:48:59.9406724Z",
+          "disconnected_at_utc": "2026-10-12T23:53:04.4780074Z",
+          "last_error_code": "",
+          "updated_at_utc": "2026-10-12T23:53:04.4800446Z"
+        }
+      }
+    },
+    {
+      "name": "restart_owned_qa_runtime",
+      "passed": true,
+      "evidence": {
+        "state": "STARTED",
+        "device_id": "HARA-DEVICE-cb8c2b8d-42eb-4651-a602-140d1aafac4a",
+        "fixture_pid": 9128
+      }
+    },
+    {
+      "name": "wss_reconnect_same_dpapi_identity",
+      "passed": true,
+      "evidence": {
+        "state": "PASS",
+        "device_id": "HARA-DEVICE-cb8c2b8d-42eb-4651-a602-140d1aafac4a",
+        "fixture_pid": 9128,
+        "process_exited": false,
+        "exit_code": null,
+        "stderr_present": false,
+        "event_status": {
+          "schema": "hara.commander-event-v2-runtime-status.v1",
+          "transport_mode": "EVENT_V2",
+          "connected": true,
+          "connected_at_utc": "2026-10-12T23:53:06.7668419Z",
+          "disconnected_at_utc": "2026-10-12T23:53:04.4780074Z",
+          "last_error_code": "",
+          "updated_at_utc": "2026-10-12T23:53:07.3090846Z"
+        }
+      }
+    },
+    {
+      "name": "persistent_replay_same_receipt_after_restart",
+      "passed": true,
+      "evidence": {
+        "state": "COMPLETED",
+        "execution_mode": "REPLAY_ONLY",
+        "receipt_sha256": "089c2c26abfc7b3b35eb956e522c48f816329230ca886260be6c369f82fb0db2",
+        "learning_outcome": "REPLAYED",
+        "quota_state": "COMMITTED",
+        "device_id": "HARA-DEVICE-cb8c2b8d-42eb-4651-a602-140d1aafac4a"
+      }
+    },
+    {
+      "name": "final_graceful_shutdown",
+      "passed": true,
+      "evidence": {
+        "state": "STOPPED",
+        "fixture_pid": 9128,
+        "exit_code": 0,
+        "stderr_present": false,
+        "event_status": {
+          "schema": "hara.commander-event-v2-runtime-status.v1",
+          "transport_mode": "EVENT_V2",
+          "connected": false,
+          "connected_at_utc": "2026-10-12T23:53:06.7668419Z",
+          "disconnected_at_utc": "2026-10-12T23:53:09.8845669Z",
+          "last_error_code": "",
+          "updated_at_utc": "2026-10-12T23:53:09.8886230Z"
+        }
+      }
+    }
+  ],
+  "passed": 5,
+  "failed": 0
+}

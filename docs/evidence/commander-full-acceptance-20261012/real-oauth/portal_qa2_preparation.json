@@ -1,0 +1,57 @@
+{
+  "schema": "hara.commander.real-portal-signup.qa2-preparation.v1",
+  "state": "QA2_READY_FOR_DEV_SUBJECT_ALLOWLIST",
+  "subject_id": "394861028946477060",
+  "regular_human": true,
+  "email_return_code_requested": true,
+  "email_verification_api_passed": true,
+  "email_notification_requested": false,
+  "d1_identity_seed_performed": false,
+  "global_roles_added": false,
+  "organization_changed": false,
+  "credential_values_exposed": false,
+  "runner_sources": {
+    "base_sha256": "00b80c0967a01bd16272cc0d476307a151dc6fe9fd2bdda0cd81864db210f91a",
+    "portal_sha256": "90d4705344109f4d9ae03e58bf8e113a416ce88678183cd22a53e19cc3a9a850",
+    "combined_sha256": "7354efce1b3918711864bf971f4ec8140adc05821f892f650dd20631d7f89a84"
+  },
+  "events": [
+    {
+      "event": "HTTP",
+      "at_utc": "2026-10-13T00:31:54.630294+00:00",
+      "method": "POST",
+      "path": "/v2/users/human",
+      "http_status": 200,
+      "safe_error_code": null
+    },
+    {
+      "event": "PORTAL_QA_USER_CREATED",
+      "at_utc": "2026-10-13T00:31:54.630786+00:00",
+      "subject_id": "394861028946477060",
+      "no_email_requested": true,
+      "global_roles_added": false,
+      "d1_seed_performed": false
+    },
+    {
+      "event": "HTTP",
+      "at_utc": "2026-10-13T00:31:54.975877+00:00",
+      "method": "POST",
+      "path": "/v2/users/394861028946477060/email/verify",
+      "http_status": 200,
+      "safe_error_code": null
+    },
+    {
+      "event": "PORTAL_QA_READY_FOR_ALLOWLIST",
+      "at_utc": "2026-10-13T00:31:54.976536+00:00",
+      "subject_id": "394861028946477060",
+      "no_email_requested": true,
+      "d1_seed_performed": false
+    }
+  ],
+  "product_receipts": {
+    "start": "c8a14d06bf7c23a50fb621e3ec296edbd2105dbcf68fb299b63862e54aae414f",
+    "output": "28faba58abc4469a8305581cc7596f8958bd3cd3b402f42a449ce49406648f7e"
+  },
+  "portal_proof": "PENDING_DEV_DEPLOY",
+  "cleanup": "PENDING_AFTER_PORTAL_AND_MCP_PROOFS"
+}

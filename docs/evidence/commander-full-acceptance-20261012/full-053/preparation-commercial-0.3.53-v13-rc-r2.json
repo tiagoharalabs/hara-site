@@ -1,0 +1,24 @@
+{
+  "bundle": "apps/commander/release-bundles/commercial-0.3.53-v13-rc-r2",
+  "historical_bundles_changed": false,
+  "manifest_sha256": "d8f6d0165253b13a5efcade628564900f41dfbeacf4a062f61439486fb1ad395",
+  "platform_versions_match_manifest": true,
+  "private_key_printed": false,
+  "production_deployed": false,
+  "schema": "hara.full-platform-053-preparation.v1",
+  "signature_sha256": "837b54872b2071b96795fc159de1a8944ea837f4f4b9adfde15427b787fdc8a3",
+  "signed_files": {
+    "agent/linux.py": "db91714140b63684917e46d6a327778183a5829dbf2b298098b31da4d463985e",
+    "agent/windows.ps1": "f67ebcee909ee2ce93187262c951b57b38bc976fec73413bd30555d9bcf62299",
+    "install/linux.sh": "9ae238e7360c9b981f147093d8e2be2c5c81b5afd684f9dbe137e75c28c58683",
+    "install/windows.ps1": "dd92242225cf518e104f8f574aa9f661e6e3c9647f2cdce2afdb6ba88d0d9710"
+  },
+  "source_files": {
+    "agent/linux.py": "db91714140b63684917e46d6a327778183a5829dbf2b298098b31da4d463985e",
+    "agent/windows.ps1": "f67ebcee909ee2ce93187262c951b57b38bc976fec73413bd30555d9bcf62299",
+    "install/linux.sh": "74f9662e9845220a353db9f5c054d1f4e5d6242c8c7b4bdbdcd53e74237b2726",
+    "install/windows.ps1": "114b7dd430641010a95de325a17069cf023f1de95d567718bb50bc3df92ff1b4"
+  },
+  "state": "SIGNED_PREPARED_NOT_DEPLOYED",
+  "version": "0.3.53"
+}

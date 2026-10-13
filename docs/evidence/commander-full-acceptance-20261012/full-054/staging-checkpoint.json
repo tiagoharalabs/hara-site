@@ -1,0 +1,11 @@
+{
+  "at_utc": "2026-10-13T06:41:38.594476+00:00",
+  "complete_homologation": false,
+  "fleet_burst_pass": 120,
+  "fleet_burst_state": "FAIL",
+  "fleet_burst_total": 160,
+  "live_soak_files_excluded": true,
+  "paths": 449,
+  "state": "STAGED_VERIFIED_054_FUNCTIONAL_CHECKPOINT",
+  "wip_distributed_excluded": true
+}

@@ -1,0 +1,51 @@
+{
+  "DO_live_quota_counter_read": false,
+  "at_utc": "2026-10-13T03:55:22+00:00",
+  "budget_issued_at_utc": "2026-10-13T03:40:10.160Z",
+  "budget_predates_cutover": true,
+  "d1_mutations": 0,
+  "d1_reads": 3,
+  "dev54_deploy_at_utc": "2026-10-13T03:40:32Z",
+  "exact_own_DEV_fixture": true,
+  "exact_request_call_counts": [
+    {
+      "call_rows": 1,
+      "issued_call_units": 1
+    }
+  ],
+  "local_commit_evidence_pending": true,
+  "own_budget_baselines": [],
+  "raw_payload_or_result_read": false,
+  "schema": "hara.commander-linux-wave29-contract-readonly-audit.v1",
+  "whitelisted_result_metadata": [
+    {
+      "call_id": "HARA-CALL-3085f5a7-899d-4c73-8910-258fc7077b5c",
+      "function_id": "device.info",
+      "mutation_performed": 0,
+      "process_exit_code": 0,
+      "receipt_sha256": "7de94cef0876939e78ad47d96efa21bf679ca641759b65e878c4c6f296ba0ede",
+      "request_id": "HARA-QA-LINUX-RO-c686216c5b34c010edb21697",
+      "result_state": "PASS",
+      "risk_class": "READ_ONLY",
+      "state": "COMPLETED",
+      "usage_budget_id": "HARA-BUDGET-f4573e38-1219-4384-a512-ca4205fe6556",
+      "usage_mode": "LOCAL_BUDGET",
+      "usage_units": 1
+    }
+  ],
+  "worker53_vs54_budget_functions": {
+    "async function deviceProductLease": {
+      "identical": true,
+      "new_sha256": "8929b97ab3d281436f976cc873afdb2194ea1aa5c6106840d08c26c08c9a8dbd",
+      "old_sha256": "8929b97ab3d281436f976cc873afdb2194ea1aa5c6106840d08c26c08c9a8dbd"
+    },
+    "async function issueDeviceBudgetBlock": {
+      "comparison": "NOT_LOCATED"
+    },
+    "function localBudgetEligibleDevice": {
+      "identical": true,
+      "new_sha256": "6c6201a68ffca51caad308f69277452db55950325419a462a9e31523348ec00a",
+      "old_sha256": "6c6201a68ffca51caad308f69277452db55950325419a462a9e31523348ec00a"
+    }
+  }
+}

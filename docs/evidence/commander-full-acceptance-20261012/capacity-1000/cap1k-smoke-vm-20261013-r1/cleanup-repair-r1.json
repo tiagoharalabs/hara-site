@@ -1,0 +1,139 @@
+{
+  "Agents_started": 0,
+  "DO_retained_state": "UNKNOWN_NOT_CERTIFIED",
+  "application_http_and_d1_commands": 33,
+  "backend_mutations": "EXACT_OWNED_FIXTURE_CLEANUP_ONLY",
+  "cleanup_commands": 6,
+  "credentials_removed": true,
+  "delete_state": "ACKNOWLEDGED",
+  "enrollments_repeated": 0,
+  "exact_fixture_count": 2,
+  "finished_at_utc": "2026-10-13T05:03:43+00:00",
+  "invokes_repeated": 0,
+  "original_failure_sha256": "684b1bce033f5fb10b12e32e99545ea90a2c16edae6308ce2fd865e7c22bf495",
+  "own_Agents_remaining": 0,
+  "remaining_by_table": [
+    {
+      "n": 0,
+      "table_name": "billing_connections"
+    },
+    {
+      "n": 0,
+      "table_name": "commander_slo_incidents"
+    },
+    {
+      "n": 0,
+      "table_name": "commander_slo_state"
+    },
+    {
+      "n": 0,
+      "table_name": "commander_support_reports"
+    },
+    {
+      "n": 0,
+      "table_name": "commander_device_calls"
+    },
+    {
+      "n": 0,
+      "table_name": "commander_device_selections"
+    },
+    {
+      "n": 0,
+      "table_name": "commander_device_authorization_codes"
+    },
+    {
+      "n": 0,
+      "table_name": "commander_device_metering_events"
+    },
+    {
+      "n": 0,
+      "table_name": "commander_device_usage_daily"
+    },
+    {
+      "n": 0,
+      "table_name": "commander_device_usage_totals"
+    },
+    {
+      "n": 0,
+      "table_name": "commander_device_agent_telemetry"
+    },
+    {
+      "n": 0,
+      "table_name": "commander_device_telemetry_snapshot"
+    },
+    {
+      "n": 0,
+      "table_name": "commander_device_budget_blocks"
+    },
+    {
+      "n": 0,
+      "table_name": "commander_tenant_budget_baselines"
+    },
+    {
+      "n": 0,
+      "table_name": "commander_devices"
+    },
+    {
+      "n": 0,
+      "table_name": "device_pairing_tokens"
+    },
+    {
+      "n": 0,
+      "table_name": "entitlements"
+    },
+    {
+      "n": 0,
+      "table_name": "commander_beta_access_requests"
+    },
+    {
+      "n": 0,
+      "table_name": "portal_sessions"
+    },
+    {
+      "n": 0,
+      "table_name": "identity_bindings"
+    },
+    {
+      "n": 0,
+      "table_name": "users"
+    },
+    {
+      "n": 0,
+      "table_name": "tenants"
+    }
+  ],
+  "repair_script_sha256": "4847dbc200659fa5b0c3ca868a2bea57f4bb4d75ab4008d044c18efba2b18da2",
+  "run_id": "cap1k-smoke-vm-20261013-r1",
+  "schema": "hara.commander-capacity-smoke-cleanup-repair.v1",
+  "started_at_utc": "2026-10-13T05:03:38+00:00",
+  "state": "PASS",
+  "tables_in_scope": [
+    "billing_connections",
+    "commander_slo_incidents",
+    "commander_slo_state",
+    "commander_support_reports",
+    "commander_device_calls",
+    "commander_device_selections",
+    "commander_device_authorization_codes",
+    "commander_device_metering_events",
+    "commander_device_usage_daily",
+    "commander_device_usage_totals",
+    "commander_device_agent_telemetry",
+    "commander_device_telemetry_snapshot",
+    "commander_device_budget_blocks",
+    "commander_tenant_budget_baselines",
+    "commander_devices",
+    "device_pairing_tokens",
+    "entitlements",
+    "commander_beta_access_requests",
+    "portal_sessions",
+    "identity_bindings",
+    "users",
+    "tenants"
+  ],
+  "vm_cleanup": {
+    "credentials_removed": true,
+    "remaining": 0,
+    "state": "PASS"
+  }
+}

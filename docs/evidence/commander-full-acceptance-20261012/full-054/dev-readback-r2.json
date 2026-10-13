@@ -1,0 +1,60 @@
+{
+  "all_eight_exact": true,
+  "at_utc": "2026-10-13T03:41:59.444430+00:00",
+  "health_content_type": "application/json; charset=utf-8",
+  "health_http": 200,
+  "mcp_no_bearer_http": 401,
+  "production_mutation": false,
+  "schema": "hara.full054-dev-readback.v1",
+  "signed_public54_files": [
+    {
+      "bytes": 220970,
+      "path": "agent/linux.py",
+      "sha256": "62e1a836ef92fc8b72638fd116a6f0097fcf9e9f0ef0f4259ca8e0f6712b4229",
+      "status": 200
+    },
+    {
+      "bytes": 99086,
+      "path": "agent/windows.ps1",
+      "sha256": "fe61f177c51f6b6a01f31a3ea1b3d081173446e8f8cb33e680744c1fb808ae62",
+      "status": 200
+    },
+    {
+      "bytes": 47407,
+      "path": "install/linux.sh",
+      "sha256": "d2057adfff5c2b475d1520ae44f1ed76a7ec0ecc673f65cf08631d7a0083d0fa",
+      "status": 200
+    },
+    {
+      "bytes": 23774,
+      "path": "install/windows.ps1",
+      "sha256": "ea9f046bebf9ed85feefae05590ac915a75e9b491aefe1833d40bf316d414cc7",
+      "status": 200
+    },
+    {
+      "bytes": 765,
+      "path": "release/agent-manifest.json",
+      "sha256": "e1c7c23de1b4313093e2d8c52be1ec52f6419f72d5ef59d675c7e5a279b1a13d",
+      "status": 200
+    },
+    {
+      "bytes": 725,
+      "path": "release/agent-manifest.sig.json",
+      "sha256": "530627e5f1fe39d2582f8312fbafb32f219b9cdbdcec8777b5725aaefa73c4e8",
+      "status": 200
+    },
+    {
+      "bytes": 624,
+      "path": "release/release-signing-public.jwk",
+      "sha256": "4e68608fa891f1b7a1e89c75936a089daeab0ba862a764f9bb31eca849cdfb9b",
+      "status": 200
+    },
+    {
+      "bytes": 334,
+      "path": "release/SHA256SUMS",
+      "sha256": "7ff1c7415fee8e6a3c9dc62ddb5d56e9a22760b35cba06e532cbaf74d75229eb",
+      "status": 200
+    }
+  ],
+  "state": "PASS"
+}

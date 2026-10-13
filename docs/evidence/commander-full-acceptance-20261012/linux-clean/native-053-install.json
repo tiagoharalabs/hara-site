@@ -1,0 +1,18 @@
+{
+  "schema": "hara.commander-linux-clean-native-installer.v1",
+  "action": "install",
+  "state": "PASS",
+  "exit_code": 0,
+  "pairing_prompt_received": true,
+  "approval_mode": "ASK_EVERY_ACTION",
+  "device_id": "HARA-DEVICE-e3eacf31-f6b4-47df-96f7-c22aaacd9e4d",
+  "device_token_exposed": false,
+  "human_action_approval_generated": false,
+  "systemctl_backend": "real",
+  "backend": "remote_DEV_worker",
+  "installer_sha256": "dae0a39f12a02920261a8051834d5b8426866a07e8a0d0acb9676c6605c8e3f8",
+  "agent_sha256": "db91714140b63684917e46d6a327778183a5829dbf2b298098b31da4d463985e",
+  "expected_version": "0.3.53",
+  "output": "HARA Commander \u2014 Linux device pairing\r\nApproval mode: ASK_EVERY_ACTION\r\nPairing token: \r\nHARA_COMMANDER_AGENT_INTEGRITY=PASS\r\nHARA_COMMANDER_CLI_WRAPPER_STATE=FRESH_CREATED\r\nHARA_COMMANDER_CLI=/home/commanderqa/.local/bin/hara-commander\r\nHARA_COMMANDER_AGENT_STARTUP_ATTESTATION=PASS\r\nHARA_COMMANDER_DEVICE_ENROLLMENT=PASS\r\nHARA_COMMANDER_AGENT_SERVICE=ACTIVE_LOCAL_CONTROL_PLANE\r\nHARA_COMMANDER_AGENT_AUTOSTART=OFF\r\nHARA_COMMANDER_AGENT_START_MODE=MANUAL_AFTER_INSTALL\r\nDEVICE_ID=HARA-DEVICE-e3eacf31-f6b4-47df-96f7-c22aaacd9e4d\r\nDEVICE_TOKEN_EXPOSED=FALSE\r\nHARA_COMMANDER_APPROVAL_MODE=ASK_EVERY_ACTION\r\nHARA_COMMANDER_TRANSPORT_MODE=OUTBOUND_RELAY\r\nHARA_COMMANDER_TUNNEL_AUTOSTART=OFF\r\nHARA_COMMANDER_CLOUD_PLUGIN_MODE=TRUE\r\nOPENAI_PLATFORM_API_KEY_REQUIRED=FALSE\r\nNEXT_STEP=Abra hara-commander start no terminal para conectar e autorizar a sess\u00e3o; depois conecte o plugin via HARA Identity OAuth\r\nCUSTOMER_MCP_ENDPOINT=https://commander.haralabs.com.br/api/mcp?profile=simple\r\nOPERATOR_SESSION_COMMAND=hara-commander start\r\nMANUAL_CONNECTION_COMMAND=hara-commander start\r\nSTATUS_COMMAND=hara-commander status\r\nSTOP_COMMAND=hara-commander stop\r\nLOCAL_MCP_COMMAND=hara-commander mcp\r\nAUTHORIZATION_COMMAND=hara-commander authorize\r\nSESSION_AUTHORITY=LOCAL_OPERATOR_TERMINAL\r\n",
+  "governed_transport": "H.A.R.A. Commander DIRECT -> Services -> SSH nucleo-a -> exclusive real Linux QA"
+}

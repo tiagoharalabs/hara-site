@@ -1,0 +1,28 @@
+{
+  "state": "PASS",
+  "checks": 22,
+  "failures": 0,
+  "errors": 0,
+  "cloud_calls": 0,
+  "SSH_calls_in_safety_tests": 0,
+  "own_native_children_guarded": true,
+  "fixtures_created_in_D1": 0,
+  "agent_connections_started": 0,
+  "source_sha256": {
+    "commander_real_1000_controller.py": "c0d143e3e84319057cef7facefdae72b81d8543cd7be678a915d9993a683b682",
+    "commander_real_1000_vm_manager.py": "031b4cc8e56de09bd33654d452d0135618d7a173c8a1a6fc45f40274e3669cd0",
+    "test_real_1000_controller_safety.py": "bcab5c3320fc9c1f2d0a81623cdb6bd3e46d1ab4ed92c4df2dbbd42a10e58daa"
+  },
+  "initial_r1": {
+    "checks": 22,
+    "failures": 1,
+    "errors": 1,
+    "state": "FAIL",
+    "findings": [
+      "PID command read raced with process exit; guarded signals now use kernel PIDFD",
+      "failed-wave test fixture lacked its own fake token; corrected before real dispatch"
+    ]
+  },
+  "fixed_guard": "UID+command+starttime+kernelPIDFD, exact cgroup/XDG partial-spawn registration",
+  "current_single_VM_bulk_gate": "HOLD_DISTRIBUTED_ASSIGNMENTS_REQUIRED"
+}

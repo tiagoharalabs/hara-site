@@ -1,0 +1,28 @@
+{
+  "schema": "hara.commander-linux-clean54-native-uninstall.v1",
+  "device_id": "HARA-DEVICE-1b987909-0cc0-46cd-8ac4-d09132640e45",
+  "backend": "remote_DEV_worker",
+  "systemctl_backend": "real",
+  "private_credentials_exposed": false,
+  "agent_version": "0.3.54",
+  "support_schema": "hara.commander-support-report.v2",
+  "support_privacy_pass": true,
+  "uninstall_exit_code": 0,
+  "output": "HARA_COMMANDER_CLI_WRAPPER_STATE=MANAGED_REMOVED\nHARA_COMMANDER_AGENT_UNINSTALL=PASS\nDEVICE_ID=HARA-DEVICE-1b987909-0cc0-46cd-8ac4-d09132640e45\nSERVER_DEVICE_REVOKE=PASS\nDEVICE_TOKEN_EXPOSED=FALSE\n",
+  "cleanup_checks": {
+    "config_removed": true,
+    "agent_data_removed": true,
+    "systemd_unit_removed": true,
+    "cli_removed": true,
+    "managed_wrapper_removed": true,
+    "unrelated_file_preserved": true,
+    "service_inactive": true
+  },
+  "revoked_credential_http_status": 401,
+  "state": "PASS_NATIVE_LINUX_UNINSTALL_REVOKE_CLEANUP",
+  "governed_transport": "H.A.R.A. Commander DIRECT -> Services -> SSH nucleo-a -> exclusive real Linux54 QA",
+  "new_qa_vm_uuid": "f1fc631b-9442-468a-82dc-e99d021ea8f5",
+  "runner_sha256": "35bb1d4f02ecb2c4a6bd07010c6790813a48cc47aeb4362840134754ecc4f5ec",
+  "release_agent_pin": "62e1a836ef92fc8b72638fd116a6f0097fcf9e9f0ef0f4259ca8e0f6712b4229",
+  "release_installer_pin": "d2057adfff5c2b475d1520ae44f1ed76a7ec0ecc673f65cf08631d7a0083d0fa"
+}

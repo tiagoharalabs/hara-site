@@ -1,0 +1,31 @@
+{
+  "schema": "hara.pilot002-source-evidence-review.v1",
+  "state": "CAUSE_UNDETERMINED",
+  "original_failure": "SOAK_PROBE_ERROR__INTERNAL_ERROR",
+  "original_failed_at_utc": "2026-10-13T01:40:00Z/01:41:05Z",
+  "facts": [
+    "18 preceding health waves completed",
+    "both local Agent processes alive and connected snapshot last updated around01:22",
+    "backend pin97471 recorded, root confirms no intervening deploy",
+    "failed health requestID discarded by original runner",
+    "failed wave summary not persisted before assertion",
+    "private Agent logs removed during successful own-fixture cleanup",
+    "DEV config lacks observability/logpush",
+    "Worker global catch sanitizes unrecognized exception to INTERNAL_ERROR without logging",
+    "hara.health skips TenantQuota reserve/commit",
+    "normal DeviceChannel failures retain CHANNEL_* codes"
+  ],
+  "plausible_not_proven": [
+    "D1 first/all failure in mcpTransientProductContext/resolveCustomerTargetDevice",
+    "unexpected DEVICE_CHANNEL getByName/stub.fetch rejection"
+  ],
+  "does_not_prove": [
+    "local connected snapshot does not prove dispatch accepted by Durable Object at failure",
+    "no logs does not prove no exception",
+    "a successful rerun cannot erase original failure"
+  ],
+  "proposed_runner_patch": "runner-diagnostics-proposed.patch",
+  "proposed_worker_patch": "worker-safe-diagnostics-proposed.patch",
+  "product_source_mutations": false,
+  "deployments_by_reviewer": 0
+}

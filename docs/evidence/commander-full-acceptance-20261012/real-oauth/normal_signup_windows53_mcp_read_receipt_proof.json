@@ -1,0 +1,165 @@
+{
+  "state": "PASS_NORMAL_SIGNUP_PAIRING_WINDOWS53_REAL_OAUTH_MCP_READ_RECEIPT",
+  "subject_id": "394861028946477060",
+  "tenant_id": "HARA-TENANT-BNRKHV5P7_1SBJSL8FZ_HYYR",
+  "device_id": "HARA-DEVICE-6644a8cb-8a82-4f0f-8828-879a1c5a3261",
+  "computer": "HARAQA5312",
+  "agent_version": "0.3.53",
+  "device_count": 1,
+  "only_owned_device": true,
+  "trial_grants_only": true,
+  "normal_portal_selection": true,
+  "normal_windows_session": {
+    "state": "ACTIVE",
+    "operator_pid": 2996,
+    "opened_at_utc": "2026-10-13T02:06:11.7370753Z",
+    "owner_pid_start_match": true,
+    "evidence_receipt_sha256": "7bb02dc96232c9ccd6926b4bc848a71fb3cbc25cba9b1007361ffda112bd3a97"
+  },
+  "calls": [
+    {
+      "event": "NORMAL_QA_DEVICE_MCP_CALL",
+      "at_utc": "2026-10-13T02:11:01.880961+00:00",
+      "tool": "list_devices",
+      "http_status": 200,
+      "tool_is_error": null,
+      "state": "PASS",
+      "blocker_code": null,
+      "safe_code": null,
+      "execution_authority": "HARA_SERVICES",
+      "receipt_sha256": null,
+      "readback_metadata": {},
+      "plan_metadata": [
+        {
+          "state": "PASS"
+        },
+        {
+          "state": "ONLINE"
+        },
+        {
+          "plan_code": "TRIAL"
+        }
+      ],
+      "credential_values_exposed": false
+    },
+    {
+      "event": "NORMAL_QA_DEVICE_MCP_CALL",
+      "at_utc": "2026-10-13T02:11:09.268570+00:00",
+      "tool": "ping",
+      "http_status": 200,
+      "tool_is_error": null,
+      "state": "PASS",
+      "blocker_code": null,
+      "safe_code": null,
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "24a9b1ec6bf0c8d06272b22122cf4523b0b2d29ac5644a6b53c12608369ae9ab",
+      "readback_metadata": {
+        "agent_version": "0.3.53",
+        "hostname": "HARAQA5312",
+        "device_id": "HARA-DEVICE-6644a8cb-8a82-4f0f-8828-879a1c5a3261"
+      },
+      "plan_metadata": [
+        {
+          "state": "PASS"
+        },
+        {
+          "plan_code": "TRIAL"
+        }
+      ],
+      "credential_values_exposed": false
+    },
+    {
+      "event": "NORMAL_QA_DEVICE_MCP_CALL",
+      "at_utc": "2026-10-13T02:11:12.892353+00:00",
+      "tool": "get_device_info",
+      "http_status": 200,
+      "tool_is_error": null,
+      "state": "PASS",
+      "blocker_code": null,
+      "safe_code": null,
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": "63d763e83cbdad799d1d9a21a24c7f2f2bbc5adf842fde3a0f84eefcf0228c63",
+      "readback_metadata": {
+        "agent_version": "0.3.53",
+        "hostname": "HARAQA5312",
+        "platform": "WINDOWS",
+        "architecture": "x64",
+        "powershell_version": "5.1.26100.9444",
+        "device_id": "HARA-DEVICE-6644a8cb-8a82-4f0f-8828-879a1c5a3261"
+      },
+      "plan_metadata": [
+        {
+          "state": "PASS"
+        },
+        {
+          "plan_code": "TRIAL"
+        },
+        {
+          "state": "COMMITTED"
+        },
+        {
+          "consumed_units": 1
+        },
+        {
+          "remaining_units": 9999
+        }
+      ],
+      "credential_values_exposed": false
+    },
+    {
+      "event": "NORMAL_QA_DEVICE_MCP_CALL",
+      "at_utc": "2026-10-13T02:11:15.495753+00:00",
+      "tool": "get_receipt",
+      "http_status": 200,
+      "tool_is_error": null,
+      "state": "PASS",
+      "blocker_code": null,
+      "safe_code": null,
+      "execution_authority": "HARA_COMMANDER_AGENT",
+      "receipt_sha256": null,
+      "readback_metadata": {
+        "state": "PASS",
+        "mutation_class": "READ_ONLY_OR_NONE_V1",
+        "payload_values_persisted": false,
+        "tool_id": "hara.device.info"
+      },
+      "plan_metadata": [
+        {
+          "state": "PASS"
+        },
+        {
+          "state": "PASS"
+        },
+        {
+          "plan_code": "TRIAL"
+        }
+      ],
+      "credential_values_exposed": false
+    }
+  ],
+  "receipt_readback": {
+    "http_status": 200,
+    "fields": {
+      "/state": "PASS",
+      "/execution_authority": "HARA_COMMANDER_AGENT",
+      "/result/tool_id": "hara.device.info",
+      "/result/execution_authority": "HARA_COMMANDER_AGENT",
+      "/result/mutation_class": "READ_ONLY_OR_NONE_V1",
+      "/result/state": "PASS",
+      "/result/payload_values_persisted": false,
+      "/computer": "HARAQA5312",
+      "/product/plan_code": "TRIAL"
+    }
+  },
+  "usage_readback": {
+    "http_status": 200,
+    "consumed_units": 1,
+    "remaining_units": 9999
+  },
+  "transport_evidence": {
+    "physical_bridge_receipt_sha256": "340e85cad87da30ab3396693f7c9b38878c05399321d0df7f560ffc180bb4ecc",
+    "metadata_bridge_receipt_sha256": "18205319ae1fe115f2b56b40bf8497f9b584dd36304b21146842883f8cb6a5b6"
+  },
+  "validator_note": "The first helper expected device_id inside get_receipt.result. The normal receipt contract returns computer at the outer level. Actual calls all returned PASS. Subsequent metadata-only read confirmed computer HARAQA5312 and execution_authority HARA_COMMANDER_AGENT without repeating the metered device_info call.",
+  "credential_values_exposed": false
+}

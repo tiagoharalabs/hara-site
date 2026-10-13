@@ -1,0 +1,12 @@
+{
+  "state": "PASS",
+  "device_id": "HARA-DEVICE-076cd661-94fd-4c61-9166-5f7596918469",
+  "platform": "WINDOWS",
+  "origin": "https://hara-commander-dev-v2.tiago-sartori.workers.dev",
+  "fixture_dpapi": true,
+  "founder_identity_used": false,
+  "quota_fixture": "DEV_ONE_UNIT",
+  "template_declared_enrollment_version": "0.3.51",
+  "actual_stable_agent_version": "0.3.53",
+  "stable_source_sha256": "f67ebcee909ee2ce93187262c951b57b38bc976fec73413bd30555d9bcf62299"
+}

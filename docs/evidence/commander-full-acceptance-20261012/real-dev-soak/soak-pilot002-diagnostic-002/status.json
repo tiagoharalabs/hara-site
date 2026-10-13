@@ -1,0 +1,63 @@
+{
+  "actual_oauth_human_logins": 0,
+  "actual_physical_machines": 1,
+  "auth_mode": "PRESEEDED_QA_IDENTITIES",
+  "backend_at_start": {
+    "created_at_utc": "2026-10-13T01:19:33.434742Z",
+    "deployment_id": "837c0cce-5446-42ee-9455-5cb33cd5d0ab",
+    "version_id": "97471c0a-b739-4906-90aa-41384a8a1cb1"
+  },
+  "cleaned_fixture_count": 2,
+  "cleanup_state": "PENDING",
+  "cloud_application_http_and_d1_commands": 81,
+  "connection_recoveries": [],
+  "customer_content_saved": false,
+  "d1_commands": 26,
+  "elapsed_seconds": 1242.576,
+  "environment": "DEV",
+  "hard_deadline_utc": "2026-10-14T02:04:31.624775+00:00",
+  "max_agents": 2,
+  "max_cloud_http": 3000,
+  "max_probe_concurrency": 20,
+  "observations": [],
+  "pilot_required_seconds": 1200,
+  "prod_mutations": false,
+  "recovery": [
+    {
+      "kind": "PROCESS_RESTART",
+      "ledger_unchanged": true,
+      "new_pid": 2737536,
+      "old_pid": 2737184,
+      "replay_only": true,
+      "request_id": "TRANSIENT-INVOKE-7c2b9ceadfff4741b272ed3049a84e96",
+      "same_receipt": true
+    },
+    {
+      "kind": "DISCONNECT",
+      "ledger_unchanged": true,
+      "new_pid": 2737769,
+      "old_pid": 2737185,
+      "replay_only": true,
+      "request_id": "TRANSIENT-INVOKE-2c0ecfb567af4f0691bce7e1a0400b6e",
+      "same_receipt": true
+    }
+  ],
+  "recovery_grace_seconds": 30.0,
+  "run_id": "soak-pilot002-diagnostic-002",
+  "schema": "hara.commander-real-dev-soak.v1",
+  "script_sha256": "e92c5634b26337a3522da79292a0306ba3ce857105638f42f424d6fd21be1f00",
+  "seventy_two_hours_passed": false,
+  "soak_requested_hours": 24,
+  "source_sha256": {
+    "experimental/event_v2_agent_loop.py": "f1a7d9fc4faf57185d0d2bcb17e741882db866c627967bf02e1d98754d212950",
+    "experimental/event_v2_customer_agent.py": "1170e771181e86b02c87d5307c9b22783788a73487f8325e73f29217046069d2",
+    "experimental/event_v2_telemetry.py": "4bb47248f2a690df680d8c6cd0144522e2cd82286bb563f391bbea9a200fa499",
+    "experimental/event_v2_websocket.py": "96b10a826e8cb2063cd6e19f6c71967e98c0b843c6cd94f997e2d24a7f316ea9",
+    "public/agent/linux.py": "db91714140b63684917e46d6a327778183a5829dbf2b298098b31da4d463985e"
+  },
+  "stages": [],
+  "started_at_utc": "2026-10-13T02:04:31Z",
+  "state": "STARTING",
+  "twenty_four_hours_passed": false,
+  "updated_at_utc": "2026-10-13T02:25:14Z"
+}

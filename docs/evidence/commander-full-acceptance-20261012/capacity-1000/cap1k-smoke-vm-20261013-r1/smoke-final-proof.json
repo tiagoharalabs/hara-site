@@ -1,0 +1,56 @@
+{
+  "Agent_linux54_source_sha256": "62e1a836ef92fc8b72638fd116a6f0097fcf9e9f0ef0f4259ca8e0f6712b4229",
+  "DO_retained_state": "UNKNOWN_NOT_CERTIFIED",
+  "actual1000_24h_passed": false,
+  "actual1000_passed": false,
+  "actual72h_passed": false,
+  "actual_agents": 2,
+  "actual_device_info_executions": 4,
+  "actual_independent_tenants": 2,
+  "at_utc": "2026-10-13T05:07:24+00:00",
+  "backend_version": "6f6e68e3-0777-4fb3-820d-a288ca5f7fab",
+  "continuous_seconds": 34.625236202031374,
+  "controller_sha256": "c0d143e3e84319057cef7facefdae72b81d8543cd7be678a915d9993a683b682",
+  "exact_one_Free_debit_per_execution": true,
+  "functional_error_count": 0,
+  "health_checks": 6,
+  "implicit_cloud_rpc_traffic_measured": false,
+  "manager_sha256": "031b4cc8e56de09bd33654d452d0135618d7a173c8a1a6fc45f40274e3669cd0",
+  "normal_cleanup_original_state": "FAIL_D1_METADATA_INTROSPECTION_UNSUPPORTED",
+  "original_failure_preserved": true,
+  "own_agents_remaining": 0,
+  "owned_Pro_mutations_tested_here": false,
+  "p95_max_ms": 1450.8608679752797,
+  "p99_max_ms": 1450.8608679752797,
+  "physical_agent_hosts": 1,
+  "private_credentials_removed": true,
+  "proofs": {
+    "cleanup_repair": {
+      "path": "cleanup-repair-r1.json",
+      "sha256": "dac5ae91537ecb654e9ec73c4ecfa8e555c65a13cfd478c3b2925b94728a0b7e"
+    },
+    "independent_VM_cleanup": {
+      "path": "vm-cleanup-independent-readback.json",
+      "sha256": "3ffb29c51d4b18c390604a50b4f718c260c23f277482a24c4e9d1a4e886f1822"
+    },
+    "original_functional_with_cleanup_failure": {
+      "path": "smoke-original-cleanup-failed.json",
+      "sha256": "684b1bce033f5fb10b12e32e99545ea90a2c16edae6308ce2fd865e7c22bf495"
+    }
+  },
+  "repair_cleanup_state": "PASS",
+  "repair_enrollments_repeated": 0,
+  "repair_invokes_repeated": 0,
+  "same_ID_replay_checks": 4,
+  "schema": "hara.commander-real1000-native-two-agent-smoke-final.v1",
+  "scoped_D1_tables_checked_zero": 22,
+  "state": "PASS_FUNCTIONAL_SMOKE_WITH_EXPLICIT_CLEANUP_REPAIR",
+  "test_scope": "REAL_DEV_WSS_WITH_QA_PRESEEDED_IDENTITIES_NOT_OAUTH_HUMANS",
+  "unique_agent_receipts": [
+    "a844531029ee4f96c2075350bfeca66f99eb2f8df518cccad87ebae95d544b74",
+    "541ea3bccd273d8681e3073c6f31fe25bdb0973ef91516811fcef31ec5c45f7d",
+    "002986421b39ee5d0d004ac6ba610911b56ed31841972c65143039b1c51955de",
+    "bb6768a0a9d619a0b87b603c42475f4db07cb4085561231fca1cd63a00389c64"
+  ],
+  "vm_uuid": "c8bcefb4-3f25-41b0-a07a-58c0d7956662"
+}

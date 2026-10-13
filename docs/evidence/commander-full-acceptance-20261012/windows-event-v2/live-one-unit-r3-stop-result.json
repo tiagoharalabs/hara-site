@@ -1,0 +1,16 @@
+{
+  "state": "STOPPED",
+  "fixture_pid": 5336,
+  "exit_code": 0,
+  "stderr_present": false,
+  "event_status": {
+    "schema": "hara.commander-event-v2-runtime-status.v1",
+    "transport_mode": "EVENT_V2",
+    "connected": false,
+    "connected_at_utc": "2026-10-13T00:15:40.0990864Z",
+    "disconnected_at_utc": "2026-10-13T00:22:59.4503620Z",
+    "last_error_code": "",
+    "transport_error_class": "",
+    "updated_at_utc": "2026-10-13T00:22:59.4544240Z"
+  }
+}

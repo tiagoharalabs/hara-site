@@ -1,0 +1,22 @@
+{
+  "D1_cleanup_state": "PENDING_METADATA_QUERY_REPAIR",
+  "at_utc": "2026-10-13T05:00:50+00:00",
+  "guest": {
+    "credentials_removed": true,
+    "device_dirs_present": 0,
+    "finished": true,
+    "original_pids_present": [],
+    "queue_files": 0,
+    "systemd": {
+      "ActiveState": "inactive",
+      "ControlGroup": "",
+      "Result": "success",
+      "SubState": "dead",
+      "TasksCurrent": "[not set]"
+    },
+    "unit": "hara-cap1k-659d5a26cdd86bc52402"
+  },
+  "read_only": true,
+  "schema": "hara.commander-real1000-smoke-vm-cleanup-readback.v1",
+  "state": "PASS"
+}

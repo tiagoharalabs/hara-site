@@ -1,0 +1,98 @@
+{
+  "schema": "hara.commander.windows.event-v2-live-dev.v1",
+  "origin": "https://hara-commander-dev-v2.tiago-sartori.workers.dev",
+  "device_id": "HARA-DEVICE-cb8c2b8d-42eb-4651-a602-140d1aafac4a",
+  "utc": "2026-10-12T23:51:21Z",
+  "founder_runtime_mutated": false,
+  "founder_credentials_used": false,
+  "portal_oauth_login_real": false,
+  "portal_session_qa_preseed": true,
+  "windows_runtime": "PowerShell 5.1/CLR4",
+  "checks": [
+    {
+      "name": "native_wss_connected",
+      "passed": true,
+      "evidence": {
+        "state": "PASS",
+        "device_id": "HARA-DEVICE-cb8c2b8d-42eb-4651-a602-140d1aafac4a",
+        "fixture_pid": 7428,
+        "process_exited": false,
+        "exit_code": null,
+        "stderr_present": false,
+        "event_status": {
+          "schema": "hara.commander-event-v2-runtime-status.v1",
+          "transport_mode": "EVENT_V2",
+          "connected": true,
+          "connected_at_utc": "2026-10-12T23:48:59.9406724Z",
+          "disconnected_at_utc": null,
+          "last_error_code": "",
+          "updated_at_utc": "2026-10-12T23:49:01.2307196Z"
+        }
+      }
+    },
+    {
+      "name": "durable_wake_health",
+      "passed": true,
+      "evidence": {
+        "latency_ms": 2486,
+        "enqueue_ms": 1645,
+        "terminal_after_enqueue_ms": 841,
+        "status_polls": 1,
+        "terminal_from_enqueue": false,
+        "initial_retry_after_ms": 250,
+        "state": "COMPLETED",
+        "authority": "HARA_COMMANDER",
+        "device_channel_state": "PASS"
+      }
+    },
+    {
+      "name": "transient_health_device_info_replay_and_quota",
+      "passed": true,
+      "evidence": {
+        "health": true,
+        "invoke": true,
+        "request_id": "TRANSIENT-INVOKE-fb24629faddf46d28768e53f977a56eb",
+        "receipt_sha256": "089c2c26abfc7b3b35eb956e522c48f816329230ca886260be6c369f82fb0db2",
+        "commit_state": "COMMITTED",
+        "replay_mode": "REPLAY_ONLY",
+        "replay_outcome": "REPLAYED",
+        "payload_persisted": false,
+        "result_persisted": false,
+        "learning_content": false,
+        "health_ms": 758.7369839893654,
+        "invoke_ms": 1556.648724945262,
+        "replay_ms": 663.6590280104429,
+        "cycle_ms": 2979.1198200546205
+      }
+    },
+    {
+      "name": "native_wss_still_connected_after_calls",
+      "passed": true,
+      "evidence": {
+        "state": "PASS",
+        "device_id": "HARA-DEVICE-cb8c2b8d-42eb-4651-a602-140d1aafac4a",
+        "fixture_pid": 7428,
+        "process_exited": false,
+        "exit_code": null,
+        "stderr_present": false,
+        "event_status": {
+          "schema": "hara.commander-event-v2-runtime-status.v1",
+          "transport_mode": "EVENT_V2",
+          "connected": true,
+          "connected_at_utc": "2026-10-12T23:48:59.9406724Z",
+          "disconnected_at_utc": null,
+          "last_error_code": "",
+          "updated_at_utc": "2026-10-12T23:49:01.2307196Z"
+        }
+      }
+    }
+  ],
+  "portal_selection_observation": {
+    "state": "UNRESOLVED",
+    "error_code": "SELECT_HTTP_403_UNKNOWN"
+  },
+  "invoke_request_id": "TRANSIENT-INVOKE-fb24629faddf46d28768e53f977a56eb",
+  "receipt_sha256": "089c2c26abfc7b3b35eb956e522c48f816329230ca886260be6c369f82fb0db2",
+  "passed": 4,
+  "failed": 0
+}

@@ -1,0 +1,140 @@
+{
+  "agents_modified": false,
+  "all_public_assets_preserved": true,
+  "at_utc": "2026-10-13T01:48:46.494158+00:00",
+  "changed_inputs": [
+    "src/auth.js"
+  ],
+  "compiled_sha256": "e0c7d1212649e2906cfcaad609d0b2e1a602e04aee8af7242a4204c22adcb823",
+  "d1_mutation": false,
+  "deployment": {
+    "annotations": {
+      "workers/message": "Commander: preserve full entitlement fingerprint for new identities; minimal auth-only fix",
+      "workers/triggered_by": "deployment"
+    },
+    "author_email": "tiago.sartori@haralabs.com.br",
+    "created_on": "2026-10-13T01:48:32.967342Z",
+    "id": "46b0be06-ce1a-4d09-bcbc-8474c45b10d9",
+    "source": "wrangler",
+    "strategy": "percentage",
+    "versions": [
+      {
+        "percentage": 100,
+        "version_id": "70564d5b-bf87-42dd-837e-717d3615ecad"
+      }
+    ]
+  },
+  "dev_modified": false,
+  "inputs_sha256": "452ff11085e2bc06066e650b82c2303dd1961d5b41abc23002643e8ff18a4a8e",
+  "prior": {
+    "annotations": {
+      "workers/message": "Commander truthful effect and replay risk metadata; signed public43 preserved",
+      "workers/triggered_by": "deployment"
+    },
+    "author_email": "tiago.sartori@haralabs.com.br",
+    "created_on": "2026-10-13T00:12:47.834637Z",
+    "id": "65406da5-6c8e-41df-b025-89e68d8fbba4",
+    "source": "wrangler",
+    "strategy": "percentage",
+    "versions": [
+      {
+        "percentage": 100,
+        "version_id": "99a19edb-d2cf-4806-8c98-861e4513a2f7"
+      }
+    ]
+  },
+  "public_assets": [
+    {
+      "path": "agent/linux.py",
+      "sha256": "3e0db700dd568a85e23212a5400f1d256546fef77b7f59f574ceed29e04c15b7",
+      "status": 200,
+      "transport_transform": null
+    },
+    {
+      "path": "agent/windows.ps1",
+      "sha256": "d507a6f91a635b025ef4f06cbd758a03c7da6f3410aadec9a3d76c28f904c6fb",
+      "status": 200,
+      "transport_transform": null
+    },
+    {
+      "path": "app.js",
+      "sha256": "7c3ec0b7bf6de107474cf674b8365136e91535a1929e8bf1af56fa12672c4a31",
+      "status": 200,
+      "transport_transform": null
+    },
+    {
+      "path": "assets/hara-commander-royal.webp",
+      "sha256": "e55b9218fc9ef540d1214509226af13c7e7906665e9ec247a92a40103f62ada3",
+      "status": 200,
+      "transport_transform": null
+    },
+    {
+      "path": "brand/chatgpt-official.webp",
+      "sha256": "bd18745b777ba0febad179ad581abbb7584951e0eea7c17d7a450b5838175ace",
+      "status": 200,
+      "transport_transform": null
+    },
+    {
+      "path": "brand/claude-official.svg",
+      "sha256": "059e22f525d67c6258c4f64514f0b0e717c914df8a706936d0299d5e6b8082d9",
+      "status": 200,
+      "transport_transform": null
+    },
+    {
+      "path": "index.html",
+      "sha256": "2c769906d1b51cd5eba4642582ec0401d3685299ebb5b6dc8b7887d50ab3a751",
+      "status": 200,
+      "transport_transform": "ONE_CLOUDFLARE_BEACON_REMOVED"
+    },
+    {
+      "path": "install/linux.sh",
+      "sha256": "534e14433da9f86eb4342c6d9400e89ecf164545605e02e22f1646510284aba5",
+      "status": 200,
+      "transport_transform": null
+    },
+    {
+      "path": "install/windows.ps1",
+      "sha256": "d0f6d7e3a79a87e439a6275ebf60b2918ad5ccdbc28666ce18288644f3d595b9",
+      "status": 200,
+      "transport_transform": null
+    },
+    {
+      "path": "release/SHA256SUMS",
+      "sha256": "696b0aee214561163a46ecd828da81d0cf5ab47eb967dd338e1c0de5bdf02ff9",
+      "status": 200,
+      "transport_transform": null
+    },
+    {
+      "path": "release/agent-manifest.json",
+      "sha256": "72711a1099503e9c728e38162a6cf8aea17c783313d85fa486387bc537111092",
+      "status": 200,
+      "transport_transform": null
+    },
+    {
+      "path": "release/agent-manifest.sig.json",
+      "sha256": "a2211fa308a07658f1d167da63605e423487cee57c7ae705272cd2cfd88545cf",
+      "status": 200,
+      "transport_transform": null
+    },
+    {
+      "path": "release/release-signing-public.jwk",
+      "sha256": "4e68608fa891f1b7a1e89c75936a089daeab0ba862a764f9bb31eca849cdfb9b",
+      "status": 200,
+      "transport_transform": null
+    },
+    {
+      "path": "release/v2/release-signing-public.jwk",
+      "sha256": "4e68608fa891f1b7a1e89c75936a089daeab0ba862a764f9bb31eca849cdfb9b",
+      "status": 200,
+      "transport_transform": null
+    },
+    {
+      "path": "styles.css",
+      "sha256": "6d3b87fb284060a4c387d9cd5046d68b9c01fb8d799079056983543e53ba8ddb",
+      "status": 200,
+      "transport_transform": null
+    }
+  ],
+  "schema": "hara.entitlement-minimal-prod-deployment.v1",
+  "state": "PASS"
+}

@@ -1,0 +1,12 @@
+{
+  "schema": "hara.dev-acceptance-measured.v1",
+  "probe": "commander_multitenant_live_dev_probe.py",
+  "started_at": "2026-10-12T23:37:54.269725+00:00",
+  "completed_at": "2026-10-12T23:37:54.273703+00:00",
+  "environment": "DEV",
+  "exit_code": 1,
+  "error": "[Errno 2] No such file or directory: '/tmp_hara/commander-win50-utf8-20261012/apps/commander/.generated/mcp-product-dev-canary-token'",
+  "checks": [],
+  "secret_output": false,
+  "prod_mutated": false
+}

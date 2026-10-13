@@ -1,0 +1,17 @@
+{
+  "schema": "hara.windows-clean-owned-clone-cleanup.v1",
+  "state": "PASS",
+  "clone_uuid": "d35599c8-b9ea-45e5-9ae9-fa047e84b8ba",
+  "clone_name": "hara-win51-clean-20261012-r1",
+  "domain_removed": true,
+  "nvram_tpm_removed": true,
+  "volume_removed": true,
+  "volume_path": "/var/lib/libvirt/images/hara-win51-clean-20261012-r1.qcow2",
+  "primary_name": "commander-win11",
+  "primary_uuid": "4c76007a-1c12-445d-b1d5-3d94cca68856",
+  "primary_running": true,
+  "primary_disk_identity_preserved": true,
+  "source_mirror_present": false,
+  "pivot_freeze_or_redefine_requested": false,
+  "receipt_sha256": "dd92d605c3147028b0576049a28634d468eb06e4b2f2062969a356ee3d5249f6"
+}

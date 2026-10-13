@@ -1,0 +1,21 @@
+{
+  "bundle": "apps/commander/release-bundles/commercial-0.3.53-v13-rc",
+  "historical_bundles_changed": false,
+  "input_windows52_signed_verified": true,
+  "linux_managed_wrapper_cleanup_source": true,
+  "linux_terminal_drain_source": true,
+  "manifest_sha256": "603cd2db707818307ab22c13a53d42fd3ad61a93807ddefeaa8ade77305a2b21",
+  "platform_versions_match_manifest": true,
+  "private_key_printed": false,
+  "production_deployed": false,
+  "schema": "hara.full-platform-053-preparation.v1",
+  "signature_sha256": "fa2bbac74053522ed032f03634b8adfe55ed947ac3665fd1b3e64e90962b9678",
+  "source_files": {
+    "apps/commander/public/agent/linux.py": "db91714140b63684917e46d6a327778183a5829dbf2b298098b31da4d463985e",
+    "apps/commander/public/agent/windows.ps1": "f67ebcee909ee2ce93187262c951b57b38bc976fec73413bd30555d9bcf62299",
+    "apps/commander/public/install/linux.sh": "447fde76bdcee326dff70600f56b4b3be6cb9d2299e9265523b5d6e6baf88de1",
+    "apps/commander/public/install/windows.ps1": "114b7dd430641010a95de325a17069cf023f1de95d567718bb50bc3df92ff1b4"
+  },
+  "state": "SIGNED_PREPARED_NOT_DEPLOYED",
+  "version": "0.3.53"
+}

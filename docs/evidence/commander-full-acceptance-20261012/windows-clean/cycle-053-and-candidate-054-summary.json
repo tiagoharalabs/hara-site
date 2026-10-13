@@ -1,0 +1,86 @@
+{
+  "schema": "hara.windows-clean-053-cycle-and-054-candidate-review.v1",
+  "status": "PARTIAL_ACCEPTANCE_RUNNING_UPDATE_053_BLOCKED",
+  "clone": {
+    "vm": "hara-win51-clean-20261012-r1",
+    "uuid": "d35599c8-b9ea-45e5-9ae9-fa047e84b8ba",
+    "profile": "C:\\Users\\HARAQA\\AppData\\Local",
+    "scope": "clean_Commander_profile_on_cloned_preprovisioned_Windows_OS",
+    "retained_for_signed_054_retest": true
+  },
+  "release": {
+    "version": "0.3.53",
+    "manifest_sha256": "eebd7f4b209158b4a9a02b986365291c14e70bcad45106271078b2a373b6a257",
+    "agent_sha256": "f67ebcee909ee2ce93187262c951b57b38bc976fec73413bd30555d9bcf62299",
+    "installer_sha256": "dd92242225cf518e104f8f574aa9f661e6e3c9647f2cdce2afdb6ba88d0d9710"
+  },
+  "receipts": {
+    "physical_install": "311fcedc425bb583485654b6533435935603a026c66f8f791d36b0ca67a5378c",
+    "install_task_system_metadata": "566a5ab3dd33ddef3eeaa82bc8d525b8503b942553bfe97211c7c1a7d2b877c7",
+    "normal_start": "7bb02dc96232c9ccd6926b4bc848a71fb3cbc25cba9b1007361ffda112bd3a97",
+    "real_oauth_receipt": "63d763e83cbdad799d1d9a21a24c7f2f2bbc5adf842fde3a0f84eefcf0228c63",
+    "running_update_failure": "3d72ee8743ea38bd2345837ef38e2e3a0e57848d01c8de9e00d58c6f9fb5daf7",
+    "running_update_error_code": "8d4890db9445f8fbe74fdacafa6f6027b3fbc86b5612b294b6854790e25c326e",
+    "rollback_task_pid_witness": "bff5a4336b99f18f1c10cfef28b7f4f9808b84cbde1682627a1299e5040b7a39",
+    "normal_stop": "948f9a0a5b3dfbc24b3ea4dd69e3928ee54201d6ce8d213e38681a98d10be44d",
+    "empty_runtime_start_witness": "249fabf2528c562e17b95efabf20cb227fef86a6fcfe727253b7fb82d0bfc7bf",
+    "native_053_defect_reproduction": "0a0a7453a5695ca939e812d0f40b775c634ee61bcbab18b9b8849c8bb3e3c8fb",
+    "native_054_candidate_regression": "534f6992d469cd857f503d9236f17d9d2be92b2be83ae7f75cdaf0e55fad59f4",
+    "stopped_update": "1ae18e6105db385f36bf6eb420066f503ed516b84bebe88ff0ef757fc257ba30",
+    "signature_negative": "15badb1db7fb7d05db86786b8dfc1ec8ff47c6363280db297eb276120c45c0fc",
+    "uninstall_server_revoke": "69ce37c01c4144c603875c7fd6443308bd704366e0fe410e0e8ba669d0f4a3f5",
+    "post_uninstall_system_check": "2d4ab78f855c384003a893ea472a8cabe331caa7042ef4c866b34a871f814ef2",
+    "portal_revoked_readback": "f4ecbbc5f0c7e43f29bb32616b35ff51c93eb550cbc429c3a520f38b8608c7d7",
+    "primary_running": "841dfb18b8c2b847ac19248a51abe73168af57062f7a0e4b460ca7d4d6bdd16c"
+  },
+  "task_pid_witness": {
+    "operator_pid": 2996,
+    "operator_started_at_utc": "2026-10-13T02:06:09.6455195Z",
+    "initial_task_pid": 3044,
+    "initial_task_started_at_utc": "2026-10-13T01:27:44.2814810Z",
+    "rollback_task_pid": 6944,
+    "rollback_task_started_at_utc": "2026-10-13T02:19:03.7084730Z",
+    "task_principal": "HARAQA",
+    "task_logon": "Interactive",
+    "task_runlevel": "Limited",
+    "task_trigger_count": 0
+  },
+  "candidate": {
+    "path": "/tmp_hara/commander-win54-started-at-fix-20261013-r1/agent/windows.ps1",
+    "sha256": "eb0f7d4560dde87b0853e06ff367b22d92d5e235023e0d5e3ef9aa6ed5c65560",
+    "bytes": 99086,
+    "declared_version": "0.3.53",
+    "signed": false,
+    "installed": false,
+    "native_recorded_cases": 34,
+    "known_directory_target_anomaly_recorded": true,
+    "atomic_durability_claimed": false,
+    "independent_source_review": "NO_NEW_BLOCKER",
+    "startup_history_semantics": "retain_last_heartbeat_and_error_until_success_heartbeat",
+    "canonical_explicit_clear": "empty_string"
+  },
+  "cross_references": [
+    "../real-oauth/normal_signup_mcp_pairing_proof.json",
+    "../real-oauth/normal_signup_windows53_mcp_read_receipt_proof.json",
+    "../real-oauth/REAL_OAUTH_QA.md"
+  ],
+  "post_uninstall": {
+    "root_present": false,
+    "agent_present": false,
+    "config_present": false,
+    "operator_session_present": false,
+    "product_task_present": false,
+    "loopback_fixture_listeners": 0,
+    "harness_running": false,
+    "server_device_state": "REVOKED",
+    "portal_online": false,
+    "portal_active_devices": 0
+  },
+  "privacy": {
+    "tokens_or_passwords_persisted": false,
+    "config_values_persisted": false,
+    "commandlines_persisted": false,
+    "primary_vm_modified": false,
+    "signed_053_source_modified": false
+  }
+}

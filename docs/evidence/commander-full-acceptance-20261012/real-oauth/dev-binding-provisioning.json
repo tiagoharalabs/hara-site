@@ -1,0 +1,49 @@
+{
+  "at_utc": "2026-10-13T00:26:53.298409+00:00",
+  "credentials_rotated": false,
+  "deployment": {
+    "annotations": {
+      "workers/message": "Automatic deployment on upload.",
+      "workers/triggered_by": "upload"
+    },
+    "author_email": "tiago.sartori@haralabs.com.br",
+    "created_on": "2026-10-13T00:26:48.504571Z",
+    "id": "b16bfe5b-9e60-4899-9ecf-197a5d373843",
+    "source": "wrangler",
+    "strategy": "percentage",
+    "versions": [
+      {
+        "percentage": 100,
+        "version_id": "2b597d71-bb13-486d-af2d-c44687b6c4c6"
+      }
+    ]
+  },
+  "environment": "DEV",
+  "existing_names_preserved": true,
+  "names_added": [
+    "HARA_IDENTITY_MCP_DCR_PROJECT_AUD",
+    "HARA_IDENTITY_MCP_INTROSPECTION_CLIENT_ID",
+    "HARA_IDENTITY_MCP_INTROSPECTION_CLIENT_SECRET"
+  ],
+  "prior_deployment": {
+    "annotations": {
+      "workers/triggered_by": "secret"
+    },
+    "author_email": "tiago.sartori@haralabs.com.br",
+    "created_on": "2026-10-12T23:41:24.992757Z",
+    "id": "056c1a19-85b4-406f-a366-7e2131c11ddf",
+    "source": "wrangler",
+    "strategy": "percentage",
+    "versions": [
+      {
+        "percentage": 100,
+        "version_id": "47ceb33e-0775-4651-82f9-91ae2e325977"
+      }
+    ]
+  },
+  "production_mutation": false,
+  "schema": "hara.dev-customer-mcp-bindings.v1",
+  "source": "existing_custodied_identity_client",
+  "state": "PASS",
+  "values_printed": false
+}

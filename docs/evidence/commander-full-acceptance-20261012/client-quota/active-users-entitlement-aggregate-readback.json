@@ -1,0 +1,127 @@
+{
+  "schema": "hara.aggregate-active-user-entitlement-audit.v1",
+  "checked_at_utc": "2026-10-13T01:24:37.047511+00:00",
+  "scope": "Readonly aggregate DEV/PROD; no customer IDs, emails, session hashes or tokens emitted",
+  "category_limit": "Invite-linked means any invite target link. Manual acceptance fixtures use known prefixes. Known organic QA is established by the OAuth actor callback plus prior D1 readback; other self-service-shaped IDs do not prove origin. Other IDs are preseed or unknown; missing entitlement alone does not prove collision.",
+  "targets": {
+    "DEV": {
+      "database_name": "hara-commander-product-dev",
+      "groups": [
+        {
+          "category": "invite_linked",
+          "environment": "DEV",
+          "tenant_state": "ACTIVE",
+          "active_users": 1,
+          "without_active_entitlement": 0,
+          "without_current_valid_active_entitlement": 0
+        },
+        {
+          "category": "invite_linked",
+          "environment": "REVIEW",
+          "tenant_state": "ACTIVE",
+          "active_users": 1,
+          "without_active_entitlement": 0,
+          "without_current_valid_active_entitlement": 0
+        },
+        {
+          "category": "known_organic_qa_signup",
+          "environment": "DEV",
+          "tenant_state": "ACTIVE",
+          "active_users": 1,
+          "without_active_entitlement": 0,
+          "without_current_valid_active_entitlement": 0
+        },
+        {
+          "category": "manual_acceptance_fixture",
+          "environment": "DEV",
+          "tenant_state": "ACTIVE",
+          "active_users": 5,
+          "without_active_entitlement": 0,
+          "without_current_valid_active_entitlement": 0
+        },
+        {
+          "category": "preseed_or_unknown_id_shape",
+          "environment": "DEV",
+          "tenant_state": "ACTIVE",
+          "active_users": 1,
+          "without_active_entitlement": 0,
+          "without_current_valid_active_entitlement": 0
+        },
+        {
+          "category": "self_service_id_shape_origin_unverified",
+          "environment": "DEV",
+          "tenant_state": "ACTIVE",
+          "active_users": 160,
+          "without_active_entitlement": 0,
+          "without_current_valid_active_entitlement": 0
+        }
+      ],
+      "totals": {
+        "active_users": 169,
+        "without_active_entitlement": 0,
+        "without_current_valid_active_entitlement": 0
+      },
+      "meta": {
+        "served_by": "v3-prod",
+        "served_by_region": "ENAM",
+        "served_by_colo": "EWR",
+        "served_by_primary": true,
+        "timings": {
+          "sql_duration_ms": 2.5491
+        },
+        "duration": 2.5491,
+        "changes": 0,
+        "last_row_id": 0,
+        "changed_db": false,
+        "size_after": 1306624,
+        "rows_read": 1195,
+        "rows_written": 0,
+        "total_attempts": 1
+      }
+    },
+    "PROD": {
+      "database_name": "hara-commander-product-prod",
+      "groups": [
+        {
+          "category": "self_service_id_shape_origin_unverified",
+          "environment": "PRODUCTION",
+          "tenant_state": "ACTIVE",
+          "active_users": 1,
+          "without_active_entitlement": 0,
+          "without_current_valid_active_entitlement": 0
+        },
+        {
+          "category": "self_service_id_shape_origin_unverified",
+          "environment": "REVIEW",
+          "tenant_state": "ACTIVE",
+          "active_users": 1,
+          "without_active_entitlement": 0,
+          "without_current_valid_active_entitlement": 0
+        }
+      ],
+      "totals": {
+        "active_users": 2,
+        "without_active_entitlement": 0,
+        "without_current_valid_active_entitlement": 0
+      },
+      "meta": {
+        "served_by": "v3-prod",
+        "served_by_region": "ENAM",
+        "served_by_colo": "MIA",
+        "served_by_primary": true,
+        "timings": {
+          "sql_duration_ms": 0.6917
+        },
+        "duration": 0.6917,
+        "changes": 0,
+        "last_row_id": 23994,
+        "changed_db": false,
+        "size_after": 47558656,
+        "rows_read": 16,
+        "rows_written": 0,
+        "total_attempts": 1
+      }
+    }
+  },
+  "state": "PASS_READONLY_AGGREGATE_AUDIT"
+}

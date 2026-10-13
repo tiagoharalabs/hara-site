@@ -251,7 +251,7 @@ def self_test() -> None:
     )
     assert hashlib.sha256(signed).hexdigest() == entry["sha256"]
     assert manifest["agent_version"] == "0.3.41"
-    assert b'AGENT_VERSION = "0.3.53"' in AGENT.read_bytes()
+    assert b'AGENT_VERSION = "0.3.54"' in AGENT.read_bytes()
     print("COMMANDER_CLEAN_LINUX_SIGNED_V1_AND_UNSIGNED_CANDIDATE_SEPARATED=PASS")
     print("COMMANDER_CLEAN_LINUX_HARNESS_SELFTEST=PASS")
 
@@ -267,7 +267,7 @@ def mock_signed_candidate():
     key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     pub = key.public_key().public_numbers()
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
-    manifest["agent_version"] = "0.3.53"
+    manifest["agent_version"] = "0.3.54"
     for entry in manifest["files"]:
         candidate = APP / "public" / entry["path"]
         raw = candidate.read_bytes()

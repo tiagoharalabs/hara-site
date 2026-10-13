@@ -1,0 +1,37 @@
+[
+  {
+    "exit_code": 0,
+    "stderr": "",
+    "stdout": "{\"schema\":\"hara.dev-safe-error-diagnostic-tests.v1\",\"state\":\"PASS\",\"checks\":23,\"scope\":\"actual helper; no Worker deploy or product probes\"}\n",
+    "test": [
+      "apps/commander/scripts/test_dev_safe_error_diagnostics.mjs"
+    ]
+  },
+  {
+    "exit_code": 0,
+    "stderr": "",
+    "stdout": "{\"schema\":\"hara.dev-safe-error-worker-catch-tests.v1\",\"state\":\"PASS\",\"checks\":21,\"scope\":\"actual Worker.fetch; prior catch loaded in memory for comparison; synthetic D1 fault only; no runtime mutation/network\"}\n",
+    "test": [
+      "apps/commander/scripts/test_worker_safe_error_catch.mjs"
+    ]
+  },
+  {
+    "exit_code": 0,
+    "stderr": "",
+    "stdout": "{\"state\": \"PASS\", \"checks\": 8, \"scope\": \"OFFLINE_NO_NETWORK\", \"raw_headers_payloads_exported\": false}\n",
+    "test": [
+      "-B",
+      "apps/commander/scripts/test_probe_error_metadata.py"
+    ]
+  },
+  {
+    "exit_code": 0,
+    "stderr": "",
+    "stdout": "{\"self_check\": \"PASS\", \"scope\": \"REAL_DEV_ONLY\", \"max_agents\": 100, \"max_concurrency\": 20, \"max_http\": 3000, \"recovery_boundaries\": {\"timed_cases\": 4, \"grace_seconds\": 30, \"status\": \"PASS\"}, \"pid_guard\": {\"status\": \"PASS\", \"wrong_command_refused\": true, \"process_preserved_before_owned_cleanup\": true}}\n",
+    "test": [
+      "-B",
+      "apps/commander/scripts/commander_full_acceptance_real_dev_soak.py",
+      "--self-check"
+    ]
+  }
+]

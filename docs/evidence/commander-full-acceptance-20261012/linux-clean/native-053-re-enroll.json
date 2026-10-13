@@ -1,0 +1,21 @@
+{
+  "schema": "hara.commander-linux-clean-native-installer.v1",
+  "action": "re-enroll",
+  "state": "PASS",
+  "exit_code": 0,
+  "pairing_prompt_received": true,
+  "approval_mode": "ASK_EVERY_ACTION",
+  "device_id": "HARA-DEVICE-962202bc-274a-486b-9794-b73d9f3a5889",
+  "device_token_exposed": false,
+  "human_action_approval_generated": false,
+  "systemctl_backend": "real",
+  "backend": "remote_DEV_worker",
+  "installer_sha256": "dae0a39f12a02920261a8051834d5b8426866a07e8a0d0acb9676c6605c8e3f8",
+  "agent_sha256": "db91714140b63684917e46d6a327778183a5829dbf2b298098b31da4d463985e",
+  "expected_version": "0.3.53",
+  "output": "HARA_COMMANDER_REENROLL_OLD_CREDENTIAL_REJECTED=PASS\r\nHARA Commander \u2014 Linux device pairing\r\nApproval mode: ASK_EVERY_ACTION\r\nPairing token: \r\nHARA_COMMANDER_CLI_WRAPPER_STATE=ALREADY_MANAGED\r\nHARA_COMMANDER_CLI=/home/commanderqa/.local/bin/hara-commander\r\nHARA_COMMANDER_AGENT_STARTUP_ATTESTATION=PASS\r\nHARA_COMMANDER_DEVICE_REENROLL=PASS\r\nOLD_DEVICE_AUTHORITY_RESURRECTED=FALSE\r\nOLD_DEVICE_ID=HARA-DEVICE-e3eacf31-f6b4-47df-96f7-c22aaacd9e4d\r\nDEVICE_ID=HARA-DEVICE-962202bc-274a-486b-9794-b73d9f3a5889\r\nDEVICE_TOKEN_EXPOSED=FALSE\r\n",
+  "old_authority_rejected": true,
+  "old_credential_http_status": 401,
+  "prior_device_id": "HARA-DEVICE-e3eacf31-f6b4-47df-96f7-c22aaacd9e4d",
+  "governed_transport": "H.A.R.A. Commander DIRECT -> Services -> SSH nucleo-a -> exclusive real Linux QA"
+}

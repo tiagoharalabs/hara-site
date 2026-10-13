@@ -1,0 +1,13 @@
+{
+  "exit_code": 0,
+  "evidence": {
+    "qa_live_process_count": 0,
+    "qa_private_profile_r1_exists": false,
+    "qa_private_profile_r2_exists": false,
+    "qa_private_profile_r3_exists": false,
+    "global_tasks_created_by_this_task": false,
+    "founder_runtime_mutated": false,
+    "utc": "2026-10-13T00:44:44.0077488Z"
+  },
+  "stderr_present": false
+}

@@ -1,0 +1,19 @@
+{
+  "backend_pin_supported": true,
+  "max_agents": 100,
+  "max_concurrency": 20,
+  "max_http": 3000,
+  "pid_guard": {
+    "process_preserved_before_owned_cleanup": true,
+    "status": "PASS",
+    "wrong_command_refused": true
+  },
+  "recovery_boundaries": {
+    "grace_seconds": 30,
+    "status": "PASS",
+    "timed_cases": 4
+  },
+  "scope": "REAL_DEV_ONLY",
+  "script_sha256": "e92c5634b26337a3522da79292a0306ba3ce857105638f42f424d6fd21be1f00",
+  "self_check": "PASS"
+}

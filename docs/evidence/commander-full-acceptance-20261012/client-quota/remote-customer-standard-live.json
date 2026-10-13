@@ -1,0 +1,96 @@
+{
+  "schema": "hara.dev-remote-customer-acceptance.v1",
+  "started_at": "2026-10-13T00:01:28.713677+00:00",
+  "environment": "DEV",
+  "oauth_frontend_exercised": false,
+  "identity_setup": "ISOLATED_QA_D1_SEED",
+  "prod_mutated": false,
+  "founder_mutated": false,
+  "secret_output": false,
+  "checks": {
+    "real_pairing_enrollment": "PASS",
+    "bounded_operator_session": "PASS",
+    "real_agent_online": "PASS",
+    "remote_read_utf8": "PASS",
+    "pro_remote_write_and_process": "PASS",
+    "same_request_no_reexecution_or_usage": "PASS",
+    "pro_unmetered_policy": "PASS"
+  },
+  "receipts": [
+    {
+      "tool": "hara.files.write",
+      "call_id": "HARA-CALL-9576476a-2951-457b-a1ee-b0409d3c0b1c",
+      "receipt_sha256": "08b56b5ba94d7ed4ae0b9d4233e356ba4618367188e54431145de3fc5f76ba4b",
+      "usage_mode": "UNMETERED",
+      "usage_units": 1
+    },
+    {
+      "tool": "hara.files.read",
+      "call_id": "HARA-CALL-c4e9c185-df93-4545-b641-06e29dc5eb76",
+      "receipt_sha256": "bb689c60a2bd0bc7f67210d1342305fa382b99662a549d105dea9805aa70066b",
+      "usage_mode": "UNMETERED",
+      "usage_units": 1
+    },
+    {
+      "tool": "hara.process.run",
+      "call_id": "HARA-CALL-27fc38d1-62c0-401b-93c3-eced8d4dd618",
+      "receipt_sha256": "e1e5f2a165947d7f1f1ec4c7e59097096895da920bfb4e06d9875a908327b500",
+      "usage_mode": "UNMETERED",
+      "usage_units": 1
+    }
+  ],
+  "plan": "STANDARD",
+  "billing_checkout_exercised": false,
+  "served_agent_version": "0.3.43",
+  "served_agent_sha256": "3e0db700dd568a85e23212a5400f1d256546fef77b7f59f574ceed29e04c15b7",
+  "approval_mode": "SESSION_TRUSTED",
+  "transport": "OUTBOUND_RELAY",
+  "usage_before": {
+    "period_key": "UNLIMITED",
+    "limit": null,
+    "consumed_units": null,
+    "remaining_units": null,
+    "metered": false,
+    "available": true
+  },
+  "idempotency_replay": {
+    "http": 201,
+    "response": {
+      "schema": "hara.commander-device-call.v1",
+      "existing": true,
+      "call_id": "HARA-CALL-9576476a-2951-457b-a1ee-b0409d3c0b1c",
+      "request_id": "HARA-QA-REMOTE-df06e1b90ea99d4e2e9bee65",
+      "device_id": "HARA-DEVICE-50aa5056-dfb7-4b05-8ac1-bfe04e27c0cf",
+      "tool_id": "hara.files.write",
+      "state": "COMPLETED",
+      "expires_at_utc": "2026-10-13T00:02:26.819Z",
+      "retry_after_ms": 0,
+      "usage_mode": "UNMETERED",
+      "usage_units": 1,
+      "usage_period_key": "LIFETIME",
+      "usage_budget_id": null
+    }
+  },
+  "cloud_budget_issued": [
+    {
+      "issued": null
+    }
+  ],
+  "usage_after": {
+    "period_key": "UNLIMITED",
+    "limit": null,
+    "consumed_units": null,
+    "remaining_units": null,
+    "metered": false,
+    "available": true
+  },
+  "cloud_budget_final": [],
+  "customer_mcp_without_oauth_http": 404,
+  "state": "FAIL",
+  "error": "CUSTOMER_MCP_MISSING_BEARER_NOT_DENIED",
+  "cleanup": {
+    "fixture_cleanup": "PASS",
+    "remaining_tenants": 0
+  },
+  "completed_at": "2026-10-13T00:02:03.775906+00:00"
+}

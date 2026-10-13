@@ -1,0 +1,53 @@
+{
+  "schema": "hara.dev-qa-self-service-offline.v1",
+  "worker_deployed": false,
+  "real_oidc_live_proof": "PENDING_DEPLOY",
+  "auth_sha256": "43d8ca2e269c85a6fbb2c3a344748e4923df2dd7f3f6b7f001a5832d949da725",
+  "tests": [
+    {
+      "test": "apps/commander/scripts/test_dev_qa_self_service_provisioning.mjs",
+      "exit_code": 0,
+      "stdout": [
+        "COMMANDER_DEV_QA_SELF_SERVICE_ALLOWLIST=PASS",
+        "COMMANDER_DEV_QA_SELF_SERVICE_UNLISTED_AND_MALFORMED=DENY",
+        "COMMANDER_DEV_QA_SELF_SERVICE_MAX_SUBJECTS=2",
+        "COMMANDER_DEV_QA_SELF_SERVICE_REAL_SQLITE_INSERT=PASS",
+        "COMMANDER_DEV_QA_SELF_SERVICE_NO_FOUNDER_PROMOTION=PASS",
+        "COMMANDER_PROD_SELF_SERVICE_FOUNDER_AND_TRIAL_UNCHANGED=PASS",
+        "COMMANDER_DEV_QA_SELF_SERVICE_CHECKS=37"
+      ],
+      "stderr": ""
+    },
+    {
+      "test": "apps/commander/scripts/test_auth_helpers.mjs",
+      "exit_code": 0,
+      "stdout": [
+        "COMMANDER_AUTH_CLIENT_AUTH_CONFIG=ENFORCED",
+        "COMMANDER_AUTH_RETURN_TO_SAME_ORIGIN=PASS",
+        "COMMANDER_AUTH_RETURN_TO_BACKSLASH_OPEN_REDIRECT=BLOCKED",
+        "COMMANDER_FOUNDER_INTERNAL_ENTITLEMENT_BINDING=PASS",
+        "COMMANDER_AUTH_MALFORMED_COOKIE=IGNORED",
+        "COMMANDER_AUTH_MALFORMED_COOKIE_LOGOUT=CLEARS_SESSION"
+      ],
+      "stderr": ""
+    },
+    {
+      "test": "apps/commander/scripts/test_oidc_helpers.mjs",
+      "exit_code": 0,
+      "stdout": [
+        "COMMANDER_OIDC_AZP_VALID=PASS",
+        "COMMANDER_OIDC_JWKS_SIGNING_KEY_METADATA=ENFORCED",
+        "COMMANDER_OIDC_MULTI_AUD_MISSING_AZP=DENIED",
+        "COMMANDER_OIDC_WRONG_AZP=DENIED",
+        "COMMANDER_OIDC_AZP_SHAPE=ENFORCED",
+        "COMMANDER_OIDC_FUTURE_NBF=DENIED",
+        "COMMANDER_OIDC_INVALID_NBF=DENIED",
+        "COMMANDER_OIDC_REQUIRED_IAT=ENFORCED",
+        "COMMANDER_OIDC_AUDIENCE_SHAPE=ENFORCED",
+        "COMMANDER_OIDC_SUBJECT_SHAPE=ENFORCED",
+        "COMMANDER_OIDC_ISSUER_COMPONENTS=ENFORCED"
+      ],
+      "stderr": ""
+    }
+  ]
+}

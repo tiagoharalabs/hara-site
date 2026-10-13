@@ -1,0 +1,50 @@
+{
+  "at_utc": "2026-10-13T00:55:10.289288+00:00",
+  "checks_passed": 119,
+  "compiled_sha256": "0c33fc755e6641aa44b53cc75c6338d57ff27f70dfc3316ab378ecb2eaf21bd6",
+  "deployment": {
+    "annotations": {
+      "workers/message": "DEV real QA OAuth/signup opt-in; legacy signed public43 assets retained; 119 offline checks PASS",
+      "workers/triggered_by": "deployment"
+    },
+    "author_email": "tiago.sartori@haralabs.com.br",
+    "created_on": "2026-10-13T00:55:02.567456Z",
+    "id": "837be871-6aab-4bb2-85b2-b0f6b356075d",
+    "source": "wrangler",
+    "strategy": "percentage",
+    "versions": [
+      {
+        "percentage": 100,
+        "version_id": "9335b34a-54b5-46a0-9e2a-c36f67f9a161"
+      }
+    ]
+  },
+  "inputs_sha256": "9814e512d63cb7e927fc3fa1c82fa2ad15d1c4636405d39b5ec37984ded7881f",
+  "new_rc_assets_promoted": false,
+  "pending_dev_migrations_applied": [
+    "0035_approval_async_call_metadata.sql"
+  ],
+  "prior_deployment": {
+    "annotations": {
+      "workers/message": "Automatic deployment on upload.",
+      "workers/triggered_by": "upload"
+    },
+    "author_email": "tiago.sartori@haralabs.com.br",
+    "created_on": "2026-10-13T00:26:48.504571Z",
+    "id": "b16bfe5b-9e60-4899-9ecf-197a5d373843",
+    "source": "wrangler",
+    "strategy": "percentage",
+    "versions": [
+      {
+        "percentage": 100,
+        "version_id": "2b597d71-bb13-486d-af2d-c44687b6c4c6"
+      }
+    ]
+  },
+  "production_mutation": false,
+  "schema": "hara.real-oauth-dev-backend-deployment.v1",
+  "signed_manifest_sha256": "72711a1099503e9c728e38162a6cf8aea17c783313d85fa486387bc537111092",
+  "signed_public_release": "0.3.43",
+  "source_auth_sha256": "43d8ca2e269c85a6fbb2c3a344748e4923df2dd7f3f6b7f001a5832d949da725",
+  "state": "DEPLOYED_READBACK_PENDING"
+}

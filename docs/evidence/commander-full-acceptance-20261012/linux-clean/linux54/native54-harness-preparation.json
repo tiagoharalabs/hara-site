@@ -1,0 +1,75 @@
+{
+  "schema": "hara.commander-linux54-native-harness-preparation.v1",
+  "state": "PASS_PREPARATION_STATIC_COMPILE_REVIEWED_NOT_EXTERNAL_ACCEPTANCE",
+  "scope": "PREPARATION_OWNED_SCRIPTS_ONLY_NO_GUEST_EXECUTION_BY_THIS_PREPARATION",
+  "current_target_release": {
+    "version": "0.3.54",
+    "agent_sha256": "62e1a836ef92fc8b72638fd116a6f0097fcf9e9f0ef0f4259ca8e0f6712b4229",
+    "installer_sha256": "d2057adfff5c2b475d1520ae44f1ed76a7ec0ecc673f65cf08631d7a0083d0fa",
+    "manifest_sha256": "e1c7c23de1b4313093e2d8c52be1ec52f6419f72d5ef59d675c7e5a279b1a13d",
+    "explicit_pin_arguments_required_for_R2": true
+  },
+  "historical_default_reference": {
+    "agent54_R1_sha256": "6aecef8f8dd05bf8f2ab0c1b9c71308647892e70a0b34e2ccbe4322ad826df2e",
+    "installer_unchanged_R1_R2": true
+  },
+  "guard": {
+    "hostname": "commander-linux-clean54",
+    "uid": 2000,
+    "euid": 2000,
+    "home": "/home/commanderqa",
+    "environment": "DEV",
+    "dev_origin": "https://hara-commander-dev-v2.tiago-sartori.workers.dev",
+    "runtime": "/run/user/2000",
+    "dbus": "unix:path=/run/user/2000/bus",
+    "optimization_independent": "EXPLICIT_REQUIRE",
+    "inherited_environment": "CLEARED_AND_QA_NORMALIZED"
+  },
+  "coverage_when_invoked": [
+    "actual_signed_install_and_reenroll_with_real_pairing_prompt",
+    "actual_signed_053_to_054_update_with_managed53_inode_preimage",
+    "public_hara_commander_start_mcp_stop_own_PID_start_marker",
+    "public_approval_mode_session_get_restoreASK",
+    "installed_local_MCP_20_initial_plus_100_retained_exact_120_numbered_lines",
+    "installed_local_MCP_UTF8_input_SHA_and_CAS_conflict_preservation",
+    "real_native_systemd_rollback_crash_once_QA_only",
+    "real_uninstall_self_revoke_support_privacy_and_unrelated_file_preservation"
+  ],
+  "mutation_scope": "EXCLUSIVE_LOCAL_QA_SESSION_TRUSTED; CLOUD_TRIAL_MUTATION_PERMISSION_NOT_CLAIMED",
+  "artifact_sha256": {
+    "native_053_to_054_upgrade_runner.py": "257a07b6ef7e3885c75d1a71cfd03f8df2f9fe722ca84fd97b2bf615ed6e2c37",
+    "native_installer_runner.py": "85064bfadf971df85ae0cfd45cad5974fae5602c9bb1bf69327fbb536c93088d",
+    "native_lifecycle_runner.py": "0d645972c0f1cb05a0a7075d950f0f7e1c9e91b0c43b76a463654eac6922690a",
+    "native_mcp_54_runner.py": "cebe53c735dbe177e1fd51406cc3b1f4ec3a71989b0ad05f88d0ccad5f13b03c",
+    "native_rollback_runner.py": "859ab4aa22a164a6ec1bb82d8e649e0c2dac29026f66312057986b017cd86424",
+    "native_uninstall_runner.py": "35bb1d4f02ecb2c4a6bd07010c6790813a48cc47aeb4362840134754ecc4f5ec"
+  },
+  "guest_execution_operations_performed_by_this_preparation": 0,
+  "vm_operations": 0,
+  "product_source_edits": 0,
+  "signed_bundle_edits": 0,
+  "signing_operations": 0,
+  "deployment_operations": 0,
+  "external_acceptance_claimed": false,
+  "boundaries": {
+    "version_guard_seconds": 5,
+    "mcp_response_seconds": 45,
+    "mcp_response_reader": "BINARY_NONBLOCKING_BUFFER",
+    "own_console_cleanup_signal_TERM_wait_seconds": 5,
+    "own_console_cleanup_signal_KILL_wait_seconds": 5,
+    "installer_post_wait_PTY_drain_seconds": 3,
+    "revoke_http_timeout_seconds": 20,
+    "revoke_redirects": "DENIED",
+    "policy_change_with_any_current_session": "DENIED_PRESERVE_SESSION"
+  },
+  "readonly_review": {
+    "state": "NO_REMAINING_BLOCKER_FOR_EXCLUSIVE_QA_SCOPE",
+    "reviewers": [
+      "/root/win49_watch_review/wrapper_readonly_review",
+      "/root/win49_watch_review/wrapper_readonly_review/windows_final_readonly"
+    ],
+    "executed_or_imported_runners_by_reviewers": false,
+    "core_sha256": "0d645972c0f1cb05a0a7075d950f0f7e1c9e91b0c43b76a463654eac6922690a",
+    "mcp_sha256": "cebe53c735dbe177e1fd51406cc3b1f4ec3a71989b0ad05f88d0ccad5f13b03c"
+  }
+}

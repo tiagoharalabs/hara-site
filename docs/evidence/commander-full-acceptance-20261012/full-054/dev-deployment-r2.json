@@ -1,0 +1,44 @@
+{
+  "at_utc": "2026-10-13T03:40:40.082055+00:00",
+  "compiled_sha256": "54c0d8e6abccf1627959c7442cf1d7fe1e2c82a65758da00914c46d5a925be5c",
+  "deployment": {
+    "annotations": {
+      "workers/message": "Commander54 full acceptance RC; signed Linux wrapper migration/PTY and Windows Unicode; DEV QA OAuth opt-in",
+      "workers/triggered_by": "deployment"
+    },
+    "author_email": "tiago.sartori@haralabs.com.br",
+    "created_on": "2026-10-13T03:40:32.488024Z",
+    "id": "8cba4bcc-6d6f-4cfb-8501-ac5e38fe5c23",
+    "source": "wrangler",
+    "strategy": "percentage",
+    "versions": [
+      {
+        "percentage": 100,
+        "version_id": "6f6e68e3-0777-4fb3-820d-a288ca5f7fab"
+      }
+    ]
+  },
+  "manifest_sha256": "e1c7c23de1b4313093e2d8c52be1ec52f6419f72d5ef59d675c7e5a279b1a13d",
+  "prior_deployment": {
+    "annotations": {
+      "workers/message": "Commander53 full acceptance RC; signed Linux wrapper migration/PTY and Windows Unicode; DEV QA OAuth opt-in",
+      "workers/triggered_by": "deployment"
+    },
+    "author_email": "tiago.sartori@haralabs.com.br",
+    "created_on": "2026-10-13T01:19:33.434742Z",
+    "id": "837c0cce-5446-42ee-9455-5cb33cd5d0ab",
+    "source": "wrangler",
+    "strategy": "percentage",
+    "versions": [
+      {
+        "percentage": 100,
+        "version_id": "97471c0a-b739-4906-90aa-41384a8a1cb1"
+      }
+    ]
+  },
+  "production_mutation": false,
+  "schema": "hara.dev054-deployment.v1",
+  "scope": "DEV_ONLY",
+  "snapshot_sha256": "38a8dd836b878950a4bebb052ef0a16d2182c39b82f7659e02ebb64f714bc787",
+  "state": "DEPLOYED_READBACK_PENDING"
+}

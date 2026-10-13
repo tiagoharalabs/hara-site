@@ -1,0 +1,22 @@
+{
+  "schema": "hara.commander-linux-clean-native-uninstall.v1",
+  "device_id": "HARA-DEVICE-b3ab72be-97ba-4f85-9d0b-37d7731cc163",
+  "backend": "remote_DEV_worker",
+  "systemctl_backend": "real",
+  "private_credentials_exposed": false,
+  "support_schema": "hara.commander-support-report.v2",
+  "support_privacy_pass": true,
+  "uninstall_exit_code": 0,
+  "output": "HARA_COMMANDER_AGENT_UNINSTALL=PASS\nDEVICE_ID=HARA-DEVICE-b3ab72be-97ba-4f85-9d0b-37d7731cc163\nSERVER_DEVICE_REVOKE=PASS\nDEVICE_TOKEN_EXPOSED=FALSE\n",
+  "cleanup_checks": {
+    "config_removed": true,
+    "agent_data_removed": true,
+    "systemd_unit_removed": true,
+    "cli_removed": true,
+    "managed_wrapper_removed": false,
+    "unrelated_file_preserved": true,
+    "service_inactive": true
+  },
+  "state": "FAIL_NATIVE_LINUX_UNINSTALL_REVOKE_CLEANUP",
+  "error_type": "AssertionError"
+}

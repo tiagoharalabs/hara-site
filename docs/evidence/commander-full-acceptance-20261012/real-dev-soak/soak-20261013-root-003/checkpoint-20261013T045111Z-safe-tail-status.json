@@ -1,0 +1,14 @@
+{
+  "backend_version_pin": "6f6e68e3-0777-4fb3-820d-a288ca5f7fab",
+  "buffer_resets": 0,
+  "coverage_guaranteed": false,
+  "elapsed_seconds": 2890.06,
+  "event_count": 615,
+  "incident_count": 0,
+  "last_event_at_utc": "2026-10-13T04:50:40.615723+00:00",
+  "product_requests_issued": 0,
+  "raw_output_saved": false,
+  "started_at_utc": "2026-10-13T04:02:39.564291+00:00",
+  "state": "RUNNING",
+  "stderr_bytes_discarded": 0
+}

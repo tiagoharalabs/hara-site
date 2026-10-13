@@ -1,0 +1,33 @@
+{
+  "schema": "HARA_NORMAL_QA_PORTAL_DEVICE_LIFECYCLE_READBACK_V1",
+  "phase": "SIGNED_WINDOWS53_NORMAL_UNINSTALL",
+  "portal_readback": {
+    "state": "NORMAL_QA2_PORTAL_DEVICE_READBACK",
+    "http_status": 200,
+    "device_count": 1,
+    "devices": [
+      {
+        "device_id": "HARA-DEVICE-6644a8cb-8a82-4f0f-8828-879a1c5a3261",
+        "device_name": "HARAQA5312",
+        "platform": "WINDOWS",
+        "architecture": "x64",
+        "agent_version": "0.3.53",
+        "state": "REVOKED",
+        "online": false,
+        "last_seen_at_utc": "2026-10-13T02:23:39.716Z",
+        "approval_mode": "SESSION_TRUSTED",
+        "authorization_active": false
+      }
+    ],
+    "active_count": 0,
+    "online_count": 0,
+    "authorized_count": 0,
+    "credential_values_exposed": false
+  },
+  "bridge_receipt_sha256": "f4ecbbc5f0c7e43f29bb32616b35ff51c93eb550cbc429c3a520f38b8608c7d7",
+  "windows_owner_uninstall_receipt_sha256": "69ce37c01c4144c603875c7fd6443308bd704366e0fe410e0e8ba669d0f4a3f5",
+  "independent_read_only": true,
+  "new_dispatch_performed": false,
+  "qa2_session_preserved": true,
+  "credential_values_exposed": false
+}

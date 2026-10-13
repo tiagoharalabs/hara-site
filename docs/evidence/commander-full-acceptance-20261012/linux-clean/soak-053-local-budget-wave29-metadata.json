@@ -1,0 +1,43 @@
+{
+  "schema": "hara.commander-linux053-safe-local-budget-metadata.v1",
+  "state": "PASS_READ_ONLY",
+  "device_id": "HARA-DEVICE-962202bc-274a-486b-9794-b73d9f3a5889",
+  "sqlite_open_mode": "ro",
+  "query_only": true,
+  "product_lease": [
+    {
+      "valid_until_utc": "2026-10-13T09:40:08.678Z",
+      "updated_at_utc": "2026-10-13T03:40:10.289741+00:00",
+      "usage_mode": "LOCAL_BUDGET",
+      "period_key": null,
+      "plan_code": "TRIAL"
+    }
+  ],
+  "local_budget_blocks": [
+    {
+      "budget_id": "HARA-BUDGET-f4573e38-1219-4384-a512-ca4205fe6556",
+      "device_id": "HARA-DEVICE-962202bc-274a-486b-9794-b73d9f3a5889",
+      "plan_code": "TRIAL",
+      "meter_id": "HARA_COMMANDER_GOVERNED_INVOKE",
+      "period_key": "2026-10",
+      "allocated_units": 100,
+      "issued_at_utc": "2026-10-13T03:40:10.160Z",
+      "expires_at_utc": "2026-11-01T00:00:00.000Z",
+      "state": "ACTIVE",
+      "committed_units": 2,
+      "reserved_units": 0
+    }
+  ],
+  "wave29_debit": [
+    {
+      "request_id": "HARA-QA-LINUX-RO-c686216c5b34c010edb21697",
+      "budget_id": "HARA-BUDGET-f4573e38-1219-4384-a512-ca4205fe6556",
+      "units": 1,
+      "state": "COMMITTED",
+      "created_at_utc": "2026-10-13T03:42:28.232508+00:00",
+      "updated_at_utc": "2026-10-13T03:42:28.233588+00:00"
+    }
+  ],
+  "tokens_or_content_read_into_output": false,
+  "agent_cli_or_session_modified": false
+}
