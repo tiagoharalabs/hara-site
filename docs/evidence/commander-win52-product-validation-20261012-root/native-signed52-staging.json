@@ -1,0 +1,70 @@
+{
+  "active_agent_or_task_changed": false,
+  "bundle_root": "C:\\ProgramData\\HaraLabs\\CommanderWinLab\\20261013\\private-052-signed-root-r1",
+  "file_sha256": {
+    "agent/linux.py": "3e0db700dd568a85e23212a5400f1d256546fef77b7f59f574ceed29e04c15b7",
+    "agent/windows.ps1": "817325667ea552136efa10d807148fa4dc6d035aca24046c884f444a4fb61ebc",
+    "install/linux.sh": "534e14433da9f86eb4342c6d9400e89ecf164545605e02e22f1646510284aba5",
+    "install/windows.ps1": "7560c58b11200d1768ceba3162f5253bc0173b051f9ea3e9ebb6a323a89a31fa",
+    "native-signed52-validator.ps1": "d11e979d6d2785592434b38fb3a04a9292e85ea6db3a42bdf16f14c5fda87698",
+    "release/SHA256SUMS": "78a213e5d6366de2b47268ac682fd04378591c52b85064f7eda0002381863d78",
+    "release/agent-manifest.json": "fd019aa722ea865781bab0ba2ee2d5e9483fec35fa6ae590fb74a33a4d88262b",
+    "release/agent-manifest.sig.json": "cc0420eb4eaca686774d0206be38e75a956c693292bc663d7a434cde7b802039",
+    "release/release-signing-public.jwk": "4e68608fa891f1b7a1e89c75936a089daeab0ba862a764f9bb31eca849cdfb9b"
+  },
+  "live_profile_touched": false,
+  "local_approval_policy_changed": false,
+  "native_report": {
+    "agent_transport_started": false,
+    "files": [
+      {
+        "bytes": 218938,
+        "parse_errors": 0,
+        "path": "agent/linux.py",
+        "sha256": "3e0db700dd568a85e23212a5400f1d256546fef77b7f59f574ceed29e04c15b7"
+      },
+      {
+        "bytes": 98717,
+        "parse_errors": 0,
+        "path": "agent/windows.ps1",
+        "sha256": "817325667ea552136efa10d807148fa4dc6d035aca24046c884f444a4fb61ebc"
+      },
+      {
+        "bytes": 36363,
+        "parse_errors": 0,
+        "path": "install/linux.sh",
+        "sha256": "534e14433da9f86eb4342c6d9400e89ecf164545605e02e22f1646510284aba5"
+      },
+      {
+        "bytes": 23774,
+        "parse_errors": 0,
+        "path": "install/windows.ps1",
+        "sha256": "7560c58b11200d1768ceba3162f5253bc0173b051f9ea3e9ebb6a323a89a31fa"
+      }
+    ],
+    "installed_agent_modified": false,
+    "manifest_sha256": "fd019aa722ea865781bab0ba2ee2d5e9483fec35fa6ae590fb74a33a4d88262b",
+    "pinned_authority": "commander-release-v2",
+    "powershell_version": "5.1.26100.9444",
+    "schema": "hara.commander-win52-private-rc-windows-validation.v1",
+    "self_test": {
+      "agent_transport_started": false,
+      "installed_agent_modified": false,
+      "marker": "COMMANDER_WINDOWS_AGENT_SELF_TEST=PASS",
+      "root_fixture_guaranteed": true,
+      "state": "PASS"
+    },
+    "signature_algorithm": "RS256_RSA3072",
+    "state": "PASS"
+  },
+  "no_runtime_installation": true,
+  "private_key_read": false,
+  "production_processes_touched": false,
+  "qga_diagnostic_sha256": "b1aa2855dfffaaa92cc5afa016eab6e19720ac86b0bf283e15fdf7be4dcdb827",
+  "schema": "hara.commander.native-signed52-staging.v1",
+  "source_sha256": "817325667ea552136efa10d807148fa4dc6d035aca24046c884f444a4fb61ebc",
+  "staged_bundle_file_count": 8,
+  "staged_byte_pins_checked": 9,
+  "state": "PASS",
+  "validator_sha256": "d11e979d6d2785592434b38fb3a04a9292e85ea6db3a42bdf16f14c5fda87698"
+}

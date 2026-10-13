@@ -80,7 +80,7 @@ export function safeCallResultMetadata(result, call) {
     bridge_receipt_sha256:/^[0-9a-f]{64}$/.test(receipt) ? receipt : null,
     result:{
       function_id:["process.run","process.start","process.output","process.interact","process.terminate","filesystem.read","filesystem.write","filesystem.search","filesystem.list","device.info"].includes(detail.function_id) ? detail.function_id : null,
-      risk_class:["READ_ONLY","MUTATING","PROCESS_MUTATING","WRITE","EXECUTE"].includes(detail.risk_class) ? detail.risk_class : null,
+      risk_class:["READ_ONLY","MUTATING","PROCESS_MUTATING","FILESYSTEM_MUTATION","PROCESS_EXECUTION","WRITE","EXECUTE"].includes(detail.risk_class) ? detail.risk_class : null,
       process_exit_code:Number.isInteger(detail.process_exit_code) ? detail.process_exit_code : null,
       domain_success_inferred:typeof detail.domain_success_inferred === "boolean" ? detail.domain_success_inferred : false,
       content_redacted:true,

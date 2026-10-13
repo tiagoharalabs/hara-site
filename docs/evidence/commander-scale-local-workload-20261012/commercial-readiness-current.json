@@ -1,0 +1,131 @@
+{
+  "checks": [
+    {
+      "basis": "Signed Founder Agent fleet receipts",
+      "code": "FOUNDERS_7_LINUX_CURRENT",
+      "passed": true,
+      "required_for": [
+        "FOUNDER_TECHNICAL",
+        "COMMERCIAL_BETA",
+        "GENERAL_AVAILABILITY"
+      ]
+    },
+    {
+      "basis": "Seven real Agent receipts for 120 retained lines",
+      "code": "REAL_PTY_POST_EXIT_7_OF_7",
+      "passed": true,
+      "required_for": [
+        "FOUNDER_TECHNICAL",
+        "COMMERCIAL_BETA",
+        "GENERAL_AVAILABILITY"
+      ]
+    },
+    {
+      "basis": "RS256 Founder-only release; not commercial distribution",
+      "code": "SIGNED_FOUNDER_RELEASE",
+      "passed": true,
+      "required_for": [
+        "FOUNDER_TECHNICAL",
+        "COMMERCIAL_BETA",
+        "GENERAL_AVAILABILITY"
+      ]
+    },
+    {
+      "basis": "Offline and GitHub Actions evidence, not a cloud soak",
+      "code": "LOCAL_GATE_AND_HOSTED_CI",
+      "passed": true,
+      "required_for": [
+        "FOUNDER_TECHNICAL",
+        "COMMERCIAL_BETA",
+        "GENERAL_AVAILABILITY"
+      ]
+    },
+    {
+      "basis": "Technical beta must not require payment services",
+      "code": "STRIPE_INDEPENDENT_BETA",
+      "passed": true,
+      "required_for": [
+        "FOUNDER_TECHNICAL"
+      ]
+    },
+    {
+      "basis": "Public signed Agent and installer must be rebuilt and verified from current source",
+      "code": "CUSTOMER_SIGNED_DISTRIBUTION",
+      "passed": false,
+      "required_for": [
+        "COMMERCIAL_BETA",
+        "GENERAL_AVAILABILITY"
+      ]
+    },
+    {
+      "basis": "Separate authenticated customer identity, device and receipt proof required",
+      "code": "SECOND_TENANT_ISOLATION",
+      "passed": false,
+      "required_for": [
+        "COMMERCIAL_BETA",
+        "GENERAL_AVAILABILITY"
+      ]
+    },
+    {
+      "basis": "Windows RC source checks alone never count as a Windows runtime acceptance",
+      "code": "WINDOWS_LIVE_PARITY",
+      "passed": false,
+      "required_for": [
+        "GENERAL_AVAILABILITY"
+      ]
+    },
+    {
+      "basis": "Authenticated Agents, DO/D1/Worker costs, reconnect and cleanup",
+      "code": "CLOUD_1000_TENANT_24H_SOAK",
+      "passed": false,
+      "required_for": [
+        "GENERAL_AVAILABILITY"
+      ]
+    },
+    {
+      "basis": "Stripe test-mode, separate tenant, signed webhook and cancel",
+      "code": "STRIPE_TEST_WEBHOOK_AND_ENTITLEMENT",
+      "passed": false,
+      "required_for": [
+        "GENERAL_AVAILABILITY"
+      ]
+    },
+    {
+      "basis": "Provider app review and business identity",
+      "code": "OPENAI_PUBLIC_APPROVAL",
+      "passed": false,
+      "required_for": [
+        "GENERAL_AVAILABILITY"
+      ]
+    }
+  ],
+  "evidence_verification_only": true,
+  "http_health_burst_not_counted_as_1000_clients": true,
+  "profiles": {
+    "COMMERCIAL_BETA": {
+      "blockers": [
+        "CUSTOMER_SIGNED_DISTRIBUTION",
+        "SECOND_TENANT_ISOLATION"
+      ],
+      "state": "HOLD"
+    },
+    "FOUNDER_TECHNICAL": {
+      "blockers": [],
+      "state": "PASS"
+    },
+    "GENERAL_AVAILABILITY": {
+      "blockers": [
+        "CUSTOMER_SIGNED_DISTRIBUTION",
+        "SECOND_TENANT_ISOLATION",
+        "WINDOWS_LIVE_PARITY",
+        "CLOUD_1000_TENANT_24H_SOAK",
+        "STRIPE_TEST_WEBHOOK_AND_ENTITLEMENT",
+        "OPENAI_PUBLIC_APPROVAL"
+      ],
+      "state": "HOLD"
+    }
+  },
+  "real_stripe_or_cloud_mutation": false,
+  "schema": "hara.commander-commercial-readiness-gate.v1",
+  "windows_source_only_not_counted_as_live": true
+}

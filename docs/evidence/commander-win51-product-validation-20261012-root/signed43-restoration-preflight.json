@@ -1,0 +1,114 @@
+{
+  "active_windows_calls": 0,
+  "actual_bindings_identical": true,
+  "at_utc": "2026-10-12T23:08:03.901759+00:00",
+  "changed_signed_paths": [
+    "agent/linux.py",
+    "agent/windows.ps1",
+    "install/linux.sh",
+    "install/windows.ps1",
+    "release/SHA256SUMS",
+    "release/agent-manifest.json",
+    "release/agent-manifest.sig.json",
+    "release/release-signing-public.jwk"
+  ],
+  "parallel_worker_sources_and_config_identical": true,
+  "prior_version_id": "3fd724aa-afdb-4b20-a360-b0a013a02c2a",
+  "production_mutation_performed": false,
+  "public_before": [
+    {
+      "bytes": 220422,
+      "path": "agent/linux.py",
+      "sha256": "1572d70e60fb299edb262a8a817bd7aa1740a4c2dda3635d50beb2f3476ffe3b",
+      "status": 200
+    },
+    {
+      "bytes": 96508,
+      "path": "agent/windows.ps1",
+      "sha256": "7b51d2f243228f27aaf742086fe012c73bc17cd8c180a4f9abbcb1e2c51f3080",
+      "status": 200
+    },
+    {
+      "bytes": 107708,
+      "path": "app.js",
+      "sha256": "7c3ec0b7bf6de107474cf674b8365136e91535a1929e8bf1af56fa12672c4a31",
+      "status": 200
+    },
+    {
+      "bytes": 25984,
+      "path": "assets/hara-commander-royal.webp",
+      "sha256": "e55b9218fc9ef540d1214509226af13c7e7906665e9ec247a92a40103f62ada3",
+      "status": 200
+    },
+    {
+      "bytes": 4810,
+      "path": "brand/chatgpt-official.webp",
+      "sha256": "bd18745b777ba0febad179ad581abbb7584951e0eea7c17d7a450b5838175ace",
+      "status": 200
+    },
+    {
+      "bytes": 3064,
+      "path": "brand/claude-official.svg",
+      "sha256": "059e22f525d67c6258c4f64514f0b0e717c914df8a706936d0299d5e6b8082d9",
+      "status": 200
+    },
+    {
+      "bytes": 44826,
+      "path": "index.html",
+      "sha256": "2c769906d1b51cd5eba4642582ec0401d3685299ebb5b6dc8b7887d50ab3a751",
+      "status": 200
+    },
+    {
+      "bytes": 36564,
+      "path": "install/linux.sh",
+      "sha256": "447fde76bdcee326dff70600f56b4b3be6cb9d2299e9265523b5d6e6baf88de1",
+      "status": 200
+    },
+    {
+      "bytes": 23604,
+      "path": "install/windows.ps1",
+      "sha256": "6ba5c29e6d3a604750331d7699455ad609b4b0a8e191c03ad10503f7a5161c3c",
+      "status": 200
+    },
+    {
+      "bytes": 334,
+      "path": "release/SHA256SUMS",
+      "sha256": "b7effd4d1620e5681c8f72dafffcca70a801d89690df8e963c84fda617530cd4",
+      "status": 200
+    },
+    {
+      "bytes": 765,
+      "path": "release/agent-manifest.json",
+      "sha256": "7e42f25404e414b74b375ccb47b7ed8ba7d8c572dc45db994d89012207f08f7c",
+      "status": 200
+    },
+    {
+      "bytes": 555,
+      "path": "release/agent-manifest.sig.json",
+      "sha256": "b755f0fd5ebf81be4c8e5cb38522684f66829e069be2ed6303eb0b7bccc26bd1",
+      "status": 200
+    },
+    {
+      "bytes": 454,
+      "path": "release/release-signing-public.jwk",
+      "sha256": "ee4bbbca568b90c50551cd6797f921abdb988afe104e4644132154418723b7b4",
+      "status": 200
+    },
+    {
+      "bytes": 624,
+      "path": "release/v2/release-signing-public.jwk",
+      "sha256": "4e68608fa891f1b7a1e89c75936a089daeab0ba862a764f9bb31eca849cdfb9b",
+      "status": 200
+    },
+    {
+      "bytes": 105625,
+      "path": "styles.css",
+      "sha256": "6d3b87fb284060a4c387d9cd5046d68b9c01fb8d799079056983543e53ba8ddb",
+      "status": 200
+    }
+  ],
+  "schema": "hara.commander-signed43-restoration-preflight.v1",
+  "state": "PASS",
+  "ui_asset_changes": 0,
+  "worker_sha256": "9bfd38d5adb3e0b2d990f586683cbec1c211d0d06c5429d1309780395d0da7d6"
+}

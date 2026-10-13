@@ -59,7 +59,9 @@ def main():
     for rel in ("agent/linux.py", "install/linux.sh"):
         need((NEW / rel).read_bytes() == (OLD / rel).read_bytes(),
              "LINUX_COMPONENT_CHANGED:" + rel)
-    agent, installer = release.final_source_verification()
+    agent = (NEW / "agent/windows.ps1").read_bytes()
+    need(release.signer.sha(agent) == release.APPROVED_SOURCE_SHA256, "HISTORICAL_SOURCE_HASH_DRIFT")
+    installer = release.expected_installer()
     need(b'$bytes=[Text.Encoding]::UTF8.GetBytes($json)' in agent and
          b'-ContentType "application/json; charset=utf-8"' in agent and b'-Body $bytes' in agent,
          "UTF8_TRANSPORT_REQUIRED")

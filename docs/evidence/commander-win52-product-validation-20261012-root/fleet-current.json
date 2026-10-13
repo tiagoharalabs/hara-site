@@ -1,0 +1,90 @@
+{
+  "agent_changes_performed": false,
+  "inventory_online_semantics": {
+    "EVENT_V2_seconds": 25200,
+    "OUTBOUND_RELAY_seconds": 240,
+    "live_probe_required_to_confirm_reachability": true
+  },
+  "linux_041": 1,
+  "linux_046": 6,
+  "linux_live_info": [
+    {
+      "agent_version": "0.3.46",
+      "bridge_receipt_sha256": "eeeb413318dc404b9aca26fa18091f52bc8cc511502f2439bafba1e1ab808dfd",
+      "computer": "services",
+      "mutation_performed": false,
+      "state": "PASS",
+      "tunnel_mode": "EVENT_V2"
+    },
+    {
+      "agent_version": "0.3.46",
+      "bridge_receipt_sha256": "2dfd69ecec5a06ebf05994c5087d48d8c2baa53dda922bec449cf28592bf1fe6",
+      "computer": "ninja-blue",
+      "mutation_performed": false,
+      "state": "PASS",
+      "tunnel_mode": "EVENT_V2"
+    },
+    {
+      "agent_version": "0.3.46",
+      "bridge_receipt_sha256": "a09401e6fad81521d09b25897f6e76125b59f3092e65c8b207e2e0d5c47a9d0e",
+      "computer": "sentinela-a",
+      "mutation_performed": false,
+      "state": "PASS",
+      "tunnel_mode": "EVENT_V2"
+    },
+    {
+      "agent_version": "0.3.41",
+      "bridge_receipt_sha256": "cfd2eeaf2d73b36279a12e61b1fa33413ecccf218aa7f5812cc54331121d2841",
+      "computer": "sentinela-b",
+      "mutation_performed": false,
+      "state": "PASS",
+      "tunnel_mode": "OUTBOUND_RELAY"
+    },
+    {
+      "agent_version": "0.3.46",
+      "bridge_receipt_sha256": "c45c36321c6dccea418ed4b349c3d4ff603040e761ac48feb04654ec18979328",
+      "computer": "sentinela-c",
+      "mutation_performed": false,
+      "state": "PASS",
+      "tunnel_mode": "EVENT_V2"
+    },
+    {
+      "agent_version": "0.3.46",
+      "bridge_receipt_sha256": "d4ca9a208adc2dde9fe9705dbf3623643afd171403d52412f4ed4769695f1f5c",
+      "computer": "sentinela-d",
+      "mutation_performed": false,
+      "state": "PASS",
+      "tunnel_mode": "EVENT_V2"
+    },
+    {
+      "agent_version": "0.3.46",
+      "bridge_receipt_sha256": "0196d1f7aacd6864542386b14876561531c15f53d1a52555ae3f2d1faddb258e",
+      "computer": "nucleo-a",
+      "mutation_performed": false,
+      "state": "PASS",
+      "tunnel_mode": "EVENT_V2"
+    }
+  ],
+  "linux_reachable": 7,
+  "schema": "hara.commander-fleet-fresh-probes.v1",
+  "sentinela_b_device_info_completed_at_utc": "2026-10-12T23:58:29.011Z",
+  "sentinela_b_installed_source_confirmed": {
+    "cause_of_historical_drift": "UNPROVEN",
+    "info_receipt_sha256": "9a8113df2e740151f4aebab30250892965697c74c94bf57f98eb297b8b120c25",
+    "mtime_utc": "2026-10-09T20:49:01.749929Z",
+    "path": "/home/sartorius/.local/share/hara-commander/hara-commander-agent",
+    "read_receipt_sha256": "5b1ea45728a103d2f45c1ee4ad959d7d342c86ace5b962ba9cd5ab3403e7dab7",
+    "source_version": "0.3.41"
+  },
+  "windows": {
+    "active_session_id": "HARA-PROC-aa74d04499a3456fb0d6b9affd6d6850",
+    "agent_version": "0.3.51",
+    "approval_mode": "SESSION_TRUSTED",
+    "computer": "HARA_WIN11",
+    "device_info_receipt_sha256": "4b5ca96ee18e03a5297c5d28e1b6edf4e01aeeaf951a6dfb9331fa339ee459fc",
+    "operator_session_required": true,
+    "private_052_installation": "HOLD_OTHER_FRONT_ACTIVE_SESSION",
+    "sessions_after_live_receipt_sha256": "10c03bc40dd679833beaa34a8d321aab1440af7dd9d15b9b0e700171ae803e0e",
+    "sessions_receipt_sha256": "a66d2d308c85c850fa4121400a1d6ce1f60c9c7100eb998f8b288f46673f7651"
+  }
+}

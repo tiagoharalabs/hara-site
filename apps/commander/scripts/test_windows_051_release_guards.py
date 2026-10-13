@@ -22,7 +22,7 @@ def main():
             checks.append(code)
         else:
             raise AssertionError("EXPECTED_DENIAL_MISSING:"+code)
-    with tempfile.TemporaryDirectory(prefix="commander-win51-historical-unsigned-test-", dir="/tmp_hara") as temp:
+    with tempfile.TemporaryDirectory(prefix="commander-win51-unsigned-test-") as temp:
         root = Path(temp)
         stage = root/"stage"
         original_new = release.NEW

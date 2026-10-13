@@ -28,6 +28,20 @@ const completeStart=workerSource.indexOf("async function completeDeviceCall(");
 const completeEnd=workerSource.indexOf("\nasync function deviceCallStatus(",completeStart);
 assert.ok(completeStart>=0&&completeEnd>completeStart,"production completeDeviceCall missing");
 const completeSource=workerSource.slice(completeStart,completeEnd);
+// Run the customer projection directly from the production Worker so unknown
+// effects cannot become false before the original response reaches the caller.
+const projectionStart=workerSource.indexOf("function trimPublicText(");
+const projectionEnd=workerSource.indexOf("\nfunction customerMcpDevicePayload(",projectionStart);
+assert.ok(projectionStart>=0&&projectionEnd>projectionStart,"production customer projection missing");
+const contracts=await import(new URL("device-tool-contract.mjs",moduleUrl).href);
+const projectionRuntime=vm.createContext({
+  deviceFunctionForTool:contracts.deviceFunctionForTool,
+  isDeviceMutationTool:contracts.isDeviceMutationTool,
+  isDeviceProcessTool:contracts.isDeviceProcessTool,
+});
+vm.runInContext(workerSource.slice(projectionStart,projectionEnd)+
+  "\nglobalThis.project=projectCustomerToolResult;",projectionRuntime);
+const project=(tool,result)=>plain(projectionRuntime.project(tool,result));
 function fixture(overrides={},quotaFault=null){
   const db=new DatabaseSync(":memory:");
   db.exec(`CREATE TABLE commander_device_calls (
@@ -95,7 +109,7 @@ function fixture(overrides={},quotaFault=null){
     status(context=current,options={}){return storage.acceptedCallStatus(env,context,callId,
       {expectedDeviceId:"DEVICE-A",nowUtc:"2026-10-12T18:01:00.000Z",newMarker,isRedacted,...options});},
     public(status){return storage.publicAcceptedCallStatus(status,"windows-a",(tool,result)=>{
-      assert.equal(tool,"hara.files.write","status must project the original tool");return plain(result);
+      assert.equal(tool,row.tool_id,"status must project the original tool");return project(tool,result);
     });},close(){db.close();},
     complete(result=rawResult){return completionRuntime.complete(env,{},
       {call_id:callId,state:"COMPLETED",result});},
@@ -133,6 +147,7 @@ await check("original-success-settles-before-content-consumed",async (f)=>{
   const metadata=JSON.parse(f.row().call_result_metadata_json);
   for (const text of ["PRIVATE-RESULT-CONTENT","PRIVATE-ARGS","PRIVATE-NONCE"]) assert.ok(!JSON.stringify(metadata).includes(text));
   assert.equal(metadata.bridge_receipt_sha256,receipt);assert.equal(metadata.usage.state,"COMMITTED");
+  assert.equal(metadata.result.risk_class,"FILESYSTEM_MUTATION");
 });
 await check("normalized-receipt-keeps-settlement-and-replay-consistent",async (f)=>{
   await f.status();assert.equal(f.quotaCalls[0].receipt,receipt);
@@ -162,10 +177,55 @@ await check("redacted-replay-preserves-original-receipt-and-tool",async (f)=>{
   await f.status();const replay=f.public(await f.status());
   assert.equal(replay.replayed,true);assert.equal(replay.content_redacted,true);
   assert.equal(replay.original_tool_id,"hara.files.write");assert.equal(replay.bridge_receipt_sha256,receipt);
-  assert.equal(replay.result.stdout,undefined);
+  assert.equal(replay.result.stdout,undefined);assert.equal(replay.result.risk_class,"FILESYSTEM_MUTATION");
   assert.equal(replay.retrieval.new_call_enqueued,false);assert.equal(replay.retrieval.additional_usage_units,0);
   assert.equal(f.state(),"COMMITTED");
 });
+for (const [label,value,expected] of [
+  ["true",true,true],["false",false,false],["null",null,null],
+  ["missing",undefined,null],["unknown-string","UNKNOWN",null],
+  ["string-false","false",null],["number-zero",0,null],["number-one",1,null],
+]) {
+  const raw={...rawResult,result:{...rawResult.result,function_id:"process.run",risk_class:"PROCESS_EXECUTION"}};
+  if (value===undefined) delete raw.mutation_performed;
+  else raw.mutation_performed=value;
+  await check(`process-effect-${label}-survives-original-and-redacted-replay`,async (f)=>{
+    const original=f.public(await f.status());
+    assert.equal(original.mutation_performed,expected);
+    assert.equal(original.result.risk_class,"PROCESS_EXECUTION");
+    assert.equal(original.result.stdout,"PRIVATE-RESULT-CONTENT");
+    const replay=f.public(await f.status());
+    assert.equal(replay.mutation_performed,expected);
+    assert.equal(replay.result.risk_class,"PROCESS_EXECUTION");
+    assert.equal(replay.bridge_receipt_sha256,receipt);
+    assert.equal(replay.original_tool_id,"hara.process.run");
+    assert.equal(replay.replayed,true);assert.equal(replay.content_redacted,true);
+    for (const privateText of ["PRIVATE-RESULT-CONTENT","PRIVATE-ARGS","PRIVATE-NONCE"]) {
+      assert.ok(!JSON.stringify(replay).includes(privateText));
+      assert.ok(!f.row().call_result_metadata_json.includes(privateText));
+    }
+    assert.equal(replay.retrieval.new_call_enqueued,false);
+    assert.equal(replay.retrieval.additional_usage_units,0);
+    assert.equal(replay.product.quota.state,"COMMITTED");
+    assert.equal(replay.product.quota.units,1);
+    for (const settlement of f.quotaCalls) {
+      assert.equal(settlement.request,"ORIGINAL-R1");assert.equal(settlement.receipt,receipt);
+      assert.equal(settlement.units,1);
+    }
+    assert.equal(f.sql.filter((entry)=>/INSERT|DELETE/.test(entry.statement)).length,0,
+      "status replay must not dispatch or create a new call");
+  },{tool_id:"hara.process.run",result_json:JSON.stringify(raw)});
+}
+for (const [label,risk] of [["unknown","PRIVATE-RISK-CONTENT"],["object",{value:"PRIVATE-RISK-CONTENT"}]]) {
+  const raw={...rawResult,result:{...rawResult.result,risk_class:risk}};
+  await check(`unrecognized-risk-${label}-is-redacted-without-a-guess`,async (f)=>{
+    await f.status();const replay=f.public(await f.status());
+    assert.equal(replay.result.risk_class,null);
+    assert.ok(!JSON.stringify(replay).includes("PRIVATE-RISK-CONTENT"));
+    assert.equal(replay.mutation_performed,true);
+    assert.equal(replay.retrieval.additional_usage_units,0);
+  },{result_json:JSON.stringify(raw)});
+}
 await check("unclaimed-expiry-refunds-original-reservation-once",async (f)=>{
   const result=await f.status();assert.equal(result.row.state,"EXPIRED");
   assert.equal(f.row().state,"EXPIRED");assert.equal(f.state(),"RELEASED");

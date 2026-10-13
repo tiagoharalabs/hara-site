@@ -1,0 +1,27 @@
+{
+  "checks": [
+    "fresh-schema-real-accounting-triggers",
+    "default-600-exact-expiry",
+    "approval-1800-survives-legacy-expiry",
+    "pending-replay-cannot-extend-original-600",
+    "pending-replay-cannot-shorten-original-1800",
+    "internal-ttl-enumeration-rejects-invalid-input-before-write",
+    "identity-function-period-replay-scoping",
+    "quota-capacity-and-denial-remain-unchanged",
+    "lost-commit-response-safe-terminal-replay",
+    "committed-reservation-does-not-expire",
+    "release-replay-refunds-once",
+    "legacy-schema-migration-preserves-default-600",
+    "mixed-legacy-and-profile-expiry-use-own-deadlines",
+    "completion-cross-month-settles-original-request-period",
+    "completion-cross-month-denial-refunds-original-period",
+    "late-completion-cannot-revive-expired-reservation"
+  ],
+  "production_class_exercised": true,
+  "remote_services_used": false,
+  "scenarios": 16,
+  "schema": "hara.commander-approval-async-quota-tests.v1",
+  "sqlite": "IN_MEMORY_REAL_SQLITE",
+  "state": "PASS",
+  "worker_sha256": "9bfd38d5adb3e0b2d990f586683cbec1c211d0d06c5429d1309780395d0da7d6"
+}

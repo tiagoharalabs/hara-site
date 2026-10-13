@@ -88,6 +88,11 @@ PYTHON = (
     "validate_signed_windows_051_v11_rc.py",
     "validate_signed_full_053_v13_rc.py",
     "test_full_053_release_guards.py",
+    "validate_signed_windows_052_v12_rc.py",
+    "test_windows_052_release_guards.py",
+    "validate_windows_052_approval_expiry.py",
+    "validate_windows_052_operator_startup.py",
+    "validate_windows_052_approval_window.py",
     "test_windows_051_release_guards.py",
     "validate_windows_051_approval_expiry.py",
     "validate_windows_051_operator_startup.py",
@@ -136,6 +141,7 @@ JS = (
     "validate_event_v2_fleet_allowlist.mjs",
     "test_approval_async_quota_ttl.mjs",
     "test_approval_async_storage.mjs",
+    "test_quota_1000_local_workload.mjs",
     "test_approval_async_queue_claim.mjs",
 )
 MODELS = (

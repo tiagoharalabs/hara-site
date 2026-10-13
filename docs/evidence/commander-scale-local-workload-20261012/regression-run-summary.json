@@ -1,0 +1,61 @@
+[
+  {
+    "elapsed_ms": 182.033,
+    "exit_code": 0,
+    "file": "auth-retention-exact-source.json",
+    "profiles": null,
+    "sha256": "117f86e14ff00fa7620386dcf4ba3f3975cb26e81e466c9a6503c173c1acca04",
+    "state": "PASS",
+    "tests": 5
+  },
+  {
+    "elapsed_ms": 58.963,
+    "exit_code": 0,
+    "file": "approval-quota-ttl-exact-source.json",
+    "profiles": null,
+    "sha256": "9dd3e714cd3df4742f1df6ea829b0318ceeda37fc6c75d65d5da8939460820f0",
+    "state": "PASS",
+    "tests": 0
+  },
+  {
+    "elapsed_ms": 2998.875,
+    "exit_code": 0,
+    "file": "capacity-exact-sql.json",
+    "profiles": null,
+    "sha256": "63cb31f25e4058c411db1885af8c5a62d6656c5bd866baf019906f373038cb70",
+    "state": "PASS",
+    "tests": 0
+  },
+  {
+    "elapsed_ms": 42.151,
+    "exit_code": 0,
+    "file": "commercial-readiness-current.json",
+    "profiles": {
+      "COMMERCIAL_BETA": {
+        "blockers": [
+          "CUSTOMER_SIGNED_DISTRIBUTION",
+          "SECOND_TENANT_ISOLATION"
+        ],
+        "state": "HOLD"
+      },
+      "FOUNDER_TECHNICAL": {
+        "blockers": [],
+        "state": "PASS"
+      },
+      "GENERAL_AVAILABILITY": {
+        "blockers": [
+          "CUSTOMER_SIGNED_DISTRIBUTION",
+          "SECOND_TENANT_ISOLATION",
+          "WINDOWS_LIVE_PARITY",
+          "CLOUD_1000_TENANT_24H_SOAK",
+          "STRIPE_TEST_WEBHOOK_AND_ENTITLEMENT",
+          "OPENAI_PUBLIC_APPROVAL"
+        ],
+        "state": "HOLD"
+      }
+    },
+    "sha256": "23b3eeefd62f2ad686ef549644c438c8fbbd99562b2224df82c27fdbf44143e6",
+    "state": null,
+    "tests": 0
+  }
+]

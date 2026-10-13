@@ -1,0 +1,60 @@
+{
+  "real_cloudflare_clients_tested": 0,
+  "scope": "LOCAL_SQLITE_EXACT_WORKER_MAINTENANCE",
+  "state": "PASS",
+  "tests": [
+    {
+      "active_sessions_preserved": 10000,
+      "budget_exhausted": false,
+      "case": "mixed_backlog_10000_active_preserved",
+      "elapsed_ms": 0,
+      "indexed_cleanup": true,
+      "rounds": 13,
+      "scope": "AUTH_RETENTION",
+      "sessions_deleted": 2216,
+      "state": "PASS",
+      "transactions_deleted": 1205
+    },
+    {
+      "budget_exhausted": true,
+      "case": "hard_round_and_row_bounds",
+      "elapsed_ms": 0,
+      "rounds": 20,
+      "scope": "AUTH_RETENTION",
+      "sessions_deleted": 4000,
+      "sql_statements": 40,
+      "state": "PASS",
+      "transactions_deleted": 2000
+    },
+    {
+      "budget_exhausted": false,
+      "case": "empty_backlog_early_exit",
+      "elapsed_ms": 0,
+      "rounds": 1,
+      "scope": "AUTH_RETENTION",
+      "sessions_deleted": 0,
+      "state": "PASS",
+      "transactions_deleted": 0
+    },
+    {
+      "budget_exhausted": false,
+      "case": "database_failure_not_misreported_as_drained",
+      "elapsed_ms": 0,
+      "rounds": 1,
+      "scope": "AUTH_RETENTION",
+      "sessions_deleted": 0,
+      "state": "DEGRADED",
+      "transactions_deleted": 0
+    },
+    {
+      "budget_exhausted": true,
+      "case": "soft_time_budget_stops_next_round",
+      "elapsed_ms": 6000,
+      "rounds": 1,
+      "scope": "AUTH_RETENTION",
+      "sessions_deleted": 100,
+      "state": "PASS",
+      "transactions_deleted": 100
+    }
+  ]
+}

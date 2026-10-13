@@ -1,0 +1,20 @@
+{
+  "checks": [
+    {
+      "detected": true,
+      "exit_code": 1,
+      "isolated_temp_cleaned": true,
+      "mutation": "commit_charged_twice",
+      "production_modified": false
+    },
+    {
+      "detected": true,
+      "exit_code": 1,
+      "isolated_temp_cleaned": true,
+      "mutation": "foreign_subject_guard_removed",
+      "production_modified": false
+    }
+  ],
+  "mutants_detected": 2,
+  "state": "PASS"
+}

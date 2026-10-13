@@ -1,0 +1,53 @@
+{
+  "agent_version": "0.3.52",
+  "files": [
+    {
+      "bytes": 437,
+      "path": "README.md",
+      "sha256": "73f339bb05244b900c79853b2c8ad16e129a62865e9d1bfe49a3c86b85a8b8e1"
+    },
+    {
+      "bytes": 218938,
+      "path": "agent/linux.py",
+      "sha256": "3e0db700dd568a85e23212a5400f1d256546fef77b7f59f574ceed29e04c15b7"
+    },
+    {
+      "bytes": 98717,
+      "path": "agent/windows.ps1",
+      "sha256": "817325667ea552136efa10d807148fa4dc6d035aca24046c884f444a4fb61ebc"
+    },
+    {
+      "bytes": 36363,
+      "path": "install/linux.sh",
+      "sha256": "534e14433da9f86eb4342c6d9400e89ecf164545605e02e22f1646510284aba5"
+    },
+    {
+      "bytes": 23774,
+      "path": "install/windows.ps1",
+      "sha256": "7560c58b11200d1768ceba3162f5253bc0173b051f9ea3e9ebb6a323a89a31fa"
+    },
+    {
+      "bytes": 334,
+      "path": "release/SHA256SUMS",
+      "sha256": "78a213e5d6366de2b47268ac682fd04378591c52b85064f7eda0002381863d78"
+    },
+    {
+      "bytes": 765,
+      "path": "release/agent-manifest.json",
+      "sha256": "fd019aa722ea865781bab0ba2ee2d5e9483fec35fa6ae590fb74a33a4d88262b"
+    },
+    {
+      "bytes": 725,
+      "path": "release/agent-manifest.sig.json",
+      "sha256": "cc0420eb4eaca686774d0206be38e75a956c693292bc663d7a434cde7b802039"
+    },
+    {
+      "bytes": 624,
+      "path": "release/release-signing-public.jwk",
+      "sha256": "4e68608fa891f1b7a1e89c75936a089daeab0ba862a764f9bb31eca849cdfb9b"
+    }
+  ],
+  "public_distribution": "commercial-0.3.43-v3",
+  "schema": "hara.commander-private52-signature-scope.v1",
+  "scope": "PRIVATE_WINDOWS_FOUNDER_ONLY"
+}

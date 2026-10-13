@@ -1,0 +1,132 @@
+{
+  "agents_or_stripe_modified": false,
+  "assets": [
+    {
+      "bytes": 218938,
+      "current": true,
+      "path": "agent/linux.py",
+      "sha256": "3e0db700dd568a85e23212a5400f1d256546fef77b7f59f574ceed29e04c15b7",
+      "status": 200
+    },
+    {
+      "bytes": 60233,
+      "current": true,
+      "path": "agent/windows.ps1",
+      "sha256": "d507a6f91a635b025ef4f06cbd758a03c7da6f3410aadec9a3d76c28f904c6fb",
+      "status": 200
+    },
+    {
+      "bytes": 107708,
+      "current": true,
+      "path": "app.js",
+      "sha256": "7c3ec0b7bf6de107474cf674b8365136e91535a1929e8bf1af56fa12672c4a31",
+      "status": 200
+    },
+    {
+      "bytes": 25984,
+      "current": true,
+      "path": "assets/hara-commander-royal.webp",
+      "sha256": "e55b9218fc9ef540d1214509226af13c7e7906665e9ec247a92a40103f62ada3",
+      "status": 200
+    },
+    {
+      "bytes": 4810,
+      "current": true,
+      "path": "brand/chatgpt-official.webp",
+      "sha256": "bd18745b777ba0febad179ad581abbb7584951e0eea7c17d7a450b5838175ace",
+      "status": 200
+    },
+    {
+      "bytes": 3064,
+      "current": true,
+      "path": "brand/claude-official.svg",
+      "sha256": "059e22f525d67c6258c4f64514f0b0e717c914df8a706936d0299d5e6b8082d9",
+      "status": 200
+    },
+    {
+      "bytes": 44826,
+      "current": true,
+      "path": "index.html",
+      "sha256": "2c769906d1b51cd5eba4642582ec0401d3685299ebb5b6dc8b7887d50ab3a751",
+      "status": 200
+    },
+    {
+      "bytes": 36363,
+      "current": true,
+      "path": "install/linux.sh",
+      "sha256": "534e14433da9f86eb4342c6d9400e89ecf164545605e02e22f1646510284aba5",
+      "status": 200
+    },
+    {
+      "bytes": 23774,
+      "current": true,
+      "path": "install/windows.ps1",
+      "sha256": "d0f6d7e3a79a87e439a6275ebf60b2918ad5ccdbc28666ce18288644f3d595b9",
+      "status": 200
+    },
+    {
+      "bytes": 334,
+      "current": true,
+      "path": "release/SHA256SUMS",
+      "sha256": "696b0aee214561163a46ecd828da81d0cf5ab47eb967dd338e1c0de5bdf02ff9",
+      "status": 200
+    },
+    {
+      "bytes": 765,
+      "current": true,
+      "path": "release/agent-manifest.json",
+      "sha256": "72711a1099503e9c728e38162a6cf8aea17c783313d85fa486387bc537111092",
+      "status": 200
+    },
+    {
+      "bytes": 725,
+      "current": true,
+      "path": "release/agent-manifest.sig.json",
+      "sha256": "a2211fa308a07658f1d167da63605e423487cee57c7ae705272cd2cfd88545cf",
+      "status": 200
+    },
+    {
+      "bytes": 624,
+      "current": true,
+      "path": "release/release-signing-public.jwk",
+      "sha256": "4e68608fa891f1b7a1e89c75936a089daeab0ba862a764f9bb31eca849cdfb9b",
+      "status": 200
+    },
+    {
+      "bytes": 624,
+      "current": true,
+      "path": "release/v2/release-signing-public.jwk",
+      "sha256": "4e68608fa891f1b7a1e89c75936a089daeab0ba862a764f9bb31eca849cdfb9b",
+      "status": 200
+    },
+    {
+      "bytes": 105625,
+      "current": true,
+      "path": "styles.css",
+      "sha256": "6d3b87fb284060a4c387d9cd5046d68b9c01fb8d799079056983543e53ba8ddb",
+      "status": 200
+    }
+  ],
+  "at_utc": "2026-10-12T23:18:13.929475+00:00",
+  "compiled_identity_match": true,
+  "deployment": {
+    "created_on": "2026-10-12T23:08:24.770113Z",
+    "id": "a9680c55-bf22-4499-92cb-7ff2e2769cec",
+    "versions": [
+      {
+        "percentage": 100,
+        "version_id": "f5f667e4-1e65-4a84-a850-8fef6877598d"
+      }
+    ]
+  },
+  "keys_read_printed_exported": false,
+  "normal_urls": true,
+  "public_assets_current": 15,
+  "public_assets_total": 15,
+  "schema": "hara.commander-signed43-restoration-reconciled-readback.v1",
+  "signed_public_files_exact": 8,
+  "signed_public_release": "commercial-0.3.43-v3",
+  "state": "PASS",
+  "ui_preserved": true,
+  "worker_sha256": "9bfd38d5adb3e0b2d990f586683cbec1c211d0d06c5429d1309780395d0da7d6"
+}
