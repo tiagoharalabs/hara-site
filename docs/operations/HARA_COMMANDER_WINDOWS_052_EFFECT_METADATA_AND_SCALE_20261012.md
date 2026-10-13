@@ -43,6 +43,10 @@ Bundle: `apps/commander/release-bundles/commercial-0.3.52-v12-rc`.
 
 Assinatura RS256/RSA3072 pela autoridade existente `commander-release-v2`. A janela de aprovação permanece em 900 segundos; transporte UTF-8, proteção SHA-256, privacidade, instalador canônico e bytes Linux foram preservados. A chave privada não foi exportada nem publicada. Os validadores históricos 0.3.51 agora verificam a fonte congelada correspondente, e os validadores 0.3.52 verificam a candidata atual.
 
+O pacote também foi staged na VM em `C:\ProgramData\HaraLabs\CommanderWinLab\20261013\private-052-signed-root-r1`: verificação nativa PS5.1 de RS256/RSA3072, arquivos do manifesto, hashes, parsers, checksums e self-test **PASS**. Nove hashes de staging foram conferidos. Isso não instalou o Agent nem alterou perfil, tarefa ou sessão. Prova em `native-signed52-staging.json`; validador público de evidência em `native-signed52-validator.ps1`.
+
+Sessões gerenciadas Windows atualmente recebem comandos PowerShell. ConPTY e stdin interativo de aplicativos arbitrários permanecem critérios de homologação independentes.
+
 A VM atual mantém `SESSION_TRUSTED`, conforme configuração encontrada, sem alteração de consentimento. A instalação da 0.3.52 está em HOLD enquanto a sessão `HARA-PROC-aa74d04499a3456fb0d6b9affd6d6850` de outra frente estiver ativa. Após drenagem, ainda é necessário instalar o canário assinado e repetir pelo MCP real os campos de efeito, no-op e replay. As 520 provas nativas não são declaradas como esse rollout.
 
 ## Servidor em produção e otimização
@@ -51,7 +55,7 @@ Worker publicado em 13/10/2026 às 00:12:47 UTC (12/10 às 21:12 em São Paulo),
 
 Um novo `hostname` na VM pelo MCP real retornou exit0 e recibo `a64abf077d84a5a6a4bc27a313868872ab662850a94d16a6b3f59027638516f0`. A recuperação da chamada `HARA-CALL-4a0e98bd-2578-4293-b131-a3af7291ced3` preservou `PROCESS_EXECUTION` e o mesmo recibo, com conteúdo redigido, zero novas chamadas e zero unidades adicionais. O campo de efeito continua refletindo a resposta da 0.3.51; sua correção depende do canário 0.3.52 ainda não instalado.
 
-A validação histórica do pacote privado eliminou invocações recursivas duplicadas, mantendo a cadeia completa v3/Windows44–51 e os controles próprios da 52. No teste local, as 13 guardas caíram de 55,272s para 27,800s; o validador de assinatura caiu de 18,530s para 9,338s. Ambas passaram após a otimização. O gate completo também verifica v2 separadamente. O gate local 121/121 precedeu esta deduplicação; o CI hospedado deve confirmar o tree final.
+A validação histórica do pacote privado eliminou invocações recursivas duplicadas, mantendo a cadeia completa v3/Windows44–51 e os controles próprios da 52. No teste local, as 13 guardas caíram de 55,272s para 27,800s; o validador de assinatura caiu de 18,530s para 9,338s. Ambas passaram após a otimização. O gate completo também verifica v2 separadamente. O gate local 121/121 precedeu esta deduplicação; o CI hospedado confirmou **121/121 PASS** no código final `c1af6e03aa58b44ae11598e6b66f7ab61782f5e5`, incluindo a otimização. Run [38326755383](https://github.com/tiagoharalabs/hara-site/actions/runs/38326755383), concluído em 13/10 às00:23:06UTC. O tree de apps/commander validado é `e518efe26a7efe8f66f5c2d8085c9262234fa827`.
 
 ## Escala e frota
 
