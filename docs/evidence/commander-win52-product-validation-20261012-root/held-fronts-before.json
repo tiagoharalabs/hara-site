@@ -1,0 +1,34 @@
+{
+  "files": [
+    {
+      "path": "apps/commander/candidate/install_windows_rc.ps1",
+      "sha256": "ee6d392d1ad8b78877b426ccff94812e9968078c76f2f40bb8f87344e9023d4f"
+    },
+    {
+      "path": "apps/commander/experimental/event_v2_windows_agent.ps1",
+      "sha256": "a4dcf789a6b653b7f84281198f162626ea4a3fc518a381f9154bfd6b542ee260"
+    },
+    {
+      "path": "apps/commander/scripts/validate_windows_local_activity_store.py",
+      "sha256": "6251bfd1fe46c055fe75233a3bba1e10c7f5fe9925186375ce2b6ec0c536697e"
+    },
+    {
+      "path": "docs/operations/HARA_COMMANDER_WINDOWS_044_APPROVAL_AND_PTY_RC_20261012.md",
+      "sha256": "c7de159d407b6a13d694c3869745c3e7bf649b96a46a7d4a8b2aa32af067f888"
+    },
+    {
+      "path": "apps/commander/scripts/test_commander_commercial_readiness_gate.py",
+      "sha256": "a96d796312195730578dba9842cba0e53037ecba5ef9a4289d3488462ad7b7e3"
+    },
+    {
+      "path": "apps/commander/scripts/validate_event_v2_windows_ps51_compat.py",
+      "sha256": "9456b5d54343083a72b95694ae17695b67e75f9facebbbb972277f77d7a9d8ac"
+    },
+    {
+      "path": "docs/evidence/commander-win44-canary-20261011/acceptance.json",
+      "sha256": "a7e526d36db2ce88c221c4e0ca7f39e376564d418c3ce61eb9f775b1bd6cb8a8"
+    }
+  ],
+  "head": "0f918c302318663ee068d31da5df7688acdded9b",
+  "schema": "hara.commander-held-fronts-preservation.v1"
+}

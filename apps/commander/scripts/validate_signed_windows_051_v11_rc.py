@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify private Windows 0.3.51-v11 signature and strict active-source identity."""
+"""Verify private Windows 0.3.51-v11 signature and immutable historical source identity."""
 from __future__ import annotations
 import json
 from pathlib import Path
@@ -59,7 +59,9 @@ def main():
     for rel in ("agent/linux.py", "install/linux.sh"):
         need((NEW / rel).read_bytes() == (OLD / rel).read_bytes(),
              "LINUX_COMPONENT_CHANGED:" + rel)
-    agent, installer = release.final_source_verification()
+    agent = (NEW / "agent/windows.ps1").read_bytes()
+    need(release.signer.sha(agent) == release.APPROVED_SOURCE_SHA256, "HISTORICAL_SOURCE_HASH_DRIFT")
+    installer = release.expected_installer()
     need(b'$bytes=[Text.Encoding]::UTF8.GetBytes($json)' in agent and
          b'-ContentType "application/json; charset=utf-8"' in agent and b'-Body $bytes' in agent,
          "UTF8_TRANSPORT_REQUIRED")
@@ -74,7 +76,7 @@ def main():
         "state": "PASS", "agent_version": "0.3.51",
         "signature": "RS256_RSA3072", "authority": "commander-release-v2",
         "four_files_authenticated": True,
-        "active_windows_source_byte_identical": True,
+        "historical_windows_source_sha256_pinned": True,
         "utf8_json_transport_pinned": True,
         "linux_agent_byte_identical": True, "linux_installer_byte_identical": True,
         "old_v3_v4_v5_v6_v7_v8_v9_preserved": True, "approval_deadline_revalidation_pinned": True,

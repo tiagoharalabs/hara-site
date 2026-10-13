@@ -1,3 +1,19 @@
+# Estado atual — metadados em produção, Windows52 privado validado, escala local
+
+Atualização: 13/10/2026 UTC (12/10 São Paulo). MCP direto H.A.R.A. Commander.
+
+- Worker de metadados em produção: `99a19edb-d2cf-4806-8c98-861e4513a2f7`, replay real preservando risco/recibo, sem nova execução ou cobrança. Publicação assinada pública 0.3.43 e 15 assets preservados.
+- Windows 0.3.52 privado assinado: **520/520 nativo PS5.1 PASS**, fonte `817325667ea552136efa10d807148fa4dc6d035aca24046c884f444a4fb61ebc`. Corrige efeitos reais/no-op. VM atual **0.3.51/SESSION_TRUSTED**; instalação52 aguardando a sessão ativa de outra frente. Configuração de consentimento preservada.
+- Gate integrado local **121/121 PASS**, projeção/replay SQLite30/30. Guardas da assinatura otimizadas para 27,8s, com13/13 critérios mantidos; CI final pendente neste registro.
+- Escala local: classe TenantQuota real, 1.000 bancos simultâneos, 39.499 chamadas, **44.504 assertivas PASS**, cleanup1.000/1.000. Soak real de1.000 tenants/Agents24h ainda pendente; próximo aceite é segundo tenant DEV autenticado e isolado.
+- Frota Linux: **7/7 consultas novas PASS**; seis Agent0.3.46/EVENT_V2; sentinela-b realmente0.3.41/OUTBOUND_RELAY. A causa da divergência histórica não está comprovada. Sem upgrade de frota, reboot ou alteração de Stripe.
+
+[Resultados e limites da frente](../operations/HARA_COMMANDER_WINDOWS_052_EFFECT_METADATA_AND_SCALE_20261012.md). [Escala e aceites restantes](../operations/HARA_COMMANDER_SCALE_LOCAL_WORKLOAD_AND_ACCEPTANCE_GAPS_20261012.md). Evidências em `docs/evidence/commander-win52-product-validation-20261012-root/`.
+
+Os estados anteriores abaixo permanecem como histórico.
+
+---
+
 # H.A.R.A. Commander — CURRENT (12/10/2026; Windows51 núcleo funcional PASS)
 
 **Windows0.3.51 foi validado pelo H.A.R.A. Commander direto:** escrita UTF-8 com40 bytes/SHA exatos, CAS correto e hash antigo recusado, terminal interativo com Unicode e variáveis preservadas, saída após exit7, paginação, encerramento normal/forçado e recuperação do recibo anterior após reconexão. Fonte ativa4c563987986249d78c76258d062a4d360ffb88199539429ea97c2f346644656a corresponde à RC privada RS256; gate115/115PASS. Operação atual: **docs/operations/HARA_COMMANDER_WINDOWS_051_PRODUCT_VALIDATION_20261012.md**. Evidência própria: **docs/evidence/commander-win51-product-validation-20261012-root/real-mcp-acceptance.json**.

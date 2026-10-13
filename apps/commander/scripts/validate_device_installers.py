@@ -101,7 +101,7 @@ print("WINDOWS_INSTALLER_DEVICE_TOKEN_MEMORY_HYGIENE=PASS")
 assert MANIFEST.get("schema") == "hara.commander-agent-release.v1"
 assert MANIFEST.get("agent_version") == "0.3.41"
 assert 'AGENT_VERSION = "0.3.43"' in LINUX_AGENT
-assert '$AgentVersion = "0.3.51"' in WINDOWS_AGENT
+assert '$AgentVersion = "0.3.52"' in WINDOWS_AGENT
 entries = {item["path"]: item for item in MANIFEST.get("files", [])}
 for rel in ("agent/linux.py", "agent/windows.ps1", "install/linux.sh", "install/windows.ps1"):
     assert rel in entries, f"RELEASE_MANIFEST_MISSING:{rel}"

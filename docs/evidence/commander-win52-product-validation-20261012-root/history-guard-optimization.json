@@ -1,0 +1,74 @@
+{
+  "agent_source_changed": false,
+  "earlier_duplicate_guard_seconds": 55.272,
+  "earlier_duplicate_signature_validator_seconds": 18.53,
+  "latest_historical_validator": "validate_signed_windows_051_v11_rc.py",
+  "results": [
+    {
+      "exit_code": 0,
+      "result": {
+        "checks": 13,
+        "passed_checks": [
+          "UNTAMPERED_UNSIGNED_STAGE_ACCEPTED",
+          "NO_SIGNATURE_OR_KEY_OPERATION",
+          "STAGING_SOURCE_DRIFT:agent/linux.py",
+          "STAGING_SOURCE_DRIFT:agent/windows.ps1",
+          "STAGING_SOURCE_DRIFT:install/linux.sh",
+          "STAGING_SOURCE_DRIFT:install/windows.ps1",
+          "STAGING_MANIFEST_DRIFT",
+          "STAGING_KEY_DRIFT",
+          "STAGING_CHECKSUM_DRIFT",
+          "IMMUTABLE_RELEASE_TARGET_EXISTS",
+          "IMMUTABLE_RELEASE_TARGET_EXISTS",
+          "REJECTED_MUTATIONS_PRESERVE_REVIEWED_STAGE",
+          "SOURCE_INSTALLER_AND_LINUX_PRESERVED"
+        ],
+        "production_action_executed": false,
+        "schema": "hara.commander-windows052-unsigned-release-guards.v1",
+        "signing_performed": false,
+        "source_sha256": "817325667ea552136efa10d807148fa4dc6d035aca24046c884f444a4fb61ebc",
+        "state": "PASS"
+      },
+      "seconds": 27.8,
+      "state": "PASS",
+      "test": "test_windows_052_release_guards.py"
+    },
+    {
+      "exit_code": 0,
+      "result": {
+        "active_windows_source_byte_identical": true,
+        "agent_version": "0.3.52",
+        "approval_deadline_revalidation_pinned": true,
+        "approval_window_seconds": 900,
+        "authority": "commander-release-v2",
+        "customer_agent_modified": false,
+        "four_files_authenticated": true,
+        "linux_agent_byte_identical": true,
+        "linux_installer_byte_identical": true,
+        "old_v3_v4_v5_v6_v7_v8_v9_v10_v11_preserved": true,
+        "production_deployment": false,
+        "schema": "hara.commander-windows052-rc-signature-validation.v1",
+        "signature": "RS256_RSA3072",
+        "state": "PASS",
+        "utf8_json_transport_pinned": true
+      },
+      "seconds": 9.338,
+      "state": "PASS",
+      "test": "validate_signed_windows_052_v12_rc.py"
+    }
+  ],
+  "schema": "hara.commander-private52-history-dedup-validation.v1",
+  "state": "PASS",
+  "transitive_history": [
+    "v3",
+    "Windows44",
+    "Windows45",
+    "Windows46",
+    "Windows47",
+    "Windows48",
+    "Windows49",
+    "Windows50",
+    "Windows51"
+  ],
+  "v2_checked_separately_by_full_gate": true
+}

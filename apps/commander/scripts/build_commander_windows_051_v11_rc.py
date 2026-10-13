@@ -80,7 +80,7 @@ def pin_canonical_installer():
     return raw
 
 def expected_agent():
-    path = APP / "public/agent/windows.ps1"
+    path = APP / "release-bundles/commercial-0.3.51-v11-rc/agent/windows.ps1"
     if not path.is_file() or path.is_symlink():
         fail("CANONICAL_AGENT_INVALID")
     source = path.read_bytes()

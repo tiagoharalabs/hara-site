@@ -1,0 +1,112 @@
+{
+  "schema": "hara.commander-real-mcp-metadata-validation.v1",
+  "at_utc": "2026-10-13T00:15:47.063Z",
+  "worker_version_id": "99a19edb-d2cf-4806-8c98-861e4513a2f7",
+  "windows_agent_version": "0.3.51",
+  "original": {
+    "state": "PASS",
+    "operational_authority": "HARA_SERVICES",
+    "execution_authority": "HARA_COMMANDER_AGENT",
+    "runtime_authority_from_chatgpt": false,
+    "mutation_performed": false,
+    "result": {
+      "function_id": "process.run",
+      "risk_class": "PROCESS_EXECUTION",
+      "process_exit_code": 0,
+      "domain_success_inferred": false,
+      "stdout": "{\"timed_out\":false,\"session_retained\":false,\"command_sha256\":\"467e55cdc2ae7c8b53e54bdf65fc15fbfa02699c6a40ba54a7c5f1a583e7c4f9\",\"state\":\"EXITED\",\"exit_code\":0,\"cwd\":\"C:\\\\WINDOWS\\\\system32\",\"output_truncated\":false,\"text\":\"HARA_ROOT52_RELAY_LIVE\\r\\r\\nHARA_WIN11\\r\\r\\n\"}"
+    },
+    "customer_services_relay": false,
+    "bridge_receipt_sha256": "a64abf077d84a5a6a4bc27a313868872ab662850a94d16a6b3f59027638516f0",
+    "computer": "HARA_WIN11",
+    "product": {
+      "plan_code": "FOUNDER_INTERNAL",
+      "entitlement_id": "HARA-ENTITLEMENT-XPK",
+      "quota": {
+        "ok": true,
+        "state": "UNMETERED",
+        "mode": "UNMETERED",
+        "units": 0,
+        "cloud_quota_transaction": false
+      }
+    }
+  },
+  "redacted_replay": {
+    "schema": "hara.commander-call-result-metadata.v1",
+    "call_id": "HARA-CALL-4a0e98bd-2578-4293-b131-a3af7291ced3",
+    "request_id": "HARA-CUSTOMER-MCP-Ajybva2BpBokUpQgt55mBN7_mMsaQyOQwMJbfiM89j0",
+    "tool_id": "hara.process.run",
+    "call_state": "COMPLETED",
+    "state": "PASS",
+    "operational_authority": "HARA_SERVICES",
+    "execution_authority": null,
+    "runtime_authority_from_chatgpt": false,
+    "mutation_performed": false,
+    "customer_services_relay": null,
+    "bridge_receipt_sha256": "a64abf077d84a5a6a4bc27a313868872ab662850a94d16a6b3f59027638516f0",
+    "result": {
+      "function_id": "process.run",
+      "risk_class": "PROCESS_EXECUTION",
+      "process_exit_code": 0,
+      "domain_success_inferred": false,
+      "content_redacted": true
+    },
+    "error_code": null,
+    "replayed": true,
+    "content_redacted": true,
+    "computer": "HARA_WIN11",
+    "original_tool_id": "hara.process.run",
+    "retrieval": {
+      "operation": "CALL_STATUS_READ",
+      "read_only": true,
+      "new_call_enqueued": false,
+      "additional_usage_units": 0
+    },
+    "product": {
+      "quota": {
+        "mode": "UNMETERED",
+        "state": "UNMETERED",
+        "units": 0,
+        "period_key": "LIFETIME",
+        "budget_id": null,
+        "cloud_quota_transaction": false
+      }
+    }
+  },
+  "sessions_after": {
+    "state": "PASS",
+    "operational_authority": "HARA_SERVICES",
+    "execution_authority": "HARA_COMMANDER_AGENT",
+    "runtime_authority_from_chatgpt": false,
+    "mutation_performed": false,
+    "result": {
+      "function_id": "process.sessions",
+      "risk_class": "READ_ONLY",
+      "process_exit_code": 0,
+      "domain_success_inferred": false,
+      "stdout": "{\"count\":1,\"sessions\":[{\"finished_at_utc\":null,\"started_at_utc\":\"2026-10-12T23:15:11.7518238Z\",\"pid\":2732,\"buffer_truncated\":false,\"session_id\":\"HARA-PROC-aa74d04499a3456fb0d6b9affd6d6850\",\"state\":\"RUNNING\"}]}"
+    },
+    "customer_services_relay": false,
+    "bridge_receipt_sha256": "10c03bc40dd679833beaa34a8d321aab1440af7dd9d15b9b0e700171ae803e0e",
+    "computer": "HARA_WIN11",
+    "product": {
+      "plan_code": "FOUNDER_INTERNAL",
+      "entitlement_id": "HARA-ENTITLEMENT-XPK",
+      "quota": {
+        "ok": true,
+        "state": "UNMETERED",
+        "mode": "UNMETERED",
+        "units": 0,
+        "cloud_quota_transaction": false
+      }
+    }
+  },
+  "assertions": {
+    "original_and_replay_same_receipt": true,
+    "replay_risk_class_preserved": true,
+    "replay_content_redacted": true,
+    "new_call_enqueued": false,
+    "additional_usage_units": 0
+  },
+  "windows_actual_effect_fix_runtime": "NOT_INSTALLED_YET_OTHER_FRONT_SESSION_ACTIVE"
+}

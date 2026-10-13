@@ -15,7 +15,7 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_SOURCE = ROOT / "apps/commander/public/agent/windows.ps1"
+DEFAULT_SOURCE = ROOT / "apps/commander/release-bundles/commercial-0.3.51-v11-rc/agent/windows.ps1"
 HARNESS = Path(__file__).resolve().parent / "test_windows_operator_session_startup_fixture_051.ps1"
 SCOPE = "REAL_AST_SESSION_LOOKUP_AND_TOP_LEVEL_START_DISPATCH_SYNTHETIC_PROFILE_AND_BOUNDARIES"
 LABELS = (
