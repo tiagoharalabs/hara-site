@@ -819,8 +819,7 @@ Wants=network-online.target
 [Service]
 Type=simple
 ExecStart=$AGENT
-# The service may restart after a failure only while explicitly started.
-# It is NOT enabled at boot by the installer.
+# The enrolled agent reconnects after reboot; command approvals remain scoped.
 Restart=on-failure
 RestartSec=5
 NoNewPrivileges=yes
@@ -832,14 +831,30 @@ EOF
 chmod 600 "$UNIT"
 
 systemctl --user daemon-reload
-# New customer: run immediately for installation attestation, but never
-# enable automatic start on future logins or reboots.
-systemctl --user disable "$SERVICE" >/dev/null 2>&1 || true
-systemctl --user start "$SERVICE"
-if systemctl --user is-enabled --quiet "$SERVICE"; then
-  echo 'AGENT_MANUAL_START_POLICY_VIOLATED' >&2
-  exit 8
-fi
+# Persist the enrolled device identity across restarts without weakening the
+# per-action approval policy. Manual-only remains an explicit advanced option.
+AGENT_AUTOSTART="${HARA_COMMANDER_AGENT_AUTOSTART:-ON}"
+case "$AGENT_AUTOSTART" in
+  ON)
+    systemctl --user enable --now "$SERVICE"
+    if ! systemctl --user is-enabled --quiet "$SERVICE"; then
+      echo 'AGENT_AUTOSTART_ENABLE_FAILED' >&2
+      exit 8
+    fi
+    # Keep the user manager available after logoff where logind permits it.
+    if command -v loginctl >/dev/null 2>&1; then
+      loginctl enable-linger "$(id -un)" >/dev/null 2>&1 || true
+    fi
+    ;;
+  OFF)
+    systemctl --user disable "$SERVICE" >/dev/null 2>&1 || true
+    systemctl --user start "$SERVICE"
+    ;;
+  *)
+    echo 'INVALID_AGENT_AUTOSTART_MODE' >&2
+    exit 8
+    ;;
+esac
 
 sleep 1
 if ! systemctl --user is-active --quiet hara-commander-agent.service || ! wait_for_agent_startup "$expected_version" ""; then
@@ -853,8 +868,8 @@ trap - EXIT
 unset DEVICE_TOKEN
 printf 'HARA_COMMANDER_DEVICE_ENROLLMENT=PASS\n'
 printf 'HARA_COMMANDER_AGENT_SERVICE=ACTIVE_LOCAL_CONTROL_PLANE\n'
-printf 'HARA_COMMANDER_AGENT_AUTOSTART=OFF\n'
-printf 'HARA_COMMANDER_AGENT_START_MODE=MANUAL_AFTER_INSTALL\n'
+printf 'HARA_COMMANDER_AGENT_AUTOSTART=%s\n' "$AGENT_AUTOSTART"
+printf 'HARA_COMMANDER_AGENT_START_MODE=%s\n' "$([ "$AGENT_AUTOSTART" = ON ] && echo AUTO_RECONNECT || echo MANUAL)"
 printf 'DEVICE_ID=%s\n' "$DEVICE_ID"
 printf 'DEVICE_TOKEN_EXPOSED=FALSE\n'
 printf 'HARA_COMMANDER_APPROVAL_MODE=%s\n' "$APPROVAL_MODE"
@@ -870,7 +885,7 @@ if [ "$TRANSPORT_MODE" = "LOCAL_TUNNEL" ]; then
 else
   printf 'HARA_COMMANDER_CLOUD_PLUGIN_MODE=TRUE\n'
   printf 'OPENAI_PLATFORM_API_KEY_REQUIRED=FALSE\n'
-  printf 'NEXT_STEP=Abra hara-commander start no terminal para conectar e autorizar a sessão; depois conecte o plugin via HARA Identity OAuth\n'
+  printf 'NEXT_STEP=Conecte o ChatGPT ao HARA Commander e entre pelo HARA Identity\n'
   printf 'CUSTOMER_MCP_ENDPOINT=https://commander.haralabs.com.br/api/mcp?profile=simple\n'
 fi
 printf 'OPERATOR_SESSION_COMMAND=hara-commander start\n'

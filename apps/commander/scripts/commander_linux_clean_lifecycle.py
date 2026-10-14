@@ -299,7 +299,7 @@ def execute(signed_stage: Path | None = None) -> int:
         stage = signed_stage.resolve()
         if not str(stage).startswith("/tmp_hara/"):
             raise RuntimeError("SIGNED_STAGE_OUTSIDE_PRIVATE_TMP")
-        verifier = ROOT / "apps/commander/scripts/build_commander_commercial_signed_v2.py"
+        verifier = ROOT / "apps/commander/scripts/build_commander_commercial_autoreconnect_signed.py"
         subprocess.run(["python3","-B",str(verifier),"verify","--stage",str(stage)],
                        check=True,stdout=subprocess.DEVNULL,timeout=20)
         path = stage / "apps/commander/public"
@@ -330,6 +330,10 @@ def execute(signed_stage: Path | None = None) -> int:
             systemctl = fakebin / "systemctl"
             systemctl.write_text(FAKE_SYSTEMCTL, encoding="utf-8")
             systemctl.chmod(0o700)
+            # Never touch host logind during an isolated installer test.
+            loginctl = fakebin / "loginctl"
+            loginctl.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            loginctl.chmod(0o700)
             test_installer=root/"linux-installer-ephemeral-test.sh"
             test_installer.write_text(mock_installer,encoding="utf-8")
             test_installer.chmod(0o700)
@@ -362,14 +366,14 @@ def execute(signed_stage: Path | None = None) -> int:
             cfg1 = parse_config(cfg_path)
             assert cfg1["HARA_DEVICE_ID"] == "HARA-CLEAN-DEVICE-1"
             assert cfg1["HARA_DEVICE_TOKEN"] == "HARA-CLEAN-TOKEN-1"
-            # A fresh customer stays connected only for the first install;
-            # no enable symlink may make the service return after reboot.
+            # Fresh installs must reconnect after a reboot, but not
+            # silently grant operations: action consent is still separate.
             fake_state=home/".hara-clean-systemctl"
             assert (fake_state/"active").exists(), "INSTALL_MUST_START_ONCE"
-            assert not (fake_state/"enabled").exists(), "BOOT_AUTOSTART_FORBIDDEN"
-            assert "HARA_COMMANDER_AGENT_AUTOSTART=OFF" in install_out
+            assert (fake_state/"enabled").exists(), "BOOT_AUTOSTART_REQUIRED"
+            assert "HARA_COMMANDER_AGENT_AUTOSTART=ON" in install_out
             print("COMMANDER_CLEAN_LINUX_INSTALL=PASS")
-            print("COMMANDER_CLEAN_LINUX_MANUAL_BOOT_POLICY=PASS")
+            print("COMMANDER_CLEAN_LINUX_AUTO_RECONNECT_POLICY=PASS")
 
             # Emulate the service being stopped/rebooted. Updating an offline
             # customer must not silently reconnect them.
@@ -379,12 +383,12 @@ def execute(signed_stage: Path | None = None) -> int:
             assert offline_update.returncode==0,offline_update.stdout
             assert "HARA_COMMANDER_AGENT_UPDATE_SERVICE_WAS_ACTIVE=FALSE" in offline_update.stdout
             assert not (fake_state/"active").exists()
-            assert not (fake_state/"enabled").exists()
+            assert (fake_state/"enabled").exists(), "OFFLINE_UPDATE_REMOVED_AUTOSTART"
             print("COMMANDER_CLEAN_LINUX_STOPPED_UPDATE_PRESERVES_OFFLINE=PASS")
 
             start=run(["systemctl","--user","start","hara-commander-agent.service"],env)
             assert start.returncode==0 and (fake_state/"active").exists()
-            assert not (fake_state/"enabled").exists()
+            assert (fake_state/"enabled").exists(), "MANUAL_START_REMOVED_AUTOSTART"
             print("COMMANDER_CLEAN_LINUX_MANUAL_RESTART=PASS")
 
             support = run(["bash", str(test_installer), "support"], env)
@@ -400,7 +404,7 @@ def execute(signed_stage: Path | None = None) -> int:
             assert "HARA_COMMANDER_AGENT_UPDATE=PASS" in update.stdout
             assert "HARA_COMMANDER_AGENT_UPDATE_ROLLBACK_READY=TRUE" in update.stdout
             assert "HARA_COMMANDER_AGENT_UPDATE_SERVICE_WAS_ACTIVE=TRUE" in update.stdout
-            assert not (fake_state/"enabled").exists()
+            assert (fake_state/"enabled").exists(), "ONLINE_UPDATE_REMOVED_AUTOSTART"
             print("COMMANDER_CLEAN_LINUX_UPDATE=PASS")
 
             state.tokens["HARA-CLEAN-TOKEN-1"]["revoked"] = True
