@@ -53,7 +53,7 @@ def need(condition, code):
 
 def main():
     parser = argparse.ArgumentParser(description="Probe live HARA Identity registration and commercial MCP readiness, without credentials")
-    parser.add_argument("--expect", choices=("closed", "guarded"), default="closed")
+    parser.add_argument("--expect", choices=("closed", "guarded"), default="guarded")
     parser.add_argument("--require-ready", action="store_true")
     args = parser.parse_args()
 
