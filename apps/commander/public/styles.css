@@ -1760,3 +1760,127 @@ html[data-theme="dark"] [data-view="devices"] .devices-command-note{
     max-width:100%;
   }
 }
+
+/* Click & Go — narrow, centered installation experience. */
+.app-view[data-view="devices"] .workspace-main {
+  display:flex;flex-direction:column;align-items:center;
+  padding:clamp(26px,4vh,52px) clamp(16px,3vw,48px) 70px;
+}
+.app-view[data-view="devices"] .devices-section-tabs,
+.app-view[data-view="devices"] .devices-section-panel{
+  width:min(100%,1020px);max-width:1020px;margin-inline:auto;
+}
+.app-view[data-view="devices"] .devices-section-tabs{
+  display:flex;justify-content:center;align-items:center;
+  gap:clamp(14px,3vw,36px);margin-bottom:23px;
+}
+.app-view[data-view="devices"] .devices-section-tabs button{
+  font-size:13px;font-weight:700;padding:8px 2px 12px;
+}
+.app-view[data-view="devices"] [data-device-section-panel="connect"]{
+  width:min(100%,720px);max-width:720px;
+}
+.app-view[data-view="devices"] .device-onboarding{
+  width:100%;display:block;margin:0 auto;
+}
+.app-view[data-view="devices"] .device-onboarding-flow{
+  max-width:720px;width:100%;margin:0 auto;
+  padding:clamp(22px,4vw,42px);
+  border-radius:20px;box-shadow:0 16px 56px rgba(0,0,0,.08);
+}
+.app-view[data-view="devices"] .device-onboarding-flow .panel-head{
+  display:flex;flex-direction:column;align-items:center;
+  text-align:center;gap:8px;margin-bottom:10px;
+}
+.app-view[data-view="devices"] .device-onboarding-flow .panel-head h2{
+  font-size:clamp(24px,3vw,30px);line-height:1.18;
+}
+.app-view[data-view="devices"] .device-onboarding-flow .panel-head .status-pill{display:none}
+.app-view[data-view="devices"] .device-onboarding-flow > p {
+  text-align:center;max-width:48ch;margin:0 auto 22px;
+  font-size:14px;line-height:1.6;white-space:normal;
+}
+.app-view[data-view="devices"] .device-onboarding-flow .onboarding-step,
+.app-view[data-view="devices"] .device-onboarding-flow .onboarding-finish{
+  padding:20px 0;gap:14px;
+}
+.app-view[data-view="devices"] .device-onboarding-flow .onboarding-step b {
+  font-size:15px;letter-spacing:-.01em;
+}
+.app-view[data-view="devices"] .device-onboarding-flow .onboarding-step small{
+  font-size:12px;line-height:1.5;
+}
+.app-view[data-view="devices"] .onboarding-step-no {
+  width:32px;height:32px;border-radius:50%;font-size:11px;
+}
+.app-view[data-view="devices"] .device-onboarding-flow .onboarding-platform-policy > .install-note{
+  display:none;
+}
+.app-view[data-view="devices"] .device-onboarding-flow .onboarding-choice-row{
+  margin-top:6px;
+}
+.app-view[data-view="devices"] .device-onboarding-flow .os-picker button{
+  min-width:88px;padding:11px 16px;font-size:13px;
+}
+.app-view[data-view="devices"] .device-onboarding-flow .install-command{
+  position:relative;display:flex;align-items:center;
+  justify-content:center;max-width:100%;margin-top:8px;
+}
+.app-view[data-view="devices"] .device-onboarding-flow .install-command code {
+  position:absolute!important;width:1px!important;height:1px!important;
+  overflow:hidden!important;clip-path:inset(50%);white-space:nowrap;
+}
+.app-view[data-view="devices"] .device-onboarding-flow .install-command .btn{
+  width:100%;min-height:46px;padding:12px 18px;
+  font-size:13px;background:var(--gold);border-color:transparent;
+  color:#08283e;font-weight:800;
+}
+.app-view[data-view="devices"] .device-onboarding-flow [data-create-pairing]{
+  min-height:43px;padding-inline:20px;
+}
+.app-view[data-view="devices"] .device-onboarding-flow .pairing-inline{
+  text-align:center;border-radius:12px;padding:18px;
+}
+.app-view[data-view="devices"] .device-onboarding-flow .pairing-token{
+  display:flex;justify-content:center;align-items:center;
+  gap:12px;flex-wrap:wrap;
+}
+.app-view[data-view="devices"] .device-onboarding-flow .pairing-token code{
+  font-size:clamp(17px,2.4vw,23px);letter-spacing:.1em;
+  font-weight:850;overflow-wrap:anywhere;
+}
+.app-view[data-view="devices"] .device-onboarding-flow .devices-repo-link,
+.app-view[data-view="devices"] .device-onboarding-flow .devices-token-reminder,
+.app-view[data-view="devices"] .device-onboarding-flow [data-cloud-onboarding-note] {
+  display:none;
+}
+.app-view[data-view="devices"] .device-onboarding-flow .onboarding-finish {
+  text-align:center;display:block;
+}
+.app-view[data-view="devices"] .device-onboarding-flow .onboarding-finish small {
+  font-size:12px;
+}
+.app-view[data-view="usage"] .workspace-main,
+.app-view[data-view="plans"] .workspace-main,
+.app-view[data-view="security"] .workspace-main{
+  display:flex;flex-direction:column;align-items:center;
+  padding:clamp(26px,4vh,52px) clamp(16px,3vw,48px) 70px;
+}
+.app-view[data-view="usage"] .workspace-main > *,
+.app-view[data-view="security"] .workspace-main > *,
+.app-view[data-view="plans"] .workspace-main > *{
+  width:min(100%,1050px);margin-inline:auto;
+}
+@media(max-width:760px){
+  .app-view[data-view="devices"] .workspace-main{padding:22px 14px 55px}
+  .app-view[data-view="devices"] .devices-section-tabs{gap:12px;flex-wrap:nowrap}
+  .app-view[data-view="devices"] .devices-section-tabs button{font-size:11px}
+  .app-view[data-view="devices"] .device-onboarding-flow{padding:22px 18px}
+  .app-view[data-view="devices"] .device-onboarding-flow .onboarding-step,
+  .app-view[data-view="devices"] .device-onboarding-flow .onboarding-finish{
+    grid-template-columns:32px minmax(0,1fr);
+  }
+  .app-view[data-view="devices"] .device-onboarding-flow .onboarding-step > .btn{
+    grid-column:2;justify-self:stretch;
+  }
+}

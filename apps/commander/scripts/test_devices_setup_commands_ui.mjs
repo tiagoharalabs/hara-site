@@ -34,7 +34,7 @@ console.log("COMMANDER_SETUP_THREE_TABS_NO_DUPLICATE_ONBOARDING=PASS");
 const onboarding=section.split('data-device-section-panel="connect"')[1]
   .split('data-device-section-panel="commands"')[0];
 for(const marker of [
-  'Escolha o sistema', 'Gere o código no portal', 'Instale no computador',
+  'Escolha o sistema', 'Seu código de conexão', 'Instale no seu computador',
   'data-create-pairing', 'id="pairingPanel"', 'id="pairingToken"',
   'data-copy-pairing', 'data-install-linux-code', 'data-install-windows-code',
   'Pairing token', 'data-os-choice="linux"', 'data-os-choice="windows"',
@@ -42,9 +42,9 @@ for(const marker of [
   assert.ok(onboarding.includes(marker),"ONBOARDING_MISSING:"+marker);
 }
 assert.ok(onboarding.indexOf('Escolha o sistema')<
-  onboarding.indexOf('Gere o código no portal'));
-assert.ok(onboarding.indexOf('Gere o código no portal')<
-  onboarding.indexOf('Instale no computador'));
+  onboarding.indexOf('Seu código de conexão'));
+assert.ok(onboarding.indexOf('Seu código de conexão')<
+  onboarding.indexOf('Instale no seu computador'));
 assert.ok(onboarding.indexOf('data-create-pairing')<
   onboarding.indexOf('data-install-linux-code'));
 assert.equal((onboarding.match(/data-create-pairing/g)||[]).length,1);

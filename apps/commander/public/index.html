@@ -267,10 +267,10 @@
               Dispositivos
             </button>
             <button type="button" role="tab" aria-selected="false" tabindex="-1" data-device-section-tab="connect">
-              <span aria-hidden="true">＋</span> Conectar novo
+              <span aria-hidden="true">＋</span> Adicionar
             </button>
             <button type="button" role="tab" aria-selected="false" tabindex="-1" data-device-section-tab="commands">
-              Comandos e integrações
+              Avançado
             </button>
           </div>
 
@@ -301,14 +301,14 @@
             <div class="device-onboarding">
               <article class="panel device-install-card device-onboarding-flow">
                 <div class="panel-head">
-                  <div><span>NOVO DISPOSITIVO</span><h2>Instalar e parear</h2></div>
+                  <div><span>COMECE AQUI</span><h2>Conecte seu computador</h2></div>
                   <span class="status-pill"><i></i> Pronto para instalar</span>
                 </div>
-                <p>Escolha o sistema, gere o código e execute o instalador. Informe o token apenas quando solicitado.</p>
+                <p>Instale, copie seu código e pronto.</p>
 
                 <div class="onboarding-step onboarding-step-stack onboarding-platform-policy">
                   <span class="onboarding-step-no">01</span>
-                  <div><b>Escolha o sistema</b><small>Linux ou Windows. O instalador oficial é baixado por HTTPS e verifica a release assinada.</small></div>
+                  <div><b>Escolha o sistema</b><small>Escolha onde você quer usar o Commander.</small></div>
                   <div class="onboarding-choice-row">
                     <div>
                       <small class="choice-label">Sistema</small>
@@ -337,7 +337,7 @@
 
                 <div class="onboarding-step">
                   <span class="onboarding-step-no">02</span>
-                  <div><b>Gere o código no portal</b><small>Copie e cole quando o instalador solicitar “Pairing token”. Uso único, válido por até 10 minutos.</small></div>
+                  <div><b>Seu código de conexão</b><small>Copie e cole quando o instalador solicitar “Pairing token”. Uso único, válido por até 10 minutos.</small></div>
                   <button class="btn btn-primary" type="button" data-create-pairing>Gerar código</button>
                 </div>
 
@@ -348,14 +348,14 @@
 
                 <div class="onboarding-step onboarding-step-stack">
                   <span class="onboarding-step-no">03</span>
-                  <div><b>Instale no computador</b><small>Copie o comando para o Terminal Linux ou PowerShell Windows. A instalação baixa a release oficial assinada por HTTPS. <a class="devices-repo-link" href="https://github.com/tiagoharalabs/hara-site/tree/hara-commander-commercial-v0.3.43-signed-v2/apps/commander/release-bundles/commercial-0.3.43-v2" target="_blank" rel="noopener noreferrer">Ver a distribuição assinada no GitHub ↗</a></small></div>
+                  <div><b>Instale no seu computador</b><small>Copie o comando para o Terminal Linux ou PowerShell Windows. A instalação baixa a release oficial assinada por HTTPS. <a class="devices-repo-link" href="https://github.com/tiagoharalabs/hara-site/tree/hara-commander-commercial-v0.3.43-signed-v2/apps/commander/release-bundles/commercial-0.3.43-v2" target="_blank" rel="noopener noreferrer">Ver a distribuição assinada no GitHub ↗</a></small></div>
                   <div class="install-pane" data-os-panel="linux">
-                    <div class="install-command"><code data-install-linux-code>(tmp=$(mktemp) && trap 'rm -f $tmp' EXIT && curl -fsS --proto '=https' --tlsv1.2 --location --max-redirs 0 https://commander.haralabs.com.br/install/linux.sh -o $tmp && HARA_COMMANDER_APPROVAL_MODE=ASK_EVERY_ACTION HARA_COMMANDER_TRANSPORT_MODE=OUTBOUND_RELAY HARA_COMMANDER_TUNNEL_AUTOSTART=OFF HARA_COMMANDER_URL=https://commander.haralabs.com.br bash $tmp)</code><button class="btn btn-secondary small" type="button" data-copy-linux>Copiar comando Linux</button></div>
+                    <div class="install-command"><code data-install-linux-code>(tmp=$(mktemp) && trap 'rm -f $tmp' EXIT && curl -fsS --proto '=https' --tlsv1.2 --location --max-redirs 0 https://commander.haralabs.com.br/install/linux.sh -o $tmp && HARA_COMMANDER_APPROVAL_MODE=ASK_EVERY_ACTION HARA_COMMANDER_TRANSPORT_MODE=OUTBOUND_RELAY HARA_COMMANDER_TUNNEL_AUTOSTART=OFF HARA_COMMANDER_URL=https://commander.haralabs.com.br bash $tmp)</code><button class="btn btn-secondary small" type="button" data-copy-linux>Copiar instalador Linux</button></div>
                     <small class="install-note" data-cloud-onboarding-note>Para conectar o ChatGPT depois do pareamento, abra <b>Comandos e integrações → MCP remoto</b> e autentique pelo HARA Identity.</small><small class="install-note" data-direct-onboarding-note hidden>Modo Direct: após parear, abra <b>Comandos e integrações → Direct</b> para configurar e autorizar o túnel OpenAI por 6 horas. Requer credenciais próprias da OpenAI Platform.</small>
                     <small class="install-note devices-token-reminder">Quando aparecer <b>Pairing token</b>, cole o código do passo 02 e pressione Enter. Depois, abra <b>Comandos e integrações</b> para iniciar ou parar as próximas sessões.</small>
                   </div>
                   <div class="install-pane" data-os-panel="windows" hidden>
-                    <div class="install-command"><code data-install-windows-code>$haraPrevUrl=$env:HARA_COMMANDER_URL; $haraPrevApproval=$env:HARA_COMMANDER_APPROVAL_MODE; $haraInstaller=Join-Path $env:TEMP ('hara-commander-install-'+[guid]::NewGuid().ToString('N')+'.ps1'); try { $env:HARA_COMMANDER_URL='https://commander.haralabs.com.br'; $env:HARA_COMMANDER_APPROVAL_MODE='ASK_EVERY_ACTION'; Invoke-WebRequest -Uri https://commander.haralabs.com.br/install/windows.ps1 -OutFile $haraInstaller -UseBasicParsing -MaximumRedirection 0 -ErrorAction Stop; & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $haraInstaller; if ($LASTEXITCODE -ne 0) { throw ('HARA_COMMANDER_INSTALL_EXIT_'+$LASTEXITCODE) } } finally { Remove-Item -LiteralPath $haraInstaller -Force -ErrorAction SilentlyContinue; $env:HARA_COMMANDER_URL=$haraPrevUrl; $env:HARA_COMMANDER_APPROVAL_MODE=$haraPrevApproval }</code><button class="btn btn-secondary small" type="button" data-copy-windows>Copiar comando Windows</button></div>
+                    <div class="install-command"><code data-install-windows-code>$haraPrevUrl=$env:HARA_COMMANDER_URL; $haraPrevApproval=$env:HARA_COMMANDER_APPROVAL_MODE; $haraInstaller=Join-Path $env:TEMP ('hara-commander-install-'+[guid]::NewGuid().ToString('N')+'.ps1'); try { $env:HARA_COMMANDER_URL='https://commander.haralabs.com.br'; $env:HARA_COMMANDER_APPROVAL_MODE='ASK_EVERY_ACTION'; Invoke-WebRequest -Uri https://commander.haralabs.com.br/install/windows.ps1 -OutFile $haraInstaller -UseBasicParsing -MaximumRedirection 0 -ErrorAction Stop; & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $haraInstaller; if ($LASTEXITCODE -ne 0) { throw ('HARA_COMMANDER_INSTALL_EXIT_'+$LASTEXITCODE) } } finally { Remove-Item -LiteralPath $haraInstaller -Force -ErrorAction SilentlyContinue; $env:HARA_COMMANDER_URL=$haraPrevUrl; $env:HARA_COMMANDER_APPROVAL_MODE=$haraPrevApproval }</code><button class="btn btn-secondary small" type="button" data-copy-windows>Copiar instalador Windows</button></div>
                     <small class="install-note devices-token-reminder">O PowerShell solicitará <b>Pairing token</b> em campo protegido. Cole o código do passo 02. Para sessões futuras, use a aba <b>Comandos e integrações</b>.</small>
                   </div>
                 </div>
