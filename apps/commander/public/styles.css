@@ -1910,3 +1910,213 @@ html[data-theme="dark"] [data-view="devices"] .devices-command-note{
   .app-view[data-view="devices"] .device-onboarding-flow .onboarding-platform-policy > .onboarding-choice-row{margin-top:0}
   .app-view[data-view="devices"] .device-onboarding-flow .install-command{margin-top:0}
 }
+
+
+/* Compact customer UX — centered Usage and a separate Help destination.
+   Billing and product Agent/runtime styling remain unchanged. */
+@media(min-width:761px){
+  .side-nav-simple{flex:1;min-height:100%}
+  .side-nav-simple>.sidebar-help-action{margin-top:auto}
+}
+.app-view[data-view="usage"] .workspace-main{
+  justify-content:center;
+  min-height:calc(100vh - 74px);
+  min-height:calc(100dvh - 74px);
+  padding-block:clamp(28px,5vh,64px);
+}
+.app-view[data-view="usage"] .workspace-main>*{width:min(100%,1050px)}
+.app-view[data-view="usage"] .quota-hero{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(155px,220px);
+  align-items:center;gap:clamp(24px,4vw,60px);
+  padding:30px 34px;
+}
+.app-view[data-view="usage"] .quota-hero>div:first-child{min-width:0}
+.app-view[data-view="usage"] .quota-hero>div:first-child>.progress{max-width:410px}
+.app-view[data-view="usage"] .quota-meta{
+  display:block;flex:none;width:100%;align-self:center;min-width:0;
+}
+.app-view[data-view="usage"] .quota-meta>span{
+  display:flex;flex-direction:column;gap:7px;min-height:78px;
+  justify-content:center;padding:17px 19px;
+  border-radius:12px;background:rgba(255,255,255,.065);
+}
+.app-view[data-view="usage"] .quota-hero>div:first-child>span{
+  font-size:12px;font-weight:650;letter-spacing:.015em;
+}
+.app-view[data-view="usage"] .quota-hero strong{font-size:clamp(30px,3vw,38px)}
+.app-view[data-view="usage"] .quota-hero strong>span{font-size:inherit;color:inherit;line-height:1.1}
+.app-view[data-view="usage"] .quota-meta small{font-size:11px;color:#a1c7da}
+.app-view[data-view="usage"] .quota-meta b{font-size:16px;color:#edf8ff}
+.app-view[data-view="usage"] .quota-hero small{font-size:11px;line-height:1.5}
+.app-view[data-view="usage"] .usage-product-grid{
+  margin-top:20px;gap:14px;
+}
+.app-view[data-view="usage"] .usage-product-grid .summary-card{
+  padding:22px 19px;min-height:150px;
+}
+.app-view[data-view="usage"] .usage-product-grid .summary-card span{font-size:12px}
+.app-view[data-view="usage"] .usage-product-grid .summary-card small{font-size:11px;line-height:1.45}
+.app-view[data-view="usage"] .activity-privacy-note{
+  max-width:1050px;font-size:10.5px;line-height:1.65;margin-top:15px;
+}
+@media(max-height:700px), (max-width:1100px){
+  .app-view[data-view="usage"] .workspace-main{justify-content:flex-start}
+}
+@media(max-width:760px){
+  .app-view[data-view="usage"] .workspace-main{min-height:0;padding:20px 16px 104px}
+  .app-view[data-view="usage"] .quota-hero{grid-template-columns:1fr;gap:18px;padding:23px 21px}
+  .app-view[data-view="usage"] .quota-meta>span{min-height:64px}
+}
+/* The Help item stays at the bottom on desktop, remains reachable on mobile. */
+@media(max-width:760px){
+  .workspace-mode .side-nav{grid-template-columns:repeat(5,minmax(0,1fr))}
+  .workspace-mode .side-nav>.sidebar-help-action{
+    margin-top:0;min-width:0;justify-content:center;flex-direction:column;gap:4px;
+    padding:7px 2px;font-size:9px;white-space:nowrap;
+  }
+  .workspace-mode .side-nav{min-height:0;flex:none}
+}
+/* Equal-height two-column settings grid; drop dated separators, increase readability. */
+.app-view[data-view="security"] .settings-grid{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:16px;align-items:stretch;
+}
+.app-view[data-view="security"] .settings-card{
+  min-width:0;padding:24px 26px;border-radius:16px;
+}
+.app-view[data-view="security"] .settings-card.full-panel{grid-column:1/-1}
+.app-view[data-view="security"] .settings-card .panel-head h2{
+  font-size:clamp(18px,1.5vw,21px);line-height:1.3;
+}
+.app-view[data-view="security"] .settings-card .panel-head span{font-size:11px}
+.app-view[data-view="security"] .settings-connection-list{
+  gap:12px;margin-top:18px;
+}
+.app-view[data-view="security"] .settings-connection-list>div{
+  grid-template-columns:50px minmax(0,1fr) auto;
+  gap:17px;border:0;border-radius:12px;
+  padding:15px 16px;
+  background:rgba(60,155,205,.055);
+}
+.app-view[data-view="security"] .settings-connection-list .where-badge{
+  width:43px;height:43px;font-size:11px;border-radius:11px;
+}
+.app-view[data-view="security"] .settings-connection-list b{
+  font-size:14px;line-height:1.3;
+}
+.app-view[data-view="security"] .settings-connection-list small{
+  font-size:12px;line-height:1.45;
+}
+.app-view[data-view="security"] .settings-connection-list .btn{
+  font-size:12px;min-height:40px;
+}
+.app-view[data-view="security"] .settings-card dl{
+  gap:9px;margin-top:17px;
+}
+.app-view[data-view="security"] .settings-card dl>div{
+  display:grid;grid-template-columns:minmax(100px,.6fr) minmax(0,1.4fr);
+  align-items:center;gap:12px;border:0;padding:5px 0;
+}
+.app-view[data-view="security"] .settings-card dt{
+  font-size:12.5px;color:var(--muted);
+}
+.app-view[data-view="security"] .settings-card dd{
+  text-align:right;font-size:12.5px;line-height:1.4;
+  overflow-wrap:anywhere;
+}
+.app-view[data-view="security"] .settings-check-list{
+  gap:13px;margin-top:18px;
+}
+.app-view[data-view="security"] .settings-check-list li{
+  font-size:12.5px;line-height:1.5;
+}
+.app-view[data-view="security"] .session{
+  border:0;padding:19px 0 0;
+  grid-template-columns:8px minmax(0,1fr) auto;
+  gap:13px;
+}
+.app-view[data-view="security"] .session b{font-size:13px}
+.app-view[data-view="security"] .session small,
+.app-view[data-view="security"] .session>span{
+  font-size:11.5px;line-height:1.45;
+}
+.app-view[data-view="security"] .settings-help-copy{
+  font-size:12.5px;line-height:1.6;margin:16px 0;
+}
+.app-view[data-view="security"] .settings-card .link-button{
+  font-size:12px;min-height:35px;
+}
+html[data-theme="dark"] .app-view[data-view="security"] .settings-connection-list>div{
+  background:rgba(57,145,188,.095);
+}
+html[data-theme="dark"] .app-view[data-view="security"] .settings-card dt,
+html[data-theme="dark"] .app-view[data-view="security"] .settings-connection-list small,
+html[data-theme="dark"] .app-view[data-view="security"] .settings-help-copy{
+  color:#aac2d0;
+}
+html[data-theme="dark"] .app-view[data-view="security"] .settings-card dd,
+html[data-theme="dark"] .app-view[data-view="security"] .settings-connection-list b,
+html[data-theme="dark"] .app-view[data-view="security"] .settings-check-list li{
+  color:#e0f0f7;
+}
+@media(max-width:900px){
+  .app-view[data-view="security"] .settings-grid{grid-template-columns:1fr}
+  .app-view[data-view="security"] .settings-card.full-panel{grid-column:auto}
+}
+@media(max-width:650px){
+  .app-view[data-view="security"] .settings-card{padding:20px}
+  .app-view[data-view="security"] .settings-connection-list>div{
+    grid-template-columns:46px minmax(0,1fr);
+    gap:12px;padding:13px;
+  }
+  .app-view[data-view="security"] .settings-connection-list .btn{
+    grid-column:2;justify-self:start;
+  }
+  .app-view[data-view="security"] .settings-card dl>div{
+    grid-template-columns:1fr;gap:2px;
+  }
+  .app-view[data-view="security"] .settings-card dd{text-align:left}
+}
+/* Help has its own workspace, not a fifth card left hanging under Settings. */
+.app-view[data-view="help"] .workspace-main{
+  display:flex;align-items:center;justify-content:center;
+  min-height:calc(100vh - 74px);min-height:calc(100dvh - 74px);
+  padding:30px 30px 70px;
+}
+.app-view[data-view="help"] .help-content{width:min(100%,760px);margin:auto}
+.app-view[data-view="help"] .help-heading{margin-bottom:22px}
+.app-view[data-view="help"] .help-heading h1{font-size:clamp(26px,3vw,34px)}
+.app-view[data-view="help"] .help-heading p{font-size:13px;line-height:1.55}
+.app-view[data-view="help"] .help-kicker{
+  color:#4b9fc9;font-size:11px;letter-spacing:.12em;font-weight:800;
+}
+.app-view[data-view="help"] .help-card{
+  padding:30px;border-radius:18px;
+}
+.app-view[data-view="help"] .help-card .panel-head span{font-size:11px}
+.app-view[data-view="help"] .help-card .panel-head h2{font-size:20px;line-height:1.35}
+.app-view[data-view="help"] .help-card .settings-help-copy{
+  font-size:13px;line-height:1.65;margin:19px 0;
+}
+.app-view[data-view="help"] .help-card .settings-actions{gap:12px}
+.app-view[data-view="help"] .help-card .settings-actions .btn{
+  font-size:13px;min-height:43px;display:inline-flex;
+  align-items:center;justify-content:center;
+}
+.app-view[data-view="help"] .help-card .help-feedback{
+  margin:21px 0 0;color:var(--muted);font-size:12px;
+}
+@media(max-height:700px), (max-width:760px){
+  .app-view[data-view="help"] .workspace-main{
+    min-height:0;align-items:stretch;justify-content:flex-start;
+    padding:26px 16px 104px;
+  }
+  .app-view[data-view="help"] .help-content{margin:0 auto}
+}
+@media(max-width:550px){
+  .app-view[data-view="help"] .help-card{padding:22px}
+  .app-view[data-view="help"] .help-card .settings-actions{
+    display:grid;grid-template-columns:1fr;
+  }
+}

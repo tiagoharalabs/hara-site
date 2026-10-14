@@ -146,7 +146,7 @@
   const bannerTitle = document.getElementById("systemBannerTitle");
   const bannerMessage = document.getElementById("systemBannerMessage");
   const bannerAction = document.getElementById("systemBannerAction");
-  const appViews = new Set(["dashboard", "devices", "usage", "plans", "connections", "security"]);
+  const appViews = new Set(["dashboard", "devices", "usage", "plans", "connections", "security", "help"]);
   const publicViews = new Set(["landing", "login", "signup", ...appViews]);
   const viewTitles = Object.freeze({
     landing: "HARA Commander",
@@ -158,6 +158,7 @@
     plans: "Plano e cobrança · HARA Commander",
     connections: "Conexões · HARA Commander",
     security: "Configurações · HARA Commander",
+    help: "Ajuda · HARA Commander",
   });
   const params = new URLSearchParams(location.search);
   const root = document.documentElement;
@@ -2056,7 +2057,7 @@
       if (active) link.setAttribute("aria-current", "page");
       else link.removeAttribute("aria-current");
     });
-    const secondaryActive = ["usage", "plans", "security"].includes(next);
+    const secondaryActive = ["usage", "plans", "security", "help"].includes(next);
     document.querySelectorAll("[data-mobile-more]").forEach((button) => {
       button.classList.toggle("active", secondaryActive);
     });

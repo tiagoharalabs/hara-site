@@ -11,7 +11,7 @@
   <style>html.auth-bootstrap-pending body>*{visibility:hidden}html.auth-bootstrap-pending body::before{content:"HARA COMMANDER · verificando sessão";position:fixed;inset:0;display:grid;place-items:center;visibility:visible;background:#eef8fd;color:#315d78;font:600 12px/1.4 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:.12em}html[data-theme="dark"].auth-bootstrap-pending body::before{background:#061721;color:#a9c8d9}</style>
   <title>HARA Commander</title>
   <link rel="icon" type="image/webp" href="./assets/hara-commander-royal.webp?v=20261014-goldmark1" />
-  <link rel="stylesheet" href="./styles.css?v=20261013-click-go-centered-v2" />
+  <link rel="stylesheet" href="./styles.css?v=20261014-usage-help-ui-v1" />
 </head>
 <body>
   <a class="skip-link" href="#mainContent">Pular para o conteúdo</a>
@@ -423,10 +423,8 @@
               <div class="progress"><i id="usageProgress" style="width:0%"></i></div>
               <small id="usageRemaining">Carregando capacidade do plano</small>
             </div>
-            <div class="quota-meta">
-              <span><small>Métrica</small><b>Execução governada</b></span>
+            <div class="quota-meta" aria-label="Período do plano">
               <span><small>Período</small><b id="usagePeriod">—</b></span>
-              <span><small>Repetições</small><b>Sem dupla contagem</b></span>
             </div>
           </div>
 
@@ -579,14 +577,29 @@
               <button class="link-button" type="button" data-refresh-service-health>Atualizar status</button>
             </article>
 
-            <article class="panel settings-card">
-              <div class="panel-head"><div><span>Ajuda</span><h2>Suporte</h2></div></div>
-              <p class="settings-help-copy">Envie um diagnóstico sanitizado da máquina local sem compartilhar comandos, payloads, resultados ou tokens.</p>
+
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="view app-view" data-view="help" aria-labelledby="help-title">
+      <div class="app-shell">
+        <aside class="sidebar" data-sidebar></aside>
+        <div class="workspace-main help-workspace-main">
+          <div class="help-content">
+            <header class="workspace-head help-heading">
+              <div><span class="help-kicker">CENTRAL DE AJUDA</span><h1 id="help-title">Como podemos ajudar?</h1>
+                <p>Suporte e diagnóstico para seu HARA Commander.</p></div>
+            </header>
+            <article class="panel settings-card help-card">
+              <div class="panel-head"><div><span>SUPORTE</span><h2>Precisa de ajuda com o Commander?</h2></div></div>
+              <p class="settings-help-copy">Acesse nossa central de suporte ou envie um diagnóstico sanitizado da sua máquina local. Comandos, conteúdos, resultados e tokens não são compartilhados no relatório.</p>
               <div class="settings-actions">
+                <a class="btn btn-primary" href="https://www.haralabs.com.br/support/" target="_blank" rel="noopener noreferrer">Abrir central de suporte</a>
                 <button class="btn btn-secondary" type="button" data-submit-local-support>Enviar diagnóstico</button>
-                <a class="btn btn-secondary" href="https://www.haralabs.com.br/support/" target="_blank" rel="noreferrer">Abrir suporte</a>
               </div>
-              <p class="settings-help-copy" id="supportReportStatus">Nenhum diagnóstico enviado nesta sessão.</p>
+              <p class="settings-help-copy help-feedback" id="supportReportStatus" role="status" aria-live="polite">Nenhum diagnóstico enviado nesta sessão.</p>
             </article>
           </div>
         </div>
@@ -613,6 +626,10 @@
       <button type="button" data-app-go="security">
         <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21h-4v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3.1 14H3v-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.5V3h4v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1h.1v4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>
         <span>Configurações</span>
+      </button>
+      <button type="button" class="sidebar-help-action" data-app-go="help">
+        <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.7 9a2.6 2.6 0 0 1 4.9 1.2c0 1.7-2.6 2-2.6 4"/><circle cx="12" cy="17.3" r=".7" fill="currentColor" stroke="none"/></svg>
+        <span>Ajuda</span>
       </button>
     </nav>
   </template>

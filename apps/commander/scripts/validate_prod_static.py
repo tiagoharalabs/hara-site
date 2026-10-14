@@ -50,6 +50,21 @@ need('return json({ configured: authStatus(env).configured });' in auth_config_b
 need('DEV_ENDPOINT_DISABLED: 404' in WORKER, "DEV_DISABLED_STATUS")
 need("auth-bootstrap-pending" in HTML, "AUTH_FIRST_PAINT")
 need(
+    'data-view="help" aria-labelledby="help-title"' in HTML
+    and 'id="supportReportStatus"' in HTML
+    and HTML.count("data-submit-local-support") == 1
+    and HTML.count('data-view="security"') == 1
+    and '<small>Métrica</small>' not in HTML
+    and '<small>Repetições</small>' not in HTML
+    and 'id="usagePeriod"' in HTML
+    and '.app-view[data-view="usage"] .workspace-main' in CSS
+    and '.app-view[data-view="security"] .settings-grid' in CSS
+    and '.side-nav-simple>.sidebar-help-action' in CSS
+    and '"security", "help"' in JS,
+    "CENTERED_USAGE_HELP_NAV_AND_SETTINGS_REFINEMENT",
+)
+
+need(
     'data-approval-choice="always"' not in HTML
     and 'data-approval-choice="ask"' not in HTML
     and 'data-tunnel-autostart' not in HTML
@@ -70,7 +85,7 @@ need(
     and 'idx_commander_devices_approval_mode' in APPROVAL_MODE_MIGRATION,
     "APPROVAL_MODE_MIGRATION",
 )
-need("styles.css?v=20261013-click-go-centered-v2" in HTML, "STYLE_CACHE_KEY")
+need("styles.css?v=20261014-usage-help-ui-v1" in HTML, "STYLE_CACHE_KEY")
 need("app.js?v=20261014-wordmark1" in HTML, "SCRIPT_CACHE_KEY")
 need("H.A.R.A" not in HTML and "H.A.R.A" not in JS, "BRAND_WORDMARK_NO_DOTS")
 need("<b>HARA</b><em>Labs</em>" in HTML, "BRAND_WORDMARK_LOCKUP")
@@ -191,18 +206,20 @@ need(
 )
 sidebar_block = HTML.split('<template id="sidebarTemplate">',1)[1].split('</template>',1)[0]
 need(
-    sidebar_block.count('data-app-go=') == 4
+    sidebar_block.count('data-app-go=') == 5
     and 'data-app-go="devices"' in sidebar_block
     and 'data-app-go="usage"' in sidebar_block
     and 'data-app-go="plans"' in sidebar_block
     and 'data-app-go="security"' in sidebar_block
+    and 'data-app-go="help"' in sidebar_block
+    and '<span>Ajuda</span>' in sidebar_block
     and 'data-app-go="dashboard"' not in sidebar_block
     and 'data-app-go="connections"' not in sidebar_block
     and '<span>Computadores</span>' in sidebar_block
     and '<span>Uso</span>' in sidebar_block
     and '<span>Plano e cobrança</span>' in sidebar_block
     and '<span>Configurações</span>' in sidebar_block,
-    "CUSTOMER_NAV_SIMPLE_FOUR_ITEMS",
+    "CUSTOMER_NAV_SIMPLE_FIVE_ITEMS",
 )
 need(
     'encodeURIComponent("/#devices")' in JS
