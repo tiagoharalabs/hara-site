@@ -71,7 +71,9 @@ need(
     "APPROVAL_MODE_MIGRATION",
 )
 need("styles.css?v=20261013-click-go-centered-v2" in HTML, "STYLE_CACHE_KEY")
-need("app.js?v=20261011-capacity-r2" in HTML, "SCRIPT_CACHE_KEY")
+need("app.js?v=20261014-wordmark1" in HTML, "SCRIPT_CACHE_KEY")
+need("H.A.R.A" not in HTML and "H.A.R.A" not in JS, "BRAND_WORDMARK_NO_DOTS")
+need("<b>HARA</b><em>Labs</em>" in HTML, "BRAND_WORDMARK_LOCKUP")
 need((APP / "public/brand/chatgpt-official.webp").stat().st_size > 0, "CHATGPT_BRAND_ASSET_PRESERVED")
 need((APP / "public/brand/claude-official.svg").stat().st_size > 0, "CLAUDE_BRAND_ASSET_PRESERVED_WITHOUT_MISLABELING_CODEX")
 need('class="where-badge">AI</span><p><b>ChatGPT' not in HTML and 'class="where-badge">AI</span><p><b>Claude' not in HTML, "CLIENT_PLACEHOLDER_BADGES_REMOVED")
@@ -493,7 +495,7 @@ need(
     and 'html[data-theme="dark"] .theme-icon-sun{display:block}' in CSS,
     "APPROVED_HEADER_BEHAVIOR",
 )
-need('OWNER: "Proprietário"' in JS and 'data-user-role>Owner<' not in HTML and 'usage: "Uso · H.A.R.A. Commander"' in JS, "PORTUGUESE_ROLE_AND_TITLE_UX")
+need('OWNER: "Proprietário"' in JS and 'data-user-role>Owner<' not in HTML and 'usage: "Uso · HARA Commander"' in JS, "PORTUGUESE_ROLE_AND_TITLE_UX")
 need("https://www.haralabs.com.br/legal/termos/" in HTML and "https://www.haralabs.com.br/legal/privacidade/" in HTML and 'class="auth-legal"' in HTML and 'class="product-legal-links"' in HTML, "LEGAL_LINKS_READY")
 need("#dashboardInvokes" not in CSS and ".activity-list" not in CSS, "DEAD_ACTIVITY_CSS_ABSENT")
 need('class="user-chip"' not in HTML, "DUPLICATE_INTERNAL_SESSION_IDENTITY_ABSENT")
