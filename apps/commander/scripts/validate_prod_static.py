@@ -259,10 +259,10 @@ need(
     and '<span class="onboarding-step-no">03</span>' in onboarding_block
     and '<span class="onboarding-step-no">04</span>' not in onboarding_block
     and '<span class="onboarding-step-no">05</span>' not in onboarding_block
-    and "Instale no computador" in onboarding_block
+    and "Instale no seu computador" in onboarding_block
     and "Sempre permitir" not in onboarding_block
     and "ASK_EVERY_ACTION" in onboarding_block
-    and "não inicia automaticamente" in onboarding_block
+    and "Seu computador aparecerá" in onboarding_block
     and "sessão de IA precisa ser aberta manualmente" not in onboarding_block,
     "COMMERCIAL_ONBOARDING_THREE_STEPS",
 )
