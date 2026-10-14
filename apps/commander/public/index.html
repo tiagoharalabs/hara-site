@@ -337,7 +337,7 @@
 
                 <div class="onboarding-step">
                   <span class="onboarding-step-no">02</span>
-                  <div><b>Seu código de conexão</b><small>Copie e cole quando o instalador solicitar “Pairing token”. Uso único, válido por até 10 minutos.</small></div>
+                  <div><b>Seu código de conexão</b><small>Cole este código quando o instalador pedir. Válido por 10 minutos.</small></div>
                   <button class="btn btn-primary" type="button" data-create-pairing>Gerar código</button>
                 </div>
 
@@ -348,7 +348,7 @@
 
                 <div class="onboarding-step onboarding-step-stack">
                   <span class="onboarding-step-no">03</span>
-                  <div><b>Instale no seu computador</b><small>Copie o comando para o Terminal Linux ou PowerShell Windows. A instalação baixa a release oficial assinada por HTTPS. <a class="devices-repo-link" href="https://github.com/tiagoharalabs/hara-site/tree/hara-commander-commercial-v0.3.43-signed-v2/apps/commander/release-bundles/commercial-0.3.43-v2" target="_blank" rel="noopener noreferrer">Ver a distribuição assinada no GitHub ↗</a></small></div>
+                  <div><b>Instale no seu computador</b><small>Copie no seu computador e siga as instruções. <a class="devices-repo-link" href="https://github.com/tiagoharalabs/hara-site/tree/hara-commander-commercial-v0.3.43-signed-v2/apps/commander/release-bundles/commercial-0.3.43-v2" target="_blank" rel="noopener noreferrer">Ver a distribuição assinada no GitHub ↗</a></small></div>
                   <div class="install-pane" data-os-panel="linux">
                     <div class="install-command"><code data-install-linux-code>(tmp=$(mktemp) && trap 'rm -f $tmp' EXIT && curl -fsS --proto '=https' --tlsv1.2 --location --max-redirs 0 https://commander.haralabs.com.br/install/linux.sh -o $tmp && HARA_COMMANDER_APPROVAL_MODE=ASK_EVERY_ACTION HARA_COMMANDER_TRANSPORT_MODE=OUTBOUND_RELAY HARA_COMMANDER_TUNNEL_AUTOSTART=OFF HARA_COMMANDER_URL=https://commander.haralabs.com.br bash $tmp)</code><button class="btn btn-secondary small" type="button" data-copy-linux>Copiar instalador Linux</button></div>
                     <small class="install-note" data-cloud-onboarding-note>Para conectar o ChatGPT depois do pareamento, abra <b>Comandos e integrações → MCP remoto</b> e autentique pelo HARA Identity.</small><small class="install-note" data-direct-onboarding-note hidden>Modo Direct: após parear, abra <b>Comandos e integrações → Direct</b> para configurar e autorizar o túnel OpenAI por 6 horas. Requer credenciais próprias da OpenAI Platform.</small>
@@ -361,7 +361,7 @@
                 </div>
 
                 <div class="onboarding-finish onboarding-ready">
-                  <div><b>Concluído</b><small>Seu computador aparecerá em <b>Dispositivos</b> assim que estiver conectado.</small></div>
+                  <div><b>Concluído</b><small>Seu computador aparecerá em <b>Dispositivos</b> quando estiver conectado.</small></div>
                 </div>
               </article>
             </div>

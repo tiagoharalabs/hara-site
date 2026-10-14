@@ -1896,3 +1896,17 @@ html[data-theme="dark"] [data-view="devices"] .devices-command-note{
 .app-view[data-view="devices"] .devices-command-guide {
   box-shadow:0 16px 56px rgba(0,0,0,.06);
 }
+
+/* Short first-run flow: keep all three actions visible on a laptop viewport. */
+@media(min-width:761px){
+  .app-view[data-view="devices"] .device-onboarding-flow{padding:24px 32px}
+  .app-view[data-view="devices"] .device-onboarding-flow .panel-head{margin-bottom:3px}
+  .app-view[data-view="devices"] .device-onboarding-flow > p{margin-bottom:9px}
+  .app-view[data-view="devices"] .device-onboarding-flow .onboarding-step{
+    padding:12px 0;gap:12px;
+  }
+  .app-view[data-view="devices"] .device-onboarding-flow .onboarding-step:first-of-type{margin-top:0}
+  .app-view[data-view="devices"] .device-onboarding-flow .onboarding-finish{padding:10px 0 2px}
+  .app-view[data-view="devices"] .device-onboarding-flow .onboarding-platform-policy > .onboarding-choice-row{margin-top:0}
+  .app-view[data-view="devices"] .device-onboarding-flow .install-command{margin-top:0}
+}

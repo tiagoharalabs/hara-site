@@ -37,7 +37,7 @@ for(const marker of [
   'Escolha o sistema', 'Seu código de conexão', 'Instale no seu computador',
   'data-create-pairing', 'id="pairingPanel"', 'id="pairingToken"',
   'data-copy-pairing', 'data-install-linux-code', 'data-install-windows-code',
-  'Pairing token', 'data-os-choice="linux"', 'data-os-choice="windows"',
+  'Cole este código', 'data-os-choice="linux"', 'data-os-choice="windows"',
 ]){
   assert.ok(onboarding.includes(marker),"ONBOARDING_MISSING:"+marker);
 }
