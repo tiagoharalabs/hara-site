@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render one approved transparent H.A.R.A capybara SVG to legacy site brand slots.
+"""Render one approved transparent HARA capybara SVG to legacy site brand slots.
 
 Run from any directory: python3 scripts/build_capybara_brand_assets.py
 Requires ffmpeg (librsvg, png, libwebp). No auth/production mutation.
@@ -40,9 +40,9 @@ def logo_lockup(color: str, subtitle: str) -> str:
     source = MASTER.read_text(encoding="utf-8")
     inner = source.split(">", 1)[1].rsplit("</svg>", 1)[0]
     return (
-        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 310 64" role="img" aria-label="H.A.R.A Labs">'
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 310 64" role="img" aria-label="HARA Labs">'
         '<svg x="0" y="0" width="64" height="64" viewBox="108 50 1080 1150">' + inner + '</svg>'
-        '<text x="80" y="31" font-family="Inter,Arial,sans-serif" font-size="24" font-weight="800" fill="' + color + '">H.A.R.A.</text>'
+        '<text x="80" y="31" font-family="Inter,Arial,sans-serif" font-size="24" font-weight="800" fill="' + color + '">HARA</text>'
         '<text x="80" y="51" font-family="Inter,Arial,sans-serif" font-size="16" font-weight="700" fill="' + subtitle + '">Labs · Identity</text>'
         '</svg>\n'
     )
