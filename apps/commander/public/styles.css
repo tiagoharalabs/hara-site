@@ -1884,3 +1884,15 @@ html[data-theme="dark"] [data-view="devices"] .devices-command-note{
     grid-column:2;justify-self:stretch;
   }
 }
+
+/* Keep developer controls out of first-time pairing. They remain in Advanced. */
+.app-view[data-view="devices"] .device-onboarding-flow .devices-setup-advanced{display:none}
+.app-view[data-view="devices"] .device-onboarding-flow .onboarding-platform-policy > .install-note {display:none}
+.app-view[data-view="devices"] .device-onboarding-flow .devices-repo-link{display:none}
+.app-view[data-view="devices"] [data-device-section-panel="commands"] {
+  width:min(100%,1020px);max-width:1020px;
+}
+.app-view[data-view="devices"] .devices-panel-compact,
+.app-view[data-view="devices"] .devices-command-guide {
+  box-shadow:0 16px 56px rgba(0,0,0,.06);
+}

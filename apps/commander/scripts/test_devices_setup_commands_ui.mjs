@@ -112,7 +112,7 @@ console.log("COMMANDER_GUIDE_LINUX_WINDOWS_MCP_TRUE_COMMANDS=PASS");
 assert.match(css,/\.devices-command-grid/);
 assert.match(css,/\.devices-setup-advanced/);
 assert.match(css,/html\[data-theme="dark"\] \[data-view="devices"\]/);
-assert.match(html,/styles\.css\?v=20261010-centered-plans-vertical1/);
+assert.match(html,/styles\.css\?v=20261013-click-go-centered-v2/);
 assert.match(html,/app\.js\?v=20261011-capacity-r2/);
 assert.match(css,/--gold/);
 console.log("COMMANDER_GUIDE_COLORS_THEME_RESPONSIVE=PASS");

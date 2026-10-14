@@ -39,7 +39,7 @@ assert.ok(findRule('.app-view[data-view="plans"] .plan-card li').includes('paddi
 assert.ok(findRule('.app-view[data-view="plans"] .plan-card ul').includes('margin:6px 0 12px'));
 assert.ok(css.includes('@media(max-width:1050px){\n  .app-view[data-view="plans"] .plan-grid{\n    max-width:520px;\n    grid-template-columns:minmax(0,1fr)'));
 assert.ok(css.includes('@media(max-width:760px){\n  .app-view[data-view="plans"] .plan-grid{max-width:100%}'));
-assert.ok(html.includes('styles.css?v=20261010-centered-plans-vertical1'));
+assert.ok(html.includes('styles.css?v=20261013-click-go-centered-v2'));
 console.log("PLAN_CARDS_CENTERED_COMPACT_SYMMETRIC_RESPONSIVE=PASS");
 
 const frame=findRule('.app-view[data-view="plans"] .workspace-main');
