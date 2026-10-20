@@ -71,6 +71,16 @@ with tempfile.TemporaryDirectory(prefix="hara-process-session-policy-") as tempo
         agent.process_kill(second["session_id"],True)
         assert agent.process_sessions()["active_count"]==0
         print("COMMANDER_IDLE_LONG_JOB_NOT_AUTO_KILLED_MANUAL_RELEASE=PASS")
+
+        agent.append_console_event=lambda *args,**kwargs: (_ for _ in ()).throw(OSError("SYNTHETIC_EVENT_STORE_FAULT"))
+        first=agent.process_start("sleep 10",temporary,0)
+        second=agent.process_start("sleep 10",temporary,0)
+        assert second["capacity_warning_event_error_code"]=="SYNTHETIC_EVENT_STORE_FAULT"
+        status=agent.process_sessions()
+        assert next(row for row in status["sessions"] if row["session_id"]==second["session_id"])["capacity_warning_event_error_code"]=="SYNTHETIC_EVENT_STORE_FAULT"
+        agent.process_kill(first["session_id"],True)
+        agent.process_kill(second["session_id"],True)
+        print("COMMANDER_CAPACITY_ALARM_STORE_FAILURE_VISIBLE=PASS")
     finally:
         if "agent" in locals(): agent.cleanup_process_sessions()
         for key,value in prior.items():

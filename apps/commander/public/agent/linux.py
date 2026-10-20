@@ -1955,15 +1955,16 @@ def process_start(command,cwd=None,timeout_ms=1000,*,non_interactive=False,owner
         try:
             append_console_event("PROCESS_CAPACITY_WARNING",state="REVIEW_REQUIRED",
                                  action_summary=f"active={running+1};capacity={MAX_PROCESS_ACTIVE_SESSIONS}")
-        except Exception:
-            pass
+        except Exception as exc:
+            session["capacity_warning_event_error_code"]=safe_error_code(exc)
     collector=threading.Thread(target=_collect_process_output,args=(session,),name="hara-process-output",daemon=True)
     session["_collector_thread"]=collector
     collector.start()
     output=_process_output_payload(session,offset=None,length=200,wait_ms=timeout_ms)
     return {**output,"cwd":str(work),"command_sha256":session["command_sha256"],
             "command_preview":_redact_command_preview(command),"owner_request_id":session["owner_request_id"],
-            "owner_subject_id":session["owner_subject_id"],"non_interactive":bool(non_interactive)}
+            "owner_subject_id":session["owner_subject_id"],"non_interactive":bool(non_interactive),
+            "capacity_warning_event_error_code":session.get("capacity_warning_event_error_code")}
 
 def process_run(command,cwd=None,timeout_ms=3000,max_lines=200,*,owner_request_id=None,owner_subject_id=None):
     timeout_ms=max(100,min(10000,int(timeout_ms)))
@@ -2032,6 +2033,7 @@ def process_sessions():
                           "blocking_reason":"NO_CLIENT_ACTIVITY" if review else None,
                           "owner_request_id":session.get("owner_request_id") or None,
                           "owner_subject_id":session.get("owner_subject_id") or None,
+                          "capacity_warning_event_error_code":session.get("capacity_warning_event_error_code"),
                           "cwd":session["cwd"],"command_sha256":session["command_sha256"]})
     active=sum(item["state"]=="RUNNING" for item in items)
     return {"count":len(items),"active_count":active,"active_capacity":MAX_PROCESS_ACTIVE_SESSIONS,
