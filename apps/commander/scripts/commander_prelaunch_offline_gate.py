@@ -72,6 +72,7 @@ PYTHON = (
     "validate_local_budget_blocks.py",
     "validate_agent_request_efficiency.py",
     "validate_event_v2_websocket_client.py",
+    "validate_event_v2_durable_batch_continuation.py",
     "validate_event_v2_wiring.py",
     "validate_event_v2_persistent_guard.py",
     "validate_event_v2_clean_shutdown.py",

@@ -10,7 +10,7 @@ Design:
 - CALL_AVAILABLE is only a wake hint for that lane;
 - DEV-only CALL_TRANSIENT executes directly over the connected socket and
   returns CALL_RESULT without persisting customer payload/result in D1;
-- reconnect performs one bounded reconciliation drain;
+- reconnect reconciles in bounded batches until durable truth is empty;
 - no fixed idle polling;
 - protocol PING maintains transport without app-level heartbeat spam;
 - one application LIVENESS checkpoint every 6h while otherwise idle.
@@ -31,6 +31,7 @@ COMMANDER = HERE.parent
 TRANSPORT_PATH = HERE / "event_v2_websocket.py"
 AGENT_PATH = HERE / "event_v2_customer_agent.py"
 MAX_DRAIN_CALLS = 8
+BACKLOG_RECV_SECONDS = 0.05
 STABLE_CONNECTION_SECONDS = 60.0
 LIVENESS_JITTER_SECONDS = 15 * 60
 
@@ -147,18 +148,24 @@ def run_connected_session(
     transient_calls = 0
 
     try:
-        # Reconcile durable truth exactly once after connect/reconnect so a
-        # notification lost while disconnected cannot strand a pending call.
-        drained += drain_durable_calls(agent, config, telemetry=telemetry)
+        # A full batch leaves the queue state unknown. Keep reconciling while
+        # it is full, with a brief socket readiness probe between batches so a close,
+        # revocation or transient event can be handled during a long backlog.
+        # Once a short batch/empty read is observed, resume normal idle waits.
+        first_batch = drain_durable_calls(agent, config, telemetry=telemetry)
+        drained += first_batch
+        backlog_pending = first_batch == MAX_DRAIN_CALLS
 
         while max_steps is None or steps < max_steps:
-            frame = transport.recv_event_or_keepalive(sock)
+            backlog_probe = backlog_pending
+            frame = (transport.recv_event_if_ready(sock, BACKLOG_RECV_SECONDS)
+                     if backlog_probe else transport.recv_event_or_keepalive(sock))
             now = monotonic()
             duration_delta = max(0, int(now - last_duration_checkpoint))
             if duration_delta >= 300:
                 safe_telemetry_add(telemetry, "connected_seconds", min(86400, duration_delta))
                 last_duration_checkpoint = now
-            if frame is None:
+            if frame is None and not backlog_probe:
                 # Transport PING is an RFC6455 control frame, never a D1 write.
                 safe_telemetry_add(telemetry, "transport_pings")
 
@@ -184,7 +191,7 @@ def run_connected_session(
                 if event["type"] == "CALL_AVAILABLE":
                     # call_id is deliberately not trusted as execution authority.
                     # It only wakes a bounded read from durable call truth.
-                    drained += drain_durable_calls(agent, config, telemetry=telemetry)
+                    backlog_pending = True
                 elif event["type"] == "CALL_TRANSIENT":
                     safe_telemetry_add(telemetry, "transient_calls")
                     result = agent.execute_transient_call(config, event)
@@ -192,6 +199,11 @@ def run_connected_session(
                         safe_telemetry_add(telemetry, "transient_failures")
                     transport.send_transient_result(sock, result)
                     transient_calls += 1
+
+            if backlog_pending:
+                batch = drain_durable_calls(agent, config, telemetry=telemetry)
+                drained += batch
+                backlog_pending = batch == MAX_DRAIN_CALLS
 
             steps += 1
 

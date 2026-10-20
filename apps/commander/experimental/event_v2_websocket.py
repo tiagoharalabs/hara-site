@@ -21,6 +21,7 @@ import base64
 import hashlib
 import json
 import os
+import select
 import socket
 import ssl
 import struct
@@ -428,6 +429,22 @@ def recv_event_or_keepalive(
         return frame
     finally:
         sock.settimeout(prior_timeout)
+
+
+def recv_event_if_ready(sock: socket.socket, timeout: float = 0.05) -> ServerFrame | None:
+    """Give a backlogged session a chance to receive without losing frame bytes.
+
+    Never put a short timeout around recv_server_frame: a timeout after a
+    partial read would consume bytes and corrupt the next frame. Only the
+    readiness probe is short; an available frame uses the normal read budget.
+    """
+    if timeout < 0 or timeout > 1:
+        raise fail("EVENT_V2_BACKLOG_WAIT_INVALID")
+    if not (hasattr(sock, "pending") and sock.pending()):
+        ready, _, _ = select.select([sock], [], [], timeout)
+        if not ready:
+            return None
+    return recv_event_or_keepalive(sock)
 
 
 def close_socket(sock: socket.socket, code: int = 1000) -> None:
