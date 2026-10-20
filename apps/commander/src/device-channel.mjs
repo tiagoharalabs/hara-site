@@ -1,5 +1,6 @@
 import { DurableObject } from "cloudflare:workers";
 import { canonicalChannelTelemetry, telemetryRollupQuery } from "./device-telemetry.mjs";
+import { deliverCurrentWake } from "./event-v2-delivery.mjs";
 
 const CHANNEL_SCHEMA = "hara.commander-device-channel.v2";
 const EVENT_SCHEMA = "hara.commander-device-event.v2";
@@ -262,13 +263,9 @@ export class DeviceChannel extends DurableObject {
           call_id: callId,
         });
 
-        let delivered = 0;
-        for (const socket of this.ctx.getWebSockets()) {
-          if (socket.readyState === WebSocket.OPEN) {
-            socket.send(event);
-            delivered += 1;
-          }
-        }
+        const delivered = deliverCurrentWake(
+          this.ctx.getWebSockets(), event, CHANNEL_SCHEMA,
+        );
 
         return json({
           schema: CHANNEL_SCHEMA,

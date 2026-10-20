@@ -77,6 +77,7 @@ jobs:
           python3 -B apps/commander/scripts/test_commercial_model_20261020.py
           node apps/commander/scripts/test_commercial_policy_20261020.mjs
           node apps/commander/scripts/test_device_enrollment_limit.mjs
+          node apps/commander/scripts/test_event_v2_notify_delivery.mjs
           python3 apps/commander/scripts/stage_signed_commercial_assets.py --check
           python3 apps/commander/scripts/validate_device_channel_source.py
           python3 apps/commander/scripts/validate_event_v2_wiring.py

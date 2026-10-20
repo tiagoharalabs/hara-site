@@ -76,3 +76,9 @@ GETs HTTPS somente leitura em `https://commander.haralabs.com.br` reproduziram o
 | `python3 -B apps/commander/scripts/validate_device_installers.py` | 0 | instaladores, manifesto, ponte MCP local e revogação; teste de loopback executado após bloqueio do socket pelo sandbox |
 
 **Estados:** corrigido no código: sim; testado local: sim (SQLite, sem Cloudflare); testado DEV: não; publicado PROD: não. A aplicação remota de `0036` e a corrida em D1 real continuam pendentes de autorização/ambiente.
+
+## Event V2 — wake e qualificação comercial local
+
+Na comparação com `origin/local/commander-event-v2-pong-deadline-20261013`, a base QA contava sockets substituídos como wake entregue. O filtro agora exige attachment atual e ignora uma falha de envio para continuar até outro socket vivo. `test_event_v2_notify_delivery.mjs` saiu 0; `validate_event_v2_wiring.py`, `validate_event_v2_presence_reconnect.py` (34/34), `validate_event_v2_websocket_client.py`, `validate_event_v2_clean_shutdown.py`, `validate_event_v2_fleet_allowlist.mjs` e `validate_event_v2_productization.py` saíram 0. Detalhes em `docs/operations/HARA_COMMANDER_COMMERCIAL_EVENT_V2_ACCEPTANCE_20261020.md`.
+
+**Estados:** corrigido no código: filtro de wake; testado local: sim; testado DEV: não; publicado PROD: não. O Agent comercial limpo ainda não é Event V2 assinado. Founder não foi contado como canário comercial.
