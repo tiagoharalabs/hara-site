@@ -47,6 +47,7 @@ import { DEVICE_ENROLL_INSERT_SQL, DEVICE_ENROLL_CONSUME_SQL, DEVICE_ENROLL_LIMI
 import { DeviceChannel, deviceChannelName } from "./device-channel.mjs";
 import { reconcileAgentVersion } from "./device-version-observation.mjs";
 import { readTenantDeviceTelemetry } from "./device-telemetry.mjs";
+import { summarizeRecentLatency } from "./activity-latency.mjs";
 import { customerStatusWaitMs, CUSTOMER_STATUS_TIMEOUT_MS } from "./device-status-poll.mjs";
 import { CALL_ROW_FIELDS, parseCallMetadata, settleCallUsage, reconcileUnsettledCallUsage, readScopedCall, acceptedCallStatus, publicAcceptedCallStatus } from "./approval-relay-storage.mjs";
 import { asyncApprovalDevice, asyncApprovalTool, asyncApprovalProfile, claimedApprovalExpiresAt, isApprovalCallHandle, pendingApprovalResult, safeCallResultMetadata, replayCallResultMetadata, ASYNC_APPROVAL_RESERVATION_TTL_SECONDS, TERMINAL_CALL_STATES } from "./approval-async-relay.mjs";
@@ -4811,6 +4812,7 @@ async function portalActivityFromLocalSnapshots(env, session, window) {
     diagnostics:{
       top_tools:top(tools,"tool_id"),
       top_errors:top(errors,"error_code"),
+      recent_latency:{state:"UNAVAILABLE_LOCAL_SNAPSHOT_ONLY",source:"LOCAL_DEVICE_SNAPSHOTS"},
     },
     summary:{
       total_calls:totals.total_calls,
@@ -4919,6 +4921,9 @@ function mergePortalActivity(local, cloud) {
     diagnostics:{
       top_tools:mergeActivityBreakdown(local.diagnostics?.top_tools,cloud.diagnostics?.top_tools,"tool_id"),
       top_errors:mergeActivityBreakdown(local.diagnostics?.top_errors,cloud.diagnostics?.top_errors,"error_code"),
+      recent_latency:cloud.diagnostics?.recent_latency
+        ? {...cloud.diagnostics.recent_latency,scope:"UNCOVERED_CLOUD_DEVICES_ONLY"}
+        : {state:"UNAVAILABLE_LOCAL_SNAPSHOT_ONLY",source:"LOCAL_DEVICE_SNAPSHOTS"},
     },
     slo:local.slo || cloud.slo || {profile:"INTERNAL_BETA_V1",status:"INSUFFICIENT_DATA"},
     summary:{
@@ -5092,6 +5097,7 @@ async function portalActivity(env, session, limitValue=50, windowValue="7d") {
         error_code:String(row.error_code || "UNKNOWN"),
         calls:Number(row.calls || 0),
       })),
+      recent_latency:summarizeRecentLatency(transactions,limit),
     },
     summary:{
       total_calls:total,
