@@ -133,6 +133,29 @@ assert.equal(quotaState("DENIED").state,"RELEASED");
 assert.equal(quota.status("LIFETIME",5000).consumed_units,3);
 console.log("COMMANDER_UNEXECUTED_DENIAL_RELEASES_QUOTA=PASS");
 
+seed("LATE");
+clock+=51_000; // First result transmission was lost; the claimed call expired.
+assert.equal((await runtime.complete(env,{},result("LATE"))).completed_after_deadline,true);
+assert.equal(callState("LATE").state,"COMPLETED");
+assert.equal(quotaState("LATE").state,"COMMITTED");
+assert.equal((await runtime.complete(env,{},result("LATE"))).existing,true);
+await assert.rejects(runtime.complete(env,{},result("LATE","b")),/IDEMPOTENCY_CONFLICT/);
+console.log("COMMANDER_LATE_CLAIMED_COMPLETION_ACCEPTED_ONCE=PASS");
+
+seed("MAINTENANCE-EXPIRED");
+db.prepare("UPDATE commander_device_calls SET state='EXPIRED',completed_at_utc=?,error_code='DEVICE_CALL_EXPIRED' WHERE call_id='MAINTENANCE-EXPIRED'").run(now());
+clock+=51_000;
+assert.equal((await runtime.complete(env,{},result("MAINTENANCE-EXPIRED"))).completed_after_deadline,true);
+assert.equal(quotaState("MAINTENANCE-EXPIRED").state,"COMMITTED");
+console.log("COMMANDER_LATE_MAINTENANCE_EXPIRY_RECONCILED=PASS");
+
+seed("UNCLAIMED-EXPIRED");
+db.prepare("UPDATE commander_device_calls SET state='EXPIRED',claimed_at_utc=NULL,completed_at_utc=?,error_code='DEVICE_CALL_EXPIRED' WHERE call_id='UNCLAIMED-EXPIRED'").run(now());
+clock+=51_000;
+await assert.rejects(runtime.complete(env,{},result("UNCLAIMED-EXPIRED")),/DEVICE_CALL_NOT_EXECUTING/);
+assert.equal(callState("UNCLAIMED-EXPIRED").state,"EXPIRED");
+console.log("COMMANDER_UNCLAIMED_EXPIRY_CANNOT_CLAIM_EXECUTION=PASS");
+
 const marker=(value)=>"HARA_REDACTED_SHA256:"+createHash("sha256").update(value).digest("hex");
 const original=result("NORMAL");
 db.prepare("UPDATE commander_device_calls SET created_at_utc=?,expires_at_utc=?,payload_json=?,result_json=? WHERE call_id='NORMAL'")
@@ -143,7 +166,7 @@ assert.equal(db.prepare("SELECT COUNT(*) AS n FROM commander_device_calls WHERE 
 assert.equal(db.prepare("SELECT COUNT(*) AS n FROM commander_device_call_completion_archive WHERE call_id='NORMAL'").get().n,1);
 assert.equal((await runtime.complete(env,{},original)).existing,true);
 await assert.rejects(runtime.complete(env,{},result("NORMAL","b")),/IDEMPOTENCY_CONFLICT/);
-assert.equal(quota.status("LIFETIME",5000).consumed_units,3);
+assert.equal(quota.status("LIFETIME",5000).consumed_units,5);
 console.log("COMMANDER_ARCHIVED_COMPLETION_ACK_REPLAY_NO_SECOND_CHARGE=PASS");
 
 db.close();quotaDb.close();

@@ -3591,9 +3591,40 @@ async function customerMcpRequestId(identity, toolId, args, mcpRequestId, transp
 
 function trimPublicText(value, limit = 65536) {
   if (typeof value !== "string") return null;
-  return value.length <= limit
-    ? value
-    : value.slice(0, limit) + "\n[HARA_COMMANDER_OUTPUT_TRUNCATED]";
+  const encoder = new TextEncoder();
+  const bytes = encoder.encode(value).length;
+  if (value.length <= limit && bytes <= 128 * 1024) return value;
+  let parsed;
+  try { parsed = JSON.parse(value); }
+  catch {
+    let low = 0, high = Math.min(value.length,limit);
+    while (low < high) {
+      const middle = Math.ceil((low + high) / 2);
+      if (encoder.encode(value.slice(0,middle)).length <= limit) low = middle;
+      else high = middle - 1;
+    }
+    if (low && /[\uD800-\uDBFF]/.test(value[low-1])) low -= 1;
+    return value.slice(0,low) + "\n[HARA_COMMANDER_OUTPUT_TRUNCATED]";
+  }
+  // Device results already pass the 256 KiB D1 envelope. Preserve structured
+  // read_many pages (Agent budget ~96 KiB) through the MCP projection.
+  if (bytes <= 128 * 1024) return value;
+  const continuation = {};
+  if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+    for (const key of ["session_id","run_id","next_offset","total_lines","base_line","has_more","eof"]) {
+      if (key in parsed) continuation[key] = parsed[key];
+    }
+    if (Array.isArray(parsed.files)) {
+      continuation.files = parsed.files.slice(0,10).map((file)=>({
+        path:typeof file?.path === "string" ? file.path.slice(0,500) : null,
+        state:typeof file?.state === "string" ? file.state : null,
+        next_offset:Number.isInteger(file?.next_offset) ? file.next_offset : null,
+        has_more:file?.has_more === true,
+      }));
+    }
+  }
+  return JSON.stringify({schema:"hara.commander-public-text-truncation.v1",state:"TRUNCATED",
+    content_incomplete:true,original_bytes:bytes,automatic_retry_allowed:false,continuation});
 }
 
 function projectCustomerToolResult(toolId, response) {
@@ -3675,8 +3706,14 @@ function projectCustomerToolResult(toolId, response) {
     }
     const stdout = trimPublicText(result.stdout);
     const stderr = trimPublicText(result.stderr);
-    if (stdout !== null) projectedResult.stdout = stdout;
-    if (stderr) projectedResult.stderr = stderr;
+    if (stdout !== null) {
+      projectedResult.stdout = stdout;
+      if (stdout !== result.stdout) projectedResult.stdout_truncated = true;
+    }
+    if (stderr) {
+      projectedResult.stderr = stderr;
+      if (stderr !== result.stderr) projectedResult.stderr_truncated = true;
+    }
     for (const key of ["human_approval_state","local_authorization_mode","authorization_source","preimage_sha256","preimage_id","rollback_preimage_id"]) {
       if (typeof result[key] === "string") projectedResult[key] = result[key];
     }
@@ -5417,12 +5454,12 @@ async function completeDeviceCall(env, request, body) {
       WHERE call_id = ?
         AND tenant_id = ?
         AND device_id = ?
-        AND state = 'EXECUTING'
-        AND expires_at_utc > ?
+        AND claimed_at_utc IS NOT NULL
+        AND (state = 'EXECUTING'
+          OR (state = 'EXPIRED' AND error_code = 'DEVICE_CALL_EXPIRED'))
       RETURNING call_id, request_id, tool_id, state, completed_at_utc`
   ).bind(
-    state, completedAt, resultJson, errorCode, descriptor, callId, device.tenant_id, device.device_id,
-    completedAt
+    state, completedAt, resultJson, errorCode, descriptor, callId, device.tenant_id, device.device_id
   ).all();
 
   const row = (update.results || [])[0];
@@ -5443,7 +5480,8 @@ async function completeDeviceCall(env, request, body) {
         throw new Error("IDEMPOTENCY_CONFLICT");
       }
       await settleCallUsage(env,existing,body.result);
-      return { schema: "hara.commander-device-call-result.v1", ok: true, existing: true, call_id: callId, state };
+      return { schema: "hara.commander-device-call-result.v1", ok: true, existing: true, call_id: callId, state,
+        completed_after_deadline:String(existing.completed_at_utc)>String(existing.expires_at_utc) };
     }
     if (
       existing
@@ -5488,6 +5526,7 @@ async function completeDeviceCall(env, request, body) {
     tool_id: row.tool_id,
     state: row.state,
     completed_at_utc: row.completed_at_utc,
+    completed_after_deadline:completedAt>String(before.expires_at_utc),
   };
 }
 

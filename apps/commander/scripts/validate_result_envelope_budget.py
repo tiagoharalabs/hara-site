@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib.util
 import json
 import os
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -19,6 +21,18 @@ WORKER_RESULT_MAX_BYTES = 256 * 1024
 
 def encoded_bytes(value):
     return len(json.dumps(value,separators=(",",":"),ensure_ascii=False).encode("utf-8"))
+
+
+def check_public_projection(tool_id, result):
+    probe = subprocess.run(
+        ["node", str(Path(__file__).with_name("test_public_result_projection.mjs")), "--stdin"],
+        input=json.dumps({"tool_id":tool_id,"result":result},ensure_ascii=False),
+        text=True,capture_output=True,timeout=10,check=True,
+    )
+    observed=json.loads(probe.stdout)
+    expected=hashlib.sha256(result["result"]["stdout"].encode("utf-8")).hexdigest()
+    assert observed["sha256"]==expected==observed["original_sha256"]
+    return observed
 
 
 with tempfile.TemporaryDirectory(prefix="hara-result-envelope-") as temporary:
@@ -55,6 +69,9 @@ with tempfile.TemporaryDirectory(prefix="hara-result-envelope-") as temporary:
                 assert item["text"].startswith("ROW-000-")
                 if item["has_more"]:
                     assert item["next_offset"] == item["offset"] + item["line_count"]
+            public=check_public_projection("hara.files.read_many",result)
+            assert public["count"]==count and len(public["files"])==count
+            assert [item["next_offset"] for item in public["files"]]==[item["next_offset"] for item in data["files"]]
             print(f"COMMANDER_READ_MANY_{count}_FILES_SERIALIZED_BUDGET=PASS")
 
         control = Path(temporary) / "control.txt"
@@ -66,6 +83,7 @@ with tempfile.TemporaryDirectory(prefix="hara-result-envelope-") as temporary:
         assert encoded_bytes(result) <= WORKER_RESULT_MAX_BYTES
         data = json.loads(result["result"]["stdout"])
         assert data["content_truncated"] is True and data["continuation_safe"] is False
+        check_public_projection("hara.files.read",result)
         print("COMMANDER_CONTROL_CHAR_ESCAPING_STAYS_WITHIN_WORKER_LIMIT=PASS")
 
         base = {"state": "PASS", "operational_authority": "HARA_SERVICES",
