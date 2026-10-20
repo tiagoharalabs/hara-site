@@ -135,6 +135,7 @@ JS = (
     "test_portal_read_coordinator.mjs",
     "test_portal_history_read.mjs",
     "test_devices_minimalist_ui.mjs",
+    "test_device_discovery_evidence.mjs",
     "test_devices_setup_commands_ui.mjs",
     "test_nav_no_duplicate_titles.mjs",
     "test_plan_cards_centered_ui.mjs",

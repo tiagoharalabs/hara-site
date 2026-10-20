@@ -573,6 +573,26 @@ function deviceOnline(lastSeenAtUtc, tunnelMode = "OUTBOUND_RELAY", now = Date.n
   return now - seen <= onlineWindowMs;
 }
 
+function deviceCheckpointEvidence(lastSeenAtUtc, tunnelMode, now) {
+  // A checkpoint supports routing within its mode-specific window. It is not
+  // a live ping result, and local-only/offline transports have no cloud window.
+  const mode = String(tunnelMode || "");
+  if (mode === "LOCAL_TUNNEL") {
+    return { checkpoint_state: "LOCAL_ONLY", checkpoint_window_seconds: null };
+  }
+  if (mode === "EVENT_V2_OFFLINE" || mode === "OUTBOUND_RELAY_OFFLINE") {
+    return { checkpoint_state: "TRANSPORT_OFFLINE", checkpoint_window_seconds: null };
+  }
+  const checkpointWindowSeconds = mode === "EVENT_V2" ? 7 * 60 * 60 : DEVICE_ONLINE_GRACE_SECONDS;
+  if (!lastSeenAtUtc || !Number.isFinite(Date.parse(String(lastSeenAtUtc)))) {
+    return { checkpoint_state: "NONE", checkpoint_window_seconds: checkpointWindowSeconds };
+  }
+  return {
+    checkpoint_state: deviceOnline(lastSeenAtUtc, mode, now) ? "RECENT" : "STALE",
+    checkpoint_window_seconds: checkpointWindowSeconds,
+  };
+}
+
 function boundedJson(value, maxBytes, code) {
   let text;
   try {
@@ -2799,7 +2819,10 @@ async function listDevices(env, session) {
     agent_version: row.agent_version,
     tunnel_mode: row.tunnel_mode,
     state: row.state,
-    online: row.state === "ACTIVE" && deviceOnline(row.last_seen_at_utc, row.tunnel_mode, now),
+    online: row.state === "ACTIVE" && !row.revoked_at_utc && deviceOnline(row.last_seen_at_utc, row.tunnel_mode, now),
+    registration_state: row.revoked_at_utc ? "REVOKED" : row.state,
+    ...deviceCheckpointEvidence(row.last_seen_at_utc, row.tunnel_mode, now),
+    reachability_state: "NOT_PROBED",
     created_at_utc: row.created_at_utc,
     last_seen_at_utc: row.last_seen_at_utc,
     revoked_at_utc: row.revoked_at_utc,
@@ -2810,6 +2833,23 @@ async function listDevices(env, session) {
     last_local_mcp_started_at_utc: row.last_local_mcp_started_at_utc || null,
     last_local_mcp_stopped_at_utc: row.last_local_mcp_stopped_at_utc || null,
   }));
+}
+
+function publicDeviceSummary(device) {
+  return {
+    device_id: device.device_id,
+    computer: device.device_name,
+    platform: device.platform,
+    architecture: device.architecture,
+    agent_version: device.agent_version,
+    transport_mode: device.tunnel_mode,
+    state: device.revoked_at_utc ? "REVOKED" : (device.online ? "ONLINE" : "OFFLINE"),
+    registration_state: device.registration_state,
+    checkpoint_state: device.checkpoint_state,
+    checkpoint_window_seconds: device.checkpoint_window_seconds,
+    reachability_state: device.reachability_state,
+    last_seen_at_utc: device.last_seen_at_utc,
+  };
 }
 
 async function enrollDevice(env, body) {
@@ -5096,11 +5136,7 @@ async function executeCustomerMcpTool(
       runtime_authority_from_chatgpt: false, mutation_performed: false, customer_services_relay: false,
       result: {
         count: devices.length,
-        computers: devices.map((d) => ({
-          device_id: d.device_id, computer: d.device_name, platform: d.platform, architecture: d.architecture,
-          agent_version: d.agent_version, state: d.revoked_at_utc ? "REVOKED" : (d.online ? "ONLINE" : "OFFLINE"),
-          last_seen_at_utc: d.last_seen_at_utc,
-        })),
+        computers: devices.map((d) => publicDeviceSummary(d)),
       },
       product: { plan_code: context.plan_code, entitlement_id: context.entitlement_id, quota: null },
     };

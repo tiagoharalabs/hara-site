@@ -249,7 +249,7 @@ export function createSimpleCustomerMcpServer({ executeTool }) {
     "list_devices",
     toolConfig({
       title: "List Devices",
-      description: "List enrolled computers and their online/offline state.",
+      description: "List enrolled computers with registration, checkpoint presence and last-seen time. Reachability is not probed; use ping for a live check.",
       inputSchema: z.object({}).strict(),
     }),
     call("hara.devices.list", () => ({})),

@@ -235,7 +235,7 @@ export function createCustomerMcpServer({ executeTool }) {
     "hara.devices.list",
     toolConfig({
       title: "List H.A.R.A. Computers",
-      description: "List computers enrolled in the authenticated H.A.R.A. Commander tenant with online/offline state.",
+      description: "List enrolled computers with registration, checkpoint presence and last-seen time. Reachability is not probed; use ping for a live check.",
       inputSchema: z.object({}).strict(),
     }),
     call("hara.devices.list"),
