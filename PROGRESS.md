@@ -369,3 +369,5 @@ Reli `docs/operations/HARA_COMMANDER_PEER_REVIEW_R6_END_TO_END_20261020.md` e co
 | `sha256sum -c` da R6; `git diff --check` | 0; 0 | evidência histórica exata e patch documental sem whitespace |
 
 **Estados:** corrigido no código: sim, antes desta mensagem; testado local: sim, agora revalidado ponta a ponta; testado DEV hospedado: não; instalado em canário: não; publicado PROD: não. O último gate offline completo sobre `a950e32` foi 140/141 com exit 1 exclusivamente pelo HOLD de assinatura oficial; desde então `apps/commander` não mudou. O candidato `2147z` segue sem assinatura e sem promoção. A identidade, o relógio e o banco do harness são substitutos locais, não prova de autorização Cloudflare ou de acesso comercial limpo. Nenhuma migração remota, deploy, assinatura, Agent ativo, Stripe LIVE ou billing OpenAI foi alterado.
+
+**Checkpoint documental:** `a58812a` incorpora a evidência R6 exata e a revalidação local; nenhum arquivo de `apps/commander` entrou no commit. O WIP externo listado no status do clone permanece preservado e fora dos commits desta revisão.
