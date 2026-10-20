@@ -5383,7 +5383,7 @@ async function claimNextDeviceCall(env, request) {
          ORDER BY c.created_at_utc
          LIMIT 1
       )
-      RETURNING call_id, request_id, tool_id, payload_json, expires_at_utc,
+      RETURNING call_id, request_id, subject_id, tool_id, payload_json, expires_at_utc,
                 usage_mode, usage_units, usage_period_key, usage_budget_id, approval_timeout_seconds, execution_budget_ms`
   ).bind(now, now, device.device_id, now, device.agent_version).all();
 
@@ -5406,6 +5406,7 @@ async function claimNextDeviceCall(env, request) {
     schema: "hara.commander-device-call-claim.v1",
     call_id: row.call_id,
     request_id: row.request_id,
+    subject_id: row.subject_id,
     tool_id: row.tool_id,
     payload: rawPayload,
     expires_at_utc: row.expires_at_utc,

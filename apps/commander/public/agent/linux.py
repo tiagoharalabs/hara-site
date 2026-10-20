@@ -126,6 +126,7 @@ MAX_PROCESS_BUFFER_CHARS = 2 * 1024 * 1024
 MAX_PROCESS_PAGE_JSON_BYTES = 60 * 1024
 MAX_PROCESS_ACTIVE_SESSIONS = 16
 MAX_PROCESS_RETAINED_SESSIONS = 48
+PROCESS_IDLE_REVIEW_SECONDS = 30 * 60
 PROCESS_FINISHED_RETENTION_SECONDS = 60 * 60
 MAX_PROCESS_ONESHOT_RESULTS = 8
 MAX_PROCESS_RESULT_TOMBSTONES = 128
@@ -1896,9 +1897,14 @@ def _process_get(session_id):
         raise ValueError("PROCESS_SESSION_NOT_FOUND")
     return session
 
+def _process_capacity_warning(active):
+    return active>=max(1,(MAX_PROCESS_ACTIVE_SESSIONS*3+3)//4)
+
 def _process_output_payload(session,offset=None,length=200,wait_ms=0):
     _drain_process(session,wait_ms)
     with session.get("_io_lock") or contextlib.nullcontext():
+        session["last_client_activity_at_utc"]=utcnow()
+        session["last_client_activity_monotonic"]=time.monotonic()
         base=int(session.get("base_line",0)); lines=session.get("lines",[])
         start=int(session.get("cursor",base)) if offset is None else int(offset)
         truncated_before=start<base
@@ -1915,7 +1921,7 @@ def _process_output_payload(session,offset=None,length=200,wait_ms=0):
         state="EXITED" if session.get("exit_code") is not None else "RUNNING"
         return {"session_id":session["session_id"],"pid":session["pid"],"state":state,"exit_code":session.get("exit_code"),"offset":start,"next_offset":next_offset,"base_line":base,"total_lines":base+len(lines),"text":"\n".join(selected),"partial":session.get("partial","")[:1000],"truncated_before":truncated_before,"buffer_truncated":bool(session.get("truncated")),"result_kind":"ONE_SHOT_RESULT" if session.get("one_shot_result") else "MANAGED_SESSION"}
 
-def process_start(command,cwd=None,timeout_ms=1000):
+def process_start(command,cwd=None,timeout_ms=1000,*,non_interactive=False,owner_request_id=None,owner_subject_id=None):
     command=str(command or "")
     if not command or len(command)>4096 or "\x00" in command: raise ValueError("PROCESS_COMMAND_INVALID")
     _prune_process_sessions()
@@ -1928,23 +1934,42 @@ def process_start(command,cwd=None,timeout_ms=1000):
     if pid==0:
         try:
             os.chdir(work)
-            os.execv("/bin/bash",["/bin/bash","-lc",command])
+            child_env=os.environ.copy()
+            if non_interactive:
+                # One-shot commands cannot answer pager prompts. Keep the
+                # interactive process.start environment untouched.
+                child_env.update(PAGER="cat",GIT_PAGER="cat",PSQL_PAGER="cat")
+            os.execve("/bin/bash",["/bin/bash","-lc",command],child_env)
         except Exception:
             os._exit(127)
     os.set_blocking(fd,False)
     sid="HARA-PROC-"+uuid.uuid4().hex
-    session={"session_id":sid,"pid":pid,"fd":fd,"started_at_utc":utcnow(),"command_sha256":hashlib.sha256(command.encode()).hexdigest(),"cwd":str(work),"lines":[],"partial":"","base_line":0,"cursor":0,"truncated":False,"exit_code":None,"_io_lock":threading.RLock()}
+    started_at=utcnow()
+    session={"session_id":sid,"pid":pid,"fd":fd,"started_at_utc":started_at,
+             "last_client_activity_at_utc":started_at,"last_client_activity_monotonic":time.monotonic(),
+             "owner_request_id":str(owner_request_id or ""),"owner_subject_id":str(owner_subject_id or ""),
+             "non_interactive":bool(non_interactive),
+             "command_sha256":hashlib.sha256(command.encode()).hexdigest(),"cwd":str(work),"lines":[],"partial":"","base_line":0,"cursor":0,"truncated":False,"exit_code":None,"_io_lock":threading.RLock()}
     PROCESS_SESSIONS[sid]=session
+    if _process_capacity_warning(running+1) and not _process_capacity_warning(running):
+        try:
+            append_console_event("PROCESS_CAPACITY_WARNING",state="REVIEW_REQUIRED",
+                                 action_summary=f"active={running+1};capacity={MAX_PROCESS_ACTIVE_SESSIONS}")
+        except Exception:
+            pass
     collector=threading.Thread(target=_collect_process_output,args=(session,),name="hara-process-output",daemon=True)
     session["_collector_thread"]=collector
     collector.start()
     output=_process_output_payload(session,offset=None,length=200,wait_ms=timeout_ms)
-    return {**output,"cwd":str(work),"command_sha256":session["command_sha256"],"command_preview":_redact_command_preview(command)}
+    return {**output,"cwd":str(work),"command_sha256":session["command_sha256"],
+            "command_preview":_redact_command_preview(command),"owner_request_id":session["owner_request_id"],
+            "owner_subject_id":session["owner_subject_id"],"non_interactive":bool(non_interactive)}
 
-def process_run(command,cwd=None,timeout_ms=3000,max_lines=200):
+def process_run(command,cwd=None,timeout_ms=3000,max_lines=200,*,owner_request_id=None,owner_subject_id=None):
     timeout_ms=max(100,min(10000,int(timeout_ms)))
     max_lines=max(1,min(500,int(max_lines)))
-    started=process_start(command,cwd,0)
+    started=process_start(command,cwd,0,non_interactive=True,
+                          owner_request_id=owner_request_id,owner_subject_id=owner_subject_id)
     sid=started["session_id"]
     session=_process_get(sid)
     deadline=time.monotonic()+timeout_ms/1000.0
@@ -1993,11 +2018,25 @@ def process_run(command,cwd=None,timeout_ms=3000,max_lines=200):
 def process_sessions():
     _prune_process_sessions()
     items=[]
+    now=time.monotonic()
     for sid,session in list(PROCESS_SESSIONS.items()):
         _drain_process(session,0)
         with session.get("_io_lock") or contextlib.nullcontext():
-            items.append({"session_id":sid,"pid":session["pid"],"state":"EXITED" if session.get("exit_code") is not None else "RUNNING","exit_code":session.get("exit_code"),"started_at_utc":session["started_at_utc"],"cwd":session["cwd"],"command_sha256":session["command_sha256"]})
-    return {"count":len(items),"sessions":items}
+            running=session.get("exit_code") is None
+            idle=max(0,int(now-float(session.get("last_client_activity_monotonic",now))))
+            review=running and idle>=PROCESS_IDLE_REVIEW_SECONDS
+            items.append({"session_id":sid,"pid":session["pid"],"state":"RUNNING" if running else "EXITED",
+                          "exit_code":session.get("exit_code"),"started_at_utc":session["started_at_utc"],
+                          "last_client_activity_at_utc":session.get("last_client_activity_at_utc"),
+                          "idle_seconds":idle,"owner_review_required":review,
+                          "blocking_reason":"NO_CLIENT_ACTIVITY" if review else None,
+                          "owner_request_id":session.get("owner_request_id") or None,
+                          "owner_subject_id":session.get("owner_subject_id") or None,
+                          "cwd":session["cwd"],"command_sha256":session["command_sha256"]})
+    active=sum(item["state"]=="RUNNING" for item in items)
+    return {"count":len(items),"active_count":active,"active_capacity":MAX_PROCESS_ACTIVE_SESSIONS,
+            "capacity_warning":_process_capacity_warning(active),
+            "idle_review_seconds":PROCESS_IDLE_REVIEW_SECONDS,"sessions":items}
 
 def process_interact(session_id,input_text,timeout_ms=1000):
     session=_process_get(session_id)
@@ -2008,6 +2047,8 @@ def process_interact(session_id,input_text,timeout_ms=1000):
         _process_update_state(session)
         if session.get("exit_code") is not None or int(session.get("fd",-1))<0: raise ValueError("PROCESS_SESSION_EXITED")
         os.write(int(session["fd"]),data)
+        session["last_client_activity_at_utc"]=utcnow()
+        session["last_client_activity_monotonic"]=time.monotonic()
     return _process_output_payload(session,offset=None,length=200,wait_ms=timeout_ms)
 
 def process_kill(session_id,force=False):
@@ -2995,11 +3036,13 @@ def execute_tool(config, call):
         result={"function_id":"process.sessions","risk_class":"READ_ONLY","process_exit_code":0,"stdout":json.dumps(data,sort_keys=True,separators=(",",":"),ensure_ascii=False),"domain_success_inferred":False}
     elif tool=="hara.process.run":
         if "command" not in payload or any(k not in ("command","cwd","timeout_ms","max_lines") for k in payload): raise ValueError("FUNCTION_ARGUMENTS_DENIED")
-        data=process_run(str(payload["command"]),payload.get("cwd"),int(payload.get("timeout_ms",3000)),int(payload.get("max_lines",200)))
+        data=process_run(str(payload["command"]),payload.get("cwd"),int(payload.get("timeout_ms",3000)),int(payload.get("max_lines",200)),
+                         owner_request_id=call.get("request_id"),owner_subject_id=call.get("subject_id"))
         result={"function_id":"process.run","risk_class":"PROCESS_EXECUTION","process_exit_code":data.get("exit_code") if isinstance(data.get("exit_code"),int) else None,"stdout":json.dumps(data,sort_keys=True,separators=(",",":"),ensure_ascii=False),"domain_success_inferred":False}
     elif tool=="hara.process.start":
         if "command" not in payload or any(k not in ("command","cwd","timeout_ms") for k in payload): raise ValueError("FUNCTION_ARGUMENTS_DENIED")
-        data=process_start(str(payload["command"]),payload.get("cwd"),int(payload.get("timeout_ms",1000)))
+        data=process_start(str(payload["command"]),payload.get("cwd"),int(payload.get("timeout_ms",1000)),
+                           owner_request_id=call.get("request_id"),owner_subject_id=call.get("subject_id"))
         result={"function_id":"process.start","risk_class":"PROCESS_EXECUTION","process_exit_code":data.get("exit_code") if isinstance(data.get("exit_code"),int) else None,"stdout":json.dumps(data,sort_keys=True,separators=(",",":"),ensure_ascii=False),"domain_success_inferred":False}
     elif tool=="hara.process.output":
         if "session_id" not in payload or any(k not in ("session_id","offset","length","timeout_ms") for k in payload): raise ValueError("FUNCTION_ARGUMENTS_DENIED")
