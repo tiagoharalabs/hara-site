@@ -1,0 +1,57 @@
+{
+  "schema": "hara.commander.install-failures-r11.codex-tasks.v1",
+  "date": "2026-10-20",
+  "codex_branch": "codex/commander-prelaunch-fixes-20261020",
+  "review_report": "docs/operations/HARA_COMMANDER_INSTALL_FAILURE_R11_20261020.md",
+  "constraints": [
+    "HARA Commander primary only; no Desktop Commander use",
+    "Do not bypass signature or SHA verification",
+    "Do not publish unsigned release or access private signing keys in peer review",
+    "Do not change live Service, Storage, Observer, Sentinela A Agents nor D1 without separate approved rollout",
+    "Keep each machine's enrollment identity and token unique"
+  ],
+  "priorities": [
+    {
+      "id": "R11-P0-LIVE-SIGNED-DISTRIBUTION",
+      "priority": "P0",
+      "evidence": "Public installer pins commander-release-v2; public manifest is signed commander-release-v1; all four published asset hashes differ from signed manifest.",
+      "action": "Prepare coherent versioned release, official signing through authorized custody, atomic publish and public readback across Storage Observer Services; block onboarding while invalid.",
+      "acceptance": "served installer pinned KID matches manifest.signature KID; RS256 valid; 4/4 public asset SHA-256 matches; Python version equals manifest; no unauthorized PROD deployment"
+    },
+    {
+      "id": "R11-P0-PRE-ENROLL-FAILFAST",
+      "priority": "P0",
+      "evidence": "Codex records three Storage/Observer attempts AGENT_RELEASE_SIGNATURE_INVALID and successful failed-install rollback; source enrollment begins before public release verification.",
+      "action": "Perform public signed-release preflight before mutating enrollment; redact logs and stage-specific errors; preserve rollback after post-enrollment failures.",
+      "acceptance": "broken release refuses enrollment without consuming pairing or leaving device; subsequent signed release permits clean onboarding"
+    },
+    {
+      "id": "R11-P1-FEDORA-UBUNTU-E2E",
+      "priority": "P1",
+      "evidence": "Storage Fedora43 SELinux Enforcing Python3.14 UID1000 and Observer Ubuntu22.04 Python3.10 UID1001; user systemd/DBus ready; installer syntax and Python AST both PASS, no installed Agent files.",
+      "action": "Once signed coherent release exists, test clean install QA on both distros (with owner consent), DBus/runtime user, SELinux AVC, permissions, startup, signed update/uninstall, lease/grants.",
+      "acceptance": "two clean devices enrolled with distinct tokens and Agent ping PASS; full rollback verified on rejection; no hardcoded UID1000 assumptions"
+    },
+    {
+      "id": "R11-P1-SENTINELA-A-ROLLFORWARD",
+      "priority": "P1",
+      "evidence": "Sentinela A active v0.3.41 SHA matches signed v1 manifest and pings PASS; 0.3.54 Event V2 unit installed but disabled; same release label wrapper SHA differs from Services.",
+      "action": "Audit existing staged v2 release vs Services and formal hashes, source inventory, canary/rollback; do not flip active Agent before signed source and explicit approval.",
+      "acceptance": "post-cutover same device identity, Event V2 health/latency and rollback proven, preflight restored on failure, no capture pipeline interruption beyond approved window"
+    },
+    {
+      "id": "R11-P1-HTTP401-OBSERVER",
+      "priority": "P1",
+      "evidence": "Codex logged one historical GET 401 before installer download in Observer; not reproduced (four endpoints HTTP 200 on current checks).",
+      "action": "Collect sanitized Cloudflare status/trace and request path for 401 separately; classify auth vs WAF/cache; do not call it signature failure.",
+      "acceptance": "typed error source proven or marked unresolved, no tokens exposed"
+    },
+    {
+      "id": "R11-P1-PUBLIC-GATE-ANTI-DRIFT",
+      "priority": "P1",
+      "evidence": "Local sources and live served installer use different KID; local-only release gate can pass false sense of security.",
+      "action": "Run read-only verifier of live installer signature pin plus manifest crypto and four assets after every publish before enabling pairing, with multi-host readback and failed smoke on inconsistent release.",
+      "acceptance": "QA harness fails before mutation for v1/v2 mismatch and asset drift; passes on coherent signed candidate served from versioned test origin"
+    }
+  ]
+}

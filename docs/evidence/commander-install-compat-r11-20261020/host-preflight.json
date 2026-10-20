@@ -1,0 +1,97 @@
+{
+  "schema": "hara.commander.install-compatibility.r11.host-preflight.v1",
+  "recorded_date": "2026-10-20",
+  "sources": "HARA Commander on Services via SSH read-only Storage/Observer; HARA Commander direct on Sentinela A/Services; live public HTTPS GET on all hosts",
+  "hosts": [
+    {
+      "host": "storage",
+      "os": "Fedora 43 Server",
+      "selinux": "Enforcing",
+      "python": "3.14.4",
+      "user_uid": 1000,
+      "python_ast_public_agent": "PASS",
+      "bash_n_public_installer": "PASS",
+      "curl": true,
+      "systemctl": true,
+      "user_dbus": "READY",
+      "user_systemd": "running",
+      "agent_config_present": false,
+      "agent_binary_present": false,
+      "agent_service_present": false,
+      "https_public_endpoints": "4/4 HTTP 200",
+      "public_asset_shas_match_observer_services": true,
+      "installed": false
+    },
+    {
+      "host": "observer",
+      "os": "Ubuntu 22.04.5 LTS",
+      "selinux": "not applicable",
+      "python": "3.10.12",
+      "user_uid": 1001,
+      "python_ast_public_agent": "PASS",
+      "bash_n_public_installer": "PASS",
+      "curl": true,
+      "systemctl": true,
+      "user_dbus": "READY",
+      "user_systemd": "running",
+      "agent_config_present": false,
+      "agent_binary_present": false,
+      "agent_service_present": false,
+      "https_public_endpoints": "4/4 HTTP 200",
+      "public_asset_shas_match_storage_services": true,
+      "installed": false
+    },
+    {
+      "host": "services",
+      "os": "Ubuntu 24.04",
+      "python": "3.12.3",
+      "agent_registered_version": "0.3.54",
+      "active_user_unit": "hara-commander-agent-v2.service",
+      "legacy_unit": "hara-commander-agent.service inactive",
+      "state": "active",
+      "installation_kind": "Founder Event V2 internal; not evidence public commercial installer passes"
+    },
+    {
+      "host": "sentinela-a",
+      "os": "Pop!_OS 22.04",
+      "python": "3.10.12",
+      "agent_registered_version": "0.3.41",
+      "active_user_unit": "hara-commander-agent.service",
+      "active_binary_sha256": "e1f44e4695266717c6585f8d0de1e664d99123e36e75b152e136a4428f7b2730",
+      "active_hash_equals_manifest_old_linux": true,
+      "staged_v2_unit": "hara-commander-agent-v2.service inactive/disabled",
+      "staged_v2_source_sha256": "0267fe2768c59a58c24492f4bb421eb91ffb1d56543a5be3240fcd5baae94212",
+      "same_path_services_staged_v2_source_sha256": "6f71373114c36c2d9cf6b0c3ae6566c61c20dcf95f6d4271b26b7f73353f1f24",
+      "same_release_label_different_bytes": true,
+      "device_env_mode": "600",
+      "current_agent_ping": "PASS",
+      "state": "running_old_agent_do_not_interrupt"
+    }
+  ],
+  "attempts_as_reported_in_codex_progress": {
+    "storage_attempts": 1,
+    "observer_attempts": 2,
+    "error_code": "AGENT_RELEASE_SIGNATURE_INVALID",
+    "rollback": "HARA_COMMANDER_FAILED_INSTALL_ROLLBACK=PASS",
+    "extra_observer_http401": "ONE_EVENT_NOT_REPRODUCED_BY_REVIEWER"
+  },
+  "cdn": {
+    "manifest_cache": "HIT",
+    "linux_installer_cache": "HIT",
+    "cache_control": "public, max-age=0, must-revalidate",
+    "read_only": true
+  },
+  "conclusions": [
+    "Both target distros have required tools, DBus and HTTPS; active public install pin v2 vs signed manifest v1 means fail-closed signature rejection independent of OS",
+    "All four public asset hashes fail signed manifest; signature valid only for old v1 pinned public key, not current live installer",
+    "Current services internal installation is not proof public installer works",
+    "Sentinela A v2 release directory exists but different bytes for same label vs Services and disabled; do not flip blindly"
+  ],
+  "limitations": [
+    "No real installer re-run on either target; do not interpret absence of installed agent as an exact per-step trace",
+    "No proof SELinux would accept all writes/startup after fixing signature",
+    "Observer historical HTTP401 not reproduced; no headers to attribute cause",
+    "No signed current v2 release created or deployed",
+    "No service, enrollment, secret, model, network security, firewalls or Agents modified"
+  ]
+}
