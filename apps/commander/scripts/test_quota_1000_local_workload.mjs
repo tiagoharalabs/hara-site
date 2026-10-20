@@ -37,7 +37,8 @@ class ClockDate extends Date {
 class DurableObject { constructor(ctx) { this.ctx = ctx; } }
 const runtime = vm.createContext({ DurableObject, Date: ClockDate,
   QUOTA_RESERVATION_TTL_SECONDS: legacyTtl,
-  ASYNC_APPROVAL_RESERVATION_TTL_SECONDS: approvalTtl });
+  ASYNC_APPROVAL_RESERVATION_TTL_SECONDS: approvalTtl,
+  QUOTA_LEDGER_RETENTION_DAYS: 90, QUOTA_LEDGER_PRUNE_BATCH: 1000 });
 vm.runInContext(classSource + '\nglobalThis.QuotaClass = TenantQuota;', runtime);
 const plain = value => JSON.parse(JSON.stringify(value));
 function equal(actual, expected, label) { assertions++; assert.equal(actual, expected, label); }

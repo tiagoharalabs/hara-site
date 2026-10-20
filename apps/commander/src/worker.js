@@ -102,6 +102,8 @@ function transientPublicErrorCode(code) {
   return code === "CHANNEL_TRANSIENT_OFFLINE" ? "DEVICE_OFFLINE" : code;
 }
 const QUOTA_RESERVATION_TTL_SECONDS = 10 * 60;
+const QUOTA_LEDGER_RETENTION_DAYS = 90;
+const QUOTA_LEDGER_PRUNE_BATCH = 1000;
 const PAIRING_RETENTION_SECONDS = 30 * 24 * 60 * 60;
 const PAIRING_RETENTION_BATCH = 100;
 const MCP_TOOL_GRANTS = Object.freeze({
@@ -916,7 +918,8 @@ export class TenantQuota extends DurableObject {
           units INTEGER NOT NULL,
           receipt_sha256 TEXT,
           updated_at_utc TEXT NOT NULL,
-          reservation_expires_at_utc TEXT
+          reservation_expires_at_utc TEXT,
+          settled_at_utc TEXT
         );
 
         CREATE INDEX IF NOT EXISTS idx_request_period
@@ -925,9 +928,22 @@ export class TenantQuota extends DurableObject {
         CREATE INDEX IF NOT EXISTS idx_request_state_expiry
           ON request_state(state, updated_at_utc);
 
+        CREATE INDEX IF NOT EXISTS idx_request_state_retention
+          ON request_state(updated_at_utc, request_id)
+          WHERE state IN ('DENIED', 'RELEASED', 'COMMITTED');
+
         CREATE TABLE IF NOT EXISTS period_usage (
           period_key TEXT PRIMARY KEY,
           consumed_units INTEGER NOT NULL DEFAULT 0 CHECK (consumed_units >= 0)
+        );
+
+        CREATE TABLE IF NOT EXISTS retired_request_state (
+          request_id TEXT PRIMARY KEY,
+          subject_id TEXT NOT NULL,
+          period_key TEXT NOT NULL,
+          state TEXT NOT NULL,
+          receipt_sha256 TEXT,
+          retired_at_utc TEXT NOT NULL
         );
 
         CREATE TABLE IF NOT EXISTS quota_meta (
@@ -1010,6 +1026,9 @@ export class TenantQuota extends DurableObject {
       if (!columns.some((column) => column.name === "reservation_expires_at_utc")) {
         this.ctx.storage.sql.exec("ALTER TABLE request_state ADD COLUMN reservation_expires_at_utc TEXT");
       }
+      if (!columns.some((column) => column.name === "settled_at_utc")) {
+        this.ctx.storage.sql.exec("ALTER TABLE request_state ADD COLUMN settled_at_utc TEXT");
+      }
 
       const usageMeta = [...this.ctx.storage.sql.exec(
         "SELECT usage_schema_version FROM quota_meta WHERE id = 1"
@@ -1045,7 +1064,52 @@ export class TenantQuota extends DurableObject {
           UPDATE quota_meta SET usage_schema_version = 2 WHERE id = 1;
         `);
       }
+      this.ctx.storage.sql.exec(`
+        CREATE TRIGGER IF NOT EXISTS trg_request_state_retired_delete
+        AFTER DELETE ON request_state
+        WHEN OLD.state IN ('DENIED', 'RELEASED', 'COMMITTED')
+        BEGIN
+          INSERT OR IGNORE INTO retired_request_state
+            (request_id, subject_id, period_key, state, receipt_sha256, retired_at_utc)
+          VALUES (OLD.request_id, OLD.subject_id, OLD.period_key, OLD.state,
+                  OLD.receipt_sha256, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
+        END;
+      `);
     });
+    this.nextLedgerCompactionMs = 0;
+  }
+
+  compactLedger() {
+    const cutoff = new Date(Date.now() - QUOTA_LEDGER_RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString();
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    this.ctx.storage.sql.exec(
+      `DELETE FROM request_state
+        WHERE request_id IN (
+          SELECT request_id FROM request_state INDEXED BY idx_request_state_retention
+           WHERE state IN ('DENIED', 'RELEASED', 'COMMITTED')
+             AND updated_at_utc <= ?
+             AND (state = 'DENIED'
+               OR (state = 'RELEASED' AND settled_at_utc IS NOT NULL AND settled_at_utc <= ?)
+               OR (state = 'COMMITTED' AND period_key < ?))
+           ORDER BY updated_at_utc, request_id
+           LIMIT ?
+        )`,
+      cutoff, cutoff, currentMonth, QUOTA_LEDGER_PRUNE_BATCH
+    );
+    const row = [...this.ctx.storage.sql.exec("SELECT changes() AS deleted")][0];
+    return { deleted: Number(row?.deleted || 0) };
+  }
+
+  maybeCompactLedger() {
+    const now = Date.now();
+    if (now < this.nextLedgerCompactionMs) return;
+    try {
+      const { deleted } = this.compactLedger();
+      this.nextLedgerCompactionMs = now + (deleted === QUOTA_LEDGER_PRUNE_BATCH ? 5 * 60 * 1000 : 24 * 60 * 60 * 1000);
+    } catch (error) {
+      this.nextLedgerCompactionMs = now + 5 * 60 * 1000;
+      console.warn("TENANT_QUOTA_LEDGER_COMPACTION_FAILED", String(error?.message || error));
+    }
   }
 
   expireStaleReservations() {
@@ -1067,6 +1131,7 @@ export class TenantQuota extends DurableObject {
 
   status(periodKey, limit, expireReservations = true) {
     if (expireReservations) this.expireStaleReservations();
+    this.maybeCompactLedger();
     const row = [...this.ctx.storage.sql.exec(
       `SELECT consumed_units AS consumed
          FROM period_usage
@@ -1108,6 +1173,10 @@ export class TenantQuota extends DurableObject {
         ...this.status(periodKey, limit, false)
       };
     }
+    const retired = [...this.ctx.storage.sql.exec(
+      "SELECT request_id FROM retired_request_state WHERE request_id = ?", requestId
+    )][0];
+    if (retired) return { ok: false, code: "REQUEST_RETIRED", existing: true, state: "RETIRED" };
 
     const balance = this.status(periodKey, limit, false);
     if (limit != null && balance.consumed_units >= limit) {
@@ -1141,8 +1210,27 @@ export class TenantQuota extends DurableObject {
 
   settleDeviceCall(requestId,subjectId,periodKey,units,commitReceipt) {
     const row=[...this.ctx.storage.sql.exec("SELECT subject_id,period_key,units,state FROM request_state WHERE request_id = ?",requestId)][0];
-    if (!row || row.subject_id !== subjectId || row.period_key !== periodKey || units !== 1 || (Number(row.units) !== units && row.state !== "RELEASED")) return {ok:false,code:"CALL_USAGE_BINDING_INVALID"};
-    return commitReceipt ? this.commit(requestId,subjectId,commitReceipt,null) : this.release(requestId,subjectId,null);
+    if (!row) {
+      const retired=[...this.ctx.storage.sql.exec(
+        "SELECT subject_id,period_key,state,receipt_sha256 FROM retired_request_state WHERE request_id = ?",requestId
+      )][0];
+      if (!retired || retired.subject_id !== subjectId || retired.period_key !== periodKey || units !== 1) return {ok:false,code:"CALL_USAGE_BINDING_INVALID"};
+      if (commitReceipt && retired.state === "COMMITTED") return this.commit(requestId,subjectId,commitReceipt,null);
+      if (!commitReceipt && retired.state === "RELEASED") return this.release(requestId,subjectId,null);
+      return {ok:false,code:"CALL_USAGE_BINDING_INVALID"};
+    }
+    if (row.subject_id !== subjectId || row.period_key !== periodKey || units !== 1 || (Number(row.units) !== units && row.state !== "RELEASED")) return {ok:false,code:"CALL_USAGE_BINDING_INVALID"};
+    if (commitReceipt) return this.commit(requestId,subjectId,commitReceipt,null);
+    const released = this.release(requestId,subjectId,null);
+    if (released.ok && released.state === "RELEASED") {
+      // A reservation that expired by TTL alone is still reconcilable. Only
+      // a proven no-execution settlement makes its row eligible for pruning.
+      this.ctx.storage.sql.exec(
+        "UPDATE request_state SET settled_at_utc = COALESCE(settled_at_utc, ?) WHERE request_id = ? AND state = 'RELEASED'",
+        new Date().toISOString(), requestId
+      );
+    }
+    return released;
   }
 
   commit(requestId, subjectId, receiptSha256, limit) {
@@ -1153,7 +1241,15 @@ export class TenantQuota extends DurableObject {
       requestId
     )][0];
 
-    if (!row) return { ok: false, code: "RESERVATION_NOT_FOUND" };
+    if (!row) {
+      const retired=[...this.ctx.storage.sql.exec(
+        "SELECT subject_id,period_key,state,receipt_sha256 FROM retired_request_state WHERE request_id = ?",requestId
+      )][0];
+      if (!retired) return {ok:false,code:"RESERVATION_NOT_FOUND"};
+      if (retired.subject_id !== subjectId || retired.receipt_sha256 !== receiptSha256) return {ok:false,code:"IDEMPOTENCY_CONFLICT"};
+      if (retired.state !== "COMMITTED") return {ok:false,code:"RESERVATION_NOT_ACTIVE",state:retired.state};
+      return {ok:true,existing:true,state:"COMMITTED",...this.status(retired.period_key,limit,false)};
+    }
     if (row.subject_id !== subjectId) return { ok: false, code: "IDEMPOTENCY_CONFLICT" };
     if (row.state === "COMMITTED") {
       if (row.receipt_sha256 !== receiptSha256) return { ok: false, code: "IDEMPOTENCY_CONFLICT" };
@@ -1189,7 +1285,15 @@ export class TenantQuota extends DurableObject {
       requestId
     )][0];
 
-    if (!row) return { ok: false, code: "RESERVATION_NOT_FOUND" };
+    if (!row) {
+      const retired=[...this.ctx.storage.sql.exec(
+        "SELECT subject_id,period_key,state FROM retired_request_state WHERE request_id = ?",requestId
+      )][0];
+      if (!retired) return {ok:false,code:"RESERVATION_NOT_FOUND"};
+      if (retired.subject_id !== subjectId) return {ok:false,code:"IDEMPOTENCY_CONFLICT"};
+      if (retired.state !== "RELEASED") return {ok:false,code:"RESERVATION_NOT_ACTIVE",state:retired.state};
+      return {ok:true,existing:true,state:"RELEASED",...this.status(retired.period_key,limit,false)};
+    }
     if (row.subject_id !== subjectId) return { ok: false, code: "IDEMPOTENCY_CONFLICT" };
     if (row.state === "RELEASED") return { ok: true, existing: true, state: "RELEASED", ...this.status(row.period_key, limit, false) };
     if (row.state !== "RESERVED") return { ok: false, code: "RESERVATION_NOT_ACTIVE", state: row.state };
@@ -3158,6 +3262,9 @@ async function pruneDeviceCallHistory(env) {
          WHERE state IN ('COMPLETED','FAILED','CANCELLED','EXPIRED')
            AND created_at_utc <= ?
            AND (usage_mode != 'CLOUD_QUOTA' OR usage_units = 0 OR usage_settled_at_utc IS NOT NULL)
+           AND (state NOT IN ('COMPLETED','FAILED')
+             OR (payload_json LIKE 'HARA_REDACTED_SHA256:%'
+               AND result_json LIKE 'HARA_REDACTED_SHA256:%'))
          ORDER BY state,created_at_utc,call_id
          LIMIT ?
       )`
@@ -5290,7 +5397,18 @@ async function completeDeviceCall(env, request, body) {
     : null;
   const completedAt = nowIso();
   const before=await env.PRODUCT_DB.prepare("SELECT "+CALL_ROW_FIELDS+" FROM commander_device_calls WHERE call_id=? AND tenant_id=? AND device_id=? LIMIT 1").bind(callId,device.tenant_id,device.device_id).first();
-  if (!before) throw new Error("DEVICE_CALL_NOT_FOUND");
+  if (!before) {
+    const archived=await env.PRODUCT_DB.prepare(
+      "SELECT state,result_marker,error_code FROM commander_device_call_completion_archive WHERE call_id=? AND tenant_id=? AND device_id=? LIMIT 1"
+    ).bind(callId,device.tenant_id,device.device_id).first();
+    if (!archived) throw new Error("DEVICE_CALL_NOT_FOUND");
+    if (archived.state!==state
+      || (state==="FAILED" && String(archived.error_code || "")!==String(errorCode || ""))
+      || !await deviceCallStoredContentMatches(archived.result_marker,resultJson)) {
+      throw new Error("IDEMPOTENCY_CONFLICT");
+    }
+    return {schema:"hara.commander-device-call-result.v1",ok:true,existing:true,archived:true,call_id:callId,state};
+  }
   const descriptor=JSON.stringify(safeCallResultMetadata(body.result,{...before,state,error_code:errorCode}));
 
   const update = await env.PRODUCT_DB.prepare(
@@ -6346,6 +6464,7 @@ export default {
         GRANT_MISSING: 403,
         LOCAL_DIAGNOSTICS_REQUIRE_SIGNED_AGENT_UPDATE: 409,
         IDEMPOTENCY_CONFLICT: 409,
+        REQUEST_RETIRED: 409,
       };
 
       if (requestUrl.pathname === "/auth/callback") {

@@ -17,6 +17,8 @@ const defaultTtlExpression=source.match(/const QUOTA_RESERVATION_TTL_SECONDS\s*=
 assert.ok(defaultTtlExpression,"legacy reservation TTL expression missing");
 const defaultTtl=Number(vm.runInNewContext(defaultTtlExpression));
 assert.equal(defaultTtl,600,"legacy reservation TTL changed");
+const ledgerPruneBatch=Number(source.match(/const QUOTA_LEDGER_PRUNE_BATCH\s*=\s*(\d+)\s*;/)?.[1]);
+assert.equal(ledgerPruneBatch,1000,"ledger pruning batch changed");
 const approvalSource=fs.readFileSync(new URL("../src/approval-async-relay.mjs",new URL(`file://${fs.realpathSync(workerPath)}`)),"utf8");
 const approvalTtl=Number(approvalSource.match(/const ASYNC_APPROVAL_RESERVATION_TTL_SECONDS\s*=\s*(\d+)\s*;/)?.[1]);
 assert.equal(approvalTtl,1800,"approval reservation TTL changed");
@@ -25,7 +27,7 @@ const plain=(value)=>JSON.parse(JSON.stringify(value));
 const iso=(value)=>new Date(value).toISOString();
 const baseline=Date.parse("2026-10-31T23:45:00.000Z");
 const receipt="a".repeat(64);
-async function fixture({legacy=false}={}) {
+async function fixture({legacy=false,version1=false}={}) {
   const db=new DatabaseSync(":memory:");
   let now=baseline;
   const statements=[];
@@ -38,6 +40,21 @@ async function fixture({legacy=false}={}) {
     db.prepare("INSERT INTO request_state VALUES (?,?,?,?,?,?,?)").run(
       "legacy","2026-10","process.run","RESERVED",1,null,iso(now),
     );
+  }
+  if (version1) {
+    db.exec(`CREATE TABLE request_state (
+      request_id TEXT PRIMARY KEY,subject_id TEXT NOT NULL,period_key TEXT NOT NULL,
+      function_id TEXT NOT NULL,state TEXT NOT NULL,units INTEGER NOT NULL,
+      receipt_sha256 TEXT,updated_at_utc TEXT NOT NULL,reservation_expires_at_utc TEXT
+    );
+    CREATE TABLE period_usage (period_key TEXT PRIMARY KEY,consumed_units INTEGER NOT NULL);
+    CREATE TABLE quota_meta (id INTEGER PRIMARY KEY,usage_schema_version INTEGER NOT NULL);
+    INSERT INTO quota_meta VALUES (1,1);
+    CREATE TRIGGER trg_request_state_usage_delete AFTER DELETE ON request_state
+    WHEN OLD.state IN ('RESERVED','COMMITTED') AND OLD.units<>0
+    BEGIN UPDATE period_usage SET consumed_units=consumed_units-OLD.units WHERE period_key=OLD.period_key; END;
+    INSERT INTO request_state VALUES ('V1-C','S1','2026-10','process.run','COMMITTED',1,'${receipt}','2026-10-20T00:00:00Z',NULL);
+    INSERT INTO period_usage VALUES ('2026-10',1);`);
   }
   class ClockDate extends Date {
     constructor(...args){super(...(args.length ? args : [now]));}
@@ -57,7 +74,8 @@ async function fixture({legacy=false}={}) {
   class DurableObject {constructor(context){this.ctx=context;}}
   const runtime=vm.createContext({DurableObject,Date:ClockDate,
     QUOTA_RESERVATION_TTL_SECONDS:defaultTtl,
-    ASYNC_APPROVAL_RESERVATION_TTL_SECONDS:approvalTtl});
+    ASYNC_APPROVAL_RESERVATION_TTL_SECONDS:approvalTtl,
+    QUOTA_LEDGER_RETENTION_DAYS:90,QUOTA_LEDGER_PRUNE_BATCH:2});
   vm.runInContext(classSource+"\nglobalThis.QuotaClass=TenantQuota;",runtime);
   const quota=new runtime.QuotaClass(ctx,{});
   await Promise.all(pending);
@@ -223,6 +241,52 @@ await check("retention-delete-never-refunds-committed-use",(f)=>{
   f.reserve("R2");assert.equal(f.balance().consumed_units,2);
   f.db.prepare("DELETE FROM request_state WHERE request_id='R2'").run();
   assert.equal(f.balance().consumed_units,1,"uncommitted reservation must be refunded");
+});
+await check("version1-delete-trigger-upgrades-without-refunding",(f)=>{
+  assert.equal(f.db.prepare("SELECT usage_schema_version FROM quota_meta WHERE id=1").get().usage_schema_version,2);
+  assert.equal(f.balance().consumed_units,1);
+  f.db.prepare("DELETE FROM request_state WHERE request_id='V1-C'").run();
+  assert.equal(f.balance().consumed_units,1);
+},{version1:true});
+await check("bounded-ledger-retention-preserves-quota-and-pending-proof",(f)=>{
+  const paid=(id)=>{f.reserve(id,600,"S1","2026-09");f.quota.commit(id,"S1",receipt,10);};
+  paid("PAID-C1");paid("PAID-C2");
+  f.reserve("TRIAL-C",600,"S1","LIFETIME");f.quota.commit("TRIAL-C","S1",receipt,10);
+  f.reserve("SETTLED-R",600,"S1","2026-09");
+  assert.equal(f.quota.settleDeviceCall("SETTLED-R","S1","2026-09",1,null).state,"RELEASED");
+  f.reserve("UNSETTLED-R",600,"S1","2026-09");f.quota.release("UNSETTLED-R","S1",10);
+  assert.equal(f.reserve("DENIED",600,"S1","2026-09","process.run",0).state,"DENIED");
+  f.reserve("PENDING",600,"S1","2026-09");
+  f.db.prepare("UPDATE request_state SET updated_at_utc='2026-07-01T00:00:00.000Z'").run();
+  f.db.prepare("UPDATE request_state SET settled_at_utc='2026-07-01T00:00:00.000Z' WHERE request_id='SETTLED-R'").run();
+  const before=f.balance("2026-09").consumed_units;
+  assert.equal(f.quota.compactLedger().deleted,2,"batch must remain bounded");
+  assert.equal(f.quota.compactLedger().deleted,2);
+  assert.equal(f.db.prepare("SELECT COUNT(*) AS n FROM request_state WHERE request_id IN ('PAID-C1','PAID-C2','SETTLED-R','DENIED')").get().n,0);
+  assert.equal(f.db.prepare("SELECT COUNT(*) AS n FROM retired_request_state").get().n,4);
+  assert.equal(f.reserve("PAID-C1",600,"S1","2026-09").code,"REQUEST_RETIRED");
+  assert.equal(f.quota.commit("PAID-C1","S1",receipt,10).existing,true);
+  assert.equal(f.quota.settleDeviceCall("PAID-C1","S1","2026-09",1,receipt).existing,true);
+  assert.equal(f.quota.commit("PAID-C1","FOREIGN",receipt,10).code,"IDEMPOTENCY_CONFLICT");
+  assert.equal(f.quota.commit("PAID-C1","S1","b".repeat(64),10).code,"IDEMPOTENCY_CONFLICT");
+  assert.equal(f.quota.release("SETTLED-R","S1",10).existing,true);
+  assert.equal(f.row("TRIAL-C").state,"COMMITTED");
+  assert.equal(f.row("UNSETTLED-R").state,"RELEASED");
+  assert.equal(f.row("PENDING").state,"RESERVED");
+  assert.equal(f.balance("2026-09").consumed_units,before,"compaction refunded or added usage");
+  assert.equal(f.balance("LIFETIME").consumed_units,1);
+  const deletion=f.statements.find((entry)=>entry.sql.includes("DELETE FROM request_state") && entry.sql.includes("idx_request_state_retention"));
+  assert(deletion,"bounded indexed retention query missing");
+  const plan=f.db.prepare("EXPLAIN QUERY PLAN "+deletion.sql).all(...deletion.binds).map((row)=>row.detail);
+  assert(plan.some((detail)=>detail.includes("idx_request_state_retention")),"retention index unused");
+  assert.equal(f.db.prepare("PRAGMA integrity_check").get().integrity_check,"ok");
+});
+await check("active-quota-object-compacts-on-scheduled-status",(f)=>{
+  assert.equal(f.reserve("OLD-DENIAL",600,"S1","2026-09","process.run",0).state,"DENIED");
+  f.db.prepare("UPDATE request_state SET updated_at_utc='2026-07-01T00:00:00.000Z' WHERE request_id='OLD-DENIAL'").run();
+  f.at(24*60*60*1000);
+  assert.equal(f.quota.status("2026-09",10).consumed_units,0);
+  assert.equal(f.db.prepare("SELECT COUNT(*) AS n FROM request_state WHERE request_id='OLD-DENIAL'").get().n,0);
 });
 console.log(JSON.stringify({
   schema:"hara.commander-approval-async-quota-tests.v1",state:"PASS",

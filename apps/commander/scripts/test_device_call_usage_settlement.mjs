@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
 import { DatabaseSync } from "node:sqlite";
-import { webcrypto } from "node:crypto";
+import { webcrypto, createHash } from "node:crypto";
 import * as approval from "../src/approval-async-relay.mjs";
 import * as storage from "../src/approval-relay-storage.mjs";
 
@@ -32,7 +32,8 @@ const classStart=worker.indexOf("export class TenantQuota extends DurableObject 
 const classEnd=worker.indexOf("\nasync function entitlementForTenant",classStart);
 assert(classStart>=0 && classEnd>classStart);
 const quotaRuntime=vm.createContext({DurableObject,Date:ClockDate,
-  QUOTA_RESERVATION_TTL_SECONDS:600,ASYNC_APPROVAL_RESERVATION_TTL_SECONDS:1800});
+  QUOTA_RESERVATION_TTL_SECONDS:600,ASYNC_APPROVAL_RESERVATION_TTL_SECONDS:1800,
+  QUOTA_LEDGER_RETENTION_DAYS:90,QUOTA_LEDGER_PRUNE_BATCH:1000});
 vm.runInContext(worker.slice(classStart,classEnd).replace("export class","class")+"\nglobalThis.Quota=TenantQuota;",quotaRuntime);
 const quota=new quotaRuntime.Quota(quotaCtx,{});
 await Promise.all(pending);
@@ -68,8 +69,12 @@ const runtime=vm.createContext({Date:ClockDate,TextEncoder,crypto:webcrypto,cons
   nowIso:(seconds=0)=>now(seconds),resolveDeviceCredential:async()=>device,
   safeCallResultMetadata:approval.safeCallResultMetadata,
   CALL_ROW_FIELDS:storage.CALL_ROW_FIELDS,settleCallUsage:storage.settleCallUsage,
-  reconcileAgentVersion:async()=>{},deviceCallStoredContentMatches:async(a,b)=>a===b});
-vm.runInContext(["cleanId","boundedJson","completeDeviceCall"].map(extract).join("\n")+"\nglobalThis.complete=completeDeviceCall;",runtime);
+  DEVICE_CALL_HISTORY_RETENTION_DAYS:90,DEVICE_CALL_HISTORY_PRUNE_BATCH:500,
+  DEVICE_CALL_HISTORY_HOURLY_PRUNE_BATCH:5000,
+  reconcileAgentVersion:async()=>{},deviceCallStoredContentMatches:async(a,b)=>
+    a===b || a==="HARA_REDACTED_SHA256:"+createHash("sha256").update(b).digest("hex")});
+vm.runInContext(["cleanId","boundedJson","completeDeviceCall","pruneDeviceCallHistory"].map(extract).join("\n")+
+  "\nglobalThis.complete=completeDeviceCall;globalThis.prune=pruneDeviceCallHistory;",runtime);
 
 function seed(id, period="LIFETIME") {
   db.prepare("INSERT INTO commander_device_calls (call_id,request_id,tenant_id,subject_id,device_id,tool_id,payload_json,state,created_at_utc,expires_at_utc,claimed_at_utc,usage_mode,usage_units,usage_period_key,approval_timeout_seconds,execution_budget_ms) VALUES (?,?,?,?,?,'hara.files.read','{}','EXECUTING',?,?,?,'CLOUD_QUOTA',1,?,0,1000)")
@@ -127,5 +132,18 @@ clock+=601000; quota.status("LIFETIME",5000);
 assert.equal(quotaState("DENIED").state,"RELEASED");
 assert.equal(quota.status("LIFETIME",5000).consumed_units,3);
 console.log("COMMANDER_UNEXECUTED_DENIAL_RELEASES_QUOTA=PASS");
+
+const marker=(value)=>"HARA_REDACTED_SHA256:"+createHash("sha256").update(value).digest("hex");
+const original=result("NORMAL");
+db.prepare("UPDATE commander_device_calls SET created_at_utc=?,expires_at_utc=?,payload_json=?,result_json=? WHERE call_id='NORMAL'")
+  .run(now(-100*86400),now(-100*86400),marker("{}"),marker(JSON.stringify(original.result)));
+clock+=100*86400*1000;
+assert.equal((await runtime.prune(env)).call_rows,1);
+assert.equal(db.prepare("SELECT COUNT(*) AS n FROM commander_device_calls WHERE call_id='NORMAL'").get().n,0);
+assert.equal(db.prepare("SELECT COUNT(*) AS n FROM commander_device_call_completion_archive WHERE call_id='NORMAL'").get().n,1);
+assert.equal((await runtime.complete(env,{},original)).existing,true);
+await assert.rejects(runtime.complete(env,{},result("NORMAL","b")),/IDEMPOTENCY_CONFLICT/);
+assert.equal(quota.status("LIFETIME",5000).consumed_units,3);
+console.log("COMMANDER_ARCHIVED_COMPLETION_ACK_REPLAY_NO_SECOND_CHARGE=PASS");
 
 db.close();quotaDb.close();

@@ -119,17 +119,34 @@ O gate offline amplo inicial saiu **1** com 122/129 PASS e sete falhas, sem afro
 
 ## Histórico e retenção D1 — 20/10/2026
 
-**Corrigido no código:** migração aditiva `0039` guarda total vitalício por tenant/usuário e contagem horária somente dos oito dias recentes. O histórico de sete dias combina essas contagens com a fração da hora inicial lida pelo índice existente; usa uma leitura D1 e conserva a precisão no limite de sete dias. O job horário remove no máximo 500 chamadas terminais com mais de 90 dias, apenas quando o uso pago está liquidado, e até 5.000 agregados horários vencidos. Não há trigger de DELETE no histórico D1 que devolva franquia. A linha de chamada sem liquidação fica preservada para reconciliação. A aplicação de `0039` no D1 remoto não foi feita.
+**Corrigido no código:** migração aditiva `0039` guarda total vitalício por tenant/usuário e contagem horária somente dos oito dias recentes. O histórico de sete dias combina essas contagens com a fração da hora inicial lida pelo índice existente; usa uma leitura D1 e conserva a precisão no limite de sete dias. O job horário remove no máximo 500 chamadas terminais com mais de 90 dias, apenas quando o uso pago está liquidado, e até 5.000 agregados horários vencidos. A migração adicional `0040` arquiva um marcador criptográfico mínimo antes de apagar uma conclusão `COMPLETED`/`FAILED`; o Worker só compacta essas chamadas depois da redação do payload e resultado. Reenvio posterior do resultado exato recebe aceite idempotente sem cobrar de novo. Linha sem liquidação e resultado ainda não redigido ficam preservados. Não há trigger de DELETE no histórico D1 que devolva franquia. `0039`/`0040` não foram aplicadas no D1 remoto.
 
 | Teste local | Exit | Evidência |
 | --- | ---: | --- |
-| `node apps/commander/scripts/test_device_call_history_retention.mjs` | 0 | backfill, limite exato de sete dias, retenção sem apagar prova pendente, inserção posterior, replay da migração e isolamento de sujeito em SQLite |
+| `node apps/commander/scripts/test_device_call_history_retention.mjs` | 0 | backfill, limite exato de sete dias, prova pendente e conteúdo bruto preservados, arquivo de recibo mínimo, inserção posterior, replay da migração e isolamento de sujeito em SQLite |
+| `node apps/commander/scripts/test_device_call_usage_settlement.mjs` | 0 | reenvio exato após arquivamento aceito, resultado divergente recusado e cota sem segunda cobrança |
 | `python3 -B apps/commander/scripts/validate_portal_read_capacity.py` | 0 | 1.000/10.000 contas, resultados iguais, plano indexado e uma leitura D1 simulada; não mede Cloudflare hospedada |
 | `node --check apps/commander/src/worker.js` | 0 | sintaxe |
 | `git diff --check` | 0 | whitespace |
 
-**Estados:** corrigido no código: sim; testado local: sim; testado DEV: não; publicado PROD: não. A remoção de linhas do `TenantQuota` ainda precisa de compactação segura; trigger versão 2 e regressão de upgrade da versão 1 foram validadas localmente, mas não autorizam apagar recibos pendentes. Escala/migração D1 hospedada e consumo histórico permanecem bloqueios de promoção.
+**Estados:** corrigido no código: sim; testado local: sim; testado DEV: não; publicado PROD: não. O stage deve aplicar `0039` e `0040` juntos antes do Worker novo. Escala/migração D1 hospedada e consumo histórico permanecem bloqueios de promoção.
 
 ## Orientação operacional recebida — 20/10/2026
 
 Li `docs/operations/HARA_COMMANDER_PRIMARY_OPERATIONAL_POLICY_20261020.md` e `docs/operations/HARA_COMMANDER_FUNCTIONAL_IMPROVEMENTS_20261020.md`. O proprietário definiu Commander como ferramenta MCP principal para uso diário e pediu melhorias observáveis nas funções existentes; não autorizou fallback automático para Desktop Commander nem alteração de Agents ativos. O relato de aproximadamente 80 mil transações é contexto de uso, sem período medido ou mudança da franquia de um milhão. A sequência local mantém correção de resultado/cota, processos e arquivos, fila/sessões e jornada comercial. Os dois documentos e recibos foram entregues por outra frente; permanecem sem commit desta frente até revisão de proveniência/privacidade.
+
+## Compactação TenantQuota e regressões R4/R3 — 20/10/2026
+
+**Corrigido no código:** cada DO ativo verifica retenção no máximo uma vez por dia quando não há backlog, ou a cada cinco minutos quando um lote de 1.000 foi cheio. A consulta é indexada e remove `DENIED` antigos, `RELEASED` apenas após liquidação comprovada sem execução, e `COMMITTED` de mês pago já encerrado após 90 dias. Reservas ainda abertas, liberações apenas por TTL e `COMMITTED` de Trial `LIFETIME` ficam no ledger. A trigger de DELETE versão 2 mantém o consumo `COMMITTED` no agregado `period_usage`; outra trigger move o vínculo e recibo para uma tabela menor na mesma operação atômica. Reserva com ID aposentado é recusada; repetição do mesmo recibo `COMMITTED` ou liberação `RELEASED` mantém resposta idempotente. A tabela de recibos aposentados cresce com o histórico e requer política futura de capacidade, sem descarte silencioso. Um DO sem tráfego não é compactado até a próxima consulta, pois não foi criado fan-out periódico por tenant.
+
+| Teste local | Exit | Evidência |
+| --- | ---: | --- |
+| `node apps/commander/scripts/test_approval_async_quota_ttl.mjs` | 0 | 20 cenários; trigger v1→v2, lote 2 simulado, plano indexado, Trial preservado, liberações pendentes preservadas, recibo aposentado idempotente e consumo pago estável |
+| `node apps/commander/scripts/test_device_call_usage_settlement.mjs` | 0 | conclusão sem cliente, falha DO/retry e recibo idempotente |
+| `node apps/commander/scripts/test_quota_1000_local_workload.mjs` | 0 | 1.000 DOs SQLite isolados; 44.504 asserções; não mede Cloudflare |
+| `python3 -B apps/commander/scripts/validate_tenant_quota_storage_efficiency.py` | 0 | índice de expiração e leitura O(1) do agregado no caminho comum |
+| `node apps/commander/scripts/test_approval_async_storage.mjs` | 0 | 30 cenários de leitura/settlement/concorrência em SQLite |
+| `python3 -B apps/commander/scripts/validate_result_delivery_outbox.py` | 0 | novo caso de disco cheio após mutação: resultado `UNKNOWN`, sem reexecução nem falsa negação |
+| `python3 -B apps/commander/scripts/validate_process_continuous_drain.py` | 0 | novo caso determinístico de desaparecimento `/proc`, erro de permissão preservado, 256 KiB, Unicode, memória e revogação de descendente |
+
+**Estados:** corrigido no código: sim; testado local: sim; testado DEV: não; publicado PROD: não. A [documentação atual da Cloudflare](https://developers.cloudflare.com/durable-objects/api/sqlite-storage-api/) confirma `sql.exec()` síncrono e armazenamento transacional; a validação acima usa SQLite local, não Cloudflare hospedada. Capacidade da tabela aposentada e custo da compactação em DO hospedado permanecem pontos de observação antes de promover a política de retenção.

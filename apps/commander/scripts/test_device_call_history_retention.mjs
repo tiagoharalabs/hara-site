@@ -4,12 +4,14 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
 import { DatabaseSync } from "node:sqlite";
+import { createHash } from "node:crypto";
 
 const app=new URL("../",import.meta.url);
 const worker=fs.readFileSync(new URL("src/worker.js",app),"utf8");
 const migration="0039_device_call_history_rollup_retention.sql";
+const archiveMigration="0040_device_call_completion_archive.sql";
 const db=new DatabaseSync(":memory:");
-for (const name of fs.readdirSync(new URL("migrations/",app)).filter(x=>x.endsWith(".sql")&&x!==migration).sort()) {
+for (const name of fs.readdirSync(new URL("migrations/",app)).filter(x=>x.endsWith(".sql")&&x!==migration&&x!==archiveMigration).sort()) {
   db.exec(fs.readFileSync(new URL(`migrations/${name}`,app),"utf8"));
 }
 const DAY=24*60*60*1000;
@@ -30,11 +32,14 @@ const seed=(id,created,{settled=true}={})=>{
 };
 seed("OLD-SETTLED",iso(-110*DAY));
 seed("OLD-UNSETTLED",iso(-110*DAY+60*60*1000),{settled:false});
+seed("OLD-RAW",iso(-110*DAY+2*60*60*1000));
 seed("RECENT",iso(-30*60*1000));
 seed("BOUNDARY-IN",iso(-7*DAY+15*60*1000));
 seed("BOUNDARY-OUT",iso(-7*DAY-15*60*1000));
 const migrationSql=fs.readFileSync(new URL(`migrations/${migration}`,app),"utf8");
 db.exec(migrationSql);
+const archiveSql=fs.readFileSync(new URL(`migrations/${archiveMigration}`,app),"utf8");
+db.exec(archiveSql);
 assert.equal(db.prepare("SELECT COUNT(*) AS n FROM commander_device_call_history_hourly WHERE hour_key<?").get(iso(-9*DAY).slice(0,13)).n,0);
 
 const wrap=(sql,binds=[])=>({
@@ -56,28 +61,34 @@ vm.runInContext(extract("productTransactionHistory")+"\n"+extract("pruneDeviceCa
 const read=()=>runtime.history(env,"T1","S1");
 let view=await read();
 assert.equal(view.available,true);
-assert.equal(view.calls_total,5);
+assert.equal(view.calls_total,6);
 assert.equal(view.calls_7d,2);
 console.log("COMMANDER_HISTORY_BACKFILL_EXACT_SEVEN_DAY_BOUNDARY=PASS");
 
+const marker=(value)=>"HARA_REDACTED_SHA256:"+createHash("sha256").update(value).digest("hex");
+db.prepare("UPDATE commander_device_calls SET payload_json=?,result_json=? WHERE call_id IN ('OLD-SETTLED','OLD-UNSETTLED')")
+  .run(marker("{}"),marker("{}"));
 db.prepare("INSERT INTO commander_device_call_history_hourly VALUES ('T1','S1',?,1)").run(iso(-20*DAY).slice(0,13));
 const pruned=await runtime.prune(env);
 assert.equal(pruned.call_rows,1);
 assert.equal(pruned.hour_rows,1);
 assert.equal(db.prepare("SELECT COUNT(*) AS n FROM commander_device_calls WHERE call_id='OLD-SETTLED'").get().n,0);
 assert.equal(db.prepare("SELECT COUNT(*) AS n FROM commander_device_calls WHERE call_id='OLD-UNSETTLED'").get().n,1);
+assert.equal(db.prepare("SELECT COUNT(*) AS n FROM commander_device_calls WHERE call_id='OLD-RAW'").get().n,1);
+assert.equal(db.prepare("SELECT COUNT(*) AS n FROM commander_device_call_completion_archive WHERE call_id='OLD-SETTLED'").get().n,1);
+assert.equal(db.prepare("SELECT COUNT(*) AS n FROM commander_device_call_completion_archive WHERE call_id='OLD-RAW'").get().n,0);
 view=await read();
-assert.equal(view.calls_total,5);
+assert.equal(view.calls_total,6);
 assert.equal(view.calls_7d,2);
 console.log("COMMANDER_HISTORY_PRUNE_PRESERVES_TOTAL_AND_UNSETTLED_PROOF=PASS");
 
 seed("AFTER-MIGRATION",now);
 view=await read();
-assert.equal(view.calls_total,6);
+assert.equal(view.calls_total,7);
 assert.equal(view.calls_7d,3);
 db.exec(migrationSql);
 view=await read();
-assert.equal(view.calls_total,6);
+assert.equal(view.calls_total,7);
 assert.equal(view.calls_7d,3);
 assert.equal((await runtime.history(env,"T1","FOREIGN")).calls_total,0);
 assert.equal(db.prepare("PRAGMA integrity_check").get()["integrity_check"],"ok");
