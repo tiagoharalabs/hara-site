@@ -86,6 +86,16 @@ function operationalToolError(code, args = undefined) {
   if (code === "DEVICE_OFFLINE") {
     return build("UNAVAILABLE", "DEVICE_AVAILABILITY", true, { available: false, device_state: "OFFLINE" });
   }
+  if (code === "AGENT_UPGRADE_REQUIRED") {
+    return build("UNAVAILABLE", "AGENT_CAPABILITY", false, {
+      supported_by_installed_agent: false, recommended_tool: "get_config",
+    });
+  }
+  if (code === "LIST_OFFSET_UNSUPPORTED") {
+    return build("UNAVAILABLE", "PAGINATION_CAPABILITY", false, {
+      offset_supported: false, recommended_tool: "get_config",
+    });
+  }
   if (code === "DEVICE_EVENT_UNDELIVERED") {
     return build("UNAVAILABLE", "DEVICE_DELIVERY", true, {
       device_state: "NOT_PROVEN_OFFLINE", execution_started: false,
@@ -522,7 +532,7 @@ export function createSimpleCustomerMcpServer({ executeTool }) {
     "list_directory",
     toolConfig({
       title: "List Directory",
-      description: "List files and directories with bounded recursive depth and offset-based continuation.",
+      description: "List files and directories with bounded recursive depth and offset-based continuation. Windows Agent versions before 0.3.55 do not support offset; check get_config before continuing a listing.",
       inputSchema: z.object({
         computer,
         path: z.string().min(1).max(4096),
@@ -698,7 +708,7 @@ export function createSimpleCustomerMcpServer({ executeTool }) {
     "start_process",
     toolConfig({
       title: "Start Process",
-      description: "Run a command. By default waits for bounded completion. Set interactive=true for a managed session; requests above 10 seconds are automatically routed to a managed session. Windows per-action approval may return PENDING with a HARA-CALL session_id; read that handle with read_process_output without resending the command.",
+      description: "Run a command. By default waits for bounded completion. Set interactive=true for a managed session; requests above 10 seconds are automatically routed to a managed session. Windows managed sessions accept PowerShell command lines, not interactive stdin or Read-Host prompts. Windows per-action approval may return PENDING with a HARA-CALL session_id; read that handle with read_process_output without resending the command.",
       inputSchema: z.object({
         computer,
         command: z.string().min(1).max(4096),
@@ -755,7 +765,7 @@ export function createSimpleCustomerMcpServer({ executeTool }) {
     "interact_with_process",
     toolConfig({
       title: "Interact With Process",
-      description: "Send input to a managed process session. The immediate response may contain only PTY echo; use read_process_output for subsequent program output.",
+      description: "Send input to a managed process session. Windows sends PowerShell command lines, not interactive stdin; Read-Host prompts are unsupported. On a PTY the immediate response may contain only echo; use read_process_output for subsequent program output.",
       inputSchema: z.object({
         computer,
         session_id: z.string().min(1).max(180),

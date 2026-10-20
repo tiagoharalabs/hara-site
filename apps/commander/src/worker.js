@@ -3934,6 +3934,9 @@ function agentPurposeToolReady(device, toolId) {
       "hara.process.interact","hara.process.kill",
     ];
     if (managed.includes(toolId)) return semverAtLeast(device.agent_version,44);
+    if (["hara.files.read_many","hara.files.search","hara.files.edit"].includes(toolId)) {
+      return semverAtLeast(device.agent_version,55);
+    }
     return starter.includes(toolId) && semverAtLeast(device.agent_version,32);
   }
   if (platform !== "LINUX") return false;
@@ -3950,6 +3953,17 @@ function agentPurposeToolReady(device, toolId) {
     : toolId === "hara.files.search" ? 17
     : 16;
   return a > 0 || b > 3 || (b === 3 && c >= minPatch);
+}
+
+function assertWindowsToolCompatibility(device, toolId, payload) {
+  if (String(device?.platform || "").toUpperCase() !== "WINDOWS") return;
+  if (toolId === "hara.files.list" && Number(payload?.offset || 0) > 0 && !semverAtLeast(device.agent_version,55)) {
+    throw new Error("LIST_OFFSET_UNSUPPORTED");
+  }
+  if (["hara.files.read_many","hara.files.search","hara.files.edit"].includes(toolId)
+      && !agentPurposeToolReady(device,toolId)) {
+    throw new Error("AGENT_UPGRADE_REQUIRED");
+  }
 }
 
 async function customerMcpWaitForCall(env, identity, call) {
@@ -4022,6 +4036,10 @@ function capabilitiesForDevice(device, grants) {
         tools.push("hara.process.start","hara.process.interact","hara.process.kill");
       }
     }
+    if (semverAtLeast(device.agent_version,55)) {
+      tools.push("hara.files.read_many","hara.files.search");
+      if (grants.includes("COMMANDER_MUTATION_INVOKE")) tools.push("hara.files.edit");
+    }
   }
   if (linux && semverAtLeast(device.agent_version,16)) {
     tools.push("hara.ping","hara.device.info","hara.system.uptime","hara.processes.list","hara.files.info","hara.files.list","hara.files.read");
@@ -4060,6 +4078,9 @@ function capabilitiesForDevice(device, grants) {
     tools:availableTools,
     tool_details:availableTools.map((toolId)=>capabilityToolDetail(toolId,approvalMode)),
     capability_detail_schema:"hara.commander-capability-tool.v2",
+    list_offset_supported:linux || (platform === "WINDOWS" && semverAtLeast(device.agent_version,55)),
+    process_input_mode:platform === "WINDOWS" ? "POWERSHELL_COMMAND_LINES" : "PTY_TEXT",
+    interactive_stdin_supported:platform !== "WINDOWS",
     approval_mode:approvalMode,
     operator_session_required:approvalMode !== "PERSISTENT_TRUSTED",
     mutation_requires_local_approval:approvalMode === "ASK_EVERY_ACTION",
@@ -5214,6 +5235,7 @@ async function executeCustomerMcpTool(
   const targetDeviceId = cleanId(targetDevice.device_id, 180);
   const targetComputer = String(targetDevice.device_name || "");
   const payload = customerMcpDevicePayload(toolId, args);
+  assertWindowsToolCompatibility(targetDevice,toolId,payload);
   const requestId = await customerMcpRequestId(
     identity,
     toolId,

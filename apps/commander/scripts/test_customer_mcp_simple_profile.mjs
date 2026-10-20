@@ -21,6 +21,8 @@ async function executeTool(request) {
   if (request.arguments?.computer === "__exists__") throw new Error("DESTINATION_EXISTS");
   if (request.arguments?.computer === "__ambiguous__") throw new Error("COMPUTER_NAME_AMBIGUOUS");
   if (request.arguments?.computer === "__denied__") throw new Error("POLICY_DENIED");
+  if (request.arguments?.computer === "__upgrade__") throw new Error("AGENT_UPGRADE_REQUIRED");
+  if (request.arguments?.computer === "__win_offset__") throw new Error("LIST_OFFSET_UNSUPPORTED");
   if (request.arguments?.computer === "__local_tunnel__") throw new Error("DEVICE_LOCAL_TUNNEL_DIRECT_PATH_REQUIRED");
   return {
     state:"PASS",
@@ -81,6 +83,9 @@ for (const name of ["get_system_uptime","get_system_resources","inspect_workspac
 }
 
 const schema=(name)=>tools.find((tool)=>tool.name===name)?.inputSchema?.properties || {};
+assert.match(tools.find((tool)=>tool.name==="start_process")?.description || "",/Windows.*PowerShell.*not.*stdin/i);
+assert.match(tools.find((tool)=>tool.name==="interact_with_process")?.description || "",/Windows.*PowerShell.*not.*stdin/i);
+assert.match(tools.find((tool)=>tool.name==="list_directory")?.description || "",/Windows.*0\.3\.55.*offset/i);
 assert.equal(schema("read_file").offset.maximum,1000000);
 assert.equal(schema("read_file").length.maximum,400);
 assert.equal(schema("read_multiple_files").offset.maximum,1000000);
@@ -248,6 +253,14 @@ assert.equal(localTunnel.result?.structuredContent?.result?.remote_relay_require
 const denied = await rpc(98,"tools/call",{name:"ping",arguments:{computer:"__denied__"}});
 assert.equal(denied.result?.isError,true);
 assert.match(denied.result?.content?.[0]?.text || "",/POLICY_DENIED/);
+
+const upgrade = await rpc(981,"tools/call",{name:"read_multiple_files",arguments:{computer:"__upgrade__",paths:["C:/qa.txt"]}});
+assert.equal(upgrade.result?.structuredContent?.state,"UNAVAILABLE");
+assert.equal(upgrade.result?.structuredContent?.blocker?.category,"AGENT_CAPABILITY");
+assert.equal(upgrade.result?.structuredContent?.blocker?.retryable,false);
+const winOffset = await rpc(982,"tools/call",{name:"list_directory",arguments:{computer:"__win_offset__",path:"C:/",offset:4}});
+assert.equal(winOffset.result?.structuredContent?.state,"UNAVAILABLE");
+assert.equal(winOffset.result?.structuredContent?.blocker?.code,"LIST_OFFSET_UNSUPPORTED");
 
 for (const tool of tools) {
   assert.deepEqual(tool._meta?.securitySchemes,[{type:"oauth2",scopes:["openid"]}]);
