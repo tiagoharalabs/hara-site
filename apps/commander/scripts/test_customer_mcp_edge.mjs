@@ -11,6 +11,7 @@ const calls = [];
 async function executeTool(request) {
   calls.push(request);
   if (request.arguments?.computer === "__offline__") throw new Error("DEVICE_OFFLINE");
+  if (request.arguments?.computer === "__undelivered__") throw new Error("DEVICE_EVENT_UNDELIVERED");
   if (request.arguments?.computer === "__missing__") throw new Error("FILENOTFOUNDERROR");
   if (request.arguments?.computer === "__parent_missing__") throw new Error("PARENT_DIRECTORY_NOT_FOUND");
   if (request.arguments?.computer === "__winparent__") throw new Error("FILESYSTEM_PARENT_NOT_FOUND");
@@ -239,6 +240,11 @@ assert.equal(localTunnel.result?.structuredContent?.result?.remote_relay_require
 const denied = await rpc(88, "tools/call", { name: "hara.ping", arguments: { computer: "__denied__" } });
 assert.equal(denied.result?.isError, true);
 assert.match(denied.result?.content?.[0]?.text || "", /POLICY_DENIED/);
+
+const undelivered = await rpc(89, "tools/call", { name: "hara.ping", arguments: { computer: "__undelivered__" } });
+assert.equal(undelivered.result?.structuredContent?.blocker?.category, "DEVICE_DELIVERY");
+assert.equal(undelivered.result?.structuredContent?.result?.device_state, "NOT_PROVEN_OFFLINE");
+assert.equal(undelivered.result?.structuredContent?.result?.execution_started, false);
 
 const badHost = await handleCustomerMcpRequest(
   new Request("https://evil.example/mcp", {

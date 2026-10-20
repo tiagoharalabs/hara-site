@@ -34,7 +34,7 @@ async function rpc(executor, name = 'ping', args = { computer: 'fixture' }) {
   return { result: payload.result, executions };
 }
 const throwing = code => () => { throw new Error(code); };
-for (const code of ['DEVICE_OFFLINE', 'DEVICE_BUSY', 'CHANNEL_TRANSIENT_BUSY', 'FILENOTFOUNDERROR',
+for (const code of ['DEVICE_OFFLINE', 'DEVICE_EVENT_UNDELIVERED', 'DEVICE_BUSY', 'CHANNEL_TRANSIENT_BUSY', 'FILENOTFOUNDERROR',
   'PROCESS_SESSION_NOT_FOUND', 'PROCESS_SESSION_EXITED', 'FILE_PRECONDITION_FAILED', 'DESTINATION_EXISTS',
   'EDIT_MATCH_AMBIGUOUS', 'PATH_NOT_DIRECTORY', 'BINARY_FILE_DENIED', 'WRITE_TOO_LARGE', 'DEVICE_LOCAL_TUNNEL_DIRECT_PATH_REQUIRED']) {
   await test('operational_error_is_flagged_' + code, async () => {
@@ -121,6 +121,16 @@ await test('failed_read_can_still_express_transient_availability', async () => {
   const { result } = await rpc(throwing('DEVICE_OFFLINE'));
   assert.equal(result.structuredContent.blocker.retryable, true);
   assert.equal(result.structuredContent.state, 'UNAVAILABLE');
+});
+await test('undelivered_notification_does_not_claim_device_offline_or_execution', async () => {
+  const { result } = await rpc(throwing('DEVICE_EVENT_UNDELIVERED'));
+  const value = result.structuredContent;
+  assert.equal(value.state, 'UNAVAILABLE');
+  assert.equal(value.blocker.category, 'DEVICE_DELIVERY');
+  assert.equal(value.blocker.retryable, true);
+  assert.equal(value.result.device_state, 'NOT_PROVEN_OFFLINE');
+  assert.equal(value.result.execution_started, false);
+  assert.equal(value.result.new_request_required, true);
 });
 await test('explicit_ok_false_is_a_tool_error', async () => {
   const { result } = await rpc(() => ({ ok: false, code: 'SYNTHETIC' }));

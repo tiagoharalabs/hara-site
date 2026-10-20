@@ -54,7 +54,8 @@ def main() -> int:
     assert undelivered_at > notify_at, "undelivered Event V2 call must cancel after notify attempt"
     notify_guard = worker[notify_at:undelivered_at + 800]
     assert "notification.delivered < 1" in notify_guard
-    assert 'throw new Error("DEVICE_OFFLINE")' in notify_guard
+    assert 'throw new Error("DEVICE_EVENT_UNDELIVERED")' in notify_guard
+    assert "DEVICE_EVENT_UNDELIVERED: 503" in worker
     assert "state = 'CANCELLED'" in notify_guard
 
     assert "const EVENT_V2_TERMINAL_FAST_PATH_WAIT_MS = 500;" in worker

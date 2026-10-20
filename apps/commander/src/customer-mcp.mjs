@@ -88,6 +88,13 @@ function operationalToolError(code, args = undefined) {
   if (code === "DEVICE_OFFLINE") {
     return build("UNAVAILABLE", "DEVICE_AVAILABILITY", true, { available: false, device_state: "OFFLINE" });
   }
+  if (code === "DEVICE_EVENT_UNDELIVERED") {
+    return build("UNAVAILABLE", "DEVICE_DELIVERY", true, {
+      device_state: "NOT_PROVEN_OFFLINE", execution_started: false,
+      new_request_required: true, automatic_retry_allowed: false,
+      next_action: "PING_THEN_RETRY_NEW_REQUEST",
+    });
+  }
   if (["DEVICE_BUSY", "CHANNEL_TRANSIENT_BUSY"].includes(code)) {
     return build("BUSY", "DEVICE_AVAILABILITY", true, { available: true, busy: true });
   }

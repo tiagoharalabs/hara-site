@@ -3562,7 +3562,9 @@ async function enqueueDeviceCall(env, body) {
       context.tenant_id,
       deviceId,
     ).run();
-    if (cancelled.meta?.changes) throw new Error("DEVICE_OFFLINE");
+    // The call was cancelled while still PENDING. A failed notification does
+    // not prove that the device is offline or that the action was executed.
+    if (cancelled.meta?.changes) throw new Error("DEVICE_EVENT_UNDELIVERED");
     const accepted=await readExisting();
     if (!accepted) throw new Error("DEVICE_CALL_ENQUEUE_CONFLICT");
     return await existingResponse(accepted);
@@ -6549,6 +6551,7 @@ export default {
         DEVICE_PLATFORM_INVALID: 400,
         DEVICE_METADATA_INVALID: 400,
         DEVICE_OFFLINE: 409,
+        DEVICE_EVENT_UNDELIVERED: 503,
         DEVICE_BUSY: 429,
         DEVICE_CALL_TOOL_DENIED: 403,
         DEVICE_CALL_FUNCTION_DENIED: 403,
