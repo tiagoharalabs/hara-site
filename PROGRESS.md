@@ -23,7 +23,7 @@ GETs HTTPS somente leitura em `https://commander.haralabs.com.br` reproduziram o
 
 **Artefatos locais preparados, sem publicação:**
 
-- Fonte candidata atualizada após R3/R6: `/tmp/commander-prelaunch-source-candidate-20261020-2048z`, manifesto SHA-256 `706c00d69a92b1aae84d8b41bb3dcb92491ad2c5a4e16e6d48b0ae627c6c6f00`, estado `AWAITING_OFFICIAL_SIGNATURE`. Linux atual `0.3.43` (SHA-256 `3e0938bfc074aadb7d082d25df872bf87ca1217a437338c1ce03e4377dfad1e8`) + Windows/instaladores comerciais v4 + UI comercial da branch. Sem assinatura; o verificador de publicação a rejeita. As montagens anteriores, inclusive `/tmp/commander-prelaunch-source-candidate-20261020-2041z`, foram superadas como candidatas e preservadas apenas como rastros locais.
+- Fonte candidata atualizada após R7: `/tmp/commander-prelaunch-source-candidate-20261020-2104z`, manifesto SHA-256 `9723813409729c142050f183afede84f1614fe238f755d1532e28cb364aa6f86`, estado `AWAITING_OFFICIAL_SIGNATURE`. Linux atual `0.3.43` (SHA-256 `9d2ea430d9b46d78155805abe5e96dc101a12ce91c520e2a4ffd10c10a124dd1`) + Windows/instaladores comerciais v4 + UI atual da branch (`index.html` SHA-256 `a82ad3ad28b43fe89282870aaabb23764632db07f5380a10726ea8d423b3c366`; `app.js` SHA-256 `754d21728dcdd4bf529147df5a4be59cf530ae6719d58c9f5164c06711d5bccb`). O Linux do candidato foi relido com SHA idêntico à fonte. Sem assinatura; o verificador de publicação a rejeita. As montagens anteriores, inclusive `/tmp/commander-prelaunch-source-candidate-20261020-2054z`, foram superadas como candidatas e preservadas apenas como rastros locais.
 - Referência de rollback: `/tmp/commander-signed-v4-rollback-20261020-1846z`, assinatura v2 válida e estado explícito `ROLLBACK_ONLY_KNOWN_PROCESS_DRAIN_REGRESSION`. Não representa promoção segura do fix de drenagem.
 - Antes de qualquer promoção, obter version ID PROD atual e rollback real por readback, assinar oficialmente o v5 no fluxo autorizado, verificar assinatura/bytes/PTY e pedir aprovação específica. Nenhum upload foi feito.
 
@@ -192,7 +192,7 @@ Li `docs/operations/HARA_COMMANDER_PEER_REVIEW_R6_END_TO_END_20261020.md` e a re
 | Construtor do candidato `--check`; testes de distribuição assinada | 0; 0 | bytes Linux verificados; 12 testes de seleção/assinatura |
 | Stage assinado corrente `--check` | 1 | HOLD esperado por falta de assinatura oficial |
 
-**Estados:** corrigido no código: sim (`cdb0208`, `ddbd0cc`); testado local: sim; testado DEV: não; publicado PROD: não. A identidade no harness é substituta, não prova de autorização Cloudflare. Quarentena exige avaliação do operador antes do reenvio, sem limpar o READY. O candidato `2022z` foi superado pelo `2048z` após a política de sessões da R3.
+**Estados:** corrigido no código: sim (`cdb0208`, `ddbd0cc`); testado local: sim; testado DEV: não; publicado PROD: não. A identidade no harness é substituta, não prova de autorização Cloudflare. Quarentena exige avaliação do operador antes do reenvio, sem limpar o READY. O candidato `2022z` foi superado pelo `2104z` após as mudanças de R3/R7 e a divulgação do trânsito Cloud.
 
 ## R3 — sessões e autenticação opaca
 
@@ -209,6 +209,51 @@ Li `docs/operations/HARA_COMMANDER_PEER_REVIEW_R6_END_TO_END_20261020.md` e a re
 | `python3 -B apps/commander/scripts/validate_device_installers.py` | 0 | validação e autoteste Linux isolados, fora do sandbox para socket 127.0.0.1 |
 | `python3 -B apps/commander/scripts/commander_linux_clean_lifecycle.py --execute` | 0 | instalação, update, reenrolamento e remoção locais, fora do sandbox para loopback; sem Agent real |
 | `python3 -B apps/commander/scripts/commander_prelaunch_offline_gate.py` | 1 | **138/139 PASS** fora do sandbox; único FAIL é `stage_signed_commercial_assets.py`, HOLD esperado sem assinatura oficial |
-| `python3 -B apps/commander/scripts/build_commander_commercial_terminal_drain_candidate.py --output /tmp/commander-prelaunch-source-candidate-20261020-2048z` | 0 | candidato sem assinatura, Linux SHA e manifesto acima; rollback v4 separado |
+| `python3 -B apps/commander/scripts/build_commander_commercial_terminal_drain_candidate.py --output /tmp/commander-prelaunch-source-candidate-20261020-2104z` | 0 | candidato sem assinatura, Linux SHA, manifesto e UI acima; rollback v4 separado |
 
 **Estados:** corrigido no código: sim para sessões e custo/deadline da autenticação; testado local: sim, inclusive gate 138/139; testado DEV: não; publicado PROD: não. O gate inicial no sandbox saiu 128/139 por fixtures defasadas e bloqueio de sockets/subprocessos; as cinco fixtures foram reconciliadas e os testes de loopback passaram fora dele. O gate final permaneceu exit 1 pela assinatura ausente. Coalescência reduz picos do mesmo token, mas não elimina as duas consultas sequenciais por chamada; cache de introspection além do voo exige contrato explícito de revogação. Alertas de capacidade ainda dependem de release e observação nos Agents, sem limpeza automática da frota.
+
+## Jornada comercial, pacote MCP e promoção — verificação local
+
+Conferi o ZIP de revisão existente `apps/commander/plugin-submission/hara-commander-capivara-v0.2.0-review.zip` antes de qualquer edição: SHA-256 `40c5a69ed30b7ed626fe725b1eb2841d423e3e3ef772b49120aad228f606c483`; `validate_commander_submission_package.py` confirmou `SOURCE_PACKAGE_PASS`, 33 ferramentas, cinco casos positivos e três negativos, com ZIP igual à fonte. `mcp.json` usa apenas `https://commander.haralabs.com.br/api/mcp?profile=simple` com recurso OAuth `https://commander.haralabs.com.br/api/mcp`, separado do MCP interno `mcp.haralabs.com.br/mcp`. Não alterei o ZIP. Os comentários mais recentes de hara-platform #851 ainda pedem decisão do proprietário sobre `functions.list/describe/invoke` e hints antes da submissão; credencial de revisor, vídeo, verificação de domínio/negócio, scan e aprovação pública continuam sem prova. Hara-platform #1000 confirma o canal outbound do Agent e telemetria só de metadados; não autoriza rotear conteúdo de cliente pelo Services.
+
+O contrato de jornada Cloud detectou uma lacuna real: a nota inicial e a nota dinâmica do portal não divulgavam igualmente que o conteúdo transita pelo Gateway e pode permanecer temporariamente na fila. Ambas agora exibem esse fato, e `validate_cloud_launch_contract.py` exige a divulgação nas duas fontes. Isto esclarece a escolha do cliente sem alterar o transporte. A jornada Linux limpa passou localmente com fixture isolada; a validação do instalador também passou. O Windows `0.3.52-v12-rc` tem assinatura RS256 verificada e testes de seleção/imutabilidade locais, mas é RC separado, não substituto silencioso do Windows comercial `0.3.43` no candidato. Não há `pwsh` nem aceite de instalação Windows limpa e roundtrip autenticado neste host. O instalador Event V2 Windows RC continua DEV-only e sua própria validação declara `WINDOWS_RUNTIME_PROVEN=FALSE`.
+
+O assistente Stripe TEST continua só com mocks: chave LIVE negada, preço `BRL 8000/month`, webhook e portal simulados, ordem de secrets e redação aprovadas. Corrigi o teste de fallback Node para simular ausência no PATH sem depender da instalação NVM específica deste host; o código de ativação não mudou. A conta Stripe TEST e a prova de checkout, webhook assinado e cancelamento reais dependem do proprietário. A franquia única continua por mês-calendário, enquanto Stripe governa período pago; a decisão de produto permanece pendente antes de migrar clientes.
+
+| Teste local | Exit | Evidência |
+| --- | ---: | --- |
+| `python3 -B apps/commander/scripts/validate_cloud_launch_contract.py` | 0 | rota comercial, OAuth, Cloud padrão e divulgação na UI inicial/dinâmica; teste estático, não OAuth hospedado |
+| `python3 -B apps/commander/scripts/validate_prod_static.py` | 0 | UI e configuração estáticas |
+| `python3 -B apps/commander/scripts/validate_commander_submission_package.py` | 0 | `SOURCE_PACKAGE_PASS`; pacote não submetido |
+| `python3 -B apps/commander/scripts/validate_stripe_test_wizard.py` | 0 | mocks, preço, chave LIVE negada, Node em PATH/fallback; zero Stripe real |
+| `python3 -B apps/commander/scripts/validate_signed_windows_052_v12_rc.py` | 0 | assinatura RC válida, sem prova runtime Windows |
+| `python3 -B apps/commander/scripts/test_windows_052_release_guards.py` | 0 | 13 guardas de fonte/imutabilidade, sem assinatura nova ou deploy |
+| `python3 -B apps/commander/scripts/validate_event_v2_windows_rc_install.py` | 0 | RC instalável em DEV por contrato estático; runtime não provado |
+| `python3 -B apps/commander/scripts/commander_commercial_readiness_gate.py --require COMMERCIAL_BETA` | 2 | HOLD: distribuição comercial assinada e segundo tenant autenticado ainda sem evidência deste candidato |
+| `python3 -B apps/commander/scripts/build_commander_commercial_terminal_drain_candidate.py --check` | 0 | fonte coerente e sem assinatura |
+| `python3 -B apps/commander/scripts/test_signed_distribution_stage.py` | 0 | 12 regressões de seleção, hash, assinatura e drenagem |
+| `python3 -B apps/commander/scripts/stage_signed_commercial_assets.py --check` | 1 | HOLD: `SIGNED_STAGE_CURRENT_RELEASE_AWAITING_OFFICIAL_SIGNATURE` |
+| `PYTHONDONTWRITEBYTECODE=1 python3 -B apps/commander/scripts/commander_prelaunch_offline_gate.py` | 1 | 140/141 PASS fora do sandbox; único FAIL é o staging sem assinatura oficial. Inclui agora contrato Cloud e wizard Stripe TEST; a execução precedeu o commit `fa92a66` do próprio gate, sem alterar os testes executados |
+
+**Estados:** corrigido no código: divulgação Cloud (`e369b70`), fixture Stripe (`73c3dd2`) e gate ampliado (`fa92a66`); testado local: sim para fonte, mocks e Linux; testado DEV: não para este candidato; publicado PROD: não. A prova Founder e o ZIP fonte não substituem cliente comercial limpo. Próxima promoção exige assinatura oficial do candidato, readback de bytes/versão e rollback, migrações `0036`–`0040` em DEV autorizado com auditoria dos agregados históricos, dois tenants reais isolados, Windows limpo, Stripe TEST autorizado, decisão de mês-calendário e aprovação específica antes de PROD. Nenhuma dessas ações remotas foi executada nesta sessão.
+
+## Revisão independente R7 — admissão concorrente de processos
+
+Li `docs/operations/HARA_COMMANDER_PEER_REVIEW_R7_20261020.md` no clone. A revisão distinguiu corretamente uma corrida induzida dentro da mesma instância Python da alcançabilidade pelo transporte comercial atual; não há prova de incidente em PROD. No instante desta leitura, `docs/evidence/commander-peer-review-r7-20261020/` citado pelo Markdown não estava presente no clone, então reproduzi a condição com regressão própria, sem depender da fixture ausente. A primeira execução do teste com a fonte anterior saiu **1**: duas chamadas simultâneas foram aceitas para capacidade um.
+
+**Corrigido no código (`c486bd1`):** `process_start` reserva a vaga sob lock antes do fork, sem manter o lock durante o fork. A reserva conta tanto no teto ativo (16) quanto no teto retido, é transferida para a sessão registrada e é liberada em falha. Falha antes da resposta encerra o child criado, fecha o PTY e retira uma sessão sem identificador entregue ao cliente. O coletor termina ao receber o sinal local de parada. A regressão força duas entradas com limite um e vinte com limite 16, falha de fork, falha de início do coletor e falha de leitura após fork real. Não foram encerradas as 13 sessões RUNNING observadas no Services nem alterado Agent ativo. Este controle é **por processo Agent**, não uma cota distribuída entre processos ou dispositivos.
+
+| Teste local | Exit | Evidência |
+| --- | ---: | --- |
+| `python3 -B apps/commander/scripts/validate_process_session_policy.py` antes da correção | 1 | duas sessões aceitas com limite um; corrida reproduzida com fork simulado |
+| Mesmo teste depois de `c486bd1` | 0 | 1/2 e 16/20 aceites, reserva liberada nos erros, child real encerrado, pager/owner/revisão preservados |
+| `python3 -B apps/commander/public/agent/linux.py --self-test` | 0 | contrato local do Agent preservado |
+| `python3 -B apps/commander/scripts/validate_process_continuous_drain.py` | 0 | drenagem contínua, Unicode, truncamento, kill/revogação preservados |
+| `python3 -B apps/commander/scripts/build_commander_commercial_terminal_drain_candidate.py --check` | 0 | novo SHA Linux ancorado, candidato ainda sem assinatura |
+| `python3 -B apps/commander/scripts/test_signed_distribution_stage.py` | 0 | 12 regressões de distribuição/assinatura |
+| `PYTHONDONTWRITEBYTECODE=1 python3 -B apps/commander/scripts/commander_prelaunch_offline_gate.py` | 1 | 140/141 PASS com `source_head=c486bd1`; único FAIL é o HOLD de assinatura oficial; lifecycle e instalador Linux passaram |
+
+A revisão também observou dispositivos Event V2 com `last_seen_at_utc` antigo que responderam a ping recente; idade de `last_seen` não prova desconexão. A observação não demonstra falha de roteamento ou de presença neste candidato. A semântica de cadastro, checkpoint e ping deve ser qualificada em DEV antes de alterar o estado exibido ao cliente. Diferenças de build na frota e HA de Identity permanecem nos limites da R3 e não foram confundidas com aceite comercial.
+
+**Estados:** corrigido no código: admissão por instância; testado local: sim; testado DEV: não; canário comercial: não; publicado PROD: não. O novo candidato `2104z` preserva a correção e aguarda assinatura oficial. A revisão R7 e a telemetria de frota não autorizam intervenção nos Agents em execução.
