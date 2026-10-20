@@ -35,7 +35,10 @@ if(process.argv.includes("--stdin")) {
     assert.equal(JSON.parse(envelope.content[0].text).result.stdout,stdout);
     return {sha256:hash(stdout),original_sha256:hash(original),count:data.count,
       files:Array.isArray(data.files)?data.files.map(x=>({state:x.state,line_count:x.line_count,
-        next_offset:x.next_offset,has_more:x.has_more})):null,isError:envelope.isError===true};
+        next_offset:x.next_offset,has_more:x.has_more,
+        file_revision_hint:x.file_revision_hint,
+        file_changed_during_read:x.file_changed_during_read,
+        restart_offset:x.restart_offset})):null,isError:envelope.isError===true};
   });
   assert.deepEqual(checks[0],checks[1]);
   process.stdout.write(JSON.stringify(checks[0])+"\n");

@@ -11,6 +11,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--source", type=Path,
@@ -67,12 +68,64 @@ with tempfile.TemporaryDirectory(prefix="hara-result-envelope-") as temporary:
             for item in data["files"]:
                 assert item["state"] == "PASS" and item["line_count"] > 0
                 assert item["text"].startswith("ROW-000-")
+                assert len(item["file_revision_hint"]) == 64
+                assert item["file_changed_during_read"] is False
                 if item["has_more"]:
                     assert item["next_offset"] == item["offset"] + item["line_count"]
             public=check_public_projection("hara.files.read_many",result)
             assert public["count"]==count and len(public["files"])==count
             assert [item["next_offset"] for item in public["files"]]==[item["next_offset"] for item in data["files"]]
+            assert [item["file_revision_hint"] for item in public["files"]]==[item["file_revision_hint"] for item in data["files"]]
             print(f"COMMANDER_READ_MANY_{count}_FILES_SERIALIZED_BUDGET=PASS")
+
+        revision_file=Path(temporary)/"revision.txt"
+        revision_file.write_text("one\ntwo\nthree\n",encoding="utf-8")
+        first=agent.filesystem_read(str(revision_file),0,1)
+        assert len(first["file_revision_hint"])==64 and first["next_offset"]==1
+        initial_stat=revision_file.stat()
+        revision_file.write_text("uno\ndos\ntres\n",encoding="utf-8")
+        os.utime(revision_file,ns=(initial_stat.st_atime_ns,initial_stat.st_mtime_ns+1000000000))
+        second=agent.filesystem_read(str(revision_file),1,1)
+        assert second["file_revision_hint"]!=first["file_revision_hint"]
+        assert second["file_changed_during_read"] is False
+        print("COMMANDER_READ_PAGE_FILE_REVISION_HINT_CHANGES=PASS")
+
+        original_open=Path.open
+        mutated=[False]
+        def mutate_on_text_open(path,*args,**kwargs):
+            mode=args[0] if args else kwargs.get("mode","r")
+            if path==revision_file and mode=="r" and not mutated[0]:
+                prior_stat=revision_file.stat()
+                with original_open(revision_file,"w",encoding="utf-8") as handle:
+                    handle.write("new\nrows\nnow\n")
+                os.utime(revision_file,ns=(prior_stat.st_atime_ns,prior_stat.st_mtime_ns+1000000000))
+                mutated[0]=True
+            return original_open(path,*args,**kwargs)
+        with patch.object(Path,"open",mutate_on_text_open):
+            raced=agent.filesystem_read(str(revision_file),0,1)
+        assert mutated[0] and raced["file_changed_during_read"] is True
+        assert raced["continuation_safe"] is False and raced["next_offset"] is None
+        assert raced["restart_offset"]==0
+        print("COMMANDER_READ_MUTATION_DURING_PAGE_REQUIRES_RESTART=PASS")
+
+        read_attempts=[]
+        def changed_then_retry(path,offset,length,budget):
+            read_attempts.append(budget)
+            first=len(read_attempts)==1
+            return {"path":path,"offset":offset,"line_count":1,
+                    "text":"X"*100000 if first else "safe",
+                    "has_more":first,"eof":not first,"next_offset":None if first else offset+1,
+                    "content_truncated":False,"continuation_safe":not first,
+                    "file_revision_hint":"a"*64 if first else "b"*64,
+                    "file_changed_during_read":first,"restart_offset":0 if first else None}
+        with patch.object(agent,"filesystem_read",side_effect=changed_then_retry):
+            retried=agent.filesystem_read_many([str(revision_file)],0,1)
+        assert len(read_attempts)>=2
+        entry=retried["files"][0]
+        assert entry["file_changed_during_read"] is True
+        assert entry["continuation_safe"] is False and entry["next_offset"] is None
+        assert entry["restart_offset"]==0
+        print("COMMANDER_READ_MANY_BUDGET_RETRY_PRESERVES_CHANGE_SIGNAL=PASS")
 
         control = Path(temporary) / "control.txt"
         control.write_bytes(b"\x01" * 60000 + b"\n")

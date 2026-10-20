@@ -2517,7 +2517,7 @@ def _function_spec(function_id):
         "filesystem.diff":("FILESYSTEM","Compara dois arquivos texto com diff unificado limitado.",{"argv":["left","right","max_lines? (1..400)"],"bounded":True}),
         "filesystem.search":("FILESYSTEM","Busca nomes de arquivos ou texto com limites de tempo, tamanho e quantidade.",{"argv":["path","search_type(files|content)","pattern","max_results? (1..100)","include_hidden? (0|1)","ignore_case? (0|1)","file_glob?","offset? (0..10000)"],"continuation":{"input":"offset","output":"next_offset","flags":["has_more","scan_truncated"]}}),
         "filesystem.list":("FILESYSTEM","Lista entradas e metadados de um diretório sem ler conteúdo de arquivos.",{"argv":["path","limit? (1..200)","depth? (1..5)","offset? (0..10000)"],"continuation":{"input":"offset","output":"next_offset","flag":"has_more"}}),
-        "filesystem.read":("FILESYSTEM","Lê um intervalo limitado de linhas de um arquivo texto acessível ao usuário local.",{"argv":["path","offset? (0..1000000)","length? (1..400)"],"continuation":{"input":"offset","output":"next_offset","flags":["has_more","eof","content_truncated","continuation_safe"]}}),
+        "filesystem.read":("FILESYSTEM","Lê um intervalo limitado de linhas de um arquivo texto acessível ao usuário local.",{"argv":["path","offset? (0..1000000)","length? (1..400)"],"continuation":{"input":"offset","output":"next_offset","revision_hint":"file_revision_hint","flags":["has_more","eof","content_truncated","continuation_safe","file_changed_during_read"]}}),
         "filesystem.read_many":("FILESYSTEM","Lê o mesmo intervalo de até dez arquivos texto sem abortar o lote por falha individual.",{"argv":["offset (0..1000000)","length (1..100)","path1..path10"],"partial_failure":True,"continuation_per_file":True}),
     }
     if function_id not in specs: raise ValueError("UNKNOWN_FUNCTION_ID")
@@ -2812,12 +2812,19 @@ def filesystem_list(path_value,limit=100,depth=1,offset=0):
         "truncated":has_more,"visited_entries":seen,
     }
 
+def _file_revision_hint(st):
+    # Metadata only: a cheap pagination hint, not a content hash or CAS token.
+    parts=(st.st_dev,st.st_ino,st.st_size,st.st_mtime_ns,st.st_ctime_ns)
+    return hashlib.sha256(":".join(str(int(part)) for part in parts).encode("ascii")).hexdigest()
+
 def filesystem_read(path_value,offset=0,length=200,max_encoded_text_bytes=96*1024):
     requested=_lexical_path(path_value)
     followed_symlink=_leaf_kind(requested)=="symlink"
     path=requested.resolve(strict=True)
     if not path.is_file(): raise ValueError("PATH_NOT_FILE")
-    file_size=int(path.stat().st_size)
+    start_stat=path.stat()
+    start_revision=_file_revision_hint(start_stat)
+    file_size=int(start_stat.st_size)
     if file_size>2*1024*1024: raise ValueError("FILE_TOO_LARGE")
     with path.open("rb") as fh:
         if b"\x00" in fh.read(4096): raise ValueError("BINARY_FILE_DENIED")
@@ -2858,14 +2865,19 @@ def filesystem_read(path_value,offset=0,length=200,max_encoded_text_bytes=96*102
             lines.append(value); output_bytes+=separator+len(encoded)
             json_text_bytes+=json_separator+escaped_bytes
     text="\n".join(lines)
-    continuation_safe=not oversized_line
+    try: changed_during_read=_file_revision_hint(path.stat())!=start_revision
+    except OSError: changed_during_read=True
+    if changed_during_read: has_more=True
+    continuation_safe=not oversized_line and not changed_during_read
     next_offset=(offset+len(lines)) if has_more and continuation_safe else None
     return {
         "path":str(requested),"resolved_path":str(path),"followed_symlink":followed_symlink,
         "file_size_bytes":file_size,"offset":offset,"line_count":len(lines),"text":text,
         "has_more":has_more,"eof":not has_more,"next_offset":next_offset,
         "content_truncated":oversized_line,"continuation_safe":continuation_safe,
-        "oversized_line":oversized_line,
+        "oversized_line":oversized_line,"file_revision_hint":start_revision,
+        "file_changed_during_read":changed_during_read,
+        "restart_offset":0 if changed_during_read else None,
     }
 
 def filesystem_read_many(paths,offset=0,length=100):
@@ -2879,12 +2891,21 @@ def filesystem_read_many(paths,offset=0,length=100):
             remaining=len(selected)-index
             available=max(256,96*1024-packed_bytes(out))
             text_budget=max(256,min(96*1024,available//remaining-1024))
+            observed_change=False
             while True:
                 item=filesystem_read(str(raw),offset,length,text_budget)
+                observed_change=observed_change or bool(item.get("file_changed_during_read"))
+                if observed_change:
+                    item={**item,"file_changed_during_read":True,"continuation_safe":False,
+                          "has_more":True,"eof":False,"next_offset":None,"restart_offset":0}
                 entry={
                     "path":item["path"],"state":"PASS","offset":item["offset"],"line_count":item["line_count"],"text":item["text"],
                     "has_more":item.get("has_more"),"eof":item.get("eof"),"next_offset":item.get("next_offset"),
                     "content_truncated":item.get("content_truncated"),
+                    "continuation_safe":item.get("continuation_safe"),
+                    "file_revision_hint":item.get("file_revision_hint"),
+                    "file_changed_during_read":item.get("file_changed_during_read"),
+                    "restart_offset":item.get("restart_offset"),
                 }
                 if packed_bytes(out+[entry])<=96*1024:
                     out.append(entry)
@@ -2892,7 +2913,11 @@ def filesystem_read_many(paths,offset=0,length=100):
                 if text_budget<=256:
                     out.append({"path":str(raw),"state":"DEFERRED","offset":offset,
                                 "line_count":0,"text":"","has_more":True,"eof":False,
-                                "next_offset":offset,"content_truncated":False,
+                                "next_offset":None if observed_change else offset,
+                                "content_truncated":False,
+                                "continuation_safe":not observed_change,
+                                "file_changed_during_read":observed_change,
+                                "restart_offset":0 if observed_change else None,
                                 "reason":"RESULT_BUDGET"})
                     break
                 text_budget=max(256,text_budget//2)
