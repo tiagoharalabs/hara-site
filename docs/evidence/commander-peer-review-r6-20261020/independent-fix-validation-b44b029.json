@@ -1,0 +1,64 @@
+{
+  "schema": "hara.commander-independent-fix-validation.v1",
+  "utc": "2026-10-20T20:40:48.515273+00:00",
+  "source_head": "b44b029e026eba0d77126b0160189feb1ddb0932",
+  "scope": "five repository tests rerun by independent reviewer on fixed git archive; disposable process/file fixtures and SQLite; not live deployment",
+  "tests": [
+    {
+      "command": [
+        "python3",
+        "-B",
+        "apps/commander/scripts/validate_process_oneshot_pagination.py"
+      ],
+      "exit_code": 0,
+      "stdout": "COMMANDER_ONESHOT_EIGHT_LINES_PAGED_EFFECT_ONCE=PASS\nCOMMANDER_ONESHOT_SMALL_RESULT_NOT_RETAINED=PASS\nCOMMANDER_ONESHOT_LONG_OUTPUT_BYTE_PAGES=PASS\nCOMMANDER_ONESHOT_EXPIRED_RESULT_DISTINCT_FROM_UNKNOWN=PASS\nCOMMANDER_ONESHOT_RESULT_COUNT_AND_TOMBSTONES_BOUNDED=PASS\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/home/sartorius/.nvm/versions/node/v24.15.0/bin/node",
+        "--disable-warning=ExperimentalWarning",
+        "apps/commander/scripts/test_public_result_projection.mjs"
+      ],
+      "exit_code": 0,
+      "stdout": "COMMANDER_PUBLIC_READ_MANY_1_JSON_AND_OFFSETS=PASS\nCOMMANDER_PUBLIC_READ_MANY_4_JSON_AND_OFFSETS=PASS\nCOMMANDER_PUBLIC_READ_MANY_10_JSON_AND_OFFSETS=PASS\nCOMMANDER_PUBLIC_JSON_65535_CHARS_PARSEABLE=PASS\nCOMMANDER_PUBLIC_JSON_65536_CHARS_PARSEABLE=PASS\nCOMMANDER_PUBLIC_JSON_65537_CHARS_PARSEABLE=PASS\nCOMMANDER_PUBLIC_OVERSIZE_JSON_STRUCTURED_CONTINUATION=PASS\nCOMMANDER_PUBLIC_UTF8_BYTE_LIMIT_PRESERVES_VALID_OUTPUT=PASS\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "python3",
+        "-B",
+        "apps/commander/scripts/validate_result_delivery_outbox.py"
+      ],
+      "exit_code": 0,
+      "stdout": "COMMANDER_COMPLETION_LOST_ACK_NEVER_DENIES_MUTATION=PASS\nCOMMANDER_COMPLETION_RESTART_REPLAYS_IDENTICAL_RECEIPT=PASS\nCOMMANDER_COMPLETION_ACKED_DUPLICATE_HAS_ONE_EFFECT=PASS\nCOMMANDER_COMPLETION_CRASHED_INTENT_STAYS_UNKNOWN_NO_REEXECUTION=PASS\nCOMMANDER_COMPLETION_REPEATED_FAILURE_RETRIES_SAME_BODY=PASS\nCOMMANDER_COMPLETION_DISK_FAULT_FAILS_UNCERTAIN_NO_REPLAY=PASS\nCOMMANDER_COMPLETION_TERMINAL_CONFLICT_QUARANTINE_AND_EXPLICIT_RETRY=PASS\nCOMMANDER_COMPLETION_TRANSIENT_FAILURE_BACKOFF_SAME_BODY=PASS\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "python3",
+        "-B",
+        "apps/commander/scripts/validate_result_envelope_budget.py"
+      ],
+      "exit_code": 0,
+      "stdout": "COMMANDER_READ_MANY_1_FILES_SERIALIZED_BUDGET=PASS\nCOMMANDER_READ_MANY_4_FILES_SERIALIZED_BUDGET=PASS\nCOMMANDER_READ_MANY_10_FILES_SERIALIZED_BUDGET=PASS\nCOMMANDER_CONTROL_CHAR_ESCAPING_STAYS_WITHIN_WORKER_LIMIT=PASS\nCOMMANDER_RESULT_ENVELOPE_BYTE_BOUNDARY=PASS\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/home/sartorius/.nvm/versions/node/v24.15.0/bin/node",
+        "--disable-warning=ExperimentalWarning",
+        "apps/commander/scripts/test_device_call_usage_settlement.mjs"
+      ],
+      "exit_code": 0,
+      "stdout": "COMMANDER_NORMAL_COMPLETION_SETTLES_WITHOUT_CLIENT_READ=PASS\nCOMMANDER_DO_FAILURE_RETRY_SETTLES_SAME_RECEIPT=PASS\nCOMMANDER_ORPHANED_COMPLETION_RECONCILES_AFTER_TTL=PASS\nCOMMANDER_UNEXECUTED_DENIAL_RELEASES_QUOTA=PASS\nCOMMANDER_LATE_CLAIMED_COMPLETION_ACCEPTED_ONCE=PASS\nCOMMANDER_LATE_MAINTENANCE_EXPIRY_RECONCILED=PASS\nCOMMANDER_UNCLAIMED_EXPIRY_CANNOT_CLAIM_EXECUTION=PASS\nCOMMANDER_ARCHIVED_COMPLETION_ACK_REPLAY_NO_SECOND_CHARGE=PASS\n",
+      "stderr": ""
+    }
+  ],
+  "source_unchanged": true,
+  "production_mutation": false,
+  "authoritative_receipts": [
+    "d94faf1063c09f1092ea1f5cca0ae8771580b80251b905bdf32701b60abd23d1",
+    "b4cb4adfe8a6847e4bc0ee6697882f26395a5e4327d45142bbc5b165c1104fa0"
+  ]
+}
