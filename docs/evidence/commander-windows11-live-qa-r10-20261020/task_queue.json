@@ -1,0 +1,60 @@
+{
+  "schema": "hara.commander.windows11.r10.codex-queue.v1",
+  "owner": "H.A.R.A. Commander Codex",
+  "date_utc": "2026-10-20",
+  "target": "HARA_WIN11 VM on nucleo-a",
+  "installed_agent": "0.3.53 OUTBOUND_RELAY SESSION_TRUSTED",
+  "safe_test_directory": "C:\\Users\\Public\\Documents\\HARA_COMMANDER_QA_20261020_WIN11",
+  "review_document": "docs/operations/HARA_COMMANDER_WINDOWS11_LIVE_QA_R10_20261020.md",
+  "already_known_in_codex": "2433a5a QA Windows 0.3.53 covers list offset, one-shot truncation, search absent, CAS Unicode and session; do not retest as if new",
+  "priorities": [
+    {
+      "id": "R10-P0-WIN-TOOLS",
+      "priority": "P0_FOR_WINDOWS_COMMERCIAL_PARITY",
+      "observed": "19 declared device capabilities; read_multiple_files UNKNOWN_FUNCTION_ID, search UNKNOWN_FUNCTION_ID, edit_block AGENT_UPGRADE_REQUIRED in real MCP. Windows SHA-based write CAS positive and negative work.",
+      "action": "Reconcile and qualify supported Windows tool catalog, payload mapper/grants, signing and clean install; implement or explicitly document unavailable tools. Preserve session consent.",
+      "acceptance": "QA read_many/search/edit/rollback where officially advertised; no UNKNOWN_FUNCTION_ID for advertised tools; no downgrade of installed 0.3.53 without approved signed candidate."
+    },
+    {
+      "id": "R10-P1-WIN-LIST",
+      "priority": "P1",
+      "observed": "list_directory C:\\ limit4 offsets 0/4/100 returns same first four, truncated true, no next_offset.",
+      "action": "Implement actual offset and safe continuation contract with deterministic page, incomplete scan flags and error taxonomy.",
+      "acceptance": "Different pages for 0/4, offset100 returns no repeated prefix; no false continuation when filesystem changes."
+    },
+    {
+      "id": "R10-P1-WIN-PROCESS",
+      "priority": "P1",
+      "observed": "PowerShell Read-Host under process.start fails -NonInteractive, interact input interpreted as later command; eight-line process.run max_lines3 has no retained session.",
+      "action": "Either provide truly interactive Windows stream with guard/consent or explicitly expose unsupported; page one-shot output without re-execution; state TERMINATING vs EXITED correctly.",
+      "acceptance": "Unicode, 8-line result retrieved in three pages with exactly one execution; managed input test and typed denial; kill-own QA session verified."
+    },
+    {
+      "id": "R10-P1-WIN-RELAY",
+      "priority": "P1",
+      "observed": "four real read_file calls queue 6297/9757/12852/15843 ms; executions 611/641/640/640 ms; Windows0.3.53 OUTBOUND_RELAY.",
+      "action": "Profile Windows poller/batch/fairness and compare with existing f682037 Linux relay fix; patch Windows separately if needed; run small approved canary and measure queue tail.",
+      "acceptance": "Before/after actual 1/4/8 read-only microbursts, queue/exec separately, no unsafe parallel mutating replay."
+    },
+    {
+      "id": "R10-P1-WIN-VM-CPU",
+      "priority": "P1_QA_ENVIRONMENT",
+      "observed": "QEMU -smp 8,sockets=8,cores=1,threads=1; Windows 11 Pro reports only two logical processors.",
+      "action": "Plan controlled VM stop/reconfigure/restart to 1 socket*8 cores*1 thread after separate owner approval, preserving VM rollback and active HARA session; this is not Commander source defect.",
+      "acceptance": "Guest logical8 before CPU benchmarks; don't change VM topology during active testing without user approval."
+    },
+    {
+      "id": "R10-P1-WIN-PROVENANCE",
+      "priority": "P1_RELEASE_GATE",
+      "observed": "Codex 2433a5a found installed 0.3.53 content mismatch with historic RC v13; source candidate version 0.3.43 unsigned.",
+      "action": "Continue existing provenance/identity/signature analysis without allegation of tampering or blindly upgrading; separately test 0.3.52 RC bundle, actual installed 0.3.53 and commercial candidate.",
+      "acceptance": "Document exact signed build/hashes, clean install, rollback, consent and E2E candidate vs installed; release gate HOLD until verified."
+    }
+  ],
+  "out_of_scope": [
+    "Do not update/reboot Windows VM or terminate user session",
+    "Do not touch Linux fleet Agents, Cloudflare PROD, Stripe LIVE, Windows credentials",
+    "Do not automatically change operator approval mode or grants",
+    "Do not claim 4-call test is load benchmark"
+  ]
+}

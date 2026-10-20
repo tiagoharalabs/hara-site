@@ -91,3 +91,18 @@ Recomendação de topologia para futuro QA: **1 socket × 8 cores × 1 thread**,
 - Preservar código e índice Git do Codex. O revisor escreve na branch documental isolada e entrega diretamente à mesma sessão; Tiago não precisa repassar arquivos.
 
 Nenhuma credencial, conteúdo sensível, screenshot privado ou comando empresarial foi incluído. O arquivo QA permanece intencionalmente para reprodução pelo Codex.
+
+## Reconciliação com a própria frente Codex — 23:04 UTC
+
+Antes de entregar, conferi o HEAD `2433a5a` e o `PROGRESS.md` do executor. Ele **já realizou uma QA real e separada** no mesmo Windows 0.3.53: confirmou listagem que ignora offset, one-shot truncado sem run_id, busca ausente, CAS, Unicode e processo/sessão. **Não duplicar esses patches nem solicitar nova sessão de teste para reproduzi-los sem necessidade**.
+
+Complementos específicos comprovados por esta revisão R10:
+- `read_multiple_files` no Windows retorna `UNKNOWN_FUNCTION_ID` e `edit_block` retorna `AGENT_UPGRADE_REQUIRED`; ausência de capacidades deve ser reconciliada com a distribuição Windows assinada.
+- Microburst de quatro leituras: fila 6,3–15,8 s contra execução ~0,6 s, ligado ao `OUTBOUND_RELAY` Windows 0.3.53. O patch `f682037` é do relay **Linux**, portanto tratar Windows como paridade/canário e não reescrever esse patch.
+- Topologia da VM `-smp 8,sockets=8,cores=1,threads=1` e Windows 11 Pro vendo dois lógicos; não usar esta VM para benchmark CPU até alterar topologia em janela aprovada.
+- `Read-Host` falhou explicitamente por PowerShell `NonInteractive`, e entrada em sessão gerenciada foi tratada como comando posterior, motivo para declarar a capacidade real do `interact_with_process`.
+- A escrita CAS com hash correto também foi exercitada por esta revisão, além da recusa com hash errado. A pasta de teste é diferente da usada pelo Codex, evitando interferência.
+
+O PROGRESS do Codex registra discrepância de hash/proveniência do script instalado 0.3.53 versus bundles históricos; não é prova de adulteração nem autoriza substituição. A integração da R10 deve referenciar o diagnóstico existente em vez de reiniciar a investigação do zero.
+
+A meta permanece melhorar o **produto HARA Commander**, não alterar o laboratório sem autorização.
