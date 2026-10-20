@@ -120,6 +120,8 @@ PROCESS_MUTATION_TOOLS = {
 }
 PROCESS_SESSIONS = {}
 PROCESS_RESULT_TOMBSTONES = {}
+PROCESS_ADMISSION_LOCK = threading.RLock()
+PROCESS_STARTING = 0
 MAX_PROCESS_LINES = 5000
 MAX_PROCESS_LINE_CHARS = 8192
 MAX_PROCESS_BUFFER_CHARS = 2 * 1024 * 1024
@@ -1834,7 +1836,7 @@ def _drain_process(session,wait_ms=0):
 def _collect_process_output(session):
     # At most MAX_PROCESS_ACTIVE_SESSIONS collectors exist. The same lock used
     # by foreground reads keeps PTY bytes, decoder state and close ordered.
-    while session.get("exit_code") is None:
+    while session.get("exit_code") is None and not session.get("_collector_stop"):
         try:
             _drain_process(session,100)
         except Exception:
@@ -1921,50 +1923,94 @@ def _process_output_payload(session,offset=None,length=200,wait_ms=0):
         state="EXITED" if session.get("exit_code") is not None else "RUNNING"
         return {"session_id":session["session_id"],"pid":session["pid"],"state":state,"exit_code":session.get("exit_code"),"offset":start,"next_offset":next_offset,"base_line":base,"total_lines":base+len(lines),"text":"\n".join(selected),"partial":session.get("partial","")[:1000],"truncated_before":truncated_before,"buffer_truncated":bool(session.get("truncated")),"result_kind":"ONE_SHOT_RESULT" if session.get("one_shot_result") else "MANAGED_SESSION"}
 
+def _abort_process_start(pid,fd,session=None):
+    """Bound cleanup if admission succeeded but the caller cannot receive a session id."""
+    if session is not None: session["_collector_stop"]=True
+    try: os.killpg(int(pid),signal.SIGKILL)
+    except OSError:
+        try: os.kill(int(pid),signal.SIGKILL)
+        except OSError: pass
+    lock=session.get("_io_lock") if session is not None else contextlib.nullcontext()
+    with lock:
+        if session is not None: session["exit_code"]=-1
+        current_fd=int(session.get("fd",fd)) if session is not None else int(fd)
+        if current_fd>=0:
+            try: os.close(current_fd)
+            except OSError: pass
+        if session is not None: session["fd"]=-1
+    collector=session.get("_collector_thread") if session is not None else None
+    if collector is not None and collector.is_alive(): collector.join(timeout=0.25)
+    deadline=time.monotonic()+0.25
+    while time.monotonic()<deadline:
+        try: reaped,_=os.waitpid(int(pid),os.WNOHANG)
+        except (ChildProcessError,OSError): break
+        if reaped: break
+        time.sleep(0.01)
+
 def process_start(command,cwd=None,timeout_ms=1000,*,non_interactive=False,owner_request_id=None,owner_subject_id=None):
+    global PROCESS_STARTING
     command=str(command or "")
     if not command or len(command)>4096 or "\x00" in command: raise ValueError("PROCESS_COMMAND_INVALID")
-    _prune_process_sessions()
-    running=sum(s.get("exit_code") is None for s in PROCESS_SESSIONS.values())
-    if running>=MAX_PROCESS_ACTIVE_SESSIONS or len(PROCESS_SESSIONS)>=MAX_PROCESS_RETAINED_SESSIONS:
-        raise ValueError("PROCESS_SESSION_CAPACITY_EXCEEDED")
     work=Path(_checked_path_text(cwd)).expanduser().resolve(strict=True) if cwd else Path.home()
     if not work.is_dir(): raise ValueError("PROCESS_CWD_INVALID")
-    pid,fd=pty.fork()
-    if pid==0:
-        try:
-            os.chdir(work)
-            child_env=os.environ.copy()
-            if non_interactive:
-                # One-shot commands cannot answer pager prompts. Keep the
-                # interactive process.start environment untouched.
-                child_env.update(PAGER="cat",GIT_PAGER="cat",PSQL_PAGER="cat")
-            os.execve("/bin/bash",["/bin/bash","-lc",command],child_env)
-        except Exception:
-            os._exit(127)
-    os.set_blocking(fd,False)
-    sid="HARA-PROC-"+uuid.uuid4().hex
-    started_at=utcnow()
-    session={"session_id":sid,"pid":pid,"fd":fd,"started_at_utc":started_at,
-             "last_client_activity_at_utc":started_at,"last_client_activity_monotonic":time.monotonic(),
-             "owner_request_id":str(owner_request_id or ""),"owner_subject_id":str(owner_subject_id or ""),
-             "non_interactive":bool(non_interactive),
-             "command_sha256":hashlib.sha256(command.encode()).hexdigest(),"cwd":str(work),"lines":[],"partial":"","base_line":0,"cursor":0,"truncated":False,"exit_code":None,"_io_lock":threading.RLock()}
-    PROCESS_SESSIONS[sid]=session
-    if _process_capacity_warning(running+1) and not _process_capacity_warning(running):
-        try:
-            append_console_event("PROCESS_CAPACITY_WARNING",state="REVIEW_REQUIRED",
-                                 action_summary=f"active={running+1};capacity={MAX_PROCESS_ACTIVE_SESSIONS}")
-        except Exception as exc:
-            session["capacity_warning_event_error_code"]=safe_error_code(exc)
-    collector=threading.Thread(target=_collect_process_output,args=(session,),name="hara-process-output",daemon=True)
-    session["_collector_thread"]=collector
-    collector.start()
-    output=_process_output_payload(session,offset=None,length=200,wait_ms=timeout_ms)
-    return {**output,"cwd":str(work),"command_sha256":session["command_sha256"],
-            "command_preview":_redact_command_preview(command),"owner_request_id":session["owner_request_id"],
-            "owner_subject_id":session["owner_subject_id"],"non_interactive":bool(non_interactive),
-            "capacity_warning_event_error_code":session.get("capacity_warning_event_error_code")}
+    with PROCESS_ADMISSION_LOCK:
+        _prune_process_sessions()
+        running=sum(s.get("exit_code") is None for s in PROCESS_SESSIONS.values())
+        if running+PROCESS_STARTING>=MAX_PROCESS_ACTIVE_SESSIONS or len(PROCESS_SESSIONS)+PROCESS_STARTING>=MAX_PROCESS_RETAINED_SESSIONS:
+            raise ValueError("PROCESS_SESSION_CAPACITY_EXCEEDED")
+        PROCESS_STARTING+=1
+    reserved=True; registered=False; pid=-1; fd=-1; session=None; sid=None
+    try:
+        pid,fd=pty.fork()
+        if pid==0:
+            try:
+                os.chdir(work)
+                child_env=os.environ.copy()
+                if non_interactive:
+                    # One-shot commands cannot answer pager prompts. Keep the
+                    # interactive process.start environment untouched.
+                    child_env.update(PAGER="cat",GIT_PAGER="cat",PSQL_PAGER="cat")
+                os.execve("/bin/bash",["/bin/bash","-lc",command],child_env)
+            except Exception:
+                os._exit(127)
+        os.set_blocking(fd,False)
+        sid="HARA-PROC-"+uuid.uuid4().hex
+        started_at=utcnow()
+        session={"session_id":sid,"pid":pid,"fd":fd,"started_at_utc":started_at,
+                 "last_client_activity_at_utc":started_at,"last_client_activity_monotonic":time.monotonic(),
+                 "owner_request_id":str(owner_request_id or ""),"owner_subject_id":str(owner_subject_id or ""),
+                 "non_interactive":bool(non_interactive),
+                 "command_sha256":hashlib.sha256(command.encode()).hexdigest(),"cwd":str(work),"lines":[],"partial":"","base_line":0,"cursor":0,"truncated":False,"exit_code":None,"_io_lock":threading.RLock()}
+        collector=threading.Thread(target=_collect_process_output,args=(session,),name="hara-process-output",daemon=True)
+        session["_collector_thread"]=collector
+        collector.start()
+        with PROCESS_ADMISSION_LOCK:
+            running=sum(s.get("exit_code") is None for s in PROCESS_SESSIONS.values())
+            PROCESS_SESSIONS[sid]=session
+            registered=True
+            PROCESS_STARTING-=1
+            reserved=False
+            active=running+(session.get("exit_code") is None)
+            capacity_warning=_process_capacity_warning(active) and not _process_capacity_warning(running)
+        if capacity_warning:
+            try:
+                append_console_event("PROCESS_CAPACITY_WARNING",state="REVIEW_REQUIRED",
+                                     action_summary=f"active={active};capacity={MAX_PROCESS_ACTIVE_SESSIONS}")
+            except Exception as exc:
+                session["capacity_warning_event_error_code"]=safe_error_code(exc)
+        output=_process_output_payload(session,offset=None,length=200,wait_ms=timeout_ms)
+        return {**output,"cwd":str(work),"command_sha256":session["command_sha256"],
+                "command_preview":_redact_command_preview(command),"owner_request_id":session["owner_request_id"],
+                "owner_subject_id":session["owner_subject_id"],"non_interactive":bool(non_interactive),
+                "capacity_warning_event_error_code":session.get("capacity_warning_event_error_code")}
+    except Exception:
+        if registered:
+            with PROCESS_ADMISSION_LOCK: PROCESS_SESSIONS.pop(sid,None)
+        if pid>0: _abort_process_start(pid,fd,session)
+        raise
+    finally:
+        if reserved:
+            with PROCESS_ADMISSION_LOCK: PROCESS_STARTING-=1
 
 def process_run(command,cwd=None,timeout_ms=3000,max_lines=200,*,owner_request_id=None,owner_subject_id=None):
     timeout_ms=max(100,min(10000,int(timeout_ms)))
