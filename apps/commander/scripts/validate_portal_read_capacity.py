@@ -9,6 +9,7 @@ import json
 from pathlib import Path
 import re
 import sqlite3
+from datetime import datetime, timedelta
 
 APP = Path(__file__).resolve().parents[1]
 SOURCE = (APP / 'src/worker.js').read_text()
@@ -25,12 +26,16 @@ def sql_for(name: str) -> str:
 HISTORY = sql_for('productTransactionHistory')
 DEVICES = sql_for('listDevices')
 SINCE = '2026-10-04T13:00:00.000Z'
+NEXT_HOUR = (datetime.fromisoformat(SINCE.replace('Z','+00:00')).replace(minute=0,second=0,microsecond=0)
+             + timedelta(hours=1)).isoformat(timespec='milliseconds').replace('+00:00','Z')
 NOW = '2026-10-11T13:00:00.000Z'
 OLD = '2026-08-01T00:00:00.000Z'
 OLD_TOTAL = 'SELECT COALESCE(SUM(lifetime_units),0) FROM commander_device_usage_totals WHERE tenant_id=? AND subject_id=?'
 
 def args(tenant: str, subject: str) -> tuple:
-    return (SINCE, tenant, subject, tenant, subject, tenant, subject, SINCE[:10])
+    return (tenant,subject,tenant,subject,tenant,subject,SINCE[:13],
+            tenant,subject,SINCE,NEXT_HOUR,
+            tenant,subject,SINCE[:10])
 
 def plan(db, sql, params):
     return [r[3] for r in db.execute('EXPLAIN QUERY PLAN ' + sql, params)]
@@ -86,6 +91,8 @@ def probe(users: int):
         assert any('idx_commander_devices_tenant_created' in p for p in device_after)
         assert any('idx_device_calls_activity_subject_created' in p for p in history_plan)
         assert any('idx_device_usage_daily_subject_day' in p for p in history_plan)
+        assert any('commander_device_call_history_hourly' in p for p in history_plan)
+        assert any('commander_device_call_history_totals' in p for p in history_plan)
         for (tenant,subject), value in expected.items():
             assert db.execute(HISTORY,args(tenant,subject)).fetchone() == value
         for i in range(users):
@@ -94,7 +101,7 @@ def probe(users: int):
         assert db.execute('PRAGMA foreign_key_check').fetchall() == []
         # Prior Worker reads remain correct after additive schema change.
         assert legacy(db,*params) == expected[params]
-        return {'registered_accounts':users,'devices':users*2,'call_rows':users*6,'daily_rows':users*4,'exact_source_account_checks':users,'cross_account_mismatches':0,'migration_idempotence':'PASS','old_worker_compatibility':'PASS','old_lifetime_query_plan':before_plan,'new_lifetime_query_plan':after_plan,'old_sqlite_vm_steps':before_steps,'new_sqlite_vm_steps':after_steps,'device_plan_before':device_before,'device_plan_after':device_after,'combined_history_plan':history_plan,'old_history_d1_round_trips':3,'new_history_d1_round_trips':1,'certifies_cloudflare_concurrency':False}
+        return {'registered_accounts':users,'devices':users*2,'call_rows':users*6,'daily_rows':users*4,'exact_source_account_checks':users,'cross_account_mismatches':0,'migration_idempotence':'PASS','old_worker_compatibility':'PASS','old_lifetime_query_plan':before_plan,'new_lifetime_query_plan':after_plan,'old_sqlite_vm_steps':before_steps,'new_sqlite_vm_steps':after_steps,'device_plan_before':device_before,'device_plan_after':device_after,'combined_history_plan':history_plan,'legacy_fixture_sql_queries':3,'old_worker_history_d1_round_trips':1,'new_worker_history_d1_round_trips':1,'certifies_cloudflare_concurrency':False}
     finally:
         db.close()
 

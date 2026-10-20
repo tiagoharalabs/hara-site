@@ -67,6 +67,9 @@ const DEVICE_CALL_ACTIVE_QUEUE_LIMIT = 16;
 const DEVICE_CALL_EXPIRY_MAINTENANCE_BATCH = 5000;
 const DEVICE_CALL_CONTENT_REDACTION_BATCH = 64;
 const DEVICE_CALL_CONTENT_REDACTION_MAX_BATCHES = 8;
+const DEVICE_CALL_HISTORY_RETENTION_DAYS = 90;
+const DEVICE_CALL_HISTORY_PRUNE_BATCH = 500;
+const DEVICE_CALL_HISTORY_HOURLY_PRUNE_BATCH = 5000;
 const DEVICE_CALL_REDACTED_PREFIX = "HARA_REDACTED_SHA256:";
 const EVENT_V2_TERMINAL_FAST_PATH_WAIT_MS = 500;
 const LOCAL_BUDGET_MIN_LINUX_PATCH = 36;
@@ -1350,28 +1353,25 @@ async function productTransactionHistory(env, tenantId, subjectId) {
   const since7d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   try {
     const sinceDay = since7d.slice(0,10);
-    // One consistent read and one D1 round trip; the indexes scope work to
-    // this tenant/subject. Do not cache authorization or change billing totals.
+    const sinceHour = since7d.slice(0,13);
+    const nextHour = new Date(Date.parse(sinceHour + ":00:00.000Z") + 60 * 60 * 1000).toISOString();
+    // Lifetime is an insert-only aggregate. Recent history scans at most one
+    // partial hour of source rows, so D1 retention cannot erase usage counts.
     const row = await env.PRODUCT_DB.prepare(
-      `WITH relay AS (
-         SELECT COUNT(*) AS calls_total,
-                COALESCE(SUM(CASE WHEN created_at_utc >= ? THEN 1 ELSE 0 END),0) AS calls_7d
-           FROM commander_device_calls
-          WHERE tenant_id = ? AND subject_id = ?
-       ), local_lifetime AS (
-         SELECT COALESCE(SUM(lifetime_units),0) AS units
-           FROM commander_device_usage_totals
-          WHERE tenant_id = ? AND subject_id = ?
-       ), local_window AS (
-         SELECT COALESCE(SUM(units),0) AS units
-           FROM commander_device_usage_daily
-          WHERE tenant_id = ? AND subject_id = ? AND day_key >= ?
-       )
-       SELECT relay.calls_total + local_lifetime.units AS calls_total,
-              relay.calls_7d + local_window.units AS calls_7d
-         FROM relay CROSS JOIN local_lifetime CROSS JOIN local_window`
-    ).bind(since7d, tenantId, subjectId, tenantId, subjectId,
-      tenantId, subjectId, sinceDay).first();
+      `SELECT
+         COALESCE((SELECT calls_total FROM commander_device_call_history_totals
+                    WHERE tenant_id=? AND subject_id=?),0)
+         + COALESCE((SELECT SUM(lifetime_units) FROM commander_device_usage_totals
+                     WHERE tenant_id=? AND subject_id=?),0) AS calls_total,
+         COALESCE((SELECT SUM(calls_count) FROM commander_device_call_history_hourly
+                    WHERE tenant_id=? AND subject_id=? AND hour_key>?),0)
+         + (SELECT COUNT(*) FROM commander_device_calls INDEXED BY idx_device_calls_activity_subject_created
+             WHERE tenant_id=? AND subject_id=? AND created_at_utc>=? AND created_at_utc<?)
+         + COALESCE((SELECT SUM(units) FROM commander_device_usage_daily
+                     WHERE tenant_id=? AND subject_id=? AND day_key>=?),0) AS calls_7d`
+    ).bind(tenantId,subjectId,tenantId,subjectId,
+      tenantId,subjectId,sinceHour,tenantId,subjectId,since7d,nextHour,
+      tenantId,subjectId,sinceDay).first();
     return {
       available: true,
       window: "7d",
@@ -3148,6 +3148,30 @@ async function redactExpiredDeviceCallContent(env, cutoff) {
   return { redacted };
 }
 
+async function pruneDeviceCallHistory(env) {
+  const terminalCutoff=new Date(Date.now()-DEVICE_CALL_HISTORY_RETENTION_DAYS*24*60*60*1000).toISOString();
+  const hourlyCutoff=new Date(Date.now()-8*24*60*60*1000).toISOString().slice(0,13);
+  const calls=await env.PRODUCT_DB.prepare(
+    `DELETE FROM commander_device_calls
+      WHERE call_id IN (
+        SELECT call_id FROM commander_device_calls INDEXED BY idx_device_calls_terminal_retention
+         WHERE state IN ('COMPLETED','FAILED','CANCELLED','EXPIRED')
+           AND created_at_utc <= ?
+           AND (usage_mode != 'CLOUD_QUOTA' OR usage_units = 0 OR usage_settled_at_utc IS NOT NULL)
+         ORDER BY state,created_at_utc,call_id
+         LIMIT ?
+      )`
+  ).bind(terminalCutoff,DEVICE_CALL_HISTORY_PRUNE_BATCH).run();
+  const hours=await env.PRODUCT_DB.prepare(
+    `DELETE FROM commander_device_call_history_hourly
+      WHERE rowid IN (
+        SELECT rowid FROM commander_device_call_history_hourly
+         WHERE hour_key < ? ORDER BY hour_key LIMIT ?
+      )`
+  ).bind(hourlyCutoff,DEVICE_CALL_HISTORY_HOURLY_PRUNE_BATCH).run();
+  return {call_rows:Number(calls.meta?.changes || 0),hour_rows:Number(hours.meta?.changes || 0)};
+}
+
 async function cleanupExpiredDeviceCalls(env) {
   const expiredAt = nowIso();
   const expiry = await env.PRODUCT_DB.prepare(
@@ -3164,11 +3188,14 @@ async function cleanupExpiredDeviceCalls(env) {
   ).bind(expiredAt, expiredAt, DEVICE_CALL_EXPIRY_MAINTENANCE_BATCH).run();
   const usage = await reconcileUnsettledCallUsage(env,{limit:200});
   const redaction = await redactExpiredDeviceCallContent(env, expiredAt);
+  const pruned = await pruneDeviceCallHistory(env);
   return {
     expired: Number(expiry.meta?.changes || 0),
     redacted: Number(redaction.redacted || 0),
     usage_settled: usage.settled,
     usage_failed: usage.failed,
+    call_rows_pruned: pruned.call_rows,
+    hour_rows_pruned: pruned.hour_rows,
   };
 }
 
