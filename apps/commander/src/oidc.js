@@ -1,8 +1,40 @@
 const encoder = new TextEncoder();
 
 const OIDC_PUBLIC_CACHE_TTL_MS = 5 * 60 * 1000;
+const OIDC_PROVIDER_TIMEOUT_MS = 3000;
 const discoveryCache = new Map();
 const jwksCache = new Map();
+const discoveryInFlight = new Map();
+const jwksInFlight = new Map();
+
+async function oidcFetchJson(endpoint, options = {}) {
+  const controller = new AbortController();
+  let timer;
+  const deadline = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      controller.abort();
+      reject(new Error("OIDC_PROVIDER_TIMEOUT"));
+    }, OIDC_PROVIDER_TIMEOUT_MS);
+  });
+  try {
+    return await Promise.race([(async () => {
+      const response = await fetch(endpoint, { ...options, signal: controller.signal });
+      let payload;
+      try { payload = await response.json(); }
+      catch (_error) {
+        if (response.ok) throw new Error("OIDC_PROVIDER_INVALID_RESPONSE");
+        payload = {};
+      }
+      return { response, payload };
+    })(), deadline]);
+  } catch (error) {
+    if (controller.signal.aborted) throw new Error("OIDC_PROVIDER_TIMEOUT");
+    if (error instanceof Error && error.message === "OIDC_PROVIDER_INVALID_RESPONSE") throw error;
+    throw new Error("OIDC_PROVIDER_UNAVAILABLE");
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 function cacheGet(cache, key) {
   const entry = cache.get(key);
@@ -87,25 +119,32 @@ export async function oidcDiscovery(issuer) {
   const normalized = normalizeIssuer(issuer);
   const cached = cacheGet(discoveryCache, normalized);
   if (cached) return cached;
-
-  const endpoint = new URL(".well-known/openid-configuration", normalized).toString();
-  const response = await fetch(endpoint, {
-    headers: { accept: "application/json" },
-  });
-  if (!response.ok) throw new Error("OIDC_DISCOVERY_FAILED");
-  const metadata = await response.json();
-  if (normalizeIssuer(metadata.issuer) !== normalized) throw new Error("OIDC_ISSUER_MISMATCH");
-  for (const field of ["authorization_endpoint", "token_endpoint", "jwks_uri"]) {
-    if (!metadata[field]) throw new Error("OIDC_DISCOVERY_INCOMPLETE");
-    requireHttpsMetadataEndpoint(metadata[field], "OIDC_DISCOVERY_ENDPOINT_INVALID");
-  }
-  if (metadata.userinfo_endpoint) {
-    requireHttpsMetadataEndpoint(metadata.userinfo_endpoint, "OIDC_DISCOVERY_ENDPOINT_INVALID");
-  }
-  if (metadata.introspection_endpoint) {
-    requireHttpsMetadataEndpoint(metadata.introspection_endpoint, "OIDC_DISCOVERY_ENDPOINT_INVALID");
-  }
-  return cachePut(discoveryCache, normalized, metadata);
+  const existing = discoveryInFlight.get(normalized);
+  if (existing) return existing;
+  const pending = (async () => {
+    const endpoint = new URL(".well-known/openid-configuration", normalized).toString();
+    const {response,payload:metadata} = await oidcFetchJson(endpoint, {
+      headers: { accept: "application/json" },
+    });
+    if (!response.ok) throw new Error("OIDC_DISCOVERY_FAILED");
+    if (!metadata || typeof metadata !== "object") throw new Error("OIDC_PROVIDER_INVALID_RESPONSE");
+    if (typeof metadata.issuer !== "string" || !metadata.issuer) throw new Error("OIDC_PROVIDER_INVALID_RESPONSE");
+    if (normalizeIssuer(metadata.issuer) !== normalized) throw new Error("OIDC_DISCOVERY_ISSUER_MISMATCH");
+    for (const field of ["authorization_endpoint", "token_endpoint", "jwks_uri"]) {
+      if (!metadata[field]) throw new Error("OIDC_DISCOVERY_INCOMPLETE");
+      requireHttpsMetadataEndpoint(metadata[field], "OIDC_DISCOVERY_ENDPOINT_INVALID");
+    }
+    if (metadata.userinfo_endpoint) {
+      requireHttpsMetadataEndpoint(metadata.userinfo_endpoint, "OIDC_DISCOVERY_ENDPOINT_INVALID");
+    }
+    if (metadata.introspection_endpoint) {
+      requireHttpsMetadataEndpoint(metadata.introspection_endpoint, "OIDC_DISCOVERY_ENDPOINT_INVALID");
+    }
+    return cachePut(discoveryCache, normalized, metadata);
+  })();
+  discoveryInFlight.set(normalized,pending);
+  try { return await pending; }
+  finally { if (discoveryInFlight.get(normalized)===pending) discoveryInFlight.delete(normalized); }
 }
 
 async function oidcJwks(metadata, { forceRefresh = false } = {}) {
@@ -115,13 +154,19 @@ async function oidcJwks(metadata, { forceRefresh = false } = {}) {
     if (cached) return cached;
   }
 
-  const response = await fetch(uri, {
-    headers: { accept: "application/json" },
-  });
-  if (!response.ok) throw new Error("OIDC_JWKS_FAILED");
-  const payload = await response.json();
-  const keys = Array.isArray(payload?.keys) ? payload.keys : [];
-  return cachePut(jwksCache, uri, keys);
+  const existing = jwksInFlight.get(uri);
+  if (existing) return existing;
+  const pending = (async () => {
+    const {response,payload} = await oidcFetchJson(uri, {
+      headers: { accept: "application/json" },
+    });
+    if (!response.ok) throw new Error("OIDC_JWKS_FAILED");
+    const keys = Array.isArray(payload?.keys) ? payload.keys : [];
+    return cachePut(jwksCache, uri, keys);
+  })();
+  jwksInFlight.set(uri,pending);
+  try { return await pending; }
+  finally { if (jwksInFlight.get(uri)===pending) jwksInFlight.delete(uri); }
 }
 
 function selectSigningJwk(keys, header) {
@@ -144,7 +189,7 @@ export async function pkceChallenge(verifier) {
 
 export async function oidcUserInfo({ metadata, accessToken }) {
   if (!metadata?.userinfo_endpoint || !accessToken) throw new Error("OIDC_USERINFO_UNAVAILABLE");
-  const response = await fetch(metadata.userinfo_endpoint, {
+  const {response,payload} = await oidcFetchJson(metadata.userinfo_endpoint, {
     headers: {
       accept: "application/json",
       authorization: "Bearer " + String(accessToken),
@@ -154,8 +199,8 @@ export async function oidcUserInfo({ metadata, accessToken }) {
   if (response.status >= 300 && response.status < 400) {
     throw new Error("OIDC_USERINFO_REDIRECT_DENIED");
   }
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok || !payload.sub) throw new Error("OIDC_USERINFO_FAILED");
+  if ([401,403].includes(response.status)) throw new Error("OIDC_USERINFO_TOKEN_REJECTED");
+  if (!response.ok || !payload || typeof payload.sub !== "string") throw new Error("OIDC_USERINFO_FAILED");
   return payload;
 }
 
@@ -179,7 +224,7 @@ export async function introspectAccessToken({
     token: String(accessToken),
     token_type_hint: "access_token",
   });
-  const response = await fetch(endpoint, {
+  const {response,payload} = await oidcFetchJson(endpoint, {
     method: "POST",
     headers: {
       accept: "application/json",
@@ -192,8 +237,7 @@ export async function introspectAccessToken({
   if (response.status >= 300 && response.status < 400) {
     throw new Error("OIDC_INTROSPECTION_REDIRECT_DENIED");
   }
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok || typeof payload.active !== "boolean") {
+  if (!response.ok || !payload || typeof payload.active !== "boolean") {
     throw new Error("OIDC_INTROSPECTION_FAILED");
   }
   return payload;

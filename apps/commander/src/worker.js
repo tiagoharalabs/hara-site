@@ -26,6 +26,8 @@ import {
   haraIdentityCustomerMcpEnabled,
   haraIdentityCustomerMcpProtectedResourceMetadata,
   haraIdentityCustomerMcpUnauthorized,
+  haraIdentityCustomerMcpUnavailable,
+  haraIdentityCustomerMcpProviderFailure,
   verifyHaraIdentityCustomerMcpBearer,
 } from "./mcp-hara-identity-customer.mjs";
 import { handleCustomerMcpRequest } from "./customer-mcp.mjs";
@@ -5681,11 +5683,21 @@ export default {
           return json({ ok: false, code: "NOT_FOUND" }, 404);
         }
         let identity;
+        const authStarted=Date.now();
         try {
           identity = await verifyHaraIdentityCustomerMcpBearer(request, env);
-        } catch (_error) {
+        } catch (error) {
+          if (haraIdentityCustomerMcpProviderFailure(error)) {
+            console.warn(JSON.stringify({schema:"hara.commander-mcp-auth-observation.v1",
+              outcome:"PROVIDER_UNAVAILABLE",code:String(error.message),duration_ms:Date.now()-authStarted}));
+            return haraIdentityCustomerMcpUnavailable();
+          }
           return haraIdentityCustomerMcpUnauthorized(request);
         }
+        if (Math.random()<0.01) console.log(JSON.stringify({schema:"hara.commander-mcp-auth-observation.v1",
+          outcome:"PASS",token_format:identity.token_format,
+          provider_fetches_started:identity.provider_fetches_started ?? null,
+          duration_ms:Date.now()-authStarted}));
 
         const profile=String(url.searchParams.get("profile") || "full").trim().toLowerCase();
         if (!["full","simple"].includes(profile)) {

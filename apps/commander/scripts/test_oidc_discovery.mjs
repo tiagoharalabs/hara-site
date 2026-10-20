@@ -1,8 +1,7 @@
 import assert from "node:assert/strict";
 import { oidcDiscovery } from "../src/oidc.js";
 
-const issuer = "https://auth.example.test/";
-const discoveryUrl = "https://auth.example.test/.well-known/openid-configuration";
+let caseNumber = 0;
 const base = {
   issuer: "https://auth.example.test",
   authorization_endpoint: "https://auth.example.test/oauth/v2/authorize?tenant=hara",
@@ -12,10 +11,12 @@ const base = {
 };
 
 async function discover(metadata) {
+  const issuer = `https://auth.example.test/case-${++caseNumber}/`;
+  const discoveryUrl = new URL(".well-known/openid-configuration", issuer).toString();
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (url, init = {}) => {
     assert.equal(String(url), discoveryUrl);
-    return Response.json(metadata);
+    return Response.json({ ...metadata, issuer });
   };
   try {
     return await oidcDiscovery(issuer);

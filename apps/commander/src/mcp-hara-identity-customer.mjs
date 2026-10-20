@@ -3,11 +3,33 @@ import {
   normalizeIssuer,
   oidcDiscovery,
   oidcUserInfo,
+  sha256,
   verifyAccessToken,
 } from "./oidc.js";
 
 const PROD_MCP_PATH = "/api/mcp";
 const PROD_MCP_METADATA_PATH = "/.well-known/oauth-protected-resource/api/mcp";
+const opaqueInFlight = new Map();
+const PROVIDER_FAILURE_CODES = new Set([
+  "OIDC_PROVIDER_TIMEOUT", "OIDC_PROVIDER_UNAVAILABLE", "OIDC_PROVIDER_INVALID_RESPONSE",
+  "OIDC_DISCOVERY_FAILED", "OIDC_DISCOVERY_INCOMPLETE", "OIDC_DISCOVERY_ENDPOINT_INVALID",
+  "OIDC_DISCOVERY_ISSUER_MISMATCH", "OIDC_JWKS_FAILED", "OIDC_USERINFO_FAILED",
+  "OIDC_INTROSPECTION_FAILED", "OIDC_USERINFO_UNAVAILABLE", "OIDC_INTROSPECTION_NOT_CONFIGURED",
+  "OIDC_INTROSPECTION_ENDPOINT_INVALID", "OIDC_USERINFO_REDIRECT_DENIED",
+  "OIDC_INTROSPECTION_REDIRECT_DENIED", "HARA_IDENTITY_MCP_ISSUER_CONFIG_INVALID",
+  "HARA_IDENTITY_MCP_DCR_PROJECT_AUD_MISSING",
+  "HARA_IDENTITY_MCP_PKCE_S256_REQUIRED", "HARA_IDENTITY_MCP_USERINFO_REQUIRED",
+  "HARA_IDENTITY_MCP_INTROSPECTION_SECRET_MISSING", "HARA_IDENTITY_MCP_INTROSPECTION_ENDPOINT_MISSING",
+]);
+
+export function haraIdentityCustomerMcpProviderFailure(error) {
+  return PROVIDER_FAILURE_CODES.has(String(error?.message || ""));
+}
+
+export function haraIdentityCustomerMcpUnavailable() {
+  return Response.json({error:"temporarily_unavailable"},{status:503,
+    headers:{"cache-control":"no-store","retry-after":"5","content-type":"application/json; charset=utf-8"}});
+}
 
 function decodeB64urlJson(value) {
   const text = String(value || "").replace(/-/g, "+").replace(/_/g, "/");
@@ -73,6 +95,9 @@ export function validateOpaqueIntrospection({
 }) {
   if (!payload || payload.active !== true) {
     throw new Error("HARA_IDENTITY_MCP_INTROSPECTION_INACTIVE");
+  }
+  if (typeof payload.iss !== "string" || !payload.iss) {
+    throw new Error("OIDC_PROVIDER_INVALID_RESPONSE");
   }
   if (normalizeIssuer(payload.iss) !== normalizeIssuer(issuer)) {
     throw new Error("HARA_IDENTITY_MCP_INTROSPECTION_ISSUER_MISMATCH");
@@ -165,6 +190,8 @@ export async function verifyHaraIdentityCustomerMcpBearer(request, env) {
   if (!haraIdentityCustomerMcpEnabled(env)) {
     throw new Error("HARA_IDENTITY_CUSTOMER_MCP_DISABLED");
   }
+  try { normalizeIssuer(env.AUTH_ISSUER); }
+  catch (_error) { throw new Error("HARA_IDENTITY_MCP_ISSUER_CONFIG_INVALID"); }
   const projectAudience = String(env.HARA_IDENTITY_MCP_DCR_PROJECT_AUD || "").trim();
   if (!projectAudience) {
     throw new Error("HARA_IDENTITY_MCP_DCR_PROJECT_AUD_MISSING");
@@ -220,21 +247,22 @@ export async function verifyHaraIdentityCustomerMcpBearer(request, env) {
     throw new Error("HARA_IDENTITY_MCP_INTROSPECTION_ENDPOINT_MISSING");
   }
 
-  const [payload, userInfo] = await Promise.all([
-    introspectAccessToken({
-      metadata,
-      accessToken,
-      clientId: introspectionClientId,
-      clientSecret: introspectionClientSecret,
-    }),
-    oidcUserInfo({ metadata, accessToken }),
-  ]);
-
-  return validateOpaqueIntrospection({
-    payload,
-    issuer: env.AUTH_ISSUER,
-    projectAudience,
-    introspectionClientId,
-    userInfo,
-  });
+  // Share only simultaneous checks for the same credential and provider
+  // binding. A settled response is removed immediately: revocation has no
+  // cache contract, so the next MCP call must ask the provider again.
+  const key = await sha256(JSON.stringify([accessToken,normalizeIssuer(env.AUTH_ISSUER),
+    projectAudience,introspectionClientId,introspectionClientSecret,
+    metadata.introspection_endpoint,metadata.userinfo_endpoint]));
+  const existing = opaqueInFlight.get(key);
+  if (existing) return {...await existing,provider_fetches_started:0};
+  const pending = Promise.all([
+    introspectAccessToken({metadata,accessToken,clientId:introspectionClientId,
+      clientSecret:introspectionClientSecret}),
+    oidcUserInfo({metadata,accessToken}),
+  ]).then(([payload,userInfo])=>validateOpaqueIntrospection({
+    payload,issuer:env.AUTH_ISSUER,projectAudience,introspectionClientId,userInfo,
+  }));
+  opaqueInFlight.set(key,pending);
+  try { return {...await pending,provider_fetches_started:2}; }
+  finally { if (opaqueInFlight.get(key)===pending) opaqueInFlight.delete(key); }
 }
