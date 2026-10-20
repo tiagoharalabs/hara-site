@@ -64,6 +64,85 @@ def writer(root, path, expected, desired, mode, data_name, start, reports):
     reports.put(("result", desired, outcome, previous, preimages, preimage_correct))
 
 
+def mcp_writer(root, path, expected, desired, start, reports):
+    agent = load_agent("mcp_" + desired, root, "data-mcp-" + desired)
+    config = {"HARA_DEVICE_ID": "QA-MCP-DEVICE"}
+    # Isolate the file path after a synthetically approved local MCP call.
+    # The product's authority and approval functions are not changed.
+    agent.require_local_product_authority = lambda _config: {"plan_code": "FOUNDER_INTERNAL"}
+    agent.effective_approval_mode = lambda _config=None: "PERSISTENT_TRUSTED"
+    agent.local_tunnel_usage = lambda *_args: None
+    agent.local_budget_reserve = lambda *_args: None
+    agent.request_local_approval = lambda _call: {
+        "state": "APPROVED", "mode": "PERSISTENT_TRUSTED", "source": "QA_FIXTURE",
+    }
+    agent.append_console_event = lambda *_args, **_kwargs: None
+    original = agent._assert_path_matches_preimage
+
+    def pause_after_real_validation(target, preimage):
+        result = original(target, preimage)
+        time.sleep(0.15)
+        return result
+
+    agent._assert_path_matches_preimage = pause_after_real_validation
+    reports.put(("ready", desired))
+    if not start.wait(12):
+        reports.put(("result", desired, "START_TIMEOUT", None, 0, False))
+        return
+    try:
+        result = agent.local_simple_mcp_call(config, "edit_block", {
+            "path": str(path), "old_string": "BASE", "new_string": desired,
+            "expected_sha256": expected,
+        })
+        data = json.loads(result["result"]["stdout"])
+        outcome = "ACCEPTED" if (result["state"] == "PASS"
+            and result["result"]["function_id"] == "filesystem.edit") else "MCP_RESULT_INVALID"
+        previous = data["previous_sha256"]
+        receipt_present = bool(result.get("bridge_receipt_sha256"))
+    except Exception as exc:
+        outcome = str(exc)
+        previous = None
+        receipt_present = False
+    preimages = len(list(agent.PREIMAGE_DIR.glob("HARA-PREIMAGE-*.json")))
+    reports.put(("result", desired, outcome, previous, preimages, receipt_present))
+
+
+def run_local_mcp_race(root):
+    files = root / "files-local-mcp"
+    files.mkdir()
+    target = files / "shared.txt"
+    target.write_text("BASE", encoding="utf-8")
+    expected = hashlib.sha256(target.read_bytes()).hexdigest()
+    ctx = mp.get_context("spawn")
+    start = ctx.Event()
+    reports = ctx.Queue()
+    names = ("MCP_A", "MCP_B")
+    children = [ctx.Process(target=mcp_writer, args=(root, target, expected, name, start, reports))
+                for name in names]
+    for child in children:
+        child.start()
+    try:
+        assert [reports.get(timeout=12)[0] for _ in children] == ["ready", "ready"]
+        start.set()
+        outcomes = [reports.get(timeout=12) for _ in children]
+        for child in children:
+            child.join(timeout=3)
+        assert all(child.exitcode == 0 for child in children), outcomes
+        accepted = [item for item in outcomes if item[2] == "ACCEPTED"]
+        denied = [item for item in outcomes if item[2] != "ACCEPTED"]
+        assert len(accepted) == 1 and len(denied) == 1, outcomes
+        assert accepted[0][3] == expected and accepted[0][4:] == (1, True), outcomes
+        assert denied[0][2] == "FILE_PRECONDITION_FAILED" and denied[0][4:] == (0, False), outcomes
+        assert target.read_text(encoding="utf-8") == accepted[0][1], outcomes
+    finally:
+        start.set()
+        for child in children:
+            if child.is_alive():
+                child.terminate()
+            child.join(timeout=2)
+        reports.close()
+
+
 def run_race(root, mode, count, alias=False):
     files = root / ("files-" + mode + str(count) + ("-alias" if alias else ""))
     files.mkdir()
@@ -140,12 +219,23 @@ def need(ok, label):
     print("COMMANDER_FILE_CAS_" + label + "=PASS")
 
 
-def main():
+def check_local_mcp_race(root):
+    try:
+        run_local_mcp_race(root)
+    except (AssertionError, queue.Empty) as exc:
+        raise SystemExit("COMMANDER_FILE_CAS_LOCAL_MCP_TWO_PROCESSES=FAIL " + str(exc))
+    need(True, "LOCAL_MCP_TWO_PROCESSES_ONE_ACCEPTED")
+
+
+def main(mcp_route_only=False):
     with tempfile.TemporaryDirectory(prefix="hara-file-cas-atomicity-") as temp:
         root = Path(temp)
         (root / "home").mkdir()
         (root / "config").mkdir()
         agent = load_agent("cas_parent", root, "data-parent")
+        if mcp_route_only:
+            check_local_mcp_race(root)
+            return
         sequential = root / "sequential.txt"
         sequential.write_text("BASE", encoding="utf-8")
         expected = hashlib.sha256(sequential.read_bytes()).hexdigest()
@@ -171,6 +261,8 @@ def main():
             except (AssertionError, queue.Empty) as exc:
                 raise SystemExit("COMMANDER_FILE_CAS_" + label + "=FAIL " + str(exc))
             need(True, label)
+
+        check_local_mcp_race(root)
 
         threaded = root / "threaded.txt"
         threaded.write_text("BASE", encoding="utf-8")
@@ -293,7 +385,8 @@ def main():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", type=Path)
+    parser.add_argument("--mcp-route-only", action="store_true")
     args = parser.parse_args()
     AGENT = (args.source or DEFAULT_AGENT).resolve(strict=True)
     os.environ["HARA_FILE_CAS_SOURCE"] = str(AGENT)
-    main()
+    main(args.mcp_route_only)
