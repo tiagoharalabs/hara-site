@@ -1,0 +1,4 @@
+# HARA Commander R12 — cutover real da Sentinela A e estados da frota
+Observações diretas por H.A.R.A._Commander e Serviços→SSH autenticado, sem Desktop Commander. Os JSONs preservam apenas versões, hashes, estados dos units e escopo; nenhuma credencial, token de pareamento, saída confidencial de cliente ou endereço privado é necessário para a validação. R12 é rollout interno Founder: não equivale à publicação comercial.
+A assin. RS256 e sete hashes da A foram validados antes do cutover. Timer de rollback de 3 minutos foi desarmado depois do readback de ping, arquivo e processo via novo Agent. A unidade legado foi preservada sem execução.
+R11 permanece a fonte de prova pública v1/v2 KID mismatch e quatro hashes incompatíveis; não instalar Storage/Observer até release oficial íntegra. Windows permanece 0.3.53. Documentação em docs/operations/HARA_COMMANDER_FLEET_CANARY_R12_20261020.md.

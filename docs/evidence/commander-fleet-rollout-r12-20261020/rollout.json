@@ -1,0 +1,120 @@
+{
+  "schema": "hara.commander.fleet-rollout-r12.v1",
+  "date_utc": "2026-10-20",
+  "review": "HARA Commander direct/Services SSH independent fallback",
+  "authorization": "owner explicit update fleet and align versions",
+  "prechange_registered_agents": {
+    "checked": 8,
+    "ping_pass": 8,
+    "read_file_pass": 8,
+    "linux_agents_version_054": 6,
+    "linux_agents_version_041": 1,
+    "windows_vm_agent_version_053": 1
+  },
+  "sentinela_a": {
+    "hostname": "sentinela-a",
+    "previous_agent_version": "0.3.41",
+    "previous_unit": "hara-commander-agent.service",
+    "previous_source_sha256": "e1f44e4695266717c6585f8d0de1e664d99123e36e75b152e136a4428f7b2730",
+    "new_agent_version": "0.3.54",
+    "new_unit": "hara-commander-agent-v2.service",
+    "channel": "FOUNDER_CANARY",
+    "signed_manifest_version": "0.3.54",
+    "signed_manifest_algorithm": "RS256",
+    "signed_manifest_kid": "commander-release-v2",
+    "trusted_public_key_fingerprint_sha256": "93a595c5c7ee29d341fe0aee1a1625610e8015bf9df1ff64a3f4accdb39400b4",
+    "signed_manifest_valid": true,
+    "signed_asset_count": 7,
+    "signed_asset_hash_mismatches": 0,
+    "device_binding_same": true,
+    "preflight_selftest_exit": 0,
+    "external_management_channel": "services SSH known_hosts isolated, host ed25519 public key verified against direct HARA A read",
+    "failsafe_timer_armed_minutes": 3,
+    "failsafe_timer_final_state": "inactive",
+    "rollback_script_exists": "~/.local/share/hara-commander/rollbacks/rollback-a-20261020.sh",
+    "rollback_script_executed": false,
+    "service_after": "v2 active enabled; legacy inactive disabled",
+    "v2_restart_count_at_2350_utc": 0,
+    "journal_errors_count_at_2350_utc": 0,
+    "readback": [
+      {
+        "check": "HARA ping",
+        "state": "PASS",
+        "version": "0.3.54"
+      },
+      {
+        "check": "HARA get_config",
+        "state": "PASS",
+        "tool_count": 31
+      },
+      {
+        "check": "HARA read_file",
+        "state": "PASS"
+      },
+      {
+        "check": "HARA process.run",
+        "state": "PASS",
+        "exit_code": 0
+      },
+      {
+        "check": "HARA ping after stabilization",
+        "state": "PASS",
+        "version": "0.3.54"
+      }
+    ],
+    "other_system_services_modified": false
+  },
+  "postchange": {
+    "linux_count": 7,
+    "linux_version": "0.3.54",
+    "linux_transport": "EVENT_V2",
+    "linux_common_full_agent_sha256": "8a533885af73e46cca7140f150a15aab0ff7e0619d54647b5ab22056e798f774",
+    "linux_common_base_agent_sha256": "9f27d636fa8d0b2f012bdee08dfa5996eb15d896a0da9a8dd0ba1c8b0394c58c",
+    "event_v2_loop_variants": [
+      "cd9ae70961cf4c68851df9866777ecc99b872656cf4f32700ac0cf394d579e76",
+      "f1a7d9fc4faf57185d0d2bcb17e741882db866c627967bf02e1d98754d212950"
+    ],
+    "note": "same version does not imply bit-identical builds; per-host manifests signed independently",
+    "signed_release_verification": "6/7 Linux verified RSA with trusted v2 key and all assets; Ninja Blue manifest+asset SHA verified, RSA not independently executed in this turn"
+  },
+  "still_blocked": [
+    {
+      "host": "storage",
+      "os": "Fedora43",
+      "state": "NO_REGISTERED_HARA_AGENT",
+      "reason": "public install version/signature/sha fail closed; no valid signed release for new device/credentials",
+      "target": "new signed release + distinct per-host enrollment"
+    },
+    {
+      "host": "observer",
+      "os": "Ubuntu22.04",
+      "state": "NO_REGISTERED_HARA_AGENT",
+      "reason": "same public install drift; separate historical HTTP401 not explained",
+      "target": "new signed release + distinct per-host enrollment"
+    },
+    {
+      "host": "HARA_WIN11",
+      "state": "MCP_ONLINE_VERSION_0.3.53",
+      "reason": "Windows RC/candidate not signed+homologated for promotion; keep user logged-in Agent intact"
+    },
+    {
+      "host": "public_download",
+      "state": "HOLD",
+      "reason": "live installer pinned v2 but current signature v1 and all four asset hashes mismatch; Codex developing repair"
+    }
+  ],
+  "rollback_constraints": "No additional reinstall, reset, stop or fallback without release-readback; preserve Founder access and separate commercial authorization",
+  "not_modified": [
+    "Nucleo Agent",
+    "Services Agent",
+    "Sentinela B/C/D Agents",
+    "Ninja Blue Agent",
+    "Windows Agent",
+    "Storage/Observer systemd",
+    "Cloudflare PROD",
+    "Stripe",
+    "D1",
+    "models",
+    "other fleet user processes"
+  ]
+}
