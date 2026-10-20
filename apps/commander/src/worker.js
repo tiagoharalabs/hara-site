@@ -5235,7 +5235,6 @@ async function executeCustomerMcpTool(
   const targetDeviceId = cleanId(targetDevice.device_id, 180);
   const targetComputer = String(targetDevice.device_name || "");
   const payload = customerMcpDevicePayload(toolId, args);
-  assertWindowsToolCompatibility(targetDevice,toolId,payload);
   const requestId = await customerMcpRequestId(
     identity,
     toolId,
@@ -5243,15 +5242,16 @@ async function executeCustomerMcpTool(
     mcpRequestId,
     transportRequestId,
   );
-  if ((isDeviceMutationTool(toolId) || isDeviceProcessTool(toolId) || toolId === "hara.files.preimages.list") && !agentPurposeToolReady(targetDevice, toolId)) {
-    throw new Error("AGENT_UPGRADE_REQUIRED");
-  }
   const approvalProfile=asyncApprovalProfile(targetDevice,toolId,payload);
   const prior=await env.PRODUCT_DB.prepare("SELECT "+CALL_ROW_FIELDS+" FROM commander_device_calls WHERE request_id=? AND tenant_id=? AND subject_id=? AND device_id=? LIMIT 1").bind(requestId,context.tenant_id,context.subject_id,targetDeviceId).first();
   if (prior && Number(prior.approval_timeout_seconds)===900) {
     if (prior.tool_id!==toolId || !await deviceCallStoredContentMatches(prior.payload_json,boundedJson(canonicalDeviceToolPayload(toolId,payload),128*1024,"DEVICE_CALL_PAYLOAD_INVALID"))) throw new Error("IDEMPOTENCY_CONFLICT");
     const status=await acceptedCallStatus(env,context,prior.call_id,{expectedDeviceId:targetDeviceId,nowUtc:nowIso(),newMarker:redactedDeviceCallContent,isRedacted:isRedactedDeviceCallContent});
     return publicAcceptedCallStatus(status,targetComputer,projectCustomerToolResult);
+  }
+  assertWindowsToolCompatibility(targetDevice,toolId,payload);
+  if ((isDeviceMutationTool(toolId) || isDeviceProcessTool(toolId) || toolId === "hara.files.preimages.list") && !agentPurposeToolReady(targetDevice, toolId)) {
+    throw new Error("AGENT_UPGRADE_REQUIRED");
   }
   const purposeFunctionId = quotaFunctionIdForTool(toolId, payload);
   const legacyPayload = legacyInvokePayload(toolId, payload);
