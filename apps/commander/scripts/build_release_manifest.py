@@ -13,6 +13,7 @@ PUBLIC = APP / "public"
 RELEASE_DIR = PUBLIC / "release"
 MANIFEST = RELEASE_DIR / "agent-manifest.json"
 SUMS = RELEASE_DIR / "SHA256SUMS"
+SIGNATURE = RELEASE_DIR / "agent-manifest.sig.json"
 FILES = (
     "agent/linux.py",
     "agent/windows.ps1",
@@ -70,6 +71,8 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
+    if not args.check and SIGNATURE.exists():
+        raise SystemExit("SIGNED_MANIFEST_REQUIRES_PRIVATE_STAGING_AND_RESIGNING")
     manifest_text, sums_text = render()
     if args.check:
         if not MANIFEST.is_file() or MANIFEST.read_text(encoding="utf-8") != manifest_text:

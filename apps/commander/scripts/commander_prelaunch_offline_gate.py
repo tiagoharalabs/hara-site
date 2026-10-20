@@ -49,6 +49,8 @@ PYTHON = (
     "verify_commander_public_artifacts.py",
     "validate_signed_commercial_v2_bundle.py",
     "validate_signed_commercial_v3_bundle.py",
+    "test_signed_distribution_stage.py",
+    "build_commander_commercial_terminal_drain_candidate.py",
     "stage_signed_commercial_assets.py",
     "commander_linux_clean_lifecycle.py",
     "validate_process_output_memory_budgets.py",
@@ -166,6 +168,8 @@ def invoke(name: str, *, stress: int, threads: int) -> dict:
     else:
         command = [sys.executable, "-B", str(script)]
     if name in MODELS:
+        command.append("--check")
+    if name == "build_commander_commercial_terminal_drain_candidate.py":
         command.append("--check")
     if name == "commander_linux_clean_lifecycle.py":
         # Ephemerally signed candidate over localhost + fake systemctl only.

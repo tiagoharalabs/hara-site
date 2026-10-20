@@ -4,6 +4,7 @@
 No Cloudflare calls, customer data, service restarts or permanent files.
 """
 from __future__ import annotations
+import argparse
 import importlib.util
 import json
 import shlex
@@ -12,7 +13,10 @@ import tempfile
 import time
 from pathlib import Path
 
-SOURCE = Path(__file__).resolve().parents[1] / "public/agent/linux.py"
+parser = argparse.ArgumentParser()
+parser.add_argument("--source", type=Path,
+                    default=Path(__file__).resolve().parents[1] / "public/agent/linux.py")
+SOURCE = parser.parse_args().source
 spec = importlib.util.spec_from_file_location("hara_agent_pty_regression", SOURCE)
 agent = importlib.util.module_from_spec(spec)
 sys.modules[spec.name] = agent
