@@ -102,6 +102,7 @@ PYTHON = (
     "validate_signed_windows_050_v10_rc.py",
     "validate_signed_windows_051_v11_rc.py",
     "validate_signed_windows_052_v12_rc.py",
+    "validate_windows_r10_candidate.py",
     "test_windows_052_release_guards.py",
     "validate_windows_052_approval_expiry.py",
     "validate_windows_052_operator_startup.py",
@@ -120,6 +121,7 @@ PYTHON = (
 JS = (
     "test_json_utf8_response.mjs",
     "test_windows_044_capability_gate.mjs",
+    "test_windows_r10_capability_contract.mjs",
     "test_no_stripe_technical_mode.mjs",
     "test_commercial_policy_20261020.mjs",
     "test_device_enrollment_limit.mjs",

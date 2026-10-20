@@ -1,0 +1,63 @@
+{
+  "schema": "hara.commander.windows-r10-candidate-evidence.v1",
+  "observed_at_utc": "2026-10-20T23:37:00Z",
+  "branch": "codex/commander-prelaunch-fixes-20261020",
+  "review_commit_read_only": "7e0ed38065b94518a9d0203834eafedaee73f8de",
+  "signed_source_base": {
+    "commit": "0e0c2ac",
+    "bundle": "commercial-0.3.54-v14-rc-r2",
+    "agent_version": "0.3.54",
+    "windows_agent_sha256": "fe61f177c51f6b6a01f31a3ea1b3d081173446e8f8cb33e680744c1fb808ae62",
+    "rs256_manifest_and_four_files_verified_offline": true
+  },
+  "candidate": {
+    "path": "apps/commander/candidate/windows_agent_055.ps1",
+    "agent_version": "0.3.55",
+    "sha256": "f44caf3f8af2b35e57a4066df65fadabf4c7eeceb969c853f62312bd18fb22ba",
+    "signature_present": false,
+    "manifest_present": false,
+    "installed": false,
+    "selected_by_commercial_staging": false
+  },
+  "windows_vm_qa": {
+    "target": "HARA_WIN11",
+    "installed_agent_version_before_and_after": "0.3.53",
+    "transport": "OUTBOUND_RELAY",
+    "authorization_mode": "SESSION_TRUSTED",
+    "qa_scope": "C:\\Users\\Public\\Documents\\HARA_COMMANDER_QA_20261020_WIN11",
+    "full_candidate_sha256_read_back": "f44caf3f8af2b35e57a4066df65fadabf4c7eeceb969c853f62312bd18fb22ba",
+    "powershell_parser_errors": 0,
+    "full_candidate_self_test_exit_code": 0,
+    "functional_probe_sha256": "f585d9fc0b8213f5d22a2555a0dfb159a049f34d3f89766190caff85828acab8",
+    "functional_probe_transport_state": "PASS",
+    "functional_probe_process_exit_code": 0,
+    "functional_probe_checks": [
+      "LIST_DISTINCT_OFFSETS_0_3_100",
+      "READ_MANY_PARTIAL_AND_CONTINUATION",
+      "SEARCH_UNICODE_AND_OFFSET",
+      "EDIT_STALE_HASH_DENIED_AND_CORRECT_HASH_ACCEPTED",
+      "EDIT_TWO_PROCESSES_ONE_ACCEPTED_ONE_PRECONDITION_FAILED",
+      "ONESHOT_EIGHT_LINES_THREE_PAGES_ONE_EXECUTION",
+      "ONESHOT_UNICODE_AND_EXIT_CODE_7",
+      "RELAY_BURST_POLL_POLICY_ISOLATED"
+    ],
+    "installed_agent_ping_after": "PASS",
+    "installed_agent_managed_sessions_after": 0,
+    "active_agent_changed": false,
+    "vm_topology_changed": false
+  },
+  "red_to_green": [
+    "probe omitted Get-WindowsManagedSession helper; probe corrected",
+    "fresh one-shot result evicted by UTC/local-time TTL comparison; candidate corrected",
+    "PowerShell -Command - stdin bootstrap received BOM; candidate one-shot changed to bounded asynchronous -EncodedCommand capture"
+  ],
+  "validation_limits": [
+    "Probe executes extracted candidate functions in a synthetic QA directory; it does not install or authenticate a 0.3.55 Agent.",
+    "Relay burst helper passed in isolation; no after-install queue latency or Cloudflare canary was measured.",
+    "Directory offset is best effort across separate calls if the tree changes; stable_across_calls is false.",
+    "Windows 0.3.53 installed continues to lack read_many, search, edit, list offset and one-shot recovery.",
+    "No Windows commercial clean-install or tenant-paid end-to-end proof exists."
+  ],
+  "dev_hosted_tested": false,
+  "production_published": false
+}
