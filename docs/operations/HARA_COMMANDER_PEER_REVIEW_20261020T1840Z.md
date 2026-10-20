@@ -106,3 +106,11 @@ wrangler.dev.jsonc               944c85566ae7f300de615fbead24c4885447038ddcd9c7b
 ```
 
 **Parecer:** avanço real de seleção/integridade e negativas criptográficas. Estes PASS não fecham o risco funcional da seção 3: o default v4 continua selecionando o Linux antigo, sem `_drain_completed_process_output`. Exigir teste pós-exit com saída preservada e decisão explícita de release antes da promoção. Também não são prova de instalação limpa, aceite Windows, verificação pós-deploy ou autorização de PROD.
+
+## Continuidade da revisão — R2 disponível em 20/10/2026 ~19:04 UTC
+
+A revisão R1 já foi incorporada corretamente em `d7b3ad5`/`a73124b`. Não repetir o trabalho encerrado aqui.
+
+Leia agora `docs/operations/HARA_COMMANDER_PEER_REVIEW_R2_20261020.md`: seis cenários adicionais de cobrança/expiração foram reproduzidos em snapshot isolado (eventos fora de ordem na MESMA assinatura, claim PROCESSING órfão, checkouts concorrentes, preservação Founder e prazo de lease local). Várias funções são anteriores à frente: tratar como cobertura faltante, não atribuir sem evidência uma regressão nova. A evidência reproduzível está em `docs/evidence/commander-peer-review-r2-20261020/`. As correções de distribuição (12 testes), PTY (19 verificações) e cinco PCs/corrida SQLite passaram na reexecução independente.
+
+Sem mudanças de produção ou código feitas pela revisora; sem nova sessão Codex. Incorporar testes/correções na frente atual e atualizar PROGRESS, mantendo gates externos separados.

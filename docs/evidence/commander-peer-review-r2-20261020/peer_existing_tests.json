@@ -1,0 +1,53 @@
+{
+  "schema": "hara.commander-peer-r2-existing-tests.v1",
+  "observed_utc": "2026-10-20T19:02:56.477687+00:00",
+  "head_before": "27d18c1513f88957182ee9d5638bdb8b9969136b",
+  "head_after": "27d18c1513f88957182ee9d5638bdb8b9969136b",
+  "results": [
+    {
+      "command": [
+        "python3",
+        "-B",
+        "apps/commander/scripts/test_signed_distribution_stage.py",
+        "-v"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": "test_candidate_preserves_linux_drain_and_commercial_windows (__main__.SignedDistributionTests.test_candidate_preserves_linux_drain_and_commercial_windows) ... ok\ntest_current_commercial_bundle_is_cryptographically_valid (__main__.SignedDistributionTests.test_current_commercial_bundle_is_cryptographically_valid) ... ok\ntest_default_stage_waits_for_new_officially_signed_bundle (__main__.SignedDistributionTests.test_default_stage_waits_for_new_officially_signed_bundle) ... ok\ntest_manifest_builder_cannot_overwrite_signed_public_manifest (__main__.SignedDistributionTests.test_manifest_builder_cannot_overwrite_signed_public_manifest) ... ok\ntest_matching_hashes_do_not_replace_a_valid_signature (__main__.SignedDistributionTests.test_matching_hashes_do_not_replace_a_valid_signature) ... ok\ntest_old_signed_manifest_with_new_agent_is_rejected (__main__.SignedDistributionTests.test_old_signed_manifest_with_new_agent_is_rejected) ... ok\ntest_production_config_requires_explicit_staged_assets (__main__.SignedDistributionTests.test_production_config_requires_explicit_staged_assets) ... ok\ntest_rollback_bundle_is_cryptographically_valid (__main__.SignedDistributionTests.test_rollback_bundle_is_cryptographically_valid) ... ok\ntest_rollback_stage_is_explicit_and_reports_known_regression (__main__.SignedDistributionTests.test_rollback_stage_is_explicit_and_reports_known_regression) ... ok\ntest_signed_rollback_linux_fails_real_pty_drain_regression (__main__.SignedDistributionTests.test_signed_rollback_linux_fails_real_pty_drain_regression) ... ok\ntest_signed_windows_rc_with_older_linux_agent_is_not_a_commercial_bundle (__main__.SignedDistributionTests.test_signed_windows_rc_with_older_linux_agent_is_not_a_commercial_bundle) ... ok\ntest_unsigned_tampering_is_rejected (__main__.SignedDistributionTests.test_unsigned_tampering_is_rejected) ... ok\n\n----------------------------------------------------------------------\nRan 12 tests in 2.348s\n\nOK\n"
+    },
+    {
+      "command": [
+        "python3",
+        "-B",
+        "apps/commander/scripts/validate_process_terminal_drain.py"
+      ],
+      "exit_code": 0,
+      "stdout": "{\"checked\": 19, \"failed\": 0, \"passed\": 19, \"schema\": \"hara.commander-pty-terminal-drain-regression.v1\", \"scope\": \"REAL_LOCAL_PTY_ONLY_NO_NETWORK\", \"source\": \"linux.py\"}\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/home/sartorius/.nvm/versions/node/v24.15.0/bin/node",
+        "--disable-warning=ExperimentalWarning",
+        "apps/commander/scripts/test_device_enrollment_limit.mjs"
+      ],
+      "exit_code": 0,
+      "stdout": "DEVICE_LIMIT_FIFTH_SIXTH_REVOKE_REPLACE=PASS\nDEVICE_LIMIT_TENANT_ISOLATION_AND_FOUNDER=PASS\nDEVICE_LIMIT_CONCURRENT_ENROLLMENT=PASS\n",
+      "stderr": ""
+    }
+  ],
+  "changed_during_test": [],
+  "tested_hashes": {
+    "apps/commander/scripts/test_signed_distribution_stage.py": "b85c31e0d010c1091def442b069d1cdce064b907d0de68e7b3dac123b2b3d3ab",
+    "apps/commander/scripts/verify_signed_distribution.py": "9cc5dc4abc8f1dc576d9cab1a9a84f4cb2a23049239f950485598ca210733c8e",
+    "apps/commander/scripts/stage_signed_commercial_assets.py": "13fe1c2c84e5e9e4e34ec5125cae6f4ec5d6eacf908c9e703afa4324886941bf",
+    "apps/commander/scripts/build_release_manifest.py": "811e6ed6c393dac9e1e6f0c4d7f2d4a786705d09631f0631af00fa9c3271b1cc",
+    "apps/commander/scripts/build_commander_commercial_terminal_drain_candidate.py": "d4f5f4d9ad64b0f9bd489041e01c65545f81e10b7efabeac91930e14d644a9b3",
+    "apps/commander/scripts/validate_process_terminal_drain.py": "0dab807c68cf3dcda4a29536c76795199d379b1d2f22dd927769da8f60c6c579",
+    "apps/commander/public/agent/linux.py": "1572d70e60fb299edb262a8a817bd7aa1740a4c2dda3635d50beb2f3476ffe3b",
+    "apps/commander/src/device-enrollment.mjs": "363aa80262af8f2a5f38b7d152dd9a5f88dcf23095874242eda2bfd1da76dc50",
+    "apps/commander/scripts/test_device_enrollment_limit.mjs": "e6db169b613add5cafa018fb88241803b242f80aaa6c7eee7ccdf4ff136e8c3f",
+    "apps/commander/migrations/0036_commander_prelaunch_commercial_terms.sql": "5e07b5aa2c15ac14c20739e118f011261c9a82a93bcf6fbe011d97d8a5a92c0d"
+  },
+  "product_code_mutated_by_reviewer": false
+}

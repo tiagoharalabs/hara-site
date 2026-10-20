@@ -1,0 +1,145 @@
+{
+  "schema": "hara.commander-peer-billing-review.v1",
+  "observed_utc": "2026-10-20T18:59:56.715Z",
+  "snapshot": {
+    "schema": "hara.commander-peer-review-snapshot.v1",
+    "observed_utc": "2026-10-20T18:58:16.126497+00:00",
+    "source": "/home/sartorius/hara-workspaces/commander-prelaunch-fixes-20261020",
+    "head": "1943a269b4361e78a73a588e10bc2bd89f251166",
+    "snapshot": "/tmp/hara-commander-peer-r2-20261020-dh1paucj",
+    "files_sha256": {
+      "apps/commander/src/billing.mjs": "c50ee6b7c001b50bfd39a1f1e6cdba586536e793c5d77bf7603ab4af5a3ed67d",
+      "apps/commander/src/worker.js": "ee036e2bcfba43e291cb3b131cb49de88c2948454e8a75c21b7b1db2ce4dc2cc",
+      "apps/commander/scripts/billing_sqlite_webhook_e2e.mjs": "571ab1b3468fc7502f26bbf95a63218f62e77052bea4880e38c159d451766416",
+      "apps/commander/scripts/billing_v1_selftest.mjs": "a3764962f4c614ac3943c5bfedd3ecfd6663b038a960a04a933b594ba843a55a",
+      "apps/commander/scripts/test_commercial_policy_20261020.mjs": "982d34e238a3b57eb7baef7a477bf7a3307b6c0581985f4bf2e4c939142c18da",
+      "apps/commander/scripts/test_commercial_model_20261020.py": "ef1e74ff9fb991e8ac0b8e329f5805d5c30673fcd55be782b602909f08bc12e0",
+      "apps/commander/migrations/0002_oidc_sessions.sql": "d405307efd86068f570e23908ed25a4dd226140d68c8c718fd39bac89736ea9c",
+      "apps/commander/migrations/0017_device_approval_mode.sql": "b07d16df135b10a77a4352311b2bc5d13846c06ac7a119a0fe35897aaf2b4856",
+      "apps/commander/migrations/0026_slo_incidents.sql": "5793155e28bda9cc6508c566618545f3235f9a66b1c40e9b4092c1e55744e7c4",
+      "apps/commander/migrations/0012_outbound_relay_offline.sql": "ca9029c9cecc66c0cc13fe5ce73cb2b8715565f09dc8ec743c3a48b441ab96a0",
+      "apps/commander/migrations/0021_commercial_terms_20261005.sql": "87c80e017424bbc9a4b413e8c3a99af77820766c32b274007c560270753ff6e2",
+      "apps/commander/migrations/0030_agent_lifecycle_telemetry.sql": "4286f4c2cb97a0a0ea6d01717881c626072960ab0f8534f019a3048c37745a32",
+      "apps/commander/migrations/0010_session_scale.sql": "c910c3277cbdeba391273a9d2290fb07873582189594a9660ea38075940ff3a4",
+      "apps/commander/migrations/0011_event_v2_transport.sql": "a12dfb82b729340a7830b73604a9c4758ac6e9f3cab6f1cdb5d9a723a7e7400a",
+      "apps/commander/migrations/0023_device_local_budget_blocks.sql": "47c6d0f036dabee286206dc3e803d03b91c2944dba9cc74eca394c40bb2626e9",
+      "apps/commander/migrations/0005_devices.sql": "1370a2cd48420a287a357b0746b0060d5db322a346655feeb81e2b5785b07112",
+      "apps/commander/migrations/0008_trial_onboarding.sql": "d413be3ee3c59adce020124d1c675e2037e4e06fb70b70d1b48cc496887bf7ba",
+      "apps/commander/migrations/0003_plan_grants.sql": "bc7b6d34d7866ac158e41dadfea7fc6249da81ec5ba8a4643e7ecce39b6af221",
+      "apps/commander/migrations/0033_portal_read_indexes_20261011.sql": "06a6cd7c56796a6f463d4e13fbfe6e3a22dbcdea5c02011d6e5baf5efd2e1d60",
+      "apps/commander/migrations/0036_commander_prelaunch_commercial_terms.sql": "63b84c1f530e1952a2ef6b78cc307e5bf69042ebe441504c099958cc236950af",
+      "apps/commander/migrations/0019_standard_beta_plan.sql": "51ab608186be8b98e2cdc69378312d62fb7aa251b4b44789d2d8a2f60076134c",
+      "apps/commander/migrations/0028_support_reports.sql": "8e64884073510357a0572a0f487d1ff9777a520ebd849be13187dd20e1fef7f6",
+      "apps/commander/migrations/0022_device_local_activity_snapshot.sql": "90df891f9203ccf40d10e8976d3abe147c195d04f13e4c2fc303a2e59f3dcb83",
+      "apps/commander/migrations/0001_product.sql": "326a19b35d175731e5239661eaf2c5e3813a943ee6125996574225293cfda26d",
+      "apps/commander/migrations/0014_founder_internal_entitlement.sql": "4015bb87dd9d24d44f772c9c28d0593dc8d37a1f53a67e133cd17eb6c7bf7296",
+      "apps/commander/migrations/0018_activity_indexes.sql": "66884c8422cc81c938ab65cce36933aa610defaeefbf1de69529ee3adbcd4cf6",
+      "apps/commander/migrations/0031_free_15000_20261010.sql": "fa06f1cc07fe61b2c672c041c5223761f8db0865e8786bb93060191f3aeb41ea",
+      "apps/commander/migrations/0034_event_v2_telemetry_rollup_20261011.sql": "7b2ae92ec791195ea39a3cdb4f8221596a3d7da3a3ae726f237273457c4d039e",
+      "apps/commander/migrations/0007_device_selections.sql": "c8a517bec638a15a72fc3c3b132651331ace4d5538bdd2204fca639d68930381",
+      "apps/commander/migrations/0009_pairing_supersession.sql": "0a96d5a4c206d76b312f9bb4ce07e8b803931ffa0ea936d4ef4a1460380cfb29",
+      "apps/commander/migrations/0025_local_budget_fresh_baseline.sql": "e870cffc6731c3066802c5ebe8401543bf565453f8ba7dd1e3be00ec8485fc96",
+      "apps/commander/migrations/0029_local_tunnel_authorization.sql": "7cd3c4ef5538c2b17b9c3f5241a2477bd9d867da2c8d0ebcf914b2c22021ce4c",
+      "apps/commander/migrations/0016_founder_process_execution_grant.sql": "b2cd300b72e373780f5f143fc6f4aa9a2ee3343c0e175e6d407886a8bdb9fc1f",
+      "apps/commander/migrations/0035_approval_async_call_metadata.sql": "108cdf7de9038eba173a1de59f7fc006c30fd131b48a7dd54078144f274a4d91",
+      "apps/commander/migrations/0013_billing_v1.sql": "67928d2212a458146dee609befc7b2af2b13ae64baadc4e72b556672420f1c61",
+      "apps/commander/migrations/0032_free_10000_revert_20261010.sql": "0a12f5433a3ffe6d6564547d677ea174a8f717918ad4b0accc9986e3b6c05bb2",
+      "apps/commander/migrations/0020_beta_access_requests.sql": "d02d5769a13726944b8ef6f3273acba392abdd1ea3457d4196e187aef29cf2a1",
+      "apps/commander/migrations/0024_local_budget_cloud_ceiling.sql": "2d7e0fde863d0f82a13c1eb9fad8621eb890dd543c3ab1024b120337083b2f9c",
+      "apps/commander/migrations/0006_device_calls.sql": "e09233ac219d4f7adee24042ad27620363b43307bd58abc0b71f497e86dc5702",
+      "apps/commander/migrations/0004_identity_bindings.sql": "51d5da88d5cbd744f72011fb4b9b377ddf7d65e533244044b34642a1d855450e",
+      "apps/commander/migrations/0015_founder_mutation_grant.sql": "a8492feeebe616ec7dce0b450db5b2c3f897df8126f6fac99678f42960b20452",
+      "apps/commander/migrations/0027_slo_incident_ack_escalation.sql": "2f69fcd4e801ed912c2fbb529ae1ab82b9737b385b847f4a0cfa69eee72cea23"
+    },
+    "source_changed_during_snapshot": [],
+    "production_mutation": false
+  },
+  "findings": [
+    {
+      "id": "R2-BILL-01-OLD-SAME-SUBSCRIPTION-FAILURE",
+      "reproduced": true,
+      "expected": "Old failure must not undo a more recent paid/recovered canonical subscription state",
+      "observed": "SUSPENDED",
+      "handler": "INVOICE_PAYMENT_FAILED",
+      "scope": "real handler + in-memory SQLite; delayed unique event, not duplicate event ID"
+    },
+    {
+      "id": "R2-BILL-02-OLD-UPDATE-REMOVES-CANCEL-DEADLINE",
+      "reproduced": true,
+      "expected": "Delayed pre-cancellation snapshot must not clear current scheduled end",
+      "before": "2026-10-21T18:59:56.000Z",
+      "after": null,
+      "connection": {
+        "state": "ACTIVE",
+        "subscription_status": "active",
+        "cancel_at_period_end": 0
+      }
+    },
+    {
+      "id": "R2-BILL-03-ORPHAN-PROCESSING-ACKNOWLEDGED",
+      "reproduced": true,
+      "expected": "A stale claim must be recoverable; do not acknowledge durable completion with no recovery path",
+      "row": {
+        "state": "PROCESSING",
+        "processed_at_utc": null
+      },
+      "paid": null,
+      "retries": [
+        {
+          "ok": true,
+          "duplicate": true,
+          "result_code": "EVENT_IN_PROGRESS"
+        },
+        {
+          "ok": true,
+          "duplicate": true,
+          "result_code": "EVENT_IN_PROGRESS"
+        },
+        {
+          "ok": true,
+          "duplicate": true,
+          "result_code": "EVENT_IN_PROGRESS"
+        }
+      ],
+      "scope": "seeded crash-equivalent persisted state; no actual Worker killed"
+    },
+    {
+      "id": "R2-BILL-04-CONCURRENT-CHECKOUTS",
+      "reproduced": true,
+      "expected": "Concurrent first checkout calls must reuse or serialize one purchase attempt",
+      "mock_provider_calls": 2,
+      "idempotency_keys": [
+        null,
+        null
+      ],
+      "checkout_ids": [
+        "cs_test_peer_1",
+        "cs_test_peer_2"
+      ],
+      "real_charge": false,
+      "scope": "mock Stripe responses, not proof of two payments"
+    },
+    {
+      "id": "R2-BILL-05-FOUNDER-EXPIRED-BY-PURCHASE",
+      "reproduced": true,
+      "expected": "Founder/Internal exemption must not be invalidated by paid-plan synchronization",
+      "founder": {
+        "state": "EXPIRED",
+        "plan_code": "FOUNDER_INTERNAL"
+      },
+      "scope": "synthetic Founder tenant; existing real Founder untouched"
+    },
+    {
+      "id": "R2-LEASE-06-EXPIRY-NOT-ENFORCED-ON-LOCAL-LEASE",
+      "reproduced": true,
+      "expected": "Reject expired entitlement and cap lease expiry at paid entitlement deadline",
+      "expired_entitlement_returned": true,
+      "expired_at": "2026-10-20T17:59:56.714Z",
+      "paid_until": "2026-10-20T19:00:56.714Z",
+      "lease_until": "2026-10-21T00:59:56.714Z",
+      "scope": "actual extracted pure resolver/lease functions; not an HTTP exploit or signed lease issuance"
+    }
+  ],
+  "real_network_attempts": 0,
+  "production_mutation": false
+}
