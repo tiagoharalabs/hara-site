@@ -130,16 +130,24 @@ def live_preflight() -> int:
     schema_rows = d1_rows(
         "SELECT name FROM sqlite_master "
         "WHERE type='table' AND name IN "
-        "('billing_connections','billing_webhook_events','entitlements','plans') "
+        "('billing_connections','billing_webhook_events','billing_projection_claims',"
+        "'billing_checkout_attempts','entitlements','plans') "
         "ORDER BY name;"
     )
     schema_names = {str(row.get("name") or "") for row in schema_rows}
     schema_ok = schema_names == {
         "billing_connections",
         "billing_webhook_events",
+        "billing_projection_claims",
+        "billing_checkout_attempts",
         "entitlements",
         "plans",
     }
+    webhook_claim_columns = {str(row.get("name") or "") for row in d1_rows(
+        "SELECT name FROM pragma_table_info('billing_webhook_events') "
+        "WHERE name IN ('claim_token','claim_expires_at_utc');"
+    )}
+    schema_ok = schema_ok and webhook_claim_columns == {"claim_token", "claim_expires_at_utc"}
 
     counts = d1_rows(
         "SELECT "
@@ -191,12 +199,15 @@ def source_preflight() -> int:
     billing = (COMMANDER / "src" / "billing.mjs").read_text(encoding="utf-8")
     worker = (COMMANDER / "src" / "worker.js").read_text(encoding="utf-8")
     migration = (COMMANDER / "migrations" / "0013_billing_v1.sql").read_text(encoding="utf-8")
+    recovery_migration = (COMMANDER / "migrations" / "0037_billing_recovery_and_checkout_attempts.sql").read_text(encoding="utf-8")
 
     checks = {
         "checkout": 'mode: "subscription"' in billing,
         "portal": "/billing_portal/sessions" in billing,
         "webhook_signature": "verifyStripeWebhookSignature" in billing,
         "idempotency": "billing_webhook_events" in billing and "billing_webhook_events" in migration,
+        "webhook_recovery": "claim_expires_at_utc" in billing and "claim_token" in recovery_migration,
+        "checkout_uniqueness": "billing_checkout_attempts" in billing and "billing_checkout_attempts" in recovery_migration,
         "entitlement_bridge": "syncPaidEntitlement" in billing,
         "webhook_route": '/api/billing/stripe/webhook' in worker,
         "checkout_route": '/api/portal/billing/checkout' in worker,

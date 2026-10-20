@@ -137,14 +137,17 @@ function requireBillingAdmin(session) {
   }
 }
 
-async function stripePost(env, path, fields, fetcher = fetch) {
-  requireBillingConfigured(env);
+function stripeFormBody(fields) {
   const body = new URLSearchParams();
   for (const [key, value] of Object.entries(fields || {})) {
     if (value === undefined || value === null || value === "") continue;
     body.set(key, String(value));
   }
+  return body.toString();
+}
 
+async function stripePost(env, path, fields, fetcher = fetch, idempotencyKey = null) {
+  requireBillingConfigured(env);
   const headers = {
     authorization: "Bearer " + String(env.STRIPE_SECRET_KEY),
     accept: "application/json",
@@ -152,14 +155,16 @@ async function stripePost(env, path, fields, fetcher = fetch) {
   };
   const apiVersion = cleanText(env.STRIPE_API_VERSION, 64);
   if (apiVersion) headers["stripe-version"] = apiVersion;
+  if (idempotencyKey) headers["idempotency-key"] = idempotencyKey;
 
   let response;
   try {
     response = await fetcher(STRIPE_API + path, {
       method: "POST",
       headers,
-      body: body.toString(),
+      body: stripeFormBody(fields),
       redirect: "error",
+      signal: AbortSignal.timeout(10_000),
     });
   } catch (_error) {
     throw new Error("BILLING_PROVIDER_UNREACHABLE");
@@ -176,6 +181,36 @@ async function stripePost(env, path, fields, fetcher = fetch) {
     throw new Error(type ? "BILLING_PROVIDER_" + type.slice(0, 80) : "BILLING_PROVIDER_ERROR");
   }
   return payload;
+}
+
+async function stripeSubscriptionNow(env, subscriptionId, tenantId, fetcher = fetch) {
+  requireBillingConfigured(env);
+  const id = cleanStripeId(subscriptionId, ["sub_"]);
+  if (!id) throw new Error("BILLING_SUBSCRIPTION_INVALID");
+  let response;
+  try {
+    response = await fetcher(STRIPE_API + "/subscriptions/" + encodeURIComponent(id), {
+      method: "GET",
+      headers: {
+        authorization: "Bearer " + String(env.STRIPE_SECRET_KEY),
+        accept: "application/json",
+      },
+      redirect: "error",
+      signal: AbortSignal.timeout(10_000),
+    });
+  } catch (_error) {
+    throw new Error("BILLING_PROVIDER_UNREACHABLE");
+  }
+  if (!response.ok) throw new Error("BILLING_PROVIDER_SUBSCRIPTION_UNAVAILABLE");
+  let current;
+  try { current = await response.json(); }
+  catch (_error) { throw new Error("BILLING_PROVIDER_RESPONSE_INVALID"); }
+  const expectedLive = String(env.ENVIRONMENT || "").toUpperCase() === "PROD";
+  if (current?.id !== id || current?.metadata?.tenant_id !== tenantId
+      || current?.livemode !== expectedLive) {
+    throw new Error("BILLING_SUBSCRIPTION_BINDING_INVALID");
+  }
+  return current;
 }
 
 async function activePlan(env, planCode) {
@@ -213,9 +248,21 @@ async function billingConnection(env, tenantId) {
   ).bind("STRIPE:" + tenantId).first();
 }
 
+async function founderEntitlementActive(env, tenantId) {
+  const now = nowIso();
+  return Boolean(await env.PRODUCT_DB.prepare(
+    `SELECT entitlement_id FROM entitlements
+      WHERE tenant_id = ? AND plan_code = 'FOUNDER_INTERNAL'
+        AND state = 'ACTIVE' AND valid_from_utc <= ?
+        AND (valid_until_utc IS NULL OR valid_until_utc > ?)
+      LIMIT 1`
+  ).bind(tenantId, now, now).first());
+}
+
 export async function billingStatus(env, session) {
   const prices = priceMap(env);
   const providerConfigured = stripeBillingConfigured(env);
+  const founderInternal = await founderEntitlementActive(env, session.tenant_id);
   const plans = {};
   for (const planCode of PAID_PLANS) {
     const plan = await activePlan(env, planCode);
@@ -224,7 +271,7 @@ export async function billingStatus(env, session) {
       catalog_active: Boolean(plan),
       price_configured: Boolean(prices[planCode]),
       checkout_ready: Boolean(
-        providerConfigured && plan && prices[planCode]
+        providerConfigured && plan && prices[planCode] && !founderInternal
       ),
       unit_limit: plan?.unit_limit == null ? null : Number(plan.unit_limit),
       period_kind: plan ? plan.period_kind : null,
@@ -237,6 +284,7 @@ export async function billingStatus(env, session) {
     schema: "hara.commander-billing-status.v1",
     provider: "STRIPE",
     configured: providerConfigured,
+    founder_internal: founderInternal,
     can_manage: ["OWNER", "ADMIN"].includes(String(session.role || "")),
     activation:{
       provider_configured:providerConfigured,
@@ -261,9 +309,80 @@ export async function billingStatus(env, session) {
     secret_material_exposed: false,
   };
 }
+
+async function checkoutAttempt(env, tenantId) {
+  return env.PRODUCT_DB.prepare(
+    `SELECT attempt_id, plan_code, request_sha256, state, checkout_session_id,
+            checkout_url, expires_at_utc, claim_expires_at_utc, created_at_utc
+       FROM billing_checkout_attempts WHERE tenant_id = ? LIMIT 1`
+  ).bind(tenantId).first();
+}
+
+function checkoutResult(plan, row) {
+  return {
+    schema: "hara.commander-billing-checkout.v1",
+    plan_code: plan,
+    checkout_session_id: row.checkout_session_id,
+    url: row.checkout_url,
+    secret_material_exposed: false,
+  };
+}
+
+async function claimCheckoutAttempt(env, tenantId, plan, requestHash) {
+  const now = nowIso();
+  const claimUntil = new Date(Date.now() + 30_000).toISOString();
+  const attemptId = "commander_checkout_" + crypto.randomUUID();
+  const claimToken = crypto.randomUUID();
+  const inserted = await env.PRODUCT_DB.prepare(
+    `INSERT INTO billing_checkout_attempts
+       (tenant_id, attempt_id, plan_code, request_sha256, state,
+        claim_token, claim_expires_at_utc, created_at_utc, updated_at_utc)
+     VALUES (?, ?, ?, ?, 'CREATING', ?, ?, ?, ?)
+     ON CONFLICT(tenant_id) DO UPDATE SET
+       attempt_id = excluded.attempt_id, plan_code = excluded.plan_code,
+       request_sha256 = excluded.request_sha256, state = 'CREATING',
+       claim_token = excluded.claim_token,
+       claim_expires_at_utc = excluded.claim_expires_at_utc,
+       checkout_session_id = NULL, checkout_url = NULL,
+       expires_at_utc = NULL, created_at_utc = excluded.created_at_utc,
+       updated_at_utc = excluded.updated_at_utc
+     WHERE billing_checkout_attempts.state = 'READY'
+       AND billing_checkout_attempts.expires_at_utc <= ?`
+  ).bind(tenantId, attemptId, plan, requestHash, claimToken, claimUntil, now, now, now).run();
+  if (inserted.meta?.changes) return { attemptId, claimToken };
+
+  const existing = await checkoutAttempt(env, tenantId);
+  if (!existing) throw new Error("BILLING_CHECKOUT_CLAIM_FAILED");
+  if (existing.plan_code !== plan) throw new Error("BILLING_CHECKOUT_PENDING_OTHER_PLAN");
+  if (existing.state === "READY" && existing.expires_at_utc > now) {
+    return { ready: checkoutResult(plan, existing) };
+  }
+  if (existing.request_sha256 !== requestHash) throw new Error("BILLING_CHECKOUT_REQUEST_CHANGED");
+  if (existing.claim_expires_at_utc > now) throw new Error("BILLING_CHECKOUT_IN_PROGRESS");
+  // Stripe retains an idempotency key for at least 24 hours. Stop safely
+  // before that boundary rather than creating another purchase opportunity.
+  if (existing.created_at_utc <= new Date(Date.now() - 23 * 3600_000).toISOString()) {
+    throw new Error("BILLING_CHECKOUT_RECONCILIATION_REQUIRED");
+  }
+  const retryToken = crypto.randomUUID();
+  const retry = await env.PRODUCT_DB.prepare(
+    `UPDATE billing_checkout_attempts
+        SET state = 'CREATING', claim_token = ?, claim_expires_at_utc = ?,
+            updated_at_utc = ?
+      WHERE tenant_id = ? AND attempt_id = ? AND request_sha256 = ?
+        AND state IN ('CREATING','UNCERTAIN')
+        AND (claim_expires_at_utc IS NULL OR claim_expires_at_utc <= ?)`
+  ).bind(retryToken, claimUntil, now, tenantId, existing.attempt_id, requestHash, now).run();
+  if (!retry.meta?.changes) throw new Error("BILLING_CHECKOUT_IN_PROGRESS");
+  return { attemptId: existing.attempt_id, claimToken: retryToken };
+}
+
 export async function createBillingCheckout(request, env, session, planCode, fetcher = fetch) {
   requireBillingAdmin(session);
   requireBillingConfigured(env);
+  if (await founderEntitlementActive(env, session.tenant_id)) {
+    throw new Error("BILLING_FOUNDER_INTERNAL_SEPARATE");
+  }
 
   const plan = cleanPlanCode(planCode);
   if (!plan) throw new Error("BILLING_PLAN_INVALID");
@@ -306,18 +425,40 @@ export async function createBillingCheckout(request, env, session, planCode, fet
     fields.customer_email = String(session.email).slice(0, 320);
   }
 
-  const checkout = await stripePost(env, "/checkout/sessions", fields, fetcher);
-  const checkoutId = cleanStripeId(checkout.id, ["cs_"]);
-  const checkoutUrl = stripeHttpsUrl(checkout.url);
-  if (!checkoutId || !checkoutUrl) throw new Error("BILLING_CHECKOUT_RESPONSE_INVALID");
-
-  return {
-    schema: "hara.commander-billing-checkout.v1",
-    plan_code: plan,
-    checkout_session_id: checkoutId,
-    url: checkoutUrl,
-    secret_material_exposed: false,
-  };
+  const requestHash = hex(await crypto.subtle.digest(
+    "SHA-256", new TextEncoder().encode(stripeFormBody(fields))
+  ));
+  const claim = await claimCheckoutAttempt(env, session.tenant_id, plan, requestHash);
+  if (claim.ready) return claim.ready;
+  try {
+    const checkout = await stripePost(env, "/checkout/sessions", fields, fetcher, claim.attemptId);
+    const checkoutId = cleanStripeId(checkout.id, ["cs_"]);
+    const checkoutUrl = stripeHttpsUrl(checkout.url);
+    const expiresAt = epochToIso(checkout.expires_at);
+    if (!checkoutId || !checkoutUrl || !expiresAt || expiresAt <= nowIso()) {
+      throw new Error("BILLING_CHECKOUT_RESPONSE_INVALID");
+    }
+    const stored = await env.PRODUCT_DB.prepare(
+      `UPDATE billing_checkout_attempts
+          SET state = 'READY', checkout_session_id = ?, checkout_url = ?,
+              expires_at_utc = ?, claim_token = NULL, claim_expires_at_utc = NULL,
+              updated_at_utc = ?
+        WHERE tenant_id = ? AND attempt_id = ? AND claim_token = ?
+          AND state = 'CREATING'`
+    ).bind(checkoutId, checkoutUrl, expiresAt, nowIso(),
+      session.tenant_id, claim.attemptId, claim.claimToken).run();
+    if (!stored.meta?.changes) throw new Error("BILLING_CHECKOUT_CLAIM_LOST");
+    return checkoutResult(plan, { checkout_session_id: checkoutId, checkout_url: checkoutUrl });
+  } catch (error) {
+    await env.PRODUCT_DB.prepare(
+      `UPDATE billing_checkout_attempts
+          SET state = 'UNCERTAIN', claim_token = NULL,
+              claim_expires_at_utc = NULL, updated_at_utc = ?
+        WHERE tenant_id = ? AND attempt_id = ? AND claim_token = ?
+          AND state = 'CREATING'`
+    ).bind(nowIso(), session.tenant_id, claim.attemptId, claim.claimToken).run().catch(() => null);
+    throw error;
+  }
 }
 
 export async function createBillingPortal(request, env, session, fetcher = fetch) {
@@ -406,20 +547,28 @@ async function beginWebhookEvent(env, eventId, eventType) {
 }
 
 async function claimWebhookEvent(env, eventId) {
+  const token = crypto.randomUUID();
+  const now = nowIso();
+  const expires = new Date(Date.now() + 120_000).toISOString();
   const claimed = await env.PRODUCT_DB.prepare(
     `UPDATE billing_webhook_events
-        SET state = 'PROCESSING', processed_at_utc = NULL, result_code = NULL
-      WHERE event_id = ? AND state IN ('RECEIVED','FAILED')`
-  ).bind(eventId).run();
-  return Boolean(claimed.meta?.changes);
+        SET state = 'PROCESSING', processed_at_utc = NULL, result_code = NULL,
+            claim_token = ?, claim_expires_at_utc = ?
+      WHERE event_id = ? AND (state IN ('RECEIVED','FAILED')
+        OR (state = 'PROCESSING' AND
+            (claim_expires_at_utc IS NULL OR claim_expires_at_utc <= ?)))`
+  ).bind(token, expires, eventId, now).run();
+  return claimed.meta?.changes ? token : null;
 }
 
-async function finishWebhookEvent(env, eventId, state, resultCode) {
-  await env.PRODUCT_DB.prepare(
+async function finishWebhookEvent(env, eventId, token, state, resultCode) {
+  const result = await env.PRODUCT_DB.prepare(
     `UPDATE billing_webhook_events
-        SET state = ?, processed_at_utc = ?, result_code = ?
-      WHERE event_id = ?`
-  ).bind(state, nowIso(), resultCode, eventId).run();
+        SET state = ?, processed_at_utc = ?, result_code = ?,
+            claim_token = NULL, claim_expires_at_utc = NULL
+      WHERE event_id = ? AND state = 'PROCESSING' AND claim_token = ?`
+  ).bind(state, nowIso(), resultCode, eventId, token).run();
+  if (!result.meta?.changes) throw new Error("BILLING_WEBHOOK_CLAIM_LOST");
 }
 
 async function tenantExists(env, tenantId) {
@@ -515,6 +664,7 @@ async function syncPaidEntitlement(env, tenantId, planCode, entitlementState, va
             SET state = 'EXPIRED', valid_until_utc = ?
           WHERE tenant_id = ?
             AND entitlement_id <> ?
+            AND plan_code <> 'FOUNDER_INTERNAL'
             AND state = 'ACTIVE'`
       ).bind(now, tenantId, entitlementId),
       env.PRODUCT_DB.prepare(
@@ -546,9 +696,15 @@ async function syncPaidEntitlement(env, tenantId, planCode, entitlementState, va
       WHERE entitlement_id = ? AND tenant_id = ?`
   ).bind(now, entitlementId, tenantId).run();
 }
-async function processCheckoutCompleted(env, object) {
+async function processCheckoutCompleted(env, object, claimToken) {
   const tenantId = cleanText(object?.metadata?.tenant_id || object?.client_reference_id, 180);
   if (!tenantId || !await tenantExists(env, tenantId)) throw new Error("BILLING_TENANT_INVALID");
+  if (await founderEntitlementActive(env, tenantId)) return "FOUNDER_INTERNAL_SEPARATE";
+
+  const pending = await checkoutAttempt(env, tenantId);
+  if (pending && pending.checkout_session_id !== cleanStripeId(object?.id, ["cs_"])) {
+    return "CHECKOUT_OTHER_ATTEMPT_IGNORED";
+  }
 
   const customerId = cleanStripeId(object?.customer, ["cus_"]);
   const subscriptionId = cleanStripeId(object?.subscription, ["sub_"]);
@@ -561,6 +717,7 @@ async function processCheckoutCompleted(env, object) {
       && current.state !== "REVOKED") {
     return "CHECKOUT_OTHER_SUBSCRIPTION_IGNORED";
   }
+  await assertBillingProjectionClaim(env, tenantId, claimToken);
   await upsertBillingConnection(env, tenantId, {
     customerId,
     subscriptionId,
@@ -570,9 +727,15 @@ async function processCheckoutCompleted(env, object) {
   return "CHECKOUT_LINKED";
 }
 
-async function processSubscription(env, eventType, object) {
+async function processSubscription(env, eventType, object, fetcher = fetch, claimToken, verifiedCurrent = false) {
   const tenantId = await resolveTenantForObject(env, object);
   if (!tenantId) throw new Error("BILLING_TENANT_NOT_FOUND");
+  if (await founderEntitlementActive(env, tenantId)) return "FOUNDER_INTERNAL_SEPARATE";
+
+  // Stripe snapshot webhooks may arrive out of order or share created seconds.
+  // Project only the currently authenticated provider object.
+  if (!verifiedCurrent) object = await stripeSubscriptionNow(env, object?.id, tenantId, fetcher);
+  await assertBillingProjectionClaim(env, tenantId, claimToken);
 
   const customerId = cleanStripeId(object?.customer, ["cus_"]);
   const subscriptionId = cleanStripeId(object?.id, ["sub_"]);
@@ -609,14 +772,13 @@ async function processSubscription(env, eventType, object) {
   if (object?.cancel_at_period_end && !scheduledEndUtc) {
     throw new Error("BILLING_PERIOD_END_REQUIRED");
   }
-  let entitlementState = eventType === "customer.subscription.deleted"
-    ? "REVOKED"
-    : subscriptionEntitlementState(status);
+  let entitlementState = subscriptionEntitlementState(status);
   if (entitlementState === "ACTIVE" && scheduledEndUtc
       && Date.parse(scheduledEndUtc) <= Date.now()) {
     entitlementState = "REVOKED";
   }
 
+  await assertBillingProjectionClaim(env, tenantId, claimToken);
   await upsertBillingConnection(env, tenantId, {
     customerId,
     subscriptionId,
@@ -626,12 +788,13 @@ async function processSubscription(env, eventType, object) {
     cancelAtPeriodEnd: Boolean(object?.cancel_at_period_end || object?.cancel_at),
     state: entitlementState === "ACTIVE" ? "ACTIVE" : entitlementState,
   });
+  await assertBillingProjectionClaim(env, tenantId, claimToken);
   await syncPaidEntitlement(env, tenantId, planCode, entitlementState,
     entitlementState === "ACTIVE" ? scheduledEndUtc : null);
   return "SUBSCRIPTION_" + entitlementState;
 }
 
-async function processInvoicePaymentFailed(env, object) {
+async function processInvoicePaymentFailed(env, object, fetcher = fetch, claimToken) {
   const tenantId = await resolveTenantForObject(env, object);
   if (!tenantId) return "INVOICE_TENANT_NOT_FOUND";
   // Invoice events can be delayed or associated with another subscription
@@ -645,38 +808,75 @@ async function processInvoicePaymentFailed(env, object) {
       || current.state === "REVOKED") {
     return "INVOICE_NOT_CURRENT_SUBSCRIPTION";
   }
-  await upsertBillingConnection(env, tenantId, {
-    customerId: cleanStripeId(object?.customer, ["cus_"]),
-    subscriptionId: invoiceSubscriptionId,
-    subscriptionStatus: "past_due",
-    state: "SUSPENDED",
-  });
-  await env.PRODUCT_DB.prepare(
-    `UPDATE entitlements
-        SET state = 'SUSPENDED'
-      WHERE entitlement_id = ? AND tenant_id = ?`
-  ).bind("BILLING:" + tenantId, tenantId).run();
+  const currentSubscription = await stripeSubscriptionNow(env, invoiceSubscriptionId, tenantId, fetcher);
+  await assertBillingProjectionClaim(env, tenantId, claimToken);
+  if (subscriptionEntitlementState(currentSubscription.status) === "ACTIVE") {
+    await processSubscription(env, "customer.subscription.updated", currentSubscription,
+      fetcher, claimToken, true);
+    return "INVOICE_STALE_IGNORED";
+  }
+  await processSubscription(env, "customer.subscription.updated", currentSubscription,
+    fetcher, claimToken, true);
   return "INVOICE_PAYMENT_FAILED";
 }
 
-async function processStripeEvent(env, event) {
+async function claimBillingProjection(env, tenantId) {
+  const token = crypto.randomUUID();
+  const now = nowIso();
+  const expires = new Date(Date.now() + 120_000).toISOString();
+  const result = await env.PRODUCT_DB.prepare(
+    `INSERT INTO billing_projection_claims (tenant_id, claim_token, claim_expires_at_utc)
+     VALUES (?, ?, ?)
+     ON CONFLICT(tenant_id) DO UPDATE SET
+       claim_token = excluded.claim_token,
+       claim_expires_at_utc = excluded.claim_expires_at_utc
+     WHERE billing_projection_claims.claim_expires_at_utc <= ?`
+  ).bind(tenantId, token, expires, now).run();
+  if (!result.meta?.changes) throw new Error("BILLING_PROJECTION_IN_PROGRESS");
+  return token;
+}
+
+async function releaseBillingProjection(env, tenantId, token) {
+  await env.PRODUCT_DB.prepare(
+    "DELETE FROM billing_projection_claims WHERE tenant_id = ? AND claim_token = ?"
+  ).bind(tenantId, token).run();
+}
+
+async function assertBillingProjectionClaim(env, tenantId, token) {
+  const row = await env.PRODUCT_DB.prepare(
+    `SELECT claim_token FROM billing_projection_claims
+      WHERE tenant_id = ? AND claim_expires_at_utc > ? LIMIT 1`
+  ).bind(tenantId, nowIso()).first();
+  if (row?.claim_token !== token) throw new Error("BILLING_PROJECTION_CLAIM_LOST");
+}
+
+async function processStripeEvent(env, event, fetcher = fetch) {
   const type = String(event?.type || "");
   const object = event?.data?.object;
   if (!object || typeof object !== "object") throw new Error("BILLING_EVENT_OBJECT_INVALID");
 
-  if (type === "checkout.session.completed") return processCheckoutCompleted(env, object);
-  if (
-    type === "customer.subscription.created"
+  const projected = type === "checkout.session.completed"
+    || type === "customer.subscription.created"
     || type === "customer.subscription.updated"
     || type === "customer.subscription.deleted"
-  ) {
-    return processSubscription(env, type, object);
+    || type === "invoice.payment_failed";
+  if (!projected) return null;
+  const tenantId = await resolveTenantForObject(env, object);
+  if (!tenantId) {
+    if (type === "invoice.payment_failed") return "INVOICE_TENANT_NOT_FOUND";
+    throw new Error("BILLING_TENANT_NOT_FOUND");
   }
-  if (type === "invoice.payment_failed") return processInvoicePaymentFailed(env, object);
-  return null;
+  const claimToken = await claimBillingProjection(env, tenantId);
+  try {
+    if (type === "checkout.session.completed") return await processCheckoutCompleted(env, object, claimToken);
+    if (type === "invoice.payment_failed") return await processInvoicePaymentFailed(env, object, fetcher, claimToken);
+    return await processSubscription(env, type, object, fetcher, claimToken);
+  } finally {
+    await releaseBillingProjection(env, tenantId, claimToken);
+  }
 }
 
-export async function handleStripeWebhook(request, env) {
+export async function handleStripeWebhook(request, env, fetcher = fetch) {
   requireBillingConfigured(env);
   const declaredLength = Number(request.headers.get("content-length") || "0");
   if (Number.isFinite(declaredLength) && declaredLength > WEBHOOK_MAX_BYTES) {
@@ -725,21 +925,13 @@ export async function handleStripeWebhook(request, env) {
     };
   }
 
-  const claimed = await claimWebhookEvent(env, eventId);
-  if (!claimed) {
-    return {
-      schema: "hara.commander-billing-webhook.v1",
-      ok: true,
-      duplicate: true,
-      event_id: eventId,
-      result_code: "EVENT_IN_PROGRESS",
-    };
-  }
+  const claimToken = await claimWebhookEvent(env, eventId);
+  if (!claimToken) throw new Error("BILLING_WEBHOOK_IN_PROGRESS");
 
   try {
-    const resultCode = await processStripeEvent(env, event);
+    const resultCode = await processStripeEvent(env, event, fetcher);
     if (!resultCode) {
-      await finishWebhookEvent(env, eventId, "IGNORED", "EVENT_IGNORED");
+      await finishWebhookEvent(env, eventId, claimToken, "IGNORED", "EVENT_IGNORED");
       return {
         schema: "hara.commander-billing-webhook.v1",
         ok: true,
@@ -749,7 +941,7 @@ export async function handleStripeWebhook(request, env) {
       };
     }
 
-    await finishWebhookEvent(env, eventId, "PROCESSED", resultCode);
+    await finishWebhookEvent(env, eventId, claimToken, "PROCESSED", resultCode);
     return {
       schema: "hara.commander-billing-webhook.v1",
       ok: true,
@@ -760,7 +952,7 @@ export async function handleStripeWebhook(request, env) {
   } catch (error) {
     const raw = String(error?.message || "BILLING_WEBHOOK_PROCESSING_FAILED");
     const code = /^[A-Z0-9_]{1,120}$/.test(raw) ? raw : "BILLING_WEBHOOK_PROCESSING_FAILED";
-    await finishWebhookEvent(env, eventId, "FAILED", code).catch(() => null);
+    await finishWebhookEvent(env, eventId, claimToken, "FAILED", code).catch(() => null);
     throw error;
   }
 }

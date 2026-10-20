@@ -82,3 +82,21 @@ GETs HTTPS somente leitura em `https://commander.haralabs.com.br` reproduziram o
 Na comparação com `origin/local/commander-event-v2-pong-deadline-20261013`, a base QA contava sockets substituídos como wake entregue. O filtro agora exige attachment atual e ignora uma falha de envio para continuar até outro socket vivo. `test_event_v2_notify_delivery.mjs` saiu 0; `validate_event_v2_wiring.py`, `validate_event_v2_presence_reconnect.py` (34/34), `validate_event_v2_websocket_client.py`, `validate_event_v2_clean_shutdown.py`, `validate_event_v2_fleet_allowlist.mjs` e `validate_event_v2_productization.py` saíram 0. Detalhes em `docs/operations/HARA_COMMANDER_COMMERCIAL_EVENT_V2_ACCEPTANCE_20261020.md`.
 
 **Estados:** corrigido no código: filtro de wake; testado local: sim; testado DEV: não; publicado PROD: não. O Agent comercial limpo ainda não é Event V2 assinado. Founder não foi contado como canário comercial.
+
+## Revisão independente R2 — billing, checkout e licença local
+
+Recebida `docs/operations/HARA_COMMANDER_PEER_REVIEW_R2_20261020.md`, com snapshot e seis reproduções em `docs/evidence/commander-peer-review-r2-20261020/`. Várias funções afetadas já existiam na base QA; a revisão foi tratada como lacuna pré-lançamento, sem atribuir indevidamente uma regressão nova.
+
+**Corrigido no código:** webhooks de assinatura e falha de pagamento consultam a assinatura atual da Stripe antes de projetar estado; leituras indisponíveis ficam recuperáveis. A projeção por tenant possui claim exclusivo e fencing. A migração aditiva `0037` dá prazo/fencing ao claim de webhook e registra uma tentativa de Checkout por tenant. Concorrência abre uma sessão; timeout repete a mesma tentativa com a mesma `Idempotency-Key` e parâmetros; após a janela segura de 23h sem reconciliação a compra fica em HOLD. Founder/Internal não entra em Checkout pago nem perde seu entitlement em eventos comerciais; tem prioridade na seleção de entitlement. Consulta e licença locais respeitam `valid_from_utc`/`valid_until_utc`, limitando a lease ao prazo pago.
+
+| Teste local | Exit | Evidência |
+| --- | ---: | --- |
+| `node apps/commander/scripts/billing_sqlite_webhook_e2e.mjs` | 0 | falha antiga após recuperação, atualização antiga após cancelamento agendado, consulta indisponível/retry, claim órfão, claim ativo retryable, projeção concorrente/fenced e Founder; zero Stripe real |
+| `node apps/commander/scripts/test_billing_checkout_attempts.mjs` | 0 | uma chamada ao mock em dois checkouts simultâneos, retry com mesma chave/corpo, nova tentativa após sessão vencida, webhook de tentativa antiga ignorado |
+| `node apps/commander/scripts/test_paid_entitlement_expiry.mjs` | 0 | entitlement vencido/futuro negado, prioridade Founder e prazo da lease limitado ao fim pago |
+| `node apps/commander/scripts/billing_v1_selftest.mjs` | 0 | contrato de Checkout/Portal com SQL real em memória |
+| `node apps/commander/scripts/test_no_stripe_technical_mode.mjs` | 0 | 13/13, zero chamadas Stripe |
+| `python3 -B apps/commander/scripts/validate_billing_v1.py` | 0 | migração `0037`, catálogo, contratos e preflight |
+| `git diff --check` | 0 | sem erros de whitespace |
+
+**Estados:** corrigido no código: seis cenários R2; testado local: SQLite e Stripe mock; testado DEV: não; publicado PROD: não. A prova local de claim não substitui D1/Worker concorrente hospedado. `0037` não foi aplicada remotamente. Nenhuma conta Stripe TEST autorizada está disponível, e não houve cobrança real. A decisão de mês-calendário versus ciclo Stripe e o baseline histórico Trial continuam pendentes. O teste de wake Event V2 passou a declarar apenas entrega a socket simulado; persistência/recuperação D1 exige outra prova integrada.

@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import { DatabaseSync } from "node:sqlite";
 import {
   APPROVED_COMMERCIAL_TERMS,
   createBillingCheckout,
@@ -99,27 +101,25 @@ await assert.rejects(
 );
 
 const queries = [];
+const db = new DatabaseSync(":memory:");
+const migrations = new URL("../migrations/", import.meta.url);
+for (const file of ["0001_product.sql", "0003_plan_grants.sql", "0005_devices.sql",
+  "0013_billing_v1.sql", "0014_founder_internal_entitlement.sql",
+  "0021_commercial_terms_20261005.sql", "0036_commander_prelaunch_commercial_terms.sql",
+  "0037_billing_recovery_and_checkout_attempts.sql"]) {
+  db.exec(fs.readFileSync(new URL(file, migrations), "utf8"));
+}
+db.prepare("INSERT INTO tenants (tenant_id,display_name,state,environment,created_at_utc) VALUES (?,?,?,?,?)")
+  .run("HARA-TENANT-FIXTURE", "Fixture", "ACTIVE", "DEV", "2026-10-10T00:00:00Z");
 env.PRODUCT_DB = {
   prepare(sql) {
     queries.push(sql);
+    const statement = db.prepare(sql);
     return {
       bind(...args) {
         return {
-          async first() {
-            if (sql.includes("FROM plans")) {
-              return {
-                plan_code: args[0],
-                display_name: args[0],
-                meter_id: "HARA_COMMANDER_GOVERNED_INVOKE",
-                period_kind: "CALENDAR_MONTH",
-                unit_limit: 1000000,
-                active_device_limit: 5,
-                state: "ACTIVE",
-              };
-            }
-            if (sql.includes("FROM billing_connections")) return null;
-            return null;
-          },
+          async first() { return statement.get(...args) || null; },
+          async run() { const result = statement.run(...args); return {meta:{changes:Number(result.changes)}}; },
         };
       },
     };
@@ -132,6 +132,7 @@ const fakeFetch = async (url, options) => {
   return new Response(JSON.stringify({
     id: "cs_test_fixture",
     url: "https://checkout.stripe.com/c/pay/cs_test_fixture",
+    expires_at: Math.floor(Date.now()/1000)+3600,
   }), {
     status: 200,
     headers: { "content-type": "application/json" },
@@ -163,14 +164,18 @@ assert.equal(form.get("metadata[tenant_id]"), "HARA-TENANT-FIXTURE");
 assert.equal(form.get("subscription_data[metadata][plan_code]"), "STANDARD");
 assert.equal(form.get("tax_id_collection[enabled]"), "true");
 assert.equal(checkoutRequest.options.headers.authorization, "Bearer fixture-secret-key");
+assert.match(checkoutRequest.options.headers["idempotency-key"], /^commander_checkout_/);
 
 const evilFetch = async () => new Response(JSON.stringify({
   id: "cs_test_fixture",
   url: "https://evilstripe.com/not-allowed",
+  expires_at: Math.floor(Date.now()/1000)+3600,
 }), {
   status: 200,
   headers: { "content-type": "application/json" },
 });
+db.prepare("UPDATE billing_checkout_attempts SET expires_at_utc=? WHERE tenant_id=?")
+  .run("2026-10-01T00:00:00.000Z", "HARA-TENANT-FIXTURE");
 await assert.rejects(
   createBillingCheckout(
     new Request("https://commander.haralabs.com.br/api/portal/billing/checkout", {

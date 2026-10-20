@@ -1179,6 +1179,8 @@ async function entitlementForTenant(env, tenantId) {
        t.state AS tenant_state,
        e.entitlement_id,
        e.state AS entitlement_state,
+       e.valid_from_utc,
+       e.valid_until_utc,
        p.plan_code,
        p.display_name AS plan_name,
        p.meter_id,
@@ -1190,9 +1192,12 @@ async function entitlementForTenant(env, tenantId) {
     WHERE t.tenant_id = ?
       AND t.state = 'ACTIVE'
       AND e.state = 'ACTIVE'
+      AND e.valid_from_utc <= ?
+      AND (e.valid_until_utc IS NULL OR e.valid_until_utc > ?)
       AND p.state = 'ACTIVE'
+    ORDER BY CASE WHEN p.plan_code = 'FOUNDER_INTERNAL' THEN 0 ELSE 1 END
     LIMIT 1`
-  ).bind(tenantId).first();
+  ).bind(tenantId, nowIso(), nowIso()).first();
 }
 
 function unlimitedProductUsage() {
@@ -1366,6 +1371,8 @@ async function dashboardForSubject(env, subjectId, tenantId) {
        e.entitlement_id,
        e.state AS entitlement_state,
        e.subject_id AS entitlement_subject_id,
+       e.valid_from_utc,
+       e.valid_until_utc,
        p.plan_code,
        p.display_name AS plan_name,
        p.meter_id,
@@ -1377,11 +1384,14 @@ async function dashboardForSubject(env, subjectId, tenantId) {
     WHERE t.tenant_id = ?
       AND t.state = 'ACTIVE'
       AND e.state = 'ACTIVE'
+      AND e.valid_from_utc <= ?
+      AND (e.valid_until_utc IS NULL OR e.valid_until_utc > ?)
       AND p.state = 'ACTIVE'
       AND (e.subject_id IS NULL OR e.subject_id = ?)
-    ORDER BY CASE WHEN e.subject_id = ? THEN 0 ELSE 1 END
+    ORDER BY CASE WHEN p.plan_code = 'FOUNDER_INTERNAL' THEN 0 ELSE 1 END,
+             CASE WHEN e.subject_id = ? THEN 0 ELSE 1 END
     LIMIT 1`
-  ).bind(tenantId, subjectId, subjectId).first();
+  ).bind(tenantId, nowIso(), nowIso(), subjectId, subjectId).first();
 
   if (!ent) return null;
   const limit = ent.period_kind === "NONE" ? null : Number(ent.unit_limit);
@@ -1433,7 +1443,13 @@ function productLeaseForContext(context, device, grants, now = new Date()) {
   const periodEnd = context.period_kind === "CALENDAR_MONTH"
     ? new Date(monthEndUtc(monthKey(now)))
     : null;
-  const validUntil = periodEnd && periodEnd < leaseEnd ? periodEnd : leaseEnd;
+  const entitlementEnd = context.valid_until_utc == null
+    ? null : new Date(context.valid_until_utc);
+  if (entitlementEnd && (!Number.isFinite(entitlementEnd.getTime()) || entitlementEnd <= now)) {
+    throw new Error("ENTITLEMENT_NOT_ACTIVE");
+  }
+  const validUntil = [leaseEnd, periodEnd, entitlementEnd]
+    .filter(Boolean).reduce((earliest, candidate) => candidate < earliest ? candidate : earliest);
   const usageMode = context.period_kind === "NONE"
     ? "UNMETERED"
     : (localBudgetEligibleDevice(device) && context.period_kind === "CALENDAR_MONTH"
@@ -1950,6 +1966,7 @@ async function deviceProductLease(env, request, body = {}) {
     meter_id: entitlement.meter_id,
     period_kind: entitlement.period_kind,
     unit_limit: entitlement.period_kind === "NONE" ? null : Number(entitlement.unit_limit),
+    valid_until_utc: entitlement.valid_until_utc,
   };
   const productLease = productLeaseForContext(context, device, grants);
   productLease.transport_mode = requestedTransport;
@@ -6180,6 +6197,13 @@ export default {
         BILLING_PLAN_UNAVAILABLE: 409,
         BILLING_PRICE_NOT_CONFIGURED: 503,
         BILLING_SUBSCRIPTION_ALREADY_EXISTS: 409,
+        BILLING_FOUNDER_INTERNAL_SEPARATE: 409,
+        BILLING_CHECKOUT_IN_PROGRESS: 503,
+        BILLING_CHECKOUT_CLAIM_FAILED: 503,
+        BILLING_CHECKOUT_CLAIM_LOST: 503,
+        BILLING_CHECKOUT_REQUEST_CHANGED: 409,
+        BILLING_CHECKOUT_PENDING_OTHER_PLAN: 409,
+        BILLING_CHECKOUT_RECONCILIATION_REQUIRED: 503,
         BILLING_CUSTOMER_NOT_READY: 409,
         BILLING_CHECKOUT_RESPONSE_INVALID: 502,
         BILLING_CHECKOUT_URL_INVALID: 502,
@@ -6188,6 +6212,11 @@ export default {
         BILLING_PROVIDER_UNREACHABLE: 502,
         BILLING_PROVIDER_RESPONSE_INVALID: 502,
         BILLING_PROVIDER_ERROR: 502,
+        BILLING_PROVIDER_SUBSCRIPTION_UNAVAILABLE: 502,
+        BILLING_SUBSCRIPTION_BINDING_INVALID: 409,
+        BILLING_WEBHOOK_IN_PROGRESS: 503,
+        BILLING_WEBHOOK_CLAIM_LOST: 503,
+        BILLING_PROJECTION_IN_PROGRESS: 503,
         BILLING_WEBHOOK_SIGNATURE_INVALID: 400,
         BILLING_WEBHOOK_TIMESTAMP_INVALID: 400,
         BILLING_WEBHOOK_JSON_INVALID: 400,

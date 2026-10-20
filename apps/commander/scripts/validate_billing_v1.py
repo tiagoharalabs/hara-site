@@ -14,6 +14,7 @@ COMMERCIAL_MIGRATION = COMMANDER / "migrations" / "0021_commercial_terms_2026100
 FREE_15000_MIGRATION = COMMANDER / "migrations" / "0031_free_15000_20261010.sql"
 FREE_REVERT_MIGRATION = COMMANDER / "migrations" / "0032_free_10000_revert_20261010.sql"
 CURRENT_TERMS_MIGRATION = COMMANDER / "migrations" / "0036_commander_prelaunch_commercial_terms.sql"
+RECOVERY_MIGRATION = COMMANDER / "migrations" / "0037_billing_recovery_and_checkout_attempts.sql"
 BILLING = COMMANDER / "src" / "billing.mjs"
 WORKER = COMMANDER / "src" / "worker.js"
 WRANGLER = COMMANDER / "wrangler.jsonc"
@@ -81,6 +82,7 @@ def main() -> int:
     free_15000_migration = FREE_15000_MIGRATION.read_text(encoding="utf-8")
     free_revert_migration = FREE_REVERT_MIGRATION.read_text(encoding="utf-8")
     current_terms_migration = CURRENT_TERMS_MIGRATION.read_text(encoding="utf-8")
+    recovery_migration = RECOVERY_MIGRATION.read_text(encoding="utf-8")
     source = BILLING.read_text(encoding="utf-8")
     worker = WORKER.read_text(encoding="utf-8")
     wrangler = WRANGLER.read_text(encoding="utf-8")
@@ -97,6 +99,7 @@ def main() -> int:
     db = sqlite3.connect(":memory:")
     db.executescript(BASE_SCHEMA)
     db.executescript(migration)
+    db.executescript(recovery_migration)
 
     columns = {
         row[1] for row in db.execute("PRAGMA table_info(billing_connections)")
@@ -114,6 +117,12 @@ def main() -> int:
     assert db.execute(
         "SELECT name FROM sqlite_master WHERE type='table' AND name='billing_webhook_events'"
     ).fetchone()[0] == "billing_webhook_events"
+    webhook_columns = {row[1] for row in db.execute("PRAGMA table_info(billing_webhook_events)")}
+    assert {"claim_token", "claim_expires_at_utc"}.issubset(webhook_columns)
+    assert {"billing_projection_claims", "billing_checkout_attempts"}.issubset({
+        row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")
+    })
+    assert "billing_checkout_attempts" in recovery_migration
     assert db.execute("PRAGMA foreign_key_check").fetchall() == []
     assert db.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
 

@@ -24,6 +24,7 @@ const env={
                 return null;
               }
               if(sql.includes('FROM billing_connections')) return null;
+              if(sql.includes('FROM entitlements')) return null;
               throw new Error('UNEXPECTED_BILLING_READ_QUERY');
             },
           };
