@@ -6,6 +6,7 @@ import contextlib
 import io
 from pathlib import Path
 import sys
+import tempfile
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -37,14 +38,24 @@ def sample_price(**updates):
 
 def tests():
     wiz.verify_dev_boundary()
-    # Remote SSH command execution does not source interactive NVM setup.
-    # Wrangler must still resolve a user-owned Node runtime without changing
-    # the caller's environment or accepting external secret input.
-    with patch.dict(wiz.os.environ, {"PATH": "/usr/local/bin:/usr/bin:/bin"}):
-        node_env = wiz.wrangler_environment()
-        node_path = wiz.shutil.which("node", path=node_env["PATH"])
-        assert node_path is not None and node_path.startswith(str(Path.home() / ".nvm/versions/node/"))
-        assert wiz.os.environ["PATH"] == "/usr/local/bin:/usr/bin:/bin"
+    # Cover both system Node and an SSH environment without Node on PATH.
+    # The fallback must be an executable owned by this user, and neither path
+    # may mutate the caller's environment.
+    base_path = "/usr/local/bin:/usr/bin:/bin"
+    with patch.dict(wiz.os.environ, {"PATH": base_path}):
+        with patch.object(wiz.shutil, "which", return_value="/usr/bin/node"):
+            assert wiz.wrangler_environment()["PATH"] == base_path
+        with tempfile.TemporaryDirectory(prefix="commander-stripe-node-") as temporary:
+            fake_home = Path(temporary)
+            fake_node = fake_home / ".nvm/versions/node/v24.0.0/bin/node"
+            fake_node.parent.mkdir(parents=True)
+            fake_node.write_bytes(b"#!/bin/sh\nexit 0\n")
+            fake_node.chmod(0o700)
+            with patch.object(wiz.Path, "home", return_value=fake_home), \
+                 patch.object(wiz.shutil, "which", return_value=None):
+                node_env = wiz.wrangler_environment()
+            assert node_env["PATH"] == str(fake_node.parent) + wiz.os.pathsep + base_path
+        assert wiz.os.environ["PATH"] == base_path
     print("STRIPE_TEST_WIZARD_NONLOGIN_SSH_NODE_FALLBACK=PASS")
     expect_denied(lambda: wiz.validate_test_key("sk_live_1234567890123"),
                   "STRIPE_LIVE_KEY")
