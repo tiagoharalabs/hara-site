@@ -65,6 +65,7 @@ with tempfile.TemporaryDirectory(prefix="hara-result-envelope-") as temporary:
             assert actual <= WORKER_RESULT_MAX_BYTES, (count, actual)
             data = json.loads(result["result"]["stdout"])
             assert data["count"] == count and len(data["files"]) == count
+            assert (data["successful_count"],data["failed_count"],data["deferred_count"],data["overall_status"]) == (count,0,0,"PASS")
             for item in data["files"]:
                 assert item["state"] == "PASS" and item["line_count"] > 0
                 assert item["text"].startswith("ROW-000-")
@@ -74,9 +75,23 @@ with tempfile.TemporaryDirectory(prefix="hara-result-envelope-") as temporary:
                     assert item["next_offset"] == item["offset"] + item["line_count"]
             public=check_public_projection("hara.files.read_many",result)
             assert public["count"]==count and len(public["files"])==count
+            assert (public["successful_count"],public["failed_count"],public["deferred_count"],public["overall_status"]) == (count,0,0,"PASS")
             assert [item["next_offset"] for item in public["files"]]==[item["next_offset"] for item in data["files"]]
             assert [item["file_revision_hint"] for item in public["files"]]==[item["file_revision_hint"] for item in data["files"]]
             print(f"COMMANDER_READ_MANY_{count}_FILES_SERIALIZED_BUDGET=PASS")
+
+        mixed=agent.execute_tool(config,{
+            "call_id":"MIXED","request_id":"MIXED","tool_id":"hara.files.read_many",
+            "payload":{"paths":[paths[0],str(Path(temporary)/"missing.txt")],"offset":0,"length":1},
+        })
+        mixed_data=json.loads(mixed["result"]["stdout"])
+        assert [item["state"] for item in mixed_data["files"]]==["PASS","FAILED"]
+        assert (mixed_data["successful_count"],mixed_data["failed_count"],mixed_data["deferred_count"],mixed_data["overall_status"])==(1,1,0,"PARTIAL")
+        mixed_public=check_public_projection("hara.files.read_many",mixed)
+        assert (mixed_public["successful_count"],mixed_public["failed_count"],mixed_public["deferred_count"],mixed_public["overall_status"])==(1,1,0,"PARTIAL")
+        missing_only=agent.filesystem_read_many([str(Path(temporary)/"missing.txt")],0,1)
+        assert (missing_only["successful_count"],missing_only["failed_count"],missing_only["deferred_count"],missing_only["overall_status"])==(0,1,0,"FAILED")
+        print("COMMANDER_READ_MANY_PARTIAL_AND_FAILED_SUMMARY=PASS")
 
         revision_file=Path(temporary)/"revision.txt"
         revision_file.write_text("one\ntwo\nthree\n",encoding="utf-8")
@@ -125,7 +140,18 @@ with tempfile.TemporaryDirectory(prefix="hara-result-envelope-") as temporary:
         assert entry["file_changed_during_read"] is True
         assert entry["continuation_safe"] is False and entry["next_offset"] is None
         assert entry["restart_offset"]==0
+        assert retried["overall_status"]=="PARTIAL"
         print("COMMANDER_READ_MANY_BUDGET_RETRY_PRESERVES_CHANGE_SIGNAL=PASS")
+
+        oversize={"path":str(revision_file),"offset":0,"line_count":1,"text":"X"*100000,
+                  "has_more":True,"eof":False,"next_offset":1,"content_truncated":False,
+                  "continuation_safe":True,"file_revision_hint":"a"*64,
+                  "file_changed_during_read":False,"restart_offset":None}
+        with patch.object(agent,"filesystem_read",return_value=oversize):
+            deferred=agent.filesystem_read_many([str(revision_file)],0,1)
+        assert deferred["files"][0]["state"]=="DEFERRED"
+        assert (deferred["successful_count"],deferred["failed_count"],deferred["deferred_count"],deferred["overall_status"])==(0,0,1,"PARTIAL")
+        print("COMMANDER_READ_MANY_DEFERRED_SUMMARY=PASS")
 
         control = Path(temporary) / "control.txt"
         control.write_bytes(b"\x01" * 60000 + b"\n")

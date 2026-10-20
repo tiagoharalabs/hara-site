@@ -2518,7 +2518,7 @@ def _function_spec(function_id):
         "filesystem.search":("FILESYSTEM","Busca nomes de arquivos ou texto com limites de tempo, tamanho e quantidade.",{"argv":["path","search_type(files|content)","pattern","max_results? (1..100)","include_hidden? (0|1)","ignore_case? (0|1)","file_glob?","offset? (0..10000)"],"continuation":{"input":"offset","output":"next_offset","flags":["has_more","scan_truncated"]}}),
         "filesystem.list":("FILESYSTEM","Lista entradas e metadados de um diretório sem ler conteúdo de arquivos.",{"argv":["path","limit? (1..200)","depth? (1..5)","offset? (0..10000)"],"continuation":{"input":"offset","output":"next_offset","flag":"has_more"}}),
         "filesystem.read":("FILESYSTEM","Lê um intervalo limitado de linhas de um arquivo texto acessível ao usuário local.",{"argv":["path","offset? (0..1000000)","length? (1..400)"],"continuation":{"input":"offset","output":"next_offset","revision_hint":"file_revision_hint","flags":["has_more","eof","content_truncated","continuation_safe","file_changed_during_read"]}}),
-        "filesystem.read_many":("FILESYSTEM","Lê o mesmo intervalo de até dez arquivos texto sem abortar o lote por falha individual.",{"argv":["offset (0..1000000)","length (1..100)","path1..path10"],"partial_failure":True,"continuation_per_file":True}),
+        "filesystem.read_many":("FILESYSTEM","Lê o mesmo intervalo de até dez arquivos texto sem abortar o lote por falha individual.",{"argv":["offset (0..1000000)","length (1..100)","path1..path10"],"partial_failure":True,"continuation_per_file":True,"summary_fields":["successful_count","failed_count","deferred_count","overall_status"]}),
     }
     if function_id not in specs: raise ValueError("UNKNOWN_FUNCTION_ID")
     domain,description,contract=specs[function_id]
@@ -2883,8 +2883,17 @@ def filesystem_read(path_value,offset=0,length=200,max_encoded_text_bytes=96*102
 def filesystem_read_many(paths,offset=0,length=100):
     out=[]
     selected=paths[:10]
+    def summarize(items):
+        successful=sum(item["state"]=="PASS" for item in items)
+        failed=sum(item["state"]=="FAILED" for item in items)
+        deferred=sum(item["state"]=="DEFERRED" for item in items)
+        changed=any(item.get("file_changed_during_read") for item in items)
+        overall="PASS" if not failed and not deferred and not changed else "FAILED" if failed==len(items) else "PARTIAL"
+        return {"count":len(items),"successful_count":successful,"failed_count":failed,
+                "deferred_count":deferred,"overall_status":overall,"files":items,
+                "offset":offset,"length":length}
     def packed_bytes(items):
-        return len(json.dumps({"count":len(items),"files":items,"offset":offset,"length":length},
+        return len(json.dumps(summarize(items),
                               sort_keys=True,separators=(",",":"),ensure_ascii=False).encode("utf-8"))
     for index,raw in enumerate(selected):
         try:
@@ -2923,7 +2932,7 @@ def filesystem_read_many(paths,offset=0,length=100):
                 text_budget=max(256,text_budget//2)
         except Exception as exc:
             out.append({"path":str(raw),"state":"FAILED","error_code":safe_error_code(exc)})
-    return {"count":len(out),"files":out,"offset":offset,"length":length}
+    return summarize(out)
 
 def invoke(config, function_id, arguments):
     if function_id not in FUNCTION_IDS: raise ValueError("UNKNOWN_FUNCTION_ID")

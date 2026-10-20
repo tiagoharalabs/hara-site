@@ -34,6 +34,8 @@ if(process.argv.includes("--stdin")) {
     const data=JSON.parse(stdout);
     assert.equal(JSON.parse(envelope.content[0].text).result.stdout,stdout);
     return {sha256:hash(stdout),original_sha256:hash(original),count:data.count,
+      successful_count:data.successful_count,failed_count:data.failed_count,
+      deferred_count:data.deferred_count,overall_status:data.overall_status,
       files:Array.isArray(data.files)?data.files.map(x=>({state:x.state,line_count:x.line_count,
         next_offset:x.next_offset,has_more:x.has_more,
         file_revision_hint:x.file_revision_hint,
