@@ -32,4 +32,4 @@ assert.equal(deliverCurrentWake(sockets.slice(0, -1), event, schema), 0);
 assert.deepEqual(sent, [event]);
 console.log("EVENT_V2_STALE_REPLACED_SOCKET_WAKE=DENIED");
 console.log("EVENT_V2_LIVE_SOCKET_AFTER_FAILED_SEND=DELIVERED");
-console.log("EVENT_V2_ZERO_DELIVERY_REMAINS_DURABLE_D1_QUEUE=PASS");
+console.log("EVENT_V2_ZERO_SOCKET_DELIVERY=REPORTED");
