@@ -1626,7 +1626,7 @@
     const note = document.getElementById("transportModeNote");
     if (note) note.textContent = direct
       ? "Direct: túnel privado por workspace. Exige tunnel_id e chave da OpenAI Platform; não serve para distribuição pública."
-      : "Cloud: o MCP comercial encaminha comandos via Cloudflare. Sem chave OpenAI. A execução ocorre na máquina e o conteúdo transita pelo Gateway.";
+      : "Cloud: o conteúdo transita pelo Gateway comercial e pode ficar temporariamente na fila até a entrega. A execução ocorre na máquina; nenhuma chave da OpenAI Platform é necessária.";
     syncInstallCommands();
   }
 

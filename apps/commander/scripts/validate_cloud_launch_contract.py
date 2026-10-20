@@ -39,6 +39,8 @@ check('data-transport-choice="cloud"' in PORTAL and
       'data-transport-choice="direct"' in PORTAL and
       'Cloud (padrão)' in PORTAL, "CLOUD_PUBLIC_UI_DEFAULT")
 check("o conteúdo transita pelo Gateway" in PORTAL and
+      "pode ficar temporariamente na fila até a entrega" in PORTAL and
+      "pode ficar temporariamente na fila até a entrega" in APP_JS and
       "HARA Identity" in PORTAL and "OAuth" in PORTAL,
       "USER_TRANSPORT_DISCLOSURE")
 check('customer_services_relay: false' in WORKER and
