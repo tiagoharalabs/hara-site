@@ -92,6 +92,20 @@ with tempfile.TemporaryDirectory(prefix="hara-pty-output-") as temporary:
     require("one_shot_exit_zero", result["exit_code"] == 0)
     require("one_shot_stdout_retained", "RUN-LAST-LINE" in result["text"])
 
+    # An interactive reply may first contain only the PTY echo. The caller
+    # needs a safe continuation hint without interpreting echoed text as the
+    # program's answer or sending the same input a second time.
+    started=agent.process_start(command("import sys,time;print('READY');value=sys.stdin.readline().strip();time.sleep(.20);print('ANSWER='+value)"),temporary,100)
+    interactive=agent.PROCESS_SESSIONS[started["session_id"]]
+    response=agent.process_interact(started["session_id"],"ação 🍵",20)
+    require("interaction_input_bytes_reported",response["input_write_complete"] and response["input_bytes_sent"]==len("ação 🍵\n".encode("utf-8")) and response["input_retry_safe"] is False)
+    require("interaction_pty_echo_mode_reported",response["pty_echo_mode_at_write"] in {"ENABLED","DISABLED","UNKNOWN"})
+    require("interaction_output_not_mislabeled",response["output_semantics"]=="PTY_UNCLASSIFIED")
+    require("interaction_continuation_hint",response["read_more_recommended"] and response["continuation_tool"]=="read_process_output")
+    await_exit(interactive,drain=False)
+    answer=agent._process_output_payload(interactive,response["next_offset"],200,0)
+    require("interaction_followup_has_answer", answer["text"].count("ANSWER=ação 🍵")==1 and answer["exit_code"]==0)
+
 agent.cleanup_process_sessions()
 print(json.dumps({
     "schema": "hara.commander-pty-terminal-drain-regression.v1",

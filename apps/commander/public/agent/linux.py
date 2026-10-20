@@ -21,6 +21,7 @@ import signal
 import sqlite3
 import stat
 import sys
+import termios
 import threading
 import uuid
 import time
@@ -2094,10 +2095,20 @@ def process_interact(session_id,input_text,timeout_ms=1000):
     with session.get("_io_lock") or contextlib.nullcontext():
         _process_update_state(session)
         if session.get("exit_code") is not None or int(session.get("fd",-1))<0: raise ValueError("PROCESS_SESSION_EXITED")
-        os.write(int(session["fd"]),data)
+        try:
+            echo_mode="ENABLED" if termios.tcgetattr(int(session["fd"]))[3]&termios.ECHO else "DISABLED"
+        except (OSError,ValueError,termios.error):
+            echo_mode="UNKNOWN"
+        input_bytes_sent=os.write(int(session["fd"]),data)
         session["last_client_activity_at_utc"]=utcnow()
         session["last_client_activity_monotonic"]=time.monotonic()
-    return _process_output_payload(session,offset=None,length=200,wait_ms=timeout_ms)
+    output=_process_output_payload(session,offset=None,length=200,wait_ms=timeout_ms)
+    more=output["state"]=="RUNNING" or output["next_offset"]<output["total_lines"]
+    return {**output,"input_bytes_requested":len(data),"input_bytes_sent":input_bytes_sent,
+            "input_write_complete":input_bytes_sent==len(data),"input_retry_safe":False,
+            "pty_echo_mode_at_write":echo_mode,"output_semantics":"PTY_UNCLASSIFIED",
+            "read_more_recommended":more,
+            "continuation_tool":"read_process_output" if more else None}
 
 def process_kill(session_id,force=False):
     session=_process_get(session_id); _process_update_state(session)
@@ -3767,7 +3778,7 @@ def local_simple_mcp_tools():
         ("list_processes","List Processes","List running processes.",_mcp_schema({"computer":computer,"limit":{"type":"integer","minimum":1,"maximum":200}})),
         ("start_process","Start Process","Run a command. Defaults to bounded one-shot execution; interactive=true keeps a managed session. Requests above 10 seconds are automatically routed to a managed session.",_mcp_schema({"computer":computer,"command":{"type":"string","minLength":1,"maxLength":4096},"cwd":path,"timeout_ms":{"type":"integer","minimum":100,"maximum":30000},"max_lines":{"type":"integer","minimum":1,"maximum":500},"interactive":boolean},["command"])),
         ("read_process_output","Read Process Output","Read a managed process session.",_mcp_schema({"computer":computer,"session_id":{"type":"string","minLength":1,"maxLength":180},"offset":{"type":"integer","minimum":0,"maximum":1000000},"length":{"type":"integer","minimum":1,"maximum":500},"timeout_ms":{"type":"integer","minimum":0,"maximum":3000}},["session_id"])),
-        ("interact_with_process","Interact With Process","Send input to a managed process session.",_mcp_schema({"computer":computer,"session_id":{"type":"string","minLength":1,"maxLength":180},"input":{"type":"string","maxLength":4096},"timeout_ms":{"type":"integer","minimum":0,"maximum":3000}},["session_id","input"])),
+        ("interact_with_process","Interact With Process","Send input to a managed process session. The reply reports bytes sent, PTY echo mode and whether read_process_output should continue; PTY text is not classified as program output.",_mcp_schema({"computer":computer,"session_id":{"type":"string","minLength":1,"maxLength":180},"input":{"type":"string","maxLength":4096},"timeout_ms":{"type":"integer","minimum":0,"maximum":3000}},["session_id","input"])),
         ("kill_process","Kill Process","Terminate a managed process session.",_mcp_schema({"computer":computer,"session_id":{"type":"string","minLength":1,"maxLength":180},"force":boolean},["session_id"])),
         ("list_sessions","List Sessions","List managed process sessions.",_mcp_schema({"computer":computer})),
         ("get_recent_tool_calls","Get Recent Tool Calls","Get privacy-safe local call metadata.",_mcp_schema({"computer":computer,"tool":{"type":"string"},"limit":{"type":"integer","minimum":1,"maximum":100}})),
