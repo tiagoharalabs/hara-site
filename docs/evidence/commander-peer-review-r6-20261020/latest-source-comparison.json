@@ -1,0 +1,29 @@
+{
+  "live_head": "e4e2c0042fa17e662488a345cd597e6a16f4fdeb",
+  "checks": [
+    {
+      "function": "_completion_outbox_replay",
+      "unchanged": true
+    },
+    {
+      "function": "flush_completion_outbox",
+      "unchanged": true
+    },
+    {
+      "function": "completion_outbox_pending",
+      "unchanged": true
+    },
+    {
+      "function": "completeDeviceCall",
+      "unchanged": false
+    },
+    {
+      "function": "trimPublicText",
+      "unchanged": true
+    },
+    {
+      "function": "projectCustomerToolResult",
+      "unchanged": true
+    }
+  ]
+}

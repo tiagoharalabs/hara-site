@@ -353,3 +353,19 @@ Reli `docs/operations/HARA_COMMANDER_FUNCTIONAL_IMPROVEMENTS_20261020.md` (SHA-2
 | `cmp`/SHA da fonte e manifesto do candidato `2147z` | 0 | Linux `fcb493e6e7349abc877def66c73966898e1886236de2b724c4c0b1cb3b37abec`; manifesto `4645bf62c8b68393868ed8b91544664e420850edc86f9570993f0600d1be5ec2` |
 
 **Candidato atual:** `/tmp/commander-prelaunch-source-candidate-20261020-2147z` supera `2142z`; Linux/Windows 0.3.43, assinatura ausente e chave privada não lida. Corrigido no código e testado localmente: sim, apenas no Linux para este ganho. Testado DEV hospedado: não. Canário instalado: não. PROD: não. A superfície de 24 ferramentas, a paridade Windows e a assinatura oficial continuam pendentes de qualificação/promoção específica. O acesso corrente, Agents, sessões e grants não foram alterados.
+
+## Recebimento da R6 independente e revalidação atual — 20/10/2026, 21:52 UTC
+
+Reli `docs/operations/HARA_COMMANDER_PEER_REVIEW_R6_END_TO_END_20261020.md` e confrontei o commit documental `90a03a170961d188b1b507536a7f925c2484a91b` com este clone: o Markdown já é idêntico. Incorporei apenas os nove arquivos históricos de `docs/evidence/commander-peer-review-r6-20261020/`, sem cherry-pick da base de revisão, troca de branch ou toque no WIP de R2/R3/R4/R7. Os oito hashes originais passaram em `sha256sum -c` (exit 0). A mesma pasta contém `EXECUTOR_REVALIDATION.md` e dois relatórios novos de antes/depois, com seus SHA-256. O recibo JSON R6 entregue por outra frente permaneceu intocado e fora deste commit.
+
+**Antes/depois pelo mesmo harness em cópia temporária:** a fonte `97a35d9` saiu 2, reproduzindo os dois achados: envio inicial perdido após execução local deixava READY e bloqueava novo claim após 51 s; a projeção cortava o JSON interno de 4/10 arquivos em 65.536 caracteres. A fonte do HEAD `d81aafc` saiu 0: uma mutação, conclusão tardia aceita, outbox ACKED, pendentes 0, novo claim tentado; `read_many` de 1/4/10 arquivos permaneceu JSON válido em `structuredContent` e resposta pública, com recibo preservado. Zero tentativas de rede real. O harness original sobre o HEAD saiu 1 no controle de ACK perdido porque presume retry imediato; as duas execuções comparáveis aguardaram 2,1 s depois do envio perdido para respeitar o backoff local de 2 s. A adaptação existiu só na cópia em `/tmp`, registrada na evidência; o harness independente não foi modificado no repositório. Esses fixes já constavam dos commits `cdb0208` e `ddbd0cc`; não foi necessário novo patch de produto nesta rodada.
+
+| Reexecução sobre o HEAD atual | Exit | Prova |
+| --- | ---: | --- |
+| `test_device_call_usage_settlement.mjs`; `validate_result_delivery_outbox.py` | 0; 0 | conclusão tardia reclamada uma vez, cota, backoff, quarentena e retry do mesmo corpo |
+| `validate_event_v2_durable_batch_continuation.py` | 0 | guard de pendente/quarentena e continuação de lotes |
+| `validate_result_envelope_budget.py`; `test_public_result_projection.mjs` | 0; 0 | Agent até MCP público, JSON/Unicode/offsets e limites |
+| Harness R6 comparável: `97a35d9` / HEAD | 2; 0 | defeitos antigos reproduzidos e ausentes no código atual |
+| `sha256sum -c` da R6; `git diff --check` | 0; 0 | evidência histórica exata e patch documental sem whitespace |
+
+**Estados:** corrigido no código: sim, antes desta mensagem; testado local: sim, agora revalidado ponta a ponta; testado DEV hospedado: não; instalado em canário: não; publicado PROD: não. O último gate offline completo sobre `a950e32` foi 140/141 com exit 1 exclusivamente pelo HOLD de assinatura oficial; desde então `apps/commander` não mudou. O candidato `2147z` segue sem assinatura e sem promoção. A identidade, o relógio e o banco do harness são substitutos locais, não prova de autorização Cloudflare ou de acesso comercial limpo. Nenhuma migração remota, deploy, assinatura, Agent ativo, Stripe LIVE ou billing OpenAI foi alterado.

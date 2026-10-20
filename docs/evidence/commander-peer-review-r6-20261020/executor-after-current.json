@@ -1,0 +1,105 @@
+{
+  "schema": "hara.commander-peer-e2e-r6.v1",
+  "observed_utc": "2026-10-20T21:51:58.013570+00:00",
+  "source_head": null,
+  "source_sha256": {
+    "apps/commander/public/agent/linux.py": "fcb493e6e7349abc877def66c73966898e1886236de2b724c4c0b1cb3b37abec",
+    "apps/commander/src/worker.js": "551741bfe4bcc670c607cb63354399aeeff3726ceb1a08cef8df1fa76d27dd84",
+    "apps/commander/src/customer-mcp-simple.mjs": "b5dba5d024da2c79a95387cacc3350717365cad5574a2331f58b608970d48655",
+    "apps/commander/experimental/event_v2_agent_loop.py": "b8f16a2b946d443f329b2e69810f327e324b765f5ed48519d6353f672ac3f826"
+  },
+  "findings": [
+    {
+      "id": "R6-OUTBOX-LATE-01",
+      "reproduced": false,
+      "local_mutation_done": true,
+      "local_execution_count": 1,
+      "server_replies": [
+        {
+          "call_id": "R6-LATE-NOT-ACCEPTED",
+          "server_ok": true,
+          "error": null,
+          "server_state": null
+        }
+      ],
+      "replay_delivered_counts": [
+        1,
+        0,
+        0
+      ],
+      "pending_count": 0,
+      "local_outbox_state": "ACKED",
+      "new_claim_attempts": 1,
+      "guard_error": null,
+      "positive_control": {
+        "server_accepted_before_disconnect": true,
+        "retry_after_deadline_delivered": 1,
+        "execution_count": 1,
+        "pending_after_retry": 0
+      },
+      "scope": "real Agent outbox + exact completeDeviceCall/D1 SQL + real Event V2 drain guard; synthetic clock, mocked authenticated device and stdin subprocess bridge; no cloud outage induced"
+    },
+    {
+      "id": "R6-PROJECTION-02",
+      "reproduced": false,
+      "cases": [
+        {
+          "files": 1,
+          "ok": true,
+          "agent_result_bytes": 61083,
+          "agent_stdout_chars": 60561,
+          "before_json_valid": true,
+          "projected_stdout_chars": 60561,
+          "after_json_valid": true,
+          "parse_error": null,
+          "projection_marker": false,
+          "outer_mcp_content_json_valid": true,
+          "structured_content_stdout_matches_projection": true,
+          "outer_state": "PASS",
+          "is_error": false,
+          "explicit_content_truncation_flag": false,
+          "receipt_preserved": true
+        },
+        {
+          "files": 4,
+          "ok": true,
+          "agent_result_bytes": 98187,
+          "agent_stdout_chars": 97510,
+          "before_json_valid": true,
+          "projected_stdout_chars": 97510,
+          "after_json_valid": true,
+          "parse_error": null,
+          "projection_marker": false,
+          "outer_mcp_content_json_valid": true,
+          "structured_content_stdout_matches_projection": true,
+          "outer_state": "PASS",
+          "is_error": false,
+          "explicit_content_truncation_flag": false,
+          "receipt_preserved": true
+        },
+        {
+          "files": 10,
+          "ok": true,
+          "agent_result_bytes": 98059,
+          "agent_stdout_chars": 97188,
+          "before_json_valid": true,
+          "projected_stdout_chars": 97188,
+          "after_json_valid": true,
+          "parse_error": null,
+          "projection_marker": false,
+          "outer_mcp_content_json_valid": true,
+          "structured_content_stdout_matches_projection": true,
+          "outer_state": "PASS",
+          "is_error": false,
+          "explicit_content_truncation_flag": false,
+          "receipt_preserved": true
+        }
+      ],
+      "scope": "actual Agent file reads and exact Worker projectCustomerToolResult/trimPublicText/publicToolResult; SDK HTTP not invoked, outer MCP JSON remains valid",
+      "recommendation": "Do not slice structured JSON stdout as arbitrary text. Coordinate envelope limits through final projection and retain valid per-file continuation; test client-visible structured result, not only Agent byte size."
+    }
+  ],
+  "network_attempts": 0,
+  "production_mutation": false,
+  "fixtures_cleaned": true
+}
