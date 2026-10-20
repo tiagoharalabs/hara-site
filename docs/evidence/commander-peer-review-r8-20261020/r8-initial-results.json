@@ -1,0 +1,31 @@
+{
+  "schema": "hara.commander-peer-file-cas-r8.v1",
+  "observed_utc": "2026-10-20T21:53:07.705201+00:00",
+  "source_head": "5a6cb8d10b21a645c2418f168f3d496c0cb4f792",
+  "source_sha256": "a6023941505e70215e4b230d64cf4159c8646e3d1c0ee76ba138ddcd40110049",
+  "scope": "two OS processes on disposable file; actual filesystem_edit and preimage; barrier after successful path+hash recheck only",
+  "sequential_control": "FILE_PRECONDITION_FAILED",
+  "original_sha256": "cbf36a964ba8c0894fcc9ec491b4d1dd94d221a7dc88308e9c6b892445a8574b",
+  "parallel_results": [
+    {
+      "desired": "WRITER_A",
+      "outcome": "ACCEPTED",
+      "precondition_checked": true,
+      "previous_sha256": "cbf36a964ba8c0894fcc9ec491b4d1dd94d221a7dc88308e9c6b892445a8574b",
+      "reported_sha256": "234ed1dd8d6963e2afe33a967f987f2278d175571fe9baa84c6a899f0fd3fd93"
+    },
+    {
+      "desired": "WRITER_B",
+      "outcome": "ACCEPTED",
+      "precondition_checked": true,
+      "previous_sha256": "cbf36a964ba8c0894fcc9ec491b4d1dd94d221a7dc88308e9c6b892445a8574b",
+      "reported_sha256": "56f235d96715c54cf0f2f5fb94ea23266b29b6006a45bea18fef43aeff4ccfde"
+    }
+  ],
+  "parallel_accepted": 2,
+  "final_file": "WRITER_A",
+  "final_sha256": "234ed1dd8d6963e2afe33a967f987f2278d175571fe9baa84c6a899f0fd3fd93",
+  "reproduced": true,
+  "real_customer_files_modified": false,
+  "network_requests": 0
+}

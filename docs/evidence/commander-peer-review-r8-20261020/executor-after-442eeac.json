@@ -1,0 +1,29 @@
+{
+  "schema": "hara.commander-peer-file-cas-r8.v1",
+  "observed_utc": "2026-10-20T22:08:51.431713+00:00",
+  "source_head": "442eeac6a71cf3f389a305c0fcda21dd51294234",
+  "source_sha256": "e6dce5da40dc2b8a3bda1c6515b805e100b623eef1091d8bd11a5f6c7b7c5190",
+  "scope": "two OS processes on disposable file; actual filesystem_edit and preimage; barrier before mutation entry to respect cross-process lock",
+  "sequential_control": "FILE_PRECONDITION_FAILED",
+  "original_sha256": "cbf36a964ba8c0894fcc9ec491b4d1dd94d221a7dc88308e9c6b892445a8574b",
+  "parallel_results": [
+    {
+      "desired": "WRITER_A",
+      "outcome": "DENIED",
+      "code": "ValueError:FILE_PRECONDITION_FAILED"
+    },
+    {
+      "desired": "WRITER_B",
+      "outcome": "ACCEPTED",
+      "precondition_checked": true,
+      "previous_sha256": "cbf36a964ba8c0894fcc9ec491b4d1dd94d221a7dc88308e9c6b892445a8574b",
+      "reported_sha256": "56f235d96715c54cf0f2f5fb94ea23266b29b6006a45bea18fef43aeff4ccfde"
+    }
+  ],
+  "parallel_accepted": 1,
+  "final_file": "WRITER_B",
+  "final_sha256": "56f235d96715c54cf0f2f5fb94ea23266b29b6006a45bea18fef43aeff4ccfde",
+  "reproduced": false,
+  "real_customer_files_modified": false,
+  "network_requests": 0
+}

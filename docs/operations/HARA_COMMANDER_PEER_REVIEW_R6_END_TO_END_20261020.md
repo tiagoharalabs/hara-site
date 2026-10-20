@@ -95,3 +95,9 @@ A revisão não autoriza deploy, migração remota, acesso a chaves, upgrade de 
 ## Revalidação contra o avanço mais recente
 
 O Codex avançou para `e4e2c0042fa17e662488a345cd597e6a16f4fdeb`, acrescentando arquivo histórico de conclusões. Como completeDeviceCall mudou, não assumi que a reprodução antiga continuava válida: extraí esse commit em outra cópia e executei novamente a integração. Ambos os achados reapareceram, com exit 2, zero rede real e controle positivo de ACK perdido passando. Resultado em `latest-rerun.json`, mantendo a coleta de 97a35d9 intacta.
+
+## Revalidação das correções — b44b029, 20/10 às 20:41 UTC
+
+O executor registrou recebimento R5/R6 e avançou nos commits dc517f0 (resultado one-shot paginado), cdb0208 (conclusão tardia/projeção), ddbd0cc (quarentena/paginação) e b44b029 (evidências). Extraí b44b029e026eba0d77126b0160189feb1ddb0932 em diretório QA independente, sem copiar WIP. Reexecutei cinco suítes: validate_process_oneshot_pagination.py, test_public_result_projection.mjs, validate_result_delivery_outbox.py, validate_result_envelope_budget.py e test_device_call_usage_settlement.mjs. Todas terminaram exit 0 e os hashes dos fontes permaneceram iguais.
+
+A prova confirma localmente paginação sem reexecução, JSON público íntegro, reenvio/quarentena de resultado e aceitação idempotente de conclusão tardia reclamada. Resultado e comandos em independent-fix-validation-b44b029.json. Não certifica autorização real, D1 hospedado, Windows nem instalação dos patches no Agent da frota. Sessões e autenticação ainda estavam em edição no momento da coleta; não testei esses arquivos móveis nem reclassifiquei trabalho em andamento como pronto.
