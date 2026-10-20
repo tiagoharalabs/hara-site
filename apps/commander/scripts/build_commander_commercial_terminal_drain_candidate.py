@@ -18,7 +18,7 @@ import tempfile
 from stage_signed_commercial_assets import APP, BUNDLES, ROLLBACK_RELEASE, stage
 
 LINUX_SOURCE = APP / "public/agent/linux.py"
-REVIEWED_LINUX_SHA256 = "4c4bf7af55cc25dde8d7459e00ad76cf0db63b88c596d018af19df2da0236107"
+REVIEWED_LINUX_SHA256 = "4c81d45a6532a53387db40ac06d95a382a7ffdb3a6da35861d4f9b350f1ab6aa"
 FILESET = ("agent/linux.py", "agent/windows.ps1", "install/linux.sh", "install/windows.ps1")
 CURRENT_STATIC = ("index.html", "app.js")
 
@@ -38,7 +38,8 @@ def prepare(output: Path) -> dict:
     for script in ("validate_process_terminal_drain.py", "validate_process_continuous_drain.py",
                    "validate_process_oneshot_pagination.py", "validate_process_session_policy.py",
                    "validate_result_delivery_outbox.py", "validate_result_envelope_budget.py",
-                   "validate_file_cas_atomicity.py", "validate_relay_burst_dispatch.py"):
+                   "validate_file_cas_atomicity.py", "validate_relay_burst_dispatch.py",
+                   "validate_mount_aware_resources.py"):
         regression = subprocess.run(
             [sys.executable, "-B", str(APP / "scripts" / script)],
             capture_output=True, text=True, check=False, timeout=20,

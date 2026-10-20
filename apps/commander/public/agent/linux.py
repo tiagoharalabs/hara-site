@@ -2602,7 +2602,7 @@ def _function_spec(function_id):
         "device.info":("DEVICE","Consulta informações básicas e não sensíveis deste computador.",{"argv":[],"result_hints":["device_id","hostname","agent_version","tunnel_mode"]}),
         "device.ping":("DEVICE","Valida conectividade ponta a ponta com este Agent.",{"argv":[],"result_hints":["pong","device_id","at_utc"]}),
         "system.uptime":("SYSTEM","Consulta uptime e load average do sistema.",{"argv":[],"result_hints":["uptime_seconds","load_average_1m","load_average_5m","load_average_15m"]}),
-        "system.resources":("SYSTEM","Consulta CPU, memória, swap, load average e capacidade do disco raiz sem shell.",{"argv":[],"result_hints":["cpu_logical","memory_available_bytes","root_disk_free_bytes"]}),
+        "system.resources":("SYSTEM","Consulta CPU, memória, swap, load average, disco raiz e mount dos dados do Agent sem shell.",{"argv":[],"result_hints":["cpu_logical","memory_available_bytes","root_disk_free_bytes","agent_data_disk_free_bytes","agent_data_mount_fstype"]}),
         "workspace.inspect":("WORKSPACE","Inspeciona metadados limitados de projeto e Git HEAD sem executar comandos externos.",{"argv":["path","max_entries? (1..200)"],"bounded":True}),
         "process.list":("PROCESS","Lista processos com metadados sanitizados, sem linha de comando ou ambiente.",{"argv":["limit? (1..200)"],"result_hints":["returned_count","available_count","truncated"]}),
         "filesystem.info":("FILESYSTEM","Consulta metadados de um caminho sem ler conteúdo. Symlink leaf é reportado sem ser silenciosamente resolvido.",{"argv":["path"],"symlink_semantics":"LSTAT_LEAF","result_hints":["type","is_symlink","symlink_target","resolved_path"]}),
@@ -2661,6 +2661,51 @@ def system_uptime():
     load=os.getloadavg()
     return {"uptime_seconds":round(uptime,2),"load_average_1m":load[0],"load_average_5m":load[1],"load_average_15m":load[2]}
 
+def _storage_mount_snapshot(mountinfo_text, data_dir, disk_usage=shutil.disk_usage):
+    mounts=[]
+    for line in str(mountinfo_text or "").splitlines():
+        if " - " not in line: continue
+        left,right=line.split(" - ",1)
+        fields=left.split()
+        after=right.split()
+        if len(fields)<6 or not after: continue
+        mount_path=re.sub(r"\\([0-7]{3})",lambda match: chr(int(match.group(1),8)),fields[4])
+        if not mount_path.startswith("/"): continue
+        mounts.append({"path":mount_path,"options":set(fields[5].split(",")),"fstype":after[0]})
+
+    def mount_for(path):
+        matches=[mount for mount in mounts if path==mount["path"] or path.startswith(mount["path"].rstrip("/")+"/")]
+        return max(matches,key=lambda mount:len(mount["path"])) if matches else None
+
+    root=mount_for("/")
+    data_path=Path(data_dir).resolve(strict=False)
+    data=mount_for(str(data_path))
+    status="MOUNT_UNKNOWN"
+    usage=None
+    if data:
+        if "ro" in data["options"] or "rw" not in data["options"]:
+            status="MOUNT_READ_ONLY"
+        else:
+            current=data_path
+            while not current.exists() and current.parent!=current:
+                current=current.parent
+            try:
+                usage=disk_usage(current)
+                status="MOUNT_READ_WRITE"
+            except (OSError,ValueError):
+                status="USAGE_UNAVAILABLE"
+    return {
+        "root_mount_fstype":root["fstype"] if root else None,
+        "root_mount_read_only":("ro" in root["options"] or "rw" not in root["options"]) if root else None,
+        "agent_data_mount_path":data["path"] if data else None,
+        "agent_data_mount_fstype":data["fstype"] if data else None,
+        "agent_data_mount_read_only":("ro" in data["options"] or "rw" not in data["options"]) if data else None,
+        "agent_data_disk_status":status,
+        "agent_data_disk_total_bytes":int(usage.total) if usage else None,
+        "agent_data_disk_used_bytes":int(usage.used) if usage else None,
+        "agent_data_disk_free_bytes":int(usage.free) if usage else None,
+    }
+
 def system_resources():
     mem={}
     try:
@@ -2673,12 +2718,17 @@ def system_resources():
         mem={}
     disk=shutil.disk_usage("/")
     load=os.getloadavg()
+    try:
+        mountinfo=Path("/proc/self/mountinfo").read_text(encoding="utf-8",errors="replace")
+    except (FileNotFoundError,PermissionError,OSError):
+        mountinfo=""
     return {
         "cpu_logical":int(os.cpu_count() or 0),
         "load_average_1m":load[0],"load_average_5m":load[1],"load_average_15m":load[2],
         "memory_total_bytes":mem.get("MemTotal"),"memory_available_bytes":mem.get("MemAvailable"),
         "swap_total_bytes":mem.get("SwapTotal"),"swap_free_bytes":mem.get("SwapFree"),
         "root_disk_total_bytes":int(disk.total),"root_disk_used_bytes":int(disk.used),"root_disk_free_bytes":int(disk.free),
+        **_storage_mount_snapshot(mountinfo,DATA_DIR),
     }
 
 def _workspace_git_metadata(root):
