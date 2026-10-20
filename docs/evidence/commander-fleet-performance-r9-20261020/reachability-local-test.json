@@ -1,0 +1,10 @@
+{
+  "schema": "hara.commander.r9.reachability-source-verification",
+  "checked_at_utc": "2026-10-20T22:22:39.945117+00:00",
+  "fixed_commit": "caef4769e08a8150d7163ba977de9eb0d964d82b",
+  "test_exit": 0,
+  "output": "COMMANDER_DEVICE_DISCOVERY_REGISTRATION_CHECKPOINT_REACHABILITY_DISTINCT=PASS",
+  "stderr": "",
+  "host_production_mutation": false,
+  "scope": "independent rerun of Codex test against git archive, no Cloudflare or active Agent"
+}

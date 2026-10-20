@@ -86,3 +86,7 @@ Via **HARA Commander em Services → SSH somente leitura autorizado**:
 ## Handoff e segurança
 
 As oito provas são JSONs sanitizados. Não contém IP, token, comandos pessoais, conteúdo de clientes nem dados financeiros. Uso real foi somente leitura, exceto a gravação destas evidências locais em QA. O Codex continua como único escritor do código do Commander. Ele já corrigiu R8 CAS em `442eeac`; **não reabrir R8**. A revisão R9 deve aprofundar gargalos novos de latência/observabilidade. Nenhum deploy, migração D1, assinatura, VM Windows, power cycle ou encerramento de sessão foi feito.
+
+## Reconciliação com avanço do Codex — 22:22 UTC
+
+Enquanto consolidava a auditoria, o Codex já havia criado o commit **`caef4769e08a8150d7163ba977de9eb0d964d82b`**, que distingue registration_state, checkpoint_state, janela de checkpoint e reachability_state=NOT_PROBED nas descobertas de dispositivos. Reexecutei independentemente `test_device_discovery_evidence.mjs` extraído **desse commit fixo**: exit 0, `COMMANDER_DEVICE_DISCOVERY_REGISTRATION_CHECKPOINT_REACHABILITY_DISTINCT=PASS`; prova em `reachability-local-test.json`. **Não reabrir essa implementação como pendência de código**. Na R9, resta validar a mudança no conector/Agent realmente instalado, qualidade dos pings e observabilidade do evento transitório DEVICE_OFFLINE. Esse teste é local, não homologação DEV/produtiva.

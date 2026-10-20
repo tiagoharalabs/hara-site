@@ -7,3 +7,5 @@ Os arquivos JSON não registram payloads de cliente, dados bancários, comandos 
 Observer e Storage não estão cadastrados como Agents neste escopo, foram consultados via SSH read-only a partir do Services pelo próprio HARA Commander. Falha transitória DEVICE_OFFLINE em uma cópia de arquivo de QA foi seguida por ping PASS; sem afirmar queda de computador.
 
 O relatório correspondente é docs/operations/HARA_COMMANDER_FLEET_PERFORMANCE_R9_20261020.md. A implementação continua exclusivamente na branch Codex; nenhuma mutação de código de produto ocorreu nesta revisão.
+
+Independent fixed-commit verification of existing caef476 device discovery is in reachability-local-test.json (exit 0; not installed).

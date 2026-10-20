@@ -42,13 +42,19 @@
       "priority": "P1",
       "area": "operational-telemetry",
       "observed": "One retryable DEVICE_OFFLINE when saving QA to Núcleo; subsequent pings PASS. Bazzite root composefs appears 100% but writable /var/home has 1.6 TiB free. Last-seen often older than ping.",
-      "request": "Make reachability vs registration vs last checkpoint distinct; classify transient retries accurately; mount-aware filesystem indicators; GPU vendor capability rather than silent failure.",
+      "request": "Do not reimplement registration/checkpoint/reachability distinction already in caef476. Validate the rollout via signed canary; investigate transient DEVICE_OFFLINE and enhance mount-aware disk and GPU vendor status.",
       "acceptance": [
         "No false disk-full alert for immutable Bazzite root with writable volume healthy",
         "Distinct clock stamps for registry checkpoint, socket status and on-demand ping",
         "Transient offline distinguishable from real unreachability without hiding errors"
       ],
-      "release_hold": false
+      "release_hold": false,
+      "existing_code_fix_verified_locally": {
+        "commit": "caef4769e08a8150d7163ba977de9eb0d964d82b",
+        "test": "test_device_discovery_evidence.mjs",
+        "exit": 0,
+        "state": "CODE_FIXED_NOT_LIVE"
+      }
     },
     {
       "id": "R9-P1-04",
