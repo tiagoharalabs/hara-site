@@ -1,0 +1,43 @@
+{
+  "schema": "hara.commander-live-function-dogfood.r5",
+  "date_utc": "2026-10-20",
+  "source": "direct H.A.R.A._Commander tool results in this conversation",
+  "host": "nucleo-a",
+  "connected_agent_version": "0.3.54",
+  "plan": "FOUNDER_INTERNAL",
+  "scope": "real MCP calls, disposable files and QA child process; not production stress, Windows qualification or candidate deploy",
+  "review_base": "27a4520ef06711ed8abb0ef52246e1082f77b702",
+  "fixture_directory": "/tmp/hara-commander-dogfood-r5-20261020-1953",
+  "production_services_changed": false,
+  "executor_source_or_index_modified": false,
+  "observations": [
+    {"tool":"create_directory","expected":"new QA directory","observed":"created=true","receipt":"e521ea7af90bafa49d7d857551df45482d7d9a8949cee83c6e60d6533ea8e8c8"},
+    {"tool":"write_file","observed":"217 bytes, 12 Unicode lines","sha256":"11a475c37c1e41892a0a4f13f3c3fb1162efa51857622b0ca1717738ebc82242","receipt":"125831d49f50d4e20521b2aa2743c74f32785616765346a1ba056853e6181364"},
+    {"tool":"read_file","offset":0,"length":4,"next_offset":4,"unicode_preserved":true,"receipt":"7ce35aca89c483db9d1edd5672a412af26bc4569ca486824796f3f382b56fb97"},
+    {"tool":"read_file","offset":4,"length":4,"next_offset":8,"receipt":"fdb91445251c129c16c79aeb1873d1ff677301fdebb612e3813089134df4ad58"},
+    {"tool":"edit_block","case":"two matches and replace_all omitted","expected_denial":true,"code":"EDIT_MATCH_AMBIGUOUS","mutation_performed":false,"receipt":null},
+    {"tool":"edit_block","case":"wrong expected_sha256","expected_denial":true,"code":"FILE_PRECONDITION_FAILED","mutation_performed":false,"receipt":null},
+    {"tool":"edit_block","case":"unique match and valid hash","replacements":1,"preimage_created":true,"sha256":"83fb5e3dddecf8b6d74fb73adfde595e716bdf9ddf59aab2e7ecdca8bb267862","receipt":"d88de6607dd4f64e57b5f40b88c824234dc6ef4d82ecccf7df7624794fa37dfa"},
+    {"tool":"search","offset":0,"pattern":"MARKER_DUP","found_line":3,"next_offset":1,"receipt":"76f23945ee2b4132b9ce8ff2498431195450594fc9a2541ac374d40682b618fa"},
+    {"tool":"search","offset":1,"pattern":"MARKER_DUP","found_line":6,"next_offset":null,"receipt":"91ecfab04fb5d070518fe3475b6a217e439a6202bc0c2292ff78fd412c195c2f"},
+    {"tool":"get_file_info","size_bytes":232,"hash_in_response":false,"receipt":"c038e9f9a155d48ec81a5b9f7a8083c31d6abe3d9bd666e8a97f0f065a5a3ab8"},
+    {"tool":"read_multiple_files","case":"one present, one absent","outer_state":"PASS","item_states":["PASS","FAILED"],"missing_code":"FILENOTFOUNDERROR","receipt":"e4a87bc0c7fd53a47402ce7f076ac5ad5f465611ebabd9c9ea5e3694c3aba57d"},
+    {"tool":"copy_file","sha256_preserved":true,"overwrote":false,"receipt":"353b61cdf84c75a3d33d0328a1f496eb9bdf21c3285eadf3cd42fbcf0a7bb167"},
+    {"tool":"move_file","overwrote":false,"receipt":"d5a45357d88a30ddb3d1b07a8f1413a64f22aee2fc963ce3f8f532b204228636"},
+    {"tool":"delete_file","case":"only disposable copy","precondition_checked":true,"preimage_id":"HARA-PREIMAGE-00a9f46dcc7f46f09d761d07cb2d78b3","receipt":"e71cff3bd42a6d810dece1067b8289c0f966bf5e295bb4ab78b9cb8a0fc54397"},
+    {"tool":"start_process","interactive":true,"session_id":"HARA-PROC-3228c0f9aa9341cba7b7114fb2f4f80c","initial_text":"QA_R5_READY","receipt":"bc160d5a1b77fd1634cdbda3e9d563b757de6cf0481ce5bfb948836ff7baa3aa"},
+    {"tool":"interact_with_process","input":"ação 🍵 confirmada","observed":"immediate PTY echo only; RUNNING","receipt":"b0c670d5a509d6391cfe7d13eeb456c54c17e626a45cd63b0889669251749127"},
+    {"tool":"read_process_output","offset":2,"text":"QA_R5_RESULT=ação 🍵 confirmada","state":"EXITED","exit_code":0,"receipt":"a14364f7119d454059cf7627325b01d4f8ff92b7803b19d8c0a21725ba7e41d6"},
+    {"tool":"start_process","case":"R5-F01 one-shot eight lines max_lines=3","run_id":"HARA-PROC-81a48adf6fc94cc988bb1107f485ca0a","exit_code":0,"total_lines":8,"returned_lines":3,"output_truncated":true,"session_retained":false,"receipt":"cfc14d9be947b1dbb209c73b6e0a5ae4bc438419c6758c429a5080f10ad89ecc"},
+    {"tool":"read_process_output","case":"continue one-shot from offset=3","code":"PROCESS_SESSION_NOT_FOUND","expected_for_current_contract":true,"functional_gap":"no output continuation without rerunning command","receipt":null},
+    {"tool":"read_file","offset":8,"length":4,"eof":true,"next_offset":null,"note":"after edit of earlier line L05; not snapshot consistency test","receipt":"62e227584f62116738373d7c5c0faf421bb642d172636ba51ccb1525ee6dfd2a"},
+    {"tool":"start_process","case":"independent final hash and source inspection","original_preserved":true,"fixture_edit_present":true,"ambiguous_markers_not_written":true,"deleted_copy_absent":true,"receipt":"3dacf0f26b38b2e1d9319a9a3e5e35356eed65a7b79bc4b6fac1eedd10c46636"}
+  ],
+  "surface_gap": {
+    "available_connector_tool_count":24,
+    "capability_only_or_source_tools_missing_from_current_connector":["hash_file","diff_files","list_file_preimages","rollback_file","get_receipt"],
+    "cause":"not established; may be connector contract, version or selected surface; do not claim backend absent",
+    "full_tool_discovery_performed":true
+  },
+  "retained_evidence_policy":"only summaries, QA text, code hashes and receipt hashes; no customer file contents or account secrets"
+}
