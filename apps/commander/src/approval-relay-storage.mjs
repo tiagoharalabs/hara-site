@@ -1,13 +1,15 @@
 import { safeCallResultMetadata, replayCallResultMetadata, pendingApprovalResult, CALL_RESULT_METADATA_SCHEMA, TERMINAL_CALL_STATES } from "./approval-async-relay.mjs";
 
-export const CALL_ROW_FIELDS = "call_id,request_id,tenant_id,subject_id,device_id,tool_id,state,created_at_utc,expires_at_utc,claimed_at_utc,completed_at_utc,payload_json,result_json,error_code,usage_mode,usage_units,usage_period_key,usage_budget_id,approval_timeout_seconds,execution_budget_ms,call_result_metadata_json";
+export const CALL_ROW_FIELDS = "call_id,request_id,tenant_id,subject_id,device_id,tool_id,state,created_at_utc,expires_at_utc,claimed_at_utc,completed_at_utc,payload_json,result_json,error_code,usage_mode,usage_units,usage_period_key,usage_budget_id,approval_timeout_seconds,execution_budget_ms,call_result_metadata_json,usage_settled_at_utc";
 export function parseCallMetadata(value) {
   try { const x=JSON.parse(String(value || "null"));return x&&typeof x==="object"?x:null; } catch {return null;}
 }
 export async function settleCallUsage(env,row,result=null) {
-  let metadata=parseCallMetadata(row.call_result_metadata_json);
-  if (metadata && (metadata.schema!==CALL_RESULT_METADATA_SCHEMA || metadata.call_id!==row.call_id || metadata.request_id!==row.request_id || metadata.tool_id!==row.tool_id || metadata.call_state!==row.state)) throw new Error("CALL_RESULT_METADATA_INVALID");
-  if (metadata) metadata=safeCallResultMetadata(metadata,row);
+  const persisted=parseCallMetadata(row.call_result_metadata_json);
+  if (persisted && (persisted.schema!==CALL_RESULT_METADATA_SCHEMA || persisted.call_id!==row.call_id || persisted.request_id!==row.request_id || persisted.tool_id!==row.tool_id || persisted.call_state!==row.state)) throw new Error("CALL_RESULT_METADATA_INVALID");
+  let metadata=persisted ? safeCallResultMetadata(persisted,row) : null;
+  const units=Number(row.usage_units || 0),mode=String(row.usage_mode || "CLOUD_QUOTA");
+  if (mode==="CLOUD_QUOTA" && units>0 && row.usage_settled_at_utc && persisted?.usage?.cloud_quota_transaction===true) return {...metadata,usage:persisted.usage};
   if (result) metadata=safeCallResultMetadata(result,row);
   if (!metadata) {
     if (row.state==="COMPLETED" || row.state==="FAILED" || row.claimed_at_utc) {
@@ -15,7 +17,6 @@ export async function settleCallUsage(env,row,result=null) {
     }
     metadata=safeCallResultMetadata({state:row.state,mutation_performed:false},row);
   }
-  const units=Number(row.usage_units || 0),mode=String(row.usage_mode || "CLOUD_QUOTA");
   let usage={mode,state:mode,units:mode==="UNMETERED"?0:units,
     period_key:row.usage_period_key || null,budget_id:row.usage_budget_id || null,cloud_quota_transaction:false};
   if (mode==="CLOUD_QUOTA" && units>0) {
@@ -31,11 +32,40 @@ export async function settleCallUsage(env,row,result=null) {
   }
   metadata={...metadata,usage};
   const encoded=JSON.stringify(metadata);
-  const saved=await env.PRODUCT_DB.prepare("UPDATE commander_device_calls SET call_result_metadata_json=? WHERE call_id=? AND tenant_id=? AND subject_id=? AND state=?")
-    .bind(encoded,row.call_id,row.tenant_id,row.subject_id,row.state).run();
+  const settledAt=mode==="CLOUD_QUOTA" && units>0 ? new Date().toISOString() : null;
+  const saved=await env.PRODUCT_DB.prepare("UPDATE commander_device_calls SET call_result_metadata_json=?, usage_settled_at_utc=COALESCE(usage_settled_at_utc,?) WHERE call_id=? AND tenant_id=? AND subject_id=? AND state=?")
+    .bind(encoded,settledAt,row.call_id,row.tenant_id,row.subject_id,row.state).run();
   if (!saved.meta?.changes) throw new Error("CALL_RESULT_METADATA_WRITE_CONFLICT");
   row.call_result_metadata_json=encoded;
+  if (settledAt) row.usage_settled_at_utc=settledAt;
   return metadata;
+}
+
+export async function reconcileUnsettledCallUsage(env,{limit=200}={}) {
+  const bounded=Math.max(1,Math.min(500,Number(limit)||200));
+  const response=await env.PRODUCT_DB.prepare(
+    `SELECT ${CALL_ROW_FIELDS}
+       FROM commander_device_calls INDEXED BY idx_device_calls_unsettled_usage
+      WHERE usage_mode='CLOUD_QUOTA'
+        AND usage_units>0
+        AND usage_settled_at_utc IS NULL
+        AND call_result_metadata_json IS NOT NULL
+        AND state IN ('COMPLETED','FAILED')
+      ORDER BY state,completed_at_utc,call_id
+      LIMIT ?`
+  ).bind(bounded).all();
+  let settled=0,failed=0;
+  for (const row of response.results || []) {
+    let result=null;
+    try { result=JSON.parse(String(row.result_json || "null")); } catch { /* redacted; use durable metadata */ }
+    try {
+      await settleCallUsage(env,row,result);
+      settled+=1;
+    } catch {
+      failed+=1;
+    }
+  }
+  return {checked:(response.results || []).length,settled,failed};
 }
 export async function readScopedCall(env,context,callId) {
   return env.PRODUCT_DB.prepare("SELECT "+CALL_ROW_FIELDS+" FROM commander_device_calls WHERE call_id=? AND tenant_id=? AND subject_id=? LIMIT 1")

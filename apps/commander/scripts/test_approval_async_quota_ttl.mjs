@@ -48,7 +48,7 @@ async function fixture({legacy=false}={}) {
     blockConcurrencyWhile(callback){const p=callback();pending.push(p);return p;},
     storage:{sql:{exec(sql,...binds){
       statements.push({sql,binds:[...binds]});
-      if (!binds.length && (/CREATE TABLE IF NOT EXISTS/.test(sql) || /DELETE FROM period_usage;/.test(sql))) {
+      if (!binds.length && (/CREATE TABLE IF NOT EXISTS/.test(sql) || /DELETE FROM period_usage;/.test(sql) || /DROP TRIGGER IF EXISTS/.test(sql))) {
         db.exec(sql);return [];
       }
       return db.prepare(sql).all(...binds);
@@ -208,10 +208,21 @@ await check("completion-cross-month-denial-refunds-original-period",(f)=>{
   assert.equal(f.balance("2026-11").consumed_units,0);
   assert.equal(f.quota.settleDeviceCall("R1","S1","2026-10",1,null).existing,true);
 });
-await check("late-completion-cannot-revive-expired-reservation",(f)=>{
+await check("proven-late-completion-restores-expired-reservation",(f)=>{
   f.reserve("R1",1800);f.at(1800000);
-  assert.equal(f.quota.settleDeviceCall("R1","S1","2026-10",1,receipt).code,"RESERVATION_NOT_ACTIVE");
-  assert.equal(f.row("R1").state,"RELEASED");assert.equal(f.balance().consumed_units,0);
+  assert.equal(f.quota.settleDeviceCall("R1","S1","2026-10",1,receipt).state,"COMMITTED");
+  assert.equal(f.row("R1").state,"COMMITTED");assert.equal(f.balance().consumed_units,1);
+  assert.equal(f.quota.settleDeviceCall("R1","S1","2026-10",1,receipt).existing,true);
+  assert.equal(f.balance().consumed_units,1);
+});
+await check("retention-delete-never-refunds-committed-use",(f)=>{
+  f.reserve("R1");f.quota.commit("R1","S1",receipt,10);
+  assert.equal(f.balance().consumed_units,1);
+  f.db.prepare("DELETE FROM request_state WHERE request_id='R1'").run();
+  assert.equal(f.balance().consumed_units,1);
+  f.reserve("R2");assert.equal(f.balance().consumed_units,2);
+  f.db.prepare("DELETE FROM request_state WHERE request_id='R2'").run();
+  assert.equal(f.balance().consumed_units,1,"uncommitted reservation must be refunded");
 });
 console.log(JSON.stringify({
   schema:"hara.commander-approval-async-quota-tests.v1",state:"PASS",

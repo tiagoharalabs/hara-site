@@ -50,7 +50,7 @@ function fixture(overrides={},quotaFault=null){
     claimed_at_utc TEXT,completed_at_utc TEXT,payload_json TEXT,result_json TEXT,
     error_code TEXT,usage_mode TEXT,usage_units INTEGER,usage_period_key TEXT,
     usage_budget_id TEXT,approval_timeout_seconds INTEGER,execution_budget_ms INTEGER,
-    call_result_metadata_json TEXT
+    call_result_metadata_json TEXT,usage_settled_at_utc TEXT
   );`);
   const row={call_id:callId,request_id:"ORIGINAL-R1",tenant_id:"TENANT-A",subject_id:"SUBJECT-A",
     device_id:"DEVICE-A",tool_id:"hara.files.write",state:"COMPLETED",
@@ -59,7 +59,7 @@ function fixture(overrides={},quotaFault=null){
     payload_json:"HARA_REDACTED_SHA256:"+"b".repeat(64),result_json:JSON.stringify(rawResult),
     error_code:null,usage_mode:"CLOUD_QUOTA",usage_units:1,usage_period_key:"2026-10",
     usage_budget_id:null,approval_timeout_seconds:900,execution_budget_ms:10000,
-    call_result_metadata_json:null,...overrides};
+    call_result_metadata_json:null,usage_settled_at_utc:null,...overrides};
   if (!Object.hasOwn(overrides,"call_result_metadata_json")&&row.result_json&&!isRedacted(row.result_json)) {
     row.call_result_metadata_json=JSON.stringify(helpers.safeCallResultMetadata(JSON.parse(row.result_json),row));
   }

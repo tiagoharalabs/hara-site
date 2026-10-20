@@ -149,6 +149,7 @@ JS = (
     "test_paid_entitlement_expiry.mjs",
     "validate_event_v2_fleet_allowlist.mjs",
     "test_approval_async_quota_ttl.mjs",
+    "test_device_call_usage_settlement.mjs",
     "test_approval_async_storage.mjs",
     "test_quota_1000_local_workload.mjs",
     "test_approval_async_queue_claim.mjs",

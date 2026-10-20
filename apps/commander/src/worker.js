@@ -46,7 +46,7 @@ import { DeviceChannel, deviceChannelName } from "./device-channel.mjs";
 import { reconcileAgentVersion } from "./device-version-observation.mjs";
 import { readTenantDeviceTelemetry } from "./device-telemetry.mjs";
 import { customerStatusWaitMs, CUSTOMER_STATUS_TIMEOUT_MS } from "./device-status-poll.mjs";
-import { CALL_ROW_FIELDS, parseCallMetadata, settleCallUsage, readScopedCall, acceptedCallStatus, publicAcceptedCallStatus } from "./approval-relay-storage.mjs";
+import { CALL_ROW_FIELDS, parseCallMetadata, settleCallUsage, reconcileUnsettledCallUsage, readScopedCall, acceptedCallStatus, publicAcceptedCallStatus } from "./approval-relay-storage.mjs";
 import { asyncApprovalDevice, asyncApprovalTool, asyncApprovalProfile, claimedApprovalExpiresAt, isApprovalCallHandle, pendingApprovalResult, safeCallResultMetadata, replayCallResultMetadata, ASYNC_APPROVAL_RESERVATION_TTL_SECONDS, TERMINAL_CALL_STATES } from "./approval-async-relay.mjs";
 import { SecurityRateLimit } from "./security-rate-limit-do.mjs";
 import {
@@ -989,7 +989,7 @@ export class TenantQuota extends DurableObject {
 
         CREATE TRIGGER IF NOT EXISTS trg_request_state_usage_delete
         AFTER DELETE ON request_state
-        WHEN OLD.state IN ('RESERVED', 'COMMITTED') AND OLD.units <> 0
+        WHEN OLD.state = 'RESERVED' AND OLD.units <> 0
         BEGIN
           UPDATE period_usage
              SET consumed_units = consumed_units - OLD.units
@@ -1024,6 +1024,22 @@ export class TenantQuota extends DurableObject {
           UPDATE quota_meta
              SET usage_schema_version = 1
            WHERE id = 1;
+        `);
+      }
+      if (Number(usageMeta.usage_schema_version || 0) < 2) {
+        // Dropping a committed ledger row must never grant quota back. The
+        // aggregate is the period's durable consumption after compaction.
+        this.ctx.storage.sql.exec(`
+          DROP TRIGGER IF EXISTS trg_request_state_usage_delete;
+          CREATE TRIGGER trg_request_state_usage_delete
+          AFTER DELETE ON request_state
+          WHEN OLD.state = 'RESERVED' AND OLD.units <> 0
+          BEGIN
+            UPDATE period_usage
+               SET consumed_units = consumed_units - OLD.units
+             WHERE period_key = OLD.period_key;
+          END;
+          UPDATE quota_meta SET usage_schema_version = 2 WHERE id = 1;
         `);
       }
     });
@@ -1139,6 +1155,18 @@ export class TenantQuota extends DurableObject {
     if (row.state === "COMMITTED") {
       if (row.receipt_sha256 !== receiptSha256) return { ok: false, code: "IDEMPOTENCY_CONFLICT" };
       return { ok: true, existing: true, state: "COMMITTED", ...this.status(row.period_key, limit, false) };
+    }
+    if (row.state === "RELEASED") {
+      // The reservation TTL is not proof that a claimed call did not run.
+      // A later authenticated D1 completion with the same receipt restores
+      // the consumed unit in its original period, even after rollover.
+      this.ctx.storage.sql.exec(
+        `UPDATE request_state
+            SET state = 'COMMITTED', units = 1, receipt_sha256 = ?, updated_at_utc = ?
+          WHERE request_id = ? AND state = 'RELEASED'`,
+        receiptSha256, new Date().toISOString(), requestId
+      );
+      return { ok: true, existing: false, state: "COMMITTED", ...this.status(row.period_key, limit, false) };
     }
     if (row.state !== "RESERVED") return { ok: false, code: "RESERVATION_NOT_ACTIVE", state: row.state };
 
@@ -3091,7 +3119,8 @@ async function redactExpiredDeviceCallContent(env, cutoff) {
 
     const updates = [];
     for (const row of rows) {
-      if (Number(row.approval_timeout_seconds)===900) {
+      if ((row.usage_mode==="CLOUD_QUOTA" && Number(row.usage_units)>0 && !row.usage_settled_at_utc)
+          || Number(row.approval_timeout_seconds)===900) {
         try {
           const raw=row.result_json && !isRedactedDeviceCallContent(row.result_json) ? JSON.parse(row.result_json) : null;
           await settleCallUsage(env,row,raw);
@@ -3133,10 +3162,13 @@ async function cleanupExpiredDeviceCalls(env) {
          LIMIT ?
       )`
   ).bind(expiredAt, expiredAt, DEVICE_CALL_EXPIRY_MAINTENANCE_BATCH).run();
+  const usage = await reconcileUnsettledCallUsage(env,{limit:200});
   const redaction = await redactExpiredDeviceCallContent(env, expiredAt);
   return {
     expired: Number(expiry.meta?.changes || 0),
     redacted: Number(redaction.redacted || 0),
+    usage_settled: usage.settled,
+    usage_failed: usage.failed,
   };
 }
 
@@ -5265,7 +5297,7 @@ async function completeDeviceCall(env, request, body) {
       ) {
         throw new Error("IDEMPOTENCY_CONFLICT");
       }
-      if (Number(existing.approval_timeout_seconds)===900) await settleCallUsage(env,existing,body.result);
+      await settleCallUsage(env,existing,body.result);
       return { schema: "hara.commander-device-call-result.v1", ok: true, existing: true, call_id: callId, state };
     }
     if (
@@ -5289,9 +5321,7 @@ async function completeDeviceCall(env, request, body) {
     throw new Error("DEVICE_CALL_NOT_EXECUTING");
   }
 
-  if (Number(before.approval_timeout_seconds)===900) {
-    await settleCallUsage(env,{...before,state,error_code:errorCode,result_json:resultJson,call_result_metadata_json:descriptor},body.result);
-  }
+  await settleCallUsage(env,{...before,state,error_code:errorCode,result_json:resultJson,call_result_metadata_json:descriptor},body.result);
 
   // Version metadata is derived only from a newly accepted, authenticated
   // self-info result. A metadata failure must not undo an executed operation.

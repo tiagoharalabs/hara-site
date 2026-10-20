@@ -104,7 +104,7 @@ db.executescript(
 
     CREATE TRIGGER trg_request_state_usage_delete
     AFTER DELETE ON request_state
-    WHEN OLD.state IN ('RESERVED','COMMITTED') AND OLD.units <> 0
+    WHEN OLD.state = 'RESERVED' AND OLD.units <> 0
     BEGIN
       UPDATE period_usage
          SET consumed_units = consumed_units - OLD.units
@@ -117,7 +117,7 @@ db.executescript(
       FROM request_state
      WHERE state IN ('RESERVED','COMMITTED')
      GROUP BY period_key;
-    UPDATE quota_meta SET usage_schema_version=1 WHERE id=1;
+    UPDATE quota_meta SET usage_schema_version=2 WHERE id=1;
     """
 )
 
@@ -159,9 +159,9 @@ db.execute(
 )
 assert consumed() == 2, consumed()
 
-# Future retention/delete stays accounting-safe.
+# Compaction must not refund previously committed usage.
 db.execute("DELETE FROM request_state WHERE request_id='OLD-C'")
-assert consumed() == 1, consumed()
+assert consumed() == 2, consumed()
 
 # Plans prove expiry sweep and O(1) status are indexed.
 expiry_plan = " ".join(

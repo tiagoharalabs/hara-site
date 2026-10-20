@@ -134,15 +134,15 @@ try {
       equal(balance(f), 6);
     }
   });
-  phase('exact_30min_expiry_maintains_terminal_receipts_and_aggregate', () => {
+  phase('exact_30min_expiry_proven_receipt_restores_consumption', () => {
     clock = base + 1800000;
     for (const f of fixtures) {
       equal(invoke(f, 'status', '2026-10', 6).consumed_units, 5);
       equal(row(f, 'COMMON-PENDING').state, 'RELEASED');
-      equal(invoke(f, 'commit', 'COMMON-PENDING', f.subject, receipt(f, 'COMMON-PENDING'), 6).code, 'RESERVATION_NOT_ACTIVE');
+      equal(invoke(f, 'commit', 'COMMON-PENDING', f.subject, receipt(f, 'COMMON-PENDING'), 6).state, 'COMMITTED');
       equal(invoke(f, 'commit', 'COMMON-COMMIT-0', f.subject, receipt(f, 'COMMON-COMMIT-0'), 6).existing, true);
       equal(balance(f), f.db.prepare("SELECT COALESCE(SUM(units),0) AS n FROM request_state WHERE period_key='2026-10' AND state IN ('RESERVED','COMMITTED')").get().n);
-      equal(balance(f), 5);
+      equal(balance(f), 6);
       equal(row(f, 'COMMON-COMMIT-0').receipt_sha256, receipt(f, 'COMMON-COMMIT-0'));
     }
   });
@@ -154,8 +154,8 @@ try {
     for (const r of rows) sum[r.state] = (sum[r.state] || 0) + Number(r.n);
     return sum;
   }, {});
-  equal(counts.COMMITTED, 5000);
-  equal(counts.RELEASED, 3000);
+  equal(counts.COMMITTED, 6000);
+  equal(counts.RELEASED, 2000);
   equal(counts.DENIED, 1500);
   equal(counts.RESERVED || 0, 0);
   report = {
@@ -168,7 +168,7 @@ try {
     validator_sha256: createHash('sha256').update(readFileSync(new URL(import.meta.url))).digest('hex'),
     local_simultaneously_open_objects: count, synthetic_subjects: count,
     quota_method_calls: quotaCalls, sql_statements: sqlStatements, assertions,
-    preserved_committed_receipts: 5000, terminal_rows: counts,
+    preserved_committed_receipts: 6000, terminal_rows: counts,
     local_elapsed_ms: Number((performance.now()-started).toFixed(3)),
     diagnostic_memory_rss_bytes: process.memoryUsage().rss,
     aggregate_query_plan: queryPlan, phases: measured,
