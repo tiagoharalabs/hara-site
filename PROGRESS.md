@@ -23,7 +23,7 @@ GETs HTTPS somente leitura em `https://commander.haralabs.com.br` reproduziram o
 
 **Artefatos locais preparados, sem publicação:**
 
-- Fonte candidata atualizada após R5-F01: `/tmp/commander-prelaunch-source-candidate-20261020-2010z`, manifesto SHA-256 `ada9c3c3d17c4e1f432db0bf86c32a935e01f4196724ffeacbbd7bf4daa7bc52`, estado `AWAITING_OFFICIAL_SIGNATURE`. Linux atual `0.3.43` (SHA-256 `0c8e5793af6636e2215752b448a8e4ad15ab35c9f0c1902f388c80bb73b204a8`) + Windows/instaladores comerciais v4 + UI comercial da branch. Sem assinatura; o verificador de publicação a rejeita. As montagens anteriores, inclusive `/tmp/commander-drain-source-candidate-20261020-1943z`, foram superadas como candidatas e preservadas apenas como rastros locais.
+- Fonte candidata atualizada após R6: `/tmp/commander-prelaunch-source-candidate-20261020-2022z`, manifesto SHA-256 `e164e7bd7d4940ca9ccb00dd13c5bd0e3a06c92692e469abd9ee74e7e3ea090b`, estado `AWAITING_OFFICIAL_SIGNATURE`. Linux atual `0.3.43` (SHA-256 `ee6919ba32b37f3436e1dfc349c4e9014f379bf2fdce4fe63d7f996ef7f9baf3`) + Windows/instaladores comerciais v4 + UI comercial da branch. Sem assinatura; o verificador de publicação a rejeita. As montagens anteriores, inclusive `/tmp/commander-prelaunch-source-candidate-20261020-2010z`, foram superadas como candidatas e preservadas apenas como rastros locais.
 - Referência de rollback: `/tmp/commander-signed-v4-rollback-20261020-1846z`, assinatura v2 válida e estado explícito `ROLLBACK_ONLY_KNOWN_PROCESS_DRAIN_REGRESSION`. Não representa promoção segura do fix de drenagem.
 - Antes de qualquer promoção, obter version ID PROD atual e rollback real por readback, assinar oficialmente o v5 no fluxo autorizado, verificar assinatura/bytes/PTY e pedir aprovação específica. Nenhum upload foi feito.
 
@@ -170,4 +170,26 @@ O commit documental de origem `27005547a048d5f6c2b61308f46726f8b324da03` foi con
 | `python3 -B apps/commander/scripts/test_signed_distribution_stage.py` | 0 | 12 testes de seleção/manifesto/assinatura/adulteração |
 | `python3 -B apps/commander/scripts/stage_signed_commercial_assets.py --check` | 1 | HOLD esperado: `SIGNED_STAGE_CURRENT_RELEASE_AWAITING_OFFICIAL_SIGNATURE` |
 
-**Estados:** corrigido no código: Linux sim, Windows pendente; testado local: Linux sim, inclusive bytes copiados para candidato `2010z`; testado DEV: não; instalado em canário: não; publicado PROD: não. O candidato novo possui manifesto coerente mas sem assinatura; não é um release publicável.
+**Estados:** corrigido no código: Linux sim, Windows pendente; testado local: Linux sim, inclusive bytes copiados para candidato `2022z`; testado DEV: não; instalado em canário: não; publicado PROD: não. O candidato novo possui manifesto coerente mas sem assinatura; não é um release publicável.
+
+## R6 recebida — conclusão tardia e resultado público ponta a ponta
+
+Li `docs/operations/HARA_COMMANDER_PEER_REVIEW_R6_END_TO_END_20261020.md` e a reprodução independente. O revisor comprovou que uma transmissão inicial perdida depois da execução local deixava READY após 51 s, e que o JSON interno de leituras com 4/10 arquivos era cortado na projeção pública. Revalidei o harness em cópia temporária, com Agent/Worker/SQLite reais, identidade e relógio sintéticos e sem rede externa. A cópia temporária aguarda 2,1 s entre tentativas para respeitar o novo backoff; os scripts originais do revisor não foram modificados. A prova local atual saiu 0: conclusão tardia entregue uma vez, outbox ACKED, novo claim permitido, ACK perdido recuperado e JSON interno parseável nos três tamanhos.
+
+**Corrigido no código:** resultado autenticado de chamada já reclamada pode ser aceito depois do prazo de 50 s, inclusive se a limpeza a marcou EXPIRED; o prazo original permanece e a resposta marca `completed_after_deadline`. Chamada nunca reclamada, recibo divergente e resultado diferente continuam recusados. A liquidação da cota acompanha a conclusão idempotente. O Agent mantém o corpo READY em SQLite, aplica backoff transitório limitado a 300 s e põe respostas HTTP definitivas em quarentena, visíveis por `outbox status` e `doctor`; `outbox retry CALL_ID` reenvia o mesmo resultado somente após ação local explícita. Polling e Event V2 deixam de reclamar nova tarefa enquanto houver resultado pendente; a quarentena tem código próprio. Nenhuma ação mutante é reexecutada na recuperação.
+
+**Projeção pública:** JSON de resultado até 128 KiB em bytes UTF-8 chega intacto aos perfis MCP simples/completo; conteúdo acima desse orçamento vira JSON válido com sinal de truncamento e offsets de continuação, enquanto texto puro permanece limitado. A regressão combina leitura real do Agent (1/4/10 arquivos) com projeção e envelope MCP e compara SHA do stdout entregue. Resultado one-shot Linux também passa a dividir linhas longas por orçamento em bytes para que o `run_id` e `next_offset` cheguem ao cliente.
+
+| Teste local | Exit | Evidência |
+| --- | ---: | --- |
+| Harness R6 temporário `peer_end_to_end.py` sobre esta branch | 0 | dois achados `reproduced=false`, ACK perdido, atraso de 51 s, uma mutação, zero rede |
+| `node apps/commander/scripts/test_device_call_usage_settlement.mjs` | 0 | conclusão tardia reclamada, expiração por manutenção, chamada não reclamada, idempotência e cota |
+| `python3 -B apps/commander/scripts/validate_result_delivery_outbox.py` | 0 | backoff, quarentena, status sem payload, doctor degradado, retry exato, reinício e disco cheio |
+| `python3 -B apps/commander/scripts/validate_event_v2_durable_batch_continuation.py` | 0 | pendência e quarentena bloqueiam claim com causas distintas; lotes 0/1/8/9/12/16 |
+| `node apps/commander/scripts/test_public_result_projection.mjs` | 0 | JSON, offsets, Unicode e fronteiras 65.535/65.536/65.537 |
+| `python3 -B apps/commander/scripts/validate_result_envelope_budget.py` | 0 | leitura real até envelope MCP, SHA igual em 1/4/10 arquivos |
+| `python3 -B apps/commander/scripts/validate_process_oneshot_pagination.py` | 0 | linhas longas paginadas, sem repetição de comando |
+| Construtor do candidato `--check`; testes de distribuição assinada | 0; 0 | bytes Linux verificados; 12 testes de seleção/assinatura |
+| Stage assinado corrente `--check` | 1 | HOLD esperado por falta de assinatura oficial |
+
+**Estados:** corrigido no código: sim (`cdb0208`, `ddbd0cc`); testado local: sim; testado DEV: não; publicado PROD: não. A identidade no harness é substituta, não prova de autorização Cloudflare. Quarentena exige avaliação do operador antes do reenvio, sem limpar o READY. A R3 de sessões/autenticação continua pendente; o candidato `2022z` será superado se a fonte Linux mudar.
