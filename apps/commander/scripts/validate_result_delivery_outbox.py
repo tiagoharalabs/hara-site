@@ -216,6 +216,61 @@ with tempfile.TemporaryDirectory(prefix="hara-result-outbox-") as temporary:
         assert agent.flush_completion_outbox(config) == 1
         assert transient_target.read_text() == "ONE_LOCAL_MUTATION"
         print("COMMANDER_COMPLETION_TRANSIENT_FAILURE_BACKOFF_SAME_BODY=PASS")
+
+        # A stale CAS token and an ambiguous edit are checked before the file
+        # mutation. Preserve their domain reason instead of implying that a
+        # local approval or an uncertain write needs reconciliation.
+        denied_target = Path(temporary) / "precondition.txt"
+        denied_target.write_text("MATCH\nMATCH\n", encoding="utf-8")
+        original_bytes = denied_target.read_bytes()
+        agent = load("hara_result_outbox_file_conflict")
+        rejected = []
+        agent.complete = lambda _cfg, _call, state, result, error_code=None: rejected.append(
+            (state, result, error_code)
+        ) or {"ok": True}
+        for suffix, tool_id, payload, code, state, category in (
+            ("CAS-EDIT", "hara.files.edit",
+             {"path": str(denied_target), "old_text": "MATCH", "new_text": "CHANGED", "expected_sha256": "0" * 64},
+             "FILE_PRECONDITION_FAILED", "CONFLICT", "FILE_PRECONDITION"),
+            ("CAS-WRITE", "hara.files.write",
+             {"path": str(denied_target), "content": "CHANGED", "mode": "rewrite", "expected_sha256": "0" * 64},
+             "FILE_PRECONDITION_FAILED", "CONFLICT", "FILE_PRECONDITION"),
+            ("CAS-DELETE", "hara.files.delete",
+             {"path": str(denied_target), "expected_sha256": "0" * 64},
+             "FILE_PRECONDITION_FAILED", "CONFLICT", "FILE_PRECONDITION"),
+            ("AMBIGUOUS", "hara.files.edit",
+             {"path": str(denied_target), "old_text": "MATCH", "new_text": "CHANGED"},
+             "EDIT_MATCH_AMBIGUOUS", "NEEDS_INPUT", "EDIT_MATCH"),
+        ):
+            attempt = {"call_id": "CALL-" + suffix, "request_id": "REQUEST-" + suffix,
+                       "tool_id": tool_id, "payload": payload}
+            agent.execute_call(config, attempt)
+            delivery_state, result, error_code = rejected[-1]
+            assert delivery_state == "FAILED" and error_code == code
+            assert result["state"] == state
+            assert result["operational_authority"] == "HARA_SERVICES"
+            assert result["mutation_performed"] is False
+            assert result["blocker"]["code"] == code
+            assert result["blocker"]["category"] == category
+            assert result["blocker"]["retryable"] is False
+            assert denied_target.read_bytes() == original_bytes
+        print("COMMANDER_COMPLETION_FILE_CONFLICT_IS_NOT_APPROVAL_OR_UNKNOWN=PASS")
+
+        # A generic exception after a mutating tool has started remains
+        # uncertain; an error code alone must never certify rollback.
+        agent = load("hara_result_outbox_unknown_mutation")
+        agent.complete = lambda _cfg, _call, state, result, error_code=None: rejected.append(
+            (state, result, error_code)
+        ) or {"ok": True}
+        def write_then_fail(_config, _call):
+            denied_target.write_text("MAY_HAVE_CHANGED", encoding="utf-8")
+            raise RuntimeError("SIMULATED_POST_WRITE_FAILURE")
+        agent.execute_tool = write_then_fail
+        agent.execute_call(config, {"call_id": "CALL-UNCERTAIN", "request_id": "REQUEST-UNCERTAIN",
+                                    "tool_id": "hara.files.edit", "payload": {}})
+        assert rejected[-1][1]["state"] == "UNKNOWN"
+        assert rejected[-1][1]["mutation_performed"] is None
+        print("COMMANDER_COMPLETION_GENERIC_MUTATION_FAILURE_STAYS_UNKNOWN=PASS")
     finally:
         for key, value in prior.items():
             if value is None:

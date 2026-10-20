@@ -3758,6 +3758,11 @@ function projectCustomerToolResult(toolId, response) {
   if (value.blocker && typeof value.blocker === "object") {
     const blocker = {};
     if (typeof value.blocker.code === "string") blocker.code = value.blocker.code;
+    for (const key of ["category","next_action"]) {
+      const field=value.blocker[key];
+      if (typeof field === "string" && /^[A-Z][A-Z0-9_]{0,119}$/.test(field)) blocker[key]=field;
+    }
+    if (typeof value.blocker.retryable === "boolean") blocker.retryable=value.blocker.retryable;
     if (typeof value.blocker.details?.risk_class === "string") {
       blocker.details = { risk_class: value.blocker.details.risk_class };
     }

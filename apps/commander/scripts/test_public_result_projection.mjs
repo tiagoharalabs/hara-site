@@ -92,3 +92,22 @@ const plain=runtime.trim("界".repeat(70000));
 assert(new TextEncoder().encode(plain).length < 66000);
 assert(plain.endsWith("[HARA_COMMANDER_OUTPUT_TRUNCATED]"));
 console.log("COMMANDER_PUBLIC_UTF8_BYTE_LIMIT_PRESERVES_VALID_OUTPUT=PASS");
+
+for (const [state,code,category,nextAction] of [
+  ["CONFLICT","FILE_PRECONDITION_FAILED","FILE_PRECONDITION","REHASH_CURRENT_FILE_BEFORE_RETRY"],
+  ["NEEDS_INPUT","EDIT_MATCH_AMBIGUOUS","EDIT_MATCH","NARROW_EDIT_MATCH_OR_CONFIRM_REPLACE_ALL"],
+]) {
+  const projected=runtime.project("hara.files.edit",{
+    state,operational_authority:"HARA_SERVICES",mutation_performed:false,
+    result:{},blocker:{code,category,retryable:false,next_action:nextAction},
+  });
+  const envelope=runtime.envelope(projected);
+  assert.equal(envelope.isError,true);
+  assert.equal(projected.operational_authority,"HARA_SERVICES");
+  assert.equal(projected.mutation_performed,false);
+  assert.equal(projected.blocker.code,code);
+  assert.equal(projected.blocker.category,category);
+  assert.equal(projected.blocker.retryable,false);
+  assert.equal(projected.blocker.next_action,nextAction);
+}
+console.log("COMMANDER_PUBLIC_FILE_CONFLICT_CATEGORY_SURVIVES_PROJECTION=PASS");

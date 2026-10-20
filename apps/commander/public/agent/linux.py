@@ -3441,6 +3441,17 @@ def completion_outbox_pending():
     finally:
         conn.close()
 
+def _known_nonmutating_file_conflict(tool_id, code):
+    # These branches in the file handlers reject before write/replace/unlink.
+    # Other errors from a started mutation retain an uncertain outcome.
+    if code=="FILE_PRECONDITION_FAILED" and tool_id in {"hara.files.write","hara.files.edit","hara.files.delete"}:
+        return {"state":"CONFLICT","category":"FILE_PRECONDITION",
+                "next_action":"REHASH_CURRENT_FILE_BEFORE_RETRY"}
+    if code=="EDIT_MATCH_AMBIGUOUS" and tool_id=="hara.files.edit":
+        return {"state":"NEEDS_INPUT","category":"EDIT_MATCH",
+                "next_action":"NARROW_EDIT_MATCH_OR_CONFIRM_REPLACE_ALL"}
+    return None
+
 def execute_call(config,call):
     started=time.monotonic()
     call["_transport"]="OUTBOUND_RELAY"
@@ -3466,14 +3477,15 @@ def execute_call(config,call):
         result=execute_tool(config,call)
     except Exception as exc:
         code=safe_error_code(exc)
-        uncertain=execution_started and _is_mutation_tool(call.get("tool_id"))
+        file_conflict=_known_nonmutating_file_conflict(call.get("tool_id"),code) if execution_started else None
+        uncertain=execution_started and _is_mutation_tool(call.get("tool_id")) and not file_conflict
         if budget_reservation:
             try:
                 if uncertain: local_budget_commit(call.get("request_id"))
                 else: local_budget_release(call.get("request_id"))
             except Exception as budget_exc:
                 append_console_event("LOCAL_BUDGET_DEGRADED",call,state="DEGRADED",error_code=safe_error_code(budget_exc))
-        operational = local_mcp_operational_error(code,"",{}) is not None
+        operational = bool(file_conflict) or local_mcp_operational_error(code,"",{}) is not None
         append_console_event(
             "OUTCOME_UNKNOWN" if uncertain else ("OPERATIONAL" if operational else "DENIED"),
             call,
@@ -3481,11 +3493,12 @@ def execute_call(config,call):
             error_code=code,
             duration_ms=round((time.monotonic()-started)*1000),
         )
-        failure={"state":"UNKNOWN" if uncertain else "DENIED",
-                 "operational_authority":"HARA_COMMANDER_AGENT" if uncertain else "LOCAL_OPERATOR_SESSION",
+        failure={"state":"UNKNOWN" if uncertain else (file_conflict["state"] if file_conflict else "DENIED"),
+                 "operational_authority":"HARA_COMMANDER_AGENT" if uncertain else ("HARA_SERVICES" if file_conflict else "LOCAL_OPERATOR_SESSION"),
                  "runtime_authority_from_chatgpt":False,
                  "mutation_performed":None if uncertain else False,
-                 "result":{},"blocker":{"code":code}}
+                 "result":{},"blocker":{"code":code,**({"category":file_conflict["category"],"retryable":False,
+                    "next_action":file_conflict["next_action"]} if file_conflict else {})}}
         body=_completion_bounded_body("FAILED",failure,code)
     else:
         if budget_reservation:
