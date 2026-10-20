@@ -1,0 +1,207 @@
+{
+  "schema": "hara.commander.windows11.live-functional-qa.r10.v1",
+  "date_utc": "2026-10-20",
+  "window_utc": [
+    "2026-10-20T22:44:00Z",
+    "2026-10-20T22:56:00Z"
+  ],
+  "source": "H.A.R.A._Commander direct MCP calls to HARA_WIN11; virsh/QEMU verification through same MCP on nucleo-a; provider activity metadata",
+  "target": {
+    "vm": "commander-win11",
+    "hostname": "HARA_WIN11",
+    "os": "Windows 11 Pro",
+    "agent_version": "0.3.53",
+    "transport": "OUTBOUND_RELAY",
+    "approval_mode": "SESSION_TRUSTED",
+    "device_state": "ONLINE",
+    "mcp_ping": "PASS",
+    "declared_capabilities": 19,
+    "qa_directory": "C:\\Users\\Public\\Documents\\HARA_COMMANDER_QA_20261020_WIN11",
+    "qa_file": "probe.txt"
+  },
+  "positive": [
+    {
+      "name": "create_directory",
+      "state": "PASS",
+      "scope": "QA folder only"
+    },
+    {
+      "name": "write_file",
+      "state": "PASS",
+      "bytes": 134
+    },
+    {
+      "name": "read_file_2pages",
+      "state": "PASS",
+      "offsets": [
+        0,
+        3
+      ],
+      "lines": 5,
+      "unicode_preserved": true
+    },
+    {
+      "name": "file_info",
+      "state": "PASS",
+      "size_bytes": 134
+    },
+    {
+      "name": "list_directory_qa",
+      "state": "PASS",
+      "count": 1
+    },
+    {
+      "name": "write_file_stale_hash",
+      "state": "DENIED_EXPECTED",
+      "code": "FILE_PRECONDITION_FAILED",
+      "qa_original_preserved": true
+    },
+    {
+      "name": "write_file_correct_hash",
+      "state": "PASS",
+      "bytes": 156,
+      "qa_added_line": "CAS_POSITIVE_PASS",
+      "verified_by_read": true
+    },
+    {
+      "name": "powershell_process_run",
+      "state": "PASS",
+      "exit_code": 0
+    },
+    {
+      "name": "powershell_unicode",
+      "state": "PASS",
+      "exit_code": 0
+    },
+    {
+      "name": "powershell_explicit_exit7",
+      "state": "TRANSPORT_PASS",
+      "exit_code": 7,
+      "lesson": "transport PASS is not command success"
+    },
+    {
+      "name": "process_start_and_read_output",
+      "state": "PASS",
+      "output_after_delay": "QA_WINDOWS_MANAGED_COMPLETE"
+    },
+    {
+      "name": "kill_process_own_qa_sessions",
+      "state": "PASS_ASYNC",
+      "count": 2,
+      "post_state": "EXITED"
+    },
+    {
+      "name": "read_file_microburst",
+      "state": "PASS",
+      "n": 4
+    }
+  ],
+  "gaps": [
+    {
+      "id": "R10-WIN-TOOL-READMANY",
+      "tool": "read_multiple_files",
+      "state": "DENIED",
+      "error": "UNKNOWN_FUNCTION_ID"
+    },
+    {
+      "id": "R10-WIN-TOOL-SEARCH",
+      "tool": "search",
+      "state": "DENIED",
+      "error": "UNKNOWN_FUNCTION_ID"
+    },
+    {
+      "id": "R10-WIN-TOOL-EDIT",
+      "tool": "edit_block",
+      "state": "DENIED",
+      "error": "AGENT_UPGRADE_REQUIRED"
+    },
+    {
+      "id": "R10-WIN-LIST-PAGINATION",
+      "tool": "list_directory",
+      "offsets": [
+        0,
+        4,
+        100
+      ],
+      "limit": 4,
+      "results": "same_first_four_items",
+      "truncated": true,
+      "next_offset_returned": false,
+      "confirmed": true
+    },
+    {
+      "id": "R10-WIN-ONESHOT-RETENTION",
+      "tool": "start_process",
+      "output_lines_generated": 8,
+      "max_lines_requested": 3,
+      "output_truncated": true,
+      "session_retained": false,
+      "recoverable_run_id": false
+    },
+    {
+      "id": "R10-WIN-INTERACTIVE",
+      "tool": "process.start/process.interact",
+      "behavior": "Read-Host failed in PowerShell -NonInteractive; submitted string interpreted as subsequent command; MCP wrapper returned PASS but STDERR carried domain errors",
+      "qa_sessions_terminated": true
+    },
+    {
+      "id": "R10-WIN-RELAY-QUEUE",
+      "tool": "read_file",
+      "n": 4,
+      "transport": "OUTBOUND_RELAY",
+      "queue_ms": [
+        6297,
+        9757,
+        12852,
+        15843
+      ],
+      "execution_ms": [
+        611,
+        641,
+        640,
+        640
+      ],
+      "total_ms": [
+        6908,
+        10398,
+        13492,
+        16483
+      ],
+      "time_slice_at_utc": "2026-10-20T22:54:28.468Z..22:54:28.615Z",
+      "attribution": "time/device/tool matched 4 calls; a separate read at 22:54:28.017 excluded",
+      "microbatch_wall_seconds": 19.313
+    },
+    {
+      "id": "R10-WIN-VM-CPU-TOPOLOGY",
+      "scope": "QA_VM_NOT_PRODUCT_AGENT",
+      "host_libvirt_configured_vcpu": 8,
+      "qemu_smp": "8,sockets=8,cores=1,threads=1",
+      "guest_os": "Windows 11 Pro",
+      "guest_logical_processors": 2,
+      "guest_wmi_cpu_objects": 2,
+      "proposed_future_topology": "1 socket, 8 cores, 1 thread; requires approved shutdown/rollback",
+      "configuration_changed": false
+    }
+  ],
+  "release_constraints": {
+    "candidate_linux_and_windows_unsigned_reported_version": "0.3.43",
+    "installed_windows_agent": "0.3.53",
+    "promote_without_signature": false,
+    "reboot_or_change_vm_topology": false,
+    "install_agent": false,
+    "change_firewall_or_credentials": false,
+    "live_prod_mutation": false
+  },
+  "qa_receipts": {
+    "create_dir": "8ecfb627d54b19edc90e62b67fdb29047b9e5ec921ef850a50ad0b5e32e8b867",
+    "write_first": "67c8f383e3ea223a610852fc61a96924d20969b0b4295bf259dac3f4d52d920f",
+    "read_first": "3b73e85c424a3b62e2f8bf8276aceb61d00dad352527e9fb01a1eab411ad5744",
+    "file_info": "6d96d8ed4f322229ba61e63cc24a0b13146babf58d9e081adc9e800139780997",
+    "write_cas_success": "2b746b0da6b4fd7af066c32cf48350e21e9e6ca6416c651dcc63c3b0e9fc2e9b",
+    "write_cas_readback": "b60fdb97f15337ef0a554b0d4a9850a592c17347be5d23dd645caabb0e505957",
+    "powershell_unicode": "bf370ac7d7819a4a1a00642f756153a270bea8e0eb68aaa31fb5eb6bf532b075",
+    "powershell_exit7": "dfcf6674a9371773efee60b4ee79530648074f5628d7f49a69546ceb",
+    "truncated_command": "07350bdb2555952f3d24b725713f09b69eef3aea24a80f97d606eb979d8dc855"
+  },
+  "caveat": "Failures requiring upgrade, available tool subset and queue timings are observed for installed Windows Agent 0.3.53; not assertions about newer uninstalled product source or future commercial release."
+}
