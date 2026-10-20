@@ -1,0 +1,23 @@
+{
+  "schema": "hara.commander-r7-concurrent-process-policy.v1",
+  "observed_utc": "2026-10-20T20:52:40.279119+00:00",
+  "agent_sha256": "4c3260f9441547d35e7d563c56b10519d8c35e98c7e680d591a84746b30eebaa",
+  "test_method": "2 threads run actual process_start; fake pty fork enforces race after both have already checked capacity; no OS fork",
+  "limit": 1,
+  "active_after": 2,
+  "session_count": 2,
+  "results": [
+    {
+      "index": 1,
+      "result": "STARTED",
+      "sid": "HARA-PROC-4d9d84bbad4b4dfebc7e445ab827ab13"
+    },
+    {
+      "index": 0,
+      "result": "STARTED",
+      "sid": "HARA-PROC-f5a9279fea6d4bcdba2f9870536ee7c3"
+    }
+  ],
+  "reproduced": true,
+  "production_processes_started": 0
+}
