@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Prepare a source candidate for official signing without reading a private key.
 
-Linux gets the reviewed terminal-drain fix. Windows and both installers remain
+Linux gets the reviewed continuous and terminal-drain fixes. Windows and both installers remain
 the last signed commercial versions; the separate Windows 0.3.52 RC is not
 silently promoted. The output has no signature and cannot be published.
 """
@@ -18,7 +18,7 @@ import tempfile
 from stage_signed_commercial_assets import APP, BUNDLES, ROLLBACK_RELEASE, stage
 
 LINUX_SOURCE = APP / "public/agent/linux.py"
-REVIEWED_LINUX_SHA256 = "14e40fc2dbcd698d5ad1fe0f51714720b47a2fea7a0004a52cee6418925b30fa"
+REVIEWED_LINUX_SHA256 = "30bd734283f2f75ecd5af7bf77fc38617430ee67ef6a5806aaa1076e1a32f35d"
 FILESET = ("agent/linux.py", "agent/windows.ps1", "install/linux.sh", "install/windows.ps1")
 CURRENT_STATIC = ("index.html", "app.js")
 
@@ -35,12 +35,13 @@ def prepare(output: Path) -> dict:
     linux = LINUX_SOURCE.read_bytes()
     if digest(linux) != REVIEWED_LINUX_SHA256 or b'AGENT_VERSION = "0.3.43"' not in linux:
         raise RuntimeError("COMMERCIAL_DRAIN_CANDIDATE_LINUX_SOURCE_DRIFT")
-    regression = subprocess.run(
-        [sys.executable, "-B", str(APP / "scripts/validate_process_terminal_drain.py")],
-        capture_output=True, text=True, check=False, timeout=20,
-    )
-    if regression.returncode:
-        raise RuntimeError("COMMERCIAL_DRAIN_CANDIDATE_PTY_REGRESSION")
+    for script in ("validate_process_terminal_drain.py", "validate_process_continuous_drain.py"):
+        regression = subprocess.run(
+            [sys.executable, "-B", str(APP / "scripts" / script)],
+            capture_output=True, text=True, check=False, timeout=20,
+        )
+        if regression.returncode:
+            raise RuntimeError("COMMERCIAL_DRAIN_CANDIDATE_PTY_REGRESSION:" + script)
     public = output / "apps/commander/public"
     public.parent.mkdir(mode=0o700, parents=True)
     stage(public, BUNDLES[ROLLBACK_RELEASE], rollback_only=True)

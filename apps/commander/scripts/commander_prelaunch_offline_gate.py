@@ -37,6 +37,7 @@ PYTHON = (
     "validate_windows_048_operator_startup.py",
     "validate_event_v2_terminal_release.py",
     "validate_process_terminal_drain.py",
+    "validate_process_continuous_drain.py",
     "validate_agent_selftest_workspace_boundary.py",
     "validate_commander_submission_package.py",
     "commander_paid_dev_health_ramp.py",

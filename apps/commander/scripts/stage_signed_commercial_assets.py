@@ -56,13 +56,14 @@ def stage(output: Path, bundle: Path = BUNDLES[CURRENT_RELEASE], *, rollback_onl
     if bundle.name != CURRENT_RELEASE and not rollback_only:
         raise RuntimeError('SIGNED_STAGE_HISTORICAL_RELEASE_REQUIRES_ROLLBACK_ONLY')
     if bundle.name == CURRENT_RELEASE:
-        proc = subprocess.run(
-            ['python3', '-B', str(APP / 'scripts/validate_process_terminal_drain.py'),
-             '--source', str(bundle / 'agent/linux.py')],
-            cwd=ROOT, capture_output=True, text=True, timeout=20, check=False,
-        )
-        if proc.returncode:
-            raise RuntimeError('SIGNED_STAGE_LINUX_PROCESS_TERMINAL_DRAIN_FAILED')
+        for script in ('validate_process_terminal_drain.py', 'validate_process_continuous_drain.py'):
+            proc = subprocess.run(
+                ['python3', '-B', str(APP / 'scripts' / script),
+                 '--source', str(bundle / 'agent/linux.py')],
+                cwd=ROOT, capture_output=True, text=True, timeout=20, check=False,
+            )
+            if proc.returncode:
+                raise RuntimeError('SIGNED_STAGE_LINUX_PROCESS_DRAIN_FAILED:' + script)
     config = json.loads((APP / 'wrangler.jsonc').read_text())
     if config['assets']['directory'] != 'signed-assets-stage-required':
         raise RuntimeError('SIGNED_STAGE_RAW_PUBLIC_CONFIG_DENIED')

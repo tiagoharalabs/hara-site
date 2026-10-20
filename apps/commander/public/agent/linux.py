@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 import base64
+import codecs
+import contextlib
 import hashlib
 import hmac
 import json
@@ -1710,6 +1712,16 @@ def _append_process_output(session,text):
     session["_buffer_chars"]=max(0,total)
     session["cursor"]=max(session.get("cursor",0),session["base_line"])
 
+def _append_process_bytes(session,data,final=False):
+    # PTY read boundaries need not coincide with UTF-8 character boundaries.
+    decoder=session.get("_output_decoder")
+    if decoder is None:
+        decoder=codecs.getincrementaldecoder("utf-8")("replace")
+        session["_output_decoder"]=decoder
+    decoded=decoder.decode(data,final=final)
+    if decoded:
+        _append_process_output(session,decoded)
+
 def _drain_completed_process_output(session):
     """Consume buffered PTY output after waitpid and before closing the master.
 
@@ -1735,7 +1747,7 @@ def _drain_completed_process_output(session):
             session["truncated"]=True
             break
         if not data: break
-        _append_process_output(session,data.decode("utf-8",errors="replace"))
+        _append_process_bytes(session,data)
         consumed+=len(data)
     if consumed>=max_bytes or time.monotonic()>=deadline:
         # Mark potential loss rather than silently claim complete output.
@@ -1743,44 +1755,61 @@ def _drain_completed_process_output(session):
 
 
 def _process_update_state(session):
-    if session.get("exit_code") is not None: return
-    try:
-        pid,status=os.waitpid(int(session["pid"]),os.WNOHANG)
-    except ChildProcessError:
-        pid=int(session["pid"]); status=0
-    if pid:
-        # waitpid reports process completion before PTY master bytes have
-        # necessarily been consumed; never close the fd first.
-        session["exit_code"]=os.waitstatus_to_exitcode(status) if hasattr(os,"waitstatus_to_exitcode") else 0
-        session["finished_monotonic"]=time.monotonic()
+    with session.get("_io_lock") or contextlib.nullcontext():
+        if session.get("exit_code") is not None: return
         try:
-            _drain_completed_process_output(session)
-            if session.get("partial"):
-                _append_process_output(session,"\n")
-        finally:
-            try: os.close(int(session["fd"]))
-            except OSError: pass
-            session["fd"]=-1
+            pid,status=os.waitpid(int(session["pid"]),os.WNOHANG)
+        except ChildProcessError:
+            pid=int(session["pid"]); status=0
+        if pid:
+            # waitpid reports process completion before PTY master bytes have
+            # necessarily been consumed; never close the fd first.
+            session["exit_code"]=os.waitstatus_to_exitcode(status) if hasattr(os,"waitstatus_to_exitcode") else 0
+            session["finished_monotonic"]=time.monotonic()
+            try:
+                _drain_completed_process_output(session)
+                _append_process_bytes(session,b"",final=True)
+                if session.get("partial"):
+                    _append_process_output(session,"\n")
+            finally:
+                try: os.close(int(session["fd"]))
+                except OSError: pass
+                session["fd"]=-1
 
 def _drain_process(session,wait_ms=0):
-    fd=int(session.get("fd",-1))
-    if fd<0:
-        _process_update_state(session); return
-    deadline=time.monotonic()+max(0,min(3000,int(wait_ms)))/1000.0
-    first=True
-    while True:
-        timeout=max(0.0,deadline-time.monotonic()) if wait_ms else 0.0
-        try: ready,_,_=select.select([fd],[],[],timeout if first else 0.0)
-        except (OSError,ValueError): ready=[]
-        first=False
-        if not ready: break
-        try: data=os.read(fd,65536)
-        except BlockingIOError: break
-        except OSError: data=b""
-        if not data: break
-        _append_process_output(session,data.decode("utf-8",errors="replace"))
-        if time.monotonic()>=deadline: break
-    _process_update_state(session)
+    with session.get("_io_lock") or contextlib.nullcontext():
+        fd=int(session.get("fd",-1))
+        if fd<0:
+            _process_update_state(session); return
+        deadline=time.monotonic()+max(0,min(3000,int(wait_ms)))/1000.0
+        first=True
+        while True:
+            timeout=max(0.0,deadline-time.monotonic()) if wait_ms else 0.0
+            try: ready,_,_=select.select([fd],[],[],timeout if first else 0.0)
+            except (OSError,ValueError): ready=[]
+            first=False
+            if not ready: break
+            try: data=os.read(fd,65536)
+            except BlockingIOError: break
+            except OSError: data=b""
+            if not data: break
+            _append_process_bytes(session,data)
+            if time.monotonic()>=deadline: break
+        _process_update_state(session)
+
+def _collect_process_output(session):
+    # At most MAX_PROCESS_ACTIVE_SESSIONS collectors exist. The same lock used
+    # by foreground reads keeps PTY bytes, decoder state and close ordered.
+    while session.get("exit_code") is None:
+        try:
+            _drain_process(session,100)
+        except Exception:
+            with session["_io_lock"]:
+                session["truncated"]=True
+                session["collector_failed"]=True
+            return
+        # Avoid spinning if a live process closes stdout without exiting.
+        time.sleep(0.01)
 
 def _prune_process_sessions():
     now=time.monotonic()
@@ -1813,15 +1842,16 @@ def _process_get(session_id):
 
 def _process_output_payload(session,offset=None,length=200,wait_ms=0):
     _drain_process(session,wait_ms)
-    base=int(session.get("base_line",0)); lines=session.get("lines",[])
-    start=int(session.get("cursor",base)) if offset is None else int(offset)
-    truncated_before=start<base
-    if start<base: start=base
-    rel=max(0,start-base); selected=lines[rel:rel+max(1,min(500,int(length)))]
-    next_offset=start+len(selected)
-    if offset is None: session["cursor"]=next_offset
-    state="EXITED" if session.get("exit_code") is not None else "RUNNING"
-    return {"session_id":session["session_id"],"pid":session["pid"],"state":state,"exit_code":session.get("exit_code"),"offset":start,"next_offset":next_offset,"base_line":base,"total_lines":base+len(lines),"text":"\n".join(selected),"partial":session.get("partial","")[:1000],"truncated_before":truncated_before,"buffer_truncated":bool(session.get("truncated"))}
+    with session.get("_io_lock") or contextlib.nullcontext():
+        base=int(session.get("base_line",0)); lines=session.get("lines",[])
+        start=int(session.get("cursor",base)) if offset is None else int(offset)
+        truncated_before=start<base
+        if start<base: start=base
+        rel=max(0,start-base); selected=lines[rel:rel+max(1,min(500,int(length)))]
+        next_offset=start+len(selected)
+        if offset is None: session["cursor"]=next_offset
+        state="EXITED" if session.get("exit_code") is not None else "RUNNING"
+        return {"session_id":session["session_id"],"pid":session["pid"],"state":state,"exit_code":session.get("exit_code"),"offset":start,"next_offset":next_offset,"base_line":base,"total_lines":base+len(lines),"text":"\n".join(selected),"partial":session.get("partial","")[:1000],"truncated_before":truncated_before,"buffer_truncated":bool(session.get("truncated"))}
 
 def process_start(command,cwd=None,timeout_ms=1000):
     command=str(command or "")
@@ -1841,8 +1871,11 @@ def process_start(command,cwd=None,timeout_ms=1000):
             os._exit(127)
     os.set_blocking(fd,False)
     sid="HARA-PROC-"+uuid.uuid4().hex
-    session={"session_id":sid,"pid":pid,"fd":fd,"started_at_utc":utcnow(),"command_sha256":hashlib.sha256(command.encode()).hexdigest(),"cwd":str(work),"lines":[],"partial":"","base_line":0,"cursor":0,"truncated":False,"exit_code":None}
+    session={"session_id":sid,"pid":pid,"fd":fd,"started_at_utc":utcnow(),"command_sha256":hashlib.sha256(command.encode()).hexdigest(),"cwd":str(work),"lines":[],"partial":"","base_line":0,"cursor":0,"truncated":False,"exit_code":None,"_io_lock":threading.RLock()}
     PROCESS_SESSIONS[sid]=session
+    collector=threading.Thread(target=_collect_process_output,args=(session,),name="hara-process-output",daemon=True)
+    session["_collector_thread"]=collector
+    collector.start()
     output=_process_output_payload(session,offset=None,length=200,wait_ms=timeout_ms)
     return {**output,"cwd":str(work),"command_sha256":session["command_sha256"],"command_preview":_redact_command_preview(command)}
 
@@ -1889,16 +1922,19 @@ def process_sessions():
     items=[]
     for sid,session in list(PROCESS_SESSIONS.items()):
         _drain_process(session,0)
-        items.append({"session_id":sid,"pid":session["pid"],"state":"EXITED" if session.get("exit_code") is not None else "RUNNING","exit_code":session.get("exit_code"),"started_at_utc":session["started_at_utc"],"cwd":session["cwd"],"command_sha256":session["command_sha256"]})
+        with session.get("_io_lock") or contextlib.nullcontext():
+            items.append({"session_id":sid,"pid":session["pid"],"state":"EXITED" if session.get("exit_code") is not None else "RUNNING","exit_code":session.get("exit_code"),"started_at_utc":session["started_at_utc"],"cwd":session["cwd"],"command_sha256":session["command_sha256"]})
     return {"count":len(items),"sessions":items}
 
 def process_interact(session_id,input_text,timeout_ms=1000):
-    session=_process_get(session_id); _process_update_state(session)
-    if session.get("exit_code") is not None or int(session.get("fd",-1))<0: raise ValueError("PROCESS_SESSION_EXITED")
+    session=_process_get(session_id)
     text=str(input_text or "")
     if len(text)>4096 or "\x00" in text: raise ValueError("PROCESS_INPUT_INVALID")
     data=(text+"\n").encode("utf-8")
-    os.write(int(session["fd"]),data)
+    with session.get("_io_lock") or contextlib.nullcontext():
+        _process_update_state(session)
+        if session.get("exit_code") is not None or int(session.get("fd",-1))<0: raise ValueError("PROCESS_SESSION_EXITED")
+        os.write(int(session["fd"]),data)
     return _process_output_payload(session,offset=None,length=200,wait_ms=timeout_ms)
 
 def process_kill(session_id,force=False):
