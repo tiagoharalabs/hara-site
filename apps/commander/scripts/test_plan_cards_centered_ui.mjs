@@ -11,7 +11,9 @@ const section=html.split('<section class="view app-view" data-view="plans"')[1]
 assert.ok(section);
 assert.equal((section.match(/class="plan-card(?: featured)?"/g)||[]).length,2);
 assert.ok(section.includes('aria-label="Plano e cobrança"'));
-assert.ok(section.includes('10.000 <small>chamadas / mês</small>'));
+assert.ok(section.includes('5.000 <small>chamadas no total</small>'));
+assert.ok(section.includes('1.000.000 de chamadas funcionais por mês, compartilhadas'));
+assert.ok(section.includes('R$ 80 <small>/ mês</small>'));
 assert.ok(section.includes('data-billing-price-label="STANDARD"'));
 assert.ok(section.includes('data-billing-plan="STANDARD"'));
 assert.ok(section.includes('data-billing-portal'));

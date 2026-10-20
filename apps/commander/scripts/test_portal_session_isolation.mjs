@@ -134,7 +134,7 @@ await test('newer_billing_response_after_logout_wins_over_older',async()=>{
  const b=t.ctx.loadBillingState();await ready();
  t.pending[1].resolve(response({can_manage:true,activation:{first_checkout_ready:true,provider_configured:true}}));await b;
  t.pending[0].resolve(response({can_manage:false,activation:{first_checkout_ready:false,provider_configured:false}}));await a;
- assert.match(t.billingStatus.textContent,/Pro disponível/);
+ assert.match(t.billingStatus.textContent,/HARA Commander disponível por R\$ 80\/mês/);
 });
 
 await test('ordinary_bootstrap_success_is_unchanged',async()=>{

@@ -2989,6 +2989,9 @@ def self_test():
     import tempfile
     with tempfile.TemporaryDirectory() as d:
         RECEIPT_DIR=Path(d)
+        # Give this fixture its own project boundary even when the host's
+        # temporary parent contains a Git marker or another project manifest.
+        (Path(d)/"pyproject.toml").write_text("[project]\nname = 'hara-agent-selftest'\nversion = '0.0.0'\n",encoding="utf-8")
         cfg={"HARA_DEVICE_ID":"selftest","HARA_DEVICE_ARCH":"test"}
         base={"call_id":"c","request_id":"selftest-001","payload":{}}
         assert execute_tool(cfg,{**base,"tool_id":"hara.health"})["state"]=="PASS"

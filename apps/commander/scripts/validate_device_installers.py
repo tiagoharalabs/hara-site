@@ -316,7 +316,11 @@ assert redirect_probe["sink_authorization"] is None, "LINUX_AGENT_BEARER_LEAKED_
 print("LINUX_AGENT_REDIRECT_RUNTIME_DENIED=PASS")
 print("LINUX_AGENT_REDIRECT_BEARER_LEAK=FALSE")
 
-subprocess.run([str(PUBLIC / "agent/linux.py"), "--self-test"], check=True)
+with tempfile.TemporaryDirectory(prefix="hara-agent-selftest-") as selftest_tmp:
+    subprocess.run([str(PUBLIC / "agent/linux.py"), "--self-test"], check=True,
+                   env={**os.environ, "XDG_DATA_HOME": str(Path(selftest_tmp) / "data"),
+                        "XDG_CONFIG_HOME": str(Path(selftest_tmp) / "config"),
+                        "TMPDIR": selftest_tmp})
 with tempfile.TemporaryDirectory(prefix="hara-agent-startup-") as tmp:
     root = Path(tmp)
     config_home = root / "config"
