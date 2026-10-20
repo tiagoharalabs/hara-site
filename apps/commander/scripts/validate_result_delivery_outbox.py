@@ -110,6 +110,28 @@ with tempfile.TemporaryDirectory(prefix="hara-result-outbox-") as temporary:
         assert len(sends) == 3 and sends[0] == sends[2]
         assert target.read_text() == "REPEATED_LOSS_ONE_WRITE"
         print("COMMANDER_COMPLETION_REPEATED_FAILURE_RETRIES_SAME_BODY=PASS")
+
+        disk_target = Path(temporary) / "disk-fault-write.txt"
+        disk_call = {**call, "call_id": "CALL-DISK-FAULT", "request_id": "REQUEST-DISK-FAULT",
+                     "payload": {**call["payload"], "path": str(disk_target)}}
+        agent = load("hara_result_outbox_disk_fault")
+        agent._completion_outbox_ready = lambda *_: (_ for _ in ()).throw(OSError("SYNTHETIC_DISK_FULL"))
+        agent.complete = lambda *_: (_ for _ in ()).throw(AssertionError("UNPERSISTED_RESULT_SENT"))
+        try:
+            agent.execute_call(config, dict(disk_call))
+        except OSError as exc:
+            assert str(exc) == "SYNTHETIC_DISK_FULL"
+        else:
+            raise AssertionError("DISK_FAULT_WAS_NOT_REPORTED")
+        assert disk_target.read_text() == "ONE_LOCAL_MUTATION"
+        agent = load("hara_result_outbox_disk_fault_recovery")
+        recovered = []
+        agent.execute_tool = lambda *_: (_ for _ in ()).throw(AssertionError("DISK_FAULT_REEXECUTED"))
+        agent.complete = lambda _cfg, _call, state, result, error_code=None: recovered.append((state,result,error_code)) or {"ok": True}
+        agent.execute_call(config, dict(disk_call))
+        assert len(recovered) == 1 and recovered[0][1]["state"] == "UNKNOWN"
+        assert recovered[0][1]["mutation_performed"] is None
+        print("COMMANDER_COMPLETION_DISK_FAULT_FAILS_UNCERTAIN_NO_REPLAY=PASS")
     finally:
         for key, value in prior.items():
             if value is None:

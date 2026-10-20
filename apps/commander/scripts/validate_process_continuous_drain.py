@@ -30,6 +30,34 @@ def command(py):
     return "python3 -u -c " + shlex.quote(py)
 
 
+def process_stopped(proc_stat):
+    try:
+        return proc_stat.read_text().split()[2] == "Z"
+    except (FileNotFoundError, ProcessLookupError):
+        return True
+
+
+class VanishedProcess:
+    def read_text(self):
+        raise ProcessLookupError("process exited between lookup and read")
+
+
+class DeniedProcess:
+    def read_text(self):
+        raise PermissionError("denied")
+
+
+assert process_stopped(VanishedProcess())
+assert process_stopped(Path("/proc/0/stat"))
+try:
+    process_stopped(DeniedProcess())
+except PermissionError:
+    pass
+else:
+    raise AssertionError("UNEXPECTED_PROC_ERROR_WAS_SWALLOWED")
+print("COMMANDER_PROCESS_PROC_EXIT_RACE_ONLY=PASS")
+
+
 with tempfile.TemporaryDirectory(prefix="hara-pty-continuous-") as temporary:
     prior = {key: os.environ.get(key) for key in ("XDG_CONFIG_HOME", "XDG_DATA_HOME")}
     os.environ["XDG_CONFIG_HOME"] = str(Path(temporary) / "config")
@@ -102,7 +130,7 @@ with tempfile.TemporaryDirectory(prefix="hara-pty-continuous-") as temporary:
         agent.cleanup_process_sessions()
         def descendant_stopped():
             proc_stat = Path(f"/proc/{child_pid}/stat")
-            return not proc_stat.exists() or proc_stat.read_text().split()[2] == "Z"
+            return process_stopped(proc_stat)
         assert wait_until(descendant_stopped, 3.0), "PROCESS_DESCENDANT_SURVIVED_REVOKE"
         print("COMMANDER_PROCESS_REVOKE_STOPS_DESCENDANT=PASS")
     finally:
