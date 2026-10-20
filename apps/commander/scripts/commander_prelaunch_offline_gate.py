@@ -44,6 +44,8 @@ PYTHON = (
     "validate_result_envelope_budget.py",
     "validate_agent_selftest_workspace_boundary.py",
     "validate_commander_submission_package.py",
+    "validate_cloud_launch_contract.py",
+    "validate_stripe_test_wizard.py",
     "commander_paid_dev_health_ramp.py",
     "validate_event_v2_telemetry_signed_release.py",
     "validate_event_v2_local_telemetry.py",
