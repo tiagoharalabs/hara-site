@@ -31,6 +31,12 @@ class CommercialCatalogTests(unittest.TestCase):
               created_at_utc TEXT NOT NULL,
               PRIMARY KEY(plan_code,grant_code)
             );
+            CREATE TABLE commander_devices (
+              device_id TEXT PRIMARY KEY,
+              tenant_id TEXT NOT NULL,
+              state TEXT NOT NULL,
+              revoked_at_utc TEXT
+            );
         """)
         for name in (
             "0008_trial_onboarding.sql", "0014_founder_internal_entitlement.sql",

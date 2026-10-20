@@ -62,3 +62,17 @@ GETs HTTPS somente leitura em `https://commander.haralabs.com.br` reproduziram o
 | `python3 -B apps/commander/scripts/validate_prod_static.py` | 0 | superfície estática alinhada |
 
 **Estados:** corrigido no código: sim; testado local: sim; testado DEV: não; publicado PROD: não. D1 remota, Stripe TEST real e Stripe LIVE não foram tocados.
+
+## Cinco computadores por organização — candidato local
+
+**Corrigido no código:** o `INSERT ... SELECT` de inscrição consulta o limite do plano e conta computadores `ACTIVE` da mesma organização dentro da instrução de escrita. O batch D1 consome o token somente se o dispositivo foi inserido; no sexto computador, retorna `DEVICE_LIMIT_REACHED` (HTTP 409) e mantém o pareamento sem consumo. A revogação libera a vaga, o registro revogado permanece, e Founder/Internal conserva limite nulo. O índice aditivo de `0036` cobre a contagem por tenant/estado.
+
+| Teste local | Exit | Evidência |
+| --- | ---: | --- |
+| `node apps/commander/scripts/test_device_enrollment_limit.mjs` | 0 | quinto/sexto, token não consumido, revogação/substituição, isolamento entre tenants, Founder e dois escritores concorrentes em SQLite |
+| `python3 -B apps/commander/scripts/validate_pairing_supersession.py` | 0 | token mais recente e supersessão preservados |
+| `python3 -B apps/commander/scripts/validate_device_lifecycle_races.py` | 0 | corridas de revogação/chamada preexistentes preservadas |
+| `node --check apps/commander/src/worker.js` | 0 | sintaxe |
+| `python3 -B apps/commander/scripts/validate_device_installers.py` | 0 | instaladores, manifesto, ponte MCP local e revogação; teste de loopback executado após bloqueio do socket pelo sandbox |
+
+**Estados:** corrigido no código: sim; testado local: sim (SQLite, sem Cloudflare); testado DEV: não; publicado PROD: não. A aplicação remota de `0036` e a corrida em D1 real continuam pendentes de autorização/ambiente.

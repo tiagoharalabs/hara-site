@@ -5,6 +5,7 @@ import sqlite3
 ROOT = Path(__file__).resolve().parents[3]
 MIGRATIONS = ROOT / "apps/commander/migrations"
 WORKER = (ROOT / "apps/commander/src/worker.js").read_text(encoding="utf-8")
+ENROLLMENT = (ROOT / "apps/commander/src/device-enrollment.mjs").read_text(encoding="utf-8")
 
 db = sqlite3.connect(":memory:")
 db.executescript((MIGRATIONS / "0001_product.sql").read_text(encoding="utf-8"))
@@ -87,7 +88,8 @@ assert "PRODUCT_DB.batch([supersede, insert])" in create, "PAIRING_SUPERSESSION_
 assert "superseded_at_utc = ?" in create, "PAIRING_SUPERSESSION_UPDATE_MISSING"
 assert create.count("consumed_at_utc IS NULL") >= 1
 assert create.count("superseded_at_utc IS NULL") >= 1
-assert enroll.count("superseded_at_utc IS NULL") >= 2, "ENROLL_SUPERSESSION_GUARD_MISSING"
+assert "DEVICE_ENROLL_INSERT_SQL" in enroll and "DEVICE_ENROLL_CONSUME_SQL" in enroll
+assert ENROLLMENT.count("superseded_at_utc IS NULL") >= 2, "ENROLL_SUPERSESSION_GUARD_MISSING"
 
 print("COMMANDER_PAIRING_HISTORICAL_NORMALIZATION=PASS")
 print("COMMANDER_PAIRING_SINGLE_CURRENT_TOKEN=PASS")

@@ -41,6 +41,7 @@ import {
   canonicalDeviceToolPayload,
 } from "./device-tool-contract.mjs";
 import { chooseCustomerTargetDevice } from "./device-targeting.mjs";
+import { DEVICE_ENROLL_INSERT_SQL, DEVICE_ENROLL_CONSUME_SQL, DEVICE_ENROLL_LIMIT_SQL } from "./device-enrollment.mjs";
 import { DeviceChannel, deviceChannelName } from "./device-channel.mjs";
 import { reconcileAgentVersion } from "./device-version-observation.mjs";
 import { readTenantDeviceTelemetry } from "./device-telemetry.mjs";
@@ -2673,19 +2674,7 @@ async function enrollDevice(env, body) {
   const credentialHash = await sha256(deviceSecret);
   const createdAt = nowIso();
 
-  const insert = env.PRODUCT_DB.prepare(
-    `INSERT INTO commander_devices
-      (device_id, pairing_id, tenant_id, enrolled_by_subject_id, device_name, platform,
-       architecture, agent_version, tunnel_mode, credential_hash, state,
-       created_at_utc, last_seen_at_utc, revoked_at_utc, approval_mode)
-     SELECT ?, pairing_id, tenant_id, subject_id, ?, ?, ?, ?, 'OUTBOUND_RELAY', ?,
-            'ACTIVE', ?, ?, NULL, ?
-       FROM device_pairing_tokens
-      WHERE token_hash = ?
-        AND consumed_at_utc IS NULL
-        AND superseded_at_utc IS NULL
-        AND expires_at_utc > ?`
-  ).bind(
+  const insert = env.PRODUCT_DB.prepare(DEVICE_ENROLL_INSERT_SQL).bind(
     deviceId,
     deviceName,
     platform,
@@ -2697,16 +2686,12 @@ async function enrollDevice(env, body) {
     approvalMode,
     tokenHash,
     createdAt,
+    createdAt,
+    createdAt,
   );
 
-  const consume = env.PRODUCT_DB.prepare(
-    `UPDATE device_pairing_tokens
-        SET consumed_at_utc = ?
-      WHERE token_hash = ?
-        AND consumed_at_utc IS NULL
-        AND superseded_at_utc IS NULL
-        AND expires_at_utc > ?`
-  ).bind(createdAt, tokenHash, createdAt);
+  const consume = env.PRODUCT_DB.prepare(DEVICE_ENROLL_CONSUME_SQL)
+    .bind(createdAt, tokenHash, createdAt, deviceId);
 
   let results;
   try {
@@ -2715,7 +2700,13 @@ async function enrollDevice(env, body) {
     throw new Error("DEVICE_PAIRING_INVALID");
   }
 
-  if (!results?.[0]?.meta?.changes || !results?.[1]?.meta?.changes) {
+  if (!results?.[0]?.meta?.changes) {
+    const full = await env.PRODUCT_DB.prepare(DEVICE_ENROLL_LIMIT_SQL)
+      .bind(tokenHash, createdAt, createdAt, createdAt).first();
+    if (full) throw new Error("DEVICE_LIMIT_REACHED");
+    throw new Error("DEVICE_PAIRING_INVALID");
+  }
+  if (!results?.[1]?.meta?.changes) {
     throw new Error("DEVICE_PAIRING_INVALID");
   }
 
@@ -6209,6 +6200,7 @@ export default {
         BILLING_PRICE_UNKNOWN: 409,
         BILLING_PRICE_MISMATCH: 409,
         DEVICE_PAIRING_INVALID: 401,
+        DEVICE_LIMIT_REACHED: 409,
         DEVICE_PAIRING_CREATE_FAILED: 503,
         DEVICE_AUTH_REQUIRED: 401,
         DEVICE_AUTH_INVALID: 401,

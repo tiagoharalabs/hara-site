@@ -8,7 +8,7 @@ import { handleStripeWebhook } from "../src/billing.mjs";
 
 const db = new DatabaseSync(":memory:");
 const root = new URL("../migrations/", import.meta.url);
-for (const file of ["0001_product.sql", "0013_billing_v1.sql", "0021_commercial_terms_20261005.sql", "0036_commander_prelaunch_commercial_terms.sql"]) {
+for (const file of ["0001_product.sql", "0005_devices.sql", "0013_billing_v1.sql", "0021_commercial_terms_20261005.sql", "0036_commander_prelaunch_commercial_terms.sql"]) {
   db.exec(fs.readFileSync(new URL(file, root), "utf8"));
 }
 db.prepare("INSERT INTO tenants (tenant_id,display_name,state,environment,created_at_utc) VALUES (?,?,?,?,?)")

@@ -20,3 +20,6 @@ UPDATE plans
        active_device_limit = 5
  WHERE plan_code = 'STANDARD'
    AND meter_id = 'HARA_COMMANDER_GOVERNED_INVOKE';
+
+CREATE INDEX IF NOT EXISTS idx_commander_devices_active_tenant
+  ON commander_devices(tenant_id, state, revoked_at_utc);
