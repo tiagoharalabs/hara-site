@@ -1,0 +1,93 @@
+{
+  "schema": "hara.commander.microburst-server-timing.r9",
+  "start_at_utc": "2026-10-20T22:08:15.902Z",
+  "end_at_utc": "2026-10-20T22:08:43.376Z",
+  "sample_count": 12,
+  "attribution_caveat": "created-at time slice may include unrelated calls; tool_id and devices matched; not a controlled latency laboratory",
+  "per_host": {
+    "sentinela-a": {
+      "calls": 4,
+      "created_times": [
+        "2026-10-20T22:08:24.445Z",
+        "2026-10-20T22:08:24.026Z",
+        "2026-10-20T22:08:23.214Z",
+        "2026-10-20T22:08:22.531Z"
+      ],
+      "queue_ms": [
+        16450,
+        13742,
+        11421,
+        9069
+      ],
+      "execution_ms": [
+        634,
+        651,
+        639,
+        576
+      ],
+      "total_ms": [
+        17084,
+        14393,
+        12060,
+        9645
+      ],
+      "all_completed": true
+    },
+    "sentinela-c": {
+      "calls": 4,
+      "created_times": [
+        "2026-10-20T22:08:21.695Z",
+        "2026-10-20T22:08:20.521Z",
+        "2026-10-20T22:08:20.178Z",
+        "2026-10-20T22:08:17.394Z"
+      ],
+      "queue_ms": [
+        1012,
+        1159,
+        461,
+        463
+      ],
+      "execution_ms": [
+        591,
+        584,
+        616,
+        576
+      ],
+      "total_ms": [
+        1603,
+        1743,
+        1077,
+        1039
+      ],
+      "all_completed": true
+    },
+    "services": {
+      "calls": 4,
+      "created_times": [
+        "2026-10-20T22:08:17.342Z",
+        "2026-10-20T22:08:17.261Z",
+        "2026-10-20T22:08:17.220Z",
+        "2026-10-20T22:08:17.209Z"
+      ],
+      "queue_ms": [
+        3678,
+        2665,
+        1538,
+        548
+      ],
+      "execution_ms": [
+        736,
+        642,
+        649,
+        538
+      ],
+      "total_ms": [
+        4414,
+        3307,
+        2187,
+        1086
+      ],
+      "all_completed": true
+    }
+  }
+}

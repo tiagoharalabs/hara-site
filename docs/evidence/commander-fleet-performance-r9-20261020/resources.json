@@ -1,0 +1,165 @@
+{
+  "schema": "hara.commander.fleet-resource-snapshot.r9",
+  "observation": "brief low-impact one-shot snapshots, not benchmarks or steady-state utilization",
+  "hosts": [
+    {
+      "host": "services",
+      "state": "PASS",
+      "exit": 0,
+      "at_utc": "2026-10-20T22:00:12Z",
+      "cpu_logical": 12,
+      "load1": 1.37,
+      "load5": 1.2,
+      "load15": 1.12,
+      "mem_total_gib": 30.64,
+      "mem_available_gib": 26.49,
+      "swap_used_gib": 0.71,
+      "root_free_gib": 160.9,
+      "root_free_percent": 40.9,
+      "uptime_days": 17.68,
+      "gpu_error": "GPU_QUERY_UNAVAILABLE"
+    },
+    {
+      "host": "sentinela-a",
+      "state": "PASS",
+      "exit": 0,
+      "at_utc": "2026-10-20T22:00:17Z",
+      "cpu_logical": 12,
+      "load1": 0.42,
+      "load5": 0.38,
+      "load15": 0.29,
+      "mem_total_gib": 62.71,
+      "mem_available_gib": 52.81,
+      "swap_used_gib": 0,
+      "root_free_gib": 145.3,
+      "root_free_percent": 74.2,
+      "uptime_days": 1.28,
+      "gpu": [
+        {
+          "index": "0",
+          "name": "NVIDIA GeForce RTX 5070",
+          "vram_total_mib": "12227",
+          "vram_used_mib": "120",
+          "gpu_util_percent": "0",
+          "temp_c": "50",
+          "power_w": "24.04"
+        }
+      ]
+    },
+    {
+      "host": "sentinela-b",
+      "state": "PASS",
+      "exit": 0,
+      "at_utc": "2026-10-20T22:00:22Z",
+      "cpu_logical": 12,
+      "load1": 0.22,
+      "load5": 0.17,
+      "load15": 0.17,
+      "mem_total_gib": 62.69,
+      "mem_available_gib": 55.9,
+      "swap_used_gib": 0,
+      "root_free_gib": 845.6,
+      "root_free_percent": 47.8,
+      "uptime_days": 6.84,
+      "gpu": [
+        {
+          "index": "0",
+          "name": "NVIDIA GeForce RTX 2070 with Max-Q Design",
+          "vram_total_mib": "8192",
+          "vram_used_mib": "6",
+          "gpu_util_percent": "0",
+          "temp_c": "44",
+          "power_w": "7.64"
+        }
+      ]
+    },
+    {
+      "host": "sentinela-c",
+      "state": "PASS",
+      "exit": 0,
+      "at_utc": "2026-10-20T22:00:26Z",
+      "cpu_logical": 12,
+      "load1": 1.17,
+      "load5": 1.05,
+      "load15": 1.01,
+      "mem_total_gib": 125.71,
+      "mem_available_gib": 111.64,
+      "swap_used_gib": 0,
+      "root_free_gib": 483.5,
+      "root_free_percent": 52.9,
+      "uptime_days": 1.28,
+      "gpu": [
+        {
+          "index": "0",
+          "name": "NVIDIA GeForce RTX 5080",
+          "vram_total_mib": "16303",
+          "vram_used_mib": "2164",
+          "gpu_util_percent": "0",
+          "temp_c": "33",
+          "power_w": "20.43"
+        }
+      ]
+    },
+    {
+      "host": "sentinela-d",
+      "state": "PASS",
+      "exit": 0,
+      "at_utc": "2026-10-20T22:00:30Z",
+      "cpu_logical": 16,
+      "load1": 0.03,
+      "load5": 0.05,
+      "load15": 0.03,
+      "mem_total_gib": 121.75,
+      "mem_available_gib": 58.44,
+      "swap_used_gib": 2.38,
+      "root_free_gib": 306.7,
+      "root_free_percent": 62.4,
+      "uptime_days": 1.28,
+      "gpu_error": "GPU_QUERY_UNAVAILABLE"
+    },
+    {
+      "host": "ninja-blue",
+      "state": "PASS",
+      "exit": 0,
+      "at_utc": "2026-10-20T22:00:35Z",
+      "cpu_logical": 16,
+      "load1": 0.59,
+      "load5": 0.66,
+      "load15": 0.54,
+      "mem_total_gib": 25.13,
+      "mem_available_gib": 21.37,
+      "swap_used_gib": 0,
+      "root_free_gib": 0,
+      "root_free_percent": 0,
+      "uptime_days": 1.28,
+      "gpu_error": "GPU_QUERY_UNAVAILABLE"
+    },
+    {
+      "host": "nucleo-a",
+      "state": "PASS",
+      "exit": 0,
+      "at_utc": "2026-10-20T22:00:39Z",
+      "cpu_logical": 16,
+      "load1": 4.86,
+      "load5": 4.02,
+      "load15": 3.67,
+      "mem_total_gib": 125.6,
+      "mem_available_gib": 90.2,
+      "swap_used_gib": 19.77,
+      "root_free_gib": 649.5,
+      "root_free_percent": 19.9,
+      "uptime_days": 1.28,
+      "gpu": [
+        {
+          "index": "0",
+          "name": "NVIDIA GeForce RTX 4090",
+          "vram_total_mib": "24564",
+          "vram_used_mib": "10274",
+          "gpu_util_percent": "28",
+          "temp_c": "46",
+          "power_w": "50.44"
+        }
+      ]
+    }
+  ]
+}

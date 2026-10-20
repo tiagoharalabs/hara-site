@@ -1,0 +1,210 @@
+{
+  "schema": "hara.commander.top-process-names.r9",
+  "scope": "process names and rss only, not command lines or arguments; momentary sample",
+  "hosts": [
+    {
+      "host": "sentinela-d",
+      "exit": 0,
+      "top_rss": [
+        {
+          "comm": "python3",
+          "rss_mib": 38072,
+          "pcpu_percent": 0
+        },
+        {
+          "comm": "llama-server",
+          "rss_mib": 18674,
+          "pcpu_percent": 0
+        },
+        {
+          "comm": "llama-server",
+          "rss_mib": 8668,
+          "pcpu_percent": 0
+        },
+        {
+          "comm": "llama-server",
+          "rss_mib": 2447,
+          "pcpu_percent": 0
+        },
+        {
+          "comm": "python",
+          "rss_mib": 2094,
+          "pcpu_percent": 0
+        },
+        {
+          "comm": "python",
+          "rss_mib": 1490,
+          "pcpu_percent": 0
+        },
+        {
+          "comm": "python",
+          "rss_mib": 1249,
+          "pcpu_percent": 0
+        },
+        {
+          "comm": "llama-server",
+          "rss_mib": 525,
+          "pcpu_percent": 0.5
+        },
+        {
+          "comm": "llama-server",
+          "rss_mib": 331,
+          "pcpu_percent": 0
+        }
+      ]
+    },
+    {
+      "host": "sentinela-c",
+      "exit": 0,
+      "top_rss": [
+        {
+          "comm": "python",
+          "rss_mib": 1487,
+          "pcpu_percent": 10.6
+        },
+        {
+          "comm": "python",
+          "rss_mib": 504,
+          "pcpu_percent": 99.7
+        },
+        {
+          "comm": "python",
+          "rss_mib": 502,
+          "pcpu_percent": 122
+        },
+        {
+          "comm": "fwupd",
+          "rss_mib": 158,
+          "pcpu_percent": 0
+        },
+        {
+          "comm": "MainThread",
+          "rss_mib": 151,
+          "pcpu_percent": 0
+        },
+        {
+          "comm": "MainThread",
+          "rss_mib": 150,
+          "pcpu_percent": 0
+        },
+        {
+          "comm": "MainThread",
+          "rss_mib": 149,
+          "pcpu_percent": 0
+        },
+        {
+          "comm": "MainThread",
+          "rss_mib": 127,
+          "pcpu_percent": 0
+        },
+        {
+          "comm": "java",
+          "rss_mib": 125,
+          "pcpu_percent": 0
+        }
+      ]
+    },
+    {
+      "host": "nucleo-a",
+      "exit": 0,
+      "top_rss": [
+        {
+          "comm": "ChatGPT",
+          "rss_mib": 3777,
+          "pcpu_percent": 62.8
+        },
+        {
+          "comm": "ChatGPT",
+          "rss_mib": 1234,
+          "pcpu_percent": 4.3
+        },
+        {
+          "comm": "brave",
+          "rss_mib": 914,
+          "pcpu_percent": 7.4
+        },
+        {
+          "comm": "brave",
+          "rss_mib": 727,
+          "pcpu_percent": 4.4
+        },
+        {
+          "comm": "brave",
+          "rss_mib": 604,
+          "pcpu_percent": 2.1
+        },
+        {
+          "comm": "codex",
+          "rss_mib": 570,
+          "pcpu_percent": 2
+        },
+        {
+          "comm": "steamwebhelper",
+          "rss_mib": 479,
+          "pcpu_percent": 2
+        },
+        {
+          "comm": "brave",
+          "rss_mib": 447,
+          "pcpu_percent": 8.8
+        },
+        {
+          "comm": "brave",
+          "rss_mib": 436,
+          "pcpu_percent": 0.8
+        }
+      ]
+    },
+    {
+      "host": "services",
+      "exit": 0,
+      "top_rss": [
+        {
+          "comm": "MainThread",
+          "rss_mib": 308,
+          "pcpu_percent": 0.1
+        },
+        {
+          "comm": "codex",
+          "rss_mib": 245,
+          "pcpu_percent": 0
+        },
+        {
+          "comm": "codex",
+          "rss_mib": 236,
+          "pcpu_percent": 2.3
+        },
+        {
+          "comm": "MainThread",
+          "rss_mib": 194,
+          "pcpu_percent": 0
+        },
+        {
+          "comm": "MainThread",
+          "rss_mib": 161,
+          "pcpu_percent": 0
+        },
+        {
+          "comm": "postgres",
+          "rss_mib": 141,
+          "pcpu_percent": 0
+        },
+        {
+          "comm": "postgres",
+          "rss_mib": 135,
+          "pcpu_percent": 0
+        },
+        {
+          "comm": "systemd-journal",
+          "rss_mib": 105,
+          "pcpu_percent": 0.5
+        },
+        {
+          "comm": "npm",
+          "rss_mib": null,
+          "pcpu_percent": 0
+        }
+      ]
+    }
+  ]
+}
