@@ -10,6 +10,7 @@ import subprocess
 import fnmatch
 import difflib
 import errno
+import fcntl
 import shutil
 import os
 import platform
@@ -51,6 +52,8 @@ PREIMAGE_DIR = DATA_DIR / "preimages"
 MAX_PREIMAGE_ENTRIES = 4096
 MAX_PREIMAGE_STORE_BYTES = 256 * 1024 * 1024
 PREIMAGE_CUSTODY_LOCK = threading.RLock()
+FILE_MUTATION_THREAD_LOCK = threading.RLock()
+FILE_MUTATION_LOCK_WAIT_SECONDS = 5.0
 SESSION_MAX_SECONDS = 12 * 60 * 60
 PRODUCT_LEASE_REFRESH_SECONDS = 4 * 60 * 60
 LOCAL_METERING_MIN_INTERVAL_SECONDS = 60 * 60
@@ -1532,6 +1535,59 @@ def _lexical_path(path_value):
     raw=Path(_checked_path_text(path_value)).expanduser()
     return Path(os.path.abspath(os.fspath(raw)))
 
+@contextlib.contextmanager
+def _file_mutation_guard(*paths):
+    # A directory inode is shared by local Agent processes, regardless of
+    # XDG_DATA_HOME or spelling through a symlinked parent. Hold its flock
+    # through the CAS check, preimage, mutation and receipt hash. Two-parent
+    # operations acquire directory locks in inode order to avoid deadlock.
+    with FILE_MUTATION_THREAD_LOCK:
+        descriptors=[]
+        canonical_paths=[]
+        try:
+            seen=set()
+            for path in paths:
+                parent=Path(path).parent
+                try:
+                    resolved=parent.resolve(strict=True)
+                except (OSError,RuntimeError) as exc:
+                    raise ValueError("PARENT_DIRECTORY_NOT_FOUND") from exc
+                if not resolved.is_dir(): raise ValueError("PARENT_DIRECTORY_NOT_FOUND")
+                canonical_paths.append(resolved/Path(path).name)
+                flags=os.O_RDONLY|os.O_DIRECTORY|getattr(os,"O_CLOEXEC",0)|getattr(os,"O_NOFOLLOW",0)
+                try:
+                    fd=os.open(str(resolved),flags)
+                except OSError as exc:
+                    raise ValueError("FILE_MUTATION_LOCK_UNAVAILABLE") from exc
+                st=os.fstat(fd)
+                key=(int(st.st_dev),int(st.st_ino))
+                if key in seen:
+                    os.close(fd)
+                else:
+                    seen.add(key); descriptors.append((key,fd))
+            deadline=time.monotonic()+max(0.0,float(FILE_MUTATION_LOCK_WAIT_SECONDS))
+            for _,fd in sorted(descriptors):
+                while True:
+                    try:
+                        fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
+                        break
+                    except OSError as exc:
+                        if exc.errno==errno.EINTR: continue
+                        if exc.errno not in {errno.EAGAIN,errno.EWOULDBLOCK}:
+                            raise ValueError("FILE_MUTATION_LOCK_UNAVAILABLE") from exc
+                        remaining=deadline-time.monotonic()
+                        if remaining<=0: raise ValueError("FILE_MUTATION_BUSY")
+                        time.sleep(min(0.05,remaining))
+            # Use the same resolved parent that was locked, even if the
+            # caller reached it through an alias that changes later.
+            yield tuple(canonical_paths)
+        finally:
+            # Closing these descriptions releases flock even after a crash.
+            # Never turn a completed mutation into a false pre-write failure.
+            for _,fd in descriptors:
+                try: os.close(fd)
+                except OSError: pass
+
 def _leaf_kind(path):
     try:
         mode=path.lstat().st_mode
@@ -1691,6 +1747,10 @@ def filesystem_preimages_list(limit=50,path_filter=None):
 def filesystem_rollback(call,preimage_id):
     meta,data=_load_preimage(preimage_id)
     target=_lexical_path(str(meta["original_path"]))
+    with _file_mutation_guard(target) as (locked_target,):
+        return _filesystem_rollback_locked(call,preimage_id,meta,data,locked_target)
+
+def _filesystem_rollback_locked(call,preimage_id,meta,data,target):
     _reject_mutation_symlink(target)
     if _leaf_kind(target) not in {"missing","file"}: raise ValueError("ROLLBACK_TARGET_NOT_FILE")
     if not target.parent.exists() or not target.parent.is_dir(): raise ValueError("PARENT_DIRECTORY_NOT_FOUND")
@@ -2147,6 +2207,10 @@ def filesystem_create_directory(path_value,parents=True):
     return {"path":str(path.resolve()),"created":not existed,"parents":bool(parents)}
 
 def filesystem_write(call,path_value,content,mode="rewrite",expected_sha256=None):
+    with _file_mutation_guard(_lexical_path(path_value)) as (locked_path,):
+        return _filesystem_write_locked(call,locked_path,content,mode,expected_sha256)
+
+def _filesystem_write_locked(call,path_value,content,mode,expected_sha256):
     path=_lexical_path(path_value); _reject_mutation_symlink(path); kind=_leaf_kind(path)
     if kind not in {"missing","file"}: raise ValueError("PATH_NOT_FILE")
     data=str(content); encoded=data.encode("utf-8")
@@ -2177,6 +2241,10 @@ def filesystem_write(call,path_value,content,mode="rewrite",expected_sha256=None
     return {"path":str(path),"mode":mode,"bytes_written":len(encoded),"size_bytes":current_bytes,"previous_sha256":previous_sha,"sha256":current_sha,"precondition_checked":expected is not None,"preimage_id":preimage.get("preimage_id") if preimage else None,"preimage_sha256":preimage.get("sha256") if preimage else None}
 
 def filesystem_edit(call,path_value,old_text,new_text,replace_all=False,expected_sha256=None):
+    with _file_mutation_guard(_lexical_path(path_value)) as (locked_path,):
+        return _filesystem_edit_locked(call,locked_path,old_text,new_text,replace_all,expected_sha256)
+
+def _filesystem_edit_locked(call,path_value,old_text,new_text,replace_all,expected_sha256):
     path=_lexical_path(path_value); _reject_mutation_symlink(path)
     if _leaf_kind(path)!="file": raise ValueError("PATH_NOT_FILE")
     if path.stat().st_size>2*1024*1024: raise ValueError("FILE_TOO_LARGE")
@@ -2199,6 +2267,10 @@ def filesystem_edit(call,path_value,old_text,new_text,replace_all=False,expected
     return {"path":str(path),"replacements":count if replace_all else 1,"size_bytes":current_bytes,"previous_sha256":previous_sha,"sha256":current_sha,"precondition_checked":expected is not None,"preimage_id":preimage.get("preimage_id"),"preimage_sha256":preimage.get("sha256")}
 
 def filesystem_move(source_value,destination_value):
+    with _file_mutation_guard(_lexical_path(source_value),_lexical_path(destination_value)) as (locked_src,locked_dst):
+        return _filesystem_move_locked(locked_src,locked_dst)
+
+def _filesystem_move_locked(source_value,destination_value):
     src=_lexical_path(source_value); dst=_lexical_path(destination_value)
     source_kind=_leaf_kind(src)
     if source_kind=="missing": raise FileNotFoundError(str(src))
@@ -2211,6 +2283,10 @@ def filesystem_move(source_value,destination_value):
     }
 
 def filesystem_copy(source_value,destination_value):
+    with _file_mutation_guard(_lexical_path(source_value),_lexical_path(destination_value)) as (locked_src,locked_dst):
+        return _filesystem_copy_locked(locked_src,locked_dst)
+
+def _filesystem_copy_locked(source_value,destination_value):
     src=_lexical_path(source_value); dst=_lexical_path(destination_value)
     if _leaf_kind(src)=="symlink": raise ValueError("SYMLINK_MUTATION_DENIED")
     if _leaf_kind(src)!="file": raise ValueError("SOURCE_NOT_FILE")
@@ -2222,10 +2298,15 @@ def filesystem_copy(source_value,destination_value):
     return {"source":str(src),"destination":str(dst),"bytes":size,"sha256":sha,"overwrote":False}
 
 def filesystem_delete(call,path_value,expected_sha256=None):
+    with _file_mutation_guard(_lexical_path(path_value)) as (locked_path,):
+        return _filesystem_delete_locked(call,locked_path,expected_sha256)
+
+def _filesystem_delete_locked(call,path_value,expected_sha256):
     path=_lexical_path(path_value); _reject_mutation_symlink(path)
-    if _leaf_kind(path)!="file": raise ValueError("DELETE_TARGET_NOT_FILE")
-    if path.stat().st_size>2*1024*1024: raise ValueError("DELETE_FILE_TOO_LARGE")
     expected=_validate_expected_sha256(expected_sha256)
+    if _leaf_kind(path)!="file":
+        raise ValueError("FILE_PRECONDITION_FAILED" if expected is not None else "DELETE_TARGET_NOT_FILE")
+    if path.stat().st_size>2*1024*1024: raise ValueError("DELETE_FILE_TOO_LARGE")
     if expected is not None: _enforce_file_precondition(path,expected)
     preimage=_store_preimage(path,call.get("call_id") or "delete","hara.files.delete")
     previous_sha=str(preimage.get("sha256") or "") if preimage else ""
@@ -3471,6 +3552,10 @@ def completion_outbox_pending():
 def _known_nonmutating_file_conflict(tool_id, code):
     # These branches in the file handlers reject before write/replace/unlink.
     # Other errors from a started mutation retain an uncertain outcome.
+    if code in {"FILE_MUTATION_BUSY","FILE_MUTATION_LOCK_UNAVAILABLE"} and tool_id in FILESYSTEM_MUTATION_TOOLS:
+        return {"state":"BUSY" if code=="FILE_MUTATION_BUSY" else "UNAVAILABLE",
+                "category":"FILE_MUTATION_LOCK","retryable":False,
+                "next_action":"RECHECK_FILE_THEN_NEW_REQUEST" if code=="FILE_MUTATION_BUSY" else "CHECK_DIRECTORY_LOCK_SUPPORT"}
     if code=="FILE_PRECONDITION_FAILED" and tool_id in {"hara.files.write","hara.files.edit","hara.files.delete"}:
         return {"state":"CONFLICT","category":"FILE_PRECONDITION",
                 "next_action":"REHASH_CURRENT_FILE_BEFORE_RETRY"}
@@ -3521,10 +3606,11 @@ def execute_call(config,call):
             duration_ms=round((time.monotonic()-started)*1000),
         )
         failure={"state":"UNKNOWN" if uncertain else (file_conflict["state"] if file_conflict else "DENIED"),
-                 "operational_authority":"HARA_COMMANDER_AGENT" if uncertain else ("HARA_SERVICES" if file_conflict else "LOCAL_OPERATOR_SESSION"),
+                 "operational_authority":"HARA_COMMANDER_AGENT" if uncertain or (file_conflict and file_conflict["category"]=="FILE_MUTATION_LOCK") else ("HARA_SERVICES" if file_conflict else "LOCAL_OPERATOR_SESSION"),
                  "runtime_authority_from_chatgpt":False,
                  "mutation_performed":None if uncertain else False,
-                 "result":{},"blocker":{"code":code,**({"category":file_conflict["category"],"retryable":False,
+                 "result":{},"blocker":{"code":code,**({"category":file_conflict["category"],
+                    "retryable":file_conflict.get("retryable",False),
                     "next_action":file_conflict["next_action"]} if file_conflict else {})}}
         body=_completion_bounded_body("FAILED",failure,code)
     else:
@@ -3996,6 +4082,10 @@ def local_mcp_operational_error(code,name,args):
         return build("INVALID_TARGET","FILESYSTEM_PATH",False,{"valid_target":False,"reason":"CONTROL_CHARACTER_OR_LENGTH"})
     if code=="FILE_PRECONDITION_FAILED":
         return build("CONFLICT","FILE_PRECONDITION",False,{"file_changed":True,"recommended_tool":"get_file_info"})
+    if code=="FILE_MUTATION_BUSY":
+        return build("BUSY","FILE_MUTATION_LOCK",False,{"recommended_tool":"get_file_info"})
+    if code=="FILE_MUTATION_LOCK_UNAVAILABLE":
+        return build("UNAVAILABLE","FILE_MUTATION_LOCK",False)
     if code=="SYMLINK_MUTATION_DENIED":
         return build("INVALID_TARGET","FILESYSTEM_SAFETY",False,{"symlink":True,"mutation_allowed":False,"recommended_tool":"get_file_info"})
     if code in {"DESTINATION_EXISTS","PATH_EXISTS_NOT_DIRECTORY","FILESYSTEM_PATH_EXISTS","FILEEXISTSERROR"}:

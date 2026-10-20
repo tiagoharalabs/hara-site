@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import fcntl
+import hashlib
 import importlib.util
 import io
 import json
@@ -255,6 +257,34 @@ with tempfile.TemporaryDirectory(prefix="hara-result-outbox-") as temporary:
             assert result["blocker"]["retryable"] is False
             assert denied_target.read_bytes() == original_bytes
         print("COMMANDER_COMPLETION_FILE_CONFLICT_IS_NOT_APPROVAL_OR_UNKNOWN=PASS")
+
+        # A lock timeout is known to happen before file mutation. Preserve
+        # that fact through the durable result instead of reporting UNKNOWN.
+        busy_agent = load("hara_result_outbox_file_lock_busy")
+        busy_agent.FILE_MUTATION_LOCK_WAIT_SECONDS = 0.05
+        busy_agent.complete = lambda _cfg, _call, state, result, error_code=None: rejected.append(
+            (state, result, error_code)
+        ) or {"ok": True}
+        lock_fd = os.open(str(denied_target.parent), os.O_RDONLY | os.O_DIRECTORY)
+        fcntl.flock(lock_fd, fcntl.LOCK_EX)
+        try:
+            busy_agent.execute_call(config, {
+                "call_id": "CALL-LOCK-BUSY", "request_id": "REQUEST-LOCK-BUSY",
+                "tool_id": "hara.files.edit",
+                "payload": {"path": str(denied_target), "old_text": "MATCH", "new_text": "CHANGED",
+                            "expected_sha256": hashlib.sha256(original_bytes).hexdigest()},
+            })
+        finally:
+            fcntl.flock(lock_fd, fcntl.LOCK_UN)
+            os.close(lock_fd)
+        delivery_state, result, error_code = rejected[-1]
+        assert delivery_state == "FAILED" and error_code == "FILE_MUTATION_BUSY"
+        assert result["state"] == "BUSY" and result["mutation_performed"] is False
+        assert result["operational_authority"] == "HARA_COMMANDER_AGENT"
+        assert result["blocker"]["category"] == "FILE_MUTATION_LOCK"
+        assert result["blocker"]["retryable"] is False
+        assert denied_target.read_bytes() == original_bytes
+        print("COMMANDER_COMPLETION_LOCK_BUSY_IS_NOT_UNKNOWN_OR_AUTO_RETRY=PASS")
 
         # A generic exception after a mutating tool has started remains
         # uncertain; an error code alone must never certify rollback.
