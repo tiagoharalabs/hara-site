@@ -66,6 +66,7 @@ TUNNEL_UNIT_FILE = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home()/".conf
 HEARTBEAT_SECONDS = 60
 CALL_POLL_HOT_SECONDS = 2
 CALL_POLL_IDLE_SECONDS = 10
+CALL_POLL_IMMEDIATE_BATCH = 8
 CALL_POLL_HOT_WINDOW_SECONDS = 120
 CALL_POLL_STARTUP_HOT_SECONDS = 30
 RATE_LIMIT_BACKOFF_INITIAL_SECONDS = 30
@@ -4696,6 +4697,7 @@ def main():
     last_error_write=0.0
     rate_limit_backoff_seconds=0
     rate_limit_backoff_until=0.0
+    immediate_drain_count=0
     was_authorized=False
     persistent=effective_approval_mode(config)=="PERSISTENT_TRUSTED"
     if not operator_session_active() and not persistent:
@@ -4708,6 +4710,7 @@ def main():
         persistent=effective_approval_mode(config)=="PERSISTENT_TRUSTED"
         authorized=persistent or operator_session_active()
         if not authorized:
+            immediate_drain_count=0
             if was_authorized:
                 killed=cleanup_process_sessions()
                 if killed: append_console_event("PROCESS_REVOKE",state="KILLED",action_summary=f"managed_processes={killed}")
@@ -4720,8 +4723,10 @@ def main():
             append_console_event("AGENT_ONLINE",state="PERSISTENT_TRUSTED" if persistent else "AUTHORIZED")
             was_authorized=True
         if now < rate_limit_backoff_until:
+            immediate_drain_count=0
             time.sleep(min(5.0, max(0.1, rate_limit_backoff_until-now)))
             continue
+        call_completed=False
         try:
             if now-last_heartbeat>=HEARTBEAT_SECONDS:
                 post_json(config["HARA_COMMANDER_URL"]+"/api/device/heartbeat",config["HARA_DEVICE_TOKEN"],{
@@ -4752,9 +4757,14 @@ def main():
             if call:
                 poll_hot_until=time.monotonic()+CALL_POLL_HOT_WINDOW_SECONDS
                 execute_call(config,call)
+                immediate_drain_count+=1
+                call_completed=True
+            else:
+                immediate_drain_count=0
             rate_limit_backoff_seconds=0
             rate_limit_backoff_until=0.0
         except Exception as exc:
+            immediate_drain_count=0
             code=safe_error_code(exc)
             if code == "HTTP_429":
                 rate_limit_backoff_seconds = min(
@@ -4774,6 +4784,11 @@ def main():
                 try_write_runtime_status(error_code=code,error_at=utcnow())
                 last_error_code=code
                 last_error_write=now
+        if call_completed and immediate_drain_count<CALL_POLL_IMMEDIATE_BATCH:
+            # Check the durable outbox and authorization again before the
+            # next claim. Keep execution serial and yield after eight calls.
+            continue
+        immediate_drain_count=0
         sleep_seconds=CALL_POLL_HOT_SECONDS if time.monotonic()<poll_hot_until else CALL_POLL_IDLE_SECONDS
         time.sleep(sleep_seconds)
 
