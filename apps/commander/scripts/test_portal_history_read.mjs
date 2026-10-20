@@ -11,10 +11,12 @@ for(const values of [{calls_7d:15,calls_total:500},{calls_7d:0,calls_total:0},{c
   let calls=0, sql='',bindings=[];
   const env={PRODUCT_DB:{prepare(query){calls++;sql=query;return{bind(...args){bindings=args;return{first:async()=>values};}};}}};
   const result=await run(env,'TENANT-A','SUBJECT-A');
-  assert.equal(calls,1);assert.equal(bindings.length,8);
-  assert.deepEqual(bindings.slice(1,7),['TENANT-A','SUBJECT-A','TENANT-A','SUBJECT-A','TENANT-A','SUBJECT-A']);
-  assert.equal(bindings[7],bindings[0].slice(0,10));
-  assert.ok(sql.includes('WITH relay AS'));
+  assert.equal(calls,1);assert.equal(bindings.length,14);
+  assert.deepEqual([0,2,4,7,11].map(i=>bindings.slice(i,i+2)),
+    Array(5).fill(null).map(()=>['TENANT-A','SUBJECT-A']));
+  assert.equal(bindings[13],bindings[9].slice(0,10));
+  assert.ok(sql.includes('commander_device_call_history_totals'));
+  assert.ok(sql.includes('commander_device_call_history_hourly'));
   assert.equal(result.calls_7d,Number(values.calls_7d));assert.equal(result.calls_total,Number(values.calls_total));
   assert.equal(result.available,true);assert.equal(result.detail_level,'AGGREGATE_ONLY');tests++;
 }

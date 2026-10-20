@@ -35,6 +35,7 @@ const projectionEnd=workerSource.indexOf("\nfunction customerMcpDevicePayload(",
 assert.ok(projectionStart>=0&&projectionEnd>projectionStart,"production customer projection missing");
 const contracts=await import(new URL("device-tool-contract.mjs",moduleUrl).href);
 const projectionRuntime=vm.createContext({
+  TextEncoder,
   deviceFunctionForTool:contracts.deviceFunctionForTool,
   isDeviceMutationTool:contracts.isDeviceMutationTool,
   isDeviceProcessTool:contracts.isDeviceProcessTool,

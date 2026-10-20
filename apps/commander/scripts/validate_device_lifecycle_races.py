@@ -187,13 +187,12 @@ late_complete = db.execute(
     """UPDATE commander_device_calls
           SET state='COMPLETED',completed_at_utc=?,result_json=?,error_code=NULL
         WHERE call_id=? AND tenant_id=? AND device_id=?
-          AND state='EXECUTING' AND expires_at_utc>?""",
+          AND claimed_at_utc IS NOT NULL AND state='EXECUTING'""",
     (
         "2026-09-24T00:10:00.000Z",'{"ok":true}',"C-LATE","T1","D1",
-        "2026-09-24T00:10:00.000Z",
     ),
 )
-assert late_complete.rowcount == 0, "LATE_COMPLETION_ACCEPTED"
+assert late_complete.rowcount == 1, "CLAIMED_LATE_COMPLETION_LOST"
 db.execute(
     """UPDATE commander_device_calls
           SET state='EXPIRED',completed_at_utc=?,error_code='DEVICE_CALL_EXPIRED'
@@ -203,7 +202,7 @@ db.execute(
 )
 assert db.execute(
     "SELECT state,error_code FROM commander_device_calls WHERE call_id='C-LATE'"
-).fetchone() == ("EXPIRED","DEVICE_CALL_EXPIRED")
+).fetchone() == ("COMPLETED",None)
 
 # Prove every expiry path records the same canonical terminal cause.
 db.execute(
@@ -265,7 +264,9 @@ assert "resolveCustomerTargetDevice" in enqueue_block
 assert "requestedDeviceId" in enqueue_block
 assert "WHERE d.device_id = ?" in enqueue_block
 assert "d.revoked_at_utc IS NULL" in enqueue_block
-assert "AND expires_at_utc > ?" in complete_block
+assert "AND claimed_at_utc IS NOT NULL" in complete_block
+assert "state = 'EXECUTING'" in complete_block
+assert "state = 'EXPIRED' AND error_code = 'DEVICE_CALL_EXPIRED'" in complete_block
 assert 'throw new Error("DEVICE_CALL_EXPIRED")' in complete_block
 assert "const resultMatches = await deviceCallStoredContentMatches(" in complete_block
 assert "||" not in "DEVICE_CALL_REDACTION_SENTINEL"
@@ -291,7 +292,7 @@ print("COMMANDER_DEVICE_SELECTION_REVOKE_RACE=BLOCKED")
 print("COMMANDER_DEVICE_ENQUEUE_REVOKE_RACE=BLOCKED")
 print("COMMANDER_DEVICE_ENQUEUE_IDEMPOTENCY_RACE=BLOCKED")
 print("COMMANDER_DEVICE_ENQUEUE_PAYLOAD_IDEMPOTENCY=STRICT")
-print("COMMANDER_DEVICE_LATE_COMPLETION=EXPIRED")
+print("COMMANDER_DEVICE_CLAIMED_LATE_COMPLETION=ACCEPTED_ONCE")
 print("COMMANDER_DEVICE_EXPIRY_ERROR_CODE=CANONICAL")
 print("COMMANDER_DEVICE_ENQUEUE_EXPIRY_WRITE=ABSENT")
 print("COMMANDER_DEVICE_COMPLETION_IDEMPOTENCY=STRICT")

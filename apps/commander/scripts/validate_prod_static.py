@@ -320,9 +320,13 @@ need(
 )
 history_block = WORKER.split("async function productTransactionHistory",1)[1].split("async function dashboardForSubject",1)[0]
 need(
-    'COUNT(*) AS calls_total' in history_block
+    'commander_device_call_history_totals' in history_block
+    and 'commander_device_call_history_hourly' in history_block
+    and 'commander_device_usage_totals' in history_block
+    and 'commander_device_usage_daily' in history_block
     and 'AS calls_7d' in history_block
-    and 'WHERE tenant_id = ? AND subject_id = ?' in history_block
+    and history_block.count('WHERE tenant_id=? AND subject_id=?') >= 4
+    and 'INDEXED BY idx_device_calls_activity_subject_created' in history_block
     and 'detail_level: "AGGREGATE_ONLY"' in history_block
     and 'tool_id' not in history_block
     and 'payload_json' not in history_block

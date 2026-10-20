@@ -51,7 +51,9 @@ assert "max_bytes=4*1024*1024" in drain
 assert "deadline=time.monotonic()+0.25" in drain
 assert "except BlockingIOError:" in drain
 assert "errno.EIO" in drain
-assert '_append_process_output(session,data.decode(' in drain
+assert '_append_process_bytes(session,data)' in drain
+assert '_append_process_bytes(session,b"",final=True)' in update
+assert 'codecs.getincrementaldecoder("utf-8")' in agent
 assert 'session["truncated"]=True' in drain
 assert "_drain_completed_process_output(session)" in update
 assert update.index("_drain_completed_process_output(session)") < update.index('os.close(int(session["fd"]))')
