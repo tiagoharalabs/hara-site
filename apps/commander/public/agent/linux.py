@@ -2515,8 +2515,8 @@ def _function_spec(function_id):
         "filesystem.info":("FILESYSTEM","Consulta metadados de um caminho sem ler conteúdo. Symlink leaf é reportado sem ser silenciosamente resolvido.",{"argv":["path"],"symlink_semantics":"LSTAT_LEAF","result_hints":["type","is_symlink","symlink_target","resolved_path"]}),
         "filesystem.hash":("FILESYSTEM","Calcula SHA-256 e tamanho de um arquivo regular, informando quando um symlink read-only foi seguido.",{"argv":["path"],"max_bytes":134217728,"result_hints":["sha256","bytes","followed_symlink","resolved_path"]}),
         "filesystem.diff":("FILESYSTEM","Compara dois arquivos texto com diff unificado limitado.",{"argv":["left","right","max_lines? (1..400)"],"bounded":True}),
-        "filesystem.search":("FILESYSTEM","Busca nomes de arquivos ou texto com limites de tempo, tamanho e quantidade.",{"argv":["path","search_type(files|content)","pattern","max_results? (1..100)","include_hidden? (0|1)","ignore_case? (0|1)","file_glob?","offset? (0..10000)"],"continuation":{"input":"offset","output":"next_offset","flags":["has_more","scan_truncated"]}}),
-        "filesystem.list":("FILESYSTEM","Lista entradas e metadados de um diretório sem ler conteúdo de arquivos.",{"argv":["path","limit? (1..200)","depth? (1..5)","offset? (0..10000)"],"continuation":{"input":"offset","output":"next_offset","flag":"has_more"}}),
+        "filesystem.search":("FILESYSTEM","Busca nomes de arquivos ou texto com limites de tempo, tamanho e quantidade.",{"argv":["path","search_type(files|content)","pattern","max_results? (1..100)","include_hidden? (0|1)","ignore_case? (0|1)","file_glob?","offset? (0..10000)"],"continuation":{"input":"offset","output":"next_offset","flags":["has_more","scan_truncated","scan_incomplete","continuation_safe"],"incomplete_reason":"incomplete_reason"}}),
+        "filesystem.list":("FILESYSTEM","Lista entradas e metadados de um diretório sem ler conteúdo de arquivos.",{"argv":["path","limit? (1..200)","depth? (1..5)","offset? (0..10000)"],"continuation":{"input":"offset","output":"next_offset","flags":["has_more","scan_incomplete","continuation_safe"],"incomplete_reason":"incomplete_reason"}}),
         "filesystem.read":("FILESYSTEM","Lê um intervalo limitado de linhas de um arquivo texto acessível ao usuário local.",{"argv":["path","offset? (0..1000000)","length? (1..400)"],"continuation":{"input":"offset","output":"next_offset","revision_hint":"file_revision_hint","flags":["has_more","eof","content_truncated","continuation_safe","file_changed_during_read"]}}),
         "filesystem.read_many":("FILESYSTEM","Lê o mesmo intervalo de até dez arquivos texto sem abortar o lote por falha individual.",{"argv":["offset (0..1000000)","length (1..100)","path1..path10"],"partial_failure":True,"continuation_per_file":True,"summary_fields":["successful_count","failed_count","deferred_count","overall_status"]}),
     }
@@ -2736,7 +2736,13 @@ def filesystem_search(path_value,search_type,pattern,max_results=50,include_hidd
     max_results=max(1,min(100,int(max_results))); offset=max(0,min(10000,int(offset)))
     deadline=time.monotonic()+3.0; scan_cap=5000
     scanned=0; matches=[]; matched_seen=0; scan_truncated=False; has_more=False; stop=False
+    limit_reason=None; permission_denied_count=0; io_error_count=0
+    skipped_large_files_count=0; skipped_binary_files_count=0
     needle=pattern.lower() if ignore_case else pattern
+    def record_error(exc):
+        nonlocal permission_denied_count,io_error_count
+        if isinstance(exc,PermissionError): permission_denied_count+=1
+        else: io_error_count+=1
     def accept(match):
         nonlocal matched_seen,has_more
         index=matched_seen; matched_seen+=1
@@ -2744,15 +2750,19 @@ def filesystem_search(path_value,search_type,pattern,max_results=50,include_hidd
         if len(matches) < max_results:
             matches.append(match); return False
         has_more=True; return True
-    for current,dirs,files in os.walk(root):
-        if time.monotonic()>deadline or scanned>=scan_cap:
+    for current,dirs,files in os.walk(root,onerror=record_error):
+        now=time.monotonic()
+        if now>deadline or scanned>=scan_cap:
+            limit_reason="TIME_LIMIT" if now>deadline else "SCAN_LIMIT"
             scan_truncated=True; break
         dirs.sort(key=str.lower); files=sorted(files,key=str.lower)
         if not include_hidden:
             dirs[:]=[d for d in dirs if not d.startswith(".")]
             files=[f for f in files if not f.startswith(".")]
         for name in files:
-            if time.monotonic()>deadline or scanned>=scan_cap:
+            now=time.monotonic()
+            if now>deadline or scanned>=scan_cap:
+                limit_reason="TIME_LIMIT" if now>deadline else "SCAN_LIMIT"
                 scan_truncated=True; stop=True; break
             scanned+=1
             if file_glob and not fnmatch.fnmatch(name,file_glob): continue
@@ -2763,36 +2773,53 @@ def filesystem_search(path_value,search_type,pattern,max_results=50,include_hidd
             else:
                 try:
                     st=path.stat()
-                    if st.st_size>2*1024*1024: continue
+                    if st.st_size>2*1024*1024:
+                        skipped_large_files_count+=1; continue
                     with path.open("rb") as fh:
-                        if b"\x00" in fh.read(4096): continue
+                        if b"\x00" in fh.read(4096):
+                            skipped_binary_files_count+=1; continue
                     with path.open("r",encoding="utf-8",errors="replace") as fh:
                         for line_no,line in enumerate(fh,1):
                             hay=line.lower() if ignore_case else line
                             if needle in hay:
                                 if accept({"path":rel,"line":line_no,"text":line.rstrip("\n")[:300]}): stop=True; break
                     if stop: break
-                except (FileNotFoundError,PermissionError,OSError):
+                except OSError as exc:
+                    record_error(exc)
                     continue
         if stop: break
-    next_offset=offset+len(matches) if (has_more or scan_truncated) else None
+    incomplete_reason=limit_reason or ("PERMISSION_DENIED" if permission_denied_count else
+        "IO_ERROR" if io_error_count else
+        "CONTENT_EXCLUDED" if skipped_large_files_count or skipped_binary_files_count else None)
+    scan_incomplete=incomplete_reason is not None
+    continuation_safe=not scan_incomplete
+    next_offset=offset+len(matches) if has_more and continuation_safe else None
     return {
         "path":str(root),"search_type":search_type,"pattern":pattern,"offset":offset,
         "count":len(matches),"matches":matches,"matched_seen":matched_seen,"scanned_files":scanned,
         "has_more":has_more,"next_offset":next_offset,"scan_truncated":scan_truncated,
-        "truncated":has_more or scan_truncated,
+        "scan_incomplete":scan_incomplete,"incomplete_reason":incomplete_reason,
+        "permission_denied_count":permission_denied_count,"io_error_count":io_error_count,
+        "skipped_large_files_count":skipped_large_files_count,
+        "skipped_binary_files_count":skipped_binary_files_count,
+        "continuation_safe":continuation_safe,"truncated":has_more or scan_incomplete,
     }
 
 def filesystem_list(path_value,limit=100,depth=1,offset=0):
     root=Path(_checked_path_text(path_value)).expanduser().resolve(strict=True)
     if not root.is_dir(): raise ValueError("PATH_NOT_DIRECTORY")
     limit=max(1,min(200,int(limit))); depth=max(1,min(5,int(depth))); offset=max(0,min(10000,int(offset)))
-    entries=[]; seen=0; has_more=False
+    entries=[]; seen=0; has_more=False; permission_denied_count=0; io_error_count=0
+    def record_error(exc):
+        nonlocal permission_denied_count,io_error_count
+        if isinstance(exc,PermissionError): permission_denied_count+=1
+        else: io_error_count+=1
     def walk(current,level):
         nonlocal seen,has_more
         if has_more or level>depth: return
         try: children=sorted(current.iterdir(),key=lambda e:e.name.lower())
-        except PermissionError: return
+        except OSError as exc:
+            record_error(exc); return
         for entry in children:
             if has_more: return
             try:
@@ -2803,13 +2830,19 @@ def filesystem_list(path_value,limit=100,depth=1,offset=0):
                     if len(entries)<limit: entries.append(item)
                     else: has_more=True; return
                 if kind=="directory" and level<depth: walk(entry,level+1)
-            except (FileNotFoundError,PermissionError,OSError):
+            except OSError as exc:
+                record_error(exc)
                 continue
     walk(root,1)
+    incomplete_reason="PERMISSION_DENIED" if permission_denied_count else "IO_ERROR" if io_error_count else None
+    scan_incomplete=incomplete_reason is not None
+    continuation_safe=not scan_incomplete
     return {
         "path":str(root),"offset":offset,"count":len(entries),"entries":entries,"depth":depth,
-        "has_more":has_more,"next_offset":offset+len(entries) if has_more else None,
-        "truncated":has_more,"visited_entries":seen,
+        "has_more":has_more,"next_offset":offset+len(entries) if has_more and continuation_safe else None,
+        "scan_incomplete":scan_incomplete,"incomplete_reason":incomplete_reason,
+        "permission_denied_count":permission_denied_count,"io_error_count":io_error_count,
+        "continuation_safe":continuation_safe,"truncated":has_more or scan_incomplete,"visited_entries":seen,
     }
 
 def _file_revision_hint(st):

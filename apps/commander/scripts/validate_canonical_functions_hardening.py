@@ -6,6 +6,7 @@ import json
 import os
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT=Path(__file__).resolve().parents[3]
 AGENT=ROOT/"apps/commander/public/agent/linux.py"
@@ -179,6 +180,13 @@ with tempfile.TemporaryDirectory(prefix="hara-canonical-functions-") as td:
     names=[x["name"] for x in page1["entries"]+page2["entries"]+page3["entries"]]
     need(names==["a.txt","b.txt","c.txt","d.txt","e.txt"],"LIST_PAGINATION_DETERMINISTIC")
     need(page1["has_more"] and page2["has_more"] and not page3["has_more"],"LIST_PAGINATION_FLAGS")
+    list_call={"call_id":"list-fixture","request_id":"list-fixture","tool_id":"hara.files.list",
+               "payload":{"path":str(listroot),"depth":1,"limit":10},"_transport":"LOCAL_MCP"}
+    list_result=ns["execute_tool"](config,list_call)
+    list_data=json.loads(list_result["result"]["stdout"])
+    need(list_result["state"]=="PASS" and list_data["count"]==5 and
+         list_data["scan_incomplete"] is False and list_data["continuation_safe"] is True,
+         "LIST_DEVICE_TOOL_RESULT_COMPLETE")
 
     # Search pagination is deterministic.
     search1=ns["filesystem_search"](str(listroot),"files",".txt",2,False,True,"",0)
@@ -187,6 +195,65 @@ with tempfile.TemporaryDirectory(prefix="hara-canonical-functions-") as td:
     found=[x["path"] for x in search1["matches"]+search2["matches"]+search3["matches"]]
     need(found==["a.txt","b.txt","c.txt","d.txt","e.txt"],"SEARCH_PAGINATION_DETERMINISTIC")
     need(search1["has_more"] and search2["has_more"] and not search3["has_more"],"SEARCH_PAGINATION_FLAGS")
+    no_match=ns["filesystem_search"](str(listroot),"files","needle",10,False,True,"",0)
+    need(no_match["count"]==0 and no_match["scan_incomplete"] is False and
+         no_match["continuation_safe"] is True and no_match["next_offset"] is None,
+         "SEARCH_COMPLETE_NO_MATCH_DISTINCT")
+    search_call={"call_id":"search-fixture","request_id":"search-fixture","tool_id":"hara.files.search",
+                 "payload":{"path":str(listroot),"search_type":"files","pattern":"a.txt","max_results":10},
+                 "_transport":"LOCAL_MCP"}
+    search_result=ns["execute_tool"](config,search_call)
+    search_data=json.loads(search_result["result"]["stdout"])
+    need(search_result["state"]=="PASS" and search_data["count"]==1 and
+         search_data["scan_incomplete"] is False and search_data["continuation_safe"] is True,
+         "SEARCH_DEVICE_TOOL_RESULT_COMPLETE")
+
+    # An incomplete scan must not look like an exhaustive no-match result or
+    # hand back an offset that repeats the same capped prefix forever.
+    synthetic_files=[f"unrelated-{index:05d}.txt" for index in range(5001)]
+    with patch.object(ns["os"],"walk",return_value=iter([(str(listroot),[],synthetic_files)])):
+        capped=ns["filesystem_search"](str(listroot),"files","needle",10,False,True,"",0)
+    need(capped["scan_truncated"] and capped["scanned_files"]==5000 and
+         capped["scan_incomplete"] and capped["incomplete_reason"]=="SCAN_LIMIT" and
+         capped["continuation_safe"] is False and capped["next_offset"] is None,
+         "SEARCH_SCAN_CAP_NO_LOOPING_OFFSET")
+
+    with patch.object(ns["time"],"monotonic",side_effect=[0.0,4.0]):
+        timed=ns["filesystem_search"](str(listroot),"files","needle",10,False,True,"",0)
+    need(timed["scan_incomplete"] and timed["incomplete_reason"]=="TIME_LIMIT" and
+         timed["continuation_safe"] is False and timed["next_offset"] is None,
+         "SEARCH_TIME_LIMIT_NOT_NO_MATCH")
+
+    def denied_walk(_root,**kwargs):
+        onerror=kwargs.get("onerror")
+        if onerror: onerror(PermissionError("fixture denied"))
+        return iter(())
+    with patch.object(ns["os"],"walk",side_effect=denied_walk):
+        denied_search=ns["filesystem_search"](str(listroot),"files","needle",10,False,True,"",0)
+    need(denied_search["scan_incomplete"] and denied_search["incomplete_reason"]=="PERMISSION_DENIED" and
+         denied_search["permission_denied_count"]==1 and denied_search["next_offset"] is None,
+         "SEARCH_PERMISSION_NOT_EMPTY_SUCCESS")
+
+    contentroot=root/"search-content"; contentroot.mkdir()
+    with (contentroot/"too-large.txt").open("wb") as handle:
+        handle.truncate(2*1024*1024+1)
+    (contentroot/"binary.txt").write_bytes(b"\x00needle\n")
+    excluded=ns["filesystem_search"](str(contentroot),"content","needle",10,False,True,"",0)
+    need(excluded["count"]==0 and excluded["scan_incomplete"] and
+         excluded["incomplete_reason"]=="CONTENT_EXCLUDED" and
+         excluded["skipped_large_files_count"]==1 and excluded["skipped_binary_files_count"]==1 and
+         excluded["continuation_safe"] is False,
+         "SEARCH_EXCLUDED_CONTENT_NOT_NO_MATCH")
+
+    original_iterdir=Path.iterdir
+    def denied_iterdir(path):
+        if path==listroot: raise PermissionError("fixture denied")
+        return original_iterdir(path)
+    with patch.object(Path,"iterdir",denied_iterdir):
+        denied_list=ns["filesystem_list"](str(listroot),2,1,0)
+    need(denied_list["scan_incomplete"] and denied_list["permission_denied_count"]==1 and
+         denied_list["continuation_safe"] is False and denied_list["next_offset"] is None,
+         "LIST_PERMISSION_NOT_EMPTY_SUCCESS")
 
     # Process list tells the caller whether it was truncated.
     plist=ns["process_list"](1)
