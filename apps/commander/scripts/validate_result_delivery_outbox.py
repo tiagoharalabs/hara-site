@@ -3,10 +3,14 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import importlib.util
+import io
+import json
 import os
 import sys
 import tempfile
+import urllib.error
 from pathlib import Path
 
 parser = argparse.ArgumentParser()
@@ -67,6 +71,9 @@ with tempfile.TemporaryDirectory(prefix="hara-result-outbox-") as temporary:
             return original_execute(*args)
         agent.execute_tool = observed_execute
         agent.complete = lost_ack
+        assert agent.flush_completion_outbox(config) == 0 and len(sent) == 1
+        with agent._ops_connect() as conn:
+            conn.execute("UPDATE completion_outbox SET retry_after_epoch=0 WHERE call_id=?",(call["call_id"],))
         assert agent.flush_completion_outbox(config) == 1
         assert executed == [], "REDELIVERY_REEXECUTED_MUTATION"
         assert len(sent) == 2 and sent[1] == sent[0]
@@ -104,8 +111,14 @@ with tempfile.TemporaryDirectory(prefix="hara-result-outbox-") as temporary:
         agent.execute_call(config, dict(repeated))
         assert agent.completion_outbox_pending() == 1
         assert agent.flush_completion_outbox(config) == 0
+        assert len(sends) == 1
+        with agent._ops_connect() as conn:
+            conn.execute("UPDATE completion_outbox SET retry_after_epoch=0 WHERE call_id=?",(repeated["call_id"],))
+        assert agent.flush_completion_outbox(config) == 0
         assert len(sends) == 2 and sends[0] == sends[1]
         agent.complete = lambda _cfg, _call, state, result, error_code=None: sends.append((state, result, error_code)) or {"ok": True}
+        with agent._ops_connect() as conn:
+            conn.execute("UPDATE completion_outbox SET retry_after_epoch=0 WHERE call_id=?",(repeated["call_id"],))
         assert agent.flush_completion_outbox(config) == 1
         assert len(sends) == 3 and sends[0] == sends[2]
         assert target.read_text() == "REPEATED_LOSS_ONE_WRITE"
@@ -132,6 +145,77 @@ with tempfile.TemporaryDirectory(prefix="hara-result-outbox-") as temporary:
         assert len(recovered) == 1 and recovered[0][1]["state"] == "UNKNOWN"
         assert recovered[0][1]["mutation_performed"] is None
         print("COMMANDER_COMPLETION_DISK_FAULT_FAILS_UNCERTAIN_NO_REPLAY=PASS")
+
+        terminal_target = Path(temporary) / "terminal-conflict.txt"
+        terminal_call = {**call,"call_id":"CALL-TERMINAL-CONFLICT","request_id":"REQUEST-TERMINAL-CONFLICT",
+                         "payload":{**call["payload"],"path":str(terminal_target)}}
+        agent = load("hara_result_outbox_terminal")
+        terminal_sends = []
+        def terminal_conflict(*args):
+            terminal_sends.append(args)
+            raise urllib.error.HTTPError("https://fixture.invalid",409,"Conflict",None,None)
+        agent.complete = terminal_conflict
+        agent.execute_call(config,dict(terminal_call))
+        assert terminal_target.read_text() == "ONE_LOCAL_MUTATION"
+        assert agent.completion_outbox_pending() == 1
+        assert agent.completion_outbox_health()["quarantined"] == 1
+        assert agent.flush_completion_outbox(config) == 0
+        assert len(terminal_sends) == 1, "terminal conflict retried automatically"
+        preserved=agent._completion_outbox_fetch(terminal_call["call_id"])["body_json"]
+        status_output=io.StringIO()
+        with contextlib.redirect_stdout(status_output):
+            agent.completion_outbox_cli_status()
+        status=json.loads(status_output.getvalue())
+        assert status["quarantined"] == 1
+        assert status["entries"][0]["last_error_code"] == "HTTP_409"
+        assert "body_json" not in status_output.getvalue()
+        assert "ONE_LOCAL_MUTATION" not in status_output.getvalue()
+
+        class HealthyResponse:
+            status=200
+            def __enter__(self): return self
+            def __exit__(self,*_): return False
+            def read(self): return b'{"ok":true,"service":"hara-commander"}'
+        agent.load_config=lambda: config
+        agent.transport_mode=lambda _config=None: "OUTBOUND_RELAY"
+        agent.operator_session_active=lambda: True
+        agent.NO_REDIRECT_OPENER=type("OfflineOpener",(),{"open":lambda *_args,**_kwargs:HealthyResponse()})()
+        doctor_output=io.StringIO()
+        with contextlib.redirect_stdout(doctor_output):
+            assert agent.commander_doctor() == 2
+        assert "HARA_COMMANDER_OUTBOX_QUARANTINED=1" in doctor_output.getvalue()
+        assert "HARA_COMMANDER_DOCTOR=DEGRADED" in doctor_output.getvalue()
+        assert agent.completion_outbox_retry(terminal_call["call_id"]) is True
+        assert agent._completion_outbox_fetch(terminal_call["call_id"])["body_json"] == preserved
+        agent.complete = lambda *_: {"ok":True,"existing":True}
+        assert agent.flush_completion_outbox(config) == 1
+        assert agent.completion_outbox_pending() == 0
+        assert terminal_target.read_text() == "ONE_LOCAL_MUTATION"
+        doctor_output=io.StringIO()
+        with contextlib.redirect_stdout(doctor_output):
+            assert agent.commander_doctor() == 0
+        assert "HARA_COMMANDER_OUTBOX_QUARANTINED=0" in doctor_output.getvalue()
+        print("COMMANDER_COMPLETION_TERMINAL_CONFLICT_QUARANTINE_AND_EXPLICIT_RETRY=PASS")
+
+        transient_target = Path(temporary) / "transient-loss.txt"
+        transient_call = {**call,"call_id":"CALL-TRANSIENT-LOSS","request_id":"REQUEST-TRANSIENT-LOSS",
+                          "payload":{**call["payload"],"path":str(transient_target)}}
+        agent = load("hara_result_outbox_transient")
+        transient_sends = []
+        def transient_failure(*args):
+            transient_sends.append(args)
+            raise ConnectionResetError("TRANSIENT_SEND_LOSS")
+        agent.complete = transient_failure
+        agent.execute_call(config,dict(transient_call))
+        row=agent._completion_outbox_fetch(transient_call["call_id"])
+        assert row["retry_after_epoch"] > int(agent.time.time())
+        assert agent.flush_completion_outbox(config) == 0 and len(transient_sends) == 1
+        with agent._ops_connect() as conn:
+            conn.execute("UPDATE completion_outbox SET retry_after_epoch=0 WHERE call_id=?",(transient_call["call_id"],))
+        agent.complete=lambda *_: {"ok":True,"existing":True}
+        assert agent.flush_completion_outbox(config) == 1
+        assert transient_target.read_text() == "ONE_LOCAL_MUTATION"
+        print("COMMANDER_COMPLETION_TRANSIENT_FAILURE_BACKOFF_SAME_BODY=PASS")
     finally:
         for key, value in prior.items():
             if value is None:

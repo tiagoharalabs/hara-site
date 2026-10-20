@@ -86,6 +86,8 @@ def drain_durable_calls(agent, config, max_calls: int = MAX_DRAIN_CALLS, *, tele
         raise RuntimeError("EVENT_V2_DRAIN_BOUND_INVALID")
     if hasattr(agent,"flush_completion_outbox") and hasattr(agent,"completion_outbox_pending"):
         agent.flush_completion_outbox(config)
+        if hasattr(agent,"completion_outbox_health") and agent.completion_outbox_health().get("quarantined"):
+            raise RuntimeError("EVENT_V2_RESULT_QUARANTINED")
         if agent.completion_outbox_pending():
             raise RuntimeError("EVENT_V2_RESULT_DELIVERY_PENDING")
     drained = 0
@@ -101,6 +103,8 @@ def drain_durable_calls(agent, config, max_calls: int = MAX_DRAIN_CALLS, *, tele
         agent.execute_call(config, call)
         drained += 1
         if hasattr(agent,"completion_outbox_pending") and agent.completion_outbox_pending():
+            if hasattr(agent,"completion_outbox_health") and agent.completion_outbox_health().get("quarantined"):
+                raise RuntimeError("EVENT_V2_RESULT_QUARANTINED")
             raise RuntimeError("EVENT_V2_RESULT_DELIVERY_PENDING")
     return drained
 

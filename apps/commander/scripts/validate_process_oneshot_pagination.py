@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
+import json
 import os
 import shlex
 import sys
@@ -58,6 +59,20 @@ with tempfile.TemporaryDirectory(prefix="hara-oneshot-pagination-") as temporary
         assert small["session_retained"] is False
         assert small["run_id"] not in agent.PROCESS_SESSIONS
         print("COMMANDER_ONESHOT_SMALL_RESULT_NOT_RETAINED=PASS")
+
+        big = agent.process_run(command("[print(f'PAGE-{i:02d}-'+'X'*5000) for i in range(20)]"),
+                                temporary, 3000, 20)
+        assert big["session_retained"] is True
+        assert big["next_offset"] < big["total_lines"]
+        assert len(json.dumps(big,ensure_ascii=False).encode("utf-8")) < 128 * 1024
+        seen = big["text"].splitlines()
+        offset = big["next_offset"]
+        while offset < big["total_lines"]:
+            page = agent._process_output_payload(agent._process_get(big["run_id"]), offset, 20, 0)
+            seen.extend(page["text"].splitlines())
+            offset = page["next_offset"]
+        assert len(seen) == 20 and seen[0].startswith("PAGE-00-") and seen[-1].startswith("PAGE-19-")
+        print("COMMANDER_ONESHOT_LONG_OUTPUT_BYTE_PAGES=PASS")
 
         agent.PROCESS_SESSIONS[run_id]["finished_monotonic"] = (
             time.monotonic() - agent.PROCESS_FINISHED_RETENTION_SECONDS - 1

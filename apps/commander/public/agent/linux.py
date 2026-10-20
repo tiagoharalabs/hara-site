@@ -123,6 +123,7 @@ PROCESS_RESULT_TOMBSTONES = {}
 MAX_PROCESS_LINES = 5000
 MAX_PROCESS_LINE_CHARS = 8192
 MAX_PROCESS_BUFFER_CHARS = 2 * 1024 * 1024
+MAX_PROCESS_PAGE_JSON_BYTES = 60 * 1024
 MAX_PROCESS_ACTIVE_SESSIONS = 16
 MAX_PROCESS_RETAINED_SESSIONS = 48
 PROCESS_FINISHED_RETENTION_SECONDS = 60 * 60
@@ -330,6 +331,15 @@ def _ops_connect():
     if "lease_token" not in lease_columns:
         conn.execute("ALTER TABLE product_lease ADD COLUMN lease_token TEXT")
         conn.commit()
+    outbox_columns={row["name"] for row in conn.execute("PRAGMA table_info(completion_outbox)")}
+    for name,definition in (("quarantined_epoch","INTEGER"),("retry_after_epoch","INTEGER NOT NULL DEFAULT 0"),
+                            ("attempt_count","INTEGER NOT NULL DEFAULT 0"),("last_error_code","TEXT")):
+        if name not in outbox_columns:
+            try:
+                conn.execute(f"ALTER TABLE completion_outbox ADD COLUMN {name} {definition}")
+            except sqlite3.OperationalError as exc:
+                if "duplicate column" not in str(exc).lower(): raise
+    conn.commit()
     try:
         os.chmod(OPERATIONS_DB_FILE,0o600)
         for suffix in ("-wal","-shm"):
@@ -1893,7 +1903,13 @@ def _process_output_payload(session,offset=None,length=200,wait_ms=0):
         start=int(session.get("cursor",base)) if offset is None else int(offset)
         truncated_before=start<base
         if start<base: start=base
-        rel=max(0,start-base); selected=lines[rel:rel+max(1,min(500,int(length)))]
+        rel=max(0,start-base)
+        selected=[]; page_bytes=0
+        for line in lines[rel:rel+max(1,min(500,int(length)))]:
+            encoded=len(json.dumps(line,ensure_ascii=False).encode("utf-8"))-2
+            added=encoded+(2 if selected else 0)
+            if selected and page_bytes+added>MAX_PROCESS_PAGE_JSON_BYTES: break
+            selected.append(line); page_bytes+=added
         next_offset=start+len(selected)
         if offset is None: session["cursor"]=next_offset
         state="EXITED" if session.get("exit_code") is not None else "RUNNING"
@@ -3149,9 +3165,75 @@ def _completion_outbox_fetch(call_id):
     finally:
         conn.close()
 
+def _completion_outbox_delivery_failure(call_id,exc):
+    code=safe_error_code(exc)
+    terminal=isinstance(exc,urllib.error.HTTPError) and int(exc.code) in {400,401,403,404,409,410,422}
+    now=int(time.time())
+    conn=_ops_connect()
+    try:
+        conn.execute("PRAGMA synchronous=FULL")
+        conn.execute("BEGIN IMMEDIATE")
+        row=conn.execute("SELECT attempt_count FROM completion_outbox WHERE call_id=? AND status='READY'",(str(call_id),)).fetchone()
+        if row:
+            attempts=int(row["attempt_count"] or 0)+1
+            delay=0 if terminal else min(300,2**min(attempts,8))
+            conn.execute("""UPDATE completion_outbox SET attempt_count=?,last_error_code=?,
+                quarantined_epoch=?,retry_after_epoch=?,updated_epoch=?
+                WHERE call_id=? AND status='READY'""",
+                (attempts,code,now if terminal else None,now+delay,now,str(call_id)))
+        conn.commit()
+    finally:
+        conn.close()
+    return terminal,code
+
+def completion_outbox_health():
+    conn=_ops_connect()
+    try:
+        row=conn.execute("""SELECT COUNT(*) AS pending,
+            SUM(CASE WHEN quarantined_epoch IS NOT NULL THEN 1 ELSE 0 END) AS quarantined,
+            SUM(CASE WHEN quarantined_epoch IS NULL AND retry_after_epoch>? THEN 1 ELSE 0 END) AS retrying,
+            MIN(CASE WHEN quarantined_epoch IS NULL AND retry_after_epoch>? THEN retry_after_epoch END) AS next_retry_epoch
+            FROM completion_outbox WHERE status IN ('INTENT','READY')""",
+            (int(time.time()),int(time.time()))).fetchone()
+        return {"pending":int(row["pending"] or 0),"quarantined":int(row["quarantined"] or 0),
+                "retrying":int(row["retrying"] or 0),"next_retry_epoch":row["next_retry_epoch"]}
+    finally:
+        conn.close()
+
+def completion_outbox_retry(call_id):
+    """Explicit local operator retry of the exact stored result, never execution."""
+    conn=_ops_connect()
+    try:
+        conn.execute("PRAGMA synchronous=FULL")
+        conn.execute("BEGIN IMMEDIATE")
+        row=conn.execute("SELECT status,body_json FROM completion_outbox WHERE call_id=?",(str(call_id),)).fetchone()
+        if not row or row["status"]!="READY" or not row["body_json"]:
+            raise ValueError("LOCAL_COMPLETION_RETRY_NOT_FOUND")
+        conn.execute("""UPDATE completion_outbox SET quarantined_epoch=NULL,retry_after_epoch=0,
+            last_error_code=NULL,updated_epoch=? WHERE call_id=? AND status='READY'""",
+            (int(time.time()),str(call_id)))
+        conn.commit()
+        return True
+    finally:
+        conn.close()
+
+def completion_outbox_cli_status():
+    health=completion_outbox_health()
+    conn=_ops_connect()
+    try:
+        rows=conn.execute("""SELECT call_id,tool_id,status,created_epoch,attempt_count,
+            last_error_code,quarantined_epoch,retry_after_epoch FROM completion_outbox
+            WHERE status IN ('INTENT','READY') ORDER BY created_epoch,call_id LIMIT 20""").fetchall()
+        print(json.dumps({"schema":"hara.commander-completion-outbox-status.v1",**health,
+            "entries":[dict(row) for row in rows],"customer_payload_included":False},sort_keys=True))
+    finally:
+        conn.close()
+
 def _completion_outbox_replay(config,row):
     call={"call_id":row["call_id"]}
     if row["status"]=="ACKED": return True
+    if row.get("quarantined_epoch") is not None: raise ValueError("LOCAL_COMPLETION_QUARANTINED")
+    if int(row.get("retry_after_epoch") or 0)>int(time.time()): return False
     if row["status"]=="INTENT":
         # A previous process stopped between intent and durable result.
         # Execution may have occurred; never run it again or claim no mutation.
@@ -3163,9 +3245,15 @@ def _completion_outbox_replay(config,row):
         _completion_outbox_ready(call,body)
     else:
         body=json.loads(row["body_json"])
-    response=complete(config,call,body["state"],body["result"],body.get("error_code"))
-    if not isinstance(response,dict) or response.get("ok") is not True:
-        raise RuntimeError("DEVICE_COMPLETION_ACK_INVALID")
+    try:
+        response=complete(config,call,body["state"],body["result"],body.get("error_code"))
+        if not isinstance(response,dict) or response.get("ok") is not True:
+            raise RuntimeError("DEVICE_COMPLETION_ACK_INVALID")
+    except Exception as exc:
+        terminal,code=_completion_outbox_delivery_failure(row["call_id"],exc)
+        if terminal:
+            append_console_event("RESULT_DELIVERY_QUARANTINED",state="QUARANTINED",error_code=code)
+        raise
     _completion_outbox_ack(row["call_id"])
     return True
 
@@ -3173,15 +3261,14 @@ def flush_completion_outbox(config,limit=8):
     conn=_ops_connect()
     try:
         rows=[dict(row) for row in conn.execute(
-            "SELECT * FROM completion_outbox WHERE status IN ('INTENT','READY') ORDER BY created_epoch,call_id LIMIT ?",
-            (max(1,min(8,int(limit))),)).fetchall()]
+            "SELECT * FROM completion_outbox WHERE status IN ('INTENT','READY') AND quarantined_epoch IS NULL AND retry_after_epoch<=? ORDER BY created_epoch,call_id LIMIT ?",
+            (int(time.time()),max(1,min(8,int(limit))),)).fetchall()]
     finally:
         conn.close()
     delivered=0
     for row in rows:
         try:
-            _completion_outbox_replay(config,row)
-            delivered+=1
+            if _completion_outbox_replay(config,row): delivered+=1
         except Exception as exc:
             append_console_event("RESULT_DELIVERY_DEGRADED",state="PENDING",error_code=safe_error_code(exc))
             break
@@ -3814,6 +3901,18 @@ def commander_doctor():
     except Exception:
         cloud_health=False
 
+    try:
+        outbox=completion_outbox_health()
+    except Exception:
+        outbox={"pending":-1,"quarantined":-1,"retrying":-1,"next_retry_epoch":None}
+    outbox_ok=outbox["quarantined"]==0 and outbox["pending"]>=0
+
+    def print_outbox_health():
+        print("HARA_COMMANDER_OUTBOX_PENDING="+str(outbox["pending"]))
+        print("HARA_COMMANDER_OUTBOX_QUARANTINED="+str(outbox["quarantined"]))
+        print("HARA_COMMANDER_OUTBOX_RETRYING="+str(outbox["retrying"]))
+        print("HARA_COMMANDER_OUTBOX_NEXT_RETRY_EPOCH="+str(outbox["next_retry_epoch"] or ""))
+
     if transport=="LOCAL_TUNNEL":
         lease_ok=False
         lease_until=""
@@ -3826,7 +3925,7 @@ def commander_doctor():
             lease_ok=False
         tunnel_rc,_=_openai_tunnel_doctor(capture=True)
         tunnel_ok=tunnel_rc==0
-        overall=lease_ok and tunnel_ok
+        overall=lease_ok and tunnel_ok and outbox_ok
         print("HARA_COMMANDER_DOCTOR="+("PASS" if overall else "DEGRADED"))
         print("HARA_COMMANDER_AGENT_VERSION="+AGENT_VERSION)
         print("HARA_COMMANDER_TRANSPORT_MODE=LOCAL_TUNNEL")
@@ -3835,18 +3934,21 @@ def commander_doctor():
         print("HARA_COMMANDER_OPENAI_TUNNEL="+("PASS" if tunnel_ok else "FAIL"))
         print("HARA_COMMANDER_CONTROL_PLANE_HEALTH="+("PASS" if cloud_health else "DEGRADED_OPTIONAL"))
         print("HARA_COMMANDER_TOOL_DATA_PLANE=LOCAL_DIRECT")
+        print_outbox_health()
         print("SECRET_MATERIAL_EXPOSED=FALSE")
         return 0 if overall else 2
 
-    print("HARA_COMMANDER_DOCTOR="+("PASS" if cloud_health else "DEGRADED"))
+    overall=cloud_health and outbox_ok
+    print("HARA_COMMANDER_DOCTOR="+("PASS" if overall else "DEGRADED"))
     print("HARA_COMMANDER_AGENT_VERSION="+AGENT_VERSION)
     print("HARA_COMMANDER_APPROVAL_MODE="+mode)
     print("HARA_COMMANDER_BACKGROUND_AUTHORIZED="+("TRUE" if mode=="PERSISTENT_TRUSTED" else "FALSE"))
     print("HARA_COMMANDER_SESSION="+("ACTIVE" if operator_session_active() else "INACTIVE"))
     print("HARA_COMMANDER_REMOTE_HEALTH="+("PASS" if cloud_health else "FAIL"))
     print("HARA_COMMANDER_LAST_HEARTBEAT_UTC="+str(runtime.get("last_successful_heartbeat_at_utc") or ""))
+    print_outbox_health()
     print("SECRET_MATERIAL_EXPOSED=FALSE")
-    return 0 if cloud_health else 2
+    return 0 if overall else 2
 
 def build_support_report():
     config=load_config()
@@ -4242,6 +4344,11 @@ def main():
         run_local_mcp_stdio(); return
     if len(sys.argv)>1 and sys.argv[1]=="doctor":
         raise SystemExit(commander_doctor())
+    if len(sys.argv)==3 and sys.argv[1:3]==["outbox","status"]:
+        completion_outbox_cli_status(); return
+    if len(sys.argv)==4 and sys.argv[1:3]==["outbox","retry"]:
+        completion_outbox_retry(sys.argv[3])
+        print("HARA_COMMANDER_OUTBOX_SAME_RESULT_RETRY_QUEUED=TRUE"); return
     if len(sys.argv)>1 and sys.argv[1]=="support":
         raise SystemExit(commander_support())
     if len(sys.argv)>1 and sys.argv[1]=="authorize":
@@ -4279,11 +4386,11 @@ def main():
         _manual_agent_systemctl("stop")
         return
     if len(sys.argv) > 1 and sys.argv[1] in {"help", "--help", "-h"}:
-        print("Usage: hara-commander [start|status|stop|mcp|authorize|tunnel connect|tunnel configure|tunnel start|tunnel stop|tunnel status|tunnel autostart [on|off]|doctor|support|transport-mode [local-tunnel|relay]|approval-mode [ask|session|always]|help]")
+        print("Usage: hara-commander [start|status|stop|mcp|authorize|outbox status|outbox retry CALL_ID|tunnel connect|tunnel configure|tunnel start|tunnel stop|tunnel status|tunnel autostart [on|off]|doctor|support|transport-mode [local-tunnel|relay]|approval-mode [ask|session|always]|help]")
         return
     if len(sys.argv) > 1:
         print("HARA_COMMANDER_UNKNOWN_COMMAND=" + str(sys.argv[1]), file=sys.stderr)
-        print("Usage: hara-commander [start|status|stop|mcp|authorize|tunnel connect|tunnel configure|tunnel start|tunnel stop|tunnel status|tunnel autostart [on|off]|doctor|support|transport-mode [local-tunnel|relay]|approval-mode [ask|session|always]|help]", file=sys.stderr)
+        print("Usage: hara-commander [start|status|stop|mcp|authorize|outbox status|outbox retry CALL_ID|tunnel connect|tunnel configure|tunnel start|tunnel stop|tunnel status|tunnel autostart [on|off]|doctor|support|transport-mode [local-tunnel|relay]|approval-mode [ask|session|always]|help]", file=sys.stderr)
         raise SystemExit(64)
     config=load_config()
     RECEIPT_DIR.mkdir(parents=True,exist_ok=True,mode=0o700)
@@ -4348,7 +4455,10 @@ def main():
                         error_code=safe_error_code(exc),
                     )
             flush_completion_outbox(config)
-            if completion_outbox_pending():
+            outbox=completion_outbox_health()
+            if outbox["quarantined"]:
+                raise RuntimeError("DEVICE_COMPLETION_QUARANTINED")
+            if outbox["pending"]:
                 raise RuntimeError("DEVICE_COMPLETION_DELIVERY_PENDING")
             call=post_json(config["HARA_COMMANDER_URL"]+"/api/device/calls/next",config["HARA_DEVICE_TOKEN"],{})
             if call:

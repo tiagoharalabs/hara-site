@@ -18,7 +18,7 @@ import tempfile
 from stage_signed_commercial_assets import APP, BUNDLES, ROLLBACK_RELEASE, stage
 
 LINUX_SOURCE = APP / "public/agent/linux.py"
-REVIEWED_LINUX_SHA256 = "0c8e5793af6636e2215752b448a8e4ad15ab35c9f0c1902f388c80bb73b204a8"
+REVIEWED_LINUX_SHA256 = "ee6919ba32b37f3436e1dfc349c4e9014f379bf2fdce4fe63d7f996ef7f9baf3"
 FILESET = ("agent/linux.py", "agent/windows.ps1", "install/linux.sh", "install/windows.ps1")
 CURRENT_STATIC = ("index.html", "app.js")
 

@@ -170,3 +170,18 @@ else:
     raise AssertionError("NEW_CALL_CLAIMED_WITH_UNDELIVERED_RESULT")
 assert pending.flushed == 1 and pending.reads == 0 and pending.executed == []
 print("COMMANDER_EVENT_V2_PENDING_RESULT_BLOCKS_NEW_CLAIM=PASS")
+
+class QuarantinedResultAgent(PendingResultAgent):
+    def completion_outbox_health(self):
+        return {"pending":1,"quarantined":1}
+
+
+quarantined=QuarantinedResultAgent()
+try:
+    loop.drain_durable_calls(quarantined, CONFIG)
+except RuntimeError as exc:
+    assert str(exc)=="EVENT_V2_RESULT_QUARANTINED"
+else:
+    raise AssertionError("QUARANTINED_RESULT_NOT_REPORTED")
+assert quarantined.flushed==1 and quarantined.reads==0
+print("COMMANDER_EVENT_V2_QUARANTINED_RESULT_VISIBLE_NO_NEW_CLAIM=PASS")
