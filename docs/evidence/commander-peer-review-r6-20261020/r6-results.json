@@ -1,0 +1,123 @@
+{
+  "schema": "hara.commander-peer-e2e-r6.v1",
+  "observed_utc": "2026-10-20T20:04:50.177718+00:00",
+  "source_head": "97a35d9bde706db66e4c3a5645cefce083dc08c6",
+  "source_sha256": {
+    "apps/commander/public/agent/linux.py": "9115666c3f7ab350bff4fd4ba63f4feb5bf63c6947fd7e1dff45ad3c3e7539d9",
+    "apps/commander/src/worker.js": "19c74ebe1d804caa0efd5021ebf1d3aac5767ae0d668ba9f5e0ee67b2ebc3a36",
+    "apps/commander/src/customer-mcp-simple.mjs": "b5dba5d024da2c79a95387cacc3350717365cad5574a2331f58b608970d48655",
+    "apps/commander/experimental/event_v2_agent_loop.py": "d94e992b78847a2e21dea1f94c1b9278d31e8f897b9535ddc4746ec1aae247a7"
+  },
+  "findings": [
+    {
+      "id": "R6-OUTBOX-LATE-01",
+      "reproduced": true,
+      "local_mutation_done": true,
+      "local_execution_count": 1,
+      "server_replies": [
+        {
+          "call_id": "R6-LATE-NOT-ACCEPTED",
+          "server_ok": false,
+          "error": "DEVICE_CALL_EXPIRED",
+          "server_state": "EXPIRED"
+        },
+        {
+          "call_id": "R6-LATE-NOT-ACCEPTED",
+          "server_ok": false,
+          "error": "DEVICE_CALL_NOT_EXECUTING",
+          "server_state": "EXPIRED"
+        },
+        {
+          "call_id": "R6-LATE-NOT-ACCEPTED",
+          "server_ok": false,
+          "error": "DEVICE_CALL_NOT_EXECUTING",
+          "server_state": "EXPIRED"
+        },
+        {
+          "call_id": "R6-LATE-NOT-ACCEPTED",
+          "server_ok": false,
+          "error": "DEVICE_CALL_NOT_EXECUTING",
+          "server_state": "EXPIRED"
+        }
+      ],
+      "replay_delivered_counts": [
+        0,
+        0,
+        0
+      ],
+      "pending_count": 1,
+      "local_outbox_state": "READY",
+      "new_claim_attempts": 0,
+      "guard_error": "EVENT_V2_RESULT_DELIVERY_PENDING",
+      "positive_control": {
+        "server_accepted_before_disconnect": true,
+        "retry_after_deadline_delivered": 1,
+        "execution_count": 1,
+        "pending_after_retry": 0
+      },
+      "scope": "real Agent outbox + exact completeDeviceCall/D1 SQL + real Event V2 drain guard; synthetic clock, mocked authenticated device and stdin subprocess bridge; no cloud outage induced"
+    },
+    {
+      "id": "R6-PROJECTION-02",
+      "reproduced": true,
+      "cases": [
+        {
+          "files": 1,
+          "ok": true,
+          "agent_result_bytes": 60724,
+          "agent_stdout_chars": 60226,
+          "before_json_valid": true,
+          "projected_stdout_chars": 60226,
+          "after_json_valid": true,
+          "parse_error": null,
+          "projection_marker": false,
+          "outer_mcp_content_json_valid": true,
+          "structured_content_stdout_matches_projection": true,
+          "outer_state": "PASS",
+          "is_error": false,
+          "explicit_content_truncation_flag": false,
+          "receipt_preserved": true
+        },
+        {
+          "files": 4,
+          "ok": true,
+          "agent_result_bytes": 97985,
+          "agent_stdout_chars": 97357,
+          "before_json_valid": true,
+          "projected_stdout_chars": 65570,
+          "after_json_valid": false,
+          "parse_error": "Bad control character in string literal in JSON at position 65536 (line 1 column 65537)",
+          "projection_marker": true,
+          "outer_mcp_content_json_valid": true,
+          "structured_content_stdout_matches_projection": true,
+          "outer_state": "PASS",
+          "is_error": false,
+          "explicit_content_truncation_flag": false,
+          "receipt_preserved": true
+        },
+        {
+          "files": 10,
+          "ok": true,
+          "agent_result_bytes": 97990,
+          "agent_stdout_chars": 97226,
+          "before_json_valid": true,
+          "projected_stdout_chars": 65570,
+          "after_json_valid": false,
+          "parse_error": "Bad control character in string literal in JSON at position 65536 (line 1 column 65537)",
+          "projection_marker": true,
+          "outer_mcp_content_json_valid": true,
+          "structured_content_stdout_matches_projection": true,
+          "outer_state": "PASS",
+          "is_error": false,
+          "explicit_content_truncation_flag": false,
+          "receipt_preserved": true
+        }
+      ],
+      "scope": "actual Agent file reads and exact Worker projectCustomerToolResult/trimPublicText/publicToolResult; SDK HTTP not invoked, outer MCP JSON remains valid",
+      "recommendation": "Do not slice structured JSON stdout as arbitrary text. Coordinate envelope limits through final projection and retain valid per-file continuation; test client-visible structured result, not only Agent byte size."
+    }
+  ],
+  "network_attempts": 0,
+  "production_mutation": false,
+  "fixtures_cleaned": true
+}

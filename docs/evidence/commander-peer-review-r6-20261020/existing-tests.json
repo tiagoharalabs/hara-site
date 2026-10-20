@@ -1,0 +1,39 @@
+{
+  "schema": "hara.commander-r6-existing-tests.v1",
+  "utc": "2026-10-20T20:04:28.298908+00:00",
+  "source_head": "97a35d9bde706db66e4c3a5645cefce083dc08c6",
+  "tests": [
+    {
+      "command": [
+        "python3",
+        "-B",
+        "apps/commander/scripts/validate_result_delivery_outbox.py"
+      ],
+      "exit_code": 0,
+      "stdout": "COMMANDER_COMPLETION_LOST_ACK_NEVER_DENIES_MUTATION=PASS\nCOMMANDER_COMPLETION_RESTART_REPLAYS_IDENTICAL_RECEIPT=PASS\nCOMMANDER_COMPLETION_ACKED_DUPLICATE_HAS_ONE_EFFECT=PASS\nCOMMANDER_COMPLETION_CRASHED_INTENT_STAYS_UNKNOWN_NO_REEXECUTION=PASS\nCOMMANDER_COMPLETION_REPEATED_FAILURE_RETRIES_SAME_BODY=PASS\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "python3",
+        "-B",
+        "apps/commander/scripts/validate_result_envelope_budget.py"
+      ],
+      "exit_code": 0,
+      "stdout": "COMMANDER_READ_MANY_1_FILES_SERIALIZED_BUDGET=PASS\nCOMMANDER_READ_MANY_4_FILES_SERIALIZED_BUDGET=PASS\nCOMMANDER_READ_MANY_10_FILES_SERIALIZED_BUDGET=PASS\nCOMMANDER_CONTROL_CHAR_ESCAPING_STAYS_WITHIN_WORKER_LIMIT=PASS\nCOMMANDER_RESULT_ENVELOPE_BYTE_BOUNDARY=PASS\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/home/sartorius/.nvm/versions/node/v24.15.0/bin/node",
+        "--disable-warning=ExperimentalWarning",
+        "apps/commander/scripts/test_device_call_usage_settlement.mjs"
+      ],
+      "exit_code": 0,
+      "stdout": "COMMANDER_NORMAL_COMPLETION_SETTLES_WITHOUT_CLIENT_READ=PASS\nCOMMANDER_DO_FAILURE_RETRY_SETTLES_SAME_RECEIPT=PASS\nCOMMANDER_ORPHANED_COMPLETION_RECONCILES_AFTER_TTL=PASS\nCOMMANDER_UNEXECUTED_DENIAL_RELEASES_QUOTA=PASS\n",
+      "stderr": ""
+    }
+  ],
+  "source_files_changed": [],
+  "production_mutation": false
+}
