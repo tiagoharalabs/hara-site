@@ -119,12 +119,16 @@ PROCESS_MUTATION_TOOLS = {
     "hara.process.kill",
 }
 PROCESS_SESSIONS = {}
+PROCESS_RESULT_TOMBSTONES = {}
 MAX_PROCESS_LINES = 5000
 MAX_PROCESS_LINE_CHARS = 8192
 MAX_PROCESS_BUFFER_CHARS = 2 * 1024 * 1024
 MAX_PROCESS_ACTIVE_SESSIONS = 16
 MAX_PROCESS_RETAINED_SESSIONS = 48
 PROCESS_FINISHED_RETENTION_SECONDS = 60 * 60
+MAX_PROCESS_ONESHOT_RESULTS = 8
+MAX_PROCESS_RESULT_TOMBSTONES = 128
+PROCESS_RESULT_TOMBSTONE_SECONDS = 24 * 60 * 60
 COMPLETION_RESULT_MAX_BYTES = 240 * 1024
 COMPLETION_OUTBOX_MAX_PENDING = 256
 # The server's normal claim TTL is 50s and async approval is at most 900s.
@@ -414,7 +418,7 @@ SLO_POLICY_FAILURE_CODES={
 SLO_CLIENT_FAILURE_CODES={
     "HTTP_400","HTTP_404","HTTP_405","HTTP_410","HTTP_422",
     "FILENOTFOUNDERROR","FILEEXISTSERROR","ISADIRECTORYERROR","NOTADIRECTORYERROR",
-    "EDIT_MATCH_AMBIGUOUS","PROCESS_SESSION_EXITED","PROCESS_SESSION_NOT_FOUND",
+    "EDIT_MATCH_AMBIGUOUS","PROCESS_SESSION_EXITED","PROCESS_SESSION_NOT_FOUND","PROCESS_RESULT_EXPIRED",
 }
 
 def _slo_failure_class(error_code):
@@ -1830,15 +1834,36 @@ def _collect_process_output(session):
         # Avoid spinning if a live process closes stdout without exiting.
         time.sleep(0.01)
 
+def _retire_process_session(sid,session,now):
+    PROCESS_SESSIONS.pop(sid,None)
+    if session.get("one_shot_result"):
+        PROCESS_RESULT_TOMBSTONES[sid]=now
+        if len(PROCESS_RESULT_TOMBSTONES)>MAX_PROCESS_RESULT_TOMBSTONES:
+            oldest=min(PROCESS_RESULT_TOMBSTONES,key=PROCESS_RESULT_TOMBSTONES.get)
+            PROCESS_RESULT_TOMBSTONES.pop(oldest,None)
+
 def _prune_process_sessions():
     now=time.monotonic()
+    for sid,retired in list(PROCESS_RESULT_TOMBSTONES.items()):
+        if now-retired>=PROCESS_RESULT_TOMBSTONE_SECONDS:
+            PROCESS_RESULT_TOMBSTONES.pop(sid,None)
+    if len(PROCESS_RESULT_TOMBSTONES)>MAX_PROCESS_RESULT_TOMBSTONES:
+        for sid,_ in sorted(PROCESS_RESULT_TOMBSTONES.items(),key=lambda pair:pair[1])[:len(PROCESS_RESULT_TOMBSTONES)-MAX_PROCESS_RESULT_TOMBSTONES]:
+            PROCESS_RESULT_TOMBSTONES.pop(sid,None)
     for sid,session in list(PROCESS_SESSIONS.items()):
         if session.get("exit_code") is None:
             _process_update_state(session)
         if session.get("exit_code") is not None:
             completed=float(session.get("finished_monotonic",now))
             if now-completed>=PROCESS_FINISHED_RETENTION_SECONDS:
-                PROCESS_SESSIONS.pop(sid,None)
+                _retire_process_session(sid,session,now)
+
+    oneshots=sorted(
+        ((sid,s) for sid,s in PROCESS_SESSIONS.items() if s.get("one_shot_result")),
+        key=lambda pair:float(pair[1].get("finished_monotonic",now)),
+    )
+    for sid,session in oneshots[:max(0,len(oneshots)-MAX_PROCESS_ONESHOT_RESULTS)]:
+        _retire_process_session(sid,session,now)
 
     # Process results remain available for a bounded period, but never allow
     # an unlimited number of finished sessions to pin their output in RAM.
@@ -1847,16 +1872,18 @@ def _prune_process_sessions():
             ((sid,s) for sid,s in PROCESS_SESSIONS.items() if s.get("exit_code") is not None),
             key=lambda pair:float(pair[1].get("finished_monotonic",0)),
         )
-        for sid,_ in finished:
+        for sid,session in finished:
             if len(PROCESS_SESSIONS)<MAX_PROCESS_RETAINED_SESSIONS: break
-            PROCESS_SESSIONS.pop(sid,None)
+            _retire_process_session(sid,session,now)
 
 
 def _process_get(session_id):
     _prune_process_sessions()
     sid=str(session_id or "")
     session=PROCESS_SESSIONS.get(sid)
-    if not session: raise ValueError("PROCESS_SESSION_NOT_FOUND")
+    if not session:
+        if sid in PROCESS_RESULT_TOMBSTONES: raise ValueError("PROCESS_RESULT_EXPIRED")
+        raise ValueError("PROCESS_SESSION_NOT_FOUND")
     return session
 
 def _process_output_payload(session,offset=None,length=200,wait_ms=0):
@@ -1870,7 +1897,7 @@ def _process_output_payload(session,offset=None,length=200,wait_ms=0):
         next_offset=start+len(selected)
         if offset is None: session["cursor"]=next_offset
         state="EXITED" if session.get("exit_code") is not None else "RUNNING"
-        return {"session_id":session["session_id"],"pid":session["pid"],"state":state,"exit_code":session.get("exit_code"),"offset":start,"next_offset":next_offset,"base_line":base,"total_lines":base+len(lines),"text":"\n".join(selected),"partial":session.get("partial","")[:1000],"truncated_before":truncated_before,"buffer_truncated":bool(session.get("truncated"))}
+        return {"session_id":session["session_id"],"pid":session["pid"],"state":state,"exit_code":session.get("exit_code"),"offset":start,"next_offset":next_offset,"base_line":base,"total_lines":base+len(lines),"text":"\n".join(selected),"partial":session.get("partial","")[:1000],"truncated_before":truncated_before,"buffer_truncated":bool(session.get("truncated")),"result_kind":"ONE_SHOT_RESULT" if session.get("one_shot_result") else "MANAGED_SESSION"}
 
 def process_start(command,cwd=None,timeout_ms=1000):
     command=str(command or "")
@@ -1918,8 +1945,12 @@ def process_run(command,cwd=None,timeout_ms=3000,max_lines=200):
     output=_process_output_payload(session,offset=base,length=max_lines,wait_ms=0)
     total=int(output.get("total_lines") or 0)
     next_offset=int(output.get("next_offset") or base)
+    retain=next_offset<total or session.get("exit_code") is None
+    if retain and session.get("exit_code") is not None:
+        session["one_shot_result"]=True
     result={
         "run_id":sid,
+        "session_id":sid if retain else None,
         "pid":session["pid"],
         "state":"TIMED_OUT" if timed_out else "EXITED",
         "exit_code":session.get("exit_code"),
@@ -1930,10 +1961,17 @@ def process_run(command,cwd=None,timeout_ms=3000,max_lines=200):
         "text":output.get("text",""),
         "partial":output.get("partial",""),
         "total_lines":total,
+        "next_offset":next_offset,
+        "base_line":base,
+        "buffer_truncated":bool(output.get("buffer_truncated")),
         "output_truncated":bool(output.get("buffer_truncated")) or next_offset<total,
-        "session_retained":False,
+        "session_retained":bool(retain),
+        "result_kind":"ONE_SHOT_RESULT" if session.get("one_shot_result") else "MANAGED_SESSION" if retain else None,
+        "result_retention_deadline_utc":(datetime.now(timezone.utc)+timedelta(seconds=PROCESS_FINISHED_RETENTION_SECONDS)).isoformat() if session.get("one_shot_result") else None,
+        "result_capacity_eviction_possible":bool(session.get("one_shot_result")),
+        "termination_uncertain":bool(session.get("exit_code") is None),
     }
-    PROCESS_SESSIONS.pop(sid,None)
+    if not retain: PROCESS_SESSIONS.pop(sid,None)
     return result
 
 def process_sessions():
@@ -3665,6 +3703,8 @@ def local_mcp_operational_error(code,name,args):
         return build("NOT_FOUND",category,False,result)
     if code=="PROCESS_SESSION_NOT_FOUND":
         return build("NOT_FOUND","PROCESS_STATE",False,{"exists":False,"recommended_tool":"list_sessions"})
+    if code=="PROCESS_RESULT_EXPIRED":
+        return build("EXPIRED","PROCESS_RESULT",False,{"exists":False,"automatic_retry_allowed":False})
     if code=="PROCESS_SESSION_EXITED":
         return build("TERMINAL","PROCESS_STATE",False,{"session_state":"EXITED"})
     if code=="PATH_VALUE_INVALID":
