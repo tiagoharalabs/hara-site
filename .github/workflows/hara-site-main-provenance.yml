@@ -80,6 +80,13 @@ jobs:
           print('HARA_SITE_STRUCTURE=PASS')
           PY
 
+      - name: Validate HARA Labs wordmark across site and products
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 scripts/validate_hara_wordmark.py
+          node --check apps/commander/public/app.js
+
       - name: Enforce public repository sanitization
         shell: bash
         run: |

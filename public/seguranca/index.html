@@ -8,24 +8,24 @@
 (()=>{try{const saved=localStorage.getItem("hara-theme");const theme=saved||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.dataset.theme=theme;document.documentElement.style.colorScheme=theme;const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=theme==="dark"?"#061721":"#eef8fd"}catch(e){}})();
 </script>
 <script>(()=>{try{document.documentElement.dataset.neon=localStorage.getItem("hara-neon")==="on"?"on":"off"}catch(e){document.documentElement.dataset.neon="off"}})();</script>
-<meta name="description" content="Princípios de segurança, identidade, menor privilégio, políticas e evidência da arquitetura H.A.R.A.">
-<title>Segurança e Trust | H.A.R.A Labs</title>
+<meta name="description" content="Princípios de segurança, identidade, menor privilégio, políticas e evidência da arquitetura HARA.">
+<title>Segurança e Trust | HARA Labs</title>
 <link rel="canonical" href="https://www.haralabs.com.br/seguranca/">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="H.A.R.A Labs">
-<meta property="og:title" content="Segurança e Trust | H.A.R.A Labs">
-<meta property="og:description" content="Princípios de segurança, identidade, menor privilégio, políticas e evidência da arquitetura H.A.R.A.">
+<meta property="og:site_name" content="HARA Labs">
+<meta property="og:title" content="Segurança e Trust | HARA Labs">
+<meta property="og:description" content="Princípios de segurança, identidade, menor privilégio, políticas e evidência da arquitetura HARA.">
 <meta property="og:url" content="https://www.haralabs.com.br/seguranca/">
 <meta property="og:image" content="https://www.haralabs.com.br/assets/images/hero-ia-realidade-sep.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta property="og:locale" content="pt_BR">
 <meta property="og:image:width" content="1672">
 <meta property="og:image:height" content="941">
-<meta property="og:image:alt" content="H.A.R.A Labs | infraestrutura corporativa de IA">
-<meta name="twitter:title" content="Segurança e Trust | H.A.R.A Labs">
-<meta name="twitter:description" content="Princípios de segurança, identidade, menor privilégio, políticas e evidência da arquitetura H.A.R.A.">
+<meta property="og:image:alt" content="HARA Labs | infraestrutura corporativa de IA">
+<meta name="twitter:title" content="Segurança e Trust | HARA Labs">
+<meta name="twitter:description" content="Princípios de segurança, identidade, menor privilégio, políticas e evidência da arquitetura HARA.">
 <meta name="twitter:image" content="https://www.haralabs.com.br/assets/images/hero-ia-realidade-sep.png">
-<link rel="icon" href="/assets/images/hara-logo-web.webp" type="image/webp">
+<link rel="icon" href="/assets/images/hara-logo-web.webp?v=20261014-goldmark1" type="image/webp">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -35,9 +35,9 @@
 </head><body><a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
 <header class="site-header" id="top">
   <div class="nav-shell">
-    <a class="brand" href="/" aria-label="H.A.R.A Labs, início">
-      <img decoding="async" src="/assets/images/hara-logo-web.webp" alt="" class="brand-logo">
-      <span class="brand-word">H.A.R.A <b>Labs</b></span>
+    <a class="brand" href="/" aria-label="HARA Labs, início">
+      <img decoding="async" src="/assets/images/hara-logo-web.webp?v=20261014-goldmark1" alt="" class="brand-logo">
+      <span class="brand-word">HARA <b>Labs</b></span>
     </a>
     <nav class="main-nav" aria-label="Navegação principal"><a href="/solucoes/">Soluções</a><a href="/arquitetura/">Arquitetura</a><a href="/seguranca/" aria-current="page">Segurança</a><a href="/produtos/">Produtos</a><a href="/empresa/">Empresa</a></nav>
     <a class="nav-cta" href="/contato/">Conversar <span>→</span></a>
@@ -54,13 +54,13 @@
 <section class="subhero trust-hero">
   <div class="page-shell subhero-inner">
     <h1>Segurança, identidade e governança.</h1>
-    <p>Esta página descreve controles, princípios e fatos públicos da arquitetura H.A.R.A. Onde uma capacidade ainda está em desenvolvimento ou depende de configuração específica, isso é indicado explicitamente.</p>
+    <p>Esta página descreve controles, princípios e fatos públicos da arquitetura HARA. Onde uma capacidade ainda está em desenvolvimento ou depende de configuração específica, isso é indicado explicitamente.</p>
   </div>
 </section>
 
 <section class="trust-summary">
   <div class="page-shell trust-summary-grid">
-    <article><small>IDENTIDADE</small><strong>H.A.R.A Identity self-hosted</strong><span>Autenticação pública operada em auth.haralabs.com.br.</span></article>
+    <article><small>IDENTIDADE</small><strong>HARA Identity self-hosted</strong><span>Autenticação pública operada em auth.haralabs.com.br.</span></article>
     <article><small>ACESSO</small><strong>Menor privilégio por desenho</strong><span>Integrações devem expor somente as capacidades necessárias ao escopo autorizado.</span></article>
     <article><small>EVIDÊNCIA</small><strong>Eventos e receipts operacionais</strong><span>A arquitetura prevê rastreabilidade de ações e contexto de execução.</span></article>
     <article><small>TRANSPARÊNCIA</small><strong>Sem certificações implícitas</strong><span>Não declaramos certificações, SLA público ou conformidade formal que não estejam documentados.</span></article>
@@ -82,14 +82,14 @@
 <section class="content-section alt"><div class="page-shell trust-two-col">
   <div><div class="section-kicker">Identidade</div><h2>Autenticação separada da aplicação.</h2></div>
   <div class="trust-facts">
-    <p><strong>H.A.R.A Identity</strong> é operado de forma self-hosted e atende o domínio público <strong>auth.haralabs.com.br</strong>.</p>
+    <p><strong>HARA Identity</strong> é operado de forma self-hosted e atende o domínio público <strong>auth.haralabs.com.br</strong>.</p>
     <p>Quando a autenticação é delegada a um provedor externo de identidade, a aplicação consumidora não precisa receber a senha usada nesse provedor. Claims, tokens e dados de sessão podem participar do fluxo conforme a configuração.</p>
-    <p>A presença de um provedor externo não elimina a necessidade de autorização e política dentro da arquitetura H.A.R.A.</p>
+    <p>A presença de um provedor externo não elimina a necessidade de autorização e política dentro da arquitetura HARA.</p>
   </div>
 </div></section>
 
 <section class="content-section"><div class="page-shell">
-  <div class="section-head"><div class="section-kicker">Dados e terceiros</div><h2>Processamento depende do caminho arquitetural escolhido.</h2><p>A H.A.R.A não assume que todos os dados devam sair do ambiente da organização. Também não assume que tudo precise permanecer local. O fluxo é definido por necessidade, sensibilidade e integração.</p></div>
+  <div class="section-head"><div class="section-kicker">Dados e terceiros</div><h2>Processamento depende do caminho arquitetural escolhido.</h2><p>A HARA não assume que todos os dados devam sair do ambiente da organização. Também não assume que tudo precise permanecer local. O fluxo é definido por necessidade, sensibilidade e integração.</p></div>
   <div class="fact-grid trust-data-grid">
     <article class="fact-card"><small>LOCAL</small><h3>Workloads locais</h3><p>Podem ser utilizados quando privacidade, latência, continuidade ou custo justificarem execução sob infraestrutura controlada.</p></article>
     <article class="fact-card"><small>CLOUD</small><h3>Serviços externos</h3><p>Podem participar quando capacidade, elasticidade ou uma integração específica justificarem seu uso.</p></article>
@@ -117,15 +117,15 @@
 <footer class="footer-v14 footer-v15">
   <div class="page-shell footer-v14-grid">
     <div class="footer-v14-brand">
-      <a class="brand" href="/"><img decoding="async" src="/assets/images/hara-logo-web.webp" alt="" class="brand-logo"><span class="brand-word">H.A.R.A <b>Labs</b></span></a>
+      <a class="brand" href="/"><img decoding="async" src="/assets/images/hara-logo-web.webp?v=20261014-goldmark1" alt="" class="brand-logo"><span class="brand-word">HARA <b>Labs</b></span></a>
       <p>Infraestrutura corporativa de IA para ambientes híbridos, com identidade, integração, governança e evidência.</p>
       <small>Irmãos Sartori Tecnologia da Informação Ltda<br>CNPJ 18.061.774/0001-98</small>
     </div>
     <div class="footer-col"><strong>Arquitetura</strong><a href="/solucoes/">Soluções</a><a href="/arquitetura/">Arquitetura</a><a href="/seguranca/">Segurança & Trust</a><a href="/observabilidade/">Observabilidade</a></div>
-    <div class="footer-col"><strong>Empresa</strong><a href="/empresa/">Sobre a H.A.R.A Labs</a><a href="/contato/">Contato</a><a href="/support/">Suporte</a><a href="/produtos/">Produtos</a></div>
+    <div class="footer-col"><strong>Empresa</strong><a href="/empresa/">Sobre a HARA Labs</a><a href="/contato/">Contato</a><a href="/support/">Suporte</a><a href="/produtos/">Produtos</a></div>
     <div class="footer-col"><strong>Legal</strong><a href="/legal/">Central Legal</a><a href="/legal/termos/">Termos de Uso</a><a href="/legal/privacidade/">Privacidade</a></div>
   </div>
-  <div class="page-shell footer-bottom"><span>© 2026 H.A.R.A Labs. Todos os direitos reservados.</span><span>Documentação institucional pública.</span></div>
+  <div class="page-shell footer-bottom"><span>© 2026 HARA Labs. Todos os direitos reservados.</span><span>Documentação institucional pública.</span></div>
 </footer>
 <script src="/assets/js/script.js?v=15"></script>
 </body></html>

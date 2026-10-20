@@ -43,7 +43,9 @@ need('return json({ configured: authStatus(env).configured });' in auth_config_b
 need('DEV_ENDPOINT_DISABLED: 404' in WORKER, "DEV_DISABLED_STATUS")
 need("auth-bootstrap-pending" in HTML, "AUTH_FIRST_PAINT")
 need("styles.css?v=20260925-neon7" in HTML, "STYLE_CACHE_KEY")
-need("app.js?v=20260925-neon1" in HTML, "SCRIPT_CACHE_KEY")
+need("app.js?v=20261014-wordmark1" in HTML, "SCRIPT_CACHE_KEY")
+need("H.A.R.A" not in HTML and "H.A.R.A" not in JS, "BRAND_WORDMARK_NO_DOTS")
+need("<b>HARA</b><em>Labs</em>" in HTML, "BRAND_WORDMARK_LOCKUP")
 need(
     'class="neon-toggle"' in HTML
     and 'class="neon-icon"' in HTML
@@ -233,7 +235,7 @@ need(
     and 'html[data-theme="dark"] .theme-icon-sun{display:block}' in CSS,
     "APPROVED_HEADER_BEHAVIOR",
 )
-need('OWNER: "Proprietário"' in JS and 'data-user-role>Owner<' not in HTML and 'usage: "Uso & limite · H.A.R.A. Commander"' in JS, "PORTUGUESE_ROLE_AND_TITLE_UX")
+need('OWNER: "Proprietário"' in JS and 'data-user-role>Owner<' not in HTML and 'usage: "Uso & limite · HARA Commander"' in JS, "PORTUGUESE_ROLE_AND_TITLE_UX")
 need("https://www.haralabs.com.br/legal/termos/" in HTML and "https://www.haralabs.com.br/legal/privacidade/" in HTML and 'class="auth-legal"' in HTML and 'class="product-legal-links"' in HTML, "LEGAL_LINKS_READY")
 need("#dashboardInvokes" not in CSS and ".activity-list" not in CSS, "DEAD_ACTIVITY_CSS_ABSENT")
 need('class="user-chip"' not in HTML, "DUPLICATE_INTERNAL_SESSION_IDENTITY_ABSENT")
