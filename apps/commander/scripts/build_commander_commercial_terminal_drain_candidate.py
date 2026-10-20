@@ -18,7 +18,7 @@ import tempfile
 from stage_signed_commercial_assets import APP, BUNDLES, ROLLBACK_RELEASE, stage
 
 LINUX_SOURCE = APP / "public/agent/linux.py"
-REVIEWED_LINUX_SHA256 = "30bd734283f2f75ecd5af7bf77fc38617430ee67ef6a5806aaa1076e1a32f35d"
+REVIEWED_LINUX_SHA256 = "9115666c3f7ab350bff4fd4ba63f4feb5bf63c6947fd7e1dff45ad3c3e7539d9"
 FILESET = ("agent/linux.py", "agent/windows.ps1", "install/linux.sh", "install/windows.ps1")
 CURRENT_STATIC = ("index.html", "app.js")
 
@@ -35,7 +35,8 @@ def prepare(output: Path) -> dict:
     linux = LINUX_SOURCE.read_bytes()
     if digest(linux) != REVIEWED_LINUX_SHA256 or b'AGENT_VERSION = "0.3.43"' not in linux:
         raise RuntimeError("COMMERCIAL_DRAIN_CANDIDATE_LINUX_SOURCE_DRIFT")
-    for script in ("validate_process_terminal_drain.py", "validate_process_continuous_drain.py"):
+    for script in ("validate_process_terminal_drain.py", "validate_process_continuous_drain.py",
+                   "validate_result_delivery_outbox.py", "validate_result_envelope_budget.py"):
         regression = subprocess.run(
             [sys.executable, "-B", str(APP / "scripts" / script)],
             capture_output=True, text=True, check=False, timeout=20,

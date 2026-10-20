@@ -84,6 +84,10 @@ def safe_telemetry_add(telemetry, key, amount=1) -> None:
 def drain_durable_calls(agent, config, max_calls: int = MAX_DRAIN_CALLS, *, telemetry=None) -> int:
     if max_calls < 1 or max_calls > MAX_DRAIN_CALLS:
         raise RuntimeError("EVENT_V2_DRAIN_BOUND_INVALID")
+    if hasattr(agent,"flush_completion_outbox") and hasattr(agent,"completion_outbox_pending"):
+        agent.flush_completion_outbox(config)
+        if agent.completion_outbox_pending():
+            raise RuntimeError("EVENT_V2_RESULT_DELIVERY_PENDING")
     drained = 0
     while drained < max_calls:
         call = agent.post_json(
@@ -96,6 +100,8 @@ def drain_durable_calls(agent, config, max_calls: int = MAX_DRAIN_CALLS, *, tele
         safe_telemetry_add(telemetry, "durable_calls")
         agent.execute_call(config, call)
         drained += 1
+        if hasattr(agent,"completion_outbox_pending") and agent.completion_outbox_pending():
+            raise RuntimeError("EVENT_V2_RESULT_DELIVERY_PENDING")
     return drained
 
 

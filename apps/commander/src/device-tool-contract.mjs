@@ -312,7 +312,7 @@ export function canonicalDeviceToolPayload(toolId, payload) {
   if (toolId === "hara.files.write") {
     if (!onlyKeys(body,["path","content","mode","expected_sha256"],["path","content"])) fail("DEVICE_CALL_PAYLOAD_INVALID");
     const content=String(body.content ?? "");
-    if (content.length > 65536 || content.includes("\u0000")) fail("DEVICE_CALL_PAYLOAD_INVALID");
+    if (content.length > 65536 || new TextEncoder().encode(content).length > 65536 || content.includes("\u0000")) fail("DEVICE_CALL_PAYLOAD_INVALID");
     const mode=String(body.mode || "rewrite");
     if (!["rewrite","append"].includes(mode)) fail("DEVICE_CALL_PAYLOAD_INVALID");
     return {path:pathArg(body.path),content,mode,...(body.expected_sha256===undefined ? {} : {expected_sha256:sha256Arg(body.expected_sha256)})};

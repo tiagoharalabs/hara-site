@@ -56,7 +56,8 @@ def stage(output: Path, bundle: Path = BUNDLES[CURRENT_RELEASE], *, rollback_onl
     if bundle.name != CURRENT_RELEASE and not rollback_only:
         raise RuntimeError('SIGNED_STAGE_HISTORICAL_RELEASE_REQUIRES_ROLLBACK_ONLY')
     if bundle.name == CURRENT_RELEASE:
-        for script in ('validate_process_terminal_drain.py', 'validate_process_continuous_drain.py'):
+        for script in ('validate_process_terminal_drain.py', 'validate_process_continuous_drain.py',
+                       'validate_result_delivery_outbox.py', 'validate_result_envelope_budget.py'):
             proc = subprocess.run(
                 ['python3', '-B', str(APP / 'scripts' / script),
                  '--source', str(bundle / 'agent/linux.py')],

@@ -147,3 +147,26 @@ finally:
     left.close()
     right.close()
 print("COMMANDER_EVENT_V2_BACKLOG_PROBE_PRESERVES_PARTIAL_FRAME=PASS")
+
+class PendingResultAgent(Agent):
+    def __init__(self):
+        super().__init__(1)
+        self.flushed = 0
+
+    def flush_completion_outbox(self, config):
+        self.flushed += 1
+        return 0
+
+    def completion_outbox_pending(self):
+        return 1
+
+
+pending = PendingResultAgent()
+try:
+    loop.drain_durable_calls(pending, CONFIG)
+except RuntimeError as exc:
+    assert str(exc) == "EVENT_V2_RESULT_DELIVERY_PENDING"
+else:
+    raise AssertionError("NEW_CALL_CLAIMED_WITH_UNDELIVERED_RESULT")
+assert pending.flushed == 1 and pending.reads == 0 and pending.executed == []
+print("COMMANDER_EVENT_V2_PENDING_RESULT_BLOCKS_NEW_CLAIM=PASS")

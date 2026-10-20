@@ -38,6 +38,8 @@ PYTHON = (
     "validate_event_v2_terminal_release.py",
     "validate_process_terminal_drain.py",
     "validate_process_continuous_drain.py",
+    "validate_result_delivery_outbox.py",
+    "validate_result_envelope_budget.py",
     "validate_agent_selftest_workspace_boundary.py",
     "validate_commander_submission_package.py",
     "commander_paid_dev_health_ramp.py",

@@ -443,7 +443,7 @@ export function createSimpleCustomerMcpServer({ executeTool }) {
     "write_file",
     toolConfig({
       title: "Write File",
-      description: "Write or append text. expected_sha256 can fail closed if the file changed; symlink leaf targets are refused.",
+      description: "Write or append up to 65,536 UTF-8 bytes of text. expected_sha256 can fail closed if the file changed; symlink leaf targets are refused.",
       inputSchema: z.object({
         computer,
         path: z.string().min(1).max(4096),

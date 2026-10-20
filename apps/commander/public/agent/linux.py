@@ -125,6 +125,12 @@ MAX_PROCESS_BUFFER_CHARS = 2 * 1024 * 1024
 MAX_PROCESS_ACTIVE_SESSIONS = 16
 MAX_PROCESS_RETAINED_SESSIONS = 48
 PROCESS_FINISHED_RETENTION_SECONDS = 60 * 60
+COMPLETION_RESULT_MAX_BYTES = 240 * 1024
+COMPLETION_OUTBOX_MAX_PENDING = 256
+# The server's normal claim TTL is 50s and async approval is at most 900s.
+# ACKED rows keep only a tombstone for an hour; unresolved results are held
+# within the pending cap for reconciliation instead of silently discarded.
+COMPLETION_OUTBOX_ACK_RETENTION_SECONDS = 60 * 60
 
 def _is_process_tool(tool_id):
     return str(tool_id or "") in PROCESS_TOOLS
@@ -302,6 +308,19 @@ def _ops_connect():
       );
       CREATE INDEX IF NOT EXISTS idx_local_budget_debits_block
         ON local_budget_debits(budget_id, state);
+      CREATE TABLE IF NOT EXISTS completion_outbox (
+        call_id TEXT PRIMARY KEY,
+        request_id TEXT NOT NULL,
+        tool_id TEXT NOT NULL,
+        input_sha256 TEXT NOT NULL,
+        status TEXT NOT NULL CHECK (status IN ('INTENT','READY','ACKED')),
+        body_json TEXT,
+        created_epoch INTEGER NOT NULL,
+        updated_epoch INTEGER NOT NULL,
+        acked_epoch INTEGER
+      );
+      CREATE INDEX IF NOT EXISTS idx_completion_outbox_pending
+        ON completion_outbox(status, updated_epoch);
     """)
     lease_columns={row["name"] for row in conn.execute("PRAGMA table_info(product_lease)")}
     if "lease_token" not in lease_columns:
@@ -2650,7 +2669,7 @@ def filesystem_list(path_value,limit=100,depth=1,offset=0):
         "truncated":has_more,"visited_entries":seen,
     }
 
-def filesystem_read(path_value,offset=0,length=200):
+def filesystem_read(path_value,offset=0,length=200,max_encoded_text_bytes=96*1024):
     requested=_lexical_path(path_value)
     followed_symlink=_leaf_kind(requested)=="symlink"
     path=requested.resolve(strict=True)
@@ -2660,26 +2679,41 @@ def filesystem_read(path_value,offset=0,length=200):
     with path.open("rb") as fh:
         if b"\x00" in fh.read(4096): raise ValueError("BINARY_FILE_DENIED")
     offset=max(0,int(offset)); length=max(1,min(400,int(length)))
-    lines=[]; has_more=False; output_bytes=0; oversized_line=False
+    lines=[]; has_more=False; output_bytes=0; json_text_bytes=0; oversized_line=False
+    max_encoded_text_bytes=max(256,min(96*1024,int(max_encoded_text_bytes)))
     with path.open("r",encoding="utf-8",errors="replace") as fh:
         for idx,line in enumerate(fh):
             if idx<offset: continue
             value=line.rstrip("\n")
             encoded=value.encode("utf-8")
             separator=1 if lines else 0
+            json_separator=2 if lines else 0
+            escaped_bytes=len(json.dumps(value,ensure_ascii=False).encode("utf-8"))-2
             if len(lines)>=length:
                 has_more=True; break
-            if output_bytes+separator+len(encoded)>65536:
+            if (output_bytes+separator+len(encoded)>65536
+                    or json_text_bytes+json_separator+escaped_bytes>max_encoded_text_bytes):
                 if not lines:
                     # A single logical line cannot be resumed by line offset.
-                    # Return a bounded preview and make the limitation explicit.
-                    preview=encoded[:65536].decode("utf-8",errors="ignore")
+                    # Bound both UTF-8 and JSON escapes before returning a
+                    # preview, and make the continuation limitation explicit.
+                    low,high=0,min(len(value),65536)+1
+                    while low+1<high:
+                        middle=(low+high)//2
+                        candidate=value[:middle]
+                        if (len(candidate.encode("utf-8"))<=65536 and
+                                len(json.dumps(candidate,ensure_ascii=False).encode("utf-8"))-2<=max_encoded_text_bytes):
+                            low=middle
+                        else:
+                            high=middle
+                    preview=value[:low]
                     lines.append(preview)
                     output_bytes=len(preview.encode("utf-8"))
                     oversized_line=True
                 has_more=True
                 break
             lines.append(value); output_bytes+=separator+len(encoded)
+            json_text_bytes+=json_separator+escaped_bytes
     text="\n".join(lines)
     continuation_safe=not oversized_line
     next_offset=(offset+len(lines)) if has_more and continuation_safe else None
@@ -2693,14 +2727,32 @@ def filesystem_read(path_value,offset=0,length=200):
 
 def filesystem_read_many(paths,offset=0,length=100):
     out=[]
-    for raw in paths[:10]:
+    selected=paths[:10]
+    def packed_bytes(items):
+        return len(json.dumps({"count":len(items),"files":items,"offset":offset,"length":length},
+                              sort_keys=True,separators=(",",":"),ensure_ascii=False).encode("utf-8"))
+    for index,raw in enumerate(selected):
         try:
-            item=filesystem_read(str(raw),offset,length)
-            out.append({
-                "path":item["path"],"state":"PASS","offset":item["offset"],"line_count":item["line_count"],"text":item["text"],
-                "has_more":item.get("has_more"),"eof":item.get("eof"),"next_offset":item.get("next_offset"),
-                "content_truncated":item.get("content_truncated"),
-            })
+            remaining=len(selected)-index
+            available=max(256,96*1024-packed_bytes(out))
+            text_budget=max(256,min(96*1024,available//remaining-1024))
+            while True:
+                item=filesystem_read(str(raw),offset,length,text_budget)
+                entry={
+                    "path":item["path"],"state":"PASS","offset":item["offset"],"line_count":item["line_count"],"text":item["text"],
+                    "has_more":item.get("has_more"),"eof":item.get("eof"),"next_offset":item.get("next_offset"),
+                    "content_truncated":item.get("content_truncated"),
+                }
+                if packed_bytes(out+[entry])<=96*1024:
+                    out.append(entry)
+                    break
+                if text_budget<=256:
+                    out.append({"path":str(raw),"state":"DEFERRED","offset":offset,
+                                "line_count":0,"text":"","has_more":True,"eof":False,
+                                "next_offset":offset,"content_truncated":False,
+                                "reason":"RESULT_BUDGET"})
+                    break
+                text_budget=max(256,text_budget//2)
         except Exception as exc:
             out.append({"path":str(raw),"state":"FAILED","error_code":safe_error_code(exc)})
     return {"count":len(out),"files":out,"offset":offset,"length":length}
@@ -2955,70 +3007,231 @@ def execute_tool(config, call):
 def complete(config, call, state, result, error_code=None):
     body={"call_id":call["call_id"],"state":state,"result":result}
     if error_code: body["error_code"]=error_code
-    post_json(config["HARA_COMMANDER_URL"]+"/api/device/calls/complete",config["HARA_DEVICE_TOKEN"],body)
+    return post_json(config["HARA_COMMANDER_URL"]+"/api/device/calls/complete",config["HARA_DEVICE_TOKEN"],body)
+
+def _completion_input_sha256(call):
+    raw=json.dumps({
+        "call_id":str(call.get("call_id") or ""),
+        "request_id":str(call.get("request_id") or ""),
+        "tool_id":str(call.get("tool_id") or ""),
+        "payload":call.get("payload") or {},
+    },sort_keys=True,separators=(",",":"),ensure_ascii=False).encode("utf-8")
+    return hashlib.sha256(raw).hexdigest()
+
+def _completion_outbox_intent(call):
+    """Claim a call locally before execution; a duplicate may only replay."""
+    identity=_completion_input_sha256(call)
+    now=int(time.time())
+    conn=_ops_connect()
+    try:
+        conn.execute("PRAGMA synchronous=FULL")
+        conn.execute("BEGIN IMMEDIATE")
+        conn.execute("DELETE FROM completion_outbox WHERE status='ACKED' AND acked_epoch<?",
+                     (now-COMPLETION_OUTBOX_ACK_RETENTION_SECONDS,))
+        row=conn.execute("SELECT * FROM completion_outbox WHERE call_id=?",(str(call["call_id"]),)).fetchone()
+        if row:
+            if (row["input_sha256"]!=identity or row["request_id"]!=str(call.get("request_id") or "")
+                    or row["tool_id"]!=str(call.get("tool_id") or "")):
+                raise ValueError("LOCAL_CALL_IDEMPOTENCY_CONFLICT")
+            conn.commit()
+            return dict(row),False
+        count=conn.execute("SELECT COUNT(*) FROM completion_outbox WHERE status IN ('INTENT','READY')").fetchone()[0]
+        if count>=COMPLETION_OUTBOX_MAX_PENDING:
+            raise ValueError("LOCAL_COMPLETION_OUTBOX_FULL")
+        conn.execute("""INSERT INTO completion_outbox
+            (call_id,request_id,tool_id,input_sha256,status,created_epoch,updated_epoch)
+            VALUES (?,?,?,?,'INTENT',?,?)""",
+            (str(call["call_id"]),str(call.get("request_id") or ""),
+             str(call.get("tool_id") or ""),identity,now,now))
+        conn.commit()
+        return None,True
+    finally:
+        conn.close()
+
+def _completion_bounded_body(state,result,error_code=None):
+    raw=json.dumps(result,separators=(",",":"),ensure_ascii=False).encode("utf-8")
+    if len(raw)>COMPLETION_RESULT_MAX_BYTES:
+        if result.get("mutation_performed") is True:
+            original=result.get("result") if isinstance(result.get("result"),dict) else {}
+            safe={key:original[key] for key in ("function_id","risk_class","process_exit_code","domain_success_inferred") if key in original}
+            result={"state":result.get("state") or "PASS",
+                    "operational_authority":result.get("operational_authority"),
+                    "runtime_authority_from_chatgpt":False,
+                    "mutation_performed":True,
+                    "bridge_receipt_sha256":result.get("bridge_receipt_sha256"),
+                    "result":safe,"result_content_truncated":True}
+        else:
+            state="FAILED"
+            error_code="DEVICE_RESULT_TOO_LARGE"
+            result={"state":"FAILED","operational_authority":result.get("operational_authority"),
+                    "runtime_authority_from_chatgpt":False,"mutation_performed":False,
+                    "result":{},"blocker":{"code":error_code}}
+    if len(json.dumps(result,separators=(",",":"),ensure_ascii=False).encode("utf-8"))>COMPLETION_RESULT_MAX_BYTES:
+        raise ValueError("DEVICE_RESULT_TOO_LARGE")
+    body={"state":state,"result":result}
+    if error_code: body["error_code"]=error_code
+    return body
+
+def _completion_outbox_ready(call,body):
+    raw=json.dumps(body,sort_keys=True,separators=(",",":"),ensure_ascii=False)
+    conn=_ops_connect()
+    try:
+        conn.execute("PRAGMA synchronous=FULL")
+        conn.execute("BEGIN IMMEDIATE")
+        row=conn.execute("SELECT status,body_json FROM completion_outbox WHERE call_id=?",
+                         (str(call["call_id"]),)).fetchone()
+        if not row: raise ValueError("LOCAL_COMPLETION_INTENT_MISSING")
+        if row["status"]=="INTENT":
+            conn.execute("UPDATE completion_outbox SET status='READY',body_json=?,updated_epoch=? WHERE call_id=? AND status='INTENT'",
+                         (raw,int(time.time()),str(call["call_id"])))
+        elif row["body_json"]!=raw:
+            raise ValueError("LOCAL_COMPLETION_RESULT_CONFLICT")
+        conn.commit()
+        return body
+    finally:
+        conn.close()
+
+def _completion_outbox_ack(call_id):
+    conn=_ops_connect()
+    try:
+        conn.execute("PRAGMA synchronous=FULL")
+        now=int(time.time())
+        conn.execute("UPDATE completion_outbox SET status='ACKED',body_json=NULL,acked_epoch=?,updated_epoch=? WHERE call_id=? AND status='READY'",
+                     (now,now,str(call_id)))
+        conn.commit()
+    finally:
+        conn.close()
+
+def _completion_outbox_fetch(call_id):
+    conn=_ops_connect()
+    try:
+        row=conn.execute("SELECT * FROM completion_outbox WHERE call_id=?",(str(call_id),)).fetchone()
+        if not row: raise ValueError("LOCAL_COMPLETION_INTENT_MISSING")
+        return dict(row)
+    finally:
+        conn.close()
+
+def _completion_outbox_replay(config,row):
+    call={"call_id":row["call_id"]}
+    if row["status"]=="ACKED": return True
+    if row["status"]=="INTENT":
+        # A previous process stopped between intent and durable result.
+        # Execution may have occurred; never run it again or claim no mutation.
+        body=_completion_bounded_body("FAILED",{
+            "state":"UNKNOWN","operational_authority":"HARA_COMMANDER_AGENT",
+            "runtime_authority_from_chatgpt":False,"mutation_performed":None,
+            "result":{},"blocker":{"code":"LOCAL_EXECUTION_OUTCOME_UNKNOWN"},
+        },"LOCAL_EXECUTION_OUTCOME_UNKNOWN")
+        _completion_outbox_ready(call,body)
+    else:
+        body=json.loads(row["body_json"])
+    response=complete(config,call,body["state"],body["result"],body.get("error_code"))
+    if not isinstance(response,dict) or response.get("ok") is not True:
+        raise RuntimeError("DEVICE_COMPLETION_ACK_INVALID")
+    _completion_outbox_ack(row["call_id"])
+    return True
+
+def flush_completion_outbox(config,limit=8):
+    conn=_ops_connect()
+    try:
+        rows=[dict(row) for row in conn.execute(
+            "SELECT * FROM completion_outbox WHERE status IN ('INTENT','READY') ORDER BY created_epoch,call_id LIMIT ?",
+            (max(1,min(8,int(limit))),)).fetchall()]
+    finally:
+        conn.close()
+    delivered=0
+    for row in rows:
+        try:
+            _completion_outbox_replay(config,row)
+            delivered+=1
+        except Exception as exc:
+            append_console_event("RESULT_DELIVERY_DEGRADED",state="PENDING",error_code=safe_error_code(exc))
+            break
+    return delivered
+
+def completion_outbox_pending():
+    conn=_ops_connect()
+    try:
+        return int(conn.execute(
+            "SELECT COUNT(*) FROM completion_outbox WHERE status IN ('INTENT','READY')"
+        ).fetchone()[0])
+    finally:
+        conn.close()
 
 def execute_call(config,call):
     started=time.monotonic()
     call["_transport"]="OUTBOUND_RELAY"
-    budget_reservation=None
-    budget_committed=False
-    if effective_approval_mode(config)!="PERSISTENT_TRUSTED" and not operator_session_active():
-        code="LOCAL_OPERATOR_SESSION_REQUIRED"
-        append_console_event("DENIED",call,state="DENIED",error_code=code)
-        complete(config,call,"FAILED",{
-            "state":"DENIED","operational_authority":"LOCAL_OPERATOR_SESSION",
-            "runtime_authority_from_chatgpt":False,"mutation_performed":False,
-            "result":{},"blocker":{"code":code},
-        },code)
+    existing,inserted=_completion_outbox_intent(call)
+    if not inserted:
+        try:
+            _completion_outbox_replay(config,existing)
+        except Exception as exc:
+            append_console_event("RESULT_DELIVERY_DEGRADED",call,state="PENDING",error_code=safe_error_code(exc))
         return
-    append_console_event("RECEIVED",call,state="PENDING")
+    budget_reservation=None
+    budget_commit=None
+    execution_started=False
     try:
+        if effective_approval_mode(config)!="PERSISTENT_TRUSTED" and not operator_session_active():
+            raise ValueError("LOCAL_OPERATOR_SESSION_REQUIRED")
+        append_console_event("RECEIVED",call,state="PENDING")
         budget_reservation=local_budget_reserve(config,call)
         if _is_mutation_tool(call.get("tool_id")):
             call["_local_approval"]=request_local_approval(call)
         append_console_event("EXECUTING",call,state="EXECUTING")
+        execution_started=True
         result=execute_tool(config,call)
-        budget_commit=None
-        if budget_reservation:
-            budget_commit=local_budget_commit(call.get("request_id"))
-            budget_committed=True
-        complete(config,call,"COMPLETED",result)
-        if budget_commit and budget_commit.get("exhausted"):
-            try:
-                refresh_product_lease(config)
-                append_console_event("LOCAL_BUDGET_ROLLOVER",call,state="READY")
-            except Exception as refresh_exc:
-                append_console_event(
-                    "PRODUCT_LEASE_DEGRADED",
-                    call,
-                    state="DEGRADED",
-                    error_code=safe_error_code(refresh_exc),
-                )
-        append_console_event(
-            "PASS",call,state="COMPLETED",
-            receipt_sha256=result.get("bridge_receipt_sha256") if isinstance(result,dict) else None,
-            duration_ms=round((time.monotonic()-started)*1000),
-        )
     except Exception as exc:
         code=safe_error_code(exc)
-        if budget_reservation and not budget_committed:
+        uncertain=execution_started and _is_mutation_tool(call.get("tool_id"))
+        if budget_reservation:
             try:
-                local_budget_release(call.get("request_id"))
-            except Exception:
-                pass
+                if uncertain: local_budget_commit(call.get("request_id"))
+                else: local_budget_release(call.get("request_id"))
+            except Exception as budget_exc:
+                append_console_event("LOCAL_BUDGET_DEGRADED",call,state="DEGRADED",error_code=safe_error_code(budget_exc))
         operational = local_mcp_operational_error(code,"",{}) is not None
         append_console_event(
-            "OPERATIONAL" if operational else "DENIED",
+            "OUTCOME_UNKNOWN" if uncertain else ("OPERATIONAL" if operational else "DENIED"),
             call,
-            state="EXPECTED" if operational else "FAILED",
+            state="UNKNOWN" if uncertain else ("EXPECTED" if operational else "FAILED"),
             error_code=code,
             duration_ms=round((time.monotonic()-started)*1000),
         )
-        complete(config,call,"FAILED",{
-            "state":"DENIED","operational_authority":"LOCAL_OPERATOR_SESSION",
-            "runtime_authority_from_chatgpt":False,"mutation_performed":False,
-            "result":{},"blocker":{"code":code},
-        },code)
+        failure={"state":"UNKNOWN" if uncertain else "DENIED",
+                 "operational_authority":"HARA_COMMANDER_AGENT" if uncertain else "LOCAL_OPERATOR_SESSION",
+                 "runtime_authority_from_chatgpt":False,
+                 "mutation_performed":None if uncertain else False,
+                 "result":{},"blocker":{"code":code}}
+        body=_completion_bounded_body("FAILED",failure,code)
+    else:
+        if budget_reservation:
+            try:
+                budget_commit=local_budget_commit(call.get("request_id"))
+            except Exception as budget_exc:
+                # The tool has already run; budget trouble cannot rewrite its
+                # outcome or cause the mutation to execute again.
+                append_console_event("LOCAL_BUDGET_DEGRADED",call,state="DEGRADED",error_code=safe_error_code(budget_exc))
+        body=_completion_bounded_body("COMPLETED",result)
+
+    # Persist the exact result before any network send. A failed/lost ACK
+    # leaves READY for identical replay; it never enters the execution catch.
+    _completion_outbox_ready(call,body)
+    try:
+        _completion_outbox_replay(config,_completion_outbox_fetch(call["call_id"]))
+    except Exception as exc:
+        append_console_event("RESULT_DELIVERY_DEGRADED",call,state="PENDING",error_code=safe_error_code(exc))
+        return
+    if budget_commit and budget_commit.get("exhausted"):
+        try:
+            refresh_product_lease(config)
+            append_console_event("LOCAL_BUDGET_ROLLOVER",call,state="READY")
+        except Exception as refresh_exc:
+            append_console_event("PRODUCT_LEASE_DEGRADED",call,state="DEGRADED",error_code=safe_error_code(refresh_exc))
+    if body["state"]=="COMPLETED":
+        append_console_event("PASS",call,state="COMPLETED",
+            receipt_sha256=body["result"].get("bridge_receipt_sha256"),
+            duration_ms=round((time.monotonic()-started)*1000))
 
 def self_test():
     global RECEIPT_DIR
@@ -4094,6 +4307,9 @@ def main():
                         state="DEGRADED",
                         error_code=safe_error_code(exc),
                     )
+            flush_completion_outbox(config)
+            if completion_outbox_pending():
+                raise RuntimeError("DEVICE_COMPLETION_DELIVERY_PENDING")
             call=post_json(config["HARA_COMMANDER_URL"]+"/api/device/calls/next",config["HARA_DEVICE_TOKEN"],{})
             if call:
                 poll_hot_until=time.monotonic()+CALL_POLL_HOT_WINDOW_SECONDS

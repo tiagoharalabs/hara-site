@@ -46,6 +46,9 @@ const pkill=canonicalDeviceToolPayload("hara.process.kill",{session_id:"HARA-PRO
 need(pkill.force===true,"PROCESS_KILL_CANONICAL");
 const writePayload=canonicalDeviceToolPayload("hara.files.write",{path:"/tmp/x",content:"abc",mode:"rewrite"});
 need(writePayload.path==="/tmp/x" && writePayload.content==="abc" && writePayload.mode==="rewrite","MUTATION_WRITE_CANONICAL");
+need(canonicalDeviceToolPayload("hara.files.write",{path:"/tmp/x",content:"x".repeat(65536)}).content.length===65536,"MUTATION_WRITE_UTF8_BYTE_BOUNDARY");
+expectError("MUTATION_WRITE_CJK_BYTE_LIMIT_DENIED","DEVICE_CALL_PAYLOAD_INVALID",()=>canonicalDeviceToolPayload("hara.files.write",{path:"/tmp/x",content:"茶".repeat(21846)}));
+need(canonicalDeviceToolPayload("hara.files.write",{path:"/tmp/x",content:"茶".repeat(21845)}).content.length===21845,"MUTATION_WRITE_CJK_UNDER_BYTE_LIMIT");
 const editPayload=canonicalDeviceToolPayload("hara.files.edit",{path:"/tmp/x",old_text:"a",new_text:"b"});
 need(editPayload.old_text==="a" && editPayload.new_text==="b","MUTATION_EDIT_CANONICAL");
 const movePayload=canonicalDeviceToolPayload("hara.files.move",{source:"/tmp/a",destination:"/tmp/b"});

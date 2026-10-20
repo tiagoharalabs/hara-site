@@ -209,6 +209,14 @@ def execute_call(config, call):
         return _ORIGINAL_EXECUTE_CALL(config, call)
 
 
+def flush_completion_outbox(config):
+    return BASELINE.flush_completion_outbox(config)
+
+
+def completion_outbox_pending():
+    return BASELINE.completion_outbox_pending()
+
+
 def execute_transient_call(config, event, *, monotonic=None):
     # PROD transient RPC is disabled. The experimental path stays restricted
     # until its idempotency and quota parity is requalified for the full set.
