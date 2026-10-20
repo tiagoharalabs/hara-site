@@ -1,0 +1,475 @@
+{
+  "schema": "hara.commander.fleet-activity.r9",
+  "since": "2026-10-19T22:03:20.452Z",
+  "window": "24h",
+  "reported_summary": {
+    "total_calls": 3442,
+    "completed": 3384,
+    "failed": 57,
+    "pending": 0,
+    "executing": 0,
+    "expired": 0,
+    "cancelled": 1,
+    "success_rate_percent": 98.3,
+    "under_3s_percent": 89.4,
+    "avg_queue_ms": 935.9,
+    "avg_execution_ms": 848,
+    "avg_total_ms": 1783.9,
+    "device_count": 7,
+    "transport_modes": [
+      "EVENT_V2",
+      "OUTBOUND_RELAY"
+    ]
+  },
+  "top_tools": [
+    {
+      "tool_id": "hara.process.run",
+      "calls": 1073
+    },
+    {
+      "tool_id": "hara.files.read",
+      "calls": 551
+    },
+    {
+      "tool_id": "hara.files.write",
+      "calls": 294
+    },
+    {
+      "tool_id": "hara.process.start",
+      "calls": 231
+    },
+    {
+      "tool_id": "hara.files.search",
+      "calls": 228
+    },
+    {
+      "tool_id": "hara.files.read_many",
+      "calls": 206
+    }
+  ],
+  "top_errors": [
+    {
+      "error_code": "FILENOTFOUNDERROR",
+      "calls": 24
+    },
+    {
+      "error_code": "PERMISSIONERROR",
+      "calls": 17
+    },
+    {
+      "error_code": "PATH_NOT_DIRECTORY",
+      "calls": 6
+    },
+    {
+      "error_code": "FILE_TOO_LARGE",
+      "calls": 4
+    },
+    {
+      "error_code": "PROCESS_SESSION_NOT_FOUND",
+      "calls": 2
+    },
+    {
+      "error_code": "EDIT_MATCH_AMBIGUOUS",
+      "calls": 1
+    }
+  ],
+  "recent_sample_count": 100,
+  "recent_sample_queue_ms": {
+    "count": 99,
+    "p50": 563,
+    "p90": 4154,
+    "p95": 7080,
+    "max": 10222
+  },
+  "recent_sample_total_ms": {
+    "count": 100,
+    "p50": 1296,
+    "p90": 4803,
+    "p95": 7717,
+    "max": 10845
+  },
+  "recent_over_3s": 18,
+  "recent_over_5s": 10,
+  "recent_queue_ge_3s": 13,
+  "recent_missing_queue_ms": 1,
+  "recent_by_host": {
+    "services": {
+      "calls": 78,
+      "queue_ms": {
+        "count": 77,
+        "p50": 529,
+        "p90": 4850,
+        "p95": 7080,
+        "max": 8814
+      },
+      "execution_ms": {
+        "count": 78,
+        "p50": 655,
+        "p90": 1050,
+        "p95": 1587,
+        "max": 2620
+      },
+      "total_ms": {
+        "count": 78,
+        "p50": 1275,
+        "p90": 5501,
+        "p95": 7717,
+        "max": 9469
+      },
+      "noncompleted": 2
+    },
+    "ninja-blue": {
+      "calls": 3,
+      "queue_ms": {
+        "count": 3,
+        "p50": 584,
+        "p90": 584,
+        "p95": 584,
+        "max": 744
+      },
+      "execution_ms": {
+        "count": 3,
+        "p50": 749,
+        "p90": 749,
+        "p95": 749,
+        "max": 771
+      },
+      "total_ms": {
+        "count": 3,
+        "p50": 1333,
+        "p90": 1333,
+        "p95": 1333,
+        "max": 1363
+      },
+      "noncompleted": 0
+    },
+    "nucleo-a": {
+      "calls": 11,
+      "queue_ms": {
+        "count": 11,
+        "p50": 593,
+        "p90": 646,
+        "p95": 646,
+        "max": 738
+      },
+      "execution_ms": {
+        "count": 11,
+        "p50": 691,
+        "p90": 876,
+        "p95": 876,
+        "max": 1401
+      },
+      "total_ms": {
+        "count": 11,
+        "p50": 1296,
+        "p90": 1491,
+        "p95": 1491,
+        "max": 1867
+      },
+      "noncompleted": 0
+    },
+    "sentinela-d": {
+      "calls": 2,
+      "queue_ms": {
+        "count": 2,
+        "p50": 515,
+        "p90": 515,
+        "p95": 515,
+        "max": 1039
+      },
+      "execution_ms": {
+        "count": 2,
+        "p50": 643,
+        "p90": 643,
+        "p95": 643,
+        "max": 762
+      },
+      "total_ms": {
+        "count": 2,
+        "p50": 1158,
+        "p90": 1158,
+        "p95": 1158,
+        "max": 1801
+      },
+      "noncompleted": 0
+    },
+    "sentinela-c": {
+      "calls": 2,
+      "queue_ms": {
+        "count": 2,
+        "p50": 559,
+        "p90": 559,
+        "p95": 559,
+        "max": 623
+      },
+      "execution_ms": {
+        "count": 2,
+        "p50": 643,
+        "p90": 643,
+        "p95": 643,
+        "max": 776
+      },
+      "total_ms": {
+        "count": 2,
+        "p50": 1202,
+        "p90": 1202,
+        "p95": 1202,
+        "max": 1399
+      },
+      "noncompleted": 0
+    },
+    "sentinela-b": {
+      "calls": 2,
+      "queue_ms": {
+        "count": 2,
+        "p50": 604,
+        "p90": 604,
+        "p95": 604,
+        "max": 736
+      },
+      "execution_ms": {
+        "count": 2,
+        "p50": 667,
+        "p90": 667,
+        "p95": 667,
+        "max": 800
+      },
+      "total_ms": {
+        "count": 2,
+        "p50": 1271,
+        "p90": 1271,
+        "p95": 1271,
+        "max": 1536
+      },
+      "noncompleted": 0
+    },
+    "sentinela-a": {
+      "calls": 2,
+      "queue_ms": {
+        "count": 2,
+        "p50": 686,
+        "p90": 686,
+        "p95": 686,
+        "max": 10222
+      },
+      "execution_ms": {
+        "count": 2,
+        "p50": 623,
+        "p90": 623,
+        "p95": 623,
+        "max": 751
+      },
+      "total_ms": {
+        "count": 2,
+        "p50": 1437,
+        "p90": 1437,
+        "p95": 1437,
+        "max": 10845
+      },
+      "noncompleted": 0
+    }
+  },
+  "recent_by_tool": {
+    "hara.process.run": {
+      "calls": 29,
+      "queue_ms": {
+        "count": 29,
+        "p50": 584,
+        "p90": 738,
+        "p95": 1137,
+        "max": 1630
+      },
+      "execution_ms": {
+        "count": 29,
+        "p50": 770,
+        "p90": 1371,
+        "p95": 1401,
+        "max": 2620
+      },
+      "total_ms": {
+        "count": 29,
+        "p50": 1437,
+        "p90": 1867,
+        "p95": 2400,
+        "max": 3930
+      },
+      "noncompleted": 0
+    },
+    "hara.files.write": {
+      "calls": 20,
+      "queue_ms": {
+        "count": 20,
+        "p50": 435,
+        "p90": 969,
+        "p95": 1722,
+        "max": 2996
+      },
+      "execution_ms": {
+        "count": 20,
+        "p50": 634,
+        "p90": 675,
+        "p95": 710,
+        "max": 710
+      },
+      "total_ms": {
+        "count": 20,
+        "p50": 1078,
+        "p90": 1603,
+        "p95": 2432,
+        "max": 3628
+      },
+      "noncompleted": 0
+    },
+    "hara.process.output": {
+      "calls": 10,
+      "queue_ms": {
+        "count": 10,
+        "p50": 456,
+        "p90": 1358,
+        "p95": 1358,
+        "max": 1424
+      },
+      "execution_ms": {
+        "count": 10,
+        "p50": 619,
+        "p90": 653,
+        "p95": 653,
+        "max": 668
+      },
+      "total_ms": {
+        "count": 10,
+        "p50": 1052,
+        "p90": 1953,
+        "p95": 1953,
+        "max": 2092
+      },
+      "noncompleted": 0
+    },
+    "hara.files.read": {
+      "calls": 23,
+      "queue_ms": {
+        "count": 23,
+        "p50": 3698,
+        "p90": 7353,
+        "p95": 7710,
+        "max": 8814
+      },
+      "execution_ms": {
+        "count": 23,
+        "p50": 649,
+        "p90": 687,
+        "p95": 700,
+        "max": 750
+      },
+      "total_ms": {
+        "count": 23,
+        "p50": 4323,
+        "p90": 8103,
+        "p95": 8339,
+        "max": 9469
+      },
+      "noncompleted": 2
+    },
+    "hara.process.start": {
+      "calls": 9,
+      "queue_ms": {
+        "count": 8,
+        "p50": 485,
+        "p90": 596,
+        "p95": 596,
+        "max": 934
+      },
+      "execution_ms": {
+        "count": 9,
+        "p50": 801,
+        "p90": 1589,
+        "p95": 1589,
+        "max": 1622
+      },
+      "total_ms": {
+        "count": 9,
+        "p50": 1235,
+        "p90": 2185,
+        "p95": 2185,
+        "max": 2521
+      },
+      "noncompleted": 0
+    },
+    "hara.ping": {
+      "calls": 7,
+      "queue_ms": {
+        "count": 7,
+        "p50": 646,
+        "p90": 1039,
+        "p95": 1039,
+        "max": 10222
+      },
+      "execution_ms": {
+        "count": 7,
+        "p50": 643,
+        "p90": 691,
+        "p95": 691,
+        "max": 762
+      },
+      "total_ms": {
+        "count": 7,
+        "p50": 1337,
+        "p90": 1801,
+        "p95": 1801,
+        "max": 10845
+      },
+      "noncompleted": 0
+    },
+    "hara.files.search": {
+      "calls": 1,
+      "queue_ms": {
+        "count": 1,
+        "p50": 472,
+        "p90": 472,
+        "p95": 472,
+        "max": 472
+      },
+      "execution_ms": {
+        "count": 1,
+        "p50": 607,
+        "p90": 607,
+        "p95": 607,
+        "max": 607
+      },
+      "total_ms": {
+        "count": 1,
+        "p50": 1079,
+        "p90": 1079,
+        "p95": 1079,
+        "max": 1079
+      },
+      "noncompleted": 0
+    },
+    "hara.files.copy": {
+      "calls": 1,
+      "queue_ms": {
+        "count": 1,
+        "p50": 534,
+        "p90": 534,
+        "p95": 534,
+        "max": 534
+      },
+      "execution_ms": {
+        "count": 1,
+        "p50": 633,
+        "p90": 633,
+        "p95": 633,
+        "max": 633
+      },
+      "total_ms": {
+        "count": 1,
+        "p50": 1167,
+        "p90": 1167,
+        "p95": 1167,
+        "max": 1167
+      },
+      "noncompleted": 0
+    }
+  },
+  "limitation": "last 100 events only; aggregate full 24h from provider separately"
+}

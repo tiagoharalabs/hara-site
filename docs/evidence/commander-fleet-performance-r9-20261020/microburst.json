@@ -1,0 +1,105 @@
+{
+  "schema": "hara.commander.microburst.r9",
+  "burst_start_utc": "2026-10-20T22:08:15.902Z",
+  "burst_end_utc": "2026-10-20T22:08:43.376Z",
+  "total": 12,
+  "note": "four concurrent read_file per host, 3 hosts; read-only existing /etc/os-release; not stress or throughput benchmark",
+  "outcomes": [
+    {
+      "host": "services",
+      "iteration": 0,
+      "state": "PASS",
+      "lines": 8,
+      "sha_receipt": "72d14dc60853b5fed733b9f395d93266430d19861393e2c34b1167bd5e5ba118",
+      "blocker": null
+    },
+    {
+      "host": "services",
+      "iteration": 1,
+      "state": "PASS",
+      "lines": 8,
+      "sha_receipt": "aa6bf9ccce8d389f0c43d979839942c5010f439beb656d60eee48056a9862b50",
+      "blocker": null
+    },
+    {
+      "host": "services",
+      "iteration": 2,
+      "state": "PASS",
+      "lines": 8,
+      "sha_receipt": "88b8d35de1296b4e4aafe085bd43e4e8116d46d1d10e2fa250b1c5b45c2d44e0",
+      "blocker": null
+    },
+    {
+      "host": "services",
+      "iteration": 3,
+      "state": "PASS",
+      "lines": 8,
+      "sha_receipt": "4d1b900f597668bc62baccf701532694ae6ca9e047fdc08b1c02af4393b1c35d",
+      "blocker": null
+    },
+    {
+      "host": "sentinela-c",
+      "iteration": 0,
+      "state": "PASS",
+      "lines": 8,
+      "sha_receipt": "efe5fd5012e2edb99dc40d72b2ae79b2e2d7083ee7c0e9597f556682e36b1db5",
+      "blocker": null
+    },
+    {
+      "host": "sentinela-c",
+      "iteration": 1,
+      "state": "PASS",
+      "lines": 8,
+      "sha_receipt": "70aa4c9fed8a26d72657df2667819a7245e8078f57d232081fc48d7c1c9eef6f",
+      "blocker": null
+    },
+    {
+      "host": "sentinela-c",
+      "iteration": 2,
+      "state": "PASS",
+      "lines": 8,
+      "sha_receipt": "71b3236b5af218ae59e099bfeb3ac8b0a314791ce1d013dfa0ff8ac202b3e381",
+      "blocker": null
+    },
+    {
+      "host": "sentinela-c",
+      "iteration": 3,
+      "state": "PASS",
+      "lines": 8,
+      "sha_receipt": "5cd128e0841a07bdc80e806706ad87b0f178bb267f97143d4c0971f3cd3aa57e",
+      "blocker": null
+    },
+    {
+      "host": "sentinela-a",
+      "iteration": 0,
+      "state": "PASS",
+      "lines": 8,
+      "sha_receipt": "18c7604429bc343dca0308a1a05bdcae37544dde512362663a8b4c661b0be3a4",
+      "blocker": null
+    },
+    {
+      "host": "sentinela-a",
+      "iteration": 1,
+      "state": "PASS",
+      "lines": 8,
+      "sha_receipt": "e0f8eb44a35be8fcc8a03b03c05682cf62afc64267ba4a70eeb91ff9827f41cf",
+      "blocker": null
+    },
+    {
+      "host": "sentinela-a",
+      "iteration": 2,
+      "state": "PASS",
+      "lines": 8,
+      "sha_receipt": "32a15941f8dd09567ad4df70b07d50b66cdabb680052f9bf827010e3bc525563",
+      "blocker": null
+    },
+    {
+      "host": "sentinela-a",
+      "iteration": 3,
+      "state": "PASS",
+      "lines": 8,
+      "sha_receipt": "273367482201534b37b446eb38247ece79197b3965607cdc085166a47fe7dee8",
+      "blocker": null
+    }
+  ]
+}

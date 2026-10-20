@@ -1,0 +1,38 @@
+{
+  "schema": "hara.commander.fleet-backend-snapshot.r9",
+  "date_utc": "2026-10-20",
+  "access_path": "HARA Commander process.run on services, authorized read-only SSH to observer and storage; HARA Commander process.run on Ninja Blue",
+  "observations": {
+    "observer": {
+      "uptime_days_approx": 64,
+      "load1": 0.27,
+      "mem_total_mib": 15654,
+      "mem_available_mib": 8779,
+      "root_free_gib": 38,
+      "root_used_percent": 76
+    },
+    "storage": {
+      "uptime_days_approx": 17.9,
+      "load1": 0.67,
+      "mem_total_mib": 11678,
+      "mem_available_mib": 9831,
+      "root_free_gib": 226,
+      "root_used_percent": 10,
+      "mount_scope": "only / and path /srv/hara as resolved; not total storage array capacity"
+    },
+    "ninja_blue": {
+      "root_type": "composefs overlay read-only",
+      "root_reported_free_gib": 0,
+      "root_reporting_caveat": "immutable base filesystem reports full by design, not writable-storage exhaustion",
+      "home_mount": "/var/home btrfs",
+      "home_capacity_tib_approx": 1.9,
+      "home_used_gib_approx": 283,
+      "home_free_tib_approx": 1.6,
+      "home_used_percent": 15
+    }
+  },
+  "notes": [
+    "Observer and Storage are not listed as directly enrolled devices in this account; observed via read-only SSH from Services over HARA Commander",
+    "No new software or agents installed, no power or model changes"
+  ]
+}

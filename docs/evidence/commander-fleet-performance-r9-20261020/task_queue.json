@@ -1,0 +1,93 @@
+{
+  "schema": "hara.commander.fleet-performance-r9-task-queue.v1",
+  "date": "2026-10-20",
+  "owner": "Codex — HARA Commander",
+  "executor_branch": "codex/commander-prelaunch-fixes-20261020",
+  "review_branch": "local/commander-functions-r5-review-20261020",
+  "principles": [
+    "Preserve Agents and live sessions until separately authorized canary.",
+    "Code patch plus reproducible test plus before/after measured through HARA Commander.",
+    "Do not reopen confirmed R8 file CAS and other fixed regressions.",
+    "Distinguish founder laboratory evidence from paid commercial test."
+  ],
+  "tasks": [
+    {
+      "id": "R9-P1-01",
+      "priority": "P1",
+      "area": "call-queue-dispatch",
+      "observed": "12/12 tiny read_file PASS; 4/4 Sentinela A 0.3.41 OUTBOUND_RELAY queue 9.069-16.450s vs C 0.3.54 EVENT_V2 0.461-1.159s, Services EVENT_V2 0.548-3.678s.",
+      "request": "Profile end-to-end queue and polling; compare before/after Event V2 controlled canary; implement bounded fair dispatch/notification improvements while preserving mutation ordering.",
+      "acceptance": [
+        "Tool-specific queue/exec/total percentile reporting on exact server timestamps",
+        "All 12 reads correct and continuation intact",
+        "Before-after repeated 4-call microburst in reserved canary, no prod Agent upgrade without approval"
+      ],
+      "release_hold": true
+    },
+    {
+      "id": "R9-P1-02",
+      "priority": "P1",
+      "area": "session-lifecycle",
+      "observed": "Services 13 RUNNING/34 listed, 12 RUNNING older than 24h, owner/capacity not present in active Agent 0.3.54 response.",
+      "request": "Qualify owner/idle-review and safe session lifecycle/explicit release; ensure one-shot pager fix reaches signed candidate.",
+      "acceptance": [
+        "List sessions returns owner, idle state, active capacity after canary",
+        "No automatic termination of owner-unknown sessions",
+        "No capacity exhaustion under documented bounded workload"
+      ],
+      "release_hold": true
+    },
+    {
+      "id": "R9-P1-03",
+      "priority": "P1",
+      "area": "operational-telemetry",
+      "observed": "One retryable DEVICE_OFFLINE when saving QA to Núcleo; subsequent pings PASS. Bazzite root composefs appears 100% but writable /var/home has 1.6 TiB free. Last-seen often older than ping.",
+      "request": "Make reachability vs registration vs last checkpoint distinct; classify transient retries accurately; mount-aware filesystem indicators; GPU vendor capability rather than silent failure.",
+      "acceptance": [
+        "No false disk-full alert for immutable Bazzite root with writable volume healthy",
+        "Distinct clock stamps for registry checkpoint, socket status and on-demand ping",
+        "Transient offline distinguishable from real unreachability without hiding errors"
+      ],
+      "release_hold": false
+    },
+    {
+      "id": "R9-P1-04",
+      "priority": "P1",
+      "area": "tool-surface-and-platform-parity",
+      "observed": "7 Linux registered 31 canonical capabilities each; this Chat connector exposes 24 tools; source commercial package advertises 33; active A 0.3.41, others 0.3.54; Windows 0.3.53 OFFLINE.",
+      "request": "Reconcile tool contracts, allowlisted grants, signatures, Linux and Windows functional test; keep version/build hashes and rollback distinct.",
+      "acceptance": [
+        "Published tools/list matches intended supported tools with grants",
+        "Founder and clean paid tenant isolated E2E",
+        "Only signed artifact canary; no silent overwrite of 0.3.54 internal"
+      ],
+      "release_hold": true
+    },
+    {
+      "id": "R9-P2-05",
+      "priority": "P2",
+      "area": "capacity-observer-and-identity",
+      "observed": "Observer root 76% used ~38 GiB free; Storage root 10% used ~226 GiB free; D ~58 GiB RAM available, ~2.38 GiB swap and resident Python/llama workers; C/A/B show low instantaneous GPU.",
+      "request": "Add trend-based observability for disk, RAM/swap, GPU memory and heat; no automatic model relocations or cleanup.",
+      "acceptance": [
+        "Alert uses writable mounts and sustained thresholds",
+        "Transient GPU query unavailable not represented as zero-capacity",
+        "No model eviction or owner session kill without authorization"
+      ],
+      "release_hold": false
+    },
+    {
+      "id": "R9-P2-06",
+      "priority": "P2",
+      "area": "test-method",
+      "observed": "Founder 3,442 functional calls /24h, 98.3% success, 89.4% under 3s; last100 queue P95 7,080ms, 78/100 on Services.",
+      "request": "Build privacy-safe sampling of per-device and per-tool queue/exec distributions, acceptance of 4/8/16-call microbursts in isolated QA; avoid conflating this with 1M/month plan capacity.",
+      "acceptance": [
+        "Repro scripts provide code vs canary vs PROD gates separately",
+        "No customer contents persisted in perf telemetry",
+        "No performance load applied to live production without reservation"
+      ],
+      "release_hold": false
+    }
+  ]
+}

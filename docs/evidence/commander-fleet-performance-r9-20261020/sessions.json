@@ -1,0 +1,90 @@
+{
+  "schema": "hara.commander.fleet-session-snapshot.r9",
+  "limitation": "sessions may be legitimate long-running; not ownership determination; counts per agent",
+  "hosts": [
+    {
+      "host": "services",
+      "state": "PASS",
+      "listed": 34,
+      "active": 13,
+      "exited": 21,
+      "active_older_24h": 12,
+      "reported_capacity": null,
+      "capacity_warning": null,
+      "owner_metadata_exposed": false,
+      "first_started_at": "2026-10-13T18:55:37.971567+00:00"
+    },
+    {
+      "host": "nucleo-a",
+      "state": "PASS",
+      "listed": 0,
+      "active": 0,
+      "exited": 0,
+      "active_older_24h": 0,
+      "reported_capacity": null,
+      "capacity_warning": null,
+      "owner_metadata_exposed": false,
+      "first_started_at": null
+    },
+    {
+      "host": "sentinela-a",
+      "state": "PASS",
+      "listed": 0,
+      "active": 0,
+      "exited": 0,
+      "active_older_24h": 0,
+      "reported_capacity": null,
+      "capacity_warning": null,
+      "owner_metadata_exposed": false,
+      "first_started_at": null
+    },
+    {
+      "host": "sentinela-b",
+      "state": "PASS",
+      "listed": 0,
+      "active": 0,
+      "exited": 0,
+      "active_older_24h": 0,
+      "reported_capacity": null,
+      "capacity_warning": null,
+      "owner_metadata_exposed": false,
+      "first_started_at": null
+    },
+    {
+      "host": "sentinela-c",
+      "state": "PASS",
+      "listed": 0,
+      "active": 0,
+      "exited": 0,
+      "active_older_24h": 0,
+      "reported_capacity": null,
+      "capacity_warning": null,
+      "owner_metadata_exposed": false,
+      "first_started_at": null
+    },
+    {
+      "host": "sentinela-d",
+      "state": "PASS",
+      "listed": 0,
+      "active": 0,
+      "exited": 0,
+      "active_older_24h": 0,
+      "reported_capacity": null,
+      "capacity_warning": null,
+      "owner_metadata_exposed": false,
+      "first_started_at": null
+    },
+    {
+      "host": "ninja-blue",
+      "state": "PASS",
+      "listed": 1,
+      "active": 0,
+      "exited": 1,
+      "active_older_24h": 0,
+      "reported_capacity": null,
+      "capacity_warning": null,
+      "owner_metadata_exposed": false,
+      "first_started_at": null
+    }
+  ]
+}
