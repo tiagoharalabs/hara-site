@@ -1,0 +1,91 @@
+{
+  "schema": "hara.commander-windows11-live-qa.v1",
+  "observed_at_utc": "2026-10-20T23:00:00Z",
+  "scope": "Founder/Internal VM QA through HARA Commander; no commercial installation",
+  "handoff_sha256": "5ea1bd04f4a9d7295f90f2f4b5303ecbaeeee01d4e64c5cfd8c869eef9b7cea7",
+  "environment": {
+    "libvirt_domain": "commander-win11",
+    "libvirt_state": "running",
+    "alternate_domain": "hara-commander-win11",
+    "alternate_state": "shut off",
+    "qga_guest_ping": "PASS",
+    "qga_os": "Microsoft Windows 11 build 26300",
+    "qga_interactive_user_session": true,
+    "scheduled_task_state_after_login": "Running",
+    "scheduled_task_logon_type": "Interactive",
+    "commander_ping": "PASS",
+    "commander_agent_version": "0.3.53",
+    "commander_transport": "OUTBOUND_RELAY",
+    "approval_mode": "SESSION_TRUSTED",
+    "operator_session_required": true,
+    "device_capability_count": 19,
+    "connector_tool_count": 24
+  },
+  "checks": [
+    {
+      "name": "read_only_discovery",
+      "result": "PASS",
+      "evidence": "get_config, device.info, ping, file.info, win.ini read, directory list"
+    },
+    {
+      "name": "read_pagination_unicode",
+      "result": "PASS",
+      "evidence": "QA file read at offsets 0 and 2 returned all three lines with ação, emoji and 東京"
+    },
+    {
+      "name": "write_cas",
+      "result": "PASS",
+      "evidence": "rewrite with current SHA-256 succeeded; stale SHA-256 was DENIED with blocker FILE_PRECONDITION_FAILED and mutation_performed=false; readback kept revised content",
+      "sha256_before": "ba1fa06e0aa189247f86204dd07f34960c5ebcb74159400d94c0f3f34d22874b",
+      "sha256_after": "6f9e76b0e7052135a3916b54ecc692f7dc06ef480f606c22de994dcdd2ab23fb",
+      "public_error_code_on_conflict": "INVALID_ARGUMENT"
+    },
+    {
+      "name": "process_exit_and_timeout",
+      "result": "PASS_WITH_EXPLICIT_DOMAIN_STATUS",
+      "evidence": "transport PASS carried exit_code 7 for a failing command; a timed-out command carried state TIMED_OUT, exit_code null, and no output; neither was retried"
+    },
+    {
+      "name": "managed_session",
+      "result": "PASS",
+      "evidence": "start/interact/output preserved Unicode and next_offset; QA-only session was killed by its own ID; final process.sessions count=4, RUNNING=0"
+    },
+    {
+      "name": "directory_offset",
+      "result": "FAIL",
+      "evidence": "limit=2, offset=0 and offset=2 returned the same two Windows system entries, both with transport PASS"
+    },
+    {
+      "name": "one_shot_truncation_recovery",
+      "result": "FAIL",
+      "evidence": "eight output lines with max_lines=3 returned only lines 1-3, output_truncated=true, session_retained=false, and no run_id"
+    },
+    {
+      "name": "search_and_edit_parity",
+      "result": "UNSUPPORTED_ON_INSTALLED_AGENT",
+      "evidence": "Windows capability catalog omits search, edit_block, read_multiple_files, copy, move and delete; a read-only search probe returned blocker UNKNOWN_FUNCTION_ID"
+    }
+  ],
+  "qa_artifact": {
+    "location": "interactive user's Temp/HARA-Commander-QA-20261020T2254Z/qa-utf8.txt",
+    "bytes": 56,
+    "kept_for_readback": true
+  },
+  "release_state": {
+    "installed_founder_windows": "0.3.53",
+    "installed_agent_name": "hara-commander-agent.ps1",
+    "installed_agent_bytes": 101989,
+    "installed_agent_sha256": "7a6112b51835de4177400057dadce15904e974f20a0f1dba940a0dc41c697708",
+    "source_windows_rc": "0.3.52",
+    "signed_windows_rc": "0.3.52-v12-rc",
+    "historical_signed_053_git_commit": "fe9728a",
+    "historical_signed_053_bundle_agent_sha256": "f67ebcee909ee2ce93187262c951b57b38bc976fec73413bd30555d9bcf62299",
+    "installed_equals_historical_signed_053_agent": false,
+    "unsigned_commercial_candidate_windows": "0.3.43",
+    "windows_0_3_53_release_provenance_verified": false,
+    "candidate_signed": false,
+    "candidate_installed": false,
+    "production_published": false
+  },
+  "limits": "Single Founder/Internal Windows VM and a live connector. Historical bundle and installed script differ by hash and size; this alone does not establish tampering or signature validity of installed bytes. No clean commercial install, concurrent CAS, reconnect/rollback, hosted DEV, or production promotion was tested. No QGA guest-exec, Agent update, alternate VM start, or cluster Agent change occurred."
+}
