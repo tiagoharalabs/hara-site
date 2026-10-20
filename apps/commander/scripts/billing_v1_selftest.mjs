@@ -20,7 +20,9 @@ const env = {
 assert.equal(APPROVED_COMMERCIAL_TERMS.STANDARD.currency, "BRL");
 assert.equal(APPROVED_COMMERCIAL_TERMS.STANDARD.price_amount_cents, 8000);
 assert.equal(APPROVED_COMMERCIAL_TERMS.STANDARD.billing_interval, "month");
-assert.equal(APPROVED_COMMERCIAL_TERMS.STANDARD.usage_unlimited, true);
+assert.equal(APPROVED_COMMERCIAL_TERMS.STANDARD.usage_unlimited, false);
+assert.equal(APPROVED_COMMERCIAL_TERMS.STANDARD.functional_calls_per_month, 1_000_000);
+assert.equal(APPROVED_COMMERCIAL_TERMS.TRIAL.functional_calls_total, 5_000);
 assert.equal(stripeBillingConfigured(env), true);
 assert.equal(stripeBillingConfigured({
   ENVIRONMENT:"PROD", STRIPE_SECRET_KEY:"sk_test_MustNotBeProd123",
@@ -35,7 +37,7 @@ assert.equal(stripeBillingConfigured({
   STRIPE_WEBHOOK_SECRET:"whsec_ValidFixture123",
 }), true);
 assert.equal(stripePriceForPlan(env, "STANDARD"), "price_standard_fixture");
-assert.equal(stripePlanForPrice(env, "price_scale_fixture"), "SCALE");
+assert.equal(stripePlanForPrice(env, "price_scale_fixture"), null);
 assert.equal(stripePlanForPrice(env, "price_unknown"), null);
 
 assert.equal(subscriptionEntitlementState("active"), "ACTIVE");
@@ -110,7 +112,8 @@ env.PRODUCT_DB = {
                 display_name: args[0],
                 meter_id: "HARA_COMMANDER_GOVERNED_INVOKE",
                 period_kind: "CALENDAR_MONTH",
-                unit_limit: 1000,
+                unit_limit: 1000000,
+                active_device_limit: 5,
                 state: "ACTIVE",
               };
             }

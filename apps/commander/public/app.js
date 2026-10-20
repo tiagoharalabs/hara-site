@@ -464,17 +464,19 @@
     setText("dashboardPlan", plan);
     const planCard = document.getElementById("planSummaryCard");
     const isTrial = planCode === "TRIAL";
+    const isPaid = planCode === "STANDARD";
+    const isFounder = planCode === "FOUNDER_INTERNAL";
     if (planCard) planCard.classList.toggle("trial", isTrial);
     setText(
       "dashboardPlanDetail",
-      isTrial ? "Plano Free · 10.000 chamadas/mês" : (unmetered ? "Plano sem franquia mensal" : "Plano ativo"),
+      isTrial ? "Avaliação · " + number(limit) + " chamadas no total" : (isPaid ? "HARA Commander · " + number(limit) + " chamadas/mês" : (isFounder ? "Founder/Internal · ilimitado" : "Plano ativo")),
     );
     setText("dashboardConsumed", unmetered ? "Ilimitado" : (usageAvailable ? number(consumed) : "—"));
     setText("dashboardLimit", unmetered ? "" : "/ " + number(limit));
     setText(
       "dashboardPercent",
       unmetered
-        ? "Sem franquia mensal de execuções governadas"
+        ? "Sem franquia de chamadas funcionais"
         : (usageAvailable ? percent.toFixed(2).replace(".", ",") + "% utilizado" : "Uso temporariamente indisponível"),
     );
     const dashboardBar = document.getElementById("dashboardUsageProgress");
@@ -491,10 +493,10 @@
     setText(
       "usageRemaining",
       unmetered
-        ? "Sem franquia mensal de execuções governadas"
-        : (usageAvailable ? number(remaining) + " execuções disponíveis" : "Uso temporariamente indisponível"),
+        ? "Sem franquia de chamadas funcionais"
+        : (usageAvailable ? number(remaining) + " chamadas disponíveis" : "Uso temporariamente indisponível"),
     );
-    setText("usagePeriod", unmetered ? "Sem limite" : (payload.usage.period_key || "—"));
+    setText("usagePeriod", unmetered ? "Sem limite" : (isTrial ? "Total da avaliação" : (payload.usage.period_key || "—")));
 
     const history = payload.transaction_history || {};
     const historyAvailable = history.available !== false;
@@ -509,18 +511,18 @@
     setText(
       "usageCardCapacityDetail",
       unmetered
-        ? "Sem franquia mensal de execuções"
-        : (usageAvailable ? "execuções restantes de " + number(limit) : "Capacidade temporariamente indisponível"),
+        ? "Sem franquia de chamadas"
+        : (usageAvailable ? "chamadas restantes de " + number(limit) : "Capacidade temporariamente indisponível"),
     );
     setText("usageCardPlan", plan);
     setText(
       "usageCardPlanDetail",
-      unmetered ? "Execuções governadas sem franquia mensal" : (isTrial ? "Free · 10.000 execuções governadas/mês" : "Plano ativo"),
+      unmetered ? (isFounder ? "Founder/Internal · ilimitado" : "Sem franquia") : (isTrial ? "Avaliação · 5.000 chamadas no total" : (isPaid ? "HARA Commander · 1.000.000 chamadas/mês" : "Plano ativo")),
     );
-    setText("usageCardPeriod", unmetered ? "Sem limite" : "Mensal");
+    setText("usageCardPeriod", unmetered ? "Sem limite" : (isTrial ? "Avaliação total" : "Mês-calendário"));
     setText(
       "usageCardPeriodDetail",
-      unmetered ? "Sem fechamento de franquia" : (payload.usage.period_key || "Ciclo atual"),
+      unmetered ? "Sem fechamento de franquia" : (isTrial ? "Sem renovação mensal" : (payload.usage.period_key || "Mês atual")),
     );
 
     const bar = document.getElementById("usageProgress");
@@ -1672,7 +1674,7 @@
 
   function applyScenario(name, payload) {
     if (!name) return;
-    const limit = Number(payload?.usage?.limit || payload?.entitlement?.unit_limit || 10000);
+    const limit = Number(payload?.usage?.limit || payload?.entitlement?.unit_limit || (payload?.entitlement?.plan_code === "STANDARD" ? 1000000 : 5000));
     const connections = document.querySelectorAll("#connectionList button:not([disabled])");
 
     if (name === "loading") {
@@ -1844,8 +1846,8 @@
         button.disabled = !ready;
         button.setAttribute("aria-disabled", String(!ready));
         button.textContent = ready
-          ? (planCode === "SCALE" ? "Assinar Scale" : "Assinar Standard")
-          : (planCode === "SCALE" ? "Roadmap" : "Em preparação");
+          ? "Assinar HARA Commander"
+          : "Em preparação";
 
         const priceLabel = document.querySelector('[data-billing-price-label="' + planCode + '"]');
         const commercial = plan?.commercial_terms || {};
@@ -1894,7 +1896,7 @@
           const state = String(payload?.connection?.subscription_status || "conectada").replaceAll("_", " ");
           statusNode.textContent = "Cobrança conectada. Status da assinatura: " + state + ".";
         } else if (activation.first_checkout_ready) {
-          statusNode.textContent = "Pro disponível por R$ 80/mês, com chamadas ilimitadas. O pagamento é concluído no checkout seguro do Stripe.";
+          statusNode.textContent = "HARA Commander disponível por R$ 80/mês, com 1.000.000 de chamadas funcionais por mês. O pagamento é concluído no checkout seguro do Stripe.";
         } else if (!activation.provider_configured) {
           statusNode.textContent = "Checkout automático ainda não ativado. O Standard está disponível em beta por convite.";
         } else if (!activation.standard_catalog_active) {

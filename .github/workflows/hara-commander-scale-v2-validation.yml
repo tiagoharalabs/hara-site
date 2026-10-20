@@ -74,6 +74,8 @@ jobs:
           python3 apps/commander/scripts/validate_commander_1k_10k_capacity.py --check
           python3 -B apps/commander/scripts/test_signed_distribution_stage.py
           python3 -B apps/commander/scripts/build_commander_commercial_terminal_drain_candidate.py --check
+          python3 -B apps/commander/scripts/test_commercial_model_20261020.py
+          node apps/commander/scripts/test_commercial_policy_20261020.mjs
           python3 apps/commander/scripts/stage_signed_commercial_assets.py --check
           python3 apps/commander/scripts/validate_device_channel_source.py
           python3 apps/commander/scripts/validate_event_v2_wiring.py

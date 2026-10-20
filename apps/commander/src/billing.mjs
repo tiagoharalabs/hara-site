@@ -1,14 +1,30 @@
 const STRIPE_API = "https://api.stripe.com/v1";
 const WEBHOOK_TOLERANCE_SECONDS = 300;
 const WEBHOOK_MAX_BYTES = 512 * 1024;
-const PAID_PLANS = Object.freeze(["STANDARD", "SCALE"]);
+const PAID_PLANS = Object.freeze(["STANDARD"]);
 export const APPROVED_COMMERCIAL_TERMS = Object.freeze({
+  TRIAL: Object.freeze({
+    public_name: "Avaliação",
+    period_kind: "LIFETIME",
+    functional_calls_total: 5_000,
+    active_device_limit: 5,
+    usage_unlimited: false,
+  }),
   STANDARD: Object.freeze({
-    public_name: "Pro",
+    public_name: "HARA Commander",
     currency: "BRL",
     price_amount_cents: 8000,
     price_display: "R$ 80",
     billing_interval: "month",
+    period_kind: "CALENDAR_MONTH",
+    functional_calls_per_month: 1_000_000,
+    active_device_limit: 5,
+    usage_unlimited: false,
+  }),
+  FOUNDER_INTERNAL: Object.freeze({
+    public_name: "Founder/Internal",
+    period_kind: "NONE",
+    active_device_limit: null,
     usage_unlimited: true,
   }),
 });
@@ -62,10 +78,16 @@ function epochToIso(value) {
   return new Date(seconds * 1000).toISOString();
 }
 
+function subscriptionPeriodEndUtc(subscription) {
+  // Current Stripe API versions put the billing period on the item; older
+  // webhook versions may still include the subscription-level field.
+  return epochToIso(subscription?.items?.data?.[0]?.current_period_end)
+    || epochToIso(subscription?.current_period_end);
+}
+
 function priceMap(env) {
   return {
     STANDARD: cleanStripeId(env.STRIPE_PRICE_STANDARD, ["price_"]),
-    SCALE: cleanStripeId(env.STRIPE_PRICE_SCALE, ["price_"]),
   };
 }
 
@@ -157,12 +179,26 @@ async function stripePost(env, path, fields, fetcher = fetch) {
 }
 
 async function activePlan(env, planCode) {
-  return env.PRODUCT_DB.prepare(
-    `SELECT plan_code, display_name, meter_id, period_kind, unit_limit, state
+  let plan;
+  try {
+    plan = await env.PRODUCT_DB.prepare(
+      `SELECT plan_code, display_name, meter_id, period_kind, unit_limit,
+            active_device_limit, state
        FROM plans
       WHERE plan_code = ? AND state = 'ACTIVE'
       LIMIT 1`
-  ).bind(planCode).first();
+    ).bind(planCode).first();
+  } catch (error) {
+    if (/no such column: active_device_limit/i.test(String(error))) return null;
+    throw error;
+  }
+  const terms = APPROVED_COMMERCIAL_TERMS[planCode];
+  if (terms && planCode === "STANDARD" && (
+    plan?.period_kind !== terms.period_kind
+    || Number(plan?.unit_limit) !== terms.functional_calls_per_month
+    || Number(plan?.active_device_limit) !== terms.active_device_limit
+  )) return null;
+  return plan;
 }
 
 async function billingConnection(env, tenantId) {
@@ -465,7 +501,7 @@ async function upsertBillingConnection(env, tenantId, {
   ).run();
 }
 
-async function syncPaidEntitlement(env, tenantId, planCode, entitlementState) {
+async function syncPaidEntitlement(env, tenantId, planCode, entitlementState, validUntilUtc = null) {
   const entitlementId = "BILLING:" + tenantId;
   const now = nowIso();
 
@@ -484,13 +520,13 @@ async function syncPaidEntitlement(env, tenantId, planCode, entitlementState) {
       env.PRODUCT_DB.prepare(
         `INSERT INTO entitlements
           (entitlement_id, tenant_id, subject_id, plan_code, state, valid_from_utc, valid_until_utc)
-         VALUES (?, ?, NULL, ?, 'ACTIVE', ?, NULL)
+         VALUES (?, ?, NULL, ?, 'ACTIVE', ?, ?)
          ON CONFLICT(entitlement_id) DO UPDATE SET
            plan_code = excluded.plan_code,
            state = 'ACTIVE',
            valid_from_utc = excluded.valid_from_utc,
-           valid_until_utc = NULL`
-      ).bind(entitlementId, tenantId, planCode, now),
+           valid_until_utc = excluded.valid_until_utc`
+      ).bind(entitlementId, tenantId, planCode, now, validUntilUtc),
     ]);
     return;
   }
@@ -566,20 +602,32 @@ async function processSubscription(env, eventType, object) {
   const configuredPrice = stripePriceForPlan(env, planCode);
   if (!configuredPrice || priceId !== configuredPrice) throw new Error("BILLING_PRICE_MISMATCH");
 
-  const entitlementState = eventType === "customer.subscription.deleted"
+  const periodEndUtc = subscriptionPeriodEndUtc(object);
+  const scheduledEndUtc = object?.cancel_at_period_end
+    ? periodEndUtc
+    : epochToIso(object?.cancel_at);
+  if (object?.cancel_at_period_end && !scheduledEndUtc) {
+    throw new Error("BILLING_PERIOD_END_REQUIRED");
+  }
+  let entitlementState = eventType === "customer.subscription.deleted"
     ? "REVOKED"
     : subscriptionEntitlementState(status);
+  if (entitlementState === "ACTIVE" && scheduledEndUtc
+      && Date.parse(scheduledEndUtc) <= Date.now()) {
+    entitlementState = "REVOKED";
+  }
 
   await upsertBillingConnection(env, tenantId, {
     customerId,
     subscriptionId,
     planCode,
     subscriptionStatus: status,
-    currentPeriodEndUtc: epochToIso(object?.current_period_end),
+    currentPeriodEndUtc: periodEndUtc,
     cancelAtPeriodEnd: Boolean(object?.cancel_at_period_end || object?.cancel_at),
     state: entitlementState === "ACTIVE" ? "ACTIVE" : entitlementState,
   });
-  await syncPaidEntitlement(env, tenantId, planCode, entitlementState);
+  await syncPaidEntitlement(env, tenantId, planCode, entitlementState,
+    entitlementState === "ACTIVE" ? scheduledEndUtc : null);
   return "SUBSCRIPTION_" + entitlementState;
 }
 

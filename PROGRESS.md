@@ -23,7 +23,7 @@ GETs HTTPS somente leitura em `https://commander.haralabs.com.br` reproduziram o
 
 **Artefatos locais preparados, sem publicação:**
 
-- Fonte candidata: `/tmp/commander-drain-source-candidate-20261020-1846z`, manifesto SHA-256 `6742a7ac8256e5e35e3c2d16e51d3c3647def7a61dddf39350def15078914b39`, estado `AWAITING_OFFICIAL_SIGNATURE`. Linux atual `0.3.43` + Windows/instaladores comerciais v4. Sem assinatura; o verificador de publicação a rejeita.
+- Fonte candidata atualizada: `/tmp/commander-drain-source-candidate-20261020-1858z`, manifesto SHA-256 `6742a7ac8256e5e35e3c2d16e51d3c3647def7a61dddf39350def15078914b39`, estado `AWAITING_OFFICIAL_SIGNATURE`. Linux atual `0.3.43` + Windows/instaladores comerciais v4 + UI comercial da branch. Sem assinatura; o verificador de publicação a rejeita. A montagem anterior de 18:46 não inclui a UI nova.
 - Referência de rollback: `/tmp/commander-signed-v4-rollback-20261020-1846z`, assinatura v2 válida e estado explícito `ROLLBACK_ONLY_KNOWN_PROCESS_DRAIN_REGRESSION`. Não representa promoção segura do fix de drenagem.
 - Antes de qualquer promoção, obter version ID PROD atual e rollback real por readback, assinar oficialmente o v5 no fluxo autorizado, verificar assinatura/bytes/PTY e pedir aprovação específica. Nenhum upload foi feito.
 
@@ -45,3 +45,20 @@ GETs HTTPS somente leitura em `https://commander.haralabs.com.br` reproduziram o
 **Próximas frentes:** modelo comercial, migração nova, teto atômico de cinco computadores, Event V2 comercial, retenção e quotas, jornada limpa com mocks Stripe TEST, pacote MCP de publicação. A decisão mês-calendário versus ciclo Stripe continua pendente e não autoriza dois resets.
 
 **Commits:** `d7b3ad5` — distribuição assinada, staging explícito, regressões e candidato de fonte. Revisão independente recebida em `docs/operations/HARA_COMMANDER_PEER_REVIEW_20261020T1840Z.md`; reproduzi localmente o defeito de drenagem antes de incorporá-lo ao gate.
+
+## Modelo comercial — candidato local de 20/10/2026
+
+**Corrigido no código:** migração aditiva `0036` estabelece Avaliação `LIFETIME`/5.000, HARA Commander `CALENDAR_MONTH`/1.000.000 e teto de cinco computadores em ambos; Founder/Internal permanece `NONE` ilimitado. Billing só oferece `STANDARD` por R$ 80/mês e rejeita checkout se o catálogo ainda estiver no modelo antigo. A UI reflete os termos sem limite de usuários. O webhook conserva acesso até o fim do período pago em cancelamento agendado e lê `current_period_end` no item Stripe quando presente. O cancelamento efetivo revoga o entitlement. Nenhuma chave ou conta Stripe TEST foi usada.
+
+**Decisão registrada, pendente para promoção:** o código usa mês-calendário como único reset da franquia paga; o ciclo Stripe rege cobrança/acesso. O proprietário precisa confirmar mês-calendário versus ciclo pago antes da promoção. Não foram implementados dois resets. A migração remota exige conciliação do uso histórico de tenants Trial antes da troca para `LIFETIME`; sem baseline, um cliente existente poderia receber chamadas extras.
+
+| Teste local | Exit | Evidência |
+| --- | ---: | --- |
+| `python3 -B apps/commander/scripts/test_commercial_model_20261020.py` | 0 | catálogo final e Founder em SQLite |
+| `node apps/commander/scripts/test_commercial_policy_20261020.mjs` | 0 | preço, quota, plano Scale não vendável e checkout antigo negado |
+| `node apps/commander/scripts/billing_sqlite_webhook_e2e.mjs` | 0 | assinatura, idempotência, suspensão, recuperação, cancelamento agendado/revertido/efetivo |
+| `node apps/commander/scripts/test_no_stripe_technical_mode.mjs` | 0 | 13 cenários, zero requests Stripe reais |
+| `python3 -B apps/commander/scripts/validate_billing_v1.py` | 0 | migrações e contrato de ativação |
+| `python3 -B apps/commander/scripts/validate_prod_static.py` | 0 | superfície estática alinhada |
+
+**Estados:** corrigido no código: sim; testado local: sim; testado DEV: não; publicado PROD: não. D1 remota, Stripe TEST real e Stripe LIVE não foram tocados.

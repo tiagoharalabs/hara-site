@@ -19,7 +19,7 @@ const env={
               if(sql.includes('FROM plans')){
                 if(args[0]==='STANDARD') return {
                   plan_code:'STANDARD',state:'ACTIVE',
-                  display_name:'Pro',period_kind:'NONE',unit_limit:null,
+                  display_name:'HARA Commander',period_kind:'CALENDAR_MONTH',unit_limit:1000000,active_device_limit:5,
                 };
                 return null;
               }
@@ -44,8 +44,8 @@ await check('active_standard_still_displays_approved_terms',()=>{
   assert.equal(status.plans.STANDARD.catalog_active,true);
   assert.equal(status.plans.STANDARD.commercial_terms.price_display,'R$ 80');
   assert.equal(APPROVED_COMMERCIAL_TERMS.STANDARD.price_amount_cents,8000);
-  assert.equal(status.plans.STANDARD.period_kind,'NONE');
-  assert.equal(status.plans.STANDARD.unit_limit,null);
+  assert.equal(status.plans.STANDARD.period_kind,'CALENDAR_MONTH');
+  assert.equal(status.plans.STANDARD.unit_limit,1000000);
 });
 await check('standard_purchase_is_hidden_until_provider_ready',()=>{
   assert.equal(status.plans.STANDARD.price_configured,false);
@@ -55,8 +55,7 @@ await check('standard_purchase_is_hidden_until_provider_ready',()=>{
 });
 await check('no_connection_fabricated_without_payment',()=>assert.equal(status.connection,null));
 await check('scale_cannot_be_accidentally_sold',()=>{
-  assert.equal(status.plans.SCALE.checkout_ready,false);
-  assert.equal(status.plans.SCALE.catalog_active,false);
+  assert.equal(status.plans.SCALE,undefined);
 });
 let externalCalls=0;
 const failFetch=()=>{externalCalls++;throw new Error('STRIPE_NETWORK_SHOULD_NOT_BE_CALLED');};

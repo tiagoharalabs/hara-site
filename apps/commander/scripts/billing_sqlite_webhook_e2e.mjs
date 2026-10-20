@@ -8,7 +8,7 @@ import { handleStripeWebhook } from "../src/billing.mjs";
 
 const db = new DatabaseSync(":memory:");
 const root = new URL("../migrations/", import.meta.url);
-for (const file of ["0001_product.sql", "0013_billing_v1.sql", "0021_commercial_terms_20261005.sql"]) {
+for (const file of ["0001_product.sql", "0013_billing_v1.sql", "0021_commercial_terms_20261005.sql", "0036_commander_prelaunch_commercial_terms.sql"]) {
   db.exec(fs.readFileSync(new URL(file, root), "utf8"));
 }
 db.prepare("INSERT INTO tenants (tenant_id,display_name,state,environment,created_at_utc) VALUES (?,?,?,?,?)")
@@ -65,7 +65,7 @@ const subscription=(status)=>({
 const checkout={id:"cs_test_e2e",customer,subscription:subId,
   client_reference_id:tenant, metadata:{tenant_id:tenant,plan_code:"STANDARD"}};
 const connection=()=>db.prepare("SELECT state,subscription_status,external_customer_id,external_subscription_id FROM billing_connections WHERE tenant_id=?").get(tenant);
-const paid=()=>db.prepare("SELECT state,plan_code FROM entitlements WHERE entitlement_id=?").get("BILLING:"+tenant);
+const paid=()=>db.prepare("SELECT state,plan_code,valid_until_utc FROM entitlements WHERE entitlement_id=?").get("BILLING:"+tenant);
 const trial=()=>db.prepare("SELECT state FROM entitlements WHERE entitlement_id=?").get("TRIAL:E2E");
 const eventCount=()=>db.prepare("SELECT COUNT(*) AS n FROM billing_webhook_events").get().n;
 
@@ -106,6 +106,26 @@ const recover=await handleStripeWebhook(await signedEvent("evt_recover","custome
 assert.equal(recover.result_code,"SUBSCRIPTION_ACTIVE");
 assert.equal(paid().state,"ACTIVE");
 console.log("BILLING_SQLITE_RECOVERY=PASS");
+
+// Stripe's item-level billing period is authoritative for scheduled
+// cancellation. Access stays active until that paid period ends.
+const paidPeriodEnd = Math.floor(Date.now()/1000) + 3600;
+const scheduled = subscription("active");
+delete scheduled.current_period_end;
+scheduled.cancel_at_period_end = true;
+scheduled.items.data[0].current_period_end = paidPeriodEnd;
+const scheduledResult = await handleStripeWebhook(await signedEvent(
+  "evt_cancel_scheduled", "customer.subscription.updated", scheduled), env);
+assert.equal(scheduledResult.result_code, "SUBSCRIPTION_ACTIVE");
+assert.equal(paid().state, "ACTIVE");
+assert.equal(paid().valid_until_utc, new Date(paidPeriodEnd*1000).toISOString());
+console.log("BILLING_SQLITE_SCHEDULED_CANCEL_RETAINS_PAID_ACCESS=PASS");
+
+const resumed = await handleStripeWebhook(await signedEvent(
+  "evt_cancel_reversed", "customer.subscription.updated", subscription("active")), env);
+assert.equal(resumed.result_code, "SUBSCRIPTION_ACTIVE");
+assert.equal(paid().valid_until_utc, null);
+console.log("BILLING_SQLITE_CANCEL_REVERSAL_CLEARS_EXPIRY=PASS");
 
 const cancel=await handleStripeWebhook(await signedEvent("evt_cancel","customer.subscription.deleted",subscription("canceled")),env);
 assert.equal(cancel.result_code,"SUBSCRIPTION_REVOKED");

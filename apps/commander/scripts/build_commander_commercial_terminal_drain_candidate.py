@@ -20,6 +20,7 @@ from stage_signed_commercial_assets import APP, BUNDLES, ROLLBACK_RELEASE, stage
 LINUX_SOURCE = APP / "public/agent/linux.py"
 REVIEWED_LINUX_SHA256 = "1572d70e60fb299edb262a8a817bd7aa1740a4c2dda3635d50beb2f3476ffe3b"
 FILESET = ("agent/linux.py", "agent/windows.ps1", "install/linux.sh", "install/windows.ps1")
+CURRENT_STATIC = ("index.html", "app.js")
 
 
 def digest(data: bytes) -> str:
@@ -44,6 +45,8 @@ def prepare(output: Path) -> dict:
     public.parent.mkdir(mode=0o700, parents=True)
     stage(public, BUNDLES[ROLLBACK_RELEASE], rollback_only=True)
     (public / "agent/linux.py").write_bytes(linux)
+    for relative in CURRENT_STATIC:
+        (public / relative).write_bytes((APP / "public" / relative).read_bytes())
     manifest_path = public / "release/agent-manifest.json"
     manifest = json.loads(manifest_path.read_bytes())
     if manifest.get("agent_version") != "0.3.43":
@@ -72,6 +75,10 @@ def prepare(output: Path) -> dict:
         "linux_agent_sha256": digest(linux),
         "manifest_sha256": digest(manifest_path.read_bytes()),
         "frozen_commercial_base": ROLLBACK_RELEASE,
+        "current_static_sha256": {
+            relative: digest((public / relative).read_bytes())
+            for relative in CURRENT_STATIC
+        },
         "signature_present": False,
         "private_key_read": False,
         "production_mutation": False,

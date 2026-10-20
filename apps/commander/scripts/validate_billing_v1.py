@@ -13,6 +13,7 @@ STANDARD_MIGRATION = COMMANDER / "migrations" / "0019_standard_beta_plan.sql"
 COMMERCIAL_MIGRATION = COMMANDER / "migrations" / "0021_commercial_terms_20261005.sql"
 FREE_15000_MIGRATION = COMMANDER / "migrations" / "0031_free_15000_20261010.sql"
 FREE_REVERT_MIGRATION = COMMANDER / "migrations" / "0032_free_10000_revert_20261010.sql"
+CURRENT_TERMS_MIGRATION = COMMANDER / "migrations" / "0036_commander_prelaunch_commercial_terms.sql"
 BILLING = COMMANDER / "src" / "billing.mjs"
 WORKER = COMMANDER / "src" / "worker.js"
 WRANGLER = COMMANDER / "wrangler.jsonc"
@@ -79,6 +80,7 @@ def main() -> int:
     commercial_migration = COMMERCIAL_MIGRATION.read_text(encoding="utf-8")
     free_15000_migration = FREE_15000_MIGRATION.read_text(encoding="utf-8")
     free_revert_migration = FREE_REVERT_MIGRATION.read_text(encoding="utf-8")
+    current_terms_migration = CURRENT_TERMS_MIGRATION.read_text(encoding="utf-8")
     source = BILLING.read_text(encoding="utf-8")
     worker = WORKER.read_text(encoding="utf-8")
     wrangler = WRANGLER.read_text(encoding="utf-8")
@@ -144,25 +146,28 @@ def main() -> int:
     catalog_db.executescript(free_15000_migration)
     catalog_db.executescript(free_revert_migration)
     catalog_db.executescript(free_revert_migration)
+    catalog_db.executescript(current_terms_migration)
     trial = catalog_db.execute(
-        "SELECT display_name,meter_id,period_kind,unit_limit,state FROM plans WHERE plan_code='TRIAL'"
+        "SELECT display_name,meter_id,period_kind,unit_limit,state,active_device_limit FROM plans WHERE plan_code='TRIAL'"
     ).fetchone()
     assert trial == (
-        "Free",
+        "Avaliação",
         "HARA_COMMANDER_GOVERNED_INVOKE",
-        "CALENDAR_MONTH",
-        10000,
+        "LIFETIME",
+        5000,
         "ACTIVE",
+        5,
     )
     standard = catalog_db.execute(
-        "SELECT display_name,meter_id,period_kind,unit_limit,state FROM plans WHERE plan_code='STANDARD'"
+        "SELECT display_name,meter_id,period_kind,unit_limit,state,active_device_limit FROM plans WHERE plan_code='STANDARD'"
     ).fetchone()
     assert standard == (
-        "Pro",
+        "HARA Commander",
         "HARA_COMMANDER_GOVERNED_INVOKE",
-        "NONE",
-        None,
+        "CALENDAR_MONTH",
+        1000000,
         "ACTIVE",
+        5,
     )
     grants = {
         row[0]
@@ -216,30 +221,30 @@ def main() -> int:
 
     # Commercial terms are explicitly approved; Stripe secret/Price IDs stay runtime-only.
     assert "STRIPE_PRICE_STANDARD" in source
-    assert "STRIPE_PRICE_SCALE" in source
+    assert 'const PAID_PLANS = Object.freeze(["STANDARD"])' in source
     assert "price_configured:" in source
     assert "provider_configured:" in source
     assert "first_checkout_ready:" in source
     assert 'price_amount_cents: 8000' in source
     assert 'currency: "BRL"' in source
     assert 'billing_interval: "month"' in source
-    assert 'usage_unlimited: true' in source
-    assert "10.000 <small>chamadas / mês</small>" in html
-    assert "10.000 chamadas renovadas todo mês" in html
+    assert 'functional_calls_per_month: 1_000_000' in source
+    assert "5.000 <small>chamadas no total</small>" in html
+    assert "sem renovação mensal" in html
     assert "R$ 80 <small>/ mês</small>" in html
-    assert "Chamadas ilimitadas" in html
-    assert "10000" in js
+    assert "1.000.000 de chamadas funcionais por mês" in html
+    assert "5000" in js and "1000000" in js
     assert "INSERT INTO plans" not in migration
 
     # Activation tooling is read-only by default and records the approved commercial terms.
-    assert "TRIAL_PREVIOUS_PROD_UNITS = 100" in preflight
-    assert "TRIAL_TARGET_MONTHLY_UNITS = 10_000" in preflight
+    assert "TRIAL_TARGET_TOTAL_UNITS = 5_000" in preflight
+    assert "STANDARD_TARGET_CALENDAR_MONTH_UNITS = 1_000_000" in preflight
     assert "STANDARD_APPROVED_BRL_MONTHLY_CENTS = 8_000" in preflight
-    assert "TRIAL_PROD_CHANGE_NOW=TRUE" in runbook
+    assert "TRIAL_TARGET_TOTAL_UNITS=5000" in runbook
     assert "STANDARD_APPROVED_PRICE=R$80_MONTH" in runbook
-    assert "STANDARD_APPROVED_USAGE=UNLIMITED" in runbook
-    assert "STRIPE_SECRET_KEY=PENDING" in runbook
-    assert "COMMANDER_BILLING_FIRST_CHECKOUT_READY=FALSE" in runbook
+    assert "STANDARD_APPROVED_CALENDAR_MONTH_UNITS=1000000" in runbook
+    assert "Stripe TEST account, DEV canary and PROD promotion pending" in runbook
+    assert "The TEST account and credentials have not been provided" in runbook
     for forbidden in ("wrangler secret put", "INSERT INTO plans", "UPDATE plans", "DELETE FROM plans"):
         assert forbidden not in preflight, forbidden
 
@@ -265,10 +270,9 @@ def main() -> int:
     print("COMMANDER_COMMERCIAL_TERMS_MIGRATION=PASS")
     print("COMMANDER_BILLING_PROD_ACTIVATION_PREFLIGHT=PASS")
     print("TRIAL_PREVIOUS_PROD_UNITS=100")
-    print("TRIAL_TARGET_MONTHLY_UNITS=10000")
-    print("TRIAL_PROD_CHANGE_NOW=TRUE")
+    print("TRIAL_TARGET_TOTAL_UNITS=5000")
     print("STANDARD_APPROVED_BRL_MONTHLY_CENTS=8000")
-    print("STANDARD_APPROVED_USAGE=UNLIMITED")
+    print("STANDARD_APPROVED_CALENDAR_MONTH_UNITS=1000000")
     return 0
 
 

@@ -132,6 +132,9 @@ class SignedDistributionTests(unittest.TestCase):
             for relative in ("agent/windows.ps1", "install/linux.sh", "install/windows.ps1"):
                 self.assertEqual((public / relative).read_bytes(),
                                  (BUNDLES[ROLLBACK_RELEASE] / relative).read_bytes())
+            for relative in ("index.html", "app.js"):
+                self.assertEqual((public / relative).read_bytes(),
+                                 (APP / "public" / relative).read_bytes())
             manifest = json.loads((public / "release/agent-manifest.json").read_bytes())
             self.assertEqual(manifest["agent_version"], "0.3.43")
             with self.assertRaisesRegex(ReleaseValidationError, "FILE_MISSING"):

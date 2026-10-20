@@ -20,8 +20,9 @@ REQUIRED_PRICE_NAMES = {
     "STRIPE_PRICE_STANDARD",
 }
 
-TRIAL_PREVIOUS_PROD_UNITS = 100
-TRIAL_TARGET_MONTHLY_UNITS = 10_000
+TRIAL_TARGET_TOTAL_UNITS = 5_000
+STANDARD_TARGET_CALENDAR_MONTH_UNITS = 1_000_000
+CUSTOMER_ACTIVE_DEVICE_LIMIT = 5
 STANDARD_APPROVED_BRL_MONTHLY_CENTS = 8_000
 
 
@@ -112,14 +113,19 @@ def live_preflight() -> int:
     names = secret_names()
     missing_secrets = sorted(REQUIRED_SECRET_NAMES - names)
 
+    device_column = bool(d1_rows(
+        "SELECT name FROM pragma_table_info('plans') "
+        "WHERE name = 'active_device_limit';"
+    ))
     plan_rows = d1_rows(
-        "SELECT plan_code, display_name, period_kind, unit_limit, state "
-        "FROM plans ORDER BY plan_code;"
+        "SELECT plan_code, display_name, period_kind, unit_limit, state, "
+        + ("active_device_limit" if device_column else "NULL AS active_device_limit")
+        + " FROM plans ORDER BY plan_code;"
     )
     plans = {str(row.get("plan_code") or ""): row for row in plan_rows}
     trial = plans.get("TRIAL") or {}
     standard = plans.get("STANDARD")
-    scale = plans.get("SCALE")
+    founder = plans.get("FOUNDER_INTERNAL") or {}
 
     schema_rows = d1_rows(
         "SELECT name FROM sqlite_master "
@@ -144,22 +150,25 @@ def live_preflight() -> int:
 
     print("COMMANDER_BILLING_PROD_SCHEMA=" + ("PASS" if schema_ok else "FAIL"))
     print("TRIAL_CURRENT_PROD_UNITS=" + str(trial.get("unit_limit")))
-    print("TRIAL_LIVE_ALIGNED=" + ("TRUE" if int(trial.get("unit_limit") or 0) == TRIAL_TARGET_MONTHLY_UNITS and trial.get("period_kind") == "CALENDAR_MONTH" else "FALSE"))
-    print("TRIAL_TARGET_MONTHLY_UNITS=" + str(TRIAL_TARGET_MONTHLY_UNITS))
+    trial_aligned = (int(trial.get("unit_limit") or 0) == TRIAL_TARGET_TOTAL_UNITS
+                     and trial.get("period_kind") == "LIFETIME"
+                     and trial.get("active_device_limit") == CUSTOMER_ACTIVE_DEVICE_LIMIT)
+    standard_aligned = (standard is not None
+                        and standard.get("period_kind") == "CALENDAR_MONTH"
+                        and standard.get("unit_limit") == STANDARD_TARGET_CALENDAR_MONTH_UNITS
+                        and standard.get("active_device_limit") == CUSTOMER_ACTIVE_DEVICE_LIMIT)
+    print("TRIAL_LIVE_ALIGNED=" + ("TRUE" if trial_aligned else "FALSE"))
+    print("TRIAL_TARGET_TOTAL_UNITS=" + str(TRIAL_TARGET_TOTAL_UNITS))
     print("COMMERCIAL_TERMS_AUTHORIZED=TRUE")
     print("STANDARD_APPROVED_BRL_MONTHLY_CENTS=" + str(STANDARD_APPROVED_BRL_MONTHLY_CENTS))
-    print("STANDARD_APPROVED_USAGE=UNLIMITED")
-    print(
-        "STANDARD_LIVE_UNLIMITED="
-        + ("TRUE" if standard and standard.get("period_kind") == "NONE" and standard.get("unit_limit") is None else "FALSE")
-    )
+    print("STANDARD_APPROVED_CALENDAR_MONTH_UNITS=" + str(STANDARD_TARGET_CALENDAR_MONTH_UNITS))
+    print("STANDARD_LIVE_ALIGNED=" + ("TRUE" if standard_aligned else "FALSE"))
+    print("FOUNDER_INTERNAL_UNLIMITED=" + ("TRUE" if founder.get("period_kind") == "NONE" and founder.get("unit_limit") is None else "FALSE"))
     print("STANDARD_CATALOG_ACTIVE=" + ("TRUE" if standard and standard.get("state") == "ACTIVE" else "FALSE"))
-    print("SCALE_CATALOG_ACTIVE=" + ("TRUE" if scale and scale.get("state") == "ACTIVE" else "FALSE"))
     print("STRIPE_SECRET_KEY=" + ("READY" if "STRIPE_SECRET_KEY" in names else "PENDING"))
     print("STRIPE_WEBHOOK_SECRET=" + ("READY" if "STRIPE_WEBHOOK_SECRET" in names else "PENDING"))
     # Price IDs are intentionally runtime config, but may be kept as Worker secrets.
     print("STRIPE_PRICE_STANDARD=" + ("READY" if "STRIPE_PRICE_STANDARD" in names else "PENDING"))
-    print("STRIPE_PRICE_SCALE=" + ("READY" if "STRIPE_PRICE_SCALE" in names else "PENDING"))
     print("BILLING_CONNECTIONS=" + str(count_row.get("billing_connections_count", 0)))
     print("BILLING_WEBHOOK_EVENTS=" + str(count_row.get("billing_webhook_events_count", 0)))
 
@@ -167,12 +176,11 @@ def live_preflight() -> int:
         schema_ok
         and not missing_secrets
         and REQUIRED_PRICE_NAMES.issubset(names)
-        and int(trial.get("unit_limit") or 0) == TRIAL_TARGET_MONTHLY_UNITS
-        and trial.get("period_kind") == "CALENDAR_MONTH"
-        and standard is not None
+        and trial_aligned
+        and standard_aligned
         and standard.get("state") == "ACTIVE"
-        and standard.get("period_kind") == "NONE"
-        and standard.get("unit_limit") is None
+        and founder.get("period_kind") == "NONE"
+        and founder.get("unit_limit") is None
     )
     print("COMMANDER_BILLING_FIRST_CHECKOUT_READY=" + ("TRUE" if ready else "FALSE"))
     print("PROD_MUTATION=FALSE")
@@ -196,11 +204,11 @@ def source_preflight() -> int:
     }
     for key, ok in checks.items():
         print("BILLING_SOURCE_" + key.upper() + "=" + ("PASS" if ok else "FAIL"))
-    print("TRIAL_PREVIOUS_PROD_UNITS=" + str(TRIAL_PREVIOUS_PROD_UNITS))
-    print("TRIAL_TARGET_MONTHLY_UNITS=" + str(TRIAL_TARGET_MONTHLY_UNITS))
-    print("TRIAL_PROD_CHANGE_NOW=TRUE")
+    print("TRIAL_TARGET_TOTAL_UNITS=" + str(TRIAL_TARGET_TOTAL_UNITS))
+    print("D1_REMOTE_MIGRATION_AUTHORIZED=FALSE")
     print("STANDARD_APPROVED_BRL_MONTHLY_CENTS=" + str(STANDARD_APPROVED_BRL_MONTHLY_CENTS))
-    print("STANDARD_APPROVED_USAGE=UNLIMITED")
+    print("STANDARD_APPROVED_CALENDAR_MONTH_UNITS=" + str(STANDARD_TARGET_CALENDAR_MONTH_UNITS))
+    print("CUSTOMER_ACTIVE_DEVICE_LIMIT=" + str(CUSTOMER_ACTIVE_DEVICE_LIMIT))
     print("COMMERCIAL_TERMS_AUTHORIZED=TRUE")
     return 0 if all(checks.values()) else 1
 
