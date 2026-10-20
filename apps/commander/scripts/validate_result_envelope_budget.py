@@ -80,6 +80,24 @@ with tempfile.TemporaryDirectory(prefix="hara-result-envelope-") as temporary:
             assert [item["file_revision_hint"] for item in public["files"]]==[item["file_revision_hint"] for item in data["files"]]
             print(f"COMMANDER_READ_MANY_{count}_FILES_SERIALIZED_BUDGET=PASS")
 
+        short=Path(temporary)/"short-cas.txt"
+        short_bytes="ação 🍵\r\nsegunda linha\r\n".encode("utf-8")
+        short.write_bytes(short_bytes)
+        expected_sha=hashlib.sha256(short_bytes).hexdigest()
+        for tool_id,payload in (
+            ("hara.files.read",{"path":str(short),"offset":0,"length":400}),
+            ("hara.files.read_many",{"paths":[str(short)],"offset":0,"length":100}),
+        ):
+            result=agent.execute_tool(config,{"call_id":"CAS-"+tool_id,
+                                              "request_id":"CAS-"+tool_id,
+                                              "tool_id":tool_id,"payload":payload})
+            data=json.loads(result["result"]["stdout"])
+            public=check_public_projection(tool_id,result)
+            actual=data["files"][0]["full_file_sha256"] if tool_id.endswith("read_many") else data["full_file_sha256"]
+            exposed=public["files"][0]["full_file_sha256"] if tool_id.endswith("read_many") else public["full_file_sha256"]
+            assert actual==exposed==expected_sha
+        print("COMMANDER_COMPLETE_SHORT_READ_CAS_HASH_SURVIVES_PUBLIC_MCP=PASS")
+
         mixed=agent.execute_tool(config,{
             "call_id":"MIXED","request_id":"MIXED","tool_id":"hara.files.read_many",
             "payload":{"paths":[paths[0],str(Path(temporary)/"missing.txt")],"offset":0,"length":1},
@@ -132,7 +150,8 @@ with tempfile.TemporaryDirectory(prefix="hara-result-envelope-") as temporary:
                     "has_more":first,"eof":not first,"next_offset":None if first else offset+1,
                     "content_truncated":False,"continuation_safe":not first,
                     "file_revision_hint":"a"*64 if first else "b"*64,
-                    "file_changed_during_read":first,"restart_offset":0 if first else None}
+                    "file_changed_during_read":first,"restart_offset":0 if first else None,
+                    **({} if first else {"full_file_sha256":"b"*64})}
         with patch.object(agent,"filesystem_read",side_effect=changed_then_retry):
             retried=agent.filesystem_read_many([str(revision_file)],0,1)
         assert len(read_attempts)>=2
@@ -140,6 +159,7 @@ with tempfile.TemporaryDirectory(prefix="hara-result-envelope-") as temporary:
         assert entry["file_changed_during_read"] is True
         assert entry["continuation_safe"] is False and entry["next_offset"] is None
         assert entry["restart_offset"]==0
+        assert "full_file_sha256" not in entry
         assert retried["overall_status"]=="PARTIAL"
         print("COMMANDER_READ_MANY_BUDGET_RETRY_PRESERVES_CHANGE_SIGNAL=PASS")
 

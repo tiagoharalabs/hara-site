@@ -154,6 +154,34 @@ with tempfile.TemporaryDirectory(prefix="hara-canonical-functions-") as td:
     read3=ns["filesystem_read"](str(target),read2["next_offset"],2)
     need(read3["line_count"]==1 and read3["eof"] is True and read3["next_offset"] is None,"READ_EOF")
 
+    # A complete short read can supply the raw-byte hash for expected_sha256
+    # without granting a shell. Partial or unstable reads must not advertise it.
+    cas_file=root/"cas-unicode.txt"
+    cas_bytes="ação 🍵\r\nsegunda linha\r\n".encode("utf-8")
+    cas_file.write_bytes(cas_bytes)
+    read_call={"call_id":"read-cas","request_id":"read-cas","tool_id":"hara.files.read",
+               "payload":{"path":str(cas_file),"offset":0,"length":400},"_transport":"LOCAL_MCP"}
+    full_read=json.loads(ns["execute_tool"](config,read_call)["result"]["stdout"])
+    cas_sha=hashlib.sha256(cas_bytes).hexdigest()
+    need(full_read.get("full_file_sha256")==cas_sha and full_read["eof"],"READ_FULL_FILE_CAS_HASH")
+    need("full_file_sha256" not in ns["filesystem_read"](str(cas_file),1,400),"READ_PARTIAL_HAS_NO_CAS_HASH")
+    many=ns["filesystem_read_many"]([str(cas_file)],0,100)
+    need(many["files"][0].get("full_file_sha256")==cas_sha,"READ_MANY_FULL_FILE_CAS_HASH")
+    changed=ns["filesystem_edit"](call,str(cas_file),"ação","editada",False,cas_sha)
+    need(changed["precondition_checked"] and "editada" in cas_file.read_text(encoding="utf-8"),
+         "READ_HASH_AUTHORIZE_EDIT_WITHOUT_SHELL")
+    unstable=root/"unstable-cas.txt"; unstable.write_text("before\n",encoding="utf-8")
+    original_read_regular=ns["_read_regular_nofollow"]
+    def change_during_hash(path,max_bytes):
+        raw,st=original_read_regular(path,max_bytes)
+        unstable.write_text("after change\n",encoding="utf-8")
+        return raw,st
+    ns["_read_regular_nofollow"]=change_during_hash
+    try: unstable_read=ns["filesystem_read"](str(unstable),0,400)
+    finally: ns["_read_regular_nofollow"]=original_read_regular
+    need("full_file_sha256" not in unstable_read and unstable_read["file_changed_during_read"]
+         and not unstable_read["continuation_safe"],"READ_CHANGED_DURING_HASH_HAS_NO_CAS_TOKEN")
+
     huge=root/"huge-line.txt"
     huge.write_text("x"*70000+"\nsmall\n",encoding="utf-8")
     huge_read=ns["filesystem_read"](str(huge),0,10)

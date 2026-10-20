@@ -2517,8 +2517,8 @@ def _function_spec(function_id):
         "filesystem.diff":("FILESYSTEM","Compara dois arquivos texto com diff unificado limitado.",{"argv":["left","right","max_lines? (1..400)"],"bounded":True}),
         "filesystem.search":("FILESYSTEM","Busca nomes de arquivos ou texto com limites de tempo, tamanho e quantidade.",{"argv":["path","search_type(files|content)","pattern","max_results? (1..100)","include_hidden? (0|1)","ignore_case? (0|1)","file_glob?","offset? (0..10000)"],"continuation":{"input":"offset","output":"next_offset","flags":["has_more","scan_truncated","scan_incomplete","continuation_safe"],"incomplete_reason":"incomplete_reason"}}),
         "filesystem.list":("FILESYSTEM","Lista entradas e metadados de um diretório sem ler conteúdo de arquivos.",{"argv":["path","limit? (1..200)","depth? (1..5)","offset? (0..10000)"],"continuation":{"input":"offset","output":"next_offset","flags":["has_more","scan_incomplete","continuation_safe"],"incomplete_reason":"incomplete_reason"}}),
-        "filesystem.read":("FILESYSTEM","Lê um intervalo limitado de linhas de um arquivo texto acessível ao usuário local.",{"argv":["path","offset? (0..1000000)","length? (1..400)"],"continuation":{"input":"offset","output":"next_offset","revision_hint":"file_revision_hint","flags":["has_more","eof","content_truncated","continuation_safe","file_changed_during_read"]}}),
-        "filesystem.read_many":("FILESYSTEM","Lê o mesmo intervalo de até dez arquivos texto sem abortar o lote por falha individual.",{"argv":["offset (0..1000000)","length (1..100)","path1..path10"],"partial_failure":True,"continuation_per_file":True,"summary_fields":["successful_count","failed_count","deferred_count","overall_status"]}),
+        "filesystem.read":("FILESYSTEM","Lê um intervalo limitado de linhas de um arquivo texto acessível ao usuário local.",{"argv":["path","offset? (0..1000000)","length? (1..400)"],"continuation":{"input":"offset","output":"next_offset","revision_hint":"file_revision_hint","flags":["has_more","eof","content_truncated","continuation_safe","file_changed_during_read"]},"cas_hash":"full_file_sha256 only for stable complete reads from offset zero of files up to 128 KiB; hash covers raw file bytes"}),
+        "filesystem.read_many":("FILESYSTEM","Lê o mesmo intervalo de até dez arquivos texto sem abortar o lote por falha individual.",{"argv":["offset (0..1000000)","length (1..100)","path1..path10"],"partial_failure":True,"continuation_per_file":True,"summary_fields":["successful_count","failed_count","deferred_count","overall_status"],"cas_hash_per_file":"same bounded full_file_sha256 rule as filesystem.read"}),
     }
     if function_id not in specs: raise ValueError("UNKNOWN_FUNCTION_ID")
     domain,description,contract=specs[function_id]
@@ -2900,6 +2900,19 @@ def filesystem_read(path_value,offset=0,length=200,max_encoded_text_bytes=96*102
     text="\n".join(lines)
     try: changed_during_read=_file_revision_hint(path.stat())!=start_revision
     except OSError: changed_during_read=True
+    full_file_sha256=None
+    if offset==0 and not has_more and not changed_during_read and file_size<=128*1024:
+        # The full short file was already returned. A bounded raw-byte reread
+        # yields a CAS token without losing CRLF or replacement-decoded bytes.
+        try:
+            raw,hash_stat=_read_regular_nofollow(path,128*1024)
+            if (_file_revision_hint(hash_stat)!=start_revision
+                    or _file_revision_hint(path.stat())!=start_revision):
+                changed_during_read=True
+            else:
+                full_file_sha256=hashlib.sha256(raw).hexdigest()
+        except (OSError,ValueError):
+            changed_during_read=True
     if changed_during_read: has_more=True
     continuation_safe=not oversized_line and not changed_during_read
     next_offset=(offset+len(lines)) if has_more and continuation_safe else None
@@ -2911,6 +2924,7 @@ def filesystem_read(path_value,offset=0,length=200,max_encoded_text_bytes=96*102
         "oversized_line":oversized_line,"file_revision_hint":start_revision,
         "file_changed_during_read":changed_during_read,
         "restart_offset":0 if changed_during_read else None,
+        **({"full_file_sha256":full_file_sha256} if full_file_sha256 else {}),
     }
 
 def filesystem_read_many(paths,offset=0,length=100):
@@ -2949,6 +2963,8 @@ def filesystem_read_many(paths,offset=0,length=100):
                     "file_changed_during_read":item.get("file_changed_during_read"),
                     "restart_offset":item.get("restart_offset"),
                 }
+                if not observed_change and item.get("full_file_sha256"):
+                    entry["full_file_sha256"]=item["full_file_sha256"]
                 if packed_bytes(out+[entry])<=96*1024:
                     out.append(entry)
                     break
@@ -3737,8 +3753,8 @@ def local_simple_mcp_tools():
         ("get_activity","Get Activity","Get privacy-safe local Commander event metadata.",_mcp_schema({"limit":{"type":"integer","minimum":1,"maximum":100},"window":{"type":"string","enum":["24h","7d","30d"]}})),
         ("ping","Ping","Check the local Commander Agent.",_mcp_schema({"computer":computer})),
         ("get_device_info","Get Device Info","Get local device and Agent information.",_mcp_schema({"computer":computer})),
-        ("read_file","Read File","Read a text file.",_mcp_schema({"computer":computer,"path":path,"offset":{"type":"integer","minimum":0,"maximum":1000000},"length":{"type":"integer","minimum":1,"maximum":400}},["path"])),
-        ("read_multiple_files","Read Multiple Files","Read multiple text files in one call.",_mcp_schema({"computer":computer,"paths":{"type":"array","items":path,"minItems":1,"maxItems":10},"offset":{"type":"integer","minimum":0,"maximum":1000000},"length":{"type":"integer","minimum":1,"maximum":100}},["paths"])),
+        ("read_file","Read File","Read a text file. A stable complete read from offset zero of a file up to 128 KiB includes full_file_sha256 for expected_sha256.",_mcp_schema({"computer":computer,"path":path,"offset":{"type":"integer","minimum":0,"maximum":1000000},"length":{"type":"integer","minimum":1,"maximum":400}},["path"])),
+        ("read_multiple_files","Read Multiple Files","Read multiple text files in one call. Each stable complete short file may include full_file_sha256 for expected_sha256.",_mcp_schema({"computer":computer,"paths":{"type":"array","items":path,"minItems":1,"maxItems":10},"offset":{"type":"integer","minimum":0,"maximum":1000000},"length":{"type":"integer","minimum":1,"maximum":100}},["paths"])),
         ("write_file","Write File","Write or append text to a file. expected_sha256 prevents overwriting a file that changed after it was read.",_mcp_schema({"computer":computer,"path":path,"content":{"type":"string","maxLength":65536},"mode":{"type":"string","enum":["rewrite","append"]},"expected_sha256":{"type":"string","pattern":"^[0-9a-fA-F]{64}$"}},["path","content"])),
         ("edit_block","Edit Block","Apply a focused text replacement. expected_sha256 adds optimistic concurrency protection.",_mcp_schema({"computer":computer,"path":path,"old_string":{"type":"string","minLength":1,"maxLength":32768},"new_string":{"type":"string","maxLength":32768},"replace_all":boolean,"expected_sha256":{"type":"string","pattern":"^[0-9a-fA-F]{64}$"}},["path","old_string","new_string"])),
         ("create_directory","Create Directory","Create a directory.",_mcp_schema({"computer":computer,"path":path,"parents":boolean},["path"])),
