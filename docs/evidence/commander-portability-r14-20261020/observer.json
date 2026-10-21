@@ -1,0 +1,23 @@
+{
+  "schema": "hara.commander.r14.distribution-portability.v1",
+  "host": "observer",
+  "architecture": "aarch64",
+  "python": "3.10.12",
+  "source_digest": "e874acc0ffeb2bf0614ad9a44ff26c3036926f84a16ff756c1f2d73a7ec5261e",
+  "tests": [
+    {
+      "test": "test_linux_r11_pre_enroll.py",
+      "exit": 0,
+      "stdout": "COMMANDER_R11_OLD_ORDER_CONTROL=PASS enroll_posts=1 exit=22\nCOMMANDER_R11_KID_MISMATCH_BEFORE_ENROLL=PASS enroll_posts=0 exit=1\nCOMMANDER_R11_LINUX_DIGEST_BEFORE_ENROLL=PASS enroll_posts=0 exit=1\nCOMMANDER_R11_WINDOWS_DIGEST_BEFORE_ENROLL=PASS enroll_posts=0 exit=1\nCOMMANDER_R11_VERSION_BEFORE_ENROLL=PASS enroll_posts=0 exit=1\nCOMMANDER_R11_VALID_RELEASE_REACHES_MOCK_ENROLL=PASS enroll_posts=1 exit=12\nCOMMANDER_R11_PRE_ENROLL_CASES=6\n",
+      "stderr": ""
+    },
+    {
+      "test": "test_linux_r13_enrollment_ack.py",
+      "exit": 0,
+      "stdout": "COMMANDER_R13_LINUX_MISSING_TOKEN=PASS\nCOMMANDER_R13_LINUX_MISSING_ID=PASS\nCOMMANDER_R13_LINUX_MALFORMED_JSON=PASS\nCOMMANDER_R13_LINUX_INVALID_ID=PASS\nCOMMANDER_R13_LINUX_LOST_ACK=PASS\nCOMMANDER_R13_LINUX_LEGACY_SERVER=PASS\n",
+      "stderr": ""
+    }
+  ],
+  "production_mutation": false,
+  "real_enrollment": false
+}
