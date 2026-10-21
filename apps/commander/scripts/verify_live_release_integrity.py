@@ -123,7 +123,12 @@ def inspect(blobs: dict[str, bytes]) -> dict:
     if (manifest.get("schema") != "hara.commander-agent-release.v1" or
             not isinstance(rows, list) or len(rows) != 4):
         errors.append("RELEASE_MANIFEST_SCHEMA_INVALID")
-    if set(by_path) != set(ASSETS):
+    if manifest.get("channel") != "stable":
+        errors.append("RELEASE_MANIFEST_CHANNEL_INVALID")
+    paths = (tuple(row.get("path") for row in rows)
+             if isinstance(rows, list) and all(isinstance(row, dict) for row in rows)
+             else ())
+    if paths != ASSETS:
         errors.append("RELEASE_MANIFEST_FILESET_INVALID")
     checks = {}
     for path in ASSETS:

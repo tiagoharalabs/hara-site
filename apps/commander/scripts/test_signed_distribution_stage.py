@@ -73,6 +73,15 @@ class SignedDistributionTests(unittest.TestCase):
         with self.assertRaisesRegex(ReleaseValidationError, "AGENT_VERSION_MISMATCH"):
             verify_bundle(WINDOWS_RC)
 
+    def test_unapproved_founder_path_is_not_a_commercial_stage_source(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            founder = Path(temporary) / "0.3.54-event-v2-fleet-founder"
+            founder.mkdir()
+            output = Path(temporary) / "assets"
+            with self.assertRaisesRegex(RuntimeError, "SIGNED_STAGE_BUNDLE_NOT_APPROVED"):
+                stage(output, founder)
+            self.assertFalse(output.exists())
+
     def test_production_config_requires_explicit_staged_assets(self):
         config = json.loads((APP / "wrangler.jsonc").read_text())
         self.assertEqual(config["assets"]["directory"], "signed-assets-stage-required")
