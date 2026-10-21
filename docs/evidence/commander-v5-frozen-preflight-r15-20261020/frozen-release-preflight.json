@@ -1,0 +1,15 @@
+{
+  "asset_checks": 4,
+  "errors": [],
+  "frozen_tar_sha256": "3ade217145e32899da47bedb43272897ee020e44658ae2b197b0eda61880970d",
+  "manifest_sha256": "2ec2b3ccddc0fbc5edb577c926315358dbcb558812d3492ec9a68894038ff381",
+  "negative_checks_passed": 5,
+  "production_mutation": false,
+  "public_key_fingerprint": "93a595c5c7ee29d341fe0aee1a1625610e8015bf9df1ff64a3f4accdb39400b4",
+  "public_promotion_authorized": false,
+  "same_pins_both_installers": true,
+  "schema": "hara.commander.frozen-source-preflight.r15.v1",
+  "signed_release": false,
+  "source_version": "0.3.43",
+  "state": "READY_FOR_AUTHORIZED_SIGNATURE"
+}
