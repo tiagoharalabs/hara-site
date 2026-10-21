@@ -26,7 +26,7 @@ class VersionedPromotionReleaseTests(unittest.TestCase):
         self.root = Path(self.temporary.name)
         self.rollback_bundle = BUNDLES[ROLLBACK_RELEASE]
         self.staged = self.root / "assets"
-        stage(self.staged, self.rollback_bundle, rollback_only=True)
+        self.stage_report = stage(self.staged, self.rollback_bundle, rollback_only=True)
 
     def test_exact_signed_stage_is_accepted_against_its_approved_bundle(self):
         report = require_signed_stage(self.staged, expected_bundle=self.rollback_bundle)
@@ -49,6 +49,57 @@ class VersionedPromotionReleaseTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "SIGNED_STAGE_UI_CHANGED"):
             require_signed_stage(self.staged, expected_bundle=self.rollback_bundle)
 
+    def test_web_page_and_static_media_drift_are_rejected(self):
+        for relative in ("index.html", "styles.css", "assets/hara-commander-royal.webp"):
+            with self.subTest(relative=relative):
+                target = self.staged / relative
+                original = target.read_bytes()
+                target.write_bytes(original + b"unexpected-stage-edit")
+                with self.assertRaisesRegex(RuntimeError, "SIGNED_STAGE_UI_CHANGED"):
+                    require_signed_stage(self.staged, expected_bundle=self.rollback_bundle)
+                target.write_bytes(original)
+
+    def test_web_source_and_stage_cotamper_cannot_rebase_approved_source(self):
+        alternate_public = self.root / "altered-public"
+        shutil.copytree(stage_module.PUBLIC, alternate_public)
+        target = alternate_public / "index.html"
+        altered = target.read_bytes() + b"\n<!-- unexpected source edit -->\n"
+        target.write_bytes(altered)
+        (self.staged / "index.html").write_bytes(altered)
+        with patch.object(stage_module, "PUBLIC", alternate_public):
+            with self.assertRaisesRegex(RuntimeError, "SIGNED_STAGE_UI_SOURCE_UNCOMMITTED"):
+                require_signed_stage(self.staged, expected_bundle=self.rollback_bundle)
+
+    def test_stage_tree_digest_detects_post_stage_change(self):
+        digest = self.stage_report["stage_tree_sha256"]
+        self.assertRegex(digest, r"^[0-9a-f]{64}$")
+        self.assertEqual(require_signed_stage(
+            self.staged, expected_bundle=self.rollback_bundle,
+            expected_tree_sha256=digest,
+        )["stage_tree_sha256"], digest)
+        with self.assertRaisesRegex(RuntimeError, "SIGNED_STAGE_TREE_DIGEST_MISMATCH"):
+            require_signed_stage(
+                self.staged, expected_bundle=self.rollback_bundle,
+                expected_tree_sha256="0" * 64,
+            )
+
+    def test_verify_assets_cli_requires_recorded_digest_and_rechecks_web_ui(self):
+        argv = ["stage", "--verify-assets", str(self.staged), "--bundle",
+                ROLLBACK_RELEASE, "--rollback-only"]
+        with patch.object(sys, "argv", argv), self.assertRaisesRegex(
+            SystemExit, "SIGNED_STAGE_EXPECTED_TREE_SHA256_REQUIRED"
+        ):
+            stage_module.main()
+        argv += ["--expected-tree-sha256", self.stage_report["stage_tree_sha256"]]
+        with patch.object(sys, "argv", argv), contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(stage_module.main(), 0)
+        html = self.staged / "index.html"
+        html.write_bytes(html.read_bytes() + b"\n<!-- changed after stage -->\n")
+        with patch.object(sys, "argv", argv), self.assertRaisesRegex(
+            RuntimeError, "SIGNED_STAGE_UI_CHANGED"
+        ):
+            stage_module.main()
+
     def test_symlink_in_signed_stage_is_rejected(self):
         installer = self.staged / "install/linux.sh"
         installer.unlink()
@@ -68,6 +119,9 @@ class VersionedPromotionReleaseTests(unittest.TestCase):
         self.assertEqual(sources["/release/agent-manifest.json"],
                          self.staged / "release/agent-manifest.json")
         self.assertEqual(sources["/install/linux.sh"], self.staged / "install/linux.sh")
+        for relative in ("brand/chatgpt-official.webp", "brand/claude-official.svg",
+                         "release/v2/release-signing-public.jwk"):
+            self.assertEqual(sources["/" + relative], self.staged / relative)
         self.assertNotEqual(sources["/install/linux.sh"],
                             self.rollback_bundle / "install/linux.sh")
 
@@ -93,13 +147,15 @@ class VersionedPromotionReleaseTests(unittest.TestCase):
                  else {"configured": True})):
             with contextlib.redirect_stdout(io.StringIO()):
                 self.assertEqual(drift.main(), 0)
-            def tampered(path):
-                body, status, content_type = fetch(path)
-                return (body + b"changed" if path == "/agent/linux.py" else body), status, content_type
-            with patch.object(drift, "fetch", side_effect=tampered), \
-                 contextlib.redirect_stdout(io.StringIO()):
-                with self.assertRaisesRegex(RuntimeError, "EXPECTED_CURRENT_GOT_MIXED"):
-                    drift.main()
+            for tampered_path in ("/agent/linux.py", "/brand/claude-official.svg"):
+                def tampered(path):
+                    body, status, content_type = fetch(path)
+                    return (body + b"changed" if path == tampered_path else body), status, content_type
+                with self.subTest(path=tampered_path), \
+                     patch.object(drift, "fetch", side_effect=tampered), \
+                     contextlib.redirect_stdout(io.StringIO()):
+                    with self.assertRaisesRegex(RuntimeError, "EXPECTED_CURRENT_GOT_MIXED"):
+                        drift.main()
 
 
 if __name__ == "__main__":

@@ -33,6 +33,9 @@ def asset_sources(stage: Path | None = None, *, expected_bundle: Path | None = N
         "/app.js": (stage or PUBLIC) / "app.js",
         "/styles.css": (stage or PUBLIC) / "styles.css",
         "/assets/hara-commander-royal.webp": (stage or PUBLIC) / "assets/hara-commander-royal.webp",
+        "/brand/chatgpt-official.webp": (stage or PUBLIC) / "brand/chatgpt-official.webp",
+        "/brand/claude-official.svg": (stage or PUBLIC) / "brand/claude-official.svg",
+        "/release/v2/release-signing-public.jwk": (stage or PUBLIC) / "release/v2/release-signing-public.jwk",
     }
     sources.update({"/" + relative: signed / relative for relative in SIGNED_PATHS})
     return sources
