@@ -626,3 +626,16 @@ Acrescentei em `f29d649` uma injeção depois do `COMMIT` no teste que executa *
 | `node --check apps/commander/src/worker.js`; `bash -n apps/commander/candidate/linux_install_043.sh`; `git diff --check` | 0 cada | sintaxe e whitespace |
 
 **Estados:** P0/P1 da R13 corrigidos no código local do Worker e nos instaladores candidatos, testados localmente; D1 Cloudflare DEV, tenant comercial de teste, clean install e Agent Windows instalado com a correção **não testados** nesta rodada. O gate público HTTPS lido às 01:06 UTC permanece **exit 2/HOLD** por kid v1/v2 e 4/4 hashes divergentes; assinatura comercial oficial ainda falta. Nenhum Agent ativo, Cloudflare PROD, D1 remoto, Stripe, chave privada ou pairing real foi alterado. WIP externo e documentos de revisão permaneceram fora do commit.
+
+### R13 LASER — fechamento dos instaladores candidatos — 21/10/2026, 01:12 UTC
+
+Os dois instaladores R13 já estavam versionados em `2a1a8de`, sem diff pendente. Uma nova asserção de saída capturada no mock Linux falhou primeiro: a fixture enviava o pairing sintético após o `printf` do prompt e antes de `read -s` desabilitar o eco do terminal. Em `bda94af`, o prompt passou para o próprio `read -s -p`; a mesma fixture então confirmou **ausência do pairing e do segredo do device na saída**, intenção 0600 com hash do pairing, seis segredos distintos em seis instalações descartáveis e mesmo segredo no retry de ACK perdido. O hash revisado do instalador Linux candidato é `4ba6749ca3d3554918de93eb266c2e409fe2e88254c493e79fe7171e5633b9b1`, atualizado no builder. O instalador Windows não precisou de novo patch: seu validador passou a recusar referências a variáveis secretas nos comandos de saída/erro do operador. Essa prova Windows é **estática**, sem instalar na VM nesta rodada.
+
+| Gate curto solicitado | Exit | Resultado |
+| --- | ---: | --- |
+| `test_linux_r13_enrollment_ack.py` | 0 | seis cenários, intenção persistente, segredo por instalação, retry idempotente, erro tipado e saída capturada sem segredo |
+| `validate_windows_r13_enrollment_intent.py` | 0 | 12 contratos estáticos, incluindo ausência de segredo nas emissões explícitas |
+| `test_device_enrollment_recovery.mjs` | 0 | função real Worker/SQLite local, rollback de seleção e ACK pós-commit |
+| `test_device_enrollment_limit.mjs` | 0 | quinto/sexto, isolamento e concorrência locais |
+
+Builder comercial `--check` e `bash -n` Linux saíram **0**. `stage_signed_commercial_assets.py --check` saiu **1** com `SIGNED_STAGE_CURRENT_RELEASE_AWAITING_OFFICIAL_SIGNATURE`: **HOLD P0 externo**, sem afrouxar gate. O último GET público read-only permanece exit **2/HOLD** (manifesto v1/pin Linux v2 e 4/4 SHA divergentes). Código candidato/testes locais: sim; pacote comercial v5 oficialmente assinado, DEV hospedado, instalação limpa, canário comercial e PROD: **não**. Nada foi assinado, publicado, pareado ou alterado em Agents, Windows, Storage/Observer ou D1 remoto.
