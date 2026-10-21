@@ -1,0 +1,3 @@
+# R17 HARA Commander MCP error disclosure — QA only
+
+Run peer_mcp_two_profiles.mjs at the root of an isolated checkout containing the exact Full/Simple modules cited by the report, e.g. with node v24. No real token, network or customer information is used. The handler receives deliberately synthetic exception strings; both Full and Simple leak the symbolic-looking string as code, although documented error codes pass. Exit 2 means a negative bug proof, not product acceptance. Correct with shared documented public error-code allowlist; preserve all normal typed errors and receipt behavior. Report: docs/operations/HARA_COMMANDER_PEER_REVIEW_R17_MCP_ERRORS_20261020.md.

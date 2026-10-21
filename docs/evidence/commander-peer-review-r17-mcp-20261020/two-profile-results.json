@@ -1,0 +1,27 @@
+{
+  "schema": "hara.commander.peer-r17-error-symbol-allowlist.v1",
+  "source_sha_full": "13f915c01d7067d8ccf4553ec2b832e5c7a905c0ed2d0453ec20c3d1683ce1cc",
+  "source_sha_simple": "8a145516d17231b97f1ff127252c3b0a904d5388a9a15c07c970be5eb999765e",
+  "scope": "real full and simple MCP handlers, synthetic exception, no network",
+  "checks": [
+    {
+      "profile": "FULL",
+      "synthetic_code_was_repeated": true,
+      "synthetic_code_was_redacted": false,
+      "policy_denied_preserved": true,
+      "known_operational_code_preserved": true,
+      "is_error": true
+    },
+    {
+      "profile": "SIMPLE",
+      "synthetic_code_was_repeated": true,
+      "synthetic_code_was_redacted": false,
+      "policy_denied_preserved": true,
+      "known_operational_code_preserved": true,
+      "is_error": true
+    }
+  ],
+  "exposure_reproduced": true,
+  "no_real_secrets_used": true,
+  "production_mutation": false
+}
