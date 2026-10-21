@@ -1,0 +1,29 @@
+{
+  "schema": "hara.commander-live-release-integrity.v1",
+  "state": "HOLD",
+  "trusted_kid": "commander-release-v2",
+  "served_signature_kid": "commander-release-v1",
+  "manifest_agent_version": "0.3.41",
+  "production_mutation": false,
+  "installer_executed": false,
+  "errors": [
+    "RELEASE_SIGNATURE_KID_MISMATCH:LINUX",
+    "SERVED_INSTALLER_UNTRUSTED_PIN:WINDOWS",
+    "RELEASE_SIGNER_NOT_AUTHORIZED",
+    "RELEASE_SIGNATURE_NOT_VALID_FOR_TRUSTED_KEY",
+    "RELEASE_ASSET_DIGEST_MISMATCH:agent/linux.py",
+    "RELEASE_ASSET_DIGEST_MISMATCH:agent/windows.ps1",
+    "RELEASE_ASSET_DIGEST_MISMATCH:install/linux.sh",
+    "RELEASE_ASSET_DIGEST_MISMATCH:install/windows.ps1",
+    "RELEASE_LINUX_AGENT_VERSION_MISMATCH",
+    "RELEASE_WINDOWS_AGENT_VERSION_MISMATCH"
+  ],
+  "asset_checks": {
+    "agent/linux.py": false,
+    "agent/windows.ps1": false,
+    "install/linux.sh": false,
+    "install/windows.ps1": false
+  },
+  "checked_at_utc": "2026-10-21T16:37:00.097929+00:00",
+  "live_gate_exit": 2
+}

@@ -71,3 +71,14 @@ Para declarar P0 de distribuição **fechado na web**, os próximos gates são: 
 A VM Windows desligada não foi acordada. O Agent `0.3.43` comercial **não** equivale à versão interna Founder 0.3.54, e a versão Windows funcional 0.3.55 segue outra homologação. A beta/GA continuam separadamente bloqueadas por segundo tenant, Windows, Stripe/OpenAI/soak. Não afirmar disponibilidade geral por assinatura ou gate local.
 
 **Preservação:** nenhum Agent, serviço, D1, Cloudflare deployment, Stripe ou energia da frota foi modificado; a única atividade sensível foi a assinatura privada sob custódia no Services e a criação de artefatos públicos de release, com a chave privada não exportada.
+
+## R19 final — gate consolidado após assinatura v5
+
+Após criar e verificar o pacote oficial, atualizei somente três pontos da suíte offline: o gate agora inclui a regressão R17 Full/Simple; dois testes antigos que esperavam a **ausência** do v5 foram alterados para confirmar o **v5 assinado presente e válido**, mantendo a recusa explícita do estágio histórico v4 quando não autorizado.
+
+- Primeiro gate no checkout da revisão: **158/160**, com as duas falhas de expectativa histórica (`test_signed_distribution_stage.py` e `test_versioned_prod_release_preflight.py`). Foram relidos e corrigidos sem alterar os controles de assinatura ou a proteção da produção.
+- Suítes focadas: **13/13 e 16/16 PASS** após essa reconciliação.
+- Commit de revisão `22a71a6820787b5176da075e9c9a0a1067dfaa52`: execução integral subsequente do `commander_prelaunch_offline_gate.py --json` **exit 0, 160/160 PASS, 0 falhas**, escopo `LOCAL_ONLY_OFFLINE_NO_CLOUDFLARE_MUTATION`. JSON integral sanitizado em `docs/evidence/commander-commercial-v5-r19-20261021/offline-gate-final.json`.
+- Último GET público somente leitura depois do gate: **exit 2/HOLD** em `2026-10-21T16:37:00Z`, ainda manifesto 0.3.41, assinatura v1, pin v2 Linux e **4/4 digests públicos divergentes**. A assinatura oficial privada criada não altera automaticamente a Cloudflare. Evidência em `public-live-check.json`.
+
+**Ponto 1 tecnicamente preparado para upload/versionamento com autorização**, mas **NÃO fechado para clientes enquanto público continuar HOLD**. Permanece proibido inferir rollout, readback hospedado, instalação real ou aceitação beta a partir dos gates locais. Exigir autorização específica antes de `versions upload --execute`, de qualquer 0%/100% deployment e de testes com pareamento real. Registrar versão ID de rollback imediatamente antes de promover; a v4 histórica não atende ao gate de drenagem. Nunca reutilizar contas/credenciais Founder para simular clientes.

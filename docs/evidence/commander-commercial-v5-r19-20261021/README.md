@@ -9,3 +9,7 @@ offline-gate-before-test-update.json recorded 158/160. Its two failing tests con
 Cloudflare public PROD is still **HOLD**: served public manifest 0.3.41/kid v1 with mismatched Linux/Windows files. No hosted version upload, 0%/100% traffic mutation or clean commercial installation has been executed. Release stage local only. The 0.3.43 channel is not the Founder 0.3.54 fleet.
 
 The signed bundle is confined to this separate review branch as eight **public** files. Services keeps the private signing key locally. Source documents: docs/operations/HARA_COMMANDER_V5_SIGNED_P1_R19_20261021.md.
+
+Final offline gate, source HEAD 22a71a6, **160/160 PASS** in offline-gate-final.json. Last public GET at 16:37 UTC still **HOLD**, 0.3.41 v1 signer vs v2 pin and 4/4 mismatched asset hashes (public-live-check.json). Machine-readable state release-gates.json distinguishes local signed readiness from Cloudflare/version/clean-install gaps. No deployment or real enrollment was performed.
+
+Final read-only Wrangler deployment listing cloud-final-baseline.json: release v5 has **not** been uploaded; read-only snapshot current version 99a19edb-d2cf-4806-8c98-861e4513a2f7 at 100% per listing. Recheck before future mutation.

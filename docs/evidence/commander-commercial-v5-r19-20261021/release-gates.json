@@ -1,0 +1,30 @@
+{
+  "checks": {
+    "clean_commercial_agent_install": false,
+    "fedora_x86_64_signature": true,
+    "frozen_worker_dry_compiled": true,
+    "official_rsa_v2_signed": true,
+    "offline_gate_160_of_160": true,
+    "public_live_integrity": false,
+    "public_site_4_asset_digest_matches": false,
+    "second_independent_tenant": false,
+    "signed_assets_4_of_4": true,
+    "signed_static_stage_17_files": true,
+    "ubuntu_arm64_signature": true,
+    "uploaded_cloud_version": false,
+    "windows_live_commercial_acceptance": false
+  },
+  "cloud_deployment_id_read_only": "65406da5-6c8e-41df-b025-89e68d8fbba4",
+  "cloud_deployment_readback_final_utc": "2026-10-21T16:40:24.099051+00:00",
+  "cloud_version_id_100pct_read_only": "99a19edb-d2cf-4806-8c98-861e4513a2f7",
+  "frozen_unsigned_tar_sha256": "3ade217145e32899da47bedb43272897ee020e44658ae2b197b0eda61880970d",
+  "frozen_worker_commit": "c90907c6bd41d56411466542e01a3224538b76c1",
+  "last_gate_commit": "22a71a6820787b5176da075e9c9a0a1067dfaa52",
+  "no_production_mutation_by_review": true,
+  "schema": "hara.commander.r19-release-gates.v1",
+  "signature_public_sha256": "6286b3ce8c453602b4b17ffa0b9ea547239cf8b5341cdc10aaf9e09aa56addcb",
+  "signed_manifest_sha256": "2ec2b3ccddc0fbc5edb577c926315358dbcb558812d3492ec9a68894038ff381",
+  "source_public_tree": "2138ef35e0f9bee92888e1bcf7bb5212956170bd",
+  "stage_tree_sha256": "4d22a2943f872d50492a2133ec9dd02aef43978c40357c93dcaa98d1a72e3c65",
+  "status": "OFFLINE_READY_PUBLIC_DISTRIBUTION_HOLD"
+}
