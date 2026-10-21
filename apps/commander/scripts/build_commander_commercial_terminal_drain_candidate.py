@@ -22,7 +22,7 @@ from stage_signed_commercial_assets import APP, BUNDLES, ROLLBACK_RELEASE, stage
 LINUX_SOURCE = APP / "public/agent/linux.py"
 REVIEWED_LINUX_SHA256 = "4c81d45a6532a53387db40ac06d95a382a7ffdb3a6da35861d4f9b350f1ab6aa"
 LINUX_INSTALLER_SOURCE = APP / "candidate/linux_install_043.sh"
-REVIEWED_LINUX_INSTALLER_SHA256 = "46b7b57c4080d5a93295cd9799ff787646c12697a179eed69dcc6c01a9524c71"
+REVIEWED_LINUX_INSTALLER_SHA256 = "4ba6749ca3d3554918de93eb266c2e409fe2e88254c493e79fe7171e5633b9b1"
 WINDOWS_INSTALLER_SOURCE = APP / "candidate/windows_install_043.ps1"
 REVIEWED_WINDOWS_INSTALLER_SHA256 = "69a6bf0c2a3c7c373d524dd63d2272511eae5b81665d5ecf0d625bcb31c5cdad"
 FILESET = ("agent/linux.py", "agent/windows.ps1", "install/linux.sh", "install/windows.ps1")

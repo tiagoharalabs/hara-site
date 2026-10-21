@@ -794,8 +794,7 @@ fi
 APPROVAL_MODE="$(resolve_approval_mode)"
 printf 'HARA Commander — Linux device pairing\n'
 printf 'Approval mode: %s\n' "$APPROVAL_MODE"
-printf 'Pairing token: '
-IFS= read -r -s PAIRING_TOKEN </dev/tty
+IFS= read -r -s -p 'Pairing token: ' PAIRING_TOKEN </dev/tty
 printf '\n'
 [ -n "$PAIRING_TOKEN" ] || { echo 'Pairing token cannot be empty.' >&2; exit 3; }
 

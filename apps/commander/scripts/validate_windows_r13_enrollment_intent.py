@@ -31,4 +31,10 @@ need("$Enroll.device_token -cne $ClientDeviceToken" in source, "SERVER_TOKEN_MAT
 need("Remove-Item -LiteralPath $EnrollmentIntent" in source, "INTENT_REMOVED_ON_ACK_AND_STARTUP")
 need('HARA_COMMANDER_AGENT_UNINSTALL=LOCAL_ONLY' in source and
      'if ($revokeState -eq "PENDING")' in source, "PENDING_REVOKE_PRESERVES_CREDENTIAL")
+emitted = [line.strip() for line in source.splitlines()
+           if line.strip().startswith(("Write-Host", "Write-Output", "Write-Error", "throw "))]
+need(not any(secret in line for line in emitted for secret in (
+    "$PairingToken", "$ClientDeviceToken", "$DeviceTokenForRollback",
+    "$Payload", "$Enroll.device_token", "$SecurePairing",
+)), "NO_SECRET_IN_OPERATOR_OUTPUT")
 print("WINDOWS_R13_ENROLLMENT_INTENT_CONTRACT=PASS")

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import http.server
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -68,7 +69,7 @@ class Handler(ReleaseHandler):
         self.wfile.write(body)
 
 
-def run_case(scenario: str) -> None:
+def run_case(scenario: str) -> str:
     Handler.assets = signed_release()
     Handler.scenario = scenario
     Handler.enroll_count = 0
@@ -103,8 +104,13 @@ def run_case(scenario: str) -> None:
             intent = root / "config/hara-commander/enrollment-intent.json"
             assert intent.is_file(), scenario
             assert stat.S_IMODE(intent.stat().st_mode) == 0o600, scenario
+            saved = json.loads(intent.read_text())
+            token = saved["client_device_token"]
+            assert saved["pairing_sha256"] == hashlib.sha256(b"QA_PAIRING_TOKEN_NOT_REAL").hexdigest()
+            assert token and len(token) == 64 and token not in output, scenario
+            assert "QA_PAIRING_TOKEN_NOT_REAL" not in output, scenario
             if scenario != "legacy_server":
-                assert Handler.client_tokens[0] and len(Handler.client_tokens[0]) == 64, scenario
+                assert Handler.client_tokens[0] == token, scenario
             if scenario == "lost_ack":
                 pending = subprocess.run(["bash", str(script), "uninstall"], env=env,
                                          capture_output=True, text=True, timeout=20)
@@ -112,6 +118,7 @@ def run_case(scenario: str) -> None:
                 assert "HARA_COMMANDER_AGENT_UNINSTALL=LOCAL_ONLY" in pending.stdout
                 assert "SERVER_DEVICE_REVOKE_PENDING=TRUE" in pending.stdout
                 assert intent.is_file(), "uninstall must preserve recovery credential"
+                assert token not in pending.stdout + pending.stderr
                 wrong_exit, wrong_output = run_pty(
                     ["bash", str(script), "install"], env,
                     "QA_DIFFERENT_PAIRING_TOKEN", timeout=50,
@@ -119,6 +126,7 @@ def run_case(scenario: str) -> None:
                 assert wrong_exit != 0 and "ENROLLMENT_INTENT_PAIRING_MISMATCH" in wrong_output, (
                     wrong_exit, re.sub(r"[A-Za-z0-9_-]{60,}", "[REDACTED]", wrong_output))
                 assert Handler.enroll_count == 1, scenario
+                assert token not in wrong_output, scenario
                 retry_exit, retry_output = run_pty(
                     ["bash", str(script), "install"], env,
                     "QA_PAIRING_TOKEN_NOT_REAL", timeout=50,
@@ -128,7 +136,9 @@ def run_case(scenario: str) -> None:
                     scenario, re.sub(r"[A-Za-z0-9_-]{60,}", "[REDACTED]", retry_output))
                 assert Handler.enroll_count == 2, scenario
                 assert Handler.client_tokens[1] == Handler.client_tokens[0], scenario
+                assert token not in retry_output, scenario
             print(f"COMMANDER_R13_LINUX_{scenario.upper()}=PASS")
+            return token
     finally:
         server.shutdown()
         server.server_close()
@@ -136,9 +146,12 @@ def run_case(scenario: str) -> None:
 
 
 def main() -> None:
-    for scenario in ("missing_token", "missing_id", "malformed_json", "invalid_id",
-                     "lost_ack", "legacy_server"):
-        run_case(scenario)
+    tokens = [run_case(scenario) for scenario in (
+        "missing_token", "missing_id", "malformed_json", "invalid_id",
+        "lost_ack", "legacy_server",
+    )]
+    assert len(tokens) == len(set(tokens)), "each fresh installation must create a new secret"
+    print("COMMANDER_R13_LINUX_UNIQUE_SECRET_AND_NO_LOG_LEAK=PASS")
 
 
 if __name__ == "__main__":
