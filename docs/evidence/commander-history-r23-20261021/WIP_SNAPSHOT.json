@@ -1,0 +1,41 @@
+{
+  "schema": "hara.commander.r23.untested-draft-archive.v1",
+  "captured_at_utc": "2026-10-21T21:18:49.831171+00:00",
+  "source_worktree": "/home/sartorius/hara-workspaces/commander-distribution-p1-20261021",
+  "base_committed_r22": "25923b3419adbdaad46166ecf44d654c8ec577be",
+  "files": [
+    {
+      "path": "apps/commander/candidate/linux_agent_history_r23.py",
+      "bytes": 270293,
+      "sha256": "697eddafcfe01c565e33be8cf82e19141dd94b504d2bec1342712a924dba8114",
+      "status": "WIP_NOT_INSTALLED"
+    },
+    {
+      "path": "apps/commander/candidate/windows_agent_history_r23.ps1",
+      "bytes": 127095,
+      "sha256": "2527755aa2379aa2ec81b53fa17364a5ad411dfe20b782088b124f8637d4b69c",
+      "status": "WIP_NOT_INSTALLED"
+    },
+    {
+      "path": "apps/commander/scripts/test_linux_r23_history.py",
+      "bytes": 6702,
+      "sha256": "d57384525625ab0d8d93e85e83329b240c550cb84c22ca7b359609d919bfb2c6",
+      "status": "WIP_NOT_INSTALLED"
+    },
+    {
+      "path": "docs/evidence/commander-history-r23-20261021/windows_history_30d_fixture.ps1",
+      "bytes": 21683,
+      "sha256": "d6c90a10100bb56f229ac625b4108f6e5d35fd5e07d811036188e63ba00a4097",
+      "status": "WIP_NOT_INSTALLED"
+    },
+    {
+      "path": "docs/evidence/commander-history-r23-20261021/windows_nonadmin_guard.ps1",
+      "bytes": 1234,
+      "sha256": "c670a4abb8789d6948570c1e94c8638d7d8301a5aa57f92ddd3bd1e35d4c97d0",
+      "status": "WIP_NOT_INSTALLED"
+    }
+  ],
+  "linux_tests_previous_local": "7/7_PASS",
+  "windows_live_validation": "NOT_PERFORMED",
+  "status": "DRAFT_ONLY_NOT_SIGNED_OR_DEPLOYED"
+}
