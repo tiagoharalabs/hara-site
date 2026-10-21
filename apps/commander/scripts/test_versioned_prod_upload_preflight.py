@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import hashlib
 import subprocess
 import tempfile
 import unittest
@@ -56,14 +57,38 @@ class VersionedUploadPreflightTests(unittest.TestCase):
                 )
             run.assert_not_called()
 
-    def test_execute_uses_exact_verified_directory_once(self):
-        completed = subprocess.CompletedProcess([], 0, "uploaded", "")
+    def test_snapshot_changed_during_copy_is_rejected_before_wrangler(self):
+        real_copy = upload.copy_snapshot
+
+        def altered_copy(source, destination):
+            real_copy(source, destination)
+            html = destination / "index.html"
+            html.write_bytes(html.read_bytes() + b"unapproved copy bytes")
+
         with patch.object(upload, "require_signed_stage", side_effect=self.verified_stage), \
-             patch.object(upload, "run_wrangler_upload", return_value=completed) as run:
+             patch.object(upload, "copy_snapshot", side_effect=altered_copy), \
+             patch.object(upload, "run_wrangler_upload") as run:
+            with self.assertRaisesRegex(RuntimeError, "SIGNED_STAGE_UI_CHANGED"):
+                self.call(execute=True)
+            run.assert_not_called()
+
+    def test_execute_uses_exact_verified_private_snapshot_once(self):
+        observed = {}
+
+        def read_snapshot(snapshot, _message):
+            observed["path"] = snapshot
+            observed["asset"] = (snapshot / "index.html").read_bytes()
+            return subprocess.CompletedProcess([], 0, "uploaded", "")
+
+        with patch.object(upload, "require_signed_stage", side_effect=self.verified_stage), \
+             patch.object(upload, "run_wrangler_upload", side_effect=read_snapshot) as run:
             report = self.call(execute=True)
-            self.assertEqual(report["state"], "UPLOADED_VERSION_READBACK_REQUIRED")
+            self.assertEqual(report["state"], "UPLOAD_SUBMITTED_VERSION_READBACK_REQUIRED")
+            self.assertFalse(report["version_content_verified"])
             self.assertEqual(run.call_count, 1)
-            self.assertEqual(run.call_args.args, (self.staged, "offline fixture"))
+            self.assertNotEqual(observed["path"], self.staged)
+            self.assertEqual(observed["asset"], (self.staged / "index.html").read_bytes())
+            self.assertFalse(observed["path"].exists())
 
     def test_wrangler_command_uses_only_supplied_stage(self):
         completed = subprocess.CompletedProcess([], 0, "uploaded", "")
@@ -100,6 +125,31 @@ class VersionedUploadPreflightTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "SIGNED_UPLOAD_OUTCOME_UNKNOWN"):
                 self.call(execute=True)
             self.assertEqual(run.call_count, 1)
+
+    def test_transient_change_to_source_stage_cannot_change_uploaded_bytes(self):
+        html = self.staged / "index.html"
+        original = html.read_bytes()
+        approved_sha = hashlib.sha256(original).hexdigest()
+        observed = {}
+
+        def transient(upload_stage, _message):
+            html.write_bytes(original + b"\n<!-- transient unapproved edit -->\n")
+            try:
+                observed["upload_stage"] = upload_stage
+                observed["asset_sha256"] = hashlib.sha256(
+                    (upload_stage / "index.html").read_bytes()
+                ).hexdigest()
+            finally:
+                html.write_bytes(original)
+            return subprocess.CompletedProcess([], 0, "uploaded", "")
+
+        with patch.object(upload, "require_signed_stage", side_effect=self.verified_stage), \
+             patch.object(upload, "run_wrangler_upload", side_effect=transient):
+            result = self.call(execute=True)
+        self.assertEqual(html.read_bytes(), original)
+        self.assertNotEqual(observed["upload_stage"], self.staged)
+        self.assertEqual(observed["asset_sha256"], approved_sha)
+        self.assertEqual(result["state"], "UPLOAD_SUBMITTED_VERSION_READBACK_REQUIRED")
 
 
 if __name__ == "__main__":

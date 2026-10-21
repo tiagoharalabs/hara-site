@@ -10,7 +10,9 @@ import argparse
 import json
 from pathlib import Path
 import re
+import shutil
 import subprocess
+import tempfile
 
 from stage_signed_commercial_assets import require_signed_stage
 
@@ -42,6 +44,10 @@ def run_wrangler_upload(stage: Path, message: str) -> subprocess.CompletedProces
     )
 
 
+def copy_snapshot(stage: Path, snapshot: Path) -> None:
+    shutil.copytree(stage, snapshot, symlinks=True)
+
+
 def upload_version(stage: Path, tree_sha256: str, source_public_tree: str,
                    message: str, *, execute: bool = False) -> dict:
     if not message.strip() or len(message) > 140:
@@ -53,24 +59,32 @@ def upload_version(stage: Path, tree_sha256: str, source_public_tree: str,
         "source_public_tree": before["source_public_tree"],
         "signed_manifest_sha256": before["manifest_sha256"],
         "cloud_operations": False,
+        "version_content_verified": False,
     }
     if not execute:
         return result
 
-    # Keep the preflight and the one mutating command in the same process.
-    # On timeout or error the upload may have succeeded: inspect versions,
-    # never retry the mutation without reconciling remote state.
-    try:
-        proc = run_wrangler_upload(stage, message)
-    except (subprocess.TimeoutExpired, OSError) as exc:
-        raise RuntimeError("SIGNED_UPLOAD_OUTCOME_UNKNOWN") from exc
-    if proc.returncode:
-        raise RuntimeError("SIGNED_UPLOAD_OUTCOME_UNKNOWN:WRANGLER_EXIT_" + str(proc.returncode))
-    try:
-        checked_stage(stage, tree_sha256, source_public_tree)
-    except Exception as exc:
-        raise RuntimeError("SIGNED_UPLOAD_OUTCOME_UNKNOWN:STAGE_CHANGED") from exc
-    result["state"] = "UPLOADED_VERSION_READBACK_REQUIRED"
+    # Wrangler reads a private, verified copy. A writer touching the original
+    # stage during upload cannot change the bytes Wrangler sees. Preserve the
+    # copy until the command exits, then verify both trees again.
+    with tempfile.TemporaryDirectory(prefix="hara-commander-upload-") as temporary:
+        snapshot = Path(temporary) / "assets"
+        copy_snapshot(stage, snapshot)
+        checked_stage(snapshot, tree_sha256, source_public_tree)
+        # On timeout or error the upload may have succeeded: inspect versions,
+        # never retry the mutation without reconciling remote state.
+        try:
+            proc = run_wrangler_upload(snapshot, message)
+        except (subprocess.TimeoutExpired, OSError) as exc:
+            raise RuntimeError("SIGNED_UPLOAD_OUTCOME_UNKNOWN") from exc
+        if proc.returncode:
+            raise RuntimeError("SIGNED_UPLOAD_OUTCOME_UNKNOWN:WRANGLER_EXIT_" + str(proc.returncode))
+        try:
+            checked_stage(snapshot, tree_sha256, source_public_tree)
+            checked_stage(stage, tree_sha256, source_public_tree)
+        except Exception as exc:
+            raise RuntimeError("SIGNED_UPLOAD_OUTCOME_UNKNOWN:STAGE_CHANGED") from exc
+    result["state"] = "UPLOAD_SUBMITTED_VERSION_READBACK_REQUIRED"
     result["cloud_operations"] = True
     return result
 
