@@ -2422,7 +2422,8 @@ def start_operator_console():
     print("Computador:", platform.node())
     print("Device ID :", config["HARA_DEVICE_ID"])
     print("Agent     :", AGENT_VERSION)
-    print("Aprovação :", "automática nesta sessão" if approval_mode=="SESSION_TRUSTED" else "confirmar cada ação")
+    approval_labels={"ASK_EVERY_ACTION":"confirmação por ação","SESSION_TRUSTED":"automática nesta sessão","PERSISTENT_TRUSTED":"automática no dispositivo confiável"}
+    print("Aprovação :", approval_labels[approval_mode])
     print("")
     print("Comandos permitidos nesta sessão:")
     print("  hara.health / hara.ping / hara.device.info")
@@ -2430,7 +2431,7 @@ def start_operator_console():
     print("  hara.processes.list")
     print("  hara.files.info / hash / diff / search / list")
     print("  hara.files.read / hara.files.read_many")
-    approval_label="sessão autorizada" if approval_mode=="SESSION_TRUSTED" else "aprovação por ação"
+    approval_label={"ASK_EVERY_ACTION":"aprovação por ação","SESSION_TRUSTED":"sessão autorizada","PERSISTENT_TRUSTED":"dispositivo confiável"}[approval_mode]
     print(f"  hara.files.create_directory / write / edit / move / copy  [{approval_label}]")
     print(f"  hara.files.delete  [preimage + {approval_label}]")
     print(f"  hara.files.preimages.list / rollback  [rollback: {approval_label}]")
@@ -2445,10 +2446,17 @@ def start_operator_console():
     print("Recibos de auditoria não são eliminados pela limpeza.")
     print("")
     print("Origem     : OpenAI / cliente MCP autorizado")
-    print("Acesso     : ativo somente enquanto este terminal permanecer aberto")
+    if approval_mode=="PERSISTENT_TRUSTED":
+        print("Acesso     : autorizado no dispositivo mesmo com o console fechado")
+    else:
+        print("Acesso     : ativo somente enquanto este terminal permanecer aberto")
     print("Argumentos sensíveis, tokens e segredos nunca são exibidos.")
     print("Cada ação será mostrada abaixo com tool, função, estado e receipt.")
-    print("Pressione Ctrl+C para revogar o acesso imediatamente.")
+    if approval_mode=="PERSISTENT_TRUSTED":
+        print("Ctrl+C fecha somente este console; não revoga a confiança persistente.")
+        print("Revogar: hara-commander approval-mode ask (ou revogar o dispositivo no portal).")
+    else:
+        print("Pressione Ctrl+C para revogar o acesso desta sessão.")
     print("-" * 58)
     position = CONSOLE_EVENTS_FILE.stat().st_size if CONSOLE_EVENTS_FILE.exists() else 0
     try:
@@ -2679,7 +2687,19 @@ def set_approval_mode(value):
     aliases={"ask":"ASK_EVERY_ACTION","per-action":"ASK_EVERY_ACTION","session":"SESSION_TRUSTED","trusted":"SESSION_TRUSTED","auto":"PERSISTENT_TRUSTED","always":"PERSISTENT_TRUSTED","persistent":"PERSISTENT_TRUSTED"}
     mode=aliases.get(raw,str(value or "").strip().upper())
     if mode not in APPROVAL_MODES: raise RuntimeError("DEVICE_APPROVAL_MODE_INVALID")
+    if CONFIG_FILE.is_symlink(): raise RuntimeError("DEVICE_CONFIG_SYMLINK_DENIED")
     lines=CONFIG_FILE.read_text(encoding="utf-8").splitlines()
+    current=next((line.split("=",1)[1].strip().upper() for line in lines if line.startswith("HARA_COMMANDER_APPROVAL_MODE=")),"ASK_EVERY_ACTION")
+    # The user grants device-wide standing trust only once, at the local terminal.
+    # Headless scripts and remote process tools must not silently elevate ASK/SESSION.
+    if mode=="PERSISTENT_TRUSTED" and current!="PERSISTENT_TRUSTED":
+        if not sys.stdin.isatty():
+            raise RuntimeError("DEVICE_TRUST_LOCAL_TTY_REQUIRED")
+        print("O modo persistente permite comandos autorizados pelo MCP sem confirmação por ação.")
+        print("Acesso continua após fechar o terminal. Revogue com: hara-commander approval-mode ask")
+        answer=input("Digite CONFIAR NESTE DISPOSITIVO para autorizar: ").strip()
+        if answer!="CONFIAR NESTE DISPOSITIVO":
+            raise RuntimeError("DEVICE_TRUST_CONFIRMATION_DENIED")
     lines=[line for line in lines if not line.startswith("HARA_COMMANDER_APPROVAL_MODE=")]
     lines.append("HARA_COMMANDER_APPROVAL_MODE="+mode)
     tmp=CONFIG_FILE.with_suffix(".tmp")
