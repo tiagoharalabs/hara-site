@@ -1,0 +1,10 @@
+{
+  "cloud_operations": false,
+  "signed_manifest_sha256": "2ec2b3ccddc0fbc5edb577c926315358dbcb558812d3492ec9a68894038ff381",
+  "source_public_tree": "2138ef35e0f9bee92888e1bcf7bb5212956170bd",
+  "stage_tree_sha256": "4d22a2943f872d50492a2133ec9dd02aef43978c40357c93dcaa98d1a72e3c65",
+  "state": "VERIFIED_NOT_UPLOADED",
+  "version_content_verified": false,
+  "worker_frozen_commit": "c90907c6bd41d56411466542e01a3224538b76c1",
+  "worker_source_verified": false
+}

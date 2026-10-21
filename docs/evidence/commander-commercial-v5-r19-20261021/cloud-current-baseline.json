@@ -1,0 +1,73 @@
+{
+  "schema": "hara.commander.prod-deployment-baseline.v1",
+  "observed_at_utc": "2026-10-21T16:17:04.109945+00:00",
+  "worker_name": "hara-commander",
+  "latest_deployment": {
+    "deployment_id": "65406da5-6c8e-41df-b025-89e68d8fbba4",
+    "versions": [
+      {
+        "version_id": "99a19edb-d2cf-4806-8c98-861e4513a2f7",
+        "percentage": 100
+      }
+    ]
+  },
+  "history": [
+    {
+      "deployment_id": "65406da5-6c8e-41df-b025-89e68d8fbba4",
+      "versions": [
+        {
+          "version_id": "99a19edb-d2cf-4806-8c98-861e4513a2f7",
+          "percentage": 100
+        }
+      ]
+    },
+    {
+      "deployment_id": "46b0be06-ce1a-4d09-bcbc-8474c45b10d9",
+      "versions": [
+        {
+          "version_id": "70564d5b-bf87-42dd-837e-717d3615ecad",
+          "percentage": 100
+        }
+      ]
+    },
+    {
+      "deployment_id": "7f88a07f-4768-485c-8e74-aaa4bd44fe35",
+      "versions": [
+        {
+          "version_id": "e2cc7d21-20bf-4082-8b55-c7249bd44e95",
+          "percentage": 100
+        }
+      ]
+    },
+    {
+      "deployment_id": "b070cc25-4d21-42cd-8015-1e3e52279da8",
+      "versions": [
+        {
+          "version_id": "1ee64945-a079-4448-b5e1-cfdd7a391022",
+          "percentage": 100
+        }
+      ]
+    },
+    {
+      "deployment_id": "a21e5826-8dec-4c3b-aa69-e1af069fb5bd",
+      "versions": [
+        {
+          "version_id": "ccc6a3e6-9b6d-47ee-9dae-28b27c7de476",
+          "percentage": 100
+        }
+      ]
+    },
+    {
+      "deployment_id": "b39eeabb-6c4e-4b0a-8ecb-33d86989da46",
+      "versions": [
+        {
+          "version_id": "1ee64945-a079-4448-b5e1-cfdd7a391022",
+          "percentage": 100
+        }
+      ]
+    }
+  ],
+  "read_only": true,
+  "production_mutation": false,
+  "secrets_output": false
+}

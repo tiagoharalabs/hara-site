@@ -51,9 +51,10 @@ class VersionedPromotionReleaseTests(unittest.TestCase):
                 require_signed_stage(self.staged)
 
     def test_legacy_signed_stage_is_not_current_promotion_candidate(self):
-        with self.assertRaisesRegex(RuntimeError, "AWAITING_OFFICIAL_SIGNATURE"):
+        self.assertTrue(BUNDLES[CURRENT_RELEASE].is_dir())
+        self.assertEqual(stage_module.validate_bundle(BUNDLES[CURRENT_RELEASE])["agent_version"], "0.3.43")
+        with self.assertRaisesRegex(RuntimeError, "SIGNED_STAGE_RELEASE_DRIFT"):
             require_signed_stage(self.staged)
-        self.assertFalse(BUNDLES[CURRENT_RELEASE].exists())
 
     def test_manifest_old_agent_new_is_rejected_before_promotion(self):
         agent = self.staged / "agent/linux.py"
@@ -148,7 +149,7 @@ class VersionedPromotionReleaseTests(unittest.TestCase):
                 "--rollback", "22222222-2222-2222-2222-222222222222",
                 "--message", "offline test", "--stage", str(self.staged)]
         with patch.object(sys, "argv", argv), patch.object(promote, "run") as remote:
-            with self.assertRaisesRegex(RuntimeError, "AWAITING_OFFICIAL_SIGNATURE"):
+            with self.assertRaisesRegex(RuntimeError, "SIGNED_STAGE_RELEASE_DRIFT"):
                 promote.main()
             remote.assert_not_called()
 

@@ -87,12 +87,18 @@ class SignedDistributionTests(unittest.TestCase):
         self.assertEqual(config["assets"]["directory"], "signed-assets-stage-required")
         self.assertFalse((APP / config["assets"]["directory"]).exists())
 
-    def test_default_stage_waits_for_new_officially_signed_bundle(self):
+    def test_default_stage_accepts_current_officially_signed_v5_bundle(self):
         with tempfile.TemporaryDirectory() as temporary:
             output = Path(temporary) / "assets"
-            with self.assertRaisesRegex(RuntimeError, "AWAITING_OFFICIAL_SIGNATURE"):
-                stage(output)
-            self.assertFalse(output.exists())
+            report = stage(output)
+            self.assertTrue(output.is_dir())
+            self.assertEqual(report["state"], "PASS")
+            self.assertEqual(report["agent_version"], "0.3.43")
+            self.assertEqual(report["release"], "commercial-0.3.43-v5-terminal-drain")
+            self.assertEqual(report["signed_files_verified"], 8)
+            self.assertEqual(report["cloud_operations"], False)
+            self.assertEqual(verify_bundle(output)["manifest_sha256"],
+                             verify_bundle(BUNDLES["commercial-0.3.43-v5-terminal-drain"])["manifest_sha256"])
 
     def test_rollback_stage_is_explicit_and_reports_known_regression(self):
         with tempfile.TemporaryDirectory() as temporary:

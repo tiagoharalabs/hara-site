@@ -1,0 +1,27 @@
+{
+  "schema": "hara.commander.offline-signed-source-compatibility.v1",
+  "source": "unsigned v5 static assets + Git-frozen Worker with MCP privacy patch",
+  "frozen_commit": "c90907c6bd41d56411466542e01a3224538b76c1",
+  "worker_source_sha256": "b0141272657373e0598e986e32f56d5f55e1bf6238a7dd058a4e4440a3f2522f",
+  "static_v5_tar_sha256": "3ade217145e32899da47bedb43272897ee020e44658ae2b197b0eda61880970d",
+  "wrangler_version": "4.85.0",
+  "offline_build_exit": 0,
+  "outputs": {
+    "README.md": {
+      "sha256": "a4a549a38a4cc8148dd4cee54addfd5ec073cad958cb47062fa0af75c01d1080",
+      "bytes": 115
+    },
+    "worker.js": {
+      "sha256": "40696f94c52577faceb390f84345cf32ffaae02aebb0376e71645fe59853a9c4",
+      "bytes": 1743151
+    },
+    "worker.js.map": {
+      "sha256": "661a1bae5e7df65ae9ffdc3400b6865bcd6e4beb668a23c78e7b8e5cf8ae46e8",
+      "bytes": 3573117
+    }
+  },
+  "cloud_upload": false,
+  "production_mutation": false,
+  "signature_present": false,
+  "release_ready_for_customers": false
+}

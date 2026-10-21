@@ -1,0 +1,569 @@
+param([string]$Action = "install")
+$ErrorActionPreference = "Stop"
+$Action = $Action.TrimStart("-").ToLowerInvariant()
+
+$BaseUrl = if ($env:HARA_COMMANDER_URL) { $env:HARA_COMMANDER_URL.TrimEnd("/") } else { "https://commander.haralabs.com.br" }
+$ReleaseSigningKid = "commander-release-v2"
+$ReleaseSigningN = "p9ylK_Yf48aEfkps9ZVm6u5Uk3haKCF1ltQmZUrXHLqrbiXf4L-3OdqpYcv7VGktbXKVfccIR2-b8lfNPKT-OpemqcgkJ9Cb-gvjxdPxoLOWxTVasKr8ttUirM08LVzL7BF3Mwadl2SEQXSHC0ayH1Jtj3-57Z8XNZ4NvWuUswBhYrNtXpe8-a86HSy2r0pEMWZalqJE1mD1nGnODYWLpsLPkTX4rUBky5zBX11Rkf2_Op3jpo5nwWVPf2AEJSq-yogQQI3jopJRydnrDySxFpI7TgN1SAL1nEcNRkh-rOjchuqyHpQAN2DSDpQvrFDxANDLMhxrlwmE6MU4PAn46ICuKgyqAYULlVhYhjZpPUZpLHvwG3rjYbD022qYbBDdamJ79FWcoDxmr85mwiDQ4WDEn8cgF_5G2pmq6Wq3ss2O1cQJB_QgkID3uBeywonGs0ikoMtxmIvSi1HVGkBVC0Ay726K9wwpT_xhiwVT_OpAnNYgNdqWcc-cU7n-Zt43"
+$ReleaseSigningE = "AQAB"
+$ApprovalModeRaw = if ($env:HARA_COMMANDER_APPROVAL_MODE) { ([string]$env:HARA_COMMANDER_APPROVAL_MODE).Trim().ToUpperInvariant() } else { "ASK_EVERY_ACTION" }
+$ApprovalMode = switch ($ApprovalModeRaw) {
+  "ASK" { "ASK_EVERY_ACTION" }
+  "ASK_EVERY_ACTION" { "ASK_EVERY_ACTION" }
+  "SESSION" { "SESSION_TRUSTED" }
+  "SESSION_TRUSTED" { "SESSION_TRUSTED" }
+  "AUTO" { "PERSISTENT_TRUSTED" }
+  "ALWAYS" { "PERSISTENT_TRUSTED" }
+  "PERSISTENT" { "PERSISTENT_TRUSTED" }
+  "PERSISTENT_TRUSTED" { "PERSISTENT_TRUSTED" }
+  default { throw "DEVICE_APPROVAL_MODE_INVALID" }
+}
+$Root = Join-Path $env:LOCALAPPDATA "HARA Commander"
+$Agent = Join-Path $Root "hara-commander-agent.ps1"
+$Config = Join-Path $Root "device.json"
+$EnrollmentIntent = Join-Path $Root "enrollment-intent.json"
+$TaskName = "HARA Commander Agent"
+$RuntimeStatus = Join-Path $Root "runtime-status.json"
+
+function Get-InstalledDevice {
+  if (-not (Test-Path -LiteralPath $Config -PathType Leaf)) { return $null }
+  try { return Get-Content -Raw -LiteralPath $Config | ConvertFrom-Json } catch { return $null }
+}
+
+function Get-RuntimeStartedAt {
+  if (-not (Test-Path -LiteralPath $RuntimeStatus -PathType Leaf)) { return "" }
+  try {
+    $status=Get-Content -Raw -LiteralPath $RuntimeStatus | ConvertFrom-Json
+    return [string]$status.started_at_utc
+  } catch {
+    return ""
+  }
+}
+
+function Wait-AgentStartup([string]$ExpectedVersion,[string]$PreviousStarted,[int]$Seconds=10) {
+  for ($i=0; $i -lt $Seconds; $i++) {
+    if (Test-Path -LiteralPath $RuntimeStatus -PathType Leaf) {
+      try {
+        $status=Get-Content -Raw -LiteralPath $RuntimeStatus | ConvertFrom-Json
+        $started=[string]$status.started_at_utc
+        $version=[string]$status.agent_version
+        if ($version -eq $ExpectedVersion -and $started -and $started -ne $PreviousStarted) {
+          return $true
+        }
+      } catch {}
+    }
+    Start-Sleep -Seconds 1
+  }
+  return $false
+}
+
+function Convert-Base64UrlBytes([string]$Value) {
+  $text = $Value.Replace("-","+").Replace("_","/")
+  switch ($text.Length % 4) {
+    2 { $text += "==" }
+    3 { $text += "=" }
+  }
+  return [Convert]::FromBase64String($text)
+}
+
+function Assert-ReleaseManifestSignature([byte[]]$ManifestBytes,$SignatureObject) {
+  if (-not $SignatureObject -or [string]$SignatureObject.schema -ne "hara.commander-release-signature.v1") { throw "AGENT_RELEASE_SIGNATURE_INVALID" }
+  if ([string]$SignatureObject.alg -ne "RS256") { throw "AGENT_RELEASE_SIGNATURE_INVALID" }
+  if ([string]$SignatureObject.kid -ne $ReleaseSigningKid) { throw "RELEASE_SIGNATURE_KID_MISMATCH" }
+  $sha=[Security.Cryptography.SHA256]::Create()
+  try { $digest=$sha.ComputeHash($ManifestBytes) } finally { $sha.Dispose() }
+  $hex=([BitConverter]::ToString($digest)).Replace("-","").ToLowerInvariant()
+  if ($hex -ne ([string]$SignatureObject.manifest_sha256).ToLowerInvariant()) { throw "AGENT_RELEASE_SIGNATURE_INVALID" }
+  $rsa=[Security.Cryptography.RSA]::Create()
+  try {
+    $params=New-Object Security.Cryptography.RSAParameters
+    $params.Modulus=Convert-Base64UrlBytes $ReleaseSigningN
+    $params.Exponent=Convert-Base64UrlBytes $ReleaseSigningE
+    $rsa.ImportParameters($params)
+    $sig=Convert-Base64UrlBytes ([string]$SignatureObject.signature)
+    if (-not $rsa.VerifyData($ManifestBytes,$sig,[Security.Cryptography.HashAlgorithmName]::SHA256,[Security.Cryptography.RSASignaturePadding]::Pkcs1)) {
+      throw "AGENT_RELEASE_SIGNATURE_INVALID"
+    }
+  } finally {
+    $rsa.Dispose()
+  }
+}
+
+function Get-AgentReleaseMetadata {
+  $manifestPath=Join-Path $env:TEMP ("hara-commander-manifest-"+[guid]::NewGuid().ToString("N")+".json")
+  $signaturePath=Join-Path $env:TEMP ("hara-commander-manifest-"+[guid]::NewGuid().ToString("N")+".sig.json")
+  try {
+    Invoke-WebRequest -Uri "$BaseUrl/release/agent-manifest.json" -OutFile $manifestPath -UseBasicParsing -TimeoutSec 30 -MaximumRedirection 0
+    Invoke-WebRequest -Uri "$BaseUrl/release/agent-manifest.sig.json" -OutFile $signaturePath -UseBasicParsing -TimeoutSec 30 -MaximumRedirection 0
+    $manifestBytes=[IO.File]::ReadAllBytes($manifestPath)
+    $signature=Get-Content -Raw -LiteralPath $signaturePath | ConvertFrom-Json
+    Assert-ReleaseManifestSignature $manifestBytes $signature
+    $manifest=[Text.Encoding]::UTF8.GetString($manifestBytes) | ConvertFrom-Json
+    if (-not $manifest -or [string]$manifest.schema -ne "hara.commander-agent-release.v1") { throw "AGENT_RELEASE_MANIFEST_INVALID" }
+    $entry = @($manifest.files | Where-Object { [string]$_.path -eq "agent/windows.ps1" } | Select-Object -First 1)
+    if (-not $entry -or -not $entry.sha256 -or -not $manifest.agent_version) { throw "AGENT_RELEASE_MANIFEST_INVALID" }
+    return [PSCustomObject]@{ Version=[string]$manifest.agent_version; Sha256=([string]$entry.sha256).ToLowerInvariant(); Manifest=$manifest }
+  } finally {
+    Remove-Item -Force -LiteralPath $manifestPath,$signaturePath -ErrorAction SilentlyContinue
+  }
+}
+
+function Assert-AgentIntegrity {
+  param([string]$Path)
+  $meta = Get-AgentReleaseMetadata
+  $actual = (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()
+  if ($actual -ne $meta.Sha256) { throw "AGENT_SHA256_MISMATCH" }
+  $match = Select-String -LiteralPath $Path -Pattern '^\$AgentVersion = "([^"]+)"$' | Select-Object -First 1
+  if (-not $match -or -not $match.Matches.Count) { throw "AGENT_VERSION_NOT_FOUND" }
+  $version = $match.Matches[0].Groups[1].Value
+  if ([string]$version -ne [string]$meta.Version) { throw "AGENT_VERSION_MANIFEST_MISMATCH" }
+  Write-Host "HARA_COMMANDER_AGENT_INTEGRITY=PASS"
+}
+
+function Assert-AgentSelfTest {
+  param([string]$Path)
+  $PowerShellExe = (Get-Command powershell.exe -ErrorAction Stop).Source
+  & $PowerShellExe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $Path --self-test | Out-Null
+  if ($LASTEXITCODE -ne 0) { throw "AGENT_SELF_TEST_FAILED" }
+  Write-Host "HARA_COMMANDER_AGENT_SELF_TEST=PASS"
+}
+
+function Get-VerifiedReleaseBeforeEnrollment {
+  $meta=Get-AgentReleaseMetadata
+  $stage=Join-Path $env:TEMP ("hara-commander-pre-enroll-"+[guid]::NewGuid().ToString("N"))
+  New-Item -ItemType Directory -Path $stage -ErrorAction Stop | Out-Null
+  try {
+    $required=@("agent/linux.py","agent/windows.ps1","install/linux.sh","install/windows.ps1")
+    $rows=@($meta.Manifest.files)
+    if ($rows.Count -ne 4 -or [string]$meta.Manifest.schema -ne "hara.commander-agent-release.v1") {
+      throw "AGENT_RELEASE_MANIFEST_INVALID"
+    }
+    foreach($relative in $required) {
+      $matching=@($rows | Where-Object { [string]$_.path -ceq $relative })
+      if ($matching.Count -ne 1) { throw "AGENT_RELEASE_MANIFEST_INVALID" }
+      $entry=$matching[0]
+      if ([string]$entry.sha256 -cnotmatch "^[0-9a-f]{64}$" -or
+          $null -eq $entry.bytes -or [int64]$entry.bytes -lt 1 -or [int64]$entry.bytes -gt 5242880) {
+        throw "AGENT_RELEASE_MANIFEST_INVALID"
+      }
+      $path=Join-Path $stage $relative
+      New-Item -ItemType Directory -Path (Split-Path -Parent $path) -Force | Out-Null
+      Invoke-WebRequest -Uri "$BaseUrl/$relative" -OutFile $path -UseBasicParsing -TimeoutSec 30 -MaximumRedirection 0
+      $item=Get-Item -LiteralPath $path -ErrorAction Stop
+      $sha=(Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant()
+      if ([int64]$item.Length -ne [int64]$entry.bytes -or $sha -cne [string]$entry.sha256) {
+        throw "RELEASE_ASSET_DIGEST_MISMATCH:$relative"
+      }
+    }
+    $agentPath=Join-Path $stage "agent/windows.ps1"
+    $versionLine=Select-String -LiteralPath $agentPath -Pattern '^\$AgentVersion = "([^"]+)"$' | Select-Object -First 1
+    if (-not $versionLine -or [string]$versionLine.Matches[0].Groups[1].Value -cne $meta.Version) {
+      throw "AGENT_VERSION_MANIFEST_MISMATCH"
+    }
+    # Portal onboarding runs a saved PowerShell file. Authenticate the exact
+    # bootstrap being executed, not only another copy fetched by this script.
+    if (-not $PSCommandPath -or -not (Test-Path -LiteralPath $PSCommandPath -PathType Leaf) -or
+        (Get-FileHash -LiteralPath $PSCommandPath -Algorithm SHA256).Hash.ToLowerInvariant() -cne
+        (Get-FileHash -LiteralPath (Join-Path $stage "install/windows.ps1") -Algorithm SHA256).Hash.ToLowerInvariant()) {
+      throw "RELEASE_ASSET_DIGEST_MISMATCH:running-installer"
+    }
+    $tokens=$null; $errors=$null
+    [System.Management.Automation.Language.Parser]::ParseFile($agentPath,[ref]$tokens,[ref]$errors) | Out-Null
+    if ($errors.Count -ne 0) { throw "AGENT_INSTALL_SYNTAX_INVALID" }
+    Assert-AgentSelfTest $agentPath
+    Write-Host "HARA_COMMANDER_RELEASE_PRE_ENROLL=PASS"
+    return [PSCustomObject]@{ Stage=$stage; Agent=$agentPath; Version=$meta.Version; Sha256=$meta.Sha256 }
+  } catch {
+    Remove-Item -LiteralPath $stage -Recurse -Force -ErrorAction SilentlyContinue
+    throw
+  }
+}
+
+function Get-DeviceToken {
+  param($Cfg)
+  if (-not $Cfg -or -not $Cfg.encrypted_device_token) { throw "DEVICE_TOKEN_UNAVAILABLE" }
+  $Secure = ConvertTo-SecureString ([string]$Cfg.encrypted_device_token)
+  $Bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($Secure)
+  try { return [Runtime.InteropServices.Marshal]::PtrToStringBSTR($Bstr) }
+  finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($Bstr) }
+}
+
+function Get-EnrollmentIntentToken([string]$PairingToken) {
+  $sha=[Security.Cryptography.SHA256]::Create()
+  try {
+    $pairingBytes=[Text.Encoding]::UTF8.GetBytes($PairingToken)
+    $pairingHash=([BitConverter]::ToString($sha.ComputeHash($pairingBytes))).Replace("-","").ToLowerInvariant()
+  } finally { $sha.Dispose() }
+  if (Test-Path -LiteralPath $Root) {
+    if ((Get-Item -LiteralPath $Root -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) {
+      throw "ENROLLMENT_INTENT_DIRECTORY_UNSAFE"
+    }
+  } else {
+    New-Item -ItemType Directory -Path $Root -ErrorAction Stop | Out-Null
+  }
+  $identity=[Security.Principal.WindowsIdentity]::GetCurrent().Name
+  & icacls.exe $Root /inheritance:r /grant:r "${identity}:(OI)(CI)F" | Out-Null
+  if ($LASTEXITCODE -ne 0) { throw "ENROLLMENT_INTENT_ACL_FAILED" }
+  if (Test-Path -LiteralPath $EnrollmentIntent) {
+    $item=Get-Item -LiteralPath $EnrollmentIntent -Force
+    if (-not ($item -is [IO.FileInfo]) -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+      throw "ENROLLMENT_INTENT_UNSAFE"
+    }
+    try { $intent=Get-Content -Raw -LiteralPath $EnrollmentIntent | ConvertFrom-Json }
+    catch { throw "ENROLLMENT_INTENT_INVALID" }
+    if ([string]$intent.schema -cne "hara.commander-enrollment-intent.v1" -or
+        [string]$intent.pairing_sha256 -cne $pairingHash -or
+        [string]$intent.base_url -cne $BaseUrl) {
+      throw "ENROLLMENT_INTENT_PAIRING_MISMATCH"
+    }
+    try {
+      $secure=ConvertTo-SecureString ([string]$intent.encrypted_client_device_token)
+      $bstr=[Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
+      try { $token=[Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr) }
+      finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr); $secure.Dispose() }
+    } catch { throw "ENROLLMENT_INTENT_INVALID" }
+    if ($token -cnotmatch '^[A-Za-z0-9_-]{64}$') { throw "ENROLLMENT_INTENT_INVALID" }
+    return $token
+  }
+  $random=New-Object byte[] 48
+  $rng=[Security.Cryptography.RandomNumberGenerator]::Create()
+  try { $rng.GetBytes($random) } finally { $rng.Dispose() }
+  $token=[Convert]::ToBase64String($random).TrimEnd("=").Replace("+","-").Replace("/","_")
+  [Array]::Clear($random,0,$random.Length)
+  $encrypted=ConvertTo-SecureString $token -AsPlainText -Force | ConvertFrom-SecureString
+  $intent=[ordered]@{
+    schema="hara.commander-enrollment-intent.v1"
+    pairing_sha256=$pairingHash
+    base_url=$BaseUrl
+    encrypted_client_device_token=$encrypted
+  }
+  $raw=[Text.Encoding]::UTF8.GetBytes(($intent | ConvertTo-Json -Compress))
+  $created=$false
+  try {
+    $stream=[IO.File]::Open($EnrollmentIntent,[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::None)
+    $created=$true
+    try { $stream.Write($raw,0,$raw.Length); $stream.Flush($true) }
+    finally { $stream.Dispose() }
+    & icacls.exe $EnrollmentIntent /inheritance:r /grant:r "${identity}:F" | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "ENROLLMENT_INTENT_ACL_FAILED" }
+  } catch {
+    if ($created) { Remove-Item -LiteralPath $EnrollmentIntent -Force -ErrorAction SilentlyContinue }
+    throw
+  }
+  return $token
+}
+
+function Invoke-DeviceAction {
+  param([string]$Kind)
+  $cfg = Get-InstalledDevice
+  if (-not $cfg -or -not $cfg.device_id) { throw "DEVICE_NOT_ENROLLED" }
+  $base = if ($cfg.base_url) { ([string]$cfg.base_url).TrimEnd("/") } else { $BaseUrl }
+  $token = Get-DeviceToken $cfg
+  try {
+    $headers = @{ Accept="application/json"; Authorization=("Bearer " + $token) }
+    if ($Kind -eq "heartbeat") {
+      $payload = @{ device_id=[string]$cfg.device_id; architecture=[string]$cfg.architecture; agent_version="0.3.43"; approval_mode=$(if ($cfg.approval_mode) {[string]$cfg.approval_mode} else {"ASK_EVERY_ACTION"}) } | ConvertTo-Json -Compress
+      $result = Invoke-RestMethod -Uri "$base/api/device/heartbeat" -Method Post -ContentType "application/json" -Headers $headers -Body $payload -TimeoutSec 15 -MaximumRedirection 0
+      if (-not $result.ok -or [string]$result.device_id -ne [string]$cfg.device_id) { throw "REMOTE_HEARTBEAT_INVALID" }
+      return $result
+    }
+    if ($Kind -eq "revoke") {
+      $result = Invoke-RestMethod -Uri "$base/api/device/revoke-self" -Method Post -ContentType "application/json" -Headers $headers -Body "{}" -TimeoutSec 15 -MaximumRedirection 0
+      if (-not $result.ok -or [string]$result.state -ne "REVOKED" -or [string]$result.device_id -ne [string]$cfg.device_id) { throw "REMOTE_REVOKE_INVALID" }
+      return $result
+    }
+    throw "DEVICE_ACTION_INVALID"
+  } finally {
+    $token = $null
+  }
+}
+
+function Invoke-Preflight {
+  $health = Invoke-RestMethod -Uri "$BaseUrl/api/health" -Method Get -Headers @{ Accept="application/json" } -TimeoutSec 15 -MaximumRedirection 0
+  if (-not $health.ok -or [string]$health.service -ne "hara-commander") { throw "COMMANDER_HEALTH_INVALID" }
+  $release = Get-AgentReleaseMetadata
+  $scheduledTaskReady = [bool](Get-Command Register-ScheduledTask -ErrorAction SilentlyContinue)
+  $powershellReady = [bool](Get-Command powershell.exe -ErrorAction SilentlyContinue)
+  $report = [ordered]@{
+    schema = "hara.commander-device-preflight.v1"
+    platform = "WINDOWS"
+    architecture = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant()
+    commander_url = $BaseUrl
+    commander_health = $true
+    release_manifest = $true
+    release_signature = $true
+    stable_agent_version = [string]$release.Version
+    persistence = "on-demand-scheduled-task"
+    persistence_ready = ($scheduledTaskReady -and $powershellReady)
+    mutation_performed = $false
+  }
+  $report | ConvertTo-Json -Compress
+  if (-not $report.persistence_ready) { throw "WINDOWS_PERSISTENCE_PREREQUISITE_MISSING" }
+}
+
+function Show-SupportReport {
+  $cfg = Get-InstalledDevice
+  $task = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+  $version = "unknown"
+  $sha256 = $null
+  if (Test-Path -LiteralPath $Agent -PathType Leaf) {
+    $match = Select-String -LiteralPath $Agent -Pattern '^\$AgentVersion = "([^"]+)"$' | Select-Object -First 1
+    if ($match -and $match.Matches.Count) { $version = $match.Matches[0].Groups[1].Value }
+    try { $sha256 = (Get-FileHash -LiteralPath $Agent -Algorithm SHA256).Hash.ToLowerInvariant() } catch { $sha256 = $null }
+  }
+  $tokenPresent = $false
+  if ($cfg -and $cfg.encrypted_device_token) { $tokenPresent = $true }
+  $runtime = $null
+  if (Test-Path -LiteralPath $RuntimeStatus -PathType Leaf) {
+    try { $runtime = Get-Content -Raw -LiteralPath $RuntimeStatus | ConvertFrom-Json } catch { $runtime = $null }
+  }
+  $report = [ordered]@{
+    schema = "hara.commander-support-report.v1"
+    platform = "WINDOWS"
+    device_id = $(if ($cfg -and $cfg.device_id) { [string]$cfg.device_id } else { $null })
+    architecture = $(if ($cfg -and $cfg.architecture) { [string]$cfg.architecture } else { [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant() })
+    commander_url = $(if ($cfg -and $cfg.base_url) { [string]$cfg.base_url } else { $null })
+    agent_version = $version
+    agent_sha256 = $sha256
+    config_present = (Test-Path -LiteralPath $Config -PathType Leaf)
+    task_present = [bool]$task
+    task_state = $(if ($task) { [string]$task.State } else { $null })
+    device_token_present = $tokenPresent
+    device_token_exposed = $false
+    last_successful_heartbeat_at_utc = $(if ($runtime) { [string]$runtime.last_successful_heartbeat_at_utc } else { $null })
+    last_runtime_error_code = $(if ($runtime) { [string]$runtime.last_runtime_error_code } else { $null })
+    last_runtime_error_at_utc = $(if ($runtime) { [string]$runtime.last_runtime_error_at_utc } else { $null })
+  }
+  $report | ConvertTo-Json -Compress
+}
+
+function Invoke-Doctor {
+  $cfg = Get-InstalledDevice
+  if (-not $cfg) { throw "DEVICE_NOT_ENROLLED" }
+  if (-not (Test-Path -LiteralPath $Agent -PathType Leaf)) { throw "AGENT_BINARY_MISSING" }
+  $task = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+  if (-not $task) { throw "AGENT_TASK_NOT_INSTALLED" }
+  if ([string]$task.State -ne "Running") { throw "AGENT_TASK_NOT_RUNNING" }
+  $health = Invoke-RestMethod -Uri "$BaseUrl/api/health" -Method Get -Headers @{ Accept="application/json" } -TimeoutSec 15 -MaximumRedirection 0
+  if (-not $health.ok -or [string]$health.service -ne "hara-commander") { throw "COMMANDER_HEALTH_INVALID" }
+  Write-Host "HARA_COMMANDER_AGENT_DOCTOR=PASS"
+  Write-Host "COMMANDER_REMOTE_HEALTH=PASS"
+  Write-Host "COMMANDER_REMOTE_HEARTBEAT=SKIPPED_LOCAL_SESSION_REQUIRED"
+  Show-Status
+}
+
+function Show-Status {
+  $cfg = Get-InstalledDevice
+  $task = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+  $version = "unknown"
+  if (Test-Path -LiteralPath $Agent -PathType Leaf) {
+    $match = Select-String -LiteralPath $Agent -Pattern '^\$AgentVersion = "([^"]+)"$' | Select-Object -First 1
+    if ($match -and $match.Matches.Count) { $version = $match.Matches[0].Groups[1].Value }
+  }
+  Write-Host ("HARA_COMMANDER_DEVICE_ENROLLED=" + $(if ($cfg) {"TRUE"} else {"FALSE"}))
+  Write-Host ("HARA_COMMANDER_AGENT_REGISTERED=" + $(if ($task) {"TRUE"} else {"FALSE"}))
+  Write-Host ("HARA_COMMANDER_AGENT_ACTIVE=" + $(if ($task -and [string]$task.State -eq "Running") {"TRUE"} else {"FALSE"}))
+  Write-Host ("HARA_COMMANDER_AGENT_AUTOSTART=" + $(if ($task -and $task.Triggers) {"ON"} else {"OFF"}))
+  Write-Host ("HARA_COMMANDER_AGENT_VERSION=" + $version)
+  if ($cfg -and $cfg.device_id) { Write-Host ("DEVICE_ID=" + [string]$cfg.device_id) }
+  if ($cfg -and $cfg.approval_mode) { Write-Host ("HARA_COMMANDER_APPROVAL_MODE=" + [string]$cfg.approval_mode) }
+  if (Test-Path -LiteralPath $Agent -PathType Leaf) {
+    $PowerShellExe = (Get-Command powershell.exe -ErrorAction SilentlyContinue).Source
+    if ($PowerShellExe) { & $PowerShellExe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $Agent --session-status }
+  }
+  Write-Host "DEVICE_TOKEN_EXPOSED=FALSE"
+}
+
+if ($Action -eq "preflight") { Invoke-Preflight; exit 0 }
+if ($Action -eq "status") { Show-Status; exit 0 }
+if ($Action -eq "doctor") { Invoke-Doctor; exit 0 }
+if ($Action -eq "support") { Show-SupportReport; exit 0 }
+if ($Action -eq "update") {
+  if (-not (Test-Path -LiteralPath $Config -PathType Leaf)) { throw "DEVICE_NOT_ENROLLED" }
+  if (-not (Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue)) { throw "AGENT_TASK_NOT_INSTALLED" }
+  $cfg = Get-InstalledDevice
+  if ($cfg -and $cfg.base_url) { $BaseUrl = ([string]$cfg.base_url).TrimEnd("/") }
+  $taskBefore = Get-ScheduledTask -TaskName $TaskName -ErrorAction Stop
+  $UpdateTaskWasRunning = [string]$taskBefore.State -eq "Running"
+  $PreviousStarted = Get-RuntimeStartedAt
+  # PowerShell -File requires an executable .ps1 suffix. The previous
+  # '.ps1.update' name failed before self-test, even for a signed valid Agent.
+  $tmp = $Agent + ".update.ps1"
+  $backup = $Agent + ".rollback"
+  Remove-Item -Force $tmp,$backup -ErrorAction SilentlyContinue
+  Invoke-WebRequest -Uri "$BaseUrl/agent/windows.ps1" -OutFile $tmp -UseBasicParsing -TimeoutSec 30 -MaximumRedirection 0
+  Assert-AgentIntegrity $tmp
+  $tokens=$null; $errors=$null
+  [System.Management.Automation.Language.Parser]::ParseFile($tmp,[ref]$tokens,[ref]$errors) | Out-Null
+  if ($errors.Count -ne 0) { Remove-Item -Force $tmp; throw "AGENT_UPDATE_SYNTAX_INVALID" }
+  Assert-AgentSelfTest $tmp
+  $VersionMatch=Select-String -LiteralPath $tmp -Pattern '^\$AgentVersion = "([^"]+)"$' | Select-Object -First 1
+  if (-not $VersionMatch -or -not $VersionMatch.Matches.Count) { throw "AGENT_VERSION_NOT_FOUND" }
+  $ExpectedVersion=[string]$VersionMatch.Matches[0].Groups[1].Value
+  if (Test-Path -LiteralPath $Agent -PathType Leaf) { Copy-Item -Force $Agent $backup }
+  if ($UpdateTaskWasRunning) {
+    Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+  }
+  Move-Item -Force $tmp $Agent
+  if ($UpdateTaskWasRunning) {
+    Start-ScheduledTask -TaskName $TaskName
+    Start-Sleep -Seconds 2
+    $task = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+    if (-not $task -or [string]$task.State -ne "Running" -or -not (Wait-AgentStartup $ExpectedVersion $PreviousStarted 10)) {
+      Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+      if (Test-Path -LiteralPath $backup -PathType Leaf) {
+        Move-Item -Force $backup $Agent
+        Start-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+        Write-Host "HARA_COMMANDER_AGENT_UPDATE_ROLLBACK=PASS"
+      }
+      throw "AGENT_UPDATE_START_FAILED"
+    }
+    Write-Host "HARA_COMMANDER_AGENT_STARTUP_ATTESTATION=PASS"
+  } else {
+    # Updating a manually stopped agent must never initiate a connection.
+    Write-Host "HARA_COMMANDER_AGENT_UPDATE_RUNTIME_ATTESTATION=SKIPPED_MANUAL_STOP"
+  }
+  Remove-Item -Force $backup -ErrorAction SilentlyContinue
+  Write-Host ("HARA_COMMANDER_AGENT_UPDATE_TASK_WAS_RUNNING=" + $(if ($UpdateTaskWasRunning) {"TRUE"} else {"FALSE"}))
+  Write-Host "HARA_COMMANDER_AGENT_UPDATE=PASS"
+  Write-Host "HARA_COMMANDER_AGENT_UPDATE_ROLLBACK_READY=TRUE"
+  Show-Status
+  exit 0
+}
+if ($Action -eq "uninstall") {
+  $cfg = Get-InstalledDevice
+  $revokeState = if ($cfg -or (Test-Path -LiteralPath $EnrollmentIntent -PathType Leaf)) { "PENDING" } else { "NOT_REQUIRED" }
+  if ($cfg) {
+    try { Invoke-DeviceAction "revoke" | Out-Null; $revokeState = "PASS" } catch { $revokeState = "PENDING" }
+  }
+  Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue
+  Remove-Item -LiteralPath $Agent -Force -ErrorAction SilentlyContinue
+  if ($revokeState -eq "PENDING") {
+    Write-Host "HARA_COMMANDER_AGENT_UNINSTALL=LOCAL_ONLY"
+    if ($cfg -and $cfg.device_id) { Write-Host ("DEVICE_ID=" + [string]$cfg.device_id) }
+    Write-Host "SERVER_DEVICE_REVOKE=PENDING"
+    Write-Host "SERVER_DEVICE_REVOKE_PENDING=TRUE"
+    Write-Host "DEVICE_TOKEN_EXPOSED=FALSE"
+    exit 12
+  }
+  Remove-Item -LiteralPath $Root -Recurse -Force -ErrorAction SilentlyContinue
+  Write-Host "HARA_COMMANDER_AGENT_UNINSTALL=PASS"
+  if ($cfg -and $cfg.device_id) { Write-Host ("DEVICE_ID=" + [string]$cfg.device_id) }
+  Write-Host ("SERVER_DEVICE_REVOKE=" + $revokeState)
+  Write-Host "DEVICE_TOKEN_EXPOSED=FALSE"
+  exit 0
+}
+if ($Action -ne "install") { throw "Usage: windows.ps1 -Action install|preflight|status|doctor|support|update|uninstall" }
+if (Test-Path -LiteralPath $Config -PathType Leaf) { throw "DEVICE_ALREADY_ENROLLED: use status, update, or uninstall." }
+
+Write-Host "HARA Commander - Windows device pairing"
+$SecurePairing = Read-Host "Pairing token" -AsSecureString
+$Bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecurePairing)
+try { $PairingToken = ([Runtime.InteropServices.Marshal]::PtrToStringBSTR($Bstr)).Trim() } finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($Bstr) }
+if ([string]::IsNullOrWhiteSpace($PairingToken)) { throw "Pairing token cannot be empty." }
+
+$DeviceName = $env:COMPUTERNAME
+$Architecture = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant()
+$PreparedRelease = Get-VerifiedReleaseBeforeEnrollment
+try {
+  $ClientDeviceToken = Get-EnrollmentIntentToken $PairingToken
+  $Payload = @{ pairing_token=$PairingToken; client_device_token=$ClientDeviceToken; device_name=$DeviceName; platform="WINDOWS"; architecture=$Architecture; agent_version="0.3.43"; approval_mode=$ApprovalMode } | ConvertTo-Json -Compress
+  try {
+    $Enroll = Invoke-RestMethod -Uri "$BaseUrl/api/device/enroll-intent" -Method Post -ContentType "application/json" -Headers @{ Accept="application/json" } -Body $Payload -TimeoutSec 30 -MaximumRedirection 0
+  } catch {
+    throw "ENROLLMENT_ACK_UNKNOWN: rerun with the same pairing token to recover this intent."
+  }
+} catch {
+  Remove-Item -LiteralPath $PreparedRelease.Stage -Recurse -Force -ErrorAction SilentlyContinue
+  throw
+}
+$PairingToken = $null
+$Payload = $null
+$SecurePairing.Dispose()
+if (-not $Enroll -or [string]$Enroll.device_id -cnotmatch '^HARA-DEVICE-[A-Za-z0-9_-]+$' -or
+    [string]$Enroll.device_token -cne $ClientDeviceToken) {
+  Remove-Item -LiteralPath $PreparedRelease.Stage -Recurse -Force -ErrorAction SilentlyContinue
+  throw "ENROLLMENT_ACK_UNKNOWN: rerun with the same pairing token to recover this intent."
+}
+
+$InstallEnrolled = $true
+$EnrollDeviceId = [string]$Enroll.device_id
+$DeviceTokenForRollback = [string]$Enroll.device_token
+$Enroll.device_token = $null
+$Enroll = $null
+try {
+  New-Item -ItemType Directory -Path $Root -Force | Out-Null
+  $EncryptedToken = ConvertTo-SecureString $DeviceTokenForRollback -AsPlainText -Force | ConvertFrom-SecureString
+  $ConfigObject = @{ base_url=$BaseUrl; device_id=$EnrollDeviceId; encrypted_device_token=$EncryptedToken; architecture=$Architecture; agent_version="0.3.43"; approval_mode=$ApprovalMode }
+  $ConfigObject | ConvertTo-Json | Set-Content -Path $Config -Encoding UTF8
+
+  $Identity = [Security.Principal.WindowsIdentity]::GetCurrent().Name
+  & icacls.exe $Root /inheritance:r /grant:r "${Identity}:(OI)(CI)F" | Out-Null
+  & icacls.exe $Config /inheritance:r /grant:r "${Identity}:F" | Out-Null
+
+  $InstallTmp = $Agent + ".install.ps1"
+  Remove-Item -Force $InstallTmp -ErrorAction SilentlyContinue
+  Copy-Item -LiteralPath $PreparedRelease.Agent -Destination $InstallTmp -ErrorAction Stop
+  if ((Get-FileHash -LiteralPath $InstallTmp -Algorithm SHA256).Hash.ToLowerInvariant() -cne $PreparedRelease.Sha256) {
+    throw "RELEASE_ASSET_DIGEST_MISMATCH:agent/windows.ps1"
+  }
+  $tokens=$null; $errors=$null
+  [System.Management.Automation.Language.Parser]::ParseFile($InstallTmp,[ref]$tokens,[ref]$errors) | Out-Null
+  if ($errors.Count -ne 0) { Remove-Item -Force $InstallTmp; throw "AGENT_INSTALL_SYNTAX_INVALID" }
+  Assert-AgentSelfTest $InstallTmp
+  $VersionMatch=Select-String -LiteralPath $InstallTmp -Pattern '^\$AgentVersion = "([^"]+)"$' | Select-Object -First 1
+  if (-not $VersionMatch -or -not $VersionMatch.Matches.Count) { throw "AGENT_VERSION_NOT_FOUND" }
+  $ExpectedVersion=[string]$VersionMatch.Matches[0].Groups[1].Value
+  Move-Item -Force $InstallTmp $Agent
+  & icacls.exe $Agent /inheritance:r /grant:r "${Identity}:F" | Out-Null
+
+  $PowerShellExe = (Get-Command powershell.exe).Source
+  $Argument = "-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$Agent`""
+  $TaskAction = New-ScheduledTaskAction -Execute $PowerShellExe -Argument $Argument
+  # Register an ON-DEMAND task with NO AtLogOn / AtStartup trigger.
+  # Installation starts it once; reboot/login never starts it automatically.
+  $Settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RestartCount 10 -RestartInterval (New-TimeSpan -Minutes 1)
+  Register-ScheduledTask -TaskName $TaskName -Action $TaskAction -Settings $Settings -Description "HARA Commander on-demand device agent" -Force | Out-Null
+  $Registered = Get-ScheduledTask -TaskName $TaskName -ErrorAction Stop
+  if ($Registered.Triggers -and @($Registered.Triggers).Count -gt 0) { throw "AGENT_MANUAL_START_POLICY_VIOLATED" }
+  Start-ScheduledTask -TaskName $TaskName
+  Start-Sleep -Seconds 2
+  $Task = Get-ScheduledTask -TaskName $TaskName
+  if (-not $Task -or -not (Wait-AgentStartup $ExpectedVersion "" 10)) { throw "HARA Commander Agent failed startup attestation." }
+  Write-Host "HARA_COMMANDER_AGENT_STARTUP_ATTESTATION=PASS"
+
+  $InstallEnrolled = $false
+  $DeviceTokenForRollback = $null
+  Remove-Item -LiteralPath $EnrollmentIntent -Force -ErrorAction SilentlyContinue
+  if (Test-Path -LiteralPath $EnrollmentIntent) { Write-Host "ENROLLMENT_INTENT_CLEANUP_PENDING=TRUE" }
+  Write-Host "HARA_COMMANDER_DEVICE_ENROLLMENT=PASS"
+  Write-Host "HARA_COMMANDER_AGENT_TASK=REGISTERED_INERT_UNTIL_LOCAL_SESSION"
+  Write-Host "HARA_COMMANDER_AGENT_AUTOSTART=OFF"
+  Write-Host "HARA_COMMANDER_AGENT_START_MODE=MANUAL_AFTER_INSTALL"
+  Write-Host "DEVICE_ID=$EnrollDeviceId"
+  Write-Host "DEVICE_TOKEN_EXPOSED=FALSE"
+  Write-Host ("NEXT_COMMAND=powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File `"" + $Agent + "`" start")
+  Write-Host "SESSION_AUTHORITY=LOCAL_OPERATOR_TERMINAL"
+} catch {
+  $OriginalError = $_
+  if ($InstallEnrolled) {
+    $RevokeState = "PENDING"
+    try {
+      $headers = @{ Accept="application/json"; Authorization=("Bearer " + $DeviceTokenForRollback) }
+      $result = Invoke-RestMethod -Uri "$BaseUrl/api/device/revoke-self" -Method Post -ContentType "application/json" -Headers $headers -Body "{}" -TimeoutSec 15 -MaximumRedirection 0
+      if ($result.ok -and [string]$result.state -eq "REVOKED" -and [string]$result.device_id -eq $EnrollDeviceId) { $RevokeState = "PASS" }
+    } catch { $RevokeState = "PENDING" }
+    Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $Agent -Force -ErrorAction SilentlyContinue
+    if ($InstallTmp) { Remove-Item -LiteralPath $InstallTmp -Force -ErrorAction SilentlyContinue }
+    if ($RevokeState -eq "PASS") {
+      Remove-Item -LiteralPath $Config,$EnrollmentIntent -Force -ErrorAction SilentlyContinue
+    }
+    Write-Host ("HARA_COMMANDER_FAILED_INSTALL_ROLLBACK=" + $RevokeState)
+    if ($RevokeState -ne "PASS") { Write-Host "SERVER_DEVICE_REVOKE_PENDING=TRUE" }
+  }
+  $DeviceTokenForRollback = $null
+  throw $OriginalError
+} finally {
+  Remove-Item -LiteralPath $PreparedRelease.Stage -Recurse -Force -ErrorAction SilentlyContinue
+}

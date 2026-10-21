@@ -1,0 +1,72 @@
+{
+  "schema": "hara.commander.v5-original-linux-nine-regressions.v1",
+  "test_count": 9,
+  "passes": 9,
+  "results": [
+    {
+      "test": "validate_process_terminal_drain.py",
+      "exit": 0,
+      "last_line": [
+        "{\"checked\": 24, \"failed\": 0, \"passed\": 24, \"schema\": \"hara.commander-pty-terminal-drain-regression.v1\", \"scope\": \"REAL_LOCAL_PTY_ONLY_NO_NETWORK\", \"source\": \"linux.py\"}"
+      ]
+    },
+    {
+      "test": "validate_process_continuous_drain.py",
+      "exit": 0,
+      "last_line": [
+        "COMMANDER_PROCESS_REVOKE_STOPS_DESCENDANT=PASS"
+      ]
+    },
+    {
+      "test": "validate_process_oneshot_pagination.py",
+      "exit": 0,
+      "last_line": [
+        "COMMANDER_ONESHOT_RESULT_COUNT_AND_TOMBSTONES_BOUNDED=PASS"
+      ]
+    },
+    {
+      "test": "validate_process_session_policy.py",
+      "exit": 0,
+      "last_line": [
+        "COMMANDER_CONCURRENT_PROCESS_FLEET_LIMIT_16=PASS"
+      ]
+    },
+    {
+      "test": "validate_result_delivery_outbox.py",
+      "exit": 0,
+      "last_line": [
+        "COMMANDER_COMPLETION_GENERIC_MUTATION_FAILURE_STAYS_UNKNOWN=PASS"
+      ]
+    },
+    {
+      "test": "validate_result_envelope_budget.py",
+      "exit": 0,
+      "last_line": [
+        "COMMANDER_RESULT_ENVELOPE_BYTE_BOUNDARY=PASS"
+      ]
+    },
+    {
+      "test": "validate_file_cas_atomicity.py",
+      "exit": 0,
+      "last_line": [
+        "COMMANDER_FILE_CAS_FAILED_RENAME_RELEASES_LOCK=PASS"
+      ]
+    },
+    {
+      "test": "validate_relay_burst_dispatch.py",
+      "exit": 0,
+      "last_line": [
+        "COMMANDER_RELAY_RATE_LIMIT_STOPS_IMMEDIATE_DRAIN=PASS"
+      ]
+    },
+    {
+      "test": "validate_mount_aware_resources.py",
+      "exit": 0,
+      "last_line": [
+        "COMMANDER_SYSTEM_RESOURCES_INCLUDES_MOUNT_STATUS=PASS"
+      ]
+    }
+  ],
+  "official_signature_present": false,
+  "production_mutation": false
+}
