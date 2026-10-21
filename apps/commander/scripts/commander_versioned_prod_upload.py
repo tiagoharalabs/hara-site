@@ -1,0 +1,95 @@
+#!/usr/bin/env python3
+"""Recheck an exact signed asset tree immediately before version upload.
+
+Default mode is offline and read-only. --execute uploads one version without
+deploying it; the returned version still needs independent Cloudflare readback.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path
+import re
+import subprocess
+
+from stage_signed_commercial_assets import require_signed_stage
+
+ROOT = Path(__file__).resolve().parents[3]
+APP = ROOT / "apps/commander"
+CONFIG = APP / "wrangler.jsonc"
+WRANGLER = ROOT / "node_modules/.bin/wrangler"
+
+
+def checked_stage(stage: Path, tree_sha256: str, source_public_tree: str) -> dict:
+    if not re.fullmatch(r"[0-9a-f]{64}", tree_sha256):
+        raise RuntimeError("SIGNED_UPLOAD_TREE_SHA256_INVALID")
+    if not re.fullmatch(r"[0-9a-f]{40,64}", source_public_tree):
+        raise RuntimeError("SIGNED_UPLOAD_SOURCE_TREE_INVALID")
+    config = json.loads(CONFIG.read_text())
+    if config["assets"]["directory"] != "signed-assets-stage-required":
+        raise RuntimeError("SIGNED_UPLOAD_RAW_PUBLIC_CONFIG_DENIED")
+    report = require_signed_stage(stage, expected_tree_sha256=tree_sha256)
+    if report["source_public_tree"] != source_public_tree:
+        raise RuntimeError("SIGNED_UPLOAD_SOURCE_TREE_MISMATCH")
+    return report
+
+
+def run_wrangler_upload(stage: Path, message: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [str(WRANGLER), "versions", "upload", "--config", str(CONFIG),
+         "--assets", str(stage), "--message", message],
+        cwd=APP, capture_output=True, text=True, timeout=300, check=False,
+    )
+
+
+def upload_version(stage: Path, tree_sha256: str, source_public_tree: str,
+                   message: str, *, execute: bool = False) -> dict:
+    if not message.strip() or len(message) > 140:
+        raise RuntimeError("SIGNED_UPLOAD_MESSAGE_INVALID")
+    before = checked_stage(stage, tree_sha256, source_public_tree)
+    result = {
+        "state": "VERIFIED_NOT_UPLOADED",
+        "stage_tree_sha256": before["stage_tree_sha256"],
+        "source_public_tree": before["source_public_tree"],
+        "signed_manifest_sha256": before["manifest_sha256"],
+        "cloud_operations": False,
+    }
+    if not execute:
+        return result
+
+    # Keep the preflight and the one mutating command in the same process.
+    # On timeout or error the upload may have succeeded: inspect versions,
+    # never retry the mutation without reconciling remote state.
+    try:
+        proc = run_wrangler_upload(stage, message)
+    except (subprocess.TimeoutExpired, OSError) as exc:
+        raise RuntimeError("SIGNED_UPLOAD_OUTCOME_UNKNOWN") from exc
+    if proc.returncode:
+        raise RuntimeError("SIGNED_UPLOAD_OUTCOME_UNKNOWN:WRANGLER_EXIT_" + str(proc.returncode))
+    try:
+        checked_stage(stage, tree_sha256, source_public_tree)
+    except Exception as exc:
+        raise RuntimeError("SIGNED_UPLOAD_OUTCOME_UNKNOWN:STAGE_CHANGED") from exc
+    result["state"] = "UPLOADED_VERSION_READBACK_REQUIRED"
+    result["cloud_operations"] = True
+    return result
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--stage", required=True, type=Path)
+    parser.add_argument("--stage-tree-sha256", required=True)
+    parser.add_argument("--source-public-tree", required=True)
+    parser.add_argument("--message", required=True)
+    parser.add_argument("--execute", action="store_true")
+    args = parser.parse_args()
+    report = upload_version(
+        args.stage, args.stage_tree_sha256, args.source_public_tree,
+        args.message, execute=args.execute,
+    )
+    print(json.dumps(report, indent=2, sort_keys=True))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
