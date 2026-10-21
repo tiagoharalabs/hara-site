@@ -21,6 +21,7 @@ $ApprovalMode = switch ($ApprovalModeRaw) {
 $Root = Join-Path $env:LOCALAPPDATA "HARA Commander"
 $Agent = Join-Path $Root "hara-commander-agent.ps1"
 $Config = Join-Path $Root "device.json"
+$EnrollmentIntent = Join-Path $Root "enrollment-intent.json"
 $TaskName = "HARA Commander Agent"
 $RuntimeStatus = Join-Path $Root "runtime-status.json"
 
@@ -185,6 +186,71 @@ function Get-DeviceToken {
   $Bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($Secure)
   try { return [Runtime.InteropServices.Marshal]::PtrToStringBSTR($Bstr) }
   finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($Bstr) }
+}
+
+function Get-EnrollmentIntentToken([string]$PairingToken) {
+  $sha=[Security.Cryptography.SHA256]::Create()
+  try {
+    $pairingBytes=[Text.Encoding]::UTF8.GetBytes($PairingToken)
+    $pairingHash=([BitConverter]::ToString($sha.ComputeHash($pairingBytes))).Replace("-","").ToLowerInvariant()
+  } finally { $sha.Dispose() }
+  if (Test-Path -LiteralPath $Root) {
+    if ((Get-Item -LiteralPath $Root -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) {
+      throw "ENROLLMENT_INTENT_DIRECTORY_UNSAFE"
+    }
+  } else {
+    New-Item -ItemType Directory -Path $Root -ErrorAction Stop | Out-Null
+  }
+  $identity=[Security.Principal.WindowsIdentity]::GetCurrent().Name
+  & icacls.exe $Root /inheritance:r /grant:r "${identity}:(OI)(CI)F" | Out-Null
+  if ($LASTEXITCODE -ne 0) { throw "ENROLLMENT_INTENT_ACL_FAILED" }
+  if (Test-Path -LiteralPath $EnrollmentIntent) {
+    $item=Get-Item -LiteralPath $EnrollmentIntent -Force
+    if (-not ($item -is [IO.FileInfo]) -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+      throw "ENROLLMENT_INTENT_UNSAFE"
+    }
+    try { $intent=Get-Content -Raw -LiteralPath $EnrollmentIntent | ConvertFrom-Json }
+    catch { throw "ENROLLMENT_INTENT_INVALID" }
+    if ([string]$intent.schema -cne "hara.commander-enrollment-intent.v1" -or
+        [string]$intent.pairing_sha256 -cne $pairingHash -or
+        [string]$intent.base_url -cne $BaseUrl) {
+      throw "ENROLLMENT_INTENT_PAIRING_MISMATCH"
+    }
+    try {
+      $secure=ConvertTo-SecureString ([string]$intent.encrypted_client_device_token)
+      $bstr=[Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
+      try { $token=[Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr) }
+      finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr); $secure.Dispose() }
+    } catch { throw "ENROLLMENT_INTENT_INVALID" }
+    if ($token -cnotmatch '^[A-Za-z0-9_-]{64}$') { throw "ENROLLMENT_INTENT_INVALID" }
+    return $token
+  }
+  $random=New-Object byte[] 48
+  $rng=[Security.Cryptography.RandomNumberGenerator]::Create()
+  try { $rng.GetBytes($random) } finally { $rng.Dispose() }
+  $token=[Convert]::ToBase64String($random).TrimEnd("=").Replace("+","-").Replace("/","_")
+  [Array]::Clear($random,0,$random.Length)
+  $encrypted=ConvertTo-SecureString $token -AsPlainText -Force | ConvertFrom-SecureString
+  $intent=[ordered]@{
+    schema="hara.commander-enrollment-intent.v1"
+    pairing_sha256=$pairingHash
+    base_url=$BaseUrl
+    encrypted_client_device_token=$encrypted
+  }
+  $raw=[Text.Encoding]::UTF8.GetBytes(($intent | ConvertTo-Json -Compress))
+  $created=$false
+  try {
+    $stream=[IO.File]::Open($EnrollmentIntent,[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::None)
+    $created=$true
+    try { $stream.Write($raw,0,$raw.Length); $stream.Flush($true) }
+    finally { $stream.Dispose() }
+    & icacls.exe $EnrollmentIntent /inheritance:r /grant:r "${identity}:F" | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "ENROLLMENT_INTENT_ACL_FAILED" }
+  } catch {
+    if ($created) { Remove-Item -LiteralPath $EnrollmentIntent -Force -ErrorAction SilentlyContinue }
+    throw
+  }
+  return $token
 }
 
 function Invoke-DeviceAction {
@@ -366,16 +432,24 @@ if ($Action -eq "update") {
 }
 if ($Action -eq "uninstall") {
   $cfg = Get-InstalledDevice
-  $revokeState = "PENDING"
+  $revokeState = if ($cfg -or (Test-Path -LiteralPath $EnrollmentIntent -PathType Leaf)) { "PENDING" } else { "NOT_REQUIRED" }
   if ($cfg) {
     try { Invoke-DeviceAction "revoke" | Out-Null; $revokeState = "PASS" } catch { $revokeState = "PENDING" }
   }
   Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue
+  Remove-Item -LiteralPath $Agent -Force -ErrorAction SilentlyContinue
+  if ($revokeState -eq "PENDING") {
+    Write-Host "HARA_COMMANDER_AGENT_UNINSTALL=LOCAL_ONLY"
+    if ($cfg -and $cfg.device_id) { Write-Host ("DEVICE_ID=" + [string]$cfg.device_id) }
+    Write-Host "SERVER_DEVICE_REVOKE=PENDING"
+    Write-Host "SERVER_DEVICE_REVOKE_PENDING=TRUE"
+    Write-Host "DEVICE_TOKEN_EXPOSED=FALSE"
+    exit 12
+  }
   Remove-Item -LiteralPath $Root -Recurse -Force -ErrorAction SilentlyContinue
   Write-Host "HARA_COMMANDER_AGENT_UNINSTALL=PASS"
   if ($cfg -and $cfg.device_id) { Write-Host ("DEVICE_ID=" + [string]$cfg.device_id) }
   Write-Host ("SERVER_DEVICE_REVOKE=" + $revokeState)
-  if ($revokeState -ne "PASS") { Write-Host "SERVER_DEVICE_REVOKE_PENDING=TRUE" }
   Write-Host "DEVICE_TOKEN_EXPOSED=FALSE"
   exit 0
 }
@@ -390,10 +464,15 @@ if ([string]::IsNullOrWhiteSpace($PairingToken)) { throw "Pairing token cannot b
 
 $DeviceName = $env:COMPUTERNAME
 $Architecture = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant()
-$Payload = @{ pairing_token=$PairingToken; device_name=$DeviceName; platform="WINDOWS"; architecture=$Architecture; agent_version="0.3.43"; approval_mode=$ApprovalMode } | ConvertTo-Json -Compress
 $PreparedRelease = Get-VerifiedReleaseBeforeEnrollment
 try {
-  $Enroll = Invoke-RestMethod -Uri "$BaseUrl/api/device/enroll" -Method Post -ContentType "application/json" -Headers @{ Accept="application/json" } -Body $Payload -TimeoutSec 30 -MaximumRedirection 0
+  $ClientDeviceToken = Get-EnrollmentIntentToken $PairingToken
+  $Payload = @{ pairing_token=$PairingToken; client_device_token=$ClientDeviceToken; device_name=$DeviceName; platform="WINDOWS"; architecture=$Architecture; agent_version="0.3.43"; approval_mode=$ApprovalMode } | ConvertTo-Json -Compress
+  try {
+    $Enroll = Invoke-RestMethod -Uri "$BaseUrl/api/device/enroll-intent" -Method Post -ContentType "application/json" -Headers @{ Accept="application/json" } -Body $Payload -TimeoutSec 30 -MaximumRedirection 0
+  } catch {
+    throw "ENROLLMENT_ACK_UNKNOWN: rerun with the same pairing token to recover this intent."
+  }
 } catch {
   Remove-Item -LiteralPath $PreparedRelease.Stage -Recurse -Force -ErrorAction SilentlyContinue
   throw
@@ -401,9 +480,10 @@ try {
 $PairingToken = $null
 $Payload = $null
 $SecurePairing.Dispose()
-if (-not $Enroll.device_id -or -not $Enroll.device_token) {
+if (-not $Enroll -or [string]$Enroll.device_id -cnotmatch '^HARA-DEVICE-[A-Za-z0-9_-]+$' -or
+    [string]$Enroll.device_token -cne $ClientDeviceToken) {
   Remove-Item -LiteralPath $PreparedRelease.Stage -Recurse -Force -ErrorAction SilentlyContinue
-  throw "DEVICE_ENROLLMENT_RESPONSE_INVALID"
+  throw "ENROLLMENT_ACK_UNKNOWN: rerun with the same pairing token to recover this intent."
 }
 
 $InstallEnrolled = $true
@@ -454,6 +534,8 @@ try {
 
   $InstallEnrolled = $false
   $DeviceTokenForRollback = $null
+  Remove-Item -LiteralPath $EnrollmentIntent -Force -ErrorAction SilentlyContinue
+  if (Test-Path -LiteralPath $EnrollmentIntent) { Write-Host "ENROLLMENT_INTENT_CLEANUP_PENDING=TRUE" }
   Write-Host "HARA_COMMANDER_DEVICE_ENROLLMENT=PASS"
   Write-Host "HARA_COMMANDER_AGENT_TASK=REGISTERED_INERT_UNTIL_LOCAL_SESSION"
   Write-Host "HARA_COMMANDER_AGENT_AUTOSTART=OFF"
@@ -472,7 +554,11 @@ try {
       if ($result.ok -and [string]$result.state -eq "REVOKED" -and [string]$result.device_id -eq $EnrollDeviceId) { $RevokeState = "PASS" }
     } catch { $RevokeState = "PENDING" }
     Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue
-    Remove-Item -LiteralPath $Root -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $Agent -Force -ErrorAction SilentlyContinue
+    if ($InstallTmp) { Remove-Item -LiteralPath $InstallTmp -Force -ErrorAction SilentlyContinue }
+    if ($RevokeState -eq "PASS") {
+      Remove-Item -LiteralPath $Config,$EnrollmentIntent -Force -ErrorAction SilentlyContinue
+    }
     Write-Host ("HARA_COMMANDER_FAILED_INSTALL_ROLLBACK=" + $RevokeState)
     if ($RevokeState -ne "PASS") { Write-Host "SERVER_DEVICE_REVOKE_PENDING=TRUE" }
   }

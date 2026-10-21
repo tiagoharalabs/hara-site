@@ -88,7 +88,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.wfile.write(raw)
 
     def do_POST(self) -> None:
-        if urlparse(self.path).path == "/api/device/enroll":
+        if urlparse(self.path).path in ("/api/device/enroll", "/api/device/enroll-intent"):
             Handler.enroll_count += 1
             self.send_error(503)
             return

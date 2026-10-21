@@ -10,6 +10,7 @@ BIN_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/hara-commander"
 USER_BIN="${HOME}/.local/bin"
 SYSTEMD_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
 CONFIG_FILE="$CONFIG_DIR/device.env"
+ENROLLMENT_INTENT="$CONFIG_DIR/enrollment-intent.json"
 AGENT="$BIN_DIR/hara-commander-agent"
 CLI="$USER_BIN/hara-commander"
 TUNNEL_CLIENT="$BIN_DIR/tunnel-client"
@@ -89,6 +90,44 @@ for raw in path.read_text(encoding="utf-8").splitlines():
         print(raw.split("=",1)[1]); raise SystemExit(0)
 raise SystemExit(1)
 PY
+}
+
+prepare_enrollment_intent() {
+  local pairing_hash="$1"
+  [ ! -L "$CONFIG_DIR" ] || { echo 'ENROLLMENT_INTENT_DIRECTORY_UNSAFE' >&2; return 1; }
+  (umask 077; mkdir -p "$CONFIG_DIR")
+  chmod 700 "$CONFIG_DIR"
+  python3 - "$ENROLLMENT_INTENT" "$pairing_hash" <<'PYENROLLINTENT'
+import json,os,pathlib,re,secrets,stat,sys
+path=pathlib.Path(sys.argv[1]); pairing_hash=sys.argv[2]
+if path.is_symlink(): raise SystemExit('ENROLLMENT_INTENT_UNSAFE')
+if path.exists():
+    info=path.stat()
+    if not stat.S_ISREG(info.st_mode) or info.st_uid!=os.getuid() or stat.S_IMODE(info.st_mode)!=0o600:
+        raise SystemExit('ENROLLMENT_INTENT_UNSAFE')
+    fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW)
+    try:
+        with os.fdopen(fd,encoding='utf-8') as file: intent=json.load(file)
+    except (OSError,ValueError):
+        raise SystemExit('ENROLLMENT_INTENT_INVALID') from None
+    if intent.get('schema')!='hara.commander-enrollment-intent.v1' or intent.get('pairing_sha256')!=pairing_hash:
+        raise SystemExit('ENROLLMENT_INTENT_PAIRING_MISMATCH')
+    token=intent.get('client_device_token')
+    if not isinstance(token,str) or not re.fullmatch(r'[A-Za-z0-9_-]{64}',token):
+        raise SystemExit('ENROLLMENT_INTENT_INVALID')
+else:
+    token=secrets.token_urlsafe(48)
+    raw=(json.dumps({'schema':'hara.commander-enrollment-intent.v1',
+                     'pairing_sha256':pairing_hash,'client_device_token':token},
+                    separators=(',',':'))+'\n').encode()
+    fd=os.open(path,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
+    with os.fdopen(fd,'wb') as file:
+        file.write(raw); file.flush(); os.fsync(file.fileno())
+    directory=os.open(path.parent,os.O_RDONLY|os.O_DIRECTORY)
+    try: os.fsync(directory)
+    finally: os.close(directory)
+print(token)
+PYENROLLINTENT
 }
 
 resolve_tunnel_autostart() {
@@ -426,7 +465,7 @@ if not obj.get("ok") or obj.get("state")!="REVOKED" or obj.get("device_id")!=dev
 }
 
 cleanup_failed_install() {
-  local rc=$?
+  local rc="${1:-$?}"
   trap - EXIT
   if [ "$rc" -ne 0 ] && [ "${INSTALL_ENROLLED:-FALSE}" = TRUE ]; then
     local revoke_state=PENDING
@@ -434,7 +473,10 @@ cleanup_failed_install() {
     systemctl --user disable --now "$SERVICE" >/dev/null 2>&1 || true
     rm -f "$UNIT"
     systemctl --user daemon-reload >/dev/null 2>&1 || true
-    rm -rf "$BIN_DIR" "$CONFIG_DIR"
+    rm -rf "$BIN_DIR"
+    rm -f "$CONFIG_FILE"
+    if [ "$revoke_state" = PASS ]; then rm -f "$ENROLLMENT_INTENT"; fi
+    rmdir "$CONFIG_DIR" >/dev/null 2>&1 || true
     printf 'HARA_COMMANDER_FAILED_INSTALL_ROLLBACK=%s\n' "$revoke_state" >&2
     [ "$revoke_state" = PASS ] || printf 'SERVER_DEVICE_REVOKE_PENDING=TRUE\n' >&2
   fi
@@ -487,7 +529,7 @@ PYREENROLLCHECK
 }
 
 cleanup_failed_reenroll() {
-  local rc=$?
+  local rc="${1:-$?}"
   trap - EXIT
   if [ "$rc" -ne 0 ] && [ "${INSTALL_ENROLLED:-FALSE}" = TRUE ]; then
     local revoke_state=PENDING
@@ -502,6 +544,7 @@ cleanup_failed_reenroll() {
       fi
     fi
     printf 'HARA_COMMANDER_FAILED_REENROLL_ROLLBACK=%s\n' "$revoke_state" >&2
+    if [ "$revoke_state" = PASS ]; then rm -f "$ENROLLMENT_INTENT"; fi
     [ "$revoke_state" = PASS ] || printf 'SERVER_DEVICE_REVOKE_PENDING=TRUE\n' >&2
   fi
   [ -z "${REENROLL_BACKUP:-}" ] || rm -f "$REENROLL_BACKUP"
@@ -683,7 +726,8 @@ case "$ACTION" in
     status_agent; exit 0 ;;
   uninstall)
     device_id="$(read_config_value HARA_DEVICE_ID 2>/dev/null || true)"
-    revoke_state=PENDING
+    revoke_state=NOT_REQUIRED
+    if [ -f "$CONFIG_FILE" ] || [ -f "$ENROLLMENT_INTENT" ]; then revoke_state=PENDING; fi
     if [ -f "$CONFIG_FILE" ] && remote_device_action revoke; then revoke_state=PASS; fi
     systemctl --user disable --now "$SERVICE" >/dev/null 2>&1 || true
     systemctl --user disable --now hara-commander-openai-tunnel.service >/dev/null 2>&1 || true
@@ -698,11 +742,19 @@ case "$ACTION" in
        && grep -Fqx '# HARA_COMMANDER_MANAGED_HARA_WRAPPER_V1' "$USER_BIN/hara"; then
       rm -f "$USER_BIN/hara"
     fi
-    rm -rf "$BIN_DIR" "$CONFIG_DIR"
+    rm -rf "$BIN_DIR"
+    if [ "$revoke_state" = PENDING ]; then
+      printf 'HARA_COMMANDER_AGENT_UNINSTALL=LOCAL_ONLY\n'
+      [ -z "$device_id" ] || printf 'DEVICE_ID=%s\n' "$device_id"
+      printf 'SERVER_DEVICE_REVOKE=PENDING\n'
+      printf 'SERVER_DEVICE_REVOKE_PENDING=TRUE\n'
+      printf 'DEVICE_TOKEN_EXPOSED=FALSE\n'
+      exit 12
+    fi
+    rm -rf "$CONFIG_DIR"
     printf 'HARA_COMMANDER_AGENT_UNINSTALL=PASS\n'
     [ -z "$device_id" ] || printf 'DEVICE_ID=%s\n' "$device_id"
     printf 'SERVER_DEVICE_REVOKE=%s\n' "$revoke_state"
-    [ "$revoke_state" = PASS ] || printf 'SERVER_DEVICE_REVOKE_PENDING=TRUE\n'
     printf 'DEVICE_TOKEN_EXPOSED=FALSE\n'
     exit 0 ;;
   re-enroll|reenroll)
@@ -732,6 +784,7 @@ EOF_ALREADY
   exit 8
 fi
 
+trap 'cleanup_prepared_release' EXIT
 if [ "$REENROLL" != TRUE ]; then
   # All four release assets and the saved bootstrap must authenticate before
   # consuming a pairing token or creating a server-side device registration.
@@ -748,12 +801,16 @@ printf '\n'
 
 DEVICE_NAME="${HOSTNAME:-$(hostname 2>/dev/null || echo linux-device)}"
 ARCH="$(uname -m)"
+PAIRING_HASH="$(printf '%s' "$PAIRING_TOKEN" | python3 -c 'import hashlib,sys; print(hashlib.sha256(sys.stdin.buffer.read()).hexdigest())')"
+DEVICE_TOKEN="$(prepare_enrollment_intent "$PAIRING_HASH")"
 
-PAYLOAD="$(printf '%s\n' "$PAIRING_TOKEN" | python3 -c '
+PAYLOAD="$(printf '%s\n%s\n' "$PAIRING_TOKEN" "$DEVICE_TOKEN" | python3 -c '
 import json,sys
 token=sys.stdin.readline().rstrip("\n")
+device_token=sys.stdin.readline().rstrip("\n")
 print(json.dumps({
   "pairing_token": token,
+  "client_device_token": device_token,
   "device_name": sys.argv[1],
   "platform": "LINUX",
   "architecture": sys.argv[2],
@@ -762,29 +819,44 @@ print(json.dumps({
 }, separators=(",",":")))
 ' "$DEVICE_NAME" "$ARCH" "$APPROVAL_MODE")"
 
-RESPONSE="$(printf '%s' "$PAYLOAD" | curl -fsS --max-time 30   -H 'content-type: application/json'   -H 'accept: application/json'   --data-binary @-   "$BASE_URL/api/device/enroll")"
+if ! RESPONSE="$(printf '%s' "$PAYLOAD" | curl -fsS --max-time 30   -H 'content-type: application/json'   -H 'accept: application/json'   --data-binary @-   "$BASE_URL/api/device/enroll-intent")"; then
+  echo 'ENROLLMENT_ACK_UNKNOWN: rerun with the same pairing token to recover this intent.' >&2
+  exit 12
+fi
 
-readarray -t VALUES < <(printf '%s' "$RESPONSE" | python3 -c '
-import json,sys
-obj=json.load(sys.stdin)
+if ! PARSED="$(printf '%s' "$RESPONSE" | python3 -c '
+import json,re,sys
+try: obj=json.load(sys.stdin)
+except (ValueError,UnicodeError): raise SystemExit('DEVICE_ENROLLMENT_RESPONSE_INVALID') from None
+if not isinstance(obj,dict): raise SystemExit('DEVICE_ENROLLMENT_RESPONSE_INVALID')
 for key in ("device_id","device_token"):
     value=obj.get(key)
-    if not isinstance(value,str) or not value:
+    if not isinstance(value,str) or not value or "\n" in value or "\r" in value:
         raise SystemExit("DEVICE_ENROLLMENT_RESPONSE_INVALID")
-    print(value)
-')
+if not re.fullmatch(r"HARA-DEVICE-[A-Za-z0-9_-]+",obj["device_id"]):
+    raise SystemExit("DEVICE_ENROLLMENT_RESPONSE_INVALID")
+print(obj["device_id"])
+print(obj["device_token"])
+')"; then
+  echo 'ENROLLMENT_ACK_UNKNOWN: rerun with the same pairing token to recover this intent.' >&2
+  exit 12
+fi
+readarray -t VALUES <<< "$PARSED"
+if [ "${VALUES[1]:-}" != "$DEVICE_TOKEN" ]; then
+  echo 'ENROLLMENT_ACK_UNKNOWN: device credential differs from the saved intent.' >&2
+  exit 12
+fi
 
 DEVICE_ID="${VALUES[0]}"
-DEVICE_TOKEN="${VALUES[1]}"
-unset PAIRING_TOKEN RESPONSE PAYLOAD VALUES
+unset PAIRING_TOKEN PAIRING_HASH RESPONSE PAYLOAD PARSED VALUES
 INSTALL_ENROLLED=TRUE
 if [ "$REENROLL" = TRUE ]; then
   REENROLL_BACKUP="$(mktemp "$CONFIG_DIR/.device.env.reenroll.XXXXXX")"
   cp -p "$CONFIG_FILE" "$REENROLL_BACKUP"
   chmod 600 "$REENROLL_BACKUP"
-  trap 'cleanup_prepared_release; cleanup_failed_reenroll' EXIT
+  trap 'status=$?; cleanup_prepared_release || true; cleanup_failed_reenroll "$status"' EXIT
 else
-  trap 'cleanup_prepared_release; cleanup_failed_install' EXIT
+  trap 'status=$?; cleanup_prepared_release || true; cleanup_failed_install "$status"' EXIT
 fi
 
 if [ -n "$TRANSPORT_MODE_RAW" ]; then
@@ -847,6 +919,7 @@ if [ "$REENROLL" = TRUE ]; then
   printf 'HARA_COMMANDER_AGENT_STARTUP_ATTESTATION=PASS\n'
   INSTALL_ENROLLED=FALSE
   trap - EXIT
+  rm -f "$ENROLLMENT_INTENT"
   rm -f "$REENROLL_BACKUP"
   REENROLL_BACKUP=""
   unset DEVICE_TOKEN
@@ -917,6 +990,7 @@ printf 'HARA_COMMANDER_AGENT_STARTUP_ATTESTATION=PASS\n'
 
 INSTALL_ENROLLED=FALSE
 trap - EXIT
+rm -f "$ENROLLMENT_INTENT"
 unset DEVICE_TOKEN
 printf 'HARA_COMMANDER_DEVICE_ENROLLMENT=PASS\n'
 printf 'HARA_COMMANDER_AGENT_SERVICE=ACTIVE_LOCAL_CONTROL_PLANE\n'

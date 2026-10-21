@@ -133,12 +133,12 @@ class SignedDistributionTests(unittest.TestCase):
             self.assertEqual(installer, (APP / "candidate/linux_install_043.sh").read_bytes())
             self.assertEqual(report["linux_installer_sha256"], hashlib.sha256(installer).hexdigest())
             self.assertLess(installer.index(b"prepare_agent_release\nfi\n\nAPPROVAL_MODE="),
-                            installer.index(b'"$BASE_URL/api/device/enroll"'))
+                            installer.index(b'"$BASE_URL/api/device/enroll-intent"'))
             windows_installer = (public / "install/windows.ps1").read_bytes()
             self.assertEqual(windows_installer, (APP / "candidate/windows_install_043.ps1").read_bytes())
             self.assertEqual(report["windows_installer_sha256"], hashlib.sha256(windows_installer).hexdigest())
             self.assertLess(windows_installer.index(b'$PreparedRelease = Get-VerifiedReleaseBeforeEnrollment'),
-                            windows_installer.index(b'$Enroll = Invoke-RestMethod -Uri "$BaseUrl/api/device/enroll"'))
+                            windows_installer.index(b'$Enroll = Invoke-RestMethod -Uri "$BaseUrl/api/device/enroll-intent"'))
             for relative in ("agent/windows.ps1",):
                 self.assertEqual((public / relative).read_bytes(),
                                  (BUNDLES[ROLLBACK_RELEASE] / relative).read_bytes())
