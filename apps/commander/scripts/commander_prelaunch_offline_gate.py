@@ -130,6 +130,7 @@ JS = (
     "test_no_stripe_technical_mode.mjs",
     "test_commercial_policy_20261020.mjs",
     "test_device_enrollment_limit.mjs",
+    "test_device_enrollment_recovery.mjs",
     "test_event_v2_notify_delivery.mjs",
     "test_portal_session_isolation.mjs",
     "test_device_status_poll.mjs",

@@ -38,6 +38,33 @@ export const DEVICE_ENROLL_CONSUME_SQL = `UPDATE device_pairing_tokens
          AND d.device_id = ?
     )`;
 
+// Keep first selection in the same D1 batch transaction as registration and
+// pairing consumption. A storage error here must roll back all three steps.
+export const DEVICE_ENROLL_SELECT_SQL = `INSERT OR IGNORE INTO commander_device_selections
+    (tenant_id, subject_id, device_id, selected_at_utc)
+ SELECT p.tenant_id, p.subject_id, d.device_id, ?
+   FROM commander_devices d
+   JOIN device_pairing_tokens p ON p.pairing_id = d.pairing_id
+  WHERE p.token_hash = ?
+    AND d.device_id = ?
+    AND d.credential_hash = ?
+    AND d.state = 'ACTIVE'
+    AND d.revoked_at_utc IS NULL`;
+
+// A consumed pairing alone cannot recover a lost enrollment response. Both
+// the original pairing token and client-created device credential are needed.
+export const DEVICE_ENROLL_RECOVER_SQL = `SELECT d.device_id, d.device_name,
+       d.platform, d.architecture, d.agent_version, d.approval_mode,
+       d.tunnel_mode, d.created_at_utc
+  FROM commander_devices d
+  JOIN device_pairing_tokens p ON p.pairing_id = d.pairing_id
+ WHERE p.token_hash = ?
+   AND d.credential_hash = ?
+   AND p.consumed_at_utc IS NOT NULL
+   AND d.state = 'ACTIVE'
+   AND d.revoked_at_utc IS NULL
+ LIMIT 1`;
+
 export const DEVICE_ENROLL_LIMIT_SQL = `SELECT 1 AS at_limit
   FROM device_pairing_tokens p
  WHERE p.token_hash = ?

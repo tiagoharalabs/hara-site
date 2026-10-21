@@ -43,7 +43,7 @@ import {
   canonicalDeviceToolPayload,
 } from "./device-tool-contract.mjs";
 import { chooseCustomerTargetDevice } from "./device-targeting.mjs";
-import { DEVICE_ENROLL_INSERT_SQL, DEVICE_ENROLL_CONSUME_SQL, DEVICE_ENROLL_LIMIT_SQL } from "./device-enrollment.mjs";
+import { DEVICE_ENROLL_INSERT_SQL, DEVICE_ENROLL_CONSUME_SQL, DEVICE_ENROLL_SELECT_SQL, DEVICE_ENROLL_RECOVER_SQL, DEVICE_ENROLL_LIMIT_SQL } from "./device-enrollment.mjs";
 import { DeviceChannel, deviceChannelName } from "./device-channel.mjs";
 import { reconcileAgentVersion } from "./device-version-observation.mjs";
 import { readTenantDeviceTelemetry } from "./device-telemetry.mjs";
@@ -2856,15 +2856,32 @@ function publicDeviceSummary(device) {
 async function enrollDevice(env, body) {
   const pairingToken = cleanOpaque(body.pairing_token, 512);
   const tokenHash = await sha256(pairingToken);
+  const clientDeviceToken = body.client_device_token == null ? null : String(body.client_device_token);
+  if (clientDeviceToken !== null && !/^[A-Za-z0-9_-]{64}$/.test(clientDeviceToken)) {
+    throw new Error("DEVICE_ENROLLMENT_CLIENT_TOKEN_INVALID");
+  }
   const deviceName = cleanDeviceName(body.device_name);
   const platform = normalizeDevicePlatform(body.platform);
   const architecture = cleanAgentValue(body.architecture, 80);
   const agentVersion = cleanAgentValue(body.agent_version, 80) || "0.1.0";
   const approvalMode = normalizeApprovalMode(body.approval_mode, "ASK_EVERY_ACTION");
   const deviceId = "HARA-DEVICE-" + crypto.randomUUID();
-  const deviceSecret = randomToken(48);
+  const deviceSecret = clientDeviceToken || randomToken(48);
   const credentialHash = await sha256(deviceSecret);
   const createdAt = nowIso();
+  const response = (device) => ({
+    schema: "hara.commander-device-enrollment.v1",
+    device_id: device.device_id,
+    device_token: deviceSecret,
+    device_name: device.device_name,
+    platform: device.platform,
+    architecture: device.architecture,
+    agent_version: device.agent_version,
+    approval_mode: device.approval_mode,
+    tunnel_mode: device.tunnel_mode,
+    state: "ACTIVE",
+    enrolled_at_utc: device.created_at_utc,
+  });
 
   const insert = env.PRODUCT_DB.prepare(DEVICE_ENROLL_INSERT_SQL).bind(
     deviceId,
@@ -2884,55 +2901,37 @@ async function enrollDevice(env, body) {
 
   const consume = env.PRODUCT_DB.prepare(DEVICE_ENROLL_CONSUME_SQL)
     .bind(createdAt, tokenHash, createdAt, deviceId);
+  const select = env.PRODUCT_DB.prepare(DEVICE_ENROLL_SELECT_SQL)
+    .bind(createdAt, tokenHash, deviceId, credentialHash);
 
   let results;
   try {
-    results = await env.PRODUCT_DB.batch([insert, consume]);
+    results = await env.PRODUCT_DB.batch([insert, consume, select]);
   } catch (_error) {
-    throw new Error("DEVICE_PAIRING_INVALID");
+    // A transport failure can occur after D1 commits. The client retains its
+    // secret and may retry the same intent; do not claim the pairing is unused.
+    throw new Error("DEVICE_ENROLLMENT_ACK_UNKNOWN");
   }
 
   if (!results?.[0]?.meta?.changes) {
+    if (clientDeviceToken) {
+      const recovered = await env.PRODUCT_DB.prepare(DEVICE_ENROLL_RECOVER_SQL)
+        .bind(tokenHash, credentialHash).first();
+      if (recovered) return response(recovered);
+    }
     const full = await env.PRODUCT_DB.prepare(DEVICE_ENROLL_LIMIT_SQL)
       .bind(tokenHash, createdAt, createdAt, createdAt).first();
     if (full) throw new Error("DEVICE_LIMIT_REACHED");
     throw new Error("DEVICE_PAIRING_INVALID");
   }
   if (!results?.[1]?.meta?.changes) {
-    throw new Error("DEVICE_PAIRING_INVALID");
+    throw new Error("DEVICE_ENROLLMENT_ACK_UNKNOWN");
   }
-
-  const enrolled = await env.PRODUCT_DB.prepare(
-    `SELECT tenant_id, enrolled_by_subject_id
-       FROM commander_devices WHERE device_id = ? LIMIT 1`
-  ).bind(deviceId).first();
-  if (!enrolled) throw new Error("DEVICE_PAIRING_INVALID");
-  await env.PRODUCT_DB.prepare(
-    `INSERT OR IGNORE INTO commander_device_selections
-      (tenant_id, subject_id, device_id, selected_at_utc)
-     SELECT ?, ?, d.device_id, ?
-       FROM commander_devices d
-      WHERE d.device_id = ?
-        AND d.tenant_id = ?
-        AND d.state = 'ACTIVE'
-        AND d.revoked_at_utc IS NULL`
-  ).bind(
-    enrolled.tenant_id, enrolled.enrolled_by_subject_id, createdAt, deviceId, enrolled.tenant_id
-  ).run();
-
-  return {
-    schema: "hara.commander-device-enrollment.v1",
-    device_id: deviceId,
-    device_token: deviceSecret,
-    device_name: deviceName,
-    platform,
-    architecture,
-    agent_version: agentVersion,
-    approval_mode: approvalMode,
-    tunnel_mode: "OUTBOUND_RELAY",
-    state: "ACTIVE",
-    enrolled_at_utc: createdAt,
-  };
+  return response({
+    device_id: deviceId, device_name: deviceName, platform, architecture,
+    agent_version: agentVersion, approval_mode: approvalMode,
+    tunnel_mode: "OUTBOUND_RELAY", created_at_utc: createdAt,
+  });
 }
 
 async function resolveDeviceCredential(env, request) {
@@ -6528,6 +6527,8 @@ export default {
         BILLING_PRICE_MISMATCH: 409,
         DEVICE_PAIRING_INVALID: 401,
         DEVICE_LIMIT_REACHED: 409,
+        DEVICE_ENROLLMENT_CLIENT_TOKEN_INVALID: 400,
+        DEVICE_ENROLLMENT_ACK_UNKNOWN: 503,
         DEVICE_PAIRING_CREATE_FAILED: 503,
         DEVICE_AUTH_REQUIRED: 401,
         DEVICE_AUTH_INVALID: 401,
