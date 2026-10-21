@@ -618,6 +618,79 @@ function Format-ConsoleEvent($Entry) {
   return "[$stamp] $([string]$Entry.event)$suffix"
 }
 
+function Get-ConsoleStreamCursor {
+  # A new operator window starts at EOF. The JSONL/SQLite history is never
+  # truncated or copied into the live console on startup.
+  if (-not (Test-Path -LiteralPath $ConsoleEvents -PathType Leaf)) { return [long]0 }
+  $stream=[System.IO.File]::Open(
+    $ConsoleEvents,[System.IO.FileMode]::Open,[System.IO.FileAccess]::Read,
+    ([System.IO.FileShare]::ReadWrite -bor [System.IO.FileShare]::Delete))
+  try { return [long]$stream.Length }
+  finally { $stream.Dispose() }
+}
+
+function Read-NewConsoleEvents([ref]$Cursor) {
+  if (-not (Test-Path -LiteralPath $ConsoleEvents -PathType Leaf)) { return @() }
+  $stream=[System.IO.File]::Open(
+    $ConsoleEvents,[System.IO.FileMode]::Open,[System.IO.FileAccess]::Read,
+    ([System.IO.FileShare]::ReadWrite -bor [System.IO.FileShare]::Delete))
+  try {
+    $from=[long]$Cursor.Value
+    if ($from -lt 0 -or $from -gt $stream.Length) { $from=[long]0 }
+    $length=[int][Math]::Min(131072,[Math]::Max(0,$stream.Length-$from))
+    if ($length -eq 0) { return @() }
+    $buffer=New-Object byte[] $length
+    [void]$stream.Seek($from,[System.IO.SeekOrigin]::Begin)
+    $count=$stream.Read($buffer,0,$length)
+    $lastNewline=-1
+    for ($i=0; $i -lt $count; $i++) {
+      if ($buffer[$i] -eq 10) { $lastNewline=$i }
+    }
+    if ($lastNewline -lt 0) { return @() }
+    $text=[System.Text.Encoding]::UTF8.GetString($buffer,0,$lastNewline+1)
+    $Cursor.Value=$from+$lastNewline+1
+    $newEvents=New-Object 'System.Collections.Generic.List[object]'
+    foreach ($line in $text.Split([char]10)) {
+      $clean=$line.TrimEnd([char]13).TrimStart([char]0xFEFF)
+      if ([string]::IsNullOrWhiteSpace($clean)) { continue }
+      try {
+        $event=$clean | ConvertFrom-Json -ErrorAction Stop
+        if ([string]$event.schema -eq "hara.commander-console-event.v1") {
+          $newEvents.Add($event)
+        }
+      } catch {}
+    }
+    return $newEvents.ToArray()
+  } finally {
+    $stream.Dispose()
+  }
+}
+
+function Show-OperatorHistory([int]$Limit=50,[long]$BeforeId=0) {
+  if ($Limit -lt 1 -or $Limit -gt 200 -or $BeforeId -lt 0) {
+    throw "HISTORY_ARGUMENT_INVALID"
+  }
+  # Explicit local SQLite history; never echo raw arguments or action_summary.
+  Initialize-LocalActivityStore
+  $columns="event_id,at_utc,event,state,tool_id,function_id,request_id,error_code,receipt_sha256"
+  if ($BeforeId -gt 0) {
+    $rows=@(Invoke-LocalDbQuery "SELECT $columns FROM activity_events WHERE event_id < ? ORDER BY event_id DESC LIMIT ?" @([long]$BeforeId,[long]($Limit+1)))
+  } else {
+    $rows=@(Invoke-LocalDbQuery "SELECT $columns FROM activity_events ORDER BY event_id DESC LIMIT ?" @([long]($Limit+1)))
+  }
+  $page=@($rows | Select-Object -First $Limit)
+  [array]::Reverse($page)
+  Write-Host "HARA_COMMANDER_HISTORY=LOCAL_READ_ONLY"
+  Write-Host ("HARA_COMMANDER_HISTORY_EVENTS="+$page.Count)
+  foreach ($item in $page) {
+    Write-Host ("#"+[long]$item.event_id+" "+(Format-ConsoleEvent $item))
+  }
+  if ($rows.Count -gt $Limit -and $page.Count -gt 0) {
+    $oldest=[long]$page[0].event_id
+    Write-Host ("HARA_COMMANDER_HISTORY_MORE=hara-commander history "+$Limit+" "+$oldest)
+  }
+}
+
 function Start-ManualOperatorConsole {
   # Repeated start resumes the worker behind an existing operator console.
   # It neither renews that session nor stops another console's worker.
@@ -676,6 +749,8 @@ function Start-OperatorConsole([ref]$SessionOpened=$null) {
     $session | ConvertTo-Json -Compress | Set-Content -LiteralPath $SessionPath -Encoding UTF8
     if ($null -ne $SessionOpened) { $SessionOpened.Value=$true }
   } | Out-Null
+  # Retain previous JSONL/SQLite history, but show only new live events.
+  $eventCursor=Get-ConsoleStreamCursor
   Write-ConsoleEvent "SESSION_OPEN" $null "AUTHORIZED"
   Write-Host ""
   Write-Host "H.A.R.A. Labs - Commander"
@@ -702,16 +777,11 @@ function Start-OperatorConsole([ref]$SessionOpened=$null) {
   Write-Host "Pressione Ctrl+C para revogar o acesso imediatamente."
   Write-Host ("-"*58)
   try {
-    $seen=0
     while ($true) {
       $current=Get-OperatorSession
       if (-not $current -or [int]$current.owner_pid -ne $PID) { break }
-      if (Test-Path -LiteralPath $ConsoleEvents -PathType Leaf) {
-        $rows=@(Get-Content -LiteralPath $ConsoleEvents)
-        while ($seen -lt $rows.Count) {
-          try { $entry=$rows[$seen] | ConvertFrom-Json; Write-Host (Format-ConsoleEvent $entry) } catch {}
-          $seen++
-        }
+      foreach ($entry in @(Read-NewConsoleEvents ([ref]$eventCursor))) {
+        Write-Host (Format-ConsoleEvent $entry)
       }
       Respond-ToLocalApprovalRequest
       Start-Sleep -Milliseconds 250
@@ -2323,6 +2393,19 @@ function Invoke-AgentSelfTest {
   }
 }
 
+if ($args.Count -gt 0 -and [string]$args[0] -eq "history") {
+  if ($args.Count -gt 3) { throw "HISTORY_ARGUMENT_INVALID" }
+  [int]$limit=50
+  [long]$beforeId=0
+  if ($args.Count -ge 2 -and -not [int]::TryParse([string]$args[1],[ref]$limit)) {
+    throw "HISTORY_ARGUMENT_INVALID"
+  }
+  if ($args.Count -ge 3 -and -not [long]::TryParse([string]$args[2],[ref]$beforeId)) {
+    throw "HISTORY_ARGUMENT_INVALID"
+  }
+  Show-OperatorHistory $limit $beforeId
+  exit 0
+}
 if ($args -contains "--self-test") { Invoke-AgentSelfTest; exit 0 }
 if ($args -contains "--session-start" -or ($args.Count -gt 0 -and [string]$args[0] -eq "start")) { Start-ManualOperatorConsole; exit 0 }
 if ($args -contains "--session-status" -or ($args.Count -gt 0 -and [string]$args[0] -eq "status")) { Show-OperatorSession; exit 0 }
@@ -2332,12 +2415,12 @@ if ($args -contains "--session-stop" -or ($args.Count -gt 0 -and [string]$args[0
   exit 0
 }
 if ($args.Count -gt 0 -and @("help","--help","-h") -contains [string]$args[0]) {
-  Write-Host "Usage: hara-commander [start|status|stop|help]"
+  Write-Host "Usage: hara-commander [start|status|stop|history [limit [before_id]]|help]"
   exit 0
 }
 if ($args.Count -gt 0) {
   Write-Host ("HARA_COMMANDER_UNKNOWN_COMMAND="+[string]$args[0])
-  Write-Host "Usage: hara-commander [start|status|stop|help]"
+  Write-Host "Usage: hara-commander [start|status|stop|history [limit [before_id]]|help]"
   exit 64
 }
 

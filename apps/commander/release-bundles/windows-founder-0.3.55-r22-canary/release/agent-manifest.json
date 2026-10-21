@@ -1,0 +1,20 @@
+{
+  "agent_version": "0.3.55",
+  "base_signed_agent_sha256": "fe61f177c51f6b6a01f31a3ea1b3d081173446e8f8cb33e680744c1fb808ae62",
+  "channel": "FOUNDER_WINDOWS_CANARY",
+  "device_id": "HARA-DEVICE-64adbd7a-02b1-4890-acdb-9543e8b48d00",
+  "files": [
+    {
+      "bytes": 124013,
+      "path": "agent/windows.ps1",
+      "sha256": "07de45201052c6fbc98764dba619f1e83864b96eed0c998f1d007ad04bf5f57f"
+    }
+  ],
+  "independent_production_promotion": false,
+  "product": "H.A.R.A. Commander",
+  "replaces_agent_version": "0.3.53",
+  "requires_local_operator_session": true,
+  "schema": "hara.commander-windows-founder-canary.v1",
+  "target_arch": "x64",
+  "target_platform": "WINDOWS"
+}

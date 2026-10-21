@@ -1,0 +1,159 @@
+{
+  "schema": "hara.commander.windows-r22-live-canary-acceptance.v1",
+  "observed_date_utc": "2026-10-21",
+  "author": "Valky - QA via HARA Commander",
+  "host": "HARA_WIN11",
+  "previous": {
+    "version": "0.3.53",
+    "source_sha256": "7a6112b51835de4177400057dadce15904e974f20a0f1dba940a0dc41c697708"
+  },
+  "current": {
+    "version": "0.3.55",
+    "source_sha256": "07de45201052c6fbc98764dba619f1e83864b96eed0c998f1d007ad04bf5f57f",
+    "signed_manifest_sha256": "0a7b63dbe5d286902ed155d5793c0bb22cb3d05c8b0fe95fcfb8edbf6daa18b9",
+    "signature_file_sha256": "1fe5b5470f9edbbb56a42cbfe502a0142b1938a6f76e0c0e93dbcbd9a3a9b066",
+    "signed_by": "commander-release-v2",
+    "algorithm": "RSA-3072-RS256",
+    "channel": "FOUNDER_WINDOWS_CANARY",
+    "scope": "ONE_WINDOWS_DEVICE_ONLY",
+    "mcp_ping": "PASS",
+    "device_info_version": "0.3.55",
+    "runtime_status_version": "0.3.55",
+    "upgrade_receipt": "AGENT_055_RUNNING",
+    "scheduled_agent_task": "RUNNING",
+    "approval_mode": "SESSION_TRUSTED",
+    "transport": "OUTBOUND_RELAY",
+    "installed_agent_hash_matches_review": true,
+    "original_agent_backup_verified": true,
+    "one_time_update_task_removed": true
+  },
+  "tests": [
+    {
+      "name": "windows_live_history_fixture",
+      "assertions": 13,
+      "final_marker": "R22_LIVE_WINDOWS_HISTORY_FIXTURE=PASS",
+      "status": "PASS",
+      "uses_existing_user_history": false
+    },
+    {
+      "name": "candidate_055_full_selftest",
+      "status": "PASS",
+      "markers": 9
+    },
+    {
+      "name": "installed_055_history_3_cli",
+      "status": "PASS",
+      "history_page_limit": 3,
+      "private_marker_visible": false
+    },
+    {
+      "name": "files_read_unicode",
+      "status": "PASS"
+    },
+    {
+      "name": "file_list_offset_2",
+      "status": "PASS"
+    },
+    {
+      "name": "write_stale_hash",
+      "status": "EXPECTED_DENIAL",
+      "code": "FILE_PRECONDITION_FAILED"
+    },
+    {
+      "name": "write_valid_CAS_and_readback",
+      "status": "PASS"
+    },
+    {
+      "name": "powershell_unicode_exit_7",
+      "status": "PASS",
+      "command_exit_code": 7
+    },
+    {
+      "name": "powershell_oneshot_8lines_3pages",
+      "status": "PASS",
+      "result_retained": true,
+      "execution_repeated": false,
+      "pages": [
+        3,
+        3,
+        2
+      ]
+    },
+    {
+      "name": "windows_mcp_ping_retry_after_transient",
+      "status": "PASS"
+    },
+    {
+      "name": "read_many_via_hosted_mcp",
+      "status": "BLOCKED_HOSTED_CONTRACT",
+      "code": "UNKNOWN_FUNCTION_ID"
+    },
+    {
+      "name": "search_via_hosted_mcp",
+      "status": "BLOCKED_HOSTED_CONTRACT",
+      "code": "UNKNOWN_FUNCTION_ID"
+    },
+    {
+      "name": "edit_via_hosted_mcp",
+      "status": "BLOCKED_HOSTED_CONTRACT",
+      "code": "AGENT_UPGRADE_REQUIRED"
+    }
+  ],
+  "microburst": {
+    "n": 4,
+    "success": 4,
+    "transport": "OUTBOUND_RELAY",
+    "queue_ms": [
+      1913,
+      4772,
+      5816,
+      6740
+    ],
+    "execution_ms": [
+      713,
+      689,
+      715,
+      811
+    ],
+    "total_ms": [
+      2626,
+      5461,
+      6531,
+      7551
+    ],
+    "warning": "Small biased sample, not SLO or causal performance proof"
+  },
+  "ux": {
+    "old_issue": "Start-OperatorConsole $seen=0 loaded all console-events.jsonl each 250ms",
+    "new_behavior": "Begin at EOF; consume only complete fresh UTF-8 JSONL rows using file stream; opt-in SQLite history with bounded pages",
+    "live_qa_console_reopened_by_owner": false,
+    "requires_user_reopen_for_live_ui": true,
+    "jsonl_history_still_exists": true,
+    "sqlite_history_still_exists": true,
+    "last_jsonl_bytes": 1473685,
+    "last_sqlite_bytes": 2351104
+  },
+  "capability_contract": {
+    "hosted_worker_advertised": 19,
+    "local_new_worker_expected": 22,
+    "windows_new_code_agent_installed": true,
+    "site_worker_capabilities_not_updated": true
+  },
+  "fleet": {
+    "founder_linux_054": 7,
+    "commercial_linux_043": 2,
+    "founder_windows_055": 1,
+    "public_stable_latest": "0.3.43",
+    "single_agent_version_everywhere": false
+  },
+  "safety": {
+    "qemu_guest_agent_reachable_before_and_after": true,
+    "reboot": false,
+    "other_agents_changed": false,
+    "cloudflare_mutation": false,
+    "public_release_changed": false,
+    "private_key_exported": false,
+    "operator_session_force_closed": false,
+    "device_token_exposed": false
+  }
+}
