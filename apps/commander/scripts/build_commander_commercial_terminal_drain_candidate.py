@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Prepare a source candidate for official signing without reading a private key.
 
-Linux gets the reviewed continuous and terminal-drain fixes. Windows and both installers remain
-the last signed commercial versions; the separate Windows 0.3.52 RC is not
-silently promoted. The output has no signature and cannot be published.
+Linux gets the reviewed continuous and terminal-drain fixes. Both candidate
+installers authenticate the complete release before enrollment; the Windows
+Agent remains the signed commercial 0.3.43 source. The separate Windows 0.3.55
+source is not silently promoted. The output has no signature and cannot be
+published.
 """
 from __future__ import annotations
 
@@ -19,6 +21,10 @@ from stage_signed_commercial_assets import APP, BUNDLES, ROLLBACK_RELEASE, stage
 
 LINUX_SOURCE = APP / "public/agent/linux.py"
 REVIEWED_LINUX_SHA256 = "4c81d45a6532a53387db40ac06d95a382a7ffdb3a6da35861d4f9b350f1ab6aa"
+LINUX_INSTALLER_SOURCE = APP / "candidate/linux_install_043.sh"
+REVIEWED_LINUX_INSTALLER_SHA256 = "76be66890113dee0dcc48493ab99da14333abe1f7857908c182b57e45d7b0a6b"
+WINDOWS_INSTALLER_SOURCE = APP / "candidate/windows_install_043.ps1"
+REVIEWED_WINDOWS_INSTALLER_SHA256 = "122420f45325c9251466081f73c0881329026afd51f3bc8453d34db0262eb67e"
 FILESET = ("agent/linux.py", "agent/windows.ps1", "install/linux.sh", "install/windows.ps1")
 CURRENT_STATIC = ("index.html", "app.js")
 
@@ -35,6 +41,12 @@ def prepare(output: Path) -> dict:
     linux = LINUX_SOURCE.read_bytes()
     if digest(linux) != REVIEWED_LINUX_SHA256 or b'AGENT_VERSION = "0.3.43"' not in linux:
         raise RuntimeError("COMMERCIAL_DRAIN_CANDIDATE_LINUX_SOURCE_DRIFT")
+    installer = LINUX_INSTALLER_SOURCE.read_bytes()
+    if digest(installer) != REVIEWED_LINUX_INSTALLER_SHA256 or b'RELEASE_SIGNING_KID="commander-release-v2"' not in installer:
+        raise RuntimeError("COMMERCIAL_DRAIN_CANDIDATE_LINUX_INSTALLER_DRIFT")
+    windows_installer = WINDOWS_INSTALLER_SOURCE.read_bytes()
+    if digest(windows_installer) != REVIEWED_WINDOWS_INSTALLER_SHA256 or b'$ReleaseSigningKid = "commander-release-v2"' not in windows_installer:
+        raise RuntimeError("COMMERCIAL_DRAIN_CANDIDATE_WINDOWS_INSTALLER_DRIFT")
     for script in ("validate_process_terminal_drain.py", "validate_process_continuous_drain.py",
                    "validate_process_oneshot_pagination.py", "validate_process_session_policy.py",
                    "validate_result_delivery_outbox.py", "validate_result_envelope_budget.py",
@@ -50,6 +62,8 @@ def prepare(output: Path) -> dict:
     public.parent.mkdir(mode=0o700, parents=True)
     stage(public, BUNDLES[ROLLBACK_RELEASE], rollback_only=True)
     (public / "agent/linux.py").write_bytes(linux)
+    (public / "install/linux.sh").write_bytes(installer)
+    (public / "install/windows.ps1").write_bytes(windows_installer)
     for relative in CURRENT_STATIC:
         (public / relative).write_bytes((APP / "public" / relative).read_bytes())
     manifest_path = public / "release/agent-manifest.json"
@@ -68,7 +82,7 @@ def prepare(output: Path) -> dict:
     ))
     (public / "release/agent-manifest.sig.json").unlink()
     for relative in FILESET:
-        if relative != "agent/linux.py" and (public / relative).read_bytes() != (BUNDLES[ROLLBACK_RELEASE] / relative).read_bytes():
+        if relative not in ("agent/linux.py", "install/linux.sh", "install/windows.ps1") and (public / relative).read_bytes() != (BUNDLES[ROLLBACK_RELEASE] / relative).read_bytes():
             raise RuntimeError("COMMERCIAL_DRAIN_CANDIDATE_COMMERCIAL_ASSET_DRIFT")
     if (public / "release/agent-manifest.sig.json").exists():
         raise RuntimeError("COMMERCIAL_DRAIN_CANDIDATE_MUST_REMAIN_UNSIGNED")
@@ -78,6 +92,8 @@ def prepare(output: Path) -> dict:
         "linux_agent_version": "0.3.43",
         "windows_agent_version": "0.3.43",
         "linux_agent_sha256": digest(linux),
+        "linux_installer_sha256": digest(installer),
+        "windows_installer_sha256": digest(windows_installer),
         "manifest_sha256": digest(manifest_path.read_bytes()),
         "frozen_commercial_base": ROLLBACK_RELEASE,
         "current_static_sha256": {
