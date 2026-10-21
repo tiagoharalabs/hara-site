@@ -1,0 +1,50 @@
+{
+  "schema": "hara.commander-r13-isolated-worktree-snapshot.v1",
+  "observed_at_utc": "2026-10-21T00:06:49.962876+00:00",
+  "base_head": "1d8b183564f1d8498c0b71ae7e35e924787e8010",
+  "qa_root": "/tmp/hara-commander-r13-pre-enroll-rgqgez92",
+  "work_in_progress_copies": [
+    {
+      "file": "apps/commander/candidate/linux_install_043.sh",
+      "sha256": "76be66890113dee0dcc48493ab99da14333abe1f7857908c182b57e45d7b0a6b",
+      "bytes": 39167
+    },
+    {
+      "file": "apps/commander/candidate/windows_install_043.ps1",
+      "sha256": "122420f45325c9251466081f73c0881329026afd51f3bc8453d34db0262eb67e",
+      "bytes": 27244
+    },
+    {
+      "file": "apps/commander/scripts/test_linux_r11_pre_enroll.py",
+      "sha256": "1aac5d09977e56eb1b7173840c4c48237afbf27add8636be6e6518c4057adea1",
+      "bytes": 6343
+    },
+    {
+      "file": "apps/commander/scripts/test_live_release_integrity_gate.py",
+      "sha256": "8f192b0af38388024366c1f675aa8205afaf74bc78ddecd8a127870b6adf6889",
+      "bytes": 2319
+    },
+    {
+      "file": "apps/commander/scripts/verify_live_release_integrity.py",
+      "sha256": "925388b0052f3ba4ac982cab3000c1213fc502c2af96db5269ab7e47c2a7f288",
+      "bytes": 7524
+    },
+    {
+      "file": "apps/commander/scripts/build_commander_commercial_terminal_drain_candidate.py",
+      "sha256": "b524643f72bc5ede122f10ed76f21cd418424b83b08da116cfc44a4d9b5210f2",
+      "bytes": 6509
+    },
+    {
+      "file": "apps/commander/scripts/commander_prelaunch_offline_gate.py",
+      "sha256": "f75ac82280069027537612f48f2e951c6a5f4eaf0aa05cadcb245c4e09202520",
+      "bytes": 11571
+    },
+    {
+      "file": "apps/commander/scripts/test_signed_distribution_stage.py",
+      "sha256": "e8862b2692ddb33e26edf6c0730de69f983f81d021e702ff98201138192ac612",
+      "bytes": 8495
+    }
+  ],
+  "codex_source_or_index_changed": false,
+  "network_mutation": false
+}

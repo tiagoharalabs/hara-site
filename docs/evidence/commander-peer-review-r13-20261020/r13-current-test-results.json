@@ -1,0 +1,24 @@
+{
+  "schema": "hara.commander-r13-existing-wip-tests.v1",
+  "observed_at_utc": "2026-10-21T00:07:15.860262+00:00",
+  "cases": [
+    {
+      "command": "python3 -B apps/commander/scripts/test_linux_r11_pre_enroll.py",
+      "exit": 0,
+      "stdout_tail": "COMMANDER_R11_OLD_ORDER_CONTROL=PASS enroll_posts=1 exit=22\nCOMMANDER_R11_KID_MISMATCH_BEFORE_ENROLL=PASS enroll_posts=0 exit=1\nCOMMANDER_R11_LINUX_DIGEST_BEFORE_ENROLL=PASS enroll_posts=0 exit=1\nCOMMANDER_R11_WINDOWS_DIGEST_BEFORE_ENROLL=PASS enroll_posts=0 exit=1\nCOMMANDER_R11_VERSION_BEFORE_ENROLL=PASS enroll_posts=0 exit=1\nCOMMANDER_R11_VALID_RELEASE_REACHES_MOCK_ENROLL=PASS enroll_posts=1 exit=22\nCOMMANDER_R11_PRE_ENROLL_CASES=6\n",
+      "stderr_tail": ""
+    },
+    {
+      "command": "python3 -B apps/commander/scripts/test_live_release_integrity_gate.py",
+      "exit": 0,
+      "stdout_tail": "LIVE_GATE_SIGNED_V2_BASE=PASS\nLIVE_GATE_OLD_MANIFEST_NEW_AGENT=DENIED\nLIVE_GATE_FOUR_ASSET_TAMPER=DENIED\nLIVE_GATE_SERVED_INSTALLER_KEY_DRIFT=DENIED\nLIVE_GATE_KID_MISMATCH=DENIED\nLIVE_GATE_MANIFEST_TAMPER=DENIED\nLIVE_GATE_OFFLINE_CHECKS=9\n",
+      "stderr_tail": ""
+    },
+    {
+      "command": "python3 -B apps/commander/scripts/verify_live_release_integrity.py --live",
+      "exit": 2,
+      "stdout_tail": "{\"domain\": \"https://commander.haralabs.com.br\", \"errors\": [\"RELEASE_SIGNATURE_KID_MISMATCH:LINUX\", \"SERVED_INSTALLER_UNTRUSTED_PIN:WINDOWS\", \"RELEASE_SIGNER_NOT_AUTHORIZED\", \"RELEASE_SIGNATURE_NOT_VALID_FOR_TRUSTED_KEY\", \"RELEASE_ASSET_DIGEST_MISMATCH:agent/linux.py\", \"RELEASE_ASSET_DIGEST_MISMATCH:agent/windows.ps1\", \"RELEASE_ASSET_DIGEST_MISMATCH:install/linux.sh\", \"RELEASE_ASSET_DIGEST_MISMATCH:install/windows.ps1\", \"RELEASE_LINUX_AGENT_VERSION_MISMATCH\", \"RELEASE_WINDOWS_AGENT_VERSION_MISMATCH\"], \"files\": {\"agent/linux.py\": {\"bytes\": 220422, \"manifest_match\": false, \"sha256\": \"1572d70e60fb299edb262a8a817bd7aa1740a4c2dda3635d50beb2f3476ffe3b\"}, \"agent/windows.ps1\": {\"bytes\": 60233, \"manifest_match\": false, \"sha256\": \"d507a6f91a635b025ef4f06cbd758a03c7da6f3410aadec9a3d76c28f904c6fb\"}, \"install/linux.sh\": {\"bytes\": 37180, \"manifest_match\": false, \"sha256\": \"699cfcccbfd345184329870632e6b9492f359bac68ba19df0c9b1c2a0cdc4463\"}, \"install/windows.ps1\": {\"bytes\": 23604, \"manifest_match\": false, \"sha256\": \"6ba5c29e6d3a604750331d7699455ad609b4b0a8e191c03ad10503f7a5161c3c\"}}, \"installer_executed\": false, \"manifest_agent_version\": \"0.3.41\", \"production_mutation\": false, \"schema\": \"hara.commander-live-release-integrity.v1\", \"served_manifest_sha256\": \"7e42f25404e414b74b375ccb47b7ed8ba7d8c572dc45db994d89012207f08f7c\", \"served_signature_kid\": \"commander-release-v1\", \"served_signature_sha256\": \"b755f0fd5ebf81be4c8e5cb38522684f66829e069be2ed6303eb0b7bccc26bd1\", \"signature_valid_for_served_installer_pin\": {\"LINUX\": false, \"WINDOWS\": true}, \"signature_valid_for_trusted_key\": false, \"state\": \"HOLD\", \"trusted_kid\": \"commander-release-v2\"}\n",
+      "stderr_tail": ""
+    }
+  ]
+}

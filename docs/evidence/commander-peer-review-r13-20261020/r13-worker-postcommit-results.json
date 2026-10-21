@@ -1,0 +1,26 @@
+{
+  "schema": "hara.commander.peer-r13-server-postcommit-uncertainty.v1",
+  "observed_source": "exact enrollDevice function + actual device-enrollment SQL + 40 migrations",
+  "fixed_head": "1d8b183564f1d8498c0b71ae7e35e924787e8010",
+  "postcommit_fault_injected": "INSERT commander_device_selections",
+  "orphan": {
+    "worker_response_error": "QA_SELECTION_WRITE_UNAVAILABLE_AFTER_COMMIT",
+    "remote_active_devices": 1,
+    "pairing_token_consumed": true,
+    "auto_revoked": false,
+    "selection_faults": 1,
+    "selection_rows": 0,
+    "client_received_new_device_token": false,
+    "retry_same_pairing_error": "DEVICE_PAIRING_INVALID"
+  },
+  "positive_control": {
+    "received_token": true,
+    "device_id_prefix": true,
+    "state": "ACTIVE",
+    "selection_rows": 1
+  },
+  "reproduced": true,
+  "network_requests": 0,
+  "production_mutation": false,
+  "no_client_token_logged": true
+}
