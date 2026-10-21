@@ -63,6 +63,7 @@ PYTHON = (
     "test_signed_distribution_stage.py",
     "test_versioned_prod_release_preflight.py",
     "test_versioned_prod_upload_preflight.py",
+    "test_versioned_asset_readback.py",
     "validate_versioned_prod_promote.py",
     "build_commander_commercial_terminal_drain_candidate.py",
     "stage_signed_commercial_assets.py",

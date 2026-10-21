@@ -152,6 +152,34 @@ class VersionedPromotionReleaseTests(unittest.TestCase):
                 promote.main()
             remote.assert_not_called()
 
+    def test_promotion_requires_version_asset_readback_before_deploy(self):
+        argv = ["promote", "--version", "11111111-1111-1111-1111-111111111111",
+                "--rollback", "22222222-2222-2222-2222-222222222222",
+                "--message", "offline test", "--stage", str(self.staged),
+                "--stage-tree-sha256", self.stage_report["stage_tree_sha256"],
+                "--execute"]
+        release = {"agent_version": "0.3.43", "manifest_sha256": "a" * 64}
+        with patch.object(sys, "argv", argv), \
+             patch.object(promote, "require_signed_stage", return_value=release), \
+             patch.object(promote, "require_current_rollback"), \
+             patch.object(promote, "require_version_secrets", return_value={"AUTH_CLIENT_SECRET"}), \
+             patch.object(promote, "run", side_effect=RuntimeError("VERSION_ASSET_MISMATCH")) as remote:
+            with self.assertRaisesRegex(RuntimeError, "VERSION_ASSET_MISMATCH"):
+                promote.main()
+        self.assertEqual(len(remote.call_args_list), 1)
+        command = remote.call_args.args[0]
+        self.assertIn("commander_versioned_asset_readback.py", " ".join(command))
+        self.assertNotIn("versions", command)
+
+    def test_promotion_execute_requires_recorded_stage_digest(self):
+        argv = ["promote", "--version", "11111111-1111-1111-1111-111111111111",
+                "--rollback", "22222222-2222-2222-2222-222222222222",
+                "--message", "offline test", "--stage", str(self.staged), "--execute"]
+        with patch.object(sys, "argv", argv), patch.object(promote, "run") as remote:
+            with self.assertRaisesRegex(SystemExit, "PROMOTION_STAGE_DIGEST_REQUIRED"):
+                promote.main()
+            remote.assert_not_called()
+
     def test_live_readback_compares_exact_stage_bytes(self):
         sources = asset_sources(self.staged, expected_bundle=self.rollback_bundle)
         argv = ["drift", "--stage", str(self.staged), "--expect-assets", "current"]

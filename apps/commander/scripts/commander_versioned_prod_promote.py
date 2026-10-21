@@ -15,6 +15,7 @@ CONFIG = APP / "wrangler.jsonc"
 READBACK = APP / "scripts" / "commander_prod_deployment_readback.py"
 RUNTIME_DRIFT = APP / "scripts" / "validate_prod_runtime_drift.py"
 LIVE_RELEASE = APP / "scripts" / "verify_live_release_integrity.py"
+VERSION_ASSET_READBACK = APP / "scripts" / "commander_versioned_asset_readback.py"
 UUID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.I)
 REQUIRED_VERSION_SECRETS = {
     "AUTH_CLIENT_SECRET",
@@ -58,6 +59,7 @@ def main() -> int:
     parser.add_argument("--version", required=True)
     parser.add_argument("--rollback", required=True)
     parser.add_argument("--stage", required=True, type=Path)
+    parser.add_argument("--stage-tree-sha256", default="")
     parser.add_argument("--message", required=True)
     parser.add_argument("--execute", action="store_true")
     args = parser.parse_args()
@@ -66,8 +68,12 @@ def main() -> int:
         raise SystemExit("VERSION_ID_INVALID")
     if args.version == args.rollback:
         raise SystemExit("VERSION_AND_ROLLBACK_MUST_DIFFER")
+    if args.execute and not re.fullmatch(r"[0-9a-f]{64}", args.stage_tree_sha256):
+        raise SystemExit("PROMOTION_STAGE_DIGEST_REQUIRED")
 
-    release = require_signed_stage(args.stage)
+    release = require_signed_stage(
+        args.stage, expected_tree_sha256=args.stage_tree_sha256 or None,
+    )
     require_current_rollback(args.rollback)
     found = require_version_secrets(args.version)
 
@@ -76,6 +82,7 @@ def main() -> int:
     print("COMMANDER_VERSIONED_PROMOTE_ROLLBACK=" + args.rollback)
     print("COMMANDER_VERSIONED_PROMOTE_REQUIRED_SECRETS=PASS")
     print("COMMANDER_VERSIONED_PROMOTE_SIGNED_STAGE=PASS")
+    print("COMMANDER_VERSIONED_PROMOTE_VERSION_ASSETS=READBACK_REQUIRED")
     print("COMMANDER_VERSIONED_PROMOTE_AGENT_VERSION=" + release["agent_version"])
     print("COMMANDER_VERSIONED_PROMOTE_MANIFEST_SHA256=" + release["manifest_sha256"])
     print("COMMANDER_VERSIONED_PROMOTE_TRIGGER_SYNC=REQUIRED")
@@ -84,6 +91,15 @@ def main() -> int:
         print("COMMANDER_VERSIONED_PROMOTE_EXECUTE=NO")
         return 0
 
+    # The approved 0% deployment is made separately. Read its exact assets
+    # through a version override before changing any normal traffic.
+    run([
+        "python3", str(VERSION_ASSET_READBACK),
+        "--stage", str(args.stage),
+        "--stage-tree-sha256", args.stage_tree_sha256,
+        "--version", args.version,
+        "--rollback", args.rollback,
+    ])
     run([
         str(WRANGLER), "versions", "deploy",
         args.version + "@100%",
@@ -101,6 +117,7 @@ def main() -> int:
     run(["python3", str(LIVE_RELEASE), "--live"])
 
     print("COMMANDER_VERSIONED_PROMOTE_WORKER=PASS")
+    print("COMMANDER_VERSIONED_PROMOTE_VERSION_ASSETS=PASS")
     print("COMMANDER_VERSIONED_PROMOTE_TRIGGERS=PASS")
     print("COMMANDER_VERSIONED_PROMOTE_READBACK=PASS")
     print("COMMANDER_VERSIONED_PROMOTE_RUNTIME_ASSETS=PASS")

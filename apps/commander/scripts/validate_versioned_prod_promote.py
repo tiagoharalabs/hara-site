@@ -24,8 +24,13 @@ need("MCP_PRODUCT_TOKEN" in SCRIPT,"MCP_SECRET")
 need("ROLLBACK_VERSION_NOT_CURRENT_100_PERCENT" in SCRIPT,"ROLLBACK_GUARD")
 need("TARGET_VERSION_SECRET_MISSING" in SCRIPT,"SECRET_GUARD")
 need('"--stage", required=True' in SCRIPT,"EXPLICIT_SIGNED_STAGE")
-need('release = require_signed_stage(args.stage)' in SCRIPT,"SIGNED_STAGE_PREFLIGHT")
-need(SCRIPT.index('release = require_signed_stage(args.stage)') < SCRIPT.index('require_current_rollback(args.rollback)'),"STAGE_BEFORE_CLOUD_READ")
+need('release = require_signed_stage(' in SCRIPT and
+     'expected_tree_sha256=args.stage_tree_sha256 or None' in SCRIPT,"SIGNED_STAGE_PREFLIGHT")
+need(SCRIPT.index('release = require_signed_stage(') < SCRIPT.index('require_current_rollback(args.rollback)'),"STAGE_BEFORE_CLOUD_READ")
+need('PROMOTION_STAGE_DIGEST_REQUIRED' in SCRIPT,"EXACT_STAGE_DIGEST_REQUIRED")
+need('commander_versioned_asset_readback.py' in SCRIPT and
+     SCRIPT.index('str(VERSION_ASSET_READBACK)') < SCRIPT.index('"versions", "deploy"'),
+     "VERSION_ASSETS_BEFORE_DEPLOY")
 need("--execute" in SCRIPT,"EXPLICIT_EXECUTE_GATE")
 need('"--stage", str(args.stage)' in SCRIPT,"EXACT_STAGE_READBACK")
 need('str(LIVE_RELEASE), "--live"' in SCRIPT,"PUBLIC_CRYPTOGRAPHIC_READBACK")
