@@ -1,0 +1,23 @@
+{
+  "schema": "hara.commander.r18-worker-source-not-pinned.v1",
+  "qa_head": "3a9131785cf74ed5303b7474b4c2cf2d5ebd61a6",
+  "frozen_public_tree": "2138ef35e0f9bee92888e1bcf7bb5212956170bd",
+  "signed_historical_bundle_used_only_as_fixture": "commercial-0.3.43-v4-autoreconnect",
+  "approved_stage_tree_sha256": "e3f5ce730a7a640d71c41c062315497d20b6fc292f1188c0885d88d8f6653448",
+  "worker_before_sha256": "df910bb6dfa5c710250232079be2dd4b23e8bec731a31a6ae257fd4968e0bd71",
+  "worker_after_sha256": "e4ac6556c6607b1d0062703eeb79494a859d3e90f11bd89c365ea14c63d98d15",
+  "checked_stage_after_worker_change": "VERIFIED_NOT_UPLOADED",
+  "fake_wrangler_observed": {
+    "worker_sha256": "e4ac6556c6607b1d0062703eeb79494a859d3e90f11bd89c365ea14c63d98d15",
+    "worker_matches_reviewed": false,
+    "stage_sha256": "a82ad3ad28b43fe89282870aaabb23764632db07f5380a10726ea8d423b3c366",
+    "snapshot_exists": true
+  },
+  "upload_result_state": "UPLOAD_SUBMITTED_VERSION_READBACK_REQUIRED",
+  "missing_gate_reproduced": true,
+  "recommends": "Pin/compare Worker source/import graph/config to immutable reviewed commit and upload from frozen project snapshot, not live mutable APP",
+  "network_requests": 0,
+  "cloud_mutations": false,
+  "real_secrets_used": false,
+  "at_utc": "2026-10-21T06:07:00.010069+00:00"
+}
