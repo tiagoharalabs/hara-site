@@ -143,6 +143,7 @@ JS = (
     "test_customer_mcp_admin_profile.mjs",
     "test_customer_argument_pipeline.mjs",
     "test_mcp_result_consistency.mjs",
+    "test_full_mcp_result_consistency.mjs",
     "test_portal_read_boundaries.mjs",
     "test_usage_activity_concurrency.mjs",
     "test_device_version_observation.mjs",

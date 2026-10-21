@@ -49,15 +49,33 @@ const SECURITY_SCHEMES = Object.freeze([
 ]);
 
 function publicToolResult(value) {
-  const result = value && typeof value === "object" ? value : {};
+  let result = value && typeof value === "object" ? value : {};
+  let projectedOperationalFailure = false;
+  // A native Agent may use DENIED for a file or process failure. Reclassify
+  // only a known operational cause when it explicitly reports no mutation.
+  if (result.state === "DENIED" && result.mutation_performed === false) {
+    const classified = operationalToolError(result.blocker?.code, result)?.structuredContent;
+    if (classified) {
+      result = {
+        ...result,
+        state: classified.state,
+        source_state: result.state,
+        mutation_performed: classified.mutation_performed,
+        blocker: { ...result.blocker, ...classified.blocker },
+        result: { ...result.result, ...classified.result },
+      };
+      projectedOperationalFailure = true;
+    }
+  }
   return {
-    content: [
-      {
-        type: "text",
-        text: JSON.stringify(result),
-      },
-    ],
+    content: [{ type: "text", text: JSON.stringify(result) }],
     structuredContent: result,
+    // A successful MCP transport response is not proof that the tool passed.
+    ...((projectedOperationalFailure || result.ok === false || [
+      "DENIED", "FAILED", "ERROR", "TIMEOUT", "UNAVAILABLE", "BUSY",
+      "NOT_FOUND", "CONFLICT", "NEEDS_INPUT", "INVALID_TARGET",
+      "UNSUPPORTED_CONTENT", "LIMIT_EXCEEDED", "CANCELLED", "EXPIRED",
+    ].includes(result.state)) ? { isError: true } : {}),
   };
 }
 
@@ -75,7 +93,7 @@ function operationalToolError(code, args = undefined) {
       result,
     };
     if (args?.computer) value.computer = String(args.computer).slice(0, 120);
-    return publicToolResult(value);
+    return { ...publicToolResult(value), isError: true };
   };
 
   if (code === "DEVICE_LOCAL_TUNNEL_DIRECT_PATH_REQUIRED") {
@@ -88,6 +106,16 @@ function operationalToolError(code, args = undefined) {
   if (code === "DEVICE_OFFLINE") {
     return build("UNAVAILABLE", "DEVICE_AVAILABILITY", true, { available: false, device_state: "OFFLINE" });
   }
+  if (code === "AGENT_UPGRADE_REQUIRED") {
+    return build("UNAVAILABLE", "AGENT_CAPABILITY", false, {
+      supported_by_installed_agent: false, recommended_tool: "hara.capabilities",
+    });
+  }
+  if (code === "LIST_OFFSET_UNSUPPORTED") {
+    return build("UNAVAILABLE", "PAGINATION_CAPABILITY", false, {
+      offset_supported: false, recommended_tool: "hara.capabilities",
+    });
+  }
   if (code === "DEVICE_EVENT_UNDELIVERED") {
     return build("UNAVAILABLE", "DEVICE_DELIVERY", true, {
       device_state: "NOT_PROVEN_OFFLINE", execution_started: false,
@@ -99,7 +127,19 @@ function operationalToolError(code, args = undefined) {
     return build("BUSY", "DEVICE_AVAILABILITY", true, { available: true, busy: true });
   }
   if (["DEVICE_CALL_TIMEOUT", "CHANNEL_TRANSIENT_TIMEOUT"].includes(code)) {
-    return build("TIMEOUT", "DEVICE_EXECUTION", true, { completed: false });
+    // A deadline does not prove cancellation or non-execution. Reconcile the
+    // existing call before issuing any new mutation.
+    const value = {
+      state: "TIMEOUT", ...common, mutation_performed: null,
+      blocker: { code, category: "DEVICE_EXECUTION", retryable: false, requires_reconciliation: true },
+      result: {
+        completed: null, execution_outcome: "UNKNOWN", automatic_retry_allowed: false,
+        next_action: "RECONCILE_EXISTING_CALL",
+        recommended_tools: ["hara.calls.recent", "hara.receipts.get"],
+      },
+    };
+    if (args?.computer) value.computer = String(args.computer).slice(0, 120);
+    return publicToolResult(value);
   }
   if (["DEVICE_NOT_FOUND", "DEVICE_CALL_NOT_FOUND"].includes(code)) {
     return build("NOT_FOUND", "DEVICE_SELECTION", false, { exists: false });
@@ -117,7 +157,9 @@ function operationalToolError(code, args = undefined) {
       : code === "RECEIPT_NOT_FOUND" ? "AUDIT_STATE"
       : code === "EDIT_MATCH_NOT_FOUND" ? "EDIT_MATCH"
       : "FILESYSTEM_STATE";
-    const result = { exists: false };
+    const result = code === "EDIT_MATCH_NOT_FOUND"
+      ? { match_found: false, recommended_tool: "hara.files.read" }
+      : { exists: false };
     if (["PARENT_DIRECTORY_NOT_FOUND", "FILESYSTEM_PARENT_NOT_FOUND"].includes(code)) result.recommended_tool = "hara.files.create_directory";
     if (code === "PREIMAGE_NOT_FOUND") result.recommended_tool = "hara.files.preimages.list";
     return build("NOT_FOUND", category, false, result);
@@ -164,9 +206,11 @@ function operationalToolError(code, args = undefined) {
 }
 
 function publicToolError(error, args = undefined) {
-  const code = String(error?.message || "COMMANDER_MCP_TOOL_FAILED")
-    .replace(/[^A-Z0-9_:-]/gi, "_")
-    .slice(0, 160);
+  // Sanitizing punctuation is insufficient: paths and credentials can remain
+  // legible. Publish only bounded symbolic error codes.
+  const raw = error?.message;
+  const code = typeof raw === "string" && /^[A-Z][A-Z0-9_]{0,119}$/.test(raw)
+    && raw.trim() === raw ? raw : "COMMANDER_MCP_TOOL_FAILED";
 
   const operational = operationalToolError(code, args);
   if (operational) return operational;

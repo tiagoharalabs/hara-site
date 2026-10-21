@@ -190,7 +190,7 @@ const offlineHealth = await rpc(44, "tools/call", {
   name: "hara.health",
   arguments: { computer: "__offline__" },
 });
-assert.equal(offlineHealth.result?.isError, undefined);
+assert.equal(offlineHealth.result?.isError, true);
 assert.equal(offlineHealth.result?.structuredContent?.state, "UNAVAILABLE");
 assert.equal(offlineHealth.result?.structuredContent?.blocker?.code, "DEVICE_OFFLINE");
 assert.equal(offlineHealth.result?.structuredContent?.blocker?.retryable, true);
@@ -204,7 +204,7 @@ assert.ok(deniedUnknown.error);
 assert.equal(calls.length, 7);
 
 const missingInfo = await rpc(81, "tools/call", { name: "hara.files.info", arguments: { computer: "__missing__", path: "/tmp/missing" } });
-assert.equal(missingInfo.result?.isError, undefined);
+assert.equal(missingInfo.result?.isError, true);
 assert.equal(missingInfo.result?.structuredContent?.state, "NOT_FOUND");
 
 const parentMissing = await rpc(82, "tools/call", { name: "hara.files.write", arguments: { computer: "__parent_missing__", path: "/tmp/no-parent/file", content: "x", mode: "rewrite" } });
@@ -221,7 +221,11 @@ assert.equal(busy.result?.structuredContent?.blocker?.retryable, true);
 
 const timeout = await rpc(85, "tools/call", { name: "hara.process.run", arguments: { computer: "__timeout__", command: "sleep 1", timeout_ms: 500, max_lines: 20 } });
 assert.equal(timeout.result?.structuredContent?.state, "TIMEOUT");
-assert.equal(timeout.result?.structuredContent?.blocker?.retryable, true);
+assert.equal(timeout.result?.isError, true);
+assert.equal(timeout.result?.structuredContent?.blocker?.retryable, false);
+assert.equal(timeout.result?.structuredContent?.blocker?.requires_reconciliation, true);
+assert.equal(timeout.result?.structuredContent?.result?.execution_outcome, "UNKNOWN");
+assert.equal(timeout.result?.structuredContent?.result?.automatic_retry_allowed, false);
 
 const conflict = await rpc(86, "tools/call", { name: "hara.files.copy", arguments: { computer: "__exists__", source: "/tmp/a", destination: "/tmp/b" } });
 assert.equal(conflict.result?.structuredContent?.state, "CONFLICT");
@@ -231,7 +235,7 @@ assert.equal(ambiguous.result?.structuredContent?.state, "NEEDS_INPUT");
 assert.equal(ambiguous.result?.structuredContent?.result?.selection_required, true);
 
 const localTunnel = await rpc(89, "tools/call", { name: "hara.ping", arguments: { computer: "__local_tunnel__" } });
-assert.equal(localTunnel.result?.isError, undefined);
+assert.equal(localTunnel.result?.isError, true);
 assert.equal(localTunnel.result?.structuredContent?.state, "DIRECT_PATH_REQUIRED");
 assert.equal(localTunnel.result?.structuredContent?.blocker?.retryable, false);
 assert.equal(localTunnel.result?.structuredContent?.result?.recommended_transport, "LOCAL_TUNNEL");
