@@ -43,9 +43,11 @@ const seed = label => {
 };
 seed("SELECTION_FAULT");
 seed("ACK_LOST");
+seed("BATCH_RESULT_LOST");
 seed("LEGACY");
 
 let failSelection = false;
+let loseBatchResultAfterCommit = false;
 const productDb = {
   prepare(sql) {
     return { bind(...args) { return {
@@ -61,15 +63,20 @@ const productDb = {
   },
   async batch(statements) {
     db.exec("BEGIN IMMEDIATE");
+    let results;
     try {
-      const results = [];
+      results = [];
       for (const statement of statements) results.push(await statement.run());
-      db.exec("COMMIT");
-      return results;
     } catch (error) {
       db.exec("ROLLBACK");
       throw error;
     }
+    db.exec("COMMIT");
+    if (loseBatchResultAfterCommit) {
+      loseBatchResultAfterCommit = false;
+      throw new Error("QA_BATCH_RESULT_LOST_AFTER_COMMIT");
+    }
+    return results;
   },
 };
 const context = vm.createContext({
@@ -119,9 +126,23 @@ try {
                        /DEVICE_PAIRING_INVALID/);
   console.log("DEVICE_ENROLL_LOST_ACK_RECOVERY_AUTHENTICATED=PASS");
 
+  const secretAfterCommit = randomBytes(48).toString("base64url");
+  const beforeLostBatch = count();
+  loseBatchResultAfterCommit = true;
+  await assert.rejects(enroll("BATCH_RESULT_LOST", secretAfterCommit),
+                       /DEVICE_ENROLLMENT_ACK_UNKNOWN/);
+  assert.equal(count(), beforeLostBatch + 1, "batch result loss follows a committed registration");
+  assert.equal(consumed("BATCH_RESULT_LOST"), true);
+  const afterBatchLoss = await enroll("BATCH_RESULT_LOST", secretAfterCommit);
+  assert.equal(afterBatchLoss.device_token, secretAfterCommit);
+  assert.equal(count(), beforeLostBatch + 1, "retry must not create a second device");
+  await assert.rejects(enroll("BATCH_RESULT_LOST", randomBytes(48).toString("base64url")),
+                       /DEVICE_PAIRING_INVALID/);
+  console.log("DEVICE_ENROLL_POSTCOMMIT_BATCH_RESULT_LOSS_RECOVERED=PASS");
+
   const legacy = await enroll("LEGACY", undefined);
   assert(legacy.device_token && legacy.device_id.startsWith("HARA-DEVICE-"));
-  assert.equal(count(), 3);
+  assert.equal(count(), 4);
   console.log("DEVICE_ENROLL_LEGACY_CLIENT_COMPATIBILITY=PASS");
 } finally {
   db.close();
