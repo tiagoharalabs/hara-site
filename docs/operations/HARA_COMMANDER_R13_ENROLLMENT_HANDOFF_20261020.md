@@ -15,6 +15,8 @@ The independent R13 review reproduced a registration committed by the Worker bef
 
 The installers continue to authenticate the complete signed release before enrollment. The source candidate remains **unsigned**. Its commercial Agent versions are Linux 0.3.43 and Windows 0.3.43; the separate Windows 0.3.55 functional source is not silently mixed into this bundle. Founder Sentinela A 0.3.54 and the installed QA Windows Agent 0.3.53 are separate observations.
 
+The exact R13 public source candidate was materialized at `/tmp/commander-prelaunch-r13-source-candidate-20261021-0100z` with manifest SHA-256 `115b85e6d7367a396e3148ccf9ede0c6b213a2201bd452692522ab760f04bcb9`, Linux installer SHA-256 `46b7b57c4080d5a93295cd9799ff787646c12697a179eed69dcc6c01a9524c71`, and Windows installer SHA-256 `69a6bf0c2a3c7c373d524dd63d2272511eae5b81665d5ecf0d625bcb31c5cdad`. It has **no signature**. The signed v4 bundle is a frozen source base and historical rollback reference, but its post-exit output regression makes it unsuitable as an automatic functional fallback. `/tmp` is transient; the candidate must be re-created and rechecked from these commits before any official signing.
+
 ## Evidence and limits
 
 `test_device_enrollment_recovery.mjs` executes the real Worker function and SQL over the 40 local migrations in isolated SQLite. It covers transactional selection failure, lost acknowledgement recovery, wrong credential, and legacy-client compatibility. `test_linux_r13_enrollment_ack.py` uses an ephemeral signed QA release and localhost HTTP: missing token, missing ID, malformed JSON, invalid ID, lost ACK with same-intent retry, mismatched pairing, pending-uninstall preservation, and old-server route rejection. It does not enroll a hosted Cloudflare device.
