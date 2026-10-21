@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 import re
 import shutil
@@ -15,6 +16,10 @@ import subprocess
 import tempfile
 
 from stage_signed_commercial_assets import require_signed_stage
+from commander_frozen_worker_source import (
+    build_frozen_worker, verify_frozen_worker,
+    FROZEN_WORKER_COMMIT, FROZEN_PUBLIC_TREE,
+)
 
 ROOT = Path(__file__).resolve().parents[3]
 APP = ROOT / "apps/commander"
@@ -36,11 +41,17 @@ def checked_stage(stage: Path, tree_sha256: str, source_public_tree: str) -> dic
     return report
 
 
-def run_wrangler_upload(stage: Path, message: str) -> subprocess.CompletedProcess[str]:
+def run_wrangler_upload(stage: Path, message: str, worker: dict) -> subprocess.CompletedProcess[str]:
+    # The reviewed Worker and locked, offline-installed npm dependencies are in
+    # the same private snapshot as the signed assets. Never execute from APP.
+    path = "/home/sartorius/.nvm/versions/node/v24.15.0/bin:"
+    env = os.environ.copy()
+    env["PATH"] = path + env.get("PATH", "")
     return subprocess.run(
-        [str(WRANGLER), "versions", "upload", "--config", str(CONFIG),
-         "--assets", str(stage), "--message", message],
-        cwd=APP, capture_output=True, text=True, timeout=300, check=False,
+        [str(worker["wrangler"]), "versions", "upload", "--config",
+         str(worker["config"]), "--assets", str(stage), "--message", message],
+        cwd=worker["app"], env=env, capture_output=True,
+        text=True, timeout=300, check=False,
     )
 
 
@@ -53,6 +64,8 @@ def upload_version(stage: Path, tree_sha256: str, source_public_tree: str,
     if not message.strip() or len(message) > 140:
         raise RuntimeError("SIGNED_UPLOAD_MESSAGE_INVALID")
     before = checked_stage(stage, tree_sha256, source_public_tree)
+    if source_public_tree != FROZEN_PUBLIC_TREE:
+        raise RuntimeError("SIGNED_UPLOAD_WORKER_PUBLIC_REF_MISMATCH")
     result = {
         "state": "VERIFIED_NOT_UPLOADED",
         "stage_tree_sha256": before["stage_tree_sha256"],
@@ -60,6 +73,8 @@ def upload_version(stage: Path, tree_sha256: str, source_public_tree: str,
         "signed_manifest_sha256": before["manifest_sha256"],
         "cloud_operations": False,
         "version_content_verified": False,
+        "worker_frozen_commit": FROZEN_WORKER_COMMIT,
+        "worker_source_verified": False,
     }
     if not execute:
         return result
@@ -71,10 +86,13 @@ def upload_version(stage: Path, tree_sha256: str, source_public_tree: str,
         snapshot = Path(temporary) / "assets"
         copy_snapshot(stage, snapshot)
         checked_stage(snapshot, tree_sha256, source_public_tree)
+        worker = build_frozen_worker(Path(temporary) / "worker",
+                                     install_dependencies=True)
+        verify_frozen_worker(worker)
         # On timeout or error the upload may have succeeded: inspect versions,
         # never retry the mutation without reconciling remote state.
         try:
-            proc = run_wrangler_upload(snapshot, message)
+            proc = run_wrangler_upload(snapshot, message, worker)
         except (subprocess.TimeoutExpired, OSError) as exc:
             raise RuntimeError("SIGNED_UPLOAD_OUTCOME_UNKNOWN") from exc
         if proc.returncode:
@@ -82,10 +100,13 @@ def upload_version(stage: Path, tree_sha256: str, source_public_tree: str,
         try:
             checked_stage(snapshot, tree_sha256, source_public_tree)
             checked_stage(stage, tree_sha256, source_public_tree)
+            verify_frozen_worker(worker)
         except Exception as exc:
             raise RuntimeError("SIGNED_UPLOAD_OUTCOME_UNKNOWN:STAGE_CHANGED") from exc
     result["state"] = "UPLOAD_SUBMITTED_VERSION_READBACK_REQUIRED"
     result["cloud_operations"] = True
+    result["worker_source_verified"] = True
+    result["worker_source_sha256"] = worker["source_sha256"]
     return result
 
 

@@ -75,8 +75,10 @@ class VersionedUploadPreflightTests(unittest.TestCase):
     def test_execute_uses_exact_verified_private_snapshot_once(self):
         observed = {}
 
-        def read_snapshot(snapshot, _message):
+        def read_snapshot(snapshot, _message, worker):
             observed["path"] = snapshot
+            observed["worker"] = worker
+            observed["worker_present_during_upload"] = (worker["app"] / "src/worker.js").is_file()
             observed["asset"] = (snapshot / "index.html").read_bytes()
             return subprocess.CompletedProcess([], 0, "uploaded", "")
 
@@ -87,17 +89,22 @@ class VersionedUploadPreflightTests(unittest.TestCase):
             self.assertFalse(report["version_content_verified"])
             self.assertEqual(run.call_count, 1)
             self.assertNotEqual(observed["path"], self.staged)
+            self.assertTrue(observed["worker_present_during_upload"])
             self.assertEqual(observed["asset"], (self.staged / "index.html").read_bytes())
             self.assertFalse(observed["path"].exists())
 
     def test_wrangler_command_uses_only_supplied_stage(self):
         completed = subprocess.CompletedProcess([], 0, "uploaded", "")
         with patch.object(upload.subprocess, "run", return_value=completed) as run:
-            upload.run_wrangler_upload(self.staged, "offline fixture")
+            worker = {"wrangler": Path("/tmp/qa/bin/wrangler"),
+                      "config": Path("/tmp/qa/app/wrangler.jsonc"), "app": Path("/tmp/qa/app")}
+            upload.run_wrangler_upload(self.staged, "offline fixture", worker)
         args = run.call_args.args[0]
         self.assertEqual(args[1:3], ["versions", "upload"])
         self.assertEqual(args[args.index("--assets") + 1], str(self.staged))
         self.assertIn("--config", args)
+        self.assertEqual(run.call_args.kwargs["cwd"], worker["app"])
+        self.assertEqual(args[args.index("--config") + 1], str(worker["config"]))
 
     def test_timeout_does_not_retry_mutating_upload(self):
         with patch.object(upload, "require_signed_stage", side_effect=self.verified_stage), \
@@ -115,7 +122,7 @@ class VersionedUploadPreflightTests(unittest.TestCase):
             self.assertEqual(run.call_count, 1)
 
     def test_change_during_upload_leaves_outcome_unknown(self):
-        def changed(_stage, _message):
+        def changed(_stage, _message, _worker):
             html = self.staged / "index.html"
             html.write_bytes(html.read_bytes() + b"changed during upload")
             return subprocess.CompletedProcess([], 0, "uploaded", "")
@@ -132,7 +139,7 @@ class VersionedUploadPreflightTests(unittest.TestCase):
         approved_sha = hashlib.sha256(original).hexdigest()
         observed = {}
 
-        def transient(upload_stage, _message):
+        def transient(upload_stage, _message, worker):
             html.write_bytes(original + b"\n<!-- transient unapproved edit -->\n")
             try:
                 observed["upload_stage"] = upload_stage
@@ -150,6 +157,40 @@ class VersionedUploadPreflightTests(unittest.TestCase):
         self.assertNotEqual(observed["upload_stage"], self.staged)
         self.assertEqual(observed["asset_sha256"], approved_sha)
         self.assertEqual(result["state"], "UPLOAD_SUBMITTED_VERSION_READBACK_REQUIRED")
+
+
+    def test_worker_source_is_pinned_to_reviewed_git_commit(self):
+        from commander_frozen_worker_source import FROZEN_WORKER_COMMIT, ROOT
+        reference = subprocess.check_output([
+            "git", "show", FROZEN_WORKER_COMMIT+":apps/commander/src/worker.js"
+        ], cwd=ROOT)
+        observed = {}
+        def fake_upload(stage, message, worker):
+            source = worker["app"]/"src/worker.js"
+            observed["sha256"] = hashlib.sha256(source.read_bytes()).hexdigest()
+            observed["outside_active_worktree"] = worker["app"] != upload.APP
+            return subprocess.CompletedProcess([], 0, "mock", "")
+        with patch.object(upload,"require_signed_stage", side_effect=self.verified_stage), \
+             patch.object(upload,"run_wrangler_upload",side_effect=fake_upload):
+            result=self.call(execute=True)
+        self.assertEqual(observed["sha256"],hashlib.sha256(reference).hexdigest())
+        self.assertTrue(observed["outside_active_worktree"])
+        self.assertTrue(result["worker_source_verified"])
+
+    def test_tampered_worker_snapshot_is_rejected_before_wrangler(self):
+        from commander_frozen_worker_source import FrozenWorkerError
+        real_build=upload.build_frozen_worker
+        def contaminated(destination, *, install_dependencies):
+            worker=real_build(destination,install_dependencies=install_dependencies)
+            target=worker["app"]/"src/worker.js"
+            target.write_bytes(target.read_bytes()+b"\n// QA bad worker snapshot\n")
+            return worker
+        with patch.object(upload,"require_signed_stage",side_effect=self.verified_stage), \
+             patch.object(upload,"build_frozen_worker",side_effect=contaminated), \
+             patch.object(upload,"run_wrangler_upload") as wrangler:
+            with self.assertRaisesRegex(FrozenWorkerError,"WORKER_SNAPSHOT_SOURCE_CHANGED"):
+                self.call(execute=True)
+            wrangler.assert_not_called()
 
 
 if __name__ == "__main__":
