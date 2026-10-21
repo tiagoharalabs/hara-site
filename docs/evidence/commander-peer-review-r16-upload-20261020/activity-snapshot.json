@@ -1,0 +1,57 @@
+{
+  "schema": "hara.commander.peer-r16-live-activity-snapshot.v1",
+  "observed_at_utc": "2026-10-21T01:53:00Z",
+  "source": "HARA Commander get_activity(window=24h,limit=100)",
+  "summary_24h": {
+    "total_calls": 4525,
+    "completed": 4462,
+    "failed": 60,
+    "cancelled": 3,
+    "success_rate_percent_reported": 98.6,
+    "under_3s_percent_reported": 88.6,
+    "avg_queue_ms": 982.2,
+    "avg_execution_ms": 869.1,
+    "avg_total_ms": 1851.3
+  },
+  "recent_100": {
+    "device_transport_groups": [
+      {
+        "host": "services",
+        "transport": "EVENT_V2",
+        "n": 62,
+        "queue_p50_ms": 498,
+        "queue_p95_ms": 2186,
+        "total_p95_ms": 5065,
+        "failures": 1
+      },
+      {
+        "host": "nucleo-a",
+        "transport": "EVENT_V2",
+        "n": 36,
+        "queue_p50_ms": 488,
+        "queue_p95_ms": 688,
+        "total_p95_ms": 1646,
+        "failures": 0
+      },
+      {
+        "host": "sentinela-d",
+        "transport": "EVENT_V2",
+        "n": 1,
+        "queue_p95_ms": 961,
+        "total_p95_ms": 1595
+      },
+      {
+        "host": "sentinela-c",
+        "transport": "EVENT_V2",
+        "n": 1,
+        "queue_p95_ms": 877,
+        "total_p95_ms": 1591
+      }
+    ]
+  },
+  "limits": [
+    "Recent 100 transactions biased by current audit; not 24h percentile",
+    "Success count includes expected validation failures as failures; availability separate",
+    "No workload benchmark or perf load generated"
+  ]
+}

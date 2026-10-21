@@ -1,0 +1,19 @@
+{
+  "schema": "hara.commander.peer-r16-upload-toctou.v1",
+  "reviewed_head": "b99f97c2f7bf128390c750b89d22991f08443ef8",
+  "checked_at_utc": "2026-10-21T01:56:56.280102+00:00",
+  "signed_control_bundle": "commercial-0.3.43-v4-autoreconnect",
+  "signed_control_source_tree": "2138ef35e0f9bee92888e1bcf7bb5212956170bd",
+  "signed_control_stage_digest": "e3f5ce730a7a640d71c41c062315497d20b6fc292f1188c0885d88d8f6653448",
+  "baseline_status": "VERIFIED_NOT_UPLOADED",
+  "persistent_mutation_detection": "SIGNED_UPLOAD_OUTCOME_UNKNOWN:STAGE_CHANGED",
+  "transient_uploaded_asset_sha256": "4cf3c8f8354594f70f52a9fcc8294b174a696b471def27c0bc5338d96b353df2",
+  "approved_asset_sha256": "a82ad3ad28b43fe89282870aaabb23764632db07f5380a10726ea8d423b3c366",
+  "transient_fake_upload_read_unapproved_bytes": true,
+  "transient_upload_reported_state": "UPLOADED_VERSION_READBACK_REQUIRED",
+  "reproduced": true,
+  "network_requests": 0,
+  "cloud_mutation": false,
+  "production_mutation": false,
+  "caveat": "fake Wrangler reads staged content while another writer briefly alters and restores it; shows local acceptance window, not proof deployed Worker differs"
+}
