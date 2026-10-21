@@ -11,6 +11,15 @@ import * as enrollmentSql from "../src/device-enrollment.mjs";
 
 const APP = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const worker = fs.readFileSync(path.join(APP, "src/worker.js"), "utf8");
+const routeStart = worker.indexOf('if ((url.pathname === "/api/device/enroll" || url.pathname === "/api/device/enroll-intent")');
+const routeEnd = worker.indexOf('if (url.pathname === "/api/device/heartbeat"', routeStart);
+assert(routeStart >= 0 && routeEnd > routeStart, "versioned enrollment route missing");
+const route = worker.slice(routeStart, routeEnd);
+for (const required of ["enforceDeviceEnrollClientRateLimit", "enforceDeviceEnrollTokenRateLimit",
+                        "DEVICE_ENROLLMENT_CLIENT_TOKEN_INVALID", "enrollDevice(env, body)"]) {
+  assert(route.includes(required), `enrollment route guard missing: ${required}`);
+}
+console.log("DEVICE_ENROLL_INTENT_ROUTE_SHARES_RATE_LIMITS=PASS");
 const start = worker.indexOf("async function enrollDevice(");
 const end = worker.indexOf("\nasync function resolveDeviceCredential(", start);
 assert(start >= 0 && end > start);

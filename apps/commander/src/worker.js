@@ -6155,9 +6155,15 @@ export default {
         return await openDeviceEventChannel(env, request);
       }
 
-      if (url.pathname === "/api/device/enroll" && request.method === "POST") {
+      if ((url.pathname === "/api/device/enroll" || url.pathname === "/api/device/enroll-intent")
+          && request.method === "POST") {
         await enforceDeviceEnrollClientRateLimit(request, env);
         const body = await request.json();
+        // A saved candidate installer must not consume a pairing on an older
+        // Worker that ignores the client credential during release rollback.
+        if (url.pathname === "/api/device/enroll-intent" && body.client_device_token == null) {
+          throw new Error("DEVICE_ENROLLMENT_CLIENT_TOKEN_INVALID");
+        }
         await enforceDeviceEnrollTokenRateLimit(body, env);
         return json(await enrollDevice(env, body), 201);
       }
