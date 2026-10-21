@@ -1,0 +1,36 @@
+{
+  "schema": "hara.commander.r16-upload-redgreen.v1",
+  "date_utc": "2026-10-21T02:04:37Z",
+  "old_version": {
+    "commit": "b99f97c2f7bf128390c750b89d22991f08443ef8",
+    "source": "commander_versioned_prod_upload.py from old commit, new tests applied",
+    "test_cases": 10,
+    "test_exit": 1,
+    "test_failures": 2,
+    "test_errors": 1,
+    "summary": [
+      "private snapshot absent",
+      "transient source mutation accepted",
+      "uploader passes original stage"
+    ]
+  },
+  "fixed_version": {
+    "commit": "b83ac65936e7644e74b73c622a505d61d809e504",
+    "source_sha256": "9c4f14f262d6efc949e41acb279c38e5cf0d7987f2c584aeb1eae5898e4fbca6",
+    "test_sha256": "684d5ea70757fdb5b1a50be3e2cc7fbc6ca793787ac677e798dc743f6d80ae6e",
+    "test_cases": 10,
+    "test_exit": 0,
+    "test_failures": 0,
+    "test_errors": 0,
+    "scope": "real upload_version; fake Wrangler; signed historical v4 fixture only; no live upload"
+  },
+  "result": "LOCAL_CODE_FIXED_REGRESSION_GREEN",
+  "not_yet_proven": [
+    "Actual Cloudflare version content readback",
+    "Commercial v5 official RSA signature",
+    "Clean Windows/Linux commercial install",
+    "Production performance SLO"
+  ],
+  "production_mutation": false,
+  "cloud_network_requests": 0
+}

@@ -57,3 +57,11 @@ Comparação histórica R9, com **Sentinela A ainda no relay 0.3.41**: fila de q
 **Aceite antes de lançar:** reduzir e qualificar fila no relay Windows e Event V2 sob tráfego representativo; publicar SLO por dispositivo/transport/ferramenta e relatar erros esperados de usuário separados de indisponibilidade do serviço. Não migrar cliente automaticamente para Event V2 Founder por esse teste, não atualizar Agent em uso e não extrapolar os percentis das últimas 100 operações para toda a janela de 24h.
 
 Evidência `microburst.json` e `microburst-timing.json` junto ao R16, identificadas por intervalo de criação e função; sem payload do cliente, IP ou token.
+
+## R16c — achado de upload CORRIGIDO NO CÓDIGO (não homologado em Cloudflare)
+
+O Codex incorporou `b83ac65936e7644e74b73c622a505d61d809e504`: passa uma **cópia privada conferida** ao Wrangler, não o staging original; antes de aceitar saída 0 verifica snapshot e fonte. O retorno agora especifica `UPLOAD_SUBMITTED_VERSION_READBACK_REQUIRED` e `version_content_verified=false`, sem alegar que a versão do Cloudflare já foi autenticada.
+
+**Teste RED/GREEN independente em clones descartáveis, sem cloud:** os **10 novos testes** do Codex aplicados ao antigo `b99f97c` terminaram **exit 1** (2 falhas e 1 erro: snapshot ausente, uso da pasta original e mutação transitória); no `b83ac65` os **mesmos 10 testes** terminaram **exit 0**. Fonte e testes conferidos por SHA-256. Resultado em `r16-upload-redgreen.json`.
+
+**Novo estado:** R16-TEMPORARY-ASSET-TOCTOU **FIXED_IN_CODE / INDEPENDENT_LOCAL_TEST_PASS**. Não reabrir a implementação. Ainda faltam assinatura oficial v5, prova de upload contra Cloudflare e digest/version ID remoto antes de promoção, publicação com rollback e comprovação de SLO/performance real no canário. A fixture é anterior à execução hospedada e não demonstra entrega PROD.
