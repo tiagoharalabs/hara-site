@@ -41,3 +41,19 @@ Pelo próprio HARA Commander, janela **24h** mais recente: **4.525 chamadas; 4.4
 - `.../README.md` e `.../SHA256SUMS`
 
 O teste deve rodar em **clone isolado do commit b99f97c** que contenha `apps/commander`; no Núcleo o ambiente QA foi `/tmp/hara-commander-r16-upload-20261020`. Não apontar para checkout do Codex, não baixar secrets e não executar `--execute` contra Wrangler. O relatório é orientativo para o Codex que permanece único proprietário dos patches; sua branch não foi modificada. **Release comercial sem assinatura segue HOLD**, com Storage/Observer ainda sem Agent principal.
+
+## R16b — microburst real após Sentinela A migrar para Event V2
+
+Em **21/10/2026 01:59:31–01:59:52 UTC**, usei H.A.R.A. Commander `read_file` (3 linhas de `/etc/os-release` Linux ou `C:\Windows\win.ini`) quatro vezes por host em paralelo, doze chamadas no total. **12/12 PASS, cada resposta com recibo**. Tempo servidor recuperado com `get_activity(window=24h,limit=100)` por combinação de host/ferramenta/janela; 4 eventos encontrados para cada host. Esta é amostra pequena e de concorrência leve, sem escrita nem benchmark de carga.
+
+| Host / versão e transporte | Fila min–máx | Execução min–máx | Total min–máx |
+| --- | ---: | ---: | ---: |
+| **Services 0.3.54 Event V2** | **22–511 ms** | 598–791 ms | 630–1.249 ms |
+| **Sentinela A 0.3.54 Event V2**, pós-cutover R12 | **646–3.924 ms** | 637–697 ms | 1.343–4.569 ms |
+| **HARA_WIN11 0.3.53 OUTBOUND_RELAY** | **2.017–10.298 ms** | 629–673 ms | 2.686–10.971 ms |
+
+Comparação histórica R9, com **Sentinela A ainda no relay 0.3.41**: fila de quatro chamadas **9.069–16.450 ms**, execução ~576–651 ms. A diferença observada pós-cutover é encorajadora, mas **não é antes/depois causal**: condições, janelas, carga, agente e acesso variaram. O Windows relay apresenta novamente cauda maior que Event V2 nesta pequena coleta. A causa principal da latência é a **espera na fila**, já que a execução em todos os hosts foi ~0,6–0,8s.
+
+**Aceite antes de lançar:** reduzir e qualificar fila no relay Windows e Event V2 sob tráfego representativo; publicar SLO por dispositivo/transport/ferramenta e relatar erros esperados de usuário separados de indisponibilidade do serviço. Não migrar cliente automaticamente para Event V2 Founder por esse teste, não atualizar Agent em uso e não extrapolar os percentis das últimas 100 operações para toda a janela de 24h.
+
+Evidência `microburst.json` e `microburst-timing.json` junto ao R16, identificadas por intervalo de criação e função; sem payload do cliente, IP ou token.

@@ -1,0 +1,111 @@
+{
+  "schema": "hara.commander.r16-post-upgrade-microburst.v1",
+  "start_at_utc": "2026-10-21T01:59:31.295Z",
+  "end_at_utc": "2026-10-21T01:59:51.872Z",
+  "n": 12,
+  "hosts": [
+    "sentinela-a",
+    "services",
+    "HARA_WIN11"
+  ],
+  "requests_per_host": 4,
+  "scope": "read_file of tiny OS system file, 12 concurrent MCP reads, no customer data or writes",
+  "outcomes": [
+    {
+      "host": "sentinela-a",
+      "index": 0,
+      "state": "PASS",
+      "lines": 3,
+      "receipt_produced": true,
+      "blocker": null
+    },
+    {
+      "host": "sentinela-a",
+      "index": 1,
+      "state": "PASS",
+      "lines": 3,
+      "receipt_produced": true,
+      "blocker": null
+    },
+    {
+      "host": "sentinela-a",
+      "index": 2,
+      "state": "PASS",
+      "lines": 3,
+      "receipt_produced": true,
+      "blocker": null
+    },
+    {
+      "host": "sentinela-a",
+      "index": 3,
+      "state": "PASS",
+      "lines": 3,
+      "receipt_produced": true,
+      "blocker": null
+    },
+    {
+      "host": "services",
+      "index": 0,
+      "state": "PASS",
+      "lines": 3,
+      "receipt_produced": true,
+      "blocker": null
+    },
+    {
+      "host": "services",
+      "index": 1,
+      "state": "PASS",
+      "lines": 3,
+      "receipt_produced": true,
+      "blocker": null
+    },
+    {
+      "host": "services",
+      "index": 2,
+      "state": "PASS",
+      "lines": 3,
+      "receipt_produced": true,
+      "blocker": null
+    },
+    {
+      "host": "services",
+      "index": 3,
+      "state": "PASS",
+      "lines": 3,
+      "receipt_produced": true,
+      "blocker": null
+    },
+    {
+      "host": "HARA_WIN11",
+      "index": 0,
+      "state": "PASS",
+      "lines": 3,
+      "receipt_produced": true,
+      "blocker": null
+    },
+    {
+      "host": "HARA_WIN11",
+      "index": 1,
+      "state": "PASS",
+      "lines": 3,
+      "receipt_produced": true,
+      "blocker": null
+    },
+    {
+      "host": "HARA_WIN11",
+      "index": 2,
+      "state": "PASS",
+      "lines": 3,
+      "receipt_produced": true,
+      "blocker": null
+    },
+    {
+      "host": "HARA_WIN11",
+      "index": 3,
+      "state": "PASS",
+      "lines": 3,
+      "receipt_produced": true,
+      "blocker": null
+    }
+  ]
+}
