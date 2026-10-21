@@ -1,0 +1,95 @@
+{
+  "schema": "hara.commander.observer-storage-public-recovery.r21.v1",
+  "observed_at_utc": "2026-10-21T18:08:38Z",
+  "method": "HARA Commander tools; Services SSH only read-only; installed device registry/ping/info; HTTP GET",
+  "hosts": [
+    {
+      "host": "observer",
+      "os": "Ubuntu 22.04.5 LTS",
+      "arch": "aarch64",
+      "agent_version": "0.3.43",
+      "online": true,
+      "ping_pass": true,
+      "registered_device_matches_user_log": true,
+      "approval_mode": "ASK_EVERY_ACTION",
+      "transport": "OUTBOUND_RELAY",
+      "tools": 31,
+      "read_file_pass": true,
+      "agent_systemd": "active_enabled",
+      "config_mode": "0600",
+      "installed_agent_sha256": "3e0db700dd568a85e23212a5400f1d256546fef77b7f59f574ceed29e04c15b7"
+    },
+    {
+      "host": "storage",
+      "os": "Fedora 43 Server",
+      "arch": "x86_64",
+      "agent_version": "0.3.43",
+      "online": true,
+      "ping_pass": true,
+      "approval_mode": "ASK_EVERY_ACTION",
+      "transport": "OUTBOUND_RELAY",
+      "tools": 31,
+      "read_file_pass": true,
+      "agent_systemd": "active_enabled",
+      "config_mode": "0600",
+      "installed_agent_sha256": "3e0db700dd568a85e23212a5400f1d256546fef77b7f59f574ceed29e04c15b7"
+    }
+  ],
+  "public_release": {
+    "gate": "PASS",
+    "manifest_version": "0.3.43",
+    "kid": "commander-release-v2",
+    "manifest_sha256": "53c0cbc2b074b9b85b81454c2bce286a8af2fa981e79f3c9b1719c5697880229",
+    "signature_sha256": "8ca0fdd9dc27cd9bf1136ff435893ed4cdb68f0b6a71e00ea1aaa074f24e7d0c",
+    "assets_sha256": {
+      "agent/linux.py": "3e0db700dd568a85e23212a5400f1d256546fef77b7f59f574ceed29e04c15b7",
+      "agent/windows.ps1": "d507a6f91a635b025ef4f06cbd758a03c7da6f3410aadec9a3d76c28f904c6fb",
+      "install/linux.sh": "699cfcccbfd345184329870632e6b9492f359bac68ba19df0c9b1c2a0cdc4463",
+      "install/windows.ps1": "d0f6d7e3a79a87e439a6275ebf60b2918ad5ccdbc28666ce18288644f3d595b9"
+    },
+    "observer_and_storage_http_sha_identical": true,
+    "cdn_cache": "HIT",
+    "errors": []
+  },
+  "comparison_r19": {
+    "r19_manifest_sha256": "2ec2b3ccddc0fbc5edb577c926315358dbcb558812d3492ec9a68894038ff381",
+    "r19_signature_sha256": "6286b3ce8c453602b4b17ffa0b9ea547239cf8b5341cdc10aaf9e09aa56addcb",
+    "matching_assets": 1,
+    "total_assets": 4,
+    "mismatching_assets": [
+      "agent/linux.py",
+      "install/linux.sh",
+      "install/windows.ps1"
+    ],
+    "conclusion": "Signed valid public release differs from reviewed R19 build despite identical 0.3.43 version label; requires provenance reconciliation, not proof of tampering"
+  },
+  "fleet_reference": {
+    "founder_linux_agents": 7,
+    "founder_version": "0.3.54",
+    "windows_registered_version": "0.3.53",
+    "windows_last_state": "OFFLINE",
+    "commercial_new_hosts": 2,
+    "all_still_single_version": false
+  },
+  "performance_observations": {
+    "transport": "OUTBOUND_RELAY",
+    "queue_examples_in_ms": [
+      2009,
+      7154,
+      8757,
+      10703,
+      15699,
+      18591
+    ],
+    "execution_typical_ms_approx": 600,
+    "note": "Recent provider activity biased and not controlled benchmark"
+  },
+  "safety": {
+    "private_keys_read": false,
+    "customer_tokens_read": false,
+    "agent_modified": false,
+    "host_rebooted": false,
+    "production_changed": false,
+    "interactive_operator_session_preserved": true
+  }
+}
