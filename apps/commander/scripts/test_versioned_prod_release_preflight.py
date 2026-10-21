@@ -6,6 +6,7 @@ from pathlib import Path
 import contextlib
 import io
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -31,6 +32,23 @@ class VersionedPromotionReleaseTests(unittest.TestCase):
     def test_exact_signed_stage_is_accepted_against_its_approved_bundle(self):
         report = require_signed_stage(self.staged, expected_bundle=self.rollback_bundle)
         self.assertEqual(report["agent_version"], "0.3.43")
+
+    def test_v5_ui_tree_is_bound_to_frozen_reviewed_source(self):
+        frozen_tree = subprocess.check_output(
+            ["git", "rev-parse", "a13b4d2eec16be7a17bcab1c9c5ad23364aba3b4:apps/commander/public"],
+            cwd=stage_module.ROOT, text=True,
+        ).strip()
+        self.assertEqual(stage_module.FROZEN_V5_PUBLIC_TREE, frozen_tree)
+        stage_module.require_frozen_v5_source(BUNDLES[CURRENT_RELEASE], frozen_tree)
+        with self.assertRaisesRegex(RuntimeError, "SIGNED_STAGE_V5_SOURCE_TREE_CHANGED"):
+            stage_module.require_frozen_v5_source(BUNDLES[CURRENT_RELEASE], "0" * 40)
+        fixture = self.root / CURRENT_RELEASE
+        shutil.copytree(self.rollback_bundle, fixture)
+        with patch.dict(stage_module.BUNDLES, {CURRENT_RELEASE: fixture}), \
+             patch.object(stage_module, "require_current_linux_regressions"), \
+             patch.object(stage_module, "public_source_tree", return_value="0" * 40):
+            with self.assertRaisesRegex(RuntimeError, "SIGNED_STAGE_V5_SOURCE_TREE_CHANGED"):
+                require_signed_stage(self.staged)
 
     def test_legacy_signed_stage_is_not_current_promotion_candidate(self):
         with self.assertRaisesRegex(RuntimeError, "AWAITING_OFFICIAL_SIGNATURE"):

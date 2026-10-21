@@ -22,6 +22,7 @@ ROOT = Path(__file__).resolve().parents[3]
 APP = ROOT / 'apps/commander'
 PUBLIC = APP / 'public'
 CURRENT_RELEASE = 'commercial-0.3.43-v5-terminal-drain'
+FROZEN_V5_PUBLIC_TREE = '2138ef35e0f9bee92888e1bcf7bb5212956170bd'
 ROLLBACK_RELEASE = 'commercial-0.3.43-v4-autoreconnect'
 HISTORICAL_RELEASE = 'commercial-0.3.43-v3'
 BUNDLES = {
@@ -55,6 +56,11 @@ def public_source_tree() -> str:
     return subprocess.check_output(
         ['git', 'rev-parse', 'HEAD:apps/commander/public'], cwd=ROOT, text=True,
     ).strip()
+
+
+def require_frozen_v5_source(bundle: Path, source_tree: str) -> None:
+    if bundle.name == CURRENT_RELEASE and source_tree != FROZEN_V5_PUBLIC_TREE:
+        raise RuntimeError('SIGNED_STAGE_V5_SOURCE_TREE_CHANGED')
 
 
 def committed_public_paths(source_tree: str) -> set[str]:
@@ -113,6 +119,7 @@ def _inspect_stage(output: Path, bundle: Path, release_metadata: dict,
             or output.resolve() != output.absolute()):
         raise RuntimeError('SIGNED_STAGE_UNSAFE_SOURCE:root')
     source_tree = public_source_tree()
+    require_frozen_v5_source(bundle, source_tree)
     expected_paths = committed_public_paths(source_tree)
     staged_paths = {
         path.relative_to(output).as_posix()
@@ -160,6 +167,7 @@ def stage(output: Path, bundle: Path = BUNDLES[CURRENT_RELEASE], *, rollback_onl
     if output.parent.resolve() != output.parent.absolute():
         raise RuntimeError('SIGNED_STAGE_DESTINATION_PARENT_SYMLINK')
     source_tree = public_source_tree()
+    require_frozen_v5_source(bundle, source_tree)
     listing = committed_public_paths(source_tree)
     originals = []
     for relative in sorted(listing):
