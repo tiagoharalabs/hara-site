@@ -1,0 +1,79 @@
+{
+  "schema": "hara.commander-r11-release-preenroll-evidence.v1",
+  "observed_at_utc": "2026-10-21T00:10:24Z",
+  "branch": "codex/commander-prelaunch-fixes-20261020",
+  "live_public_get_only": {
+    "gate": "apps/commander/scripts/verify_live_release_integrity.py --live",
+    "exit_code": 2,
+    "state": "HOLD",
+    "manifest_agent_version": "0.3.41",
+    "manifest_sha256": "7e42f25404e414b74b375ccb47b7ed8ba7d8c572dc45db994d89012207f08f7c",
+    "signature_kid": "commander-release-v1",
+    "signature_valid_for_served_linux_installer_pin": false,
+    "signature_valid_for_served_windows_installer_pin": true,
+    "signature_valid_for_trusted_v2_key": false,
+    "served_asset_hashes_match_manifest": 0,
+    "served_asset_count": 4,
+    "served_sha256": {
+      "agent/linux.py": "1572d70e60fb299edb262a8a817bd7aa1740a4c2dda3635d50beb2f3476ffe3b",
+      "agent/windows.ps1": "d507a6f91a635b025ef4f06cbd758a03c7da6f3410aadec9a3d76c28f904c6fb",
+      "install/linux.sh": "699cfcccbfd345184329870632e6b9492f359bac68ba19df0c9b1c2a0cdc4463",
+      "install/windows.ps1": "6ba5c29e6d3a604750331d7699455ad609b4b0a8e191c03ad10503f7a5161c3c"
+    },
+    "installer_executed": false,
+    "production_mutation": false
+  },
+  "linux_mock_before_after": {
+    "script": "apps/commander/scripts/test_linux_r11_pre_enroll.py",
+    "exit_code": 0,
+    "old_installer_post_before_release_validation": 1,
+    "candidate_post_on_kid_mismatch": 0,
+    "candidate_post_on_linux_digest_mismatch": 0,
+    "candidate_post_on_windows_digest_mismatch": 0,
+    "candidate_post_on_agent_version_mismatch": 0,
+    "candidate_post_on_valid_bundle": 1,
+    "valid_bundle_post_target": "local_mock_returns_503",
+    "real_device_registered": false
+  },
+  "windows_vm_isolated_qa": {
+    "candidate_installer_sha256": "122420f45325c9251466081f73c0881329026afd51f3bc8453d34db0262eb67e",
+    "probe_sha256": "64f0f2ca7ba59f57191515271ad0da9a26046ac7a739cec047144c472a04365e",
+    "probe_transport_state": "PASS",
+    "probe_process_exit_code": 0,
+    "source_sha256_read_back_on_vm": "122420f45325c9251466081f73c0881329026afd51f3bc8453d34db0262eb67e",
+    "source_parser_errors": 0,
+    "probe_checks": [
+      "VALID_BUNDLE_BEFORE_ENROLL",
+      "LINUX_ASSET_TAMPER_DENIED",
+      "AGENT_VERSION_MISMATCH_DENIED",
+      "SIGNATURE_KID_MISMATCH_DENIED"
+    ],
+    "probe_network_or_enroll": false,
+    "installed_agent_version_after": "0.3.53",
+    "installed_agent_ping_after": "PASS",
+    "installed_agent_managed_sessions_after": 0
+  },
+  "unsigned_commercial_source_candidate": {
+    "path": "/tmp/commander-prelaunch-source-candidate-20261021-0010z",
+    "linux_agent_version": "0.3.43",
+    "windows_agent_version": "0.3.43",
+    "linux_installer_sha256": "76be66890113dee0dcc48493ab99da14333abe1f7857908c182b57e45d7b0a6b",
+    "windows_installer_sha256": "122420f45325c9251466081f73c0881329026afd51f3bc8453d34db0262eb67e",
+    "manifest_sha256": "4ea40b082ba9904dc768de85d86c45b297b113dee6a463ef7c5251c8bcc05052",
+    "signature_present": false,
+    "windows_055_r10_source_included": false,
+    "rollback_bundle": "commercial-0.3.43-v4-autoreconnect",
+    "rollback_known_terminal_drain_regression": true
+  },
+  "offline_gate": {
+    "checked": 151,
+    "passed": 150,
+    "failed": 1,
+    "exit_code": 1,
+    "only_failure": "stage_signed_commercial_assets.py",
+    "failure_reason": "SIGNED_STAGE_CURRENT_RELEASE_AWAITING_OFFICIAL_SIGNATURE",
+    "gates_weakened": false
+  },
+  "dev_hosted_tested": false,
+  "production_published": false
+}
