@@ -61,6 +61,8 @@ PYTHON = (
     "validate_signed_commercial_v2_bundle.py",
     "validate_signed_commercial_v3_bundle.py",
     "test_signed_distribution_stage.py",
+    "test_versioned_prod_release_preflight.py",
+    "validate_versioned_prod_promote.py",
     "build_commander_commercial_terminal_drain_candidate.py",
     "stage_signed_commercial_assets.py",
     "commander_linux_clean_lifecycle.py",

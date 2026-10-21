@@ -6,6 +6,8 @@ import json
 import subprocess
 from pathlib import Path
 
+from validate_prod_runtime_drift import asset_sources
+
 ROOT = Path(__file__).resolve().parents[3]
 APP = ROOT / "apps/commander"
 PUBLIC = APP / "public"
@@ -39,7 +41,6 @@ WINDOWS_BOOTSTRAP = (
     "$env:HARA_COMMANDER_APPROVAL_MODE=$haraPrevApproval }"
 )
 SUMS_PATH = PUBLIC / "release/SHA256SUMS"
-DRIFT = (APP / "scripts/validate_prod_runtime_drift.py").read_text(encoding="utf-8")
 
 EXPECTED = (
     "agent/linux.py",
@@ -170,6 +171,7 @@ def main() -> int:
     need("AGENT_VERSION_MANIFEST_MISMATCH" in WINDOWS, "WINDOWS_VERSION_ENFORCEMENT")
     need("Assert-AgentIntegrity" in WINDOWS, "WINDOWS_INTEGRITY_FUNCTION")
 
+    runtime_paths = asset_sources()
     for public_path in (
         "/install/linux.sh",
         "/install/windows.ps1",
@@ -180,7 +182,8 @@ def main() -> int:
         "/release/release-signing-public.jwk",
         "/release/SHA256SUMS",
     ):
-        need(public_path in DRIFT, "RUNTIME_DRIFT_" + public_path.upper().replace("/", "_").replace(".", "_"))
+        need(public_path in runtime_paths and runtime_paths[public_path].is_file(),
+             "RUNTIME_DRIFT_" + public_path.upper().replace("/", "_").replace(".", "_"))
 
     need("Assert-AgentSelfTest" in WINDOWS, "WINDOWS_SELF_TEST_FUNCTION")
     need(WINDOWS.count("Assert-AgentSelfTest $") >= 2, "WINDOWS_SELF_TEST_INSTALL_AND_UPDATE")

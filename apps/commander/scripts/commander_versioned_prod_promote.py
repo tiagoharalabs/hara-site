@@ -6,12 +6,15 @@ import re
 import subprocess
 from pathlib import Path
 
+from stage_signed_commercial_assets import require_signed_stage
+
 ROOT = Path(__file__).resolve().parents[3]
 APP = ROOT / "apps" / "commander"
 WRANGLER = ROOT / "node_modules" / ".bin" / "wrangler"
 CONFIG = APP / "wrangler.jsonc"
 READBACK = APP / "scripts" / "commander_prod_deployment_readback.py"
 RUNTIME_DRIFT = APP / "scripts" / "validate_prod_runtime_drift.py"
+LIVE_RELEASE = APP / "scripts" / "verify_live_release_integrity.py"
 UUID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.I)
 REQUIRED_VERSION_SECRETS = {
     "AUTH_CLIENT_SECRET",
@@ -54,6 +57,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--version", required=True)
     parser.add_argument("--rollback", required=True)
+    parser.add_argument("--stage", required=True, type=Path)
     parser.add_argument("--message", required=True)
     parser.add_argument("--execute", action="store_true")
     args = parser.parse_args()
@@ -63,6 +67,7 @@ def main() -> int:
     if args.version == args.rollback:
         raise SystemExit("VERSION_AND_ROLLBACK_MUST_DIFFER")
 
+    release = require_signed_stage(args.stage)
     require_current_rollback(args.rollback)
     found = require_version_secrets(args.version)
 
@@ -70,6 +75,9 @@ def main() -> int:
     print("COMMANDER_VERSIONED_PROMOTE_TARGET=" + args.version)
     print("COMMANDER_VERSIONED_PROMOTE_ROLLBACK=" + args.rollback)
     print("COMMANDER_VERSIONED_PROMOTE_REQUIRED_SECRETS=PASS")
+    print("COMMANDER_VERSIONED_PROMOTE_SIGNED_STAGE=PASS")
+    print("COMMANDER_VERSIONED_PROMOTE_AGENT_VERSION=" + release["agent_version"])
+    print("COMMANDER_VERSIONED_PROMOTE_MANIFEST_SHA256=" + release["manifest_sha256"])
     print("COMMANDER_VERSIONED_PROMOTE_TRIGGER_SYNC=REQUIRED")
 
     if not args.execute:
@@ -89,12 +97,14 @@ def main() -> int:
         "python3", str(READBACK),
         "--expect-version", args.version,
     ])
-    run(["python3", str(RUNTIME_DRIFT), "--expect-assets", "current"])
+    run(["python3", str(RUNTIME_DRIFT), "--expect-assets", "current", "--stage", str(args.stage)])
+    run(["python3", str(LIVE_RELEASE), "--live"])
 
     print("COMMANDER_VERSIONED_PROMOTE_WORKER=PASS")
     print("COMMANDER_VERSIONED_PROMOTE_TRIGGERS=PASS")
     print("COMMANDER_VERSIONED_PROMOTE_READBACK=PASS")
     print("COMMANDER_VERSIONED_PROMOTE_RUNTIME_ASSETS=PASS")
+    print("COMMANDER_VERSIONED_PROMOTE_LIVE_RELEASE=PASS")
     print("COMMANDER_VERSIONED_PROMOTE=PASS")
     return 0
 

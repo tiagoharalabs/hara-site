@@ -33,6 +33,13 @@ RELEASE_FILES = (
     'release/agent-manifest.json', 'release/agent-manifest.sig.json',
     'release/release-signing-public.jwk', 'release/SHA256SUMS',
 )
+LINUX_RELEASE_REGRESSIONS = (
+    'validate_process_terminal_drain.py', 'validate_process_continuous_drain.py',
+    'validate_process_oneshot_pagination.py', 'validate_process_session_policy.py',
+    'validate_result_delivery_outbox.py', 'validate_result_envelope_budget.py',
+    'validate_file_cas_atomicity.py', 'validate_relay_burst_dispatch.py',
+    'validate_mount_aware_resources.py',
+)
 
 
 def verified_file(root: Path, relative: str) -> Path:
@@ -51,23 +58,55 @@ def validate_bundle(bundle: Path) -> dict:
     return verify_bundle(bundle)
 
 
+def require_current_linux_regressions(bundle: Path) -> None:
+    if bundle.name != CURRENT_RELEASE:
+        return
+    for script in LINUX_RELEASE_REGRESSIONS:
+        proc = subprocess.run(
+            ['python3', '-B', str(APP / 'scripts' / script),
+             '--source', str(bundle / 'agent/linux.py')],
+            cwd=ROOT, capture_output=True, text=True, timeout=20, check=False,
+        )
+        if proc.returncode:
+            raise RuntimeError('SIGNED_STAGE_LINUX_PROCESS_DRAIN_FAILED:' + script)
+
+
+def require_signed_stage(output: Path, *, expected_bundle: Path | None = None) -> dict:
+    """Bind promotion/readback to the exact approved, signed asset set."""
+    bundle = expected_bundle or BUNDLES[CURRENT_RELEASE]
+    release_metadata = validate_bundle(bundle)
+    require_current_linux_regressions(bundle)
+    if (not output.is_absolute() or output.is_symlink() or not output.is_dir()
+            or output.resolve() != output.absolute()):
+        raise RuntimeError('SIGNED_STAGE_UNSAFE_SOURCE:root')
+    prefix = 'apps/commander/public/'
+    tracked = subprocess.check_output(
+        ['git', 'ls-files', '-z', '--', prefix], cwd=ROOT,
+    ).decode().split('\0')
+    expected_paths = {name[len(prefix):] for name in tracked if name.startswith(prefix)}
+    staged_paths = {
+        path.relative_to(output).as_posix()
+        for path in output.rglob('*') if path.is_file() or path.is_symlink()
+    }
+    if staged_paths != expected_paths:
+        raise RuntimeError('SIGNED_STAGE_FILESET_DRIFT')
+    for relative in sorted(expected_paths):
+        staged = verified_file(output, relative)
+        source = verified_file(bundle if relative in RELEASE_FILES else PUBLIC, relative)
+        if staged.read_bytes() != source.read_bytes():
+            code = ('SIGNED_STAGE_RELEASE_DRIFT:' if relative in RELEASE_FILES
+                    else 'SIGNED_STAGE_UI_CHANGED:')
+            raise RuntimeError(code + relative)
+    if verify_bundle(output) != release_metadata:
+        raise RuntimeError('SIGNED_STAGE_RELEASE_VERIFICATION_CHANGED')
+    return release_metadata
+
+
 def stage(output: Path, bundle: Path = BUNDLES[CURRENT_RELEASE], *, rollback_only: bool = False) -> dict:
     release_metadata = validate_bundle(bundle)
     if bundle.name != CURRENT_RELEASE and not rollback_only:
         raise RuntimeError('SIGNED_STAGE_HISTORICAL_RELEASE_REQUIRES_ROLLBACK_ONLY')
-    if bundle.name == CURRENT_RELEASE:
-        for script in ('validate_process_terminal_drain.py', 'validate_process_continuous_drain.py',
-                       'validate_process_oneshot_pagination.py', 'validate_process_session_policy.py',
-                       'validate_result_delivery_outbox.py', 'validate_result_envelope_budget.py',
-                       'validate_file_cas_atomicity.py', 'validate_relay_burst_dispatch.py',
-                       'validate_mount_aware_resources.py'):
-            proc = subprocess.run(
-                ['python3', '-B', str(APP / 'scripts' / script),
-                 '--source', str(bundle / 'agent/linux.py')],
-                cwd=ROOT, capture_output=True, text=True, timeout=20, check=False,
-            )
-            if proc.returncode:
-                raise RuntimeError('SIGNED_STAGE_LINUX_PROCESS_DRAIN_FAILED:' + script)
+    require_current_linux_regressions(bundle)
     config = json.loads((APP / 'wrangler.jsonc').read_text())
     if config['assets']['directory'] != 'signed-assets-stage-required':
         raise RuntimeError('SIGNED_STAGE_RAW_PUBLIC_CONFIG_DENIED')

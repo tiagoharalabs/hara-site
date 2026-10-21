@@ -8,27 +8,34 @@ import re
 from pathlib import Path
 from urllib.request import Request, urlopen
 
+from stage_signed_commercial_assets import require_signed_stage
+
 ROOT = Path(__file__).resolve().parents[3]
 PUBLIC = ROOT / "apps/commander/public"
+# Historical comparison baseline used by older read-only checks. Promotion
+# always supplies --stage and compares the exact approved signed candidate.
 SIGNED = ROOT / "apps/commander/release-bundles/commercial-0.3.43-v3"
 ORIGIN = "https://commander.haralabs.com.br"
 
-ASSETS = {
-    "/": PUBLIC / "index.html",
-    "/app.js": PUBLIC / "app.js",
-    "/styles.css": PUBLIC / "styles.css",
-    # Current PROD must serve the current signed v3 commercial hotfix, not unsigned HEAD
-    # Agent/installer sources and not the historic v1 public manifest.
-    "/install/linux.sh": SIGNED / "install/linux.sh",
-    "/install/windows.ps1": SIGNED / "install/windows.ps1",
-    "/agent/linux.py": SIGNED / "agent/linux.py",
-    "/agent/windows.ps1": SIGNED / "agent/windows.ps1",
-    "/release/agent-manifest.json": SIGNED / "release/agent-manifest.json",
-    "/release/agent-manifest.sig.json": SIGNED / "release/agent-manifest.sig.json",
-    "/release/release-signing-public.jwk": SIGNED / "release/release-signing-public.jwk",
-    "/release/SHA256SUMS": SIGNED / "release/SHA256SUMS",
-    "/assets/hara-commander-royal.webp": PUBLIC / "assets/hara-commander-royal.webp",
-}
+SIGNED_PATHS = (
+    "install/linux.sh", "install/windows.ps1", "agent/linux.py", "agent/windows.ps1",
+    "release/agent-manifest.json", "release/agent-manifest.sig.json",
+    "release/release-signing-public.jwk", "release/SHA256SUMS",
+)
+
+
+def asset_sources(stage: Path | None = None, *, expected_bundle: Path | None = None) -> dict[str, Path]:
+    if stage is not None:
+        require_signed_stage(stage, expected_bundle=expected_bundle)
+    signed = stage if stage is not None else SIGNED
+    sources = {
+        "/": (stage or PUBLIC) / "index.html",
+        "/app.js": (stage or PUBLIC) / "app.js",
+        "/styles.css": (stage or PUBLIC) / "styles.css",
+        "/assets/hara-commander-royal.webp": (stage or PUBLIC) / "assets/hara-commander-royal.webp",
+    }
+    sources.update({"/" + relative: signed / relative for relative in SIGNED_PATHS})
+    return sources
 
 def sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
@@ -65,10 +72,12 @@ def main() -> int:
         choices=("stale", "mixed", "current", "any"),
         default="any",
     )
+    parser.add_argument("--stage", type=Path,
+                        help="exact approved signed stage used for the uploaded Worker version")
     args = parser.parse_args()
 
     rows = []
-    for path, source_path in ASSETS.items():
+    for path, source_path in asset_sources(args.stage).items():
         live, status, content_type = fetch(path)
         source = source_path.read_bytes()
         if status != 200:
@@ -105,6 +114,7 @@ def main() -> int:
 
     report = {
         "origin": ORIGIN,
+        "expected_stage": str(args.stage) if args.stage else None,
         "asset_state": asset_state,
         "assets": rows,
         "health": health,
