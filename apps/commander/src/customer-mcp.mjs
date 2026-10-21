@@ -3,6 +3,7 @@ import {
   createMcpHandler,
 } from "@modelcontextprotocol/server";
 import { z } from "zod";
+import { approvedPublicMcpErrorCode } from "./public-mcp-error-codes.mjs";
 
 export const CUSTOMER_MCP_TOOLS = Object.freeze([
   "hara.devices.list",
@@ -214,12 +215,13 @@ function publicToolError(error, args = undefined) {
 
   const operational = operationalToolError(code, args);
   if (operational) return operational;
+  const publicCode = approvedPublicMcpErrorCode(code);
 
   return {
     isError: true,
     content: [{
       type: "text",
-      text: JSON.stringify({ ok: false, code: code || "COMMANDER_MCP_TOOL_FAILED" }),
+      text: JSON.stringify({ ok: false, code: publicCode }),
     }],
   };
 }
