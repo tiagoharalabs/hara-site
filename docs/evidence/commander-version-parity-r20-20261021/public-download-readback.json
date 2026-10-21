@@ -1,0 +1,28 @@
+{
+  "schema": "hara.commander.r20.public-download-readback.v1",
+  "at_utc": "2026-10-21T17:11:19.167377+00:00",
+  "state": "HOLD",
+  "verifier_exit": 2,
+  "public_agent_version": "0.3.41",
+  "public_kid": "commander-release-v2",
+  "asset_checks": {
+    "agent/linux.py": false,
+    "agent/windows.ps1": false,
+    "install/linux.sh": false,
+    "install/windows.ps1": false
+  },
+  "error_codes": [
+    "SERVED_INSTALLER_UNTRUSTED_PIN:WINDOWS",
+    "RELEASE_SIGNATURE_KID_MISMATCH:WINDOWS",
+    "RELEASE_MANIFEST_DIGEST_MISMATCH",
+    "RELEASE_SIGNATURE_NOT_VALID_FOR_TRUSTED_KEY",
+    "RELEASE_ASSET_DIGEST_MISMATCH:agent/linux.py",
+    "RELEASE_ASSET_DIGEST_MISMATCH:agent/windows.ps1",
+    "RELEASE_ASSET_DIGEST_MISMATCH:install/linux.sh",
+    "RELEASE_ASSET_DIGEST_MISMATCH:install/windows.ps1",
+    "RELEASE_LINUX_AGENT_VERSION_MISMATCH",
+    "RELEASE_WINDOWS_AGENT_VERSION_MISMATCH"
+  ],
+  "installer_executed": false,
+  "production_mutation": false
+}

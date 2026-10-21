@@ -1,0 +1,47 @@
+{
+  "blockers": [
+    "LINUX_FOUNDER_RUNNING_TARGET_RELEASE",
+    "RUNNING_LINUX_LOOP_BUILD_EQUIVALENCE_APPROVED",
+    "WINDOWS_VM_ONLINE_AND_TARGET_INSTALLED",
+    "LATEST_LINUX_AND_WINDOWS_INSTALLERS_SIGNED_TO_SAME_TARGET",
+    "WINDOWS_LATEST_SIGNED_AND_RUNTIME_ACCEPTED",
+    "LINUX_TARGET_COMMERCIAL_SOURCE_PROVEN",
+    "CROSS_PLATFORM_CAPABILITY_PARITY_QUALIFIED",
+    "PUBLIC_DOWNLOADS_PASS_SIGNED_TARGET_READBACK",
+    "ALL_HOSTS_UNIFIED_RELEASE_AND_BUILD_QUALIFIED"
+  ],
+  "checks": {
+    "ALL_HOSTS_UNIFIED_RELEASE_AND_BUILD_QUALIFIED": false,
+    "COMMERCIAL_BUNDLE_CRYPTOGRAPHICALLY_VALID": true,
+    "CROSS_PLATFORM_CAPABILITY_PARITY_QUALIFIED": false,
+    "LATEST_LINUX_AND_WINDOWS_INSTALLERS_SIGNED_TO_SAME_TARGET": false,
+    "LINUX_FOUNDER_RUNNING_TARGET_RELEASE": false,
+    "LINUX_TARGET_COMMERCIAL_SOURCE_PROVEN": false,
+    "PUBLIC_DOWNLOADS_PASS_SIGNED_TARGET_READBACK": false,
+    "RELEASE_TARGET_EXPLICITLY_SELECTED": true,
+    "RUNNING_LINUX_LOOP_BUILD_EQUIVALENCE_APPROVED": false,
+    "SEVEN_LINUX_REAL_RUNTIME_PASS": true,
+    "SIGNED_RELEASE_INVENTORY_MATCHES_BYTES": true,
+    "WINDOWS_CANDIDATE_SOURCE_HASH_INTACT": true,
+    "WINDOWS_LATEST_SIGNED_AND_RUNTIME_ACCEPTED": false,
+    "WINDOWS_LATEST_SOURCE_MATCHES_TARGET": true,
+    "WINDOWS_VM_ONLINE_AND_TARGET_INSTALLED": false
+  },
+  "fleet_build_uniform_linux": false,
+  "fleet_semver_uniform_linux": true,
+  "linux_declared_capabilities": 31,
+  "mutation_performed": false,
+  "network_access": false,
+  "public_distribution_updated": false,
+  "schema": "hara.commander.release-train-parity-gate.r20.v1",
+  "state": "HOLD",
+  "target_release_proposed_not_approved": "0.3.55",
+  "versions_observed": {
+    "commercial_signed": "0.3.43",
+    "linux_runtime": "0.3.54",
+    "public_download": "0.3.41",
+    "windows_candidate": "0.3.55",
+    "windows_registry": "0.3.53"
+  },
+  "windows_candidate_declared_capabilities": 22
+}

@@ -1,0 +1,38 @@
+{
+  "schema": "hara.commander.release-capability-matrix.r20.v1",
+  "source_worker_sha256": "df910bb6dfa5c710250232079be2dd4b23e8bec731a31a6ae257fd4968e0bd71",
+  "server_contract": "SOURCE_ONLY_NOT_RUNTIME_W11",
+  "linux_054": {
+    "count": 31
+  },
+  "windows_053": {
+    "count": 19
+  },
+  "windows_055": {
+    "count": 22
+  },
+  "common_linux_win055": 21,
+  "missing_on_win055": [
+    "hara.files.copy",
+    "hara.files.delete",
+    "hara.files.diff",
+    "hara.files.hash",
+    "hara.files.move",
+    "hara.files.preimages.list",
+    "hara.files.rollback",
+    "hara.system.resources",
+    "hara.system.uptime",
+    "hara.workspace.inspect"
+  ],
+  "only_on_win055": [
+    "hara.functions.invoke"
+  ],
+  "new_win055_tools": [
+    "hara.files.edit",
+    "hara.files.read_many",
+    "hara.files.search"
+  ],
+  "release_parity_complete": false,
+  "network_requests": 0,
+  "customer_device_mutated": false
+}
