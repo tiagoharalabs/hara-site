@@ -1,0 +1,88 @@
+{
+  "schema": "hara.commander.handoff.r12.v1",
+  "snapshot_date": "2026-10-23",
+  "source": "services plus storage, OpenAI Platform recent review, GitHub #310, VM-owner handoff",
+  "product": "Hara Commander",
+  "ui_prod": {
+    "state": "PASS",
+    "cloudflare_version": "dd25fde5-d8d2-4a70-af80-5f58dce8cd8d",
+    "percent": 100,
+    "rollback_version": "20540b42-c5d2-4a90-98e9-01500368d7f1",
+    "release_commit": "894890b9a7115f18b5ac5c0b92617e946e791bcf",
+    "closeout_commit": "583b60f6f68ecd9766d3b99d6bf337296d1d860d",
+    "login_settings_r11": true,
+    "success_receipt": "/home/sartorius/.local/share/hara/codex-inbox/HARA_COMMANDER_LOGIN_SETTINGS_R11_PROD_RECEIPT_20261023.json"
+  },
+  "device_revoke": {
+    "state": "TESTED_NOT_DEPLOYED",
+    "test_count": 5,
+    "owner_branch": "local/commander-devices-revoke-history-r10-20261023",
+    "integration_branch": "local/commander-revoke-history-r12-20261023",
+    "integration_conflict": "UU apps/commander/public/index.html",
+    "legacy_device_name": "HARA_WIN11",
+    "legacy_device_id_suffix": "e8b48d00",
+    "actual_revocation_performed": false,
+    "clear_history": "browser_local_only_reversible"
+  },
+  "commercial_release": {
+    "state": "HOLD",
+    "issue": 310,
+    "windows_acceptance_issue": 240,
+    "public_manifest_version": "0.3.41",
+    "public_linux_agent": "0.3.43",
+    "public_windows_agent": "0.3.52",
+    "mismatching_files": 4,
+    "files_total": 4,
+    "candidate_version": "0.3.56",
+    "candidate_signed": false,
+    "candidate_published": false,
+    "candidate_source_branch": "local/commander-commercial-056-candidate-20261023",
+    "candidate_manifest_sha256": "ee485c46414729a51ea5b8719b9bd6a4d572995dd85397ee0c20de22b1db4595",
+    "blockers": [
+      "windows_native_distribution_executionpolicy",
+      "custodied_signer_manifest",
+      "real_linux_windows_e2e",
+      "stage_and_public_readback"
+    ]
+  },
+  "review_vms": {
+    "owner": "other_front",
+    "host": "sentinela-b",
+    "windows": "hara-review-win11",
+    "linux": "hara-review-linux",
+    "linux_os": "Ubuntu Server 24.04.5",
+    "reported_on": true,
+    "reported_autostart": true,
+    "review_agents_paired_proven": false
+  },
+  "openai": {
+    "state": "DRAFT_NOT_SUBMITTED",
+    "draft_version": "0.2.0",
+    "domain_verified": true,
+    "oauth": true,
+    "tools": 33,
+    "review_info_complete": false,
+    "reviewer_tenant": "HARA Review",
+    "reviewer_user": "openai-reviewer@haralabs.com.br",
+    "login_url": "https://commander.haralabs.com.br/auth/login",
+    "positive_cases": 5,
+    "negative_cases": 3,
+    "video_validated": false,
+    "password_recorded_here": false
+  },
+  "governance": {
+    "retired_usb_link": true,
+    "vm_owner_separate": true,
+    "separate_confirmations": [
+      "services_git",
+      "storage_git",
+      "github_web"
+    ],
+    "codex_staging_preserve": true
+  },
+  "handoff_paths": [
+    "docs/handoffs/HARA_COMMANDER_CURRENT_KIT_R12_20261023.md",
+    "docs/handoffs/HARA_COMMANDER_NEXT_CHAT_START_R12_20261023.md",
+    "docs/status/HARA_COMMANDER_STATE_R12_20261023.json"
+  ]
+}
