@@ -1,11 +1,11 @@
 # Hara Commander — Handoff canônico R12
-**Data:** 23/10/2026 · **Estado atual (readback pós-R13):** UI R13 PROD 100%; release pública de Agents HOLD; OpenAI Review não submetido.
+**Data:** 23/10/2026 · **Estado atual (readback pós-R15):** UI R15 PROD 100%; release pública de Agents HOLD; OpenAI Review não submetido.
 
 Este documento evita perder contexto entre frentes. Não confundir commit em Services/Storage, upload candidato Cloudflare, versão ativa PROD e homologação OpenAI.
 
 ## Estado de produção — site
 
-- Worker `hara-commander`: versão **R13 `71ad29df-438b-4239-a4a3-9bf94d7f583c`**, **100% do tráfego**; rollback imediato R12 `b5f3b28f-c1ae-41b5-83c1-d3e5698b3825`. A R11 `dd25fde5-d8d2-4a70-af80-5f58dce8cd8d` permanece histórica.
+- Worker `hara-commander`: **R15 `d52b55b8-bb9d-45c7-954e-c2bd34f72f3b` a 100%** do tráfego, readback externo PASS. Rollback imediato **R14 `2b8de065-d701-40eb-81da-ec9b4c9f27c7`**; R13 `71ad29df-438b-4239-a4a3-9bf94d7f583c` e R11 continuam históricas.
 - R11 commit `894890b9a7115f18b5ac5c0b92617e946e791bcf`, closeout `583b60f6f68ecd9766d3b99d6bf337296d1d860d`, Storage readback PASS.
 - R11 login: avisos repetidos sobre senha e banner automático de acesso protegido retirados; botão dourado e brilho suave; erros de autenticação reais permanecem. Configurações: divisórias internas retiradas, blocos sutis e melhor legibilidade.
 - R4–R9 já corrigiram espaçamentos Avançado, MCP, Direct expandido, Adicionar, Concluído em uma linha e centralização Uso. Branding desejado é a capivara dourada original sem pirâmide.
@@ -23,7 +23,12 @@ Este documento evita perder contexto entre frentes. Não confundir commit em Ser
 - **Diferenciar do P0 de resiliência Storage [#322](https://github.com/tiagoharalabs/hara-site/issues/322):** no Storage, o processo `0.3.54` permaneceu vivo sem heartbeat até recuperação manual após cerca de 12h35; ausência de watchdog e loop sequencial comprovadas, mas instrução causadora do travamento ainda desconhecida. Protótipo externo de supervisor foi testado localmente (19 testes), não publicado nem ativado. Correção de loop/alerta ainda **P0 ABERTO**; não confundir com a promoção bem-sucedida do Núcleo.
 - A versão comercial `0.3.56` segue candidata, sem assinatura/admissão/liberação. **Não** usar como substituta da `0.3.54` assinada.
 
-## Revogação e Histórico — R13 publicada no site (23/10/2026)
+## Revogação e Histórico — R15 em produção (23/10/2026)
+
+- **R15 corrigiu o bug real da revogação, reproduzido em Brave:** `#deviceList` na R14 recebia `data-device-tab=active`, e o clique delegado usava `closest('[data-device-tab]')`, capturando o ancestral e executando `setDeviceTab('active')` antes do botão `Revogar acesso`. A confirmação era zerada, sem POST. R15 usa `data-list-tab` no container e limita os 3 seletores de tabs a `.device-tabs button[data-device-tab]`. Teste CDP Brave real R14: confirmação ausente; R15: confirmação visível, primeiro clique sem POST, segundo clique faz 1 POST mockado e move a matrícula sintética offline para Histórico. Sem revogação real do proprietário no QA. Git Services/Storage fonte `201ce4e35c00b8ebc99da0a554fff7c4ee7dc72a`, closeout `3b4ad3b313de1b12181189473ba42ddfdb836a03`. Recibo `HARA_COMMANDER_REVOKE_CLICK_R15_PROD_RECEIPT_20261023.json`.
+- **Revogação é server-side mesmo offline:** `POST /api/portal/devices/revoke` altera `commander_devices.state=REVOKED` e `revoked_at_utc` no D1 e cancela pendentes. `resolveDeviceCredential` nega o token antigo com `DEVICE_AUTH_INVALID`, sem consultar Agent/heartbeat.
+
+### Histórico R13 preservado
 
 - **Em PROD R13**, `Revogar acesso` mostra quadro persistente `Cancelar` / `Confirmar revogação` e valida `ok:true`, `state:REVOKED` e matrícula exata retornada. A API `POST /api/portal/devices/revoke` permanece. A matrícula Windows LEGADA `HARA_WIN11` (offline, Agent .55, ID final `e8b48d00`) NÃO é a VM QA `hara-review-win11` da Sentinela B. **Nenhuma revogação real do proprietário foi executada neste rollout**; testes foram sintéticos.
 - **Histórico R13 real, não ocultação:** a UI removeu `Mostrar ocultos` e `Restaurar todos`. O botão `Limpar histórico`, após confirmação de OWNER/ADMIN, chama `POST /api/portal/devices/history/clear`; elimina de fato registros da tabela D1 `commander_device_history` no tenant, com log da operação e leitura de volta. As matrículas já revogadas em `commander_devices`, recibos, chamadas e auditoria técnica **não** são apagados. A migração remota `0036_portal_device_history_clear.sql` passou e fez backfill inicial; ao verificar, 8 revogados=8 no Histórico e 0 limpezas, portanto **nenhum histórico do proprietário foi limpo automaticamente**.
@@ -54,6 +59,6 @@ Handoff recebido do owner de VMs: `hara-review-win11` Windows 11 e `hara-review-
 
 1. Conferir estado ATUAL em Cloudflare e Git, pois snapshot pode ficar velho.
 2. Ajudar Codex #310 a fechar release comercial, não editar trabalho ativo nem staging.
-3. **Não refazer R12/R13:** já publicadas, com versão R13 e D1 0036 verificadas. Se houver problema, preservar recibo `HARA_COMMANDER_REVOKE_HISTORY_R13_PROD_RECEIPT_20261023.json` e rollback R12 `b5f3b28f...`; teste real destrutivo apenas na sessão autenticada e com confirmação do operador.
+3. **Não refazer R12–R15:** R15 é a versão ativa, D1 0036 permanece. Se houver problema, usar o recibo R15 e rollback imediato R14 `2b8de065...`; teste real destrutivo só na sessão autenticada e com confirmação explícita do operador.
 4. Aguardar VMs com Agents pareados ao REVIEW; executar testes reais 5+3, vídeo, preencher OpenAI e só então submeter.
 5. Distinguir confirmação **Git local Services → Git Storage → GitHub Web**; registrar SHAs. Comunicação entre hosts só via rede, nunca ressuscitar USB Link aposentado.
