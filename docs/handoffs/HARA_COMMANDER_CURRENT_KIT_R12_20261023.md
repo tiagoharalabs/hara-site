@@ -1,11 +1,11 @@
 # Hara Commander — Handoff canônico R12
-**Data:** 23/10/2026 · **Estado:** UI R11 PROD; release pública de Agents HOLD; OpenAI Review não submetido.
+**Data:** 23/10/2026 · **Estado atual (readback pós-R13):** UI R13 PROD 100%; release pública de Agents HOLD; OpenAI Review não submetido.
 
 Este documento evita perder contexto entre frentes. Não confundir commit em Services/Storage, upload candidato Cloudflare, versão ativa PROD e homologação OpenAI.
 
 ## Estado de produção — site
 
-- Worker `hara-commander`: versão **dd25fde5-d8d2-4a70-af80-5f58dce8cd8d**, 100% tráfego; rollback `20540b42-c5d2-4a90-98e9-01500368d7f1`.
+- Worker `hara-commander`: versão **R13 `71ad29df-438b-4239-a4a3-9bf94d7f583c`**, **100% do tráfego**; rollback imediato R12 `b5f3b28f-c1ae-41b5-83c1-d3e5698b3825`. A R11 `dd25fde5-d8d2-4a70-af80-5f58dce8cd8d` permanece histórica.
 - R11 commit `894890b9a7115f18b5ac5c0b92617e946e791bcf`, closeout `583b60f6f68ecd9766d3b99d6bf337296d1d860d`, Storage readback PASS.
 - R11 login: avisos repetidos sobre senha e banner automático de acesso protegido retirados; botão dourado e brilho suave; erros de autenticação reais permanecem. Configurações: divisórias internas retiradas, blocos sutis e melhor legibilidade.
 - R4–R9 já corrigiram espaçamentos Avançado, MCP, Direct expandido, Adicionar, Concluído em uma linha e centralização Uso. Branding desejado é a capivara dourada original sem pirâmide.
@@ -23,11 +23,11 @@ Este documento evita perder contexto entre frentes. Não confundir commit em Ser
 - **Diferenciar do P0 de resiliência Storage [#322](https://github.com/tiagoharalabs/hara-site/issues/322):** no Storage, o processo `0.3.54` permaneceu vivo sem heartbeat até recuperação manual após cerca de 12h35; ausência de watchdog e loop sequencial comprovadas, mas instrução causadora do travamento ainda desconhecida. Protótipo externo de supervisor foi testado localmente (19 testes), não publicado nem ativado. Correção de loop/alerta ainda **P0 ABERTO**; não confundir com a promoção bem-sucedida do Núcleo.
 - A versão comercial `0.3.56` segue candidata, sem assinatura/admissão/liberação. **Não** usar como substituta da `0.3.54` assinada.
 
-## Revogação e Histórico — P1 ainda não publicada
+## Revogação e Histórico — R13 publicada no site (23/10/2026)
 
-- Em PROD, `Revogar acesso` depende de segundo clique em até 6 s, UX confusa. API `POST /api/portal/devices/revoke` existe. O usuário quer revogar matrícula Windows LEGADA `HARA_WIN11` (offline, Agent .55, ID final `e8b48d00`), NÃO a VM de QA `hara-review-win11` na Sentinela B. Nenhuma revogação real confirmada.
-- Código de melhoria **R10 preparado**, não promovido: confirmação persistente, validação de resposta, falhas 403/404/409 visíveis, Histórico e `Limpar histórico` reversível em armazenamento local por subject+tenant (não apaga auditoria). 5 testes simulados PASS. Fonte: `commander-devices-revoke-history-r10-20261023`, documento `docs/operations/HARA_COMMANDER_REVOKE_HISTORY_UX_R10_20261023.md`.
-- **Readback pós-handoff (23/10, 13h50 BRT):** o conflito histórico `UU apps/commander/public/index.html` da branch `local/commander-revoke-history-r12-20261023` foi resolvido e integrado sobre R11 no commit `04fd70cfc71fe4d423b10adbed225d633a5b0810`. `git ls-files -u` = 0; worktree sem alterações rastreadas (há `node_modules` não rastreado, preservar). Closeout registra 21 verificações R12 PASS, sem revogação real e **sem deploy PROD**. Continuar somente com gate de publicação independente, QA visual/funcional e readback.
+- **Em PROD R13**, `Revogar acesso` mostra quadro persistente `Cancelar` / `Confirmar revogação` e valida `ok:true`, `state:REVOKED` e matrícula exata retornada. A API `POST /api/portal/devices/revoke` permanece. A matrícula Windows LEGADA `HARA_WIN11` (offline, Agent .55, ID final `e8b48d00`) NÃO é a VM QA `hara-review-win11` da Sentinela B. **Nenhuma revogação real do proprietário foi executada neste rollout**; testes foram sintéticos.
+- **Histórico R13 real, não ocultação:** a UI removeu `Mostrar ocultos` e `Restaurar todos`. O botão `Limpar histórico`, após confirmação de OWNER/ADMIN, chama `POST /api/portal/devices/history/clear`; elimina de fato registros da tabela D1 `commander_device_history` no tenant, com log da operação e leitura de volta. As matrículas já revogadas em `commander_devices`, recibos, chamadas e auditoria técnica **não** são apagados. A migração remota `0036_portal_device_history_clear.sql` passou e fez backfill inicial; ao verificar, 8 revogados=8 no Histórico e 0 limpezas, portanto **nenhum histórico do proprietário foi limpo automaticamente**.
+- **Histórico da integração:** o conflito R12 `UU apps/commander/public/index.html` foi resolvido no commit `04fd70c...`, publicado na Cloudflare como R12 `b5f3b28f...` (100%) e substituído por R13. A R13 veio do commit Services/Storage `b3ad8940a4023684a97453c22d0496d46c756687`, com closeout `f870560fa14053a7ae6628f3fd713f57e9b55c02`; QA de 36 verificações JS, 7 SQL e build Worker PASS, leitura externa Storage/Núcleo PASS. A fonte e closeout estão no Git Storage; **não confundir publicação Web/Cloudflare com push da fonte R13 ao GitHub Web**.
 
 ## Blocker P0 — release assinada Linux/Windows
 
@@ -54,6 +54,6 @@ Handoff recebido do owner de VMs: `hara-review-win11` Windows 11 e `hara-review-
 
 1. Conferir estado ATUAL em Cloudflare e Git, pois snapshot pode ficar velho.
 2. Ajudar Codex #310 a fechar release comercial, não editar trabalho ativo nem staging.
-3. Resolver `UU` da revogação R12 respeitando R11 PROD, com testes e promoção independente.
+3. **Não refazer R12/R13:** já publicadas, com versão R13 e D1 0036 verificadas. Se houver problema, preservar recibo `HARA_COMMANDER_REVOKE_HISTORY_R13_PROD_RECEIPT_20261023.json` e rollback R12 `b5f3b28f...`; teste real destrutivo apenas na sessão autenticada e com confirmação do operador.
 4. Aguardar VMs com Agents pareados ao REVIEW; executar testes reais 5+3, vídeo, preencher OpenAI e só então submeter.
 5. Distinguir confirmação **Git local Services → Git Storage → GitHub Web**; registrar SHAs. Comunicação entre hosts só via rede, nunca ressuscitar USB Link aposentado.
