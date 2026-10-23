@@ -3170,6 +3170,9 @@ def self_test():
         assert "uptime_seconds" in json.loads(uptime["result"]["stdout"])
         resources=execute_tool(cfg,{**base,"request_id":"selftest-resources","tool_id":"hara.system.resources","payload":{}})
         assert json.loads(resources["result"]["stdout"])["cpu_logical"]>=1
+        # Anchor the synthetic project so parent Git/workspace markers cannot
+        # redirect this installation self-test into another workspace.
+        (Path(d)/"pyproject.toml").write_text("# synthetic self-test workspace\n",encoding="utf-8")
         workspace=execute_tool(cfg,{**base,"request_id":"selftest-workspace","tool_id":"hara.workspace.inspect","payload":{"path":d,"max_entries":20}})
         workspace_data=json.loads(workspace["result"]["stdout"]); assert workspace_data["root"]==str(Path(d).resolve()) and workspace_data["external_command_invoked"] is False
         procs=execute_tool(cfg,{**base,"request_id":"selftest-004c","tool_id":"hara.functions.invoke","payload":{"function_id":"process.list","arguments":{"argv":["3"]}}})

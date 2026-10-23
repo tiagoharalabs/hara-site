@@ -702,12 +702,21 @@ case "$ACTION" in
     if [ "$existing_transport" = "LOCAL_TUNNEL" ]; then
       install_tunnel_client
     fi
+    [ -f "$AGENT" ] && [ ! -L "$AGENT" ] || { echo 'AGENT_UPDATE_PREIMAGE_REQUIRED' >&2; exit 7; }
     backup="$AGENT.rollback"
     rm -f "$backup"
-    [ ! -f "$AGENT" ] || cp -p "$AGENT" "$backup"
+    cp -p "$AGENT" "$backup"
+    previous_version="$(python3 - "$backup" <<'PYPREVIOUSVERSION'
+from pathlib import Path
+import re,sys
+matches=re.findall(r'^AGENT_VERSION\s*=\s*"((?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*))"\s*$',Path(sys.argv[1]).read_text(encoding="utf-8"),re.M)
+if len(matches)!=1: raise SystemExit("AGENT_INSTALLED_VERSION_UNKNOWN")
+print(matches[0])
+PYPREVIOUSVERSION
+)"
     download_agent
     if ! install_cli || ! systemctl --user daemon-reload; then
-      if [ -f "$backup" ]; then mv -f "$backup" "$AGENT"; chmod 700 "$AGENT"; fi
+      if [ -f "$backup" ]; then cp -p "$backup" "$AGENT"; chmod 700 "$AGENT"; fi
       echo 'HARA_COMMANDER_AGENT_UPDATE_ROLLBACK=AGENT_RESTORED' >&2
       exit 7
     fi
@@ -717,12 +726,15 @@ case "$ACTION" in
       if systemctl --user restart "$SERVICE"; then restart_succeeded=TRUE; sleep 1; fi
       if [ "$restart_succeeded" != TRUE ] || ! systemctl --user is-active --quiet "$SERVICE" || ! wait_for_agent_startup "$expected_version" "$previous_started"; then
         if [ -f "$backup" ]; then
-          mv -f "$backup" "$AGENT"
+          cp -p "$backup" "$AGENT"
           chmod 700 "$AGENT"
+          rollback_previous_started="$(read_runtime_status_value started_at_utc 2>/dev/null || true)"
           if systemctl --user restart "$SERVICE"; then
             sleep 1
             if systemctl --user is-active --quiet "$SERVICE"; then
-              printf 'HARA_COMMANDER_AGENT_UPDATE_ROLLBACK=PASS\n' >&2
+              if wait_for_agent_startup "$previous_version" "$rollback_previous_started"; then
+                printf 'HARA_COMMANDER_AGENT_UPDATE_ROLLBACK=PASS\n' >&2
+              else printf 'HARA_COMMANDER_AGENT_UPDATE_ROLLBACK=STARTUP_ATTESTATION_FAILED\n' >&2; fi
             else printf 'HARA_COMMANDER_AGENT_UPDATE_ROLLBACK=SERVICE_INACTIVE\n' >&2; fi
           else printf 'HARA_COMMANDER_AGENT_UPDATE_ROLLBACK=SERVICE_RESTART_FAILED\n' >&2; fi
         fi
@@ -734,7 +746,7 @@ case "$ACTION" in
       # Updating a manually stopped agent must not establish a new connection.
       printf 'HARA_COMMANDER_AGENT_UPDATE_RUNTIME_ATTESTATION=SKIPPED_MANUAL_STOP\n'
     fi
-    rm -f "$backup"
+    # Retain the exact preimage advertised by ROLLBACK_READY, also on success.
     printf 'HARA_COMMANDER_AGENT_UPDATE_SERVICE_WAS_ACTIVE=%s\n' "$UPDATE_SERVICE_WAS_ACTIVE"
     printf 'HARA_COMMANDER_AGENT_UPDATE=PASS\n'
     printf 'HARA_COMMANDER_AGENT_UPDATE_ROLLBACK_READY=TRUE\n'

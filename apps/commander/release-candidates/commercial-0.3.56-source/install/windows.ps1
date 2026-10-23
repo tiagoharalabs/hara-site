@@ -326,30 +326,51 @@ if ($Action -eq "update") {
   $VersionMatch=Select-String -LiteralPath $tmp -Pattern '^\$AgentVersion = "([^"]+)"$' | Select-Object -First 1
   if (-not $VersionMatch -or -not $VersionMatch.Matches.Count) { throw "AGENT_VERSION_NOT_FOUND" }
   $ExpectedVersion=[string]$VersionMatch.Matches[0].Groups[1].Value
-  if (Test-Path -LiteralPath $Agent -PathType Leaf) { Copy-Item -Force $Agent $backup }
-  if ($UpdateTaskWasRunning) {
-    Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
-  }
-  Move-Item -Force $tmp $Agent
-  if ($UpdateTaskWasRunning) {
-    Start-ScheduledTask -TaskName $TaskName
-    Start-Sleep -Seconds 2
-    $task = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
-    if (-not $task -or [string]$task.State -ne "Running" -or -not (Wait-AgentStartup $ExpectedVersion $PreviousStarted 10)) {
-      Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
-      if (Test-Path -LiteralPath $backup -PathType Leaf) {
-        Move-Item -Force $backup $Agent
-        Start-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
-        Write-Host "HARA_COMMANDER_AGENT_UPDATE_ROLLBACK=PASS"
+  if (-not (Test-Path -LiteralPath $Agent -PathType Leaf)) { throw "AGENT_UPDATE_PREIMAGE_REQUIRED" }
+  Copy-Item -Force $Agent $backup -ErrorAction Stop
+  $PreviousVersionMatches=@(Select-String -LiteralPath $backup -Pattern '^\$AgentVersion = "([^"]+)"$' -CaseSensitive)
+  if ($PreviousVersionMatches.Count -ne 1) { throw "AGENT_INSTALLED_VERSION_UNKNOWN" }
+  $PreviousVersion=[string]$PreviousVersionMatches[0].Matches[0].Groups[1].Value
+  $PreviousSha=(Get-FileHash -LiteralPath $backup -Algorithm SHA256).Hash
+  try {
+    if ($UpdateTaskWasRunning) { Stop-ScheduledTask -TaskName $TaskName -ErrorAction Stop }
+    Move-Item -Force $tmp $Agent -ErrorAction Stop
+    if ($UpdateTaskWasRunning) {
+      Start-ScheduledTask -TaskName $TaskName -ErrorAction Stop
+      Start-Sleep -Seconds 2
+      $task = Get-ScheduledTask -TaskName $TaskName -ErrorAction Stop
+      if (-not $task -or [string]$task.State -ne "Running" -or -not (Wait-AgentStartup $ExpectedVersion $PreviousStarted 10)) {
+        throw "AGENT_UPDATE_START_FAILED"
       }
-      throw "AGENT_UPDATE_START_FAILED"
+      Write-Host "HARA_COMMANDER_AGENT_STARTUP_ATTESTATION=PASS"
+    } else {
+      # Updating a manually stopped agent must never initiate a connection.
+      Write-Host "HARA_COMMANDER_AGENT_UPDATE_RUNTIME_ATTESTATION=SKIPPED_MANUAL_STOP"
     }
-    Write-Host "HARA_COMMANDER_AGENT_STARTUP_ATTESTATION=PASS"
-  } else {
-    # Updating a manually stopped agent must never initiate a connection.
-    Write-Host "HARA_COMMANDER_AGENT_UPDATE_RUNTIME_ATTESTATION=SKIPPED_MANUAL_STOP"
+  } catch {
+    $UpdateFailure=$_
+    $RollbackState="AGENT_RESTORE_FAILED"
+    try {
+      if ($UpdateTaskWasRunning) { Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue }
+      # Keep the exact preimage available even if runtime recovery fails.
+      Copy-Item -Force $backup $Agent -ErrorAction Stop
+      if ((Get-FileHash -LiteralPath $Agent -Algorithm SHA256).Hash -cne $PreviousSha) { throw "AGENT_ROLLBACK_INTEGRITY_FAILED" }
+      if ($UpdateTaskWasRunning) {
+        $RollbackPreviousStarted=Get-RuntimeStartedAt
+        $RollbackState="SERVICE_RESTART_FAILED"
+        Start-ScheduledTask -TaskName $TaskName -ErrorAction Stop
+        $restoredTask=Get-ScheduledTask -TaskName $TaskName -ErrorAction Stop
+        $RollbackState="STARTUP_ATTESTATION_FAILED"
+        if ($restoredTask -and [string]$restoredTask.State -eq "Running" -and
+            (Wait-AgentStartup $PreviousVersion $RollbackPreviousStarted 10)) { $RollbackState="PASS" }
+      } else { $RollbackState="AGENT_RESTORED_MANUAL_STOP" }
+    } catch {
+      # The state names the failed recovery step; never turn it into PASS.
+    }
+    Write-Host ("HARA_COMMANDER_AGENT_UPDATE_ROLLBACK="+$RollbackState)
+    throw $UpdateFailure
   }
-  Remove-Item -Force $backup -ErrorAction SilentlyContinue
+  # Retain the exact preimage advertised by ROLLBACK_READY, also on success.
   Write-Host ("HARA_COMMANDER_AGENT_UPDATE_TASK_WAS_RUNNING=" + $(if ($UpdateTaskWasRunning) {"TRUE"} else {"FALSE"}))
   Write-Host "HARA_COMMANDER_AGENT_UPDATE=PASS"
   Write-Host "HARA_COMMANDER_AGENT_UPDATE_ROLLBACK_READY=TRUE"

@@ -5,6 +5,7 @@ import io
 import json
 import os
 from pathlib import Path
+import subprocess
 import tempfile
 import time
 import unittest
@@ -148,5 +149,17 @@ class CommercialLinuxTests(unittest.TestCase):
         result=self.a.execute_tool(self.cfg,call)
         self.assertFalse(result['mutation_performed'])
         self.assertEqual(result['result']['human_approval_state'],'APPROVED')
+
+    def test_full_self_test_anchors_its_workspace_inside_a_project_parent(self):
+        parent=self.root/'synthetic-project';parent.mkdir()
+        (parent/'.git').mkdir()
+        env={**os.environ,'TMPDIR':str(parent),
+             'XDG_CONFIG_HOME':str(self.root/'self-test-config'),
+             'XDG_DATA_HOME':str(self.root/'self-test-data'),
+             'PYTHONDONTWRITEBYTECODE':'1'}
+        result=subprocess.run(['python3','-I','-B',str(SOURCE),'--self-test'],
+                              env=env,capture_output=True,text=True,timeout=30)
+        self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+        self.assertIn('COMMANDER_LINUX_FIVE_TOOL_BRIDGE=PASS',result.stdout)
 
 if __name__=='__main__':unittest.main(verbosity=2)

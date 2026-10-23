@@ -35,3 +35,14 @@ The generator's explicit `--draft` mode allows a complete unsigned review
 bundle without declaring proposed source reviewed/admitted. The normal signed
 release gate, production selection and independent manifest admission pin remain
 closed. No signing or publication is performed by the draft path.
+
+Closed-beta review corrections: Linux's full self-test now anchors its synthetic
+workspace. Both update paths retain the exact preimage after success or failure;
+Windows also compensates for swap/start exceptions, and rollback PASS requires
+fresh startup attestation on both platforms. Source tests and the isolated
+PowerShell lifecycle harness cover these changes without installing an Agent.
+The controlled pre-execution stall probe still returns `HOLD_P0_322`: heartbeat
+is coupled to execution. Windows 11 ACL/DPAPI/SQLite/Task Scheduler acceptance,
+native release admission and the authorized signature remain required. The
+wire-contract channel remains `stable`; private-beta scope grants no production
+selection, signature or installation authority.
