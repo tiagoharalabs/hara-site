@@ -6,7 +6,9 @@
 
 **UI PROD entregue:** Cloudflare `hara-commander` versão R11 `dd25fde5-d8d2-4a70-af80-5f58dce8cd8d` 100%; rollback `20540b42-c5d2-4a90-98e9-01500368d7f1`. Login com destaque dourado e sem avisos redundantes, Configurações sem divisórias internas. Commit R11 `894890b` + closeout `583b60f`.
 
-**Revogação/Historico P1:** melhoria R10 testada com cinco casos simulados, **não em produção**; branch de integração `commander-revoke-history-r12-20261023` apresentou `UU apps/commander/public/index.html`. Não sobrescrever checkout ou fazer `ours/theirs` de forma cega. Antiga matrícula `HARA_WIN11`, ID final `e8b48d00`, não é VM Win11 de revisão. Nenhuma revogação produtiva confirmada.
+**Agent Núcleo A — readback 23/10 13h49 BRT:** conexão pelo **produto** `device.info` + `ping` confirmou Agent `0.3.54` e `PERSISTENT_TRUSTED`, apesar da enumeração anterior ainda apontar `0.3.41`. Não tratar a lista antiga como versão real, nem realizar atualização redundante.
+
+**Revogação/Histórico P1:** R10 testada com cinco casos simulados; R12 integrada em `04fd70cfc71fe4d423b10adbed225d633a5b0810`, com 21 verificações R12 PASS e conflito histórico `UU apps/commander/public/index.html` já resolvido (`git ls-files -u` = 0 em 23/10 às 13h50 BRT). **Ainda não publicada em PROD.** Preservar `node_modules` não rastreado; não sobrescrever trabalho de outras frentes. Matrícula legada `HARA_WIN11`, ID final `e8b48d00`, não é VM Win11 de revisão; revogação real NÃO confirmada.
 
 **Instaladores P0:** manifesto público assinado antigo `0.3.41` não corresponde a 4/4 files atuais; Linux Agent `0.3.43`, Windows Agent `0.3.52`. Release comercial `0.3.56` é candidata **não assinada** com testes offline PASS; Windows ExecutionPolicy bloqueia .ps1 por arquivo. Owner Codex #310 e QA Windows #240. Sem signer/admissão/E2E/readback, `PUBLIC_INSTALLERS=HOLD`.
 
