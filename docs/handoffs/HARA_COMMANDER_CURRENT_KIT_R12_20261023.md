@@ -14,11 +14,16 @@ Este documento evita perder contexto entre frentes. Não confundir commit em Ser
 - HTTP health 200; OAuth configurado; MCP sem auth 401 esperado; challenge OpenAI preservado. Cloudflare pode injetar beacon em HTML e alterar SHA bruto; não confundir com drift de app. Quedas intermitentes do usuário não tiveram RCA confirmado.
 - Recibo: `/home/sartorius/.local/share/hara/codex-inbox/HARA_COMMANDER_LOGIN_SETTINGS_R11_PROD_RECEIPT_20261023.json`.
 
+## Readback do Agent — 23/10/2026 13h49 BRT
+
+- **Núcleo A:** `hara.device.info` e `hara.ping` pelo **Hara Commander do produto** retornaram Agent `0.3.54`, `PERSISTENT_TRUSTED`, `pong:true` em `2026-10-23T16:49:50Z`. A lista de matrículas ainda exibia `0.3.41`; tratar como metadado defasado e **não iniciar downgrade/upgrade redundante** sem nova prova.
+- Na lista consultada, Services, Storage, Observer, Sentinelas A–D e Ninja Blue apareciam `0.3.54`/ONLINE; matrícula legada Windows `HARA_WIN11` (`e8b48d00`) permanecia OFFLINE, versão `0.3.55`. Esse status não substitui ping individual. Sem revogação real nesta rodada.
+
 ## Revogação e Histórico — P1 ainda não publicada
 
 - Em PROD, `Revogar acesso` depende de segundo clique em até 6 s, UX confusa. API `POST /api/portal/devices/revoke` existe. O usuário quer revogar matrícula Windows LEGADA `HARA_WIN11` (offline, Agent .55, ID final `e8b48d00`), NÃO a VM de QA `hara-review-win11` na Sentinela B. Nenhuma revogação real confirmada.
 - Código de melhoria **R10 preparado**, não promovido: confirmação persistente, validação de resposta, falhas 403/404/409 visíveis, Histórico e `Limpar histórico` reversível em armazenamento local por subject+tenant (não apaga auditoria). 5 testes simulados PASS. Fonte: `commander-devices-revoke-history-r10-20261023`, documento `docs/operations/HARA_COMMANDER_REVOKE_HISTORY_UX_R10_20261023.md`.
-- Integração de outra frente em `commander-revoke-history-r12-20261023` estava com **conflito `UU apps/commander/public/index.html`**, além de modificações em JS/CSS/testes. Não resolver usando reset, ours/theirs ou overwrites. É necessário integrar sobre R11 com teste visual e funcional, e publicar com gate separado.
+- **Readback pós-handoff (23/10, 13h50 BRT):** o conflito histórico `UU apps/commander/public/index.html` da branch `local/commander-revoke-history-r12-20261023` foi resolvido e integrado sobre R11 no commit `04fd70cfc71fe4d423b10adbed225d633a5b0810`. `git ls-files -u` = 0; worktree sem alterações rastreadas (há `node_modules` não rastreado, preservar). Closeout registra 21 verificações R12 PASS, sem revogação real e **sem deploy PROD**. Continuar somente com gate de publicação independente, QA visual/funcional e readback.
 
 ## Blocker P0 — release assinada Linux/Windows
 
