@@ -18,11 +18,17 @@
     "test_count": 5,
     "owner_branch": "local/commander-devices-revoke-history-r10-20261023",
     "integration_branch": "local/commander-revoke-history-r12-20261023",
-    "integration_conflict": "UU apps/commander/public/index.html",
+    "integration_conflict": null,
     "legacy_device_name": "HARA_WIN11",
     "legacy_device_id_suffix": "e8b48d00",
     "actual_revocation_performed": false,
-    "clear_history": "browser_local_only_reversible"
+    "clear_history": "browser_local_only_reversible",
+    "integration_conflict_original": "UU apps/commander/public/index.html",
+    "integration_state": "COMMITTED_NOT_DEPLOYED",
+    "integration_commit": "04fd70cfc71fe4d423b10adbed225d633a5b0810",
+    "integration_unmerged_entries": 0,
+    "integration_qa_checks_pass": 21,
+    "integration_untracked_node_modules_preserve": true
   },
   "commercial_release": {
     "state": "HOLD",
@@ -78,7 +84,15 @@
       "storage_git",
       "github_web"
     ],
-    "codex_staging_preserve": true
+    "codex_staging_preserve": true,
+    "nucleo_a_agent_live_readback": {
+      "version": "0.3.54",
+      "readback_at_utc": "2026-10-23T16:49:50Z",
+      "method": "PRODUCT_HARA_COMMANDER_DEVICE_INFO_AND_PING",
+      "ping": true,
+      "approval_mode": "PERSISTENT_TRUSTED",
+      "registry_list_stale_version": "0.3.41"
+    }
   },
   "handoff_paths": [
     "docs/handoffs/HARA_COMMANDER_CURRENT_KIT_R12_20261023.md",
