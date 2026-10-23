@@ -1,7 +1,7 @@
 {
   "schema": "hara.commander.handoff.r12.v1",
   "snapshot_date": "2026-10-23",
-  "source": "services plus storage, OpenAI Platform recent review, GitHub #310, VM-owner handoff",
+  "source": "services plus storage, OpenAI Platform recent review, GitHub #310, VM-owner handoff; Nucleo A 0.3.41->0.3.54 runtime verification; Storage resilience P0 #322",
   "product": "Hara Commander",
   "ui_prod": {
     "state": "PASS",
@@ -87,16 +87,47 @@
     "codex_staging_preserve": true,
     "nucleo_a_agent_live_readback": {
       "version": "0.3.54",
-      "readback_at_utc": "2026-10-23T16:49:50Z",
-      "method": "PRODUCT_HARA_COMMANDER_DEVICE_INFO_AND_PING",
-      "ping": true,
+      "previous_active_service_version": "0.3.41",
+      "previous_cli_distribution_version": "0.3.54",
+      "mismatch_root_cause": "SYSTEMD_SERVICE_OLD_EXECUTABLE_WHILE_CLI_POINTS_TO_NEW_DISTRIBUTION",
+      "service_executable_path": "~/.local/share/hara-commander/hara-commander-agent",
+      "cli_symlink_path": "~/.local/bin/hara-commander",
+      "installed_sha256": "ea42a392a6d350bb6e7e522cca5498ee823d2c41587855d0d3d1ecc41a954da2",
+      "prior_binary_rollback_path": "~/.local/share/hara-commander/rollback/hara-commander-agent.0.3.41.e1f44e4695266717.bak",
+      "service_restarted_at": "2026-10-23T13:49:21-03:00",
+      "restart_scope": "AGENT_SERVICE_ONLY",
+      "systemd_state": "active/running",
       "approval_mode": "PERSISTENT_TRUSTED",
-      "registry_list_stale_version": "0.3.41"
+      "device_id": "HARA-DEVICE-e032ffff-f2d2-43ad-b2a8-f5385a900f62",
+      "readback_at_utc": "2026-10-23T17:16:39.860758Z",
+      "readback_method": "PRODUCT_HARA_COMMANDER_DEVICE_INFO_AND_PING_PLUS_SYSTEMD_BIN_HASH",
+      "ping": true,
+      "rollback_preserved": true
     }
   },
   "handoff_paths": [
     "docs/handoffs/HARA_COMMANDER_CURRENT_KIT_R12_20261023.md",
     "docs/handoffs/HARA_COMMANDER_NEXT_CHAT_START_R12_20261023.md",
     "docs/status/HARA_COMMANDER_STATE_R12_20261023.json"
-  ]
+  ],
+  "agent_resilience_p0": {
+    "state": "OPEN",
+    "issue": 322,
+    "host": "storage",
+    "incident_date": "2026-10-23",
+    "approx_control_plane_disconnected_minutes": 755,
+    "running_agent_version": "0.3.54",
+    "human_restart_recovered": true,
+    "systemd_watchdog_enabled": false,
+    "sequential_heartbeat_execution_loop_confirmed": true,
+    "last_pending_tool": "hara.files.list",
+    "last_pending_event": "RECEIVED",
+    "execution_proven": false,
+    "instruction_level_root_cause": "NOT_DETERMINED",
+    "prototype": "external_stall_guard",
+    "prototype_status": "LOCAL_STAGED_UNCOMMITTED_NOT_DEPLOYED",
+    "prototype_unit_tests_pass": 19,
+    "production_recovery_fix_complete": false,
+    "commercial_release_blocker": true
+  }
 }
