@@ -33,5 +33,23 @@
   ],
   "private_envelope_or_state_copied": false,
   "production_signature_issued": false,
-  "published": false
+  "published": false,
+  "closed_beta_source_review": {
+    "source_services_commit": "31d664675093e5ce5ba677fe241f6c1b6fa13c8f",
+    "isolated_patch_commit": "c88af0e95fc72c9cb197dda57211ec8dc914fcb1",
+    "original_artifact_sha256": {
+      "agent/linux.py": "df256b7f315437fb4b2bab6319f33fb8e81c6b64c98db768c596d8871ad5b42b",
+      "agent/windows.ps1": "2f107bb8cfd71aa54645a5a8c66c1ae0276c04710cb7322004822c9bb7587dc6",
+      "install/linux.sh": "d97015e77d3b7af7fd9aaec65a7683f892b9fea0ac694ac6734b3e2792fde13e",
+      "install/windows.ps1": "8f0d437d1fe7b646ce09b971c2095d92d1b5f5e650b1899df6404d5501523a81"
+    },
+    "changed_artifacts": [
+      "agent/linux.py",
+      "install/linux.sh",
+      "install/windows.ps1"
+    ],
+    "classification": "SOURCE_ONLY_PENDING_OWNER_REVIEW_ADMISSION_AND_SIGNATURE",
+    "production_signature_issued": false,
+    "published": false
+  }
 }

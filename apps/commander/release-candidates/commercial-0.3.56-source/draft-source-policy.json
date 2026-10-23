@@ -5,10 +5,10 @@
   "artifacts": {
     "agent/linux.py": {
       "classification": "commercial-candidate",
-      "source_commit": "afd391193e31e5d15dd002c064b9d5b07e684751",
+      "source_commit": "c88af0e95fc72c9cb197dda57211ec8dc914fcb1",
       "source_path": "apps/commander/release-candidates/commercial-0.3.56-source/agent/linux.py",
       "review_reference": "apps/commander/release-candidates/commercial-0.3.56-source/README.md",
-      "sha256": "df256b7f315437fb4b2bab6319f33fb8e81c6b64c98db768c596d8871ad5b42b"
+      "sha256": "3c04894f611adb31cafc8b90f58558e71cb2353a6b80f7f1701ef57f7735d524"
     },
     "agent/windows.ps1": {
       "classification": "commercial-candidate",
@@ -19,17 +19,17 @@
     },
     "install/linux.sh": {
       "classification": "commercial-candidate",
-      "source_commit": "afd391193e31e5d15dd002c064b9d5b07e684751",
+      "source_commit": "c88af0e95fc72c9cb197dda57211ec8dc914fcb1",
       "source_path": "apps/commander/release-candidates/commercial-0.3.56-source/install/linux.sh",
       "review_reference": "apps/commander/release-candidates/commercial-0.3.56-source/README.md",
-      "sha256": "d97015e77d3b7af7fd9aaec65a7683f892b9fea0ac694ac6734b3e2792fde13e"
+      "sha256": "a63542827372f73f5b0f48bf924fb847156c9d7f6f1adb371d73f78effade93f"
     },
     "install/windows.ps1": {
       "classification": "commercial-candidate",
-      "source_commit": "afd391193e31e5d15dd002c064b9d5b07e684751",
+      "source_commit": "c88af0e95fc72c9cb197dda57211ec8dc914fcb1",
       "source_path": "apps/commander/release-candidates/commercial-0.3.56-source/install/windows.ps1",
       "review_reference": "apps/commander/release-candidates/commercial-0.3.56-source/README.md",
-      "sha256": "8f0d437d1fe7b646ce09b971c2095d92d1b5f5e650b1899df6404d5501523a81"
+      "sha256": "2219d2cf657ccb52471ae5c5e6544877946b24621185b0303e0d1e1c6ad1a401"
     }
   }
 }
