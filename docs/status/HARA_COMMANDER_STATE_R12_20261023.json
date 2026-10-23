@@ -1,22 +1,23 @@
 {
   "schema": "hara.commander.handoff.r12.v1",
   "snapshot_date": "2026-10-23",
-  "source": "services plus storage, OpenAI Platform recent review, GitHub #310, VM-owner handoff; Nucleo A 0.3.41->0.3.54 runtime verification; Storage resilience P0 #322; R13 real portal history clear PROD CF 100% and D1 migration 0036",
+  "source": "services plus storage, OpenAI Platform recent review, GitHub #310, VM-owner handoff; Nucleo A 0.3.41->0.3.54 runtime verification; Storage resilience P0 #322; R13 real portal history clear PROD CF 100% and D1 migration 0036; R15 scoped tab handler real Brave click regression PROD CF 100%",
   "product": "Hara Commander",
   "ui_prod": {
     "state": "PASS",
-    "cloudflare_version": "71ad29df-438b-4239-a4a3-9bf94d7f583c",
+    "cloudflare_version": "d52b55b8-bb9d-45c7-954e-c2bd34f72f3b",
     "percent": 100,
-    "rollback_version": "b5f3b28f-c1ae-41b5-83c1-d3e5698b3825",
-    "release_commit": "b3ad8940a4023684a97453c22d0496d46c756687",
-    "closeout_commit": "f870560fa14053a7ae6628f3fd713f57e9b55c02",
+    "rollback_version": "2b8de065-d701-40eb-81da-ec9b4c9f27c7",
+    "release_commit": "201ce4e35c00b8ebc99da0a554fff7c4ee7dc72a",
+    "closeout_commit": "3b4ad3b313de1b12181189473ba42ddfdb836a03",
     "login_settings_r11": true,
-    "success_receipt": "/home/sartorius/.local/share/hara/codex-inbox/HARA_COMMANDER_REVOKE_HISTORY_R13_PROD_RECEIPT_20261023.json",
-    "revision": "R13",
-    "previous_r11_version": "dd25fde5-d8d2-4a70-af80-5f58dce8cd8d"
+    "success_receipt": "/home/sartorius/.local/share/hara/codex-inbox/HARA_COMMANDER_REVOKE_CLICK_R15_PROD_RECEIPT_20261023.json",
+    "revision": "R15",
+    "previous_r11_version": "dd25fde5-d8d2-4a70-af80-5f58dce8cd8d",
+    "previous_r13_version": "71ad29df-438b-4239-a4a3-9bf94d7f583c"
   },
   "device_revoke": {
-    "state": "PUBLISHED_R13_UI_SERVER_DELETE",
+    "state": "PUBLISHED_R15_CLICK_FIXED",
     "test_count": 5,
     "owner_branch": "local/commander-devices-revoke-history-r10-20261023",
     "integration_branch": "local/commander-revoke-history-r12-20261023",
@@ -26,7 +27,7 @@
     "actual_revocation_performed": false,
     "clear_history": "SERVER_SIDE_DELETE_PORTAL_HISTORY_D1",
     "integration_conflict_original": "UU apps/commander/public/index.html",
-    "integration_state": "PRODUCTION_R13",
+    "integration_state": "PRODUCTION_R15",
     "integration_commit": "04fd70cfc71fe4d423b10adbed225d633a5b0810",
     "integration_unmerged_entries": 0,
     "integration_qa_checks_pass": 21,
@@ -45,10 +46,21 @@
       "portal_history": 8,
       "clear_actions": 0
     },
-    "integration_release_commit": "b3ad8940a4023684a97453c22d0496d46c756687",
+    "integration_release_commit": "201ce4e35c00b8ebc99da0a554fff7c4ee7dc72a",
     "tests_js_pass": 36,
     "tests_sqlite_pass": 7,
-    "live_portal_revoke_with_owner": "NOT_EXECUTED_TO_PROTECT_OWNER_DEVICE"
+    "live_portal_revoke_with_owner": "NOT_EXECUTED_TO_PROTECT_OWNER_DEVICE",
+    "real_browser_root_cause": "ANCESTOR_DEVICE_LIST_DATA_DEVICE_TAB_COLLIDED_WITH_DELEGATED_CLICK",
+    "fix": "DATA_LIST_TAB_AND_SCOPED_ACTUAL_TAB_BUTTON_SELECTORS",
+    "first_click_confirm_visible": true,
+    "offline_backend_revocation_supported": true,
+    "authentication_token_invalid_after_revocation": true,
+    "browser_proof_before": "R14_PANEL_FALSE_NO_POST",
+    "browser_proof_after": "R15_PANEL_TRUE_SINGLE_POST_AFTER_EXPLICIT_CONFIRM",
+    "browser_qa_auth_source": "ISOLATED_FIXTURE_NO_PRODUCTION_SECRETS",
+    "browser_qa_real_mutation": false,
+    "tests_js_suites_pass": 9,
+    "tests_r15_checks_pass": 14
   },
   "commercial_release": {
     "state": "HOLD",
@@ -127,7 +139,10 @@
     "github_web_source_r13_published": false,
     "services_storage_git_head_r13": "f870560fa14053a7ae6628f3fd713f57e9b55c02",
     "cloudflare_prod_r13_live": true,
-    "hara_storage_agent_resilience_p0_still_open": true
+    "hara_storage_agent_resilience_p0_still_open": true,
+    "services_storage_git_head_r15": "3b4ad3b313de1b12181189473ba42ddfdb836a03",
+    "cloudflare_prod_r15_live": true,
+    "github_web_source_r15_published": false
   },
   "handoff_paths": [
     "docs/handoffs/HARA_COMMANDER_CURRENT_KIT_R12_20261023.md",
