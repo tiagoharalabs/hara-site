@@ -1,0 +1,37 @@
+{
+  "base_commit": "02a51596317275594f603b70d294d36b612086b6",
+  "candidate_version": "0.3.56",
+  "classification": "commercial-candidate-not-admitted",
+  "origins": [
+    {
+      "component": "linux-054.py",
+      "origin_services_path": "/tmp_hara/commander-full-054-signed-stage-20261013-root-r2/apps/commander/public/agent/linux.py",
+      "sha256": "62e1a836ef92fc8b72638fd116a6f0097fcf9e9f0ef0f4259ca8e0f6712b4229",
+      "bytes": 220970,
+      "classification": "internal_source_for_review_not_public_release"
+    },
+    {
+      "component": "linux-054-review.py",
+      "origin_services_path": "/tmp_hara/commander-durable-trust-054-signed-review-20261022/agent/linux.py",
+      "sha256": "aa648552eca60ddc4b16940a7cda0aba8a3a17b9f66ff63f17f5bb5c1e7ae794",
+      "bytes": 224229,
+      "classification": "internal_source_for_review_not_public_release"
+    },
+    {
+      "component": "windows-055.ps1",
+      "origin_services_path": "/tmp_hara/hara-commander-windows055-r22-sign-20261021/agent/windows.ps1",
+      "sha256": "07de45201052c6fbc98764dba619f1e83864b96eed0c998f1d007ad04bf5f57f",
+      "bytes": 124013,
+      "classification": "internal_source_for_review_not_public_release"
+    }
+  ],
+  "linux_ported_review_functions": [
+    "_next_local_lease_refresh_delay",
+    "run_local_tunnel_agent_telemetry",
+    "require_local_product_authority",
+    "execute_tool"
+  ],
+  "private_envelope_or_state_copied": false,
+  "production_signature_issued": false,
+  "published": false
+}
