@@ -14,10 +14,14 @@ Este documento evita perder contexto entre frentes. Não confundir commit em Ser
 - HTTP health 200; OAuth configurado; MCP sem auth 401 esperado; challenge OpenAI preservado. Cloudflare pode injetar beacon em HTML e alterar SHA bruto; não confundir com drift de app. Quedas intermitentes do usuário não tiveram RCA confirmado.
 - Recibo: `/home/sartorius/.local/share/hara/codex-inbox/HARA_COMMANDER_LOGIN_SETTINGS_R11_PROD_RECEIPT_20261023.json`.
 
-## Readback do Agent — 23/10/2026 13h49 BRT
+## Núcleo A — divergência corrigida e verificada em 23/10/2026
 
-- **Núcleo A:** `hara.device.info` e `hara.ping` pelo **Hara Commander do produto** retornaram Agent `0.3.54`, `PERSISTENT_TRUSTED`, `pong:true` em `2026-10-23T16:49:50Z`. A lista de matrículas ainda exibia `0.3.41`; tratar como metadado defasado e **não iniciar downgrade/upgrade redundante** sem nova prova.
-- Na lista consultada, Services, Storage, Observer, Sentinelas A–D e Ninja Blue apareciam `0.3.54`/ONLINE; matrícula legada Windows `HARA_WIN11` (`e8b48d00`) permanecia OFFLINE, versão `0.3.55`. Esse status não substitui ping individual. Sem revogação real nesta rodada.
+- **Causa da diferença de versão:** antes da promoção, a CLI `~/.local/bin/hara-commander` já apontava para a distribuição `0.3.54`, mas o serviço systemd do usuário ainda executava `~/.local/share/hara-commander/hara-commander-agent` em `0.3.41`. **Não era apenas cache/metadado da lista de matrículas.** A versão da CLI não prova a versão do Agent em execução.
+- **Correção concluída:** o executável usado pelo serviço foi promovido para `0.3.54`. SHA-256 do arquivo ativo: `ea42a392a6d350bb6e7e522cca5498ee823d2c41587855d0d3d1ecc41a954da2`, igual ao conteúdo da distribuição Linux `0.3.54` verificada. Backup preservado: `~/.local/share/hara-commander/rollback/hara-commander-agent.0.3.41.e1f44e4695266717.bak`.
+- **Ativação/readback:** o Agent foi reiniciado às **13h49min21s BRT**, sem reiniciar o host. Em nova consulta, `systemd` retornou `active/running`, e `hara.device.info`/`hara.ping` retornaram `0.3.54`, `PERSISTENT_TRUSTED`, `pong:true` e a mesma matrícula `HARA-DEVICE-e032ffff-f2d2-43ad-b2a8-f5385a900f62` (`ping` às `2026-10-23T17:16:39.860758Z`). A execução por `/proc/<pid>/cmdline` confirmou o caminho do executável do serviço. Identidade/token e arquivos do Codex não foram modificados durante a correção reportada.
+- Na listagem anterior, Services, Storage, Observer, Sentinelas A–D e Ninja Blue apareciam `0.3.54`/ONLINE; matrícula Windows legada `HARA_WIN11` (`e8b48d00`) permaneceu OFFLINE. A lista não substitui verificação do processo efetivo, do hash do arquivo e do ping.
+- **Diferenciar do P0 de resiliência Storage [#322](https://github.com/tiagoharalabs/hara-site/issues/322):** no Storage, o processo `0.3.54` permaneceu vivo sem heartbeat até recuperação manual após cerca de 12h35; ausência de watchdog e loop sequencial comprovadas, mas instrução causadora do travamento ainda desconhecida. Protótipo externo de supervisor foi testado localmente (19 testes), não publicado nem ativado. Correção de loop/alerta ainda **P0 ABERTO**; não confundir com a promoção bem-sucedida do Núcleo.
+- A versão comercial `0.3.56` segue candidata, sem assinatura/admissão/liberação. **Não** usar como substituta da `0.3.54` assinada.
 
 ## Revogação e Histórico — P1 ainda não publicada
 
