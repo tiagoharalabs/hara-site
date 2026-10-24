@@ -41,14 +41,14 @@ try{
  worker.exec(`CREATE TABLE tenants(tenant_id TEXT PRIMARY KEY);
   CREATE TABLE commander_devices(device_id TEXT PRIMARY KEY,tenant_id TEXT,state TEXT,
    revoked_at_utc TEXT,approval_mode TEXT,tunnel_mode TEXT,last_seen_at_utc TEXT,created_at_utc TEXT)`);
- for(const name of ['0037_device_recovery_alerts.sql','0038_recovery_delivery.sql'])
+ for(const name of ['0037_device_recovery_alerts.sql','0038_recovery_delivery.sql','0039_recovery_device_leases.sql'])
   worker.exec(readFileSync(new URL('../migrations/'+name,import.meta.url),'utf8'));
  sink.exec('CREATE TABLE qa_delivery_receipts(event_id TEXT PRIMARY KEY,fingerprint TEXT NOT NULL,receipt_ref TEXT NOT NULL,stored_at_utc TEXT NOT NULL)');
  const tenants=Array.from({length:16},(_,i)=>'SYNTH-T'+i);
  const targets=tenants.map((tenant,i)=>({tenant_id:tenant,id:'qa'+i,kind:'QA_RECIPIENT_V1',origin,
   writePath:'/notify',readPath:'/receipt/',writeSecret:'SYNTHETIC_WRITE',readSecret:'SYNTHETIC_READ'}));
  const env={ENVIRONMENT:'DEV',PRODUCT_DB:adapter(worker,'worker'),COMMANDER_RECOVERY_ALERTS_ENABLED:'true',
-  COMMANDER_RECOVERY_DELIVERY_ENABLED:'true',COMMANDER_RECOVERY_DELIVERY_ALLOWED_ORIGINS:JSON.stringify([origin]),
+  COMMANDER_RECOVERY_SCAN_CONCURRENCY:process.env.R163_SCAN_CONCURRENCY||'4',COMMANDER_RECOVERY_DELIVERY_ENABLED:'true',COMMANDER_RECOVERY_DELIVERY_ALLOWED_ORIGINS:JSON.stringify([origin]),
   COMMANDER_RECOVERY_DELIVERY_TARGETS:JSON.stringify(targets),SYNTHETIC_WRITE:'synthetic-capacity-write-only',SYNTHETIC_READ:'synthetic-capacity-read-only'};
  const jobs=[];let maxBatchBytes=0,maxJobQueries=0,maxJobMs=0;
  if(fanout){env.COMMANDER_RECOVERY_FANOUT_ENABLED='true';env.COMMANDER_RECOVERY_WORK_QUEUE={sendBatch:async entries=>{

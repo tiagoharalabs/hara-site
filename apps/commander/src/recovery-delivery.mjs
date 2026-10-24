@@ -2,6 +2,7 @@
 // No default destination, token, invented receipt, or implicit commercial opt-in.
 // receipt_sha256 hashes UTF-8 canonical JSON of the authenticated GET receipt
 // (top-level keys sorted), so an independent readback can reproduce the proof.
+import {claimRecoveryDeviceLease,releaseRecoveryDeviceLease} from './recovery-scan-leases.mjs';
 import {recoveryDeviceEnabled,prodCanaryDeviceIds} from './recovery-alerts.mjs';
 
 const TARGET_FIELDS=['tenant_id','id','kind','origin','writePath','readPath','writeSecret','readSecret'];
@@ -124,7 +125,7 @@ export async function listRecoveryDeliveryCandidates(env,{nowMs=Date.now(),limit
     ...(after?[after.persisted_at_utc,after.persisted_at_utc,after.event_id]:[]),limit).all();
  return {state:'COMPLETE',rows:rows.results||[]};
 }
-export async function dispatchRecoveryDeliveries(env,{fetchImpl=fetch,nowMs=Date.now(),maxEvents=10,timeoutMs=5000,eventIds}={}){
+export async function dispatchRecoveryDeliveries(env,{fetchImpl=fetch,nowMs=Date.now(),maxEvents=10,timeoutMs=5000,eventIds,exclusiveDeviceLeases=false}={}){
  const summary={state:'DISABLED',staged:0,attempted:0,delivered:0,held:0,exhausted:0};
  if(env?.COMMANDER_RECOVERY_DELIVERY_ENABLED!=='true')return summary;
  let targets;
@@ -172,9 +173,13 @@ export async function dispatchRecoveryDeliveries(env,{fetchImpl=fetch,nowMs=Date
    const source=await env.PRODUCT_DB.prepare(`SELECT r.*,d.state AS device_state,d.revoked_at_utc FROM commander_device_recovery_events r
     JOIN commander_devices d ON d.device_id=r.device_id AND d.tenant_id=r.tenant_id WHERE r.event_id=? AND r.tenant_id=?`)
     .bind(row.event_id,target.tenant_id).first();
-   let state='RETRY',receipt=null;const controller=new AbortController();let timer;
+   let state='RETRY',receipt=null,deviceLease=null;const controller=new AbortController();let timer;
    try{
     if(!source||source.device_state!=='ACTIVE'||source.revoked_at_utc||!recoveryDeviceEnabled(env,source))throw Error('RECOVERY_DEVICE_NOT_ACTIVE');
+    if(exclusiveDeviceLeases){
+     deviceLease=await claimRecoveryDeviceLease(env,source,nowMs);
+     if(!deviceLease)throw Error('RECOVERY_DEVICE_LEASE_HELD');
+    }
     const body=envelope(source,target);if(!body)throw Error('RECOVERY_RECEIVER_UNSUPPORTED');
     receipt=await Promise.race([deliver(env,target,body,fetchImpl,controller.signal,row.attempts),
      new Promise((_,reject)=>{timer=setTimeout(()=>{controller.abort();reject(Error('RECIPIENT_TIMEOUT'));},timeoutMs);})]);
@@ -183,9 +188,12 @@ export async function dispatchRecoveryDeliveries(env,{fetchImpl=fetch,nowMs=Date
    finally{clearTimeout(timer);controller.abort();}
    const next=nowMs+Math.min(3600000,5000*2**Math.min(16,row.attempts-1));
    const result=await env.PRODUCT_DB.prepare(`UPDATE recovery_delivery_outbox SET state=?,next_attempt_ms=?,lease_until_ms=0,receipt_ref=?,receipt_sha256=?
-    WHERE event_id=? AND binding_id=? AND tenant_id=? AND state='INFLIGHT' AND attempts=?`)
+    WHERE event_id=? AND binding_id=? AND tenant_id=? AND state='INFLIGHT' AND attempts=?${deviceLease?
+     ' AND EXISTS(SELECT 1 FROM recovery_device_leases l WHERE l.device_id=? AND l.tenant_id=? AND l.lease_token=? AND l.lease_until_ms>?)':''}`)
     .bind(state,next,state==='DELIVERED'?receipt.receipt_ref:null,state==='DELIVERED'?await sha(stable(receipt)):null,
-     row.event_id,target.id,target.tenant_id,row.attempts).run();
+     row.event_id,target.id,target.tenant_id,row.attempts,
+     ...(deviceLease?[deviceLease.device_id,deviceLease.tenant_id,deviceLease.lease_token,nowMs]:[])).run();
+   if(deviceLease)await releaseRecoveryDeviceLease(env,deviceLease);
    if(result.meta?.changes&&state==='DELIVERED')summary.delivered++;
    if(state==='EXHAUSTED')summary.exhausted++;
   }

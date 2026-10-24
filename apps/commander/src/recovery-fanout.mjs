@@ -4,11 +4,13 @@
 // Provider API/limits: https://developers.cloudflare.com/queues/configuration/javascript-apis/
 // https://developers.cloudflare.com/queues/platform/limits/ and /d1/platform/limits/
 import {recoveryAlertsEnabled,listOfflineRecoveryCandidates,detectOfflineRecoveryDevices} from './recovery-alerts.mjs';
+import {recoveryPartition} from './recovery-scan-leases.mjs';
 import {listRecoveryDeliveryCandidates,dispatchRecoveryDeliveries} from './recovery-delivery.mjs';
 
 const SCHEMA='hara.commander.recovery-work.v1';
 const enabled=env=>env?.COMMANDER_RECOVERY_FANOUT_ENABLED==='true'&&recoveryAlertsEnabled(env);
-const bound=env=>typeof env?.COMMANDER_RECOVERY_WORK_QUEUE?.sendBatch==='function';
+const queueFor=env=>env?.RECOVERY_DELIVERY_QUEUE||env?.COMMANDER_RECOVERY_WORK_QUEUE;
+const bound=env=>typeof queueFor(env)?.sendBatch==='function';
 const schemaKeys=(body,field)=>Object.keys(body).sort().join(',')===['schema','kind',field].sort().join(',');
 function valid(body){
  if(!body||typeof body!=='object'||Array.isArray(body)||body.schema!==SCHEMA)return false;
@@ -27,7 +29,7 @@ export async function enqueueRecoveryWork(env,{nowMs=Date.now(),maxDevices=20000
  result.state='COMPLETE';let pending=[],pendingBytes=2;
  const flush=async()=>{
   if(!pending.length)return;
-  await env.COMMANDER_RECOVERY_WORK_QUEUE.sendBatch(pending);
+  await queueFor(env).sendBatch(pending);
   result.jobs+=pending.length;result.batches++;pending=[];pendingBytes=2;
  };
  const add=async body=>{
@@ -37,18 +39,19 @@ export async function enqueueRecoveryWork(env,{nowMs=Date.now(),maxDevices=20000
   if(pending.length&&(pending.length>=100||pendingBytes+bytes>240000))await flush();
   pending.push(entry);pendingBytes+=bytes;
  };
- let after=null,scanIds=[];
+ let after=null;const partitions=Array.from({length:16},()=>[]);
  while(result.scan_devices<maxDevices){
   const limit=Math.min(500,maxDevices-result.scan_devices);
   const rows=await listOfflineRecoveryCandidates(env,nowMs,{limit,after});
   for(const row of rows){
+   const shard=recoveryPartition(row.device_id),scanIds=partitions[shard];
    scanIds.push(row.device_id);result.scan_devices++;
-   if(scanIds.length===96){await add({schema:SCHEMA,kind:'SCAN',device_ids:scanIds});scanIds=[];}
+   if(scanIds.length===96){await add({schema:SCHEMA,kind:'SCAN',device_ids:scanIds});partitions[shard]=[];}
   }
   if(rows.length<limit)break;
   after=rows.at(-1);
  }
- if(scanIds.length)await add({schema:SCHEMA,kind:'SCAN',device_ids:scanIds});
+ for(const device_ids of partitions)if(device_ids.length)await add({schema:SCHEMA,kind:'SCAN',device_ids});
  after=null;let eventIds=[];
  while(result.delivery_events<maxEvents){
   const limit=Math.min(500,maxEvents-result.delivery_events);
@@ -76,7 +79,7 @@ export async function consumeRecoveryWork(batch,env,{nowMs=Date.now(),fetchImpl=
  if(!valid(body)){message.ack();return {state:'REJECTED_RECOVERY_WORK'};}
  try{
   const result=body.kind==='SCAN'?await detectOfflineRecoveryDevices(env,body.device_ids,nowMs):
-   await dispatchRecoveryDeliveries(env,{eventIds:body.event_ids,nowMs,fetchImpl,timeoutMs});
+   await dispatchRecoveryDeliveries(env,{eventIds:body.event_ids,nowMs,fetchImpl,timeoutMs,exclusiveDeviceLeases:true});
   if(result.state?.startsWith('HOLD_')||(result.held&&result.exhausted<result.held)){
    message.retry({delaySeconds:60});return {state:'RETRY',result};
   }

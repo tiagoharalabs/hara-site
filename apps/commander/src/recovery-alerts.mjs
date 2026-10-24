@@ -1,3 +1,4 @@
+import {boundedRecoveryMap,claimRecoveryDeviceLease,releaseRecoveryDeviceLease} from './recovery-scan-leases.mjs';
 // H.A.R.A. Commander recovery inbox: source-only, default OFF.
 // PERSISTED is a durable D1 receipt; PORTAL_ACKNOWLEDGED is a human action.
 // Neither is proof of external push/email delivery. No bearer token is logged.
@@ -99,7 +100,7 @@ async function sha(input) {
 async function incidentForHeartbeat(device) {
   return "offline-"+(await sha(JSON.stringify([device.tenant_id,device.device_id,device.last_seen_at_utc]))).slice(0,40);
 }
-async function persist(env,device,event,origin="AGENT",anchor=null,nowMs=Date.now()) {
+async function persist(env,device,event,origin="AGENT",anchor=null,nowMs=Date.now(),lease=null) {
   requireEnabled(env); validIdentity(device);
   if (!recoveryDeviceEnabled(env,device)) deny("RECOVERY_ALERTS_DEVICE_NOT_ADMITTED");
   const now=new Date(nowMs).toISOString();
@@ -126,13 +127,15 @@ async function persist(env,device,event,origin="AGENT",anchor=null,nowMs=Date.no
     "AND NOT EXISTS (SELECT 1 FROM commander_device_recovery_events r "+
     "WHERE r.tenant_id=d.tenant_id AND r.device_id=d.device_id AND r.incident_id=? "+
     "AND (r.generation>? OR (r.generation=? AND r.sequence>=?))) "+
+    (lease?"AND EXISTS (SELECT 1 FROM recovery_device_leases l WHERE l.device_id=d.device_id AND l.tenant_id=d.tenant_id AND l.lease_token=? AND l.lease_until_ms>?) ":"")+
     "ON CONFLICT DO NOTHING"
   ).bind(eventId,device.tenant_id,device.device_id,event.incident_id,event.generation,
     event.sequence,event.state,origin,event.client_event_id||null,
     event.worker||null,event.detector||null,event.error_code,event.at_utc,anchor,fingerprint,now,
     device.device_id,device.tenant_id,origin,origin,event.state,anchor,
     event.incident_id,event.generation,event.sequence-1,
-    event.incident_id,event.generation,event.generation,event.sequence).run();
+    event.incident_id,event.generation,event.generation,event.sequence,
+    ...(lease?[lease.lease_token,nowMs]:[])).run();
   if (!result?.meta?.changes) {
     const current=await env.PRODUCT_DB.prepare(
       "SELECT state,revoked_at_utc FROM commander_devices WHERE device_id=? AND tenant_id=? LIMIT 1"
@@ -142,6 +145,11 @@ async function persist(env,device,event,origin="AGENT",anchor=null,nowMs=Date.no
       "SELECT payload_sha256 FROM commander_device_recovery_events "+
       "WHERE event_id=? AND tenant_id=? AND device_id=? LIMIT 1"
     ).bind(eventId,device.tenant_id,device.device_id).first();
+    if (!row && lease) {
+      const held=await env.PRODUCT_DB.prepare("SELECT lease_token,lease_until_ms FROM recovery_device_leases WHERE device_id=? AND tenant_id=?")
+        .bind(device.device_id,device.tenant_id).first();
+      if(!held||held.lease_token!==lease.lease_token||held.lease_until_ms<=nowMs)deny("RECOVERY_DEVICE_LEASE_LOST");
+    }
     if (!row) deny("RECOVERY_EVENT_STALE_OR_OUT_OF_ORDER");
     if (row.payload_sha256!==fingerprint) deny("RECOVERY_EVENT_IDEMPOTENCY_CONFLICT");
   }
@@ -267,41 +275,47 @@ export async function listOfflineRecoveryCandidates(env,nowMs=Date.now(),{limit=
   const scoped=deviceIds===undefined?admitted:
     (admitted===null?deviceIds:deviceIds.filter(id=>admitted.includes(id)));
   if (scoped!==null && !scoped.length) return [];
-  const scopeClause=scoped===null?"":"AND d.device_id IN ("+scoped.map(()=>"?").join(",")+") ";
+  const source=scoped===null?"commander_devices d":
+    "(SELECT column1 AS device_id FROM (VALUES "+scoped.map(()=>"(?)").join(",")+")) selected CROSS JOIN commander_devices d ON d.device_id=selected.device_id";
   const cursorClause=after?"AND (d.last_seen_at_utc>? OR (d.last_seen_at_utc=? AND d.device_id>?)) ":"";
   if (1+(scoped||[]).length+(after?3:0)+1>100) deny("RECOVERY_SCAN_CURSOR_INVALID");
   const rows=await env.PRODUCT_DB.prepare(
     "SELECT d.device_id,d.tenant_id,d.state,d.revoked_at_utc,d.approval_mode,d.tunnel_mode,"+
-    "d.last_seen_at_utc FROM commander_devices d "+
+    "d.last_seen_at_utc FROM "+source+" "+
     "WHERE d.state='ACTIVE' AND d.revoked_at_utc IS NULL "+
     "AND d.approval_mode='PERSISTENT_TRUSTED' AND d.tunnel_mode='OUTBOUND_RELAY' "+
     "AND d.last_seen_at_utc < ? AND d.last_seen_at_utc > d.created_at_utc "+
-    scopeClause+cursorClause+
+    cursorClause+
     "AND NOT EXISTS (SELECT 1 FROM commander_device_recovery_events r "+
     "WHERE r.device_id=d.device_id AND r.origin='SERVER' AND r.event_state='DEGRADED' "+
     "AND r.heartbeat_anchor_at_utc=d.last_seen_at_utc) "+
     "ORDER BY d.last_seen_at_utc,d.device_id LIMIT ?"
-  ).bind(cutoff,...(scoped||[]),...(after?[after.last_seen_at_utc,after.last_seen_at_utc,after.device_id]:[]),limit).all();
+  ).bind(...(scoped||[]),cutoff,...(after?[after.last_seen_at_utc,after.last_seen_at_utc,after.device_id]:[]),limit).all();
   return rows.results||[];
 }
-async function recordOfflineCandidates(env,rows,nowMs) {
-  let recorded=0;
-  for (const device of rows) {
-    const incident=await incidentForHeartbeat(device);
-    const event={incident_id:incident,generation:1,sequence:1,state:"DEGRADED",
-      at_utc:new Date(Date.parse(device.last_seen_at_utc)+STALE_AFTER_MS).toISOString(),
-      error_code:"HEARTBEAT_STALE"};
-    try {
-      const ack=await persist(env,device,event,"SERVER",device.last_seen_at_utc,nowMs);
-      if (!ack.duplicate) recorded++;
-    } catch (error) {
-      // A concurrent heartbeat/revocation invalidates the candidate; retry next tick.
-      if (error.message!=="RECOVERY_EVENT_STALE_OR_OUT_OF_ORDER"
-          && error.message!=="DEVICE_AUTH_INVALID") throw error;
-    }
-  }
+async function recordOfflineCandidates(env,rows,nowMs,{leased=false}={}) {
+  let recorded=0,held=0;
+  const started=performance.now(),clock=()=>nowMs+Math.floor(performance.now()-started);
+  const concurrency=leased?Number(env.COMMANDER_RECOVERY_SCAN_CONCURRENCY||1):1;
+  await boundedRecoveryMap(rows,concurrency,async device=>{
+    const lease=leased?await claimRecoveryDeviceLease(env,device,clock()):null;
+    if(leased&&!lease){held++;return;}
+    try{
+      const incident=await incidentForHeartbeat(device);
+      const event={incident_id:incident,generation:1,sequence:1,state:"DEGRADED",
+        at_utc:new Date(Date.parse(device.last_seen_at_utc)+STALE_AFTER_MS).toISOString(),
+        error_code:"HEARTBEAT_STALE"};
+      try {
+        const ack=await persist(env,device,event,"SERVER",device.last_seen_at_utc,clock(),lease);
+        if (!ack.duplicate) recorded++;
+      } catch (error) {
+        if (error.message!=="RECOVERY_EVENT_STALE_OR_OUT_OF_ORDER"
+            && error.message!=="DEVICE_AUTH_INVALID") throw error;
+      }
+    }finally{if(lease)await releaseRecoveryDeviceLease(env,lease);}
+  });
   return {schema:"hara.commander.recovery-offline-scan.v1",checked:rows.length,
-    persisted:recorded,bounded:true};
+    persisted:recorded,held,exhausted:0,bounded:true,concurrency};
 }
 export async function detectOfflineRecoveryEvents(env,nowMs=Date.now(),limit=200) {
   const rows=await listOfflineRecoveryCandidates(env,nowMs,{limit});
@@ -313,7 +327,7 @@ export async function detectOfflineRecoveryEvents(env,nowMs=Date.now(),limit=200
 // queue payload may choose an enrollment's tenant, anchor or authorization.
 export async function detectOfflineRecoveryDevices(env,deviceIds,nowMs=Date.now()) {
   const rows=await listOfflineRecoveryCandidates(env,nowMs,{limit:96,deviceIds});
-  return recordOfflineCandidates(env,rows,nowMs);
+  return recordOfflineCandidates(env,rows,nowMs,{leased:true});
 }
 export async function observeHeartbeatRecovery(env,device,nowMs=Date.now()) {
   if (!recoveryDeviceEnabled(env,device)) return null;

@@ -23,7 +23,7 @@ function fixture(t){
   'CREATE TABLE commander_devices(device_id TEXT PRIMARY KEY,tenant_id TEXT,state TEXT,'+
   'revoked_at_utc TEXT,approval_mode TEXT,tunnel_mode TEXT,last_seen_at_utc TEXT,created_at_utc TEXT);'+
   "INSERT INTO tenants VALUES('TENANT-A'),('TENANT-B');");
- for(const file of ['0037_device_recovery_alerts.sql','0038_recovery_delivery.sql'])
+ for(const file of ['0037_device_recovery_alerts.sql','0038_recovery_delivery.sql','0039_recovery_device_leases.sql'])
   db.exec(readFileSync(new URL('../migrations/'+file,import.meta.url),'utf8'));
  recipient.exec('CREATE TABLE receipt(event_id TEXT PRIMARY KEY,body TEXT NOT NULL,receipt TEXT NOT NULL)');
  const metrics={queries:[],batches:[],fetches:[]},hooks={};
@@ -122,10 +122,10 @@ for(const flag of [undefined,'false',true])test('consumer fanout default OFF pre
  await f.consume(scan([deviceId(1)]));
  assert.equal(f.metrics.queries.length,0);assert.equal(f.metrics.fetches.length,0);
 });
-test('20k real eligible rows become 209 unique SCAN jobs without repeatedly selecting the first 200',async t=>{
+test('20k real eligible rows become partitioned unique SCAN jobs without repeatedly selecting the first 200',async t=>{
  const f=fixture(t);f.db.exec('BEGIN');for(let n=1;n<=20000;n++)f.addDevice(n);f.db.exec('COMMIT');
  await f.produce();const jobs=f.jobs();
- assert.equal(jobs.length,209);assert.ok(jobs.every(job=>job.kind==='SCAN'));
+ assert.ok(jobs.length>=209&&jobs.length<=224);assert.ok(jobs.every(job=>job.kind==='SCAN'));
  assert.ok(jobs.every(job=>job.device_ids.length>=1&&job.device_ids.length<=96));
  const ids=jobs.flatMap(job=>job.device_ids);
  assert.equal(ids.length,20000);assert.equal(new Set(ids).size,20000);
@@ -159,15 +159,15 @@ test('PROD fanout retains exact canary whitelist and rejects absent whitelist',a
 });
 test('consumer rechecks refreshed heartbeat, revocation and manual stop after producer selected them',async t=>{
  const f=fixture(t);for(let n=1;n<=4;n++)f.addDevice(n);
- await f.produce();const job=f.jobs()[0];assert.equal(job.device_ids.length,4);
+ await f.produce();const jobs=f.jobs();assert.equal(jobs.flatMap(x=>x.device_ids).length,4);
  f.db.prepare('UPDATE commander_devices SET last_seen_at_utc=? WHERE device_id=?').run(iso(0),deviceId(1));
  f.db.prepare("UPDATE commander_devices SET state='REVOKED',revoked_at_utc=? WHERE device_id=?").run(iso(0),deviceId(2));
  f.db.prepare("UPDATE commander_devices SET tunnel_mode='OUTBOUND_RELAY_OFFLINE' WHERE device_id=?").run(deviceId(3));
- const result=await f.consume(job);
+ const results=[];for(const job of jobs)results.push(await f.consume(job));
  assert.deepEqual(f.db.prepare('SELECT device_id,event_state FROM commander_device_recovery_events').all()
   .map(row=>({...row})),[{device_id:deviceId(4),event_state:'DEGRADED'}]);
- assert.equal(result.calls.ack,1);assert.deepEqual(result.calls.retry,[]);
- assert.equal(result.calls.atAck,1,'ack preceded durable incident persistence');
+ assert.ok(results.every(r=>r.calls.ack===1&&r.calls.retry.length===0));
+ assert.equal(results.at(-1).calls.atAck,1,'ack preceded durable incident persistence');
  assert.equal(f.metrics.fetches.length,0);
 });
 test('duplicate SCAN delivery is idempotent and consumes only its explicit device IDs',async t=>{
@@ -276,4 +276,34 @@ test('recipient outage retries only the selected message and later resumes witho
  const resumed=await f.consume(delivery([eventId(1)]),{nowMs:NOW+60000});
  assert.equal(resumed.calls.ack,1);assert.equal(f.db.prepare('SELECT state FROM recovery_delivery_outbox').get().state,'DELIVERED');
  assert.equal(f.recipient.prepare('SELECT count(*) AS n FROM receipt').get().n,1);
+});
+
+test('scoped detector uses enrollment primary-key lookups rather than a fleet rescan',async t=>{
+ const f=fixture(t);for(let i=1;i<=100;i++)f.addDevice(i);
+ await f.consume(scan([deviceId(99)]));
+ const q=f.metrics.queries.find(q=>q.sql.includes('selected CROSS JOIN'));
+ assert.ok(q);const plan=f.db.prepare('EXPLAIN QUERY PLAN '+q.sql).all(...q.args);
+ assert.ok(plan.some(r=>r.detail.includes('SEARCH d USING INDEX')&&r.detail.includes('device_id=?')));
+ assert.equal(f.db.prepare('SELECT count(*) AS n FROM commander_device_recovery_events').get().n,1);
+});
+test('duplicate consumers cannot both own an enrollment; lease release and replay remain safe',async t=>{
+ const f=fixture(t);f.addDevice(1);f.env.COMMANDER_RECOVERY_SCAN_CONCURRENCY='4';
+ const results=await Promise.all([f.consume(scan([deviceId(1)])),f.consume(scan([deviceId(1)]))]);
+ assert.equal(f.db.prepare('SELECT count(*) AS n FROM commander_device_recovery_events').get().n,1);
+ assert.equal(f.db.prepare('SELECT count(*) AS n FROM recovery_device_leases').get().n,0);
+ assert.equal(results.filter(r=>r.calls.retry.length).length,1);
+ await f.consume(scan([deviceId(1)]));
+ assert.equal(f.db.prepare('SELECT count(*) AS n FROM commander_device_recovery_events').get().n,1);
+});
+test('expired crash attempt cannot persist over a successor lease token',async t=>{
+ const f=fixture(t);f.addDevice(1);let replaced=false;
+ f.hooks.beforeQuery=(sql)=>{
+  if(!replaced&&sql.startsWith('INSERT INTO commander_device_recovery_events')){
+   replaced=true;f.db.prepare("UPDATE recovery_device_leases SET lease_token='SUCCESSOR',lease_until_ms=?").run(NOW+60000);
+  }
+ };
+ const result=await f.consume(scan([deviceId(1)]));
+ assert.equal(result.calls.retry.length,1);
+ assert.equal(f.db.prepare('SELECT count(*) AS n FROM commander_device_recovery_events').get().n,0);
+ assert.equal(f.db.prepare('SELECT lease_token FROM recovery_device_leases').get().lease_token,'SUCCESSOR');
 });
