@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import base64
+import contextlib
 import hashlib
 import hmac
 import json
@@ -3323,6 +3324,9 @@ def _relay_worker_entry(target,config,channel):
         raise SystemExit(0)
     signal.signal(signal.SIGTERM,terminate)
     try:
+        # spawn imports fresh module globals; restore the enrollment fence
+        # before any worker opens the effect/budget journal.
+        if config.get('HARA_COMMANDER_URL'):configure_enrollment_state(config)
         target(config,channel)
     except (Exception,KeyboardInterrupt) as exc:
         _relay_progress('ERROR',code=safe_error_code(exc))
@@ -3425,8 +3429,139 @@ def _relay_executor_worker(config,channel):
         time.sleep(delay)
 
 
+class RecoveryEventOutbox:
+    """Enrollment-private metadata, isolated from the tool journal and heartbeat.
+
+    PERSISTED closes ingestion only. External delivery and human ACK belong to
+    the server and never cause this Agent to replay an already persisted event.
+    """
+    def __init__(self, config):
+        self.config = dict(config)
+        self.context = _enrollment_context(config)
+        self.path = DATA_DIR / 'enrollments' / self.context / 'recovery-events.sqlite3'
+        for folder in (DATA_DIR, self.path.parent.parent, self.path.parent):
+            if folder.is_symlink(): raise ValueError('ENROLLMENT_STATE_PATH_INVALID')
+            folder.mkdir(mode=0o700, parents=True, exist_ok=True)
+            if folder.stat().st_mode & 0o077: raise ValueError('RECOVERY_STORE_NOT_PRIVATE')
+        try:
+            fd = os.open(self.path, os.O_CREAT | os.O_EXCL | os.O_WRONLY | os.O_NOFOLLOW, 0o600)
+            os.close(fd)
+        except FileExistsError:
+            info = self.path.lstat()
+            if not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid() or info.st_mode & 0o077:
+                raise ValueError('RECOVERY_STORE_NOT_PRIVATE') from None
+        with self._connect() as db:
+            db.executescript('''
+              CREATE TABLE IF NOT EXISTS recovery_meta(key TEXT PRIMARY KEY,value TEXT NOT NULL);
+              CREATE TABLE IF NOT EXISTS recovery_health(worker TEXT PRIMARY KEY,incident TEXT NOT NULL,
+                sequence INTEGER NOT NULL,state TEXT NOT NULL,event_id TEXT NOT NULL);
+              CREATE TABLE IF NOT EXISTS recovery_events(event_id TEXT PRIMARY KEY,incident TEXT NOT NULL,
+                sequence INTEGER NOT NULL,body TEXT NOT NULL,state TEXT NOT NULL,created_ms INTEGER NOT NULL,
+                attempts INTEGER NOT NULL DEFAULT 0,next_ms INTEGER NOT NULL DEFAULT 0,
+                lease_ms INTEGER NOT NULL DEFAULT 0,server_event_id TEXT,
+                UNIQUE(incident,sequence));
+              CREATE INDEX IF NOT EXISTS recovery_due ON recovery_events(state,next_ms);
+            ''')
+
+    @contextlib.contextmanager
+    def _connect(self):
+        db = sqlite3.connect(str(self.path), timeout=.05)
+        db.row_factory = sqlite3.Row
+        try:
+            db.execute('PRAGMA synchronous=FULL')
+            yield db
+        finally:
+            db.close()
+
+    def enqueue(self, worker, state):
+        if worker not in {'heartbeat', 'executor'} or state not in {'STALLED','RECOVERING','RECOVERED','DEGRADED'}:
+            raise ValueError('RECOVERY_EVENT_INVALID')
+        now = int(time.time() * 1000)
+        with self._connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            prior = db.execute('SELECT * FROM recovery_health WHERE worker=?', (worker,)).fetchone()
+            if prior and prior['state'] == state:
+                event = db.execute('SELECT body FROM recovery_events WHERE event_id=?', (prior['event_id'],)).fetchone()
+                db.commit()
+                return json.loads(event['body']) if event else None
+            # Bounded retention; pending metadata is never evicted for capacity.
+            db.execute("DELETE FROM recovery_events WHERE state='PERSISTED' AND created_ms<?", (now-90*86400000,))
+            if db.execute('SELECT count(*) FROM recovery_events').fetchone()[0] >= 4096:
+                raise ValueError('RECOVERY_OUTBOX_FULL')
+            new_incident = not prior or prior['state'] == 'RECOVERED'
+            incident = uuid.uuid4().hex if new_incident else prior['incident']
+            sequence = 1 if new_incident else prior['sequence'] + 1
+            event = {'schema':'hara.commander.recovery-alert.proposal.v1','event_id':uuid.uuid4().hex,
+                     'client_incident_key':incident,'transition_seq':sequence,'worker':worker,'state':state,
+                     'observed_at_utc':datetime.fromtimestamp(now/1000, timezone.utc).isoformat(timespec='milliseconds').replace('+00:00','Z'),
+                     'detector':'LINUX_PROCESS_GUARDIAN'}
+            body = json.dumps(event, sort_keys=True, separators=(',', ':'))
+            db.execute("INSERT INTO recovery_events(event_id,incident,sequence,body,state,created_ms) VALUES(?,?,?,?,'PENDING',?)",
+                       (event['event_id'],incident,sequence,body,now))
+            db.execute('INSERT OR REPLACE INTO recovery_health VALUES(?,?,?,?,?)',
+                       (worker,incident,sequence,state,event['event_id']))
+            db.commit()
+            return event
+
+    def send_once(self, *, authorized=True, now_ms=None):
+        if not authorized: return {'state':'PAUSED'}
+        now = int(time.time()*1000) if now_ms is None else int(now_ms)
+        with self._connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            if db.execute("SELECT 1 FROM recovery_meta WHERE key='revoked'").fetchone():
+                db.commit(); return {'state':'REVOKED'}
+            db.execute("UPDATE recovery_events SET state='EXHAUSTED',lease_ms=0 WHERE state='INFLIGHT' AND lease_ms<=? AND attempts>=32", (now,))
+            db.execute("UPDATE recovery_events SET state='EXPIRED' WHERE state IN ('PENDING','RETRY','INFLIGHT') AND created_ms<?",
+                       (now-7*86400000,))
+            row = db.execute('''SELECT e.* FROM recovery_events e WHERE e.attempts<32
+              AND ((e.state IN ('PENDING','RETRY') AND e.next_ms<=?) OR (e.state='INFLIGHT' AND e.lease_ms<=?))
+              AND NOT EXISTS(SELECT 1 FROM recovery_events p WHERE p.incident=e.incident
+                AND p.sequence<e.sequence AND p.state<>'PERSISTED')
+              ORDER BY e.created_ms,e.incident,e.sequence LIMIT 1''', (now,now)).fetchone()
+            if not row: db.commit(); return {'state':'EMPTY'}
+            attempt = row['attempts'] + 1
+            db.execute("UPDATE recovery_events SET state='INFLIGHT',attempts=?,lease_ms=? WHERE event_id=?",
+                       (attempt,now+15000,row['event_id']))
+            db.commit()
+        event = json.loads(row['body'])
+        server_id = None
+        try:
+            reply = post_json(self.config['HARA_COMMANDER_URL'].rstrip('/')+'/api/device/recovery-events',
+                              self.config['HARA_DEVICE_TOKEN'],event,timeout=5)
+            if (not isinstance(reply,dict) or reply.get('schema')!='hara.commander.recovery-ingest.v1'
+                or reply.get('ack')!='PERSISTED' or reply.get('client_event_id')!=event['event_id']
+                or reply.get('external_delivery_confirmed') is not False
+                or not re.fullmatch(r'HARA-REC-[0-9a-f]{48}',str(reply.get('event_id') or ''))):
+                raise ValueError('RECOVERY_PERSISTENCE_NOT_CONFIRMED')
+            state='PERSISTED';server_id=reply['event_id']
+        except Exception as exc:
+            code=safe_error_code(exc)
+            state='REVOKED' if code in {'HTTP_401','HTTP_403'} else ('EXHAUSTED' if attempt>=32 else 'RETRY')
+        delay=min(300000,5000*2**min(16,attempt-1))
+        with self._connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            if state=='REVOKED': db.execute("INSERT OR REPLACE INTO recovery_meta VALUES('revoked','1')")
+            changed=db.execute("UPDATE recovery_events SET state=?,server_event_id=?,next_ms=?,lease_ms=0 WHERE event_id=? AND state='INFLIGHT' AND attempts=?",
+                               (state,server_id,now+delay,row['event_id'],attempt)).rowcount
+            db.commit()
+        return {'state':state if changed else 'STALE_ATTEMPT','event_id':row['event_id']}
+
+
+def _relay_alert_worker(config, channel):
+    outbox=RecoveryEventOutbox(config)
+    while True:
+        assert_current_enrollment(config)
+        authorized=effective_approval_mode(config)=='PERSISTENT_TRUSTED' or operator_session_active()
+        _relay_progress('BUSY')
+        result=outbox.send_once(authorized=authorized)
+        if result['state']=='REVOKED': _relay_progress('REVOKED',code='DEVICE_AUTH_INVALID'); return
+        delay=.1 if result['state']=='PERSISTED' else 2.0
+        _relay_progress('READY',delay=delay)
+        time.sleep(delay)
+
+
 class RelaySupervisor:
-    def __init__(self,config,*,heartbeat_target=None,executor_target=None,report=None,settings=None):
+    def __init__(self,config,*,heartbeat_target=None,executor_target=None,report=None,settings=None,recovery_outbox=None):
         import multiprocessing
         if transport_mode(config)!='OUTBOUND_RELAY':raise ValueError('RELAY_TRANSPORT_REQUIRED')
         self.config=dict(config)
@@ -3434,16 +3569,19 @@ class RelaySupervisor:
         self.context=multiprocessing.get_context(start_method)
         self.targets={'heartbeat':heartbeat_target or _relay_heartbeat_worker,
                       'executor':executor_target or _relay_executor_worker}
+        self.recovery_outbox=recovery_outbox
+        if recovery_outbox is not None:self.targets['alerts']=_relay_alert_worker
         self.report=report or self._report
         self.settings={'heartbeat_stale':RELAY_HEARTBEAT_STALE_SECONDS,
                        'worker_timeout':RELAY_WORKER_TIMEOUT_SECONDS,
                        'heartbeat_interval':float(HEARTBEAT_SECONDS),
                        'restart_cooldown':5.0,'restart_window':1800.0,'max_restarts':2}
         if settings:self.settings.update(settings)
-        self.children={};self.attempts={'heartbeat':[],'executor':[]}
-        self.restart_counts={'heartbeat':0,'executor':0}
+        self.children={};self.attempts={kind:[] for kind in self.targets}
+        self.restart_counts={kind:0 for kind in self.targets}
         self.heartbeat_confirmations=0;self.last_heartbeat=None;self.started=None
         self.revoked=False;self.recovering={};self.states={};self.blocked_until={};self.abandoned={}
+        self.pending_health=[];self.last_health_error=None
 
     @staticmethod
     def _report(event):
@@ -3454,8 +3592,24 @@ class RelaySupervisor:
     def _event(self,kind,state,now):
         if self.states.get(kind)==state:return
         self.states[kind]=state
+        if self.recovery_outbox is not None and kind in {'heartbeat','executor'}:
+            if len(self.pending_health)<128:self.pending_health.append((kind,state))
+            else:self.report({'schema':'hara.commander.relay-health.v1','worker':'alerts',
+                              'state':'DEGRADED','error_code':'RECOVERY_OUTBOX_FULL','monotonic':now})
+            self._flush_health(now)
         self.report({'schema':'hara.commander.relay-health.v1','worker':kind,
                      'state':state,'monotonic':now})
+
+    def _flush_health(self,now):
+        while self.pending_health:
+            try:self.recovery_outbox.enqueue(*self.pending_health[0])
+            except Exception as exc:
+                if self.last_health_error is None or now-self.last_health_error>=30:
+                    self.report({'schema':'hara.commander.relay-health.v1','worker':'alerts',
+                                 'state':'DEGRADED','error_code':safe_error_code(exc),'monotonic':now})
+                    self.last_health_error=now
+                break
+            self.pending_health.pop(0)
 
     def _spawn(self,kind,now):
         receive,send=self.context.Pipe(duplex=False)
@@ -3523,6 +3677,7 @@ class RelaySupervisor:
         if not authorized or self.revoked:
             self.close();self.started=None;self.last_heartbeat=None;self.recovering.clear();return
         if self.started is None:self.started=now
+        self._flush_health(now)
         for kind in self.targets:
             if kind not in self.children and now>=self.blocked_until.get(kind,0):self._spawn(kind,now)
         for kind,child in list(self.children.items()):
@@ -3550,11 +3705,11 @@ class RelaySupervisor:
                     child['deadline']=min(float(message['deadline']),now+900)
                     child['ready']=False
                     child['call']={k:message.get(k) for k in ('request_id','call_id','fingerprint')}
-                elif kind=='executor' and tag in {'BUSY','READY'}:
+                elif kind in {'executor','alerts'} and tag in {'BUSY','READY'}:
                     delay=min(60.0,max(0.0,float(message.get('delay',0)))) if tag=='READY' else 0.0
                     child['deadline']=now+delay+self.settings['worker_timeout']
                     child['ready']=tag=='READY'
-                    if tag=='READY':child['call']=None;self.abandoned.clear()
+                    if tag=='READY' and kind=='executor':child['call']=None;self.abandoned.clear()
                 elif kind=='executor' and tag=='MANAGED_PROCESS':
                     child['managed'][int(message['pid'])]=message.get('start_marker')
                 elif kind=='executor' and tag=='PHASE':
@@ -3585,7 +3740,7 @@ class RelaySupervisor:
 
 def run_supervised_relay(config):
     startup=_enrollment_context(config)
-    guardian=RelaySupervisor(config)
+    guardian=RelaySupervisor(config,recovery_outbox=RecoveryEventOutbox(config))
     previous={}
     def stop(_signal,_frame):raise KeyboardInterrupt
     for signum in (signal.SIGTERM,signal.SIGINT):

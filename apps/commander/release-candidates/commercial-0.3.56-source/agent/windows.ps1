@@ -2364,6 +2364,101 @@ function Invoke-WithWindowsRelayLock([scriptblock]$Action) {
   } finally {if($held){$mutex.ReleaseMutex()};$mutex.Dispose()}
 }
 
+function Get-WindowsRecoveryNow {return [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()}
+function Initialize-WindowsRecoveryOutbox($Cfg) {
+  $context=Get-EnrollmentContext $Cfg
+  if(Test-Path -LiteralPath $ConfigPath -PathType Leaf){
+    $current=Get-Content -Raw -LiteralPath $ConfigPath | ConvertFrom-Json
+    if((Get-EnrollmentContext $current) -cne $context){throw 'ENROLLMENT_CHANGED_RESTART_REQUIRED'}
+  }
+  $folder=Split-Path $script:OperationsDb
+  $item=Get-Item -LiteralPath $folder -Force
+  if(-not $item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)){throw 'ENROLLMENT_STATE_PATH_INVALID'}
+  $path=Join-Path $folder 'recovery-events.sqlite3'
+  if(Test-Path -LiteralPath $path){
+    $item=Get-Item -LiteralPath $path -Force
+    if($item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)){throw 'ENROLLMENT_STATE_PATH_INVALID'}
+  }
+  # The enrollment directory already has the native private ACL. This separate
+  # DB inherits it, without depending on the tool journal or a DPAPI plaintext.
+  Initialize-WinSqlite
+  [HaraWinSqlite]::Execute($path,'CREATE TABLE IF NOT EXISTS recovery_meta(key TEXT PRIMARY KEY,value TEXT NOT NULL)',@())
+  [HaraWinSqlite]::Execute($path,@'
+CREATE TABLE IF NOT EXISTS recovery_events (
+ ordinal INTEGER PRIMARY KEY AUTOINCREMENT,event_id TEXT NOT NULL UNIQUE,worker TEXT NOT NULL,
+ incident TEXT NOT NULL,sequence INTEGER NOT NULL,health TEXT NOT NULL,at_utc TEXT NOT NULL,
+ created_ms INTEGER NOT NULL,state TEXT NOT NULL,attempts INTEGER NOT NULL DEFAULT 0,
+ next_ms INTEGER NOT NULL DEFAULT 0,lease_ms INTEGER NOT NULL DEFAULT 0,server_event_id TEXT,
+ UNIQUE(incident,sequence))
+'@,@())
+  [HaraWinSqlite]::Execute($path,'CREATE INDEX IF NOT EXISTS recovery_due ON recovery_events(state,next_ms)',@())
+  [HaraWinSqlite]::Execute($path,"INSERT OR IGNORE INTO recovery_meta VALUES('context',?)",@($context))
+  $stored=@([HaraWinSqlite]::Query($path,"SELECT value FROM recovery_meta WHERE key='context'",@()))
+  if($stored.Count -ne 1 -or [string]$stored[0].value -cne $context){throw 'ENROLLMENT_CHANGED_RESTART_REQUIRED'}
+  return $path
+}
+function ConvertTo-WindowsRecoveryEvent($Row) {
+  return [ordered]@{schema='hara.commander.recovery-alert.proposal.v1';event_id=[string]$Row.event_id;
+    client_incident_key=[string]$Row.incident;transition_seq=[long]$Row.sequence;worker=[string]$Row.worker;
+    state=[string]$Row.health;observed_at_utc=[string]$Row.at_utc;detector='WINDOWS_JOB_GUARDIAN'}
+}
+function Add-WindowsRecoveryEvent($Cfg,[string]$Worker,[string]$State) {
+  if(@('heartbeat','executor') -cnotcontains $Worker -or @('STALLED','RECOVERING','RECOVERED','DEGRADED') -cnotcontains $State){throw 'RECOVERY_EVENT_INVALID'}
+  $path=Initialize-WindowsRecoveryOutbox $Cfg
+  $now=[long](Get-WindowsRecoveryNow)
+  $eventId=[guid]::NewGuid().ToString('N');$incident=[guid]::NewGuid().ToString('N')
+  $at=[DateTimeOffset]::FromUnixTimeMilliseconds($now).UtcDateTime.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+  [HaraWinSqlite]::Execute($path,"DELETE FROM recovery_events WHERE state='PERSISTED' AND created_ms<?",@($now-90L*86400000))
+  # One SQLite INSERT derives incident+sequence and deduplicates atomically.
+  # A crash cannot consume a sequence without writing its event.
+  [HaraWinSqlite]::Execute($path,@'
+INSERT INTO recovery_events(event_id,worker,incident,sequence,health,at_utc,created_ms,state)
+SELECT ?,?,COALESCE((SELECT CASE WHEN health='RECOVERED' THEN ? ELSE incident END
+ FROM recovery_events WHERE worker=? ORDER BY ordinal DESC LIMIT 1),?),
+ COALESCE((SELECT CASE WHEN health='RECOVERED' THEN 1 ELSE sequence+1 END
+ FROM recovery_events WHERE worker=? ORDER BY ordinal DESC LIMIT 1),1),?,?,?,'PENDING'
+WHERE NOT EXISTS(SELECT 1 FROM (SELECT health FROM recovery_events WHERE worker=? ORDER BY ordinal DESC LIMIT 1) WHERE health=?)
+ AND (SELECT count(*) FROM recovery_events)<4096
+'@,@($eventId,$Worker,$incident,$Worker,$incident,$Worker,$State,$at,$now,$Worker,$State))
+  $row=@([HaraWinSqlite]::Query($path,'SELECT * FROM recovery_events WHERE worker=? ORDER BY ordinal DESC LIMIT 1',@($Worker)))
+  if(-not $row.Count -or [string]$row[0].health -cne $State){throw 'RECOVERY_OUTBOX_FULL'}
+  return ConvertTo-WindowsRecoveryEvent $row[0]
+}
+function Send-WindowsRecoveryEvents($Cfg,[string]$Token,[bool]$Authorized=$true) {
+  if(-not $Authorized){return @{state='PAUSED'}}
+  $path=Initialize-WindowsRecoveryOutbox $Cfg
+  if(@([HaraWinSqlite]::Query($path,"SELECT 1 AS n FROM recovery_meta WHERE key='revoked'",@())).Count){return @{state='REVOKED'}}
+  $now=[long](Get-WindowsRecoveryNow)
+  [HaraWinSqlite]::Execute($path,"UPDATE recovery_events SET state='EXPIRED' WHERE state IN ('PENDING','RETRY','INFLIGHT') AND created_ms<?",@($now-7L*86400000))
+  [HaraWinSqlite]::Execute($path,"UPDATE recovery_events SET state='EXHAUSTED',lease_ms=0 WHERE state='INFLIGHT' AND lease_ms<=? AND attempts>=32",@($now))
+  $rows=@([HaraWinSqlite]::Query($path,@'
+UPDATE recovery_events SET state='INFLIGHT',attempts=attempts+1,lease_ms=?
+WHERE event_id=(SELECT e.event_id FROM recovery_events e WHERE e.attempts<32
+ AND ((e.state IN ('PENDING','RETRY') AND e.next_ms<=?) OR (e.state='INFLIGHT' AND e.lease_ms<=?))
+ AND NOT EXISTS(SELECT 1 FROM recovery_events p WHERE p.incident=e.incident
+  AND p.sequence<e.sequence AND p.state<>'PERSISTED')
+ ORDER BY e.ordinal LIMIT 1) RETURNING *
+'@,@(($now+15000),$now,$now)))
+  if(-not $rows.Count){return @{state='EMPTY'}}
+  $row=$rows[0];$event=ConvertTo-WindowsRecoveryEvent $row
+  $serverId=$null
+  try {
+    $reply=Send-Json "$(([string]$Cfg.base_url).TrimEnd('/'))/api/device/recovery-events" $Token $event 5
+    if(-not $reply -or [string]$reply.schema -cne 'hara.commander.recovery-ingest.v1' -or
+       [string]$reply.ack -cne 'PERSISTED' -or [string]$reply.client_event_id -cne [string]$row.event_id -or
+       $reply.external_delivery_confirmed -isnot [bool] -or $reply.external_delivery_confirmed -ne $false -or
+       [string]$reply.event_id -cnotmatch '^HARA-REC-[0-9a-f]{48}$'){throw 'RECOVERY_PERSISTENCE_NOT_CONFIRMED'}
+    $state='PERSISTED';$serverId=[string]$reply.event_id
+  } catch {
+    $code=Get-SafeErrorCode $_
+    $state=if($code -cin @('HTTP_401','HTTP_403')){'REVOKED'}elseif([long]$row.attempts -ge 32){'EXHAUSTED'}else{'RETRY'}
+  }
+  if($state -ceq 'REVOKED'){[HaraWinSqlite]::Execute($path,"INSERT OR REPLACE INTO recovery_meta VALUES('revoked','1')",@())}
+  $delay=[long][Math]::Min(300000,5000*[Math]::Pow(2,[Math]::Min(16,[long]$row.attempts-1)))
+  $saved=@([HaraWinSqlite]::Query($path,"UPDATE recovery_events SET state=?,server_event_id=?,next_ms=?,lease_ms=0 WHERE event_id=? AND state='INFLIGHT' AND attempts=? RETURNING event_id",@($state,$serverId,($now+$delay),[string]$row.event_id,[long]$row.attempts)))
+  return @{state=$(if($saved.Count){$state}else{'STALE_ATTEMPT'});event_id=[string]$row.event_id}
+}
+
 function Initialize-WindowsRelayStore {
   if(Test-Path -LiteralPath $script:OperationsDb){
     $item=Get-Item -LiteralPath $script:OperationsDb -Force
@@ -2576,7 +2671,7 @@ public sealed class HaraRelayProcess : IDisposable {
   }
   public HaraRelayProcess(string shell,string script,string role,string parentPid,string parentStart,string context,string nonce,string handshake) {
     if(Environment.OSVersion.Platform!=PlatformID.Win32NT) throw new PlatformNotSupportedException("WINDOWS_JOB_REQUIRED");
-    if(role!="heartbeat" && role!="executor") throw new InvalidOperationException("RELAY_ROLE_INVALID");
+    if(role!="heartbeat" && role!="executor" && role!="alerts") throw new InvalidOperationException("RELAY_ROLE_INVALID");
     if(handshake==null || handshake.Length>4096) throw new InvalidOperationException("RELAY_HANDSHAKE_INVALID");
     Job=CreateJobObject(IntPtr.Zero,null);
     if(Job==IntPtr.Zero) throw new InvalidOperationException("RELAY_JOB_CREATE_FAILED");
@@ -2669,11 +2764,28 @@ function Get-WindowsRelayDeadline($Call,[double]$Now=(Get-WindowsRelayNow)) {
   return $Now+[Math]::Max(0.0,[Math]::Min($limit,($expiry.UtcDateTime-[DateTime]::UtcNow).TotalSeconds))
 }
 function New-WindowsRelaySupervisorState([string]$AgentPath,[scriptblock]$Reporter=$null) {
-  return @{agentPath=$AgentPath;reporter=$Reporter;children=@{};attempts=@{heartbeat=@();executor=@()};restartCounts=@{heartbeat=0;executor=0};heartbeatCount=0;lastHeartbeat=$null;startedAt=$null;states=@{};recovering=@{};blockedUntil=@{};abandoned=@{};revoked=$false}
+  return @{agentPath=$AgentPath;reporter=$Reporter;children=@{};attempts=@{heartbeat=@();executor=@()};restartCounts=@{heartbeat=0;executor=0};heartbeatCount=0;lastHeartbeat=$null;startedAt=$null;states=@{};recovering=@{};blockedUntil=@{};abandoned=@{};revoked=$false;pendingHealth=(New-Object Collections.Generic.List[object]);lastHealthError=$null}
+}
+function Flush-WindowsRecoveryHealth($State,[double]$Now) {
+  while($State.pendingHealth.Count){
+    try {Add-WindowsRecoveryEvent $State.recoveryCfg $State.pendingHealth[0].worker $State.pendingHealth[0].state | Out-Null}
+    catch {
+      if($null -eq $State.lastHealthError -or $Now-$State.lastHealthError -ge 30){
+        [Console]::Error.WriteLine('RECOVERY_OUTBOX_WRITE_FAILED');$State.lastHealthError=$Now
+      }
+      break
+    }
+    $State.pendingHealth.RemoveAt(0)
+  }
 }
 function Write-WindowsRelayHealth($State,[string]$Role,[string]$Health,[double]$Now) {
   if($State.states[$Role] -ceq $Health){return}
   $State.states[$Role]=$Health
+  if($State.recoveryCfg -and @('heartbeat','executor') -ccontains $Role){
+    if($State.pendingHealth.Count -lt 128){$State.pendingHealth.Add(@{worker=$Role;state=$Health})}
+    else{[Console]::Error.WriteLine('RECOVERY_OUTBOX_FULL')}
+    Flush-WindowsRecoveryHealth $State $Now
+  }
   $event=@{schema='hara.commander.relay-health.v1';worker=$Role;state=$Health;monotonic=$Now}
   if($State.reporter){& $State.reporter $event}else{[Console]::Error.WriteLine(($event | ConvertTo-Json -Compress))}
 }
@@ -2708,7 +2820,9 @@ function Step-WindowsRelaySupervisor($State,$Cfg,[bool]$Authorized,[double]$Now=
     $State.startedAt=$null;$State.lastHeartbeat=$null;$State.recovering.Clear();return
   }
   if($null -eq $State.startedAt){$State.startedAt=$Now}
-  foreach($role in @('heartbeat','executor')){
+  Flush-WindowsRecoveryHealth $State $Now
+  $roles=@('heartbeat','executor');if($State.alertsEnabled){$roles+=@('alerts')}
+  foreach($role in $roles){
     if(-not $State.children.ContainsKey($role) -and $Now -ge [double]$State.blockedUntil[$role]){Start-WindowsRelayChild $State $Cfg $role $Now}
   }
   foreach($role in @($State.children.Keys)){
@@ -2728,7 +2842,7 @@ function Step-WindowsRelaySupervisor($State,$Cfg,[bool]$Authorized,[double]$Now=
       } elseif($tag -ceq 'READY' -or $tag -ceq 'BUSY'){
         $sleep=if($tag -ceq 'READY'){[Math]::Min(60,[Math]::Max(0,[double]$message.delay))}else{0.0}
         $child.deadline=$Now+$sleep+35;$child.ready=$tag -ceq 'READY'
-        if($child.ready){$child.call=$null;$State.abandoned.Clear()}
+        if($child.ready -and $role -ceq 'executor'){$child.call=$null;$State.abandoned.Clear()}
       }
     }
     $anchor=if($null -ne $State.lastHeartbeat){$State.lastHeartbeat}else{$State.startedAt}
@@ -2781,7 +2895,7 @@ function Restore-WindowsRelayClaims($Claims) {
   }
 }
 function Start-WindowsRelayWorker([string[]]$WorkerArgs) {
-  if([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT -or $WorkerArgs.Count -ne 6 -or @('heartbeat','executor') -cnotcontains $WorkerArgs[1]){throw 'RELAY_WORKER_ARGUMENTS_INVALID'}
+  if([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT -or $WorkerArgs.Count -ne 6 -or @('heartbeat','executor','alerts') -cnotcontains $WorkerArgs[1]){throw 'RELAY_WORKER_ARGUMENTS_INVALID'}
   [int]$parentId=0
   if(-not [int]::TryParse($WorkerArgs[2],[ref]$parentId) -or $parentId -le 1 -or $WorkerArgs[4] -cnotmatch '^[0-9a-f]{64}$' -or $WorkerArgs[5] -cnotmatch '^[0-9a-f]{64}$' -or -not [Console]::IsInputRedirected){throw 'RELAY_HANDSHAKE_REQUIRED'}
   # START is sent only after the guardian has assigned the native Job Object.
@@ -2792,8 +2906,8 @@ function Start-WindowsRelayWorker([string[]]$WorkerArgs) {
   $script:WindowsRelayWorkerMode=$true
   $cfg=Test-WindowsRelayWorkerContext $parentId $WorkerArgs[3] $WorkerArgs[4]
   if(-not $cfg){return}
+  if(@('executor','alerts') -ccontains $WorkerArgs[1]){$script:EnrollmentContext=Initialize-EnrollmentState $cfg}
   if($WorkerArgs[1] -ceq 'executor'){
-    $script:EnrollmentContext=Initialize-EnrollmentState $cfg
     Restore-WindowsRelayClaims $hello.abandoned
     Repair-WindowsRelayJournal
     Write-WindowsRelayProgress 'READY' @{delay=0}
@@ -2819,6 +2933,11 @@ function Start-WindowsRelayWorker([string[]]$WorkerArgs) {
           Write-WindowsRelayProgress 'HEARTBEAT_CONFIRMED'
           Try-SetRuntimeStatus -HeartbeatAt ([DateTime]::UtcNow.ToString('o')) -ErrorCode '' -ErrorAt '' | Out-Null
           $delay=[double]$HeartbeatSeconds;$failures=0
+        } elseif($WorkerArgs[1] -ceq 'alerts') {
+          Write-WindowsRelayProgress 'BUSY'
+          $sent=Send-WindowsRecoveryEvents $cfg $deviceToken $true
+          if($sent.state -ceq 'REVOKED'){throw 'HTTP_403'}
+          $delay=if($sent.state -ceq 'PERSISTED'){0.1}else{2.0}
         } else {
           Write-WindowsRelayProgress 'BUSY'
           if((Get-WindowsRelayNow)-$lastRepair -ge 10){
@@ -2847,7 +2966,7 @@ function Start-WindowsRelayWorker([string[]]$WorkerArgs) {
         $delay=[Math]::Min(60.0,$(if($code -ceq 'HTTP_429'){30.0}else{2.0})*[Math]::Pow(2,$failures-1))
         if($WorkerArgs[1] -ceq 'heartbeat'){Write-WindowsRelayProgress 'HEARTBEAT_RETRY' @{delay=$delay;code=$code}}
       } finally {$deviceToken=$null}
-      if($WorkerArgs[1] -ceq 'executor'){Write-WindowsRelayProgress 'READY' @{delay=$delay}}
+      if(@('executor','alerts') -ccontains $WorkerArgs[1]){Write-WindowsRelayProgress 'READY' @{delay=$delay}}
       Start-Sleep -Milliseconds ([int]($delay*1000))
     }
   } finally {
@@ -2857,6 +2976,9 @@ function Start-WindowsRelayWorker([string[]]$WorkerArgs) {
 function Start-WindowsRelaySupervisor($Cfg,[string]$AgentPath) {
   $context=Get-EnrollmentContext $Cfg
   $state=New-WindowsRelaySupervisorState $AgentPath
+  $state.recoveryCfg=$Cfg;$state.alertsEnabled=$true
+  $state.attempts.alerts=@();$state.restartCounts.alerts=0
+  Initialize-WindowsRecoveryOutbox $Cfg | Out-Null
   try {
     while($true){
       $current=Read-WindowsRelayConfig

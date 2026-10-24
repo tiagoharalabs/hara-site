@@ -1,12 +1,13 @@
-/** Source proposal for owner #163. No route, destination, credential or runtime
- * binding is supplied here. /api/portal/slo/ack is never a delivery receipt.
+/** Agent ingestion and recipient delivery have separate terminal receipts.
+ * /api/portal/slo/ack is never a delivery receipt.
  * Store interface: async run(sql,args)->{changes}, first(sql,args)->row|null.
  * The owner must decide whether to extend the SLO subsystem or admit another
  * sink, then bind an idempotent sender and a verifier of actual delivery.
  */
 export const HOLD_REMOTE_ALERT_OWNER_163='HOLD_REMOTE_ALERT_OWNER_163';
 export const SOURCE_CONTRACT=Object.freeze({
- status:'SOURCE_PROPOSAL_PENDING_OWNER_163',
+ status:'SOURCE_IMPLEMENTED_INGEST_CONTRACT_R163',
+ ingestRoute:'/api/device/recovery-events',ingestAck:'PERSISTED',
  owner:'https://github.com/tiagoharalabs/hara-site/issues/163',
  existingIncidentMigrations:['0026_slo_incidents.sql','0027_slo_incident_ack_escalation.sql'],
  externalTransportBound:false,humanIncidentAckIsDeliveryAck:false,
@@ -64,7 +65,7 @@ export class RecoveryAlertOutbox {
   if(!saved || saved.event_id!==event.event_id || saved.fingerprint!==fingerprint)throw Error('ALERT_IDEMPOTENCY_CONFLICT');
   return saved;
  }
- async claim(nowMs){
+ async claim(nowMs,ingest=false){
   if(!Number.isSafeInteger(nowMs)||nowMs<0)throw Error('ALERT_CLOCK_INVALID');
   await this.store.run(`UPDATE commander_recovery_delivery_outbox SET state='EXHAUSTED',lease_until_ms=0
    WHERE state='INFLIGHT' AND lease_until_ms<=? AND attempts>=?`,[nowMs,this.policy.maxAttempts]);
@@ -74,7 +75,7 @@ export class RecoveryAlertOutbox {
         OR (current.state='INFLIGHT' AND current.lease_until_ms<=?))
       AND NOT EXISTS (SELECT 1 FROM commander_recovery_delivery_outbox previous
        WHERE previous.client_incident_key=current.client_incident_key
-         AND previous.transition_seq<current.transition_seq AND previous.state<>'DELIVERED')
+         AND previous.transition_seq<current.transition_seq AND ${ingest?"previous.state NOT IN ('PERSISTED','DELIVERED')":"previous.state<>'DELIVERED'"})
     ORDER BY current.next_attempt_ms,current.client_incident_key,current.transition_seq LIMIT 1)
    RETURNING *`,[nowMs+this.policy.leaseMs,this.policy.maxAttempts,nowMs,nowMs]);
  }
@@ -84,20 +85,31 @@ export class RecoveryAlertOutbox {
    WHERE event_id=? AND state='INFLIGHT' AND attempts=?`,[receipt.receiptRef,row.event_id,row.attempts]);
   return Number(result.changes)===1;
  }
- async dispatch({send,verifyReceipt,nowMs=Date.now()}={}){
+ async dispatchIngest(options={}){return this._dispatch({...options,ingest:true});}
+ async dispatch(options={}){return this._dispatch({...options,ingest:false});}
+ async _dispatch({send,verifyReceipt,nowMs=Date.now(),ingest=false}={}){
   // Absence of either owner-supplied operation is a scoped HOLD, never a fake
   // acceptance boolean, guessed endpoint, human acknowledgement or local ACK.
-  if(typeof send!=='function'||typeof verifyReceipt!=='function')return {state:HOLD_REMOTE_ALERT_OWNER_163};
-  const row=await this.claim(nowMs);if(!row)return {state:'EMPTY'};
+  if(typeof send!=='function'||(!ingest&&typeof verifyReceipt!=='function'))return {state:HOLD_REMOTE_ALERT_OWNER_163};
+  const row=await this.claim(nowMs,ingest);if(!row)return {state:'EMPTY'};
   const controller=new AbortController();let timer;
   try {
    const delivery=(async()=>{
     const event=JSON.parse(row.body_json);
     const response=await send(event,{idempotencyKey:row.event_id,attempt:row.attempts,signal:controller.signal});
-    return verifyReceipt(event,response);
+    if(!ingest)return verifyReceipt(event,response);
+    if(response?.schema!=='hara.commander.recovery-ingest.v1'||response.ack!=='PERSISTED'||
+       response.client_event_id!==event.event_id||response.external_delivery_confirmed!==false||
+       !/^HARA-REC-[0-9a-f]{48}$/.test(response.event_id||''))throw Error('ALERT_PERSISTENCE_NOT_CONFIRMED');
+    return {kind:'PERSISTED',eventId:event.event_id,receiptRef:response.event_id};
    })();
    const timeout=new Promise((_,reject)=>{timer=setTimeout(()=>{controller.abort();reject(Error('ALERT_DELIVERY_TIMEOUT'));},this.policy.timeoutMs);});
    const receipt=await Promise.race([delivery,timeout]);
+   if(ingest){
+    const result=await this.store.run(`UPDATE commander_recovery_delivery_outbox SET state='PERSISTED',receipt_ref=?,lease_until_ms=0
+     WHERE event_id=? AND state='INFLIGHT' AND attempts=?`,[receipt.receiptRef,row.event_id,row.attempts]);
+    return {state:Number(result.changes)===1?'PERSISTED':'STALE_ATTEMPT',eventId:row.event_id};
+   }
    if(!deliveryMatches(row,receipt))throw Error('ALERT_DELIVERY_NOT_CONFIRMED');
    if(!await this.confirm(row,receipt))return {state:'STALE_ATTEMPT',eventId:row.event_id};
    return {state:'DELIVERED',eventId:row.event_id,receiptRef:receipt.receiptRef};
