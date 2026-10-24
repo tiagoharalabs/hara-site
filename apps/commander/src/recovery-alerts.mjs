@@ -15,7 +15,7 @@ export function recoveryAlertsEnabled(env) {
 }
 // Fail closed in PROD: a recovery watcher may process only explicitly listed,
 // HARA-owned canary devices. Broader 20k acceptance is a separate #163 gate.
-function prodCanaryDeviceIds(env) {
+export function prodCanaryDeviceIds(env) {
   if (env?.ENVIRONMENT!=="PROD") return null;
   const raw=env.COMMANDER_RECOVERY_ALERTS_PROD_CANARY_DEVICE_IDS;
   if (typeof raw!=="string" || !raw || raw.length>2048) return [];
@@ -248,31 +248,45 @@ export async function acknowledgeRecoveryEvent(env,session,body,nowMs=Date.now()
 // Server detector requires a separately scheduled 1-minute cron and owner approval.
 // Only durable-trust outbound sessions are eligible. Manual stop/revoked/offline
 // devices are excluded. A large-fleet detection SLO still requires a hosted proof.
-export async function detectOfflineRecoveryEvents(env,nowMs=Date.now(),limit=200) {
+export async function listOfflineRecoveryCandidates(env,nowMs=Date.now(),{limit=200,after=null,deviceIds}={}) {
   requireEnabled(env);
   if (!Number.isSafeInteger(limit) || limit<1 || limit>500) deny("RECOVERY_EVENT_LIMIT_INVALID");
+  if (!Number.isSafeInteger(nowMs) || nowMs<0) deny("RECOVERY_EVENT_TIME_INVALID");
+  if (deviceIds!==undefined && (!Array.isArray(deviceIds) || !deviceIds.length || deviceIds.length>96
+      || new Set(deviceIds).size!==deviceIds.length
+      || deviceIds.some(id=>typeof id!=="string" || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,179}$/.test(id)))) {
+    deny("RECOVERY_DEVICE_SCOPE_INVALID");
+  }
+  if (after && (typeof after.device_id!=="string" || !Number.isFinite(Date.parse(after.last_seen_at_utc)))) {
+    deny("RECOVERY_SCAN_CURSOR_INVALID");
+  }
   const cutoff=new Date(nowMs-STALE_AFTER_MS).toISOString();
   const admitted=prodCanaryDeviceIds(env);
-  if (admitted!==null && admitted.length===0) {
-    return {schema:"hara.commander.recovery-offline-scan.v1",
-      checked:0,persisted:0,bounded:true,canary_unconfigured:true};
-  }
-  const prodClause=admitted===null?"":"AND d.device_id IN ("+
-    admitted.map(()=>"?").join(",")+") ";
+  // Intersect scopes before preparing SQL: 96 IDs plus a separate 16-ID PROD
+  // whitelist would exceed D1's 100 bound parameters. Neither scope expands it.
+  const scoped=deviceIds===undefined?admitted:
+    (admitted===null?deviceIds:deviceIds.filter(id=>admitted.includes(id)));
+  if (scoped!==null && !scoped.length) return [];
+  const scopeClause=scoped===null?"":"AND d.device_id IN ("+scoped.map(()=>"?").join(",")+") ";
+  const cursorClause=after?"AND (d.last_seen_at_utc>? OR (d.last_seen_at_utc=? AND d.device_id>?)) ":"";
+  if (1+(scoped||[]).length+(after?3:0)+1>100) deny("RECOVERY_SCAN_CURSOR_INVALID");
   const rows=await env.PRODUCT_DB.prepare(
     "SELECT d.device_id,d.tenant_id,d.state,d.revoked_at_utc,d.approval_mode,d.tunnel_mode,"+
     "d.last_seen_at_utc FROM commander_devices d "+
     "WHERE d.state='ACTIVE' AND d.revoked_at_utc IS NULL "+
     "AND d.approval_mode='PERSISTENT_TRUSTED' AND d.tunnel_mode='OUTBOUND_RELAY' "+
     "AND d.last_seen_at_utc < ? AND d.last_seen_at_utc > d.created_at_utc "+
-    prodClause+
+    scopeClause+cursorClause+
     "AND NOT EXISTS (SELECT 1 FROM commander_device_recovery_events r "+
     "WHERE r.device_id=d.device_id AND r.origin='SERVER' AND r.event_state='DEGRADED' "+
     "AND r.heartbeat_anchor_at_utc=d.last_seen_at_utc) "+
-    "ORDER BY d.last_seen_at_utc LIMIT ?"
-  ).bind(cutoff,...(admitted||[]),limit).all();
+    "ORDER BY d.last_seen_at_utc,d.device_id LIMIT ?"
+  ).bind(cutoff,...(scoped||[]),...(after?[after.last_seen_at_utc,after.last_seen_at_utc,after.device_id]:[]),limit).all();
+  return rows.results||[];
+}
+async function recordOfflineCandidates(env,rows,nowMs) {
   let recorded=0;
-  for (const device of rows.results||[]) {
+  for (const device of rows) {
     const incident=await incidentForHeartbeat(device);
     const event={incident_id:incident,generation:1,sequence:1,state:"DEGRADED",
       at_utc:new Date(Date.parse(device.last_seen_at_utc)+STALE_AFTER_MS).toISOString(),
@@ -286,8 +300,20 @@ export async function detectOfflineRecoveryEvents(env,nowMs=Date.now(),limit=200
           && error.message!=="DEVICE_AUTH_INVALID") throw error;
     }
   }
-  return {schema:"hara.commander.recovery-offline-scan.v1",checked:(rows.results||[]).length,
+  return {schema:"hara.commander.recovery-offline-scan.v1",checked:rows.length,
     persisted:recorded,bounded:true};
+}
+export async function detectOfflineRecoveryEvents(env,nowMs=Date.now(),limit=200) {
+  const rows=await listOfflineRecoveryCandidates(env,nowMs,{limit});
+  const result=await recordOfflineCandidates(env,rows,nowMs);
+  if (prodCanaryDeviceIds(env)?.length===0) result.canary_unconfigured=true;
+  return result;
+}
+// One native queue message, with admission rechecked at consumption time. No
+// queue payload may choose an enrollment's tenant, anchor or authorization.
+export async function detectOfflineRecoveryDevices(env,deviceIds,nowMs=Date.now()) {
+  const rows=await listOfflineRecoveryCandidates(env,nowMs,{limit:96,deviceIds});
+  return recordOfflineCandidates(env,rows,nowMs);
 }
 export async function observeHeartbeatRecovery(env,device,nowMs=Date.now()) {
   if (!recoveryDeviceEnabled(env,device)) return null;

@@ -50,6 +50,7 @@ import {
 } from "./recovery-alerts.mjs";
 import { readTenantDeviceTelemetry } from "./device-telemetry.mjs";
 import { dispatchRecoveryDeliveries } from "./recovery-delivery.mjs";
+import { enqueueRecoveryWork, consumeRecoveryWork } from "./recovery-fanout.mjs";
 import { customerStatusWaitMs, CUSTOMER_STATUS_TIMEOUT_MS } from "./device-status-poll.mjs";
 import { CALL_ROW_FIELDS, parseCallMetadata, settleCallUsage, readScopedCall, acceptedCallStatus, publicAcceptedCallStatus } from "./approval-relay-storage.mjs";
 import { asyncApprovalDevice, asyncApprovalTool, asyncApprovalProfile, claimedApprovalExpiresAt, isApprovalCallHandle, pendingApprovalResult, safeCallResultMetadata, replayCallResultMetadata, ASYNC_APPROVAL_RESERVATION_TTL_SECONDS, TERMINAL_CALL_STATES } from "./approval-async-relay.mjs";
@@ -6452,11 +6453,23 @@ export default {
       return json(errorPayload, statusMap[code] || 500);
     }
   },
+  async queue(batch, env) {
+    requireRuntime(env);
+    const result=await consumeRecoveryWork(batch,env);
+    if (result.state.startsWith('HOLD_')) console.warn(JSON.stringify({code:result.state}));
+  },
   async scheduled(event, env, ctx) {
     requireRuntime(env);
     // Opt-in minute cron is separate from the existing hourly maintenance.
     if (event.cron === "* * * * *") {
       if (recoveryAlertsEnabled(env)) ctx.waitUntil((async()=>{
+        // Separate opt-in and native Queue admission; no resource or PROD
+        // whitelist is created/expanded by enabling this source-only path.
+        if (env.COMMANDER_RECOVERY_FANOUT_ENABLED==='true') {
+          const result=await enqueueRecoveryWork(env);
+          if (result.state.startsWith('HOLD_')) console.warn(JSON.stringify({code:result.state}));
+          return;
+        }
         await detectOfflineRecoveryEvents(env);
         await dispatchRecoveryDeliveries(env);
       })());

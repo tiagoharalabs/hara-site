@@ -2,7 +2,7 @@
 // No default destination, token, invented receipt, or implicit commercial opt-in.
 // receipt_sha256 hashes UTF-8 canonical JSON of the authenticated GET receipt
 // (top-level keys sorted), so an independent readback can reproduce the proof.
-import {recoveryDeviceEnabled} from './recovery-alerts.mjs';
+import {recoveryDeviceEnabled,prodCanaryDeviceIds} from './recovery-alerts.mjs';
 
 const TARGET_FIELDS=['tenant_id','id','kind','origin','writePath','readPath','writeSecret','readSecret'];
 const stable=value=>JSON.stringify(Object.fromEntries(Object.entries(value).sort(([a],[b])=>a.localeCompare(b))));
@@ -96,6 +96,33 @@ async function deliver(env,target,event,fetchImpl,signal,attempt){
     !/^[A-Za-z0-9_.:-]{1,160}$/.test(accepted.receipt_ref||''))throw Error('RECIPIENT_RECEIPT_INVALID');
  if(!qa)validateReceipt(accepted,target,event,hash);
  return validateReceipt(await readJson(await read()),target,event,hash,accepted.receipt_ref);
+}
+// Metadata-only scheduling for an explicitly admitted Queue binding. Native
+// claims and live enrollment fences remain in dispatchRecoveryDeliveries.
+export async function listRecoveryDeliveryCandidates(env,{nowMs=Date.now(),limit=500,after=null}={}){
+ if(env?.COMMANDER_RECOVERY_DELIVERY_ENABLED!=='true')return {state:'DISABLED',rows:[]};
+ let targets;try{targets=targetsFor(env);}catch{return {state:'HOLD_RECOVERY_TARGET_CONFIG',rows:[]};}
+ if(!Number.isSafeInteger(nowMs)||nowMs<0||!Number.isSafeInteger(limit)||limit<1||limit>500||
+    (after&&(typeof after.event_id!=='string'||!/^HARA-REC-[0-9a-f]{48}$/.test(after.event_id)||
+      !Number.isFinite(Date.parse(after.persisted_at_utc)))))throw Error('RECOVERY_DELIVERY_BUDGET_INVALID');
+ const admitted=prodCanaryDeviceIds(env);
+ if(admitted!==null&&!admitted.length)return {state:'COMPLETE',rows:[]};
+ const scope=admitted===null?'':` AND r.device_id IN (${admitted.map(()=>'?').join(',')})`;
+ const cursor=after?' AND (r.persisted_at_utc>? OR (r.persisted_at_utc=? AND r.event_id>?))':'';
+ const rows=await env.PRODUCT_DB.prepare(`WITH targets(tenant_id,binding_id,kind) AS
+   (VALUES ${targets.map(()=>'(?,?,?)').join(',')})
+  SELECT r.event_id,r.persisted_at_utc FROM commander_device_recovery_events r
+  JOIN targets t ON t.tenant_id=r.tenant_id
+  JOIN commander_devices d ON d.device_id=r.device_id AND d.tenant_id=r.tenant_id
+  LEFT JOIN recovery_delivery_outbox o ON o.event_id=r.event_id AND o.binding_id=t.binding_id AND o.tenant_id=r.tenant_id
+  WHERE d.state='ACTIVE' AND d.revoked_at_utc IS NULL
+   AND (t.kind<>'QA_RECIPIENT_V1' OR (r.origin='AGENT' AND r.client_event_id IS NOT NULL AND r.incident_id LIKE 'agent-%'))
+   AND (o.event_id IS NULL OR (o.attempts<8 AND
+    ((o.state IN ('PENDING','RETRY') AND o.next_attempt_ms<=?) OR (o.state='INFLIGHT' AND o.lease_until_ms<=?))))
+   ${scope}${cursor} ORDER BY r.persisted_at_utc,r.event_id LIMIT ?`)
+  .bind(...targets.flatMap(t=>[t.tenant_id,t.id,t.kind]),nowMs,nowMs,...(admitted||[]),
+    ...(after?[after.persisted_at_utc,after.persisted_at_utc,after.event_id]:[]),limit).all();
+ return {state:'COMPLETE',rows:rows.results||[]};
 }
 export async function dispatchRecoveryDeliveries(env,{fetchImpl=fetch,nowMs=Date.now(),maxEvents=10,timeoutMs=5000,eventIds}={}){
  const summary={state:'DISABLED',staged:0,attempted:0,delivered:0,held:0,exhausted:0};
