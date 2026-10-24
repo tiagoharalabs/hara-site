@@ -3383,6 +3383,7 @@ def _relay_executor_worker(config,channel):
     reconcile_relay_calls()
     _relay_progress('READY')
     last_lease=0.0;last_reconciliation=0.0;backoff=0.0
+    poll_hot_until=time.monotonic()+CALL_POLL_STARTUP_HOT_SECONDS
     while True:
         _relay_progress('BUSY')
         try:
@@ -3405,6 +3406,7 @@ def _relay_executor_worker(config,channel):
             call=post_json(config['HARA_COMMANDER_URL']+'/api/device/calls/next',
                            config['HARA_DEVICE_TOKEN'],{},timeout=25)
             if call:
+                poll_hot_until=time.monotonic()+CALL_POLL_HOT_WINDOW_SECONDS
                 _RELAY_CALL_DEADLINE=relay_call_deadline(call)
                 _relay_progress('CALL',request_id=str(call['request_id']),call_id=str(call['call_id']),
                                 deadline=_RELAY_CALL_DEADLINE,fingerprint=_relay_call_fingerprint(call))
@@ -3418,8 +3420,9 @@ def _relay_executor_worker(config,channel):
                 _relay_progress('REVOKED',code=code);return
             backoff=min(60.0,30.0 if backoff==0 else backoff*2) if code=='HTTP_429' else 2.0
             _relay_progress('ERROR',code=code)
-        _relay_progress('READY')
-        time.sleep(backoff or float(CALL_POLL_HOT_SECONDS))
+        delay=backoff or float(CALL_POLL_HOT_SECONDS if time.monotonic()<poll_hot_until else CALL_POLL_IDLE_SECONDS)
+        _relay_progress('READY',delay=delay)
+        time.sleep(delay)
 
 
 class RelaySupervisor:
@@ -3548,7 +3551,8 @@ class RelaySupervisor:
                     child['ready']=False
                     child['call']={k:message.get(k) for k in ('request_id','call_id','fingerprint')}
                 elif kind=='executor' and tag in {'BUSY','READY'}:
-                    child['deadline']=now+self.settings['worker_timeout']
+                    delay=min(60.0,max(0.0,float(message.get('delay',0)))) if tag=='READY' else 0.0
+                    child['deadline']=now+delay+self.settings['worker_timeout']
                     child['ready']=tag=='READY'
                     if tag=='READY':child['call']=None;self.abandoned.clear()
                 elif kind=='executor' and tag=='MANAGED_PROCESS':

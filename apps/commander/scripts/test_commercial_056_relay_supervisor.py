@@ -189,5 +189,26 @@ class SupervisorTests(unittest.TestCase):
             text=raw.read_text();self.assertEqual(text[text.rfind(')')+2:].split()[0],'Z')
         self.assertGreaterEqual(guard.restart_counts['executor'],1)
 
+    def test_executor_network_backoff_does_not_look_like_a_stall(self):
+        def backoff(config,channel):
+            channel.send({'kind':'READY','delay':.25})
+            time.sleep(.25)
+        guard=self.guard(executor=backoff,worker_timeout=.04)
+        self.observe(guard,.16)
+        self.assertEqual(guard.restart_counts['executor'],0)
+
+    def test_idle_polling_keeps_the_existing_ten_second_cadence(self):
+        class StopWorker(BaseException):pass
+        current=[0.0];delays=[]
+        def sleep(delay):
+            delays.append(delay);current[0]=100.0
+            if len(delays)==2:raise StopWorker
+        config={'HARA_COMMANDER_URL':'https://fixture.invalid','HARA_DEVICE_TOKEN':'synthetic'}
+        with patch.object(self.a,'reconcile_relay_calls'),patch.object(self.a,'refresh_product_lease'), \
+             patch.object(self.a,'post_json',return_value=None),patch.object(self.a.time,'monotonic',side_effect=lambda:current[0]), \
+             patch.object(self.a.time,'sleep',side_effect=sleep):
+            with self.assertRaises(StopWorker):self.a._relay_executor_worker(config,None)
+        self.assertEqual(delays,[self.a.CALL_POLL_HOT_SECONDS,self.a.CALL_POLL_IDLE_SECONDS])
+
 
 if __name__=='__main__':unittest.main(verbosity=2)
