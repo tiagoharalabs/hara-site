@@ -230,6 +230,8 @@ public static class HaraWinSqlite {
   [DllImport("winsqlite3.dll",CallingConvention=CallingConvention.Cdecl)]
   static extern int sqlite3_close(IntPtr db);
   [DllImport("winsqlite3.dll",CallingConvention=CallingConvention.Cdecl)]
+  static extern int sqlite3_busy_timeout(IntPtr db,int milliseconds);
+  [DllImport("winsqlite3.dll",CallingConvention=CallingConvention.Cdecl)]
   static extern IntPtr sqlite3_errmsg16(IntPtr db);
   [DllImport("winsqlite3.dll",CallingConvention=CallingConvention.Cdecl)]
   static extern int sqlite3_prepare16_v2(IntPtr db,[MarshalAs(UnmanagedType.LPWStr)] string sql,int n,out IntPtr stmt,IntPtr tail);
@@ -283,11 +285,23 @@ public static class HaraWinSqlite {
     }
   }
 
+  static void Configure(IntPtr db,bool readOnly) {
+    Check(db,sqlite3_busy_timeout(db,2000),"busy_timeout");
+    if(readOnly) return;
+    IntPtr stmt=IntPtr.Zero;
+    try {
+      Check(db,sqlite3_prepare16_v2(db,"PRAGMA synchronous=FULL",-1,out stmt,IntPtr.Zero),"durability");
+      int rc=sqlite3_step(stmt);
+      if(rc!=DONE && rc!=ROW) throw Failure(db,"durability",rc);
+    } finally {if(stmt!=IntPtr.Zero) sqlite3_finalize(stmt);}
+  }
+
   public static void Execute(string path,string sql,object[] values) {
     IntPtr db=IntPtr.Zero,stmt=IntPtr.Zero;
     int open=sqlite3_open16(path,out db);
     if (open!=OK) throw Failure(db,"open",open);
     try {
+      Configure(db,false);
       Check(db,sqlite3_prepare16_v2(db,sql,-1,out stmt,IntPtr.Zero),"prepare");
       Bind(db,stmt,values);
       int rc=sqlite3_step(stmt);
@@ -310,6 +324,7 @@ public static class HaraWinSqlite {
     int open=readOnly ? sqlite3_open_v2(System.Text.Encoding.UTF8.GetBytes(path+"\0"),out db,1,IntPtr.Zero) : sqlite3_open16(path,out db);
     if (open!=OK) throw Failure(db,"open",open);
     try {
+      Configure(db,readOnly);
       Check(db,sqlite3_prepare16_v2(db,sql,-1,out stmt,IntPtr.Zero),"prepare");
       Bind(db,stmt,values);
       int count=sqlite3_column_count(stmt);
@@ -1187,11 +1202,13 @@ function Assert-StarterMutationAuthorized($Cfg,$Call) {
         [string]$active.owner_started_at_utc -cne [string]$approvedSession.owner_started_at_utc) {
       throw "LOCAL_OPERATOR_SESSION_REQUIRED"
     }
+    Assert-WindowsRelayDeadline
     return
   }
   if ($mode -eq "SESSION_TRUSTED" -and -not (Test-OperatorSessionActive)) {
     throw "LOCAL_OPERATOR_SESSION_REQUIRED"
   }
+  Assert-WindowsRelayDeadline
 }
 
 function Initialize-LocalApprovalConsoleInput {
@@ -1324,7 +1341,7 @@ function Respond-ToLocalApprovalRequest {
   Write-Host ("Resumo local: "+[string]$pending.action_summary)
   Write-Host ("SHA256 argumentos: "+[string]$pending.arguments_sha256)
   Write-Host "Apenas esta acao sera autorizada. A sessao nao vira permanente."
-  Write-Host ("Voce tem ate "+[int]($ApprovalTimeoutSeconds/60)+" minutos para aprovar esta acao; depois, descarte esta solicitacao.")
+  Write-Host ("Solicitacao valida ate "+([DateTime]::Parse([string]$pending.expires_at_utc)).ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss")+"; depois, descarte esta solicitacao.")
   $response=Read-LocalApprovalResponse $pending
   if ($response.state -cne "SUBMITTED") {
     Write-Host "APROVACAO_INDIVIDUAL=EXPIRADA" -ForegroundColor Yellow
@@ -2330,7 +2347,533 @@ function Set-DeviceOffline($Cfg=$null) {
 function Complete-Call($Cfg,[string]$Token,$Call,[string]$State,$Result,[string]$ErrorCode="") {
   $body=@{call_id=[string]$Call.call_id;state=$State;result=$Result}
   if ($ErrorCode) { $body.error_code=$ErrorCode }
-  Send-Json "$($Cfg.base_url)/api/device/calls/complete" $Token $body 20 | Out-Null
+  $reply=Send-Json "$($Cfg.base_url)/api/device/calls/complete" $Token $body 20
+  if(-not $reply -or $reply.ok -ne $true -or [string]$reply.call_id -cne [string]$Call.call_id -or [string]$reply.state -cne $State){throw 'CALL_COMPLETION_NOT_ACKNOWLEDGED'}
+}
+
+# Durable relay state is scoped to the enrollment and protected by its ACL.
+# The named mutex serializes claims/checkpoints; SQLite commits use FULL sync.
+function Invoke-WithWindowsRelayLock([scriptblock]$Action) {
+  $name='Local\HARA-Relay-'+(Get-Utf8Sha256 ([IO.Path]::GetFullPath($script:OperationsDb).ToLowerInvariant()))
+  $mutex=New-Object Threading.Mutex -ArgumentList $false,$name
+  $held=$false
+  try {
+    try {$held=$mutex.WaitOne(2000)} catch [Threading.AbandonedMutexException] {$held=$true}
+    if(-not $held){throw 'RELAY_JOURNAL_BUSY'}
+    & $Action
+  } finally {if($held){$mutex.ReleaseMutex()};$mutex.Dispose()}
+}
+
+function Initialize-WindowsRelayStore {
+  if(Test-Path -LiteralPath $script:OperationsDb){
+    $item=Get-Item -LiteralPath $script:OperationsDb -Force
+    if($item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)){throw 'ENROLLMENT_STATE_PATH_INVALID'}
+  }
+  Invoke-LocalDbExec @'
+CREATE TABLE IF NOT EXISTS windows_relay_calls (
+ request_id TEXT PRIMARY KEY, call_id TEXT NOT NULL UNIQUE, fingerprint TEXT NOT NULL,
+ phase TEXT NOT NULL, receipt_sha256 TEXT, completion_json TEXT,
+ delivery_state TEXT NOT NULL DEFAULT 'NONE', updated_at_utc TEXT NOT NULL
+)
+'@
+}
+
+function ConvertTo-WindowsRelayCanonical($Value) {
+  if($null -eq $Value){return $null}
+  if($Value -is [Collections.IDictionary] -or $Value -is [pscustomobject]) {
+    $result=[ordered]@{}
+    [string[]]$keys=if($Value -is [Collections.IDictionary]){@($Value.Keys)}else{@($Value.PSObject.Properties.Name)}
+    [Array]::Sort($keys,[StringComparer]::Ordinal)
+    foreach($key in $keys){$result[$key]=ConvertTo-WindowsRelayCanonical $Value.$key}
+    return $result
+  }
+  if($Value -is [Collections.IEnumerable] -and $Value -isnot [string]) {
+    $items=@();foreach($item in $Value){$items+=,(ConvertTo-WindowsRelayCanonical $item)}
+    return ,$items
+  }
+  return $Value
+}
+
+function Get-WindowsRelayFingerprint($Call) {
+  $binding=[ordered]@{}
+  foreach($key in @('call_id','payload','request_id','tool_id','usage')){$binding[$key]=ConvertTo-WindowsRelayCanonical $Call.$key}
+  return Get-Utf8Sha256 ($binding | ConvertTo-Json -Depth 20 -Compress)
+}
+
+function New-WindowsRelayClaim($Call) {
+  foreach($id in @([string]$Call.request_id,[string]$Call.call_id)){
+    if([string]::IsNullOrWhiteSpace($id) -or $id.Length -gt 180){throw 'CALL_IDENTITY_INVALID'}
+  }
+  $fingerprint=Get-WindowsRelayFingerprint $Call
+  Invoke-WithWindowsRelayLock {
+    Initialize-WindowsRelayStore
+    $existing=@(Invoke-LocalDbQuery 'SELECT fingerprint FROM windows_relay_calls WHERE request_id=? OR call_id=?' @([string]$Call.request_id,[string]$Call.call_id))
+    if($existing.Count){
+      if([string]$existing[0].fingerprint -ceq $fingerprint){throw 'CALL_REPLAY_REFUSED'}
+      throw 'CALL_IDEMPOTENCY_CONFLICT'
+    }
+    Invoke-LocalDbExec 'INSERT INTO windows_relay_calls(request_id,call_id,fingerprint,phase,updated_at_utc) VALUES(?,?,?,?,?)' @([string]$Call.request_id,[string]$Call.call_id,$fingerprint,'PREPARING',[DateTime]::UtcNow.ToString('o'))
+  }
+}
+
+function Set-WindowsRelayPhase($Call,[string]$Phase,[string]$ReceiptSha='') {
+  if(@('RESERVED','EXECUTING','EXECUTED','FAILED','UNCERTAIN') -cnotcontains $Phase){throw 'CALL_PHASE_INVALID'}
+  Invoke-WithWindowsRelayLock {
+    Invoke-LocalDbExec 'UPDATE windows_relay_calls SET phase=?,receipt_sha256=COALESCE(NULLIF(?,?),receipt_sha256),updated_at_utc=? WHERE request_id=?' @($Phase,$ReceiptSha,'',[DateTime]::UtcNow.ToString('o'),[string]$Call.request_id)
+  }
+  Write-WindowsRelayProgress 'PHASE' @{request_id=[string]$Call.request_id;phase=$Phase}
+}
+
+function Set-WindowsRelayCompletion($Call,[string]$State,$Result,[string]$ErrorCode='') {
+  $body=[ordered]@{call_id=[string]$Call.call_id;state=$State;result=$Result}
+  if($ErrorCode){$body.error_code=$ErrorCode}
+  $json=$body | ConvertTo-Json -Depth 20 -Compress
+  if([Text.Encoding]::UTF8.GetByteCount($json) -gt 256*1024){throw 'CALL_COMPLETION_TOO_LARGE'}
+  Invoke-WithWindowsRelayLock {
+    Invoke-LocalDbExec "UPDATE windows_relay_calls SET completion_json=?,delivery_state='PENDING',phase=CASE WHEN ?='COMPLETED' THEN 'EXECUTED' ELSE phase END,receipt_sha256=COALESCE(NULLIF(?,''),receipt_sha256),updated_at_utc=? WHERE request_id=?" @($json,$State,[string]$Result.bridge_receipt_sha256,[DateTime]::UtcNow.ToString('o'),[string]$Call.request_id)
+  }
+}
+
+function Get-WindowsRelayDeliveryError($ErrorRecord) {
+  $code=Get-SafeErrorCode $ErrorRecord
+  try {
+    $wire=$ErrorRecord.ErrorDetails.Message | ConvertFrom-Json
+    if([string]$wire.code -ceq 'DEVICE_CALL_EXPIRED' -or [string]$wire.error -ceq 'DEVICE_CALL_EXPIRED'){return 'DEVICE_CALL_EXPIRED'}
+  } catch {}
+  if($ErrorRecord.Exception.Message -ceq 'DEVICE_CALL_EXPIRED'){return 'DEVICE_CALL_EXPIRED'}
+  return $code
+}
+
+function Send-WindowsRelayCompletion($Cfg,[string]$Token,[string]$RequestId,$Body) {
+  try {Complete-Call $Cfg $Token ([pscustomobject]@{call_id=[string]$Body.call_id}) ([string]$Body.state) $Body.result ([string]$Body.error_code)}
+  catch {
+    $code=Get-WindowsRelayDeliveryError $_
+    Invoke-WithWindowsRelayLock {
+      if($code -ceq 'DEVICE_CALL_EXPIRED'){
+        Invoke-LocalDbExec "UPDATE windows_relay_calls SET delivery_state='EXPIRED',completion_json=NULL,updated_at_utc=? WHERE request_id=?" @([DateTime]::UtcNow.ToString('o'),$RequestId)
+      } else {
+        Invoke-LocalDbExec 'UPDATE windows_relay_calls SET updated_at_utc=? WHERE request_id=?' @([DateTime]::UtcNow.ToString('o'),$RequestId)
+      }
+    }
+    throw
+  }
+  Invoke-WithWindowsRelayLock {
+    Invoke-LocalDbExec "UPDATE windows_relay_calls SET delivery_state='ACKNOWLEDGED',completion_json=NULL,updated_at_utc=? WHERE request_id=?" @([DateTime]::UtcNow.ToString('o'),$RequestId)
+  }
+}
+
+function Repair-WindowsRelayJournal($Cfg=$null,[string]$Token=$null,[int]$Limit=64) {
+  Initialize-WindowsRelayStore
+  $rows=@(Invoke-LocalDbQuery "SELECT * FROM windows_relay_calls WHERE phase IN ('PREPARING','RESERVED','EXECUTING') OR completion_json IS NOT NULL ORDER BY updated_at_utc LIMIT ?" @($Limit))
+  foreach($row in $rows){
+    $call=[pscustomobject]@{call_id=[string]$row.call_id;request_id=[string]$row.request_id}
+    if(@('PREPARING','RESERVED','EXECUTING') -ccontains [string]$row.phase){
+      $uncertain=[string]$row.phase -ceq 'EXECUTING'
+      $phase=if($uncertain){'UNCERTAIN'}else{'FAILED'}
+      $code=if($uncertain){'CALL_OUTCOME_UNCERTAIN'}else{'DEVICE_CALL_TIMEOUT'}
+      Set-WindowsRelayPhase $call $phase
+      if(-not $row.completion_json){
+        $result=@{state=if($uncertain){'INDETERMINATE'}else{'DENIED'};runtime_authority_from_chatgpt=$false;mutation_performed=if($uncertain){$null}else{$false};result=@{};blocker=@{code=$code}}
+        Set-WindowsRelayCompletion $call 'FAILED' $result $code
+      }
+    }
+    if($Cfg){
+      $pending=@(Invoke-LocalDbQuery 'SELECT completion_json FROM windows_relay_calls WHERE request_id=?' @([string]$row.request_id))
+      if($pending.Count -and $pending[0].completion_json){Send-WindowsRelayCompletion $Cfg $Token ([string]$row.request_id) ($pending[0].completion_json | ConvertFrom-Json)}
+    }
+  }
+}
+
+function Test-WindowsMutationTool([string]$Tool) {
+  return @('hara.files.create_directory','hara.files.write','hara.files.edit','hara.process.start','hara.process.run','hara.process.interact','hara.process.kill') -ccontains $Tool
+}
+
+function Invoke-WindowsRelayCall($Cfg,[string]$Token,$Call) {
+  New-WindowsRelayClaim $Call
+  $executing=$false
+  try {
+    Assert-WindowsRelayDeadline
+    if((Get-ApprovalMode $Cfg) -cne 'PERSISTENT_TRUSTED' -and -not (Test-OperatorSessionActive)){throw 'LOCAL_OPERATOR_SESSION_REQUIRED'}
+    if([string]$Call.usage.mode -ceq 'LOCAL_BUDGET'){throw 'WINDOWS_LOCAL_BUDGET_UNSUPPORTED'}
+    Write-ConsoleEvent 'RECEIVED' $Call 'PENDING'
+    Assert-WindowsRelayDeadline
+    Set-WindowsRelayPhase $Call 'EXECUTING'
+    $executing=$true
+    Assert-WindowsRelayDeadline
+    $result=Invoke-Tool $Cfg $Call
+  } catch {
+    $code=Get-SafeErrorCode $_
+    $uncertain=$executing -and (Test-WindowsMutationTool ([string]$Call.tool_id))
+    Set-WindowsRelayPhase $Call $(if($uncertain){'UNCERTAIN'}else{'FAILED'})
+    $result=@{state=if($uncertain){'INDETERMINATE'}else{'DENIED'};runtime_authority_from_chatgpt=$false;mutation_performed=if($uncertain){$null}else{$false};result=@{};blocker=@{code=$code}}
+    Set-WindowsRelayCompletion $Call 'FAILED' $result $code
+    Send-WindowsRelayCompletion $Cfg $Token ([string]$Call.request_id) ([pscustomobject]@{call_id=[string]$Call.call_id;state='FAILED';result=$result;error_code=$code})
+    Write-ConsoleEvent $(if($uncertain){'OPERATIONAL'}else{'DENIED'}) $Call $(if($uncertain){'UNCERTAIN'}else{'FAILED'}) $code
+    return
+  }
+  # Atomic success + outbox checkpoint; delivery failure never rewrites effects.
+  Set-WindowsRelayCompletion $Call 'COMPLETED' $result
+  Send-WindowsRelayCompletion $Cfg $Token ([string]$Call.request_id) ([pscustomobject]@{call_id=[string]$Call.call_id;state='COMPLETED';result=$result})
+  Write-ConsoleEvent 'PASS' $Call 'COMPLETED' '' ([string]$result.bridge_receipt_sha256)
+}
+
+function Get-WindowsRelayNow {return [Diagnostics.Stopwatch]::GetTimestamp()/[double][Diagnostics.Stopwatch]::Frequency}
+$script:WindowsRelayDeadline=$null
+function Assert-WindowsRelayDeadline {
+  if($null -ne $script:WindowsRelayDeadline -and (Get-WindowsRelayNow) -ge $script:WindowsRelayDeadline){throw 'DEVICE_CALL_EXPIRED'}
+}
+function Write-WindowsRelayProgress([string]$Kind,$Details=@{}) {
+  if(-not $script:WindowsRelayWorkerMode){return}
+  $message=[ordered]@{schema='hara.commander.relay-progress.v1';kind=$Kind}
+  foreach($key in $Details.Keys){$message[$key]=$Details[$key]}
+  [Console]::Out.WriteLine('HARA_RELAY_PROGRESS='+($message | ConvertTo-Json -Depth 5 -Compress))
+  [Console]::Out.Flush()
+}
+
+function Initialize-WindowsRelayProcessType {
+  if('HaraRelayProcess' -as [type]){return}
+  Add-Type -Language CSharp -TypeDefinition @'
+using System;
+using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Threading;
+
+public sealed class HaraRelayProcess : IDisposable {
+  [StructLayout(LayoutKind.Sequential)] struct BasicLimits {
+    public long ProcessTime,JobTime; public uint Flags;
+    public UIntPtr MinWorkingSet,MaxWorkingSet; public uint ActiveLimit;
+    public UIntPtr Affinity; public uint Priority,Scheduling;
+  }
+  [StructLayout(LayoutKind.Sequential)] struct Counters {
+    public ulong ReadOps,WriteOps,OtherOps,ReadBytes,WriteBytes,OtherBytes;
+  }
+  [StructLayout(LayoutKind.Sequential)] struct ExtendedLimits {
+    public BasicLimits Basic; public Counters Io;
+    public UIntPtr ProcessMemory,JobMemory,PeakProcessMemory,PeakJobMemory;
+  }
+  [StructLayout(LayoutKind.Sequential)] struct Accounting {
+    public long UserTime,KernelTime,PeriodUserTime,PeriodKernelTime;
+    public uint PageFaults,TotalProcesses,ActiveProcesses,TerminatedProcesses;
+  }
+  [DllImport("kernel32.dll",CharSet=CharSet.Unicode,SetLastError=true)] static extern IntPtr CreateJobObject(IntPtr attributes,string name);
+  [DllImport("kernel32.dll",SetLastError=true)] static extern bool SetInformationJobObject(IntPtr job,int info,IntPtr value,uint length);
+  [DllImport("kernel32.dll",SetLastError=true)] static extern bool QueryInformationJobObject(IntPtr job,int info,IntPtr value,uint length,IntPtr resultLength);
+  [DllImport("kernel32.dll",SetLastError=true)] static extern bool AssignProcessToJobObject(IntPtr job,IntPtr process);
+  [DllImport("kernel32.dll",SetLastError=true)] static extern bool TerminateJobObject(IntPtr job,uint exitCode);
+  [DllImport("kernel32.dll")] static extern bool CloseHandle(IntPtr handle);
+  readonly ConcurrentQueue<string> Progress=new ConcurrentQueue<string>();
+  int Pending=0;
+  IntPtr Job=IntPtr.Zero;
+  public readonly Process Child;
+  public volatile bool ProtocolOverflow=false;
+
+  static string Quote(string value) {
+    if(value==null || value.IndexOfAny(new char[]{'"','\r','\n','\0'})>=0) throw new InvalidOperationException("RELAY_ARGUMENT_INVALID");
+    return "\""+value+"\"";
+  }
+  public HaraRelayProcess(string shell,string script,string role,string parentPid,string parentStart,string context,string nonce,string handshake) {
+    if(Environment.OSVersion.Platform!=PlatformID.Win32NT) throw new PlatformNotSupportedException("WINDOWS_JOB_REQUIRED");
+    if(role!="heartbeat" && role!="executor") throw new InvalidOperationException("RELAY_ROLE_INVALID");
+    if(handshake==null || handshake.Length>4096) throw new InvalidOperationException("RELAY_HANDSHAKE_INVALID");
+    Job=CreateJobObject(IntPtr.Zero,null);
+    if(Job==IntPtr.Zero) throw new InvalidOperationException("RELAY_JOB_CREATE_FAILED");
+    try {
+      ExtendedLimits limits=new ExtendedLimits();limits.Basic.Flags=0x2000; // KILL_ON_JOB_CLOSE; no breakaway.
+      int size=Marshal.SizeOf(typeof(ExtendedLimits));IntPtr buffer=Marshal.AllocHGlobal(size);
+      try {Marshal.StructureToPtr(limits,buffer,false);if(!SetInformationJobObject(Job,9,buffer,(uint)size)) throw new InvalidOperationException("RELAY_JOB_LIMIT_FAILED");}
+      finally {Marshal.FreeHGlobal(buffer);}
+      Child=new Process();
+      Child.StartInfo.FileName=shell;
+      Child.StartInfo.Arguments="-NoLogo -NoProfile -NonInteractive -File "+Quote(script)+" --relay-worker "+Quote(role)+" "+Quote(parentPid)+" "+Quote(parentStart)+" "+Quote(context)+" "+Quote(nonce);
+      Child.StartInfo.UseShellExecute=false;Child.StartInfo.CreateNoWindow=true;
+      Child.StartInfo.RedirectStandardInput=true;Child.StartInfo.RedirectStandardOutput=true;Child.StartInfo.RedirectStandardError=true;
+      Child.StartInfo.StandardOutputEncoding=new UTF8Encoding(false);
+      Child.OutputDataReceived+=OnOutput;
+      Child.ErrorDataReceived+=delegate(object sender,DataReceivedEventArgs e) {}; // Never relay raw stderr/secrets.
+      if(!Child.Start()) throw new InvalidOperationException("RELAY_WORKER_START_FAILED");
+      // The worker waits for this handshake before touching enrollment or tools.
+      if(!AssignProcessToJobObject(Job,Child.Handle)) throw new InvalidOperationException("RELAY_JOB_ASSIGN_FAILED");
+      Child.BeginOutputReadLine();Child.BeginErrorReadLine();
+      Child.StandardInput.WriteLine(handshake);Child.StandardInput.Flush();Child.StandardInput.Close();
+    } catch {
+      if(Child!=null) {try {if(!Child.HasExited) Child.Kill();Child.WaitForExit(1000);}catch{}}
+      if(Job!=IntPtr.Zero){CloseHandle(Job);Job=IntPtr.Zero;}
+      throw;
+    }
+  }
+  void OnOutput(object sender,DataReceivedEventArgs e) {
+    if(e.Data==null || !e.Data.StartsWith("HARA_RELAY_PROGRESS=",StringComparison.Ordinal)) return;
+    if(e.Data.Length>4096) {ProtocolOverflow=true;return;}
+    if(Interlocked.Increment(ref Pending)>128) {ProtocolOverflow=true;Interlocked.Decrement(ref Pending);return;}
+    Progress.Enqueue(e.Data.Substring(20));
+  }
+  public string[] Drain() {
+    var result=new System.Collections.Generic.List<string>();string line;
+    for(int i=0;i<128 && Progress.TryDequeue(out line);i++){Interlocked.Decrement(ref Pending);result.Add(line);}
+    return result.ToArray();
+  }
+  public bool IsAlive {get {return !Child.HasExited;}}
+  public bool IsQuiescent {
+    get {
+      if(Job==IntPtr.Zero) return Child.HasExited;
+      int size=Marshal.SizeOf(typeof(Accounting));IntPtr buffer=Marshal.AllocHGlobal(size);
+      try {
+        if(!QueryInformationJobObject(Job,1,buffer,(uint)size,IntPtr.Zero)) return false;
+        Accounting value=(Accounting)Marshal.PtrToStructure(buffer,typeof(Accounting));
+        return Child.HasExited && value.ActiveProcesses==0;
+      } finally {Marshal.FreeHGlobal(buffer);}
+    }
+  }
+  public bool Stop() {
+    if(Job!=IntPtr.Zero && !TerminateJobObject(Job,1)) return IsQuiescent;
+    try {Child.WaitForExit(1000);}catch{return false;}
+    return IsQuiescent;
+  }
+  public void Dispose() {
+    if(Job!=IntPtr.Zero){CloseHandle(Job);Job=IntPtr.Zero;}
+    if(Child!=null) Child.Dispose();
+    GC.SuppressFinalize(this);
+  }
+  ~HaraRelayProcess(){if(Job!=IntPtr.Zero)CloseHandle(Job);}
+}
+'@
+}
+
+function Start-WindowsRelayProcess([string]$Role,$Cfg,$Abandoned,[string]$AgentPath) {
+  Initialize-WindowsRelayProcessType
+  $nonce=[guid]::NewGuid().ToString('N')+[guid]::NewGuid().ToString('N')
+  $handshake=@{schema='hara.commander.relay-worker-handshake.v1';nonce=$nonce;abandoned=@($Abandoned)} | ConvertTo-Json -Depth 6 -Compress
+  $parentStart=(Get-Process -Id $PID).StartTime.ToUniversalTime().ToString('o')
+  return New-Object HaraRelayProcess -ArgumentList (Join-Path $PSHOME 'powershell.exe'),([IO.Path]::GetFullPath($AgentPath)),$Role,([string]$PID),$parentStart,(Get-EnrollmentContext $Cfg),$nonce,$handshake
+}
+function Read-WindowsRelayProgress($Process) {
+  if($Process.ProtocolOverflow){throw 'RELAY_PROGRESS_OVERFLOW'}
+  foreach($line in $Process.Drain()){
+    $message=$line | ConvertFrom-Json
+    if([string]$message.schema -cne 'hara.commander.relay-progress.v1'){throw 'RELAY_PROGRESS_INVALID'}
+    $message
+  }
+}
+function Test-WindowsRelayProcessAlive($Process) {return $Process.IsAlive}
+function Stop-WindowsRelayProcess($Process) {
+  if(-not $Process.Stop()){return $false}
+  $Process.Dispose();return $true
+}
+function Get-WindowsRelayDeadline($Call,[double]$Now=(Get-WindowsRelayNow)) {
+  $expiry=[DateTimeOffset]::MinValue
+  if([string]$Call.expires_at_utc -cnotmatch '(Z|[+-][0-9]{2}:[0-9]{2})$' -or -not [DateTimeOffset]::TryParse([string]$Call.expires_at_utc,[ref]$expiry)){throw 'CALL_DEADLINE_REQUIRED'}
+  $limit=if([string]$Call.tool_id -ceq 'hara.process.run'){20.0}elseif([string]$Call.tool_id -ceq 'hara.process.start'){15.0}else{30.0}
+  return $Now+[Math]::Max(0.0,[Math]::Min($limit,($expiry.UtcDateTime-[DateTime]::UtcNow).TotalSeconds))
+}
+function New-WindowsRelaySupervisorState([string]$AgentPath,[scriptblock]$Reporter=$null) {
+  return @{agentPath=$AgentPath;reporter=$Reporter;children=@{};attempts=@{heartbeat=@();executor=@()};restartCounts=@{heartbeat=0;executor=0};heartbeatCount=0;lastHeartbeat=$null;startedAt=$null;states=@{};recovering=@{};blockedUntil=@{};abandoned=@{};revoked=$false}
+}
+function Write-WindowsRelayHealth($State,[string]$Role,[string]$Health,[double]$Now) {
+  if($State.states[$Role] -ceq $Health){return}
+  $State.states[$Role]=$Health
+  $event=@{schema='hara.commander.relay-health.v1';worker=$Role;state=$Health;monotonic=$Now}
+  if($State.reporter){& $State.reporter $event}else{[Console]::Error.WriteLine(($event | ConvertTo-Json -Compress))}
+}
+function Stop-WindowsRelayChild($State,[string]$Role) {
+  $child=$State.children[$Role]
+  if(-not $child){return $true}
+  if(-not (Stop-WindowsRelayProcess $child.process)){$child.fenced=$true;return $false}
+  $State.children.Remove($Role);return $true
+}
+function Start-WindowsRelayChild($State,$Cfg,[string]$Role,[double]$Now) {
+  $seeds=if($Role -ceq 'executor'){@($State.abandoned.Values)}else{@()}
+  $process=Start-WindowsRelayProcess $Role $Cfg $seeds $State.agentPath
+  $State.children[$Role]=@{process=$process;deadline=$Now+35.0;ready=$false;networkBackoff=$false;call=$null;fenced=$false}
+}
+function Restart-WindowsRelayChild($State,$Cfg,[string]$Role,[double]$Now) {
+  Write-WindowsRelayHealth $State $Role 'STALLED' $Now
+  $child=$State.children[$Role]
+  if($Role -ceq 'executor' -and $child.call){$State.abandoned[[string]$child.call.request_id]=$child.call}
+  if(-not (Stop-WindowsRelayChild $State $Role)){Write-WindowsRelayHealth $State $Role 'DEGRADED' $Now;return}
+  $recent=@($State.attempts[$Role]|Where-Object {$Now-$_ -lt 1800})
+  $State.attempts[$Role]=$recent
+  if($recent.Count -ge 2){$State.blockedUntil[$Role]=$recent[0]+1800;Write-WindowsRelayHealth $State $Role 'DEGRADED' $Now;return}
+  $delay=if($recent.Count){[Math]::Max(0,5-($Now-$recent[-1]))}else{0.0}
+  if($delay -gt 0){$delay+=(Get-Random -Minimum 0 -Maximum 1000)/1000.0}
+  $State.attempts[$Role]=@($recent)+@($Now+$delay);$State.restartCounts[$Role]++
+  $State.recovering[$Role]=$Now;Write-WindowsRelayHealth $State $Role 'RECOVERING' $Now
+  if($delay -gt 0){$State.blockedUntil[$Role]=$Now+$delay}else{Start-WindowsRelayChild $State $Cfg $Role $Now}
+}
+function Step-WindowsRelaySupervisor($State,$Cfg,[bool]$Authorized,[double]$Now=(Get-WindowsRelayNow)) {
+  if(-not $Authorized -or $State.revoked){
+    foreach($role in @($State.children.Keys)){[void](Stop-WindowsRelayChild $State $role)}
+    $State.startedAt=$null;$State.lastHeartbeat=$null;$State.recovering.Clear();return
+  }
+  if($null -eq $State.startedAt){$State.startedAt=$Now}
+  foreach($role in @('heartbeat','executor')){
+    if(-not $State.children.ContainsKey($role) -and $Now -ge [double]$State.blockedUntil[$role]){Start-WindowsRelayChild $State $Cfg $role $Now}
+  }
+  foreach($role in @($State.children.Keys)){
+    $child=$State.children[$role]
+    if($child.fenced){[void](Stop-WindowsRelayChild $State $role);continue}
+    try {$messages=@(Read-WindowsRelayProgress $child.process)}catch{Restart-WindowsRelayChild $State $Cfg $role $Now;continue}
+    foreach($message in $messages){
+      $tag=[string]$message.kind
+      if($tag -ceq 'REVOKED'){$State.revoked=$true;Step-WindowsRelaySupervisor $State $Cfg $false $Now;return}
+      if($role -ceq 'heartbeat'){
+        if($tag -ceq 'HEARTBEAT_CONFIRMED'){$State.lastHeartbeat=$Now;$State.heartbeatCount++;$child.networkBackoff=$false;$child.deadline=$Now+$HeartbeatSeconds+35}
+        elseif($tag -ceq 'HEARTBEAT_ATTEMPT'){$child.deadline=$Now+35}
+        elseif($tag -ceq 'HEARTBEAT_RETRY'){$child.networkBackoff=$true;$child.deadline=$Now+[Math]::Min(60,[double]$message.delay)+35}
+      } elseif($tag -ceq 'CALL'){
+        $child.deadline=[Math]::Min([double]$message.deadline,$Now+900);$child.ready=$false
+        $child.call=@{request_id=[string]$message.request_id;call_id=[string]$message.call_id;fingerprint=[string]$message.fingerprint}
+      } elseif($tag -ceq 'READY' -or $tag -ceq 'BUSY'){
+        $sleep=if($tag -ceq 'READY'){[Math]::Min(60,[Math]::Max(0,[double]$message.delay))}else{0.0}
+        $child.deadline=$Now+$sleep+35;$child.ready=$tag -ceq 'READY'
+        if($child.ready){$child.call=$null;$State.abandoned.Clear()}
+      }
+    }
+    $anchor=if($null -ne $State.lastHeartbeat){$State.lastHeartbeat}else{$State.startedAt}
+    $absent=$role -ceq 'heartbeat' -and $Now-$anchor -ge 150
+    $alive=Test-WindowsRelayProcessAlive $child.process
+    if($absent -and $child.networkBackoff -and $alive -and $Now -lt $child.deadline){
+      if(-not $State.recovering.ContainsKey($role)){
+        Write-WindowsRelayHealth $State $role 'STALLED' $Now;Write-WindowsRelayHealth $State $role 'RECOVERING' $Now
+        $State.recovering[$role]=$Now;Write-WindowsRelayHealth $State $role 'DEGRADED' $Now
+      }
+    } elseif(-not $alive -or $Now -ge $child.deadline -or $absent){Restart-WindowsRelayChild $State $Cfg $role $Now}
+  }
+  foreach($role in @($State.recovering.Keys)){
+    $child=$State.children[$role]
+    if($child -and $null -ne $State.lastHeartbeat -and $State.lastHeartbeat -gt $State.recovering[$role] -and ($role -ceq 'heartbeat' -or $child.ready)){
+      Write-WindowsRelayHealth $State $role 'RECOVERED' $Now;$State.recovering.Remove($role)
+    }
+  }
+}
+
+function Read-WindowsRelayConfig {
+  $item=Get-Item -LiteralPath $ConfigPath -Force
+  if($item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $item.Length -gt 32768){throw 'DEVICE_CONFIG_INVALID'}
+  $cfg=Get-Content -Raw -LiteralPath $ConfigPath | ConvertFrom-Json
+  [void](Get-EnrollmentContext $cfg)
+  if(-not $cfg.architecture){throw 'DEVICE_CONFIG_INVALID'}
+  if($cfg.transport_mode -and [string]$cfg.transport_mode -cne 'OUTBOUND_RELAY'){throw 'WINDOWS_RELAY_TRANSPORT_REQUIRED'}
+  return $cfg
+}
+function Test-WindowsRelayWorkerContext([int]$ParentId,[string]$ParentStart,[string]$ExpectedContext) {
+  try {$parent=Get-Process -Id $ParentId -ErrorAction Stop}catch{return $null}
+  if($parent.StartTime.ToUniversalTime().ToString('o') -cne $ParentStart){return $null}
+  $cfg=Read-WindowsRelayConfig
+  if((Get-EnrollmentContext $cfg) -cne $ExpectedContext){throw 'ENROLLMENT_CHANGED_RESTART_REQUIRED'}
+  if((Get-ApprovalMode $cfg) -cne 'PERSISTENT_TRUSTED' -and -not (Test-OperatorSessionActive)){return $null}
+  return $cfg
+}
+function Restore-WindowsRelayClaims($Claims) {
+  foreach($claim in @($Claims)){
+    if([string]$claim.fingerprint -cnotmatch '^[0-9a-f]{64}$' -or -not $claim.call_id -or -not $claim.request_id -or ([string]$claim.call_id).Length -gt 180 -or ([string]$claim.request_id).Length -gt 180){throw 'CALL_RECOVERY_BINDING_INVALID'}
+    Invoke-WithWindowsRelayLock {
+      Initialize-WindowsRelayStore
+      $row=@(Invoke-LocalDbQuery 'SELECT call_id,fingerprint FROM windows_relay_calls WHERE request_id=?' @([string]$claim.request_id))
+      if($row.Count){
+        if([string]$row[0].call_id -cne [string]$claim.call_id -or [string]$row[0].fingerprint -cne [string]$claim.fingerprint){throw 'CALL_IDEMPOTENCY_CONFLICT'}
+      } else {
+        Invoke-LocalDbExec 'INSERT INTO windows_relay_calls(request_id,call_id,fingerprint,phase,updated_at_utc) VALUES(?,?,?,?,?)' @([string]$claim.request_id,[string]$claim.call_id,[string]$claim.fingerprint,'PREPARING',[DateTime]::UtcNow.ToString('o'))
+      }
+    }
+  }
+}
+function Start-WindowsRelayWorker([string[]]$WorkerArgs) {
+  if([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT -or $WorkerArgs.Count -ne 6 -or @('heartbeat','executor') -cnotcontains $WorkerArgs[1]){throw 'RELAY_WORKER_ARGUMENTS_INVALID'}
+  [int]$parentId=0
+  if(-not [int]::TryParse($WorkerArgs[2],[ref]$parentId) -or $parentId -le 1 -or $WorkerArgs[4] -cnotmatch '^[0-9a-f]{64}$' -or $WorkerArgs[5] -cnotmatch '^[0-9a-f]{64}$' -or -not [Console]::IsInputRedirected){throw 'RELAY_HANDSHAKE_REQUIRED'}
+  # START is sent only after the guardian has assigned the native Job Object.
+  $line=[Console]::In.ReadLine()
+  if(-not $line -or $line.Length -gt 4096){throw 'RELAY_HANDSHAKE_REQUIRED'}
+  $hello=$line | ConvertFrom-Json
+  if([string]$hello.schema -cne 'hara.commander.relay-worker-handshake.v1' -or [string]$hello.nonce -cne $WorkerArgs[5] -or @($hello.abandoned).Count -gt 2){throw 'RELAY_HANDSHAKE_INVALID'}
+  $script:WindowsRelayWorkerMode=$true
+  $cfg=Test-WindowsRelayWorkerContext $parentId $WorkerArgs[3] $WorkerArgs[4]
+  if(-not $cfg){return}
+  if($WorkerArgs[1] -ceq 'executor'){
+    $script:EnrollmentContext=Initialize-EnrollmentState $cfg
+    Restore-WindowsRelayClaims $hello.abandoned
+    Repair-WindowsRelayJournal
+    Write-WindowsRelayProgress 'READY' @{delay=0}
+  }
+  $failures=0;$lastRepair=0.0;$burst=0
+  $hotUntil=(Get-WindowsRelayNow)+$CallPollStartupHotSeconds
+  $approvalLimit=$ApprovalTimeoutSeconds
+  try {
+    while($true){
+      $cfg=Test-WindowsRelayWorkerContext $parentId $WorkerArgs[3] $WorkerArgs[4]
+      if(-not $cfg){return}
+      $deviceToken=$null
+      $delay=2.0;$completed=$false
+      try {
+        $deviceToken=Get-PlainText (ConvertTo-SecureString ([string]$cfg.encrypted_device_token))
+        if([string]::IsNullOrWhiteSpace($deviceToken)){throw 'DEVICE_CONFIG_INVALID'}
+        if($WorkerArgs[1] -ceq 'heartbeat'){
+          Write-WindowsRelayProgress 'HEARTBEAT_ATTEMPT'
+          $reply=Send-Json "$($cfg.base_url)/api/device/heartbeat" $deviceToken @{
+            device_id=[string]$cfg.device_id;architecture=[string]$cfg.architecture;agent_version=$AgentVersion;approval_mode=(Get-ApprovalMode $cfg)
+          } 20
+          if(-not $reply -or $reply.ok -ne $true -or [string]$reply.schema -cne 'hara.commander-device-heartbeat.v1' -or [string]$reply.device_id -cne [string]$cfg.device_id -or [string]$reply.state -cne 'ACTIVE'){throw 'HEARTBEAT_NOT_CONFIRMED'}
+          Write-WindowsRelayProgress 'HEARTBEAT_CONFIRMED'
+          Try-SetRuntimeStatus -HeartbeatAt ([DateTime]::UtcNow.ToString('o')) -ErrorCode '' -ErrorAt '' | Out-Null
+          $delay=[double]$HeartbeatSeconds;$failures=0
+        } else {
+          Write-WindowsRelayProgress 'BUSY'
+          if((Get-WindowsRelayNow)-$lastRepair -ge 10){
+            try {Repair-WindowsRelayJournal $cfg $deviceToken 1}catch{if((Get-SafeErrorCode $_) -cin @('HTTP_401','HTTP_403')){throw}}
+            $lastRepair=Get-WindowsRelayNow
+          }
+          Write-WindowsRelayProgress 'BUSY'
+          try {$call=Send-Json "$($cfg.base_url)/api/device/calls/next" $deviceToken @{} 25}
+          catch {if($_.Exception.Response -and [int]$_.Exception.Response.StatusCode -eq 204){$call=$null}else{throw}}
+          if($call -and $call.call_id){
+            $hotUntil=(Get-WindowsRelayNow)+$CallPollHotWindowSeconds
+            $script:WindowsRelayDeadline=Get-WindowsRelayDeadline $call
+            Write-WindowsRelayProgress 'CALL' @{call_id=[string]$call.call_id;request_id=[string]$call.request_id;fingerprint=(Get-WindowsRelayFingerprint $call);deadline=$script:WindowsRelayDeadline}
+            $script:ApprovalTimeoutSeconds=[Math]::Min($approvalLimit,[Math]::Max(1,[Math]::Ceiling($script:WindowsRelayDeadline-(Get-WindowsRelayNow))))
+            try {Assert-WindowsRelayDeadline;Invoke-WindowsRelayCall $cfg $deviceToken $call;$completed=$true}
+            finally {$script:WindowsRelayDeadline=$null;$script:ApprovalTimeoutSeconds=$approvalLimit}
+          }
+          if($completed){$burst++}else{$burst=0}
+          $delay=Get-WindowsRelayPollSleep $completed $burst ((Get-WindowsRelayNow) -lt $hotUntil)
+          $failures=0
+        }
+      } catch {
+        $code=Get-SafeErrorCode $_
+        if($code -cin @('HTTP_401','HTTP_403','DEVICE_AUTH_INVALID')){Write-WindowsRelayProgress 'REVOKED' @{code=$code};return}
+        $failures=[Math]::Min(6,$failures+1)
+        $delay=[Math]::Min(60.0,$(if($code -ceq 'HTTP_429'){30.0}else{2.0})*[Math]::Pow(2,$failures-1))
+        if($WorkerArgs[1] -ceq 'heartbeat'){Write-WindowsRelayProgress 'HEARTBEAT_RETRY' @{delay=$delay;code=$code}}
+      } finally {$deviceToken=$null}
+      if($WorkerArgs[1] -ceq 'executor'){Write-WindowsRelayProgress 'READY' @{delay=$delay}}
+      Start-Sleep -Milliseconds ([int]($delay*1000))
+    }
+  } finally {
+    foreach($session in @($script:ManagedWindowsSessions.Values)){try{$session.Dispose()}catch{}}
+  }
+}
+function Start-WindowsRelaySupervisor($Cfg,[string]$AgentPath) {
+  $context=Get-EnrollmentContext $Cfg
+  $state=New-WindowsRelaySupervisorState $AgentPath
+  try {
+    while($true){
+      $current=Read-WindowsRelayConfig
+      if((Get-EnrollmentContext $current) -cne $context){throw 'ENROLLMENT_CHANGED_RESTART_REQUIRED'}
+      if((Get-ApprovalMode $current) -cne (Get-ApprovalMode $Cfg)){
+        foreach($role in @($state.children.Keys)){
+          if(-not (Stop-WindowsRelayChild $state $role)){throw 'RELAY_PREVIOUS_JOB_NOT_QUIESCENT'}
+        }
+        $Cfg=$current
+      }
+      $authorized=(Get-ApprovalMode $current) -ceq 'PERSISTENT_TRUSTED' -or (Test-OperatorSessionActive)
+      Step-WindowsRelaySupervisor $state $current $authorized
+      Start-Sleep -Milliseconds 100
+    }
+  } finally {
+    foreach($role in @($state.children.Keys)){[void](Stop-WindowsRelayChild $state $role)}
+  }
 }
 
 function Get-WindowsRelayPollSleep([bool]$Completed,[int]$BurstCount,[bool]$Hot) {
@@ -2508,6 +3051,7 @@ function Invoke-AgentSelfTest {
   }
 }
 
+if ($args.Count -gt 0 -and [string]$args[0] -ceq '--relay-worker') { Start-WindowsRelayWorker $args; exit 0 }
 if ($args -contains "--version") { Write-Output $AgentVersion; exit 0 }
 if ($args -contains "--self-test") { Invoke-AgentSelfTest; exit 0 }
 if (Test-Path -LiteralPath $ConfigPath -PathType Leaf) {
@@ -2567,122 +3111,4 @@ try {
   throw $code
 }
 
-$LastHeartbeat=[datetime]::MinValue
-$PollHotUntil=(Get-Date).AddSeconds($CallPollStartupHotSeconds)
-$LastErrorCode=$null
-$LastErrorWrite=[datetime]::MinValue
-$RateLimitBackoffSeconds=0
-$RateLimitBackoffUntil=[datetime]::MinValue
-$WasAuthorized=$false
-$BurstDispatchCount=0
-if (-not (Test-OperatorSessionActive) -and (Get-ApprovalMode $StartupCfg) -ne "PERSISTENT_TRUSTED") {
-  Set-DeviceOffline $StartupCfg | Out-Null
-  Write-ConsoleEvent "AGENT_INERT" $null "LOCAL_SESSION_REQUIRED"
-}
-while ($true) {
-  $CompletedPollCall=$false
-  $Cfg=Get-Content -Raw -Path $ConfigPath | ConvertFrom-Json
-  if((Get-EnrollmentContext $Cfg) -cne $EnrollmentContext){
-    foreach($session in @($script:ManagedWindowsSessions.Values)){try{$session.Dispose()}catch{}}
-    throw "ENROLLMENT_CHANGED_RESTART_REQUIRED"
-  }
-  $Persistent=(Get-ApprovalMode $Cfg) -eq "PERSISTENT_TRUSTED"
-  if (-not $Persistent -and -not (Test-OperatorSessionActive)) {
-    $WasAuthorized=$false
-    Start-Sleep -Seconds 1
-    continue
-  }
-  if (-not $WasAuthorized) {
-    $LastHeartbeat=[datetime]::MinValue
-    $PollHotUntil=(Get-Date).AddSeconds($CallPollStartupHotSeconds)
-    Write-ConsoleEvent "AGENT_ONLINE" $null "AUTHORIZED"
-    $WasAuthorized=$true
-  }
-  if ((Get-Date) -lt $RateLimitBackoffUntil) {
-    $remaining=[Math]::Max(1,[Math]::Ceiling(($RateLimitBackoffUntil-(Get-Date)).TotalSeconds))
-    Start-Sleep -Seconds ([Math]::Min(5,$remaining))
-    continue
-  }
-  try {
-    $SecureToken=ConvertTo-SecureString ([string]$Cfg.encrypted_device_token)
-    $DeviceToken=Get-PlainText $SecureToken
-    if (((Get-Date)-$LastHeartbeat).TotalSeconds -ge $HeartbeatSeconds) {
-      Send-Json "$($Cfg.base_url)/api/device/heartbeat" $DeviceToken @{
-        device_id=[string]$Cfg.device_id
-        architecture=[string]$Cfg.architecture
-        agent_version=$AgentVersion
-        approval_mode=(Get-ApprovalMode $Cfg)
-        activity_snapshots=(Get-LocalActivityHeartbeatSnapshot)
-      } 20 | Out-Null
-      $LastHeartbeat=Get-Date
-      $LastErrorCode=$null
-      Try-SetRuntimeStatus -HeartbeatAt ([DateTime]::UtcNow.ToString("o")) -ErrorCode "" -ErrorAt "" | Out-Null
-    }
-    try {
-      $Call=Send-Json "$($Cfg.base_url)/api/device/calls/next" $DeviceToken @{} 25
-    } catch {
-      if ($_.Exception.Response -and [int]$_.Exception.Response.StatusCode -eq 204) { $Call=$null } else { throw }
-    }
-    if ($null -ne $Call -and $Call.call_id) {
-      $PollHotUntil=(Get-Date).AddSeconds($CallPollHotWindowSeconds)
-      if (-not $Persistent -and -not (Test-OperatorSessionActive)) {
-        $code="LOCAL_OPERATOR_SESSION_REQUIRED"
-        Write-ConsoleEvent "DENIED" $Call "DENIED" $code
-        $denied=@{
-          state="DENIED";operational_authority="LOCAL_OPERATOR_SESSION"
-          runtime_authority_from_chatgpt=$false;mutation_performed=$false
-          result=@{};blocker=@{code=$code}
-        }
-        Complete-Call $Cfg $DeviceToken $Call "FAILED" $denied $code
-        $CompletedPollCall=$true
-      } else {
-        Write-ConsoleEvent "RECEIVED" $Call "PENDING"
-        try {
-          Write-ConsoleEvent "EXECUTING" $Call "EXECUTING"
-          $result=Invoke-Tool $Cfg $Call
-          $completionState="COMPLETED"; $completionCode=""
-        } catch {
-          $code=Get-SafeErrorCode $_
-          $operational=Test-OperationalErrorCode $code
-          Write-ConsoleEvent $(if($operational){"OPERATIONAL"}else{"DENIED"}) $Call $(if($operational){"EXPECTED"}else{"FAILED"}) $code
-          $result=@{
-            state="DENIED";operational_authority="LOCAL_OPERATOR_SESSION"
-            runtime_authority_from_chatgpt=$false;mutation_performed=$false
-            result=@{};blocker=@{code=$code}
-          }
-          $completionState="FAILED"; $completionCode=$code
-        }
-        # A transport failure after execution is never rewritten as a
-        # failed execution. The same call_id may be reconciled separately.
-        Complete-Call $Cfg $DeviceToken $Call $completionState $result $completionCode
-        $CompletedPollCall=$true
-        if ($completionState -eq "COMPLETED") {
-          $receipt=if ($result.bridge_receipt_sha256) {[string]$result.bridge_receipt_sha256} else {""}
-          Write-ConsoleEvent "PASS" $Call "COMPLETED" "" $receipt
-        }
-      }
-    }
-    $RateLimitBackoffSeconds=0
-    $RateLimitBackoffUntil=[datetime]::MinValue
-  } catch {
-    $code=Get-SafeErrorCode $_
-    $now=Get-Date
-    if ($code -eq "HTTP_429") {
-      if ($RateLimitBackoffSeconds -le 0) { $RateLimitBackoffSeconds=$RateLimitBackoffInitialSeconds }
-      else { $RateLimitBackoffSeconds=[Math]::Min($RateLimitBackoffMaxSeconds,$RateLimitBackoffSeconds*2) }
-      $RateLimitBackoffUntil=(Get-Date).AddSeconds($RateLimitBackoffSeconds)
-      $PollHotUntil=[datetime]::MinValue
-      Write-ConsoleEvent "TRANSPORT_BACKOFF" $null "DEGRADED" $code
-    }
-    if ($code -ne $LastErrorCode -or ($now-$LastErrorWrite).TotalSeconds -ge 60) {
-      Try-SetRuntimeStatus -ErrorCode $code -ErrorAt ([DateTime]::UtcNow.ToString("o")) | Out-Null
-      $LastErrorCode=$code
-      $LastErrorWrite=$now
-    }
-  } finally {
-    $DeviceToken=$null
-  }
-  if ($CompletedPollCall) { $BurstDispatchCount++ } else { $BurstDispatchCount=0 }
-  $PollSleep=Get-WindowsRelayPollSleep $CompletedPollCall $BurstDispatchCount ((Get-Date) -lt $PollHotUntil)
-  if ($PollSleep -gt 0) { Start-Sleep -Seconds $PollSleep }
-}
+Start-WindowsRelaySupervisor $StartupCfg $PSCommandPath
