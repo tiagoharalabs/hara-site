@@ -5,10 +5,10 @@
   "artifacts": {
     "agent/linux.py": {
       "classification": "commercial-candidate",
-      "source_commit": "ffa1c9092b01169f42ceaf3074c9386fc8b3f082",
+      "source_commit": "cdd24758ecbbf93bcad4079a284301dce348dbbf",
       "source_path": "apps/commander/release-candidates/commercial-0.3.56-source/agent/linux.py",
       "review_reference": "apps/commander/release-candidates/commercial-0.3.56-source/README.md",
-      "sha256": "1d741beb16910282008639adf1e2cfb04ceecf77dba23138e57c354065adb9eb"
+      "sha256": "855578adb084b79ef6b377dbf15ef1856c2507a316087e55bbf98b31a6883720"
     },
     "agent/windows.ps1": {
       "classification": "commercial-candidate",
