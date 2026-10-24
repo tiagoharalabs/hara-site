@@ -325,7 +325,7 @@ def _ops_connect():
     conn=sqlite3.connect(str(OPERATIONS_DB_FILE),timeout=2.0)
     conn.row_factory=sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA synchronous=NORMAL")
+    conn.execute("PRAGMA synchronous=FULL")
     conn.executescript("""
       CREATE TABLE IF NOT EXISTS activity_events (
         event_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -376,6 +376,16 @@ def _ops_connect():
       );
       CREATE INDEX IF NOT EXISTS idx_local_budget_period
         ON local_budget_blocks(period_key, state, issued_at_utc);
+      CREATE TABLE IF NOT EXISTS relay_call_journal (
+        request_id TEXT PRIMARY KEY,
+        call_id TEXT NOT NULL UNIQUE,
+        fingerprint TEXT NOT NULL,
+        phase TEXT NOT NULL,
+        receipt_sha256 TEXT,
+        completion_json TEXT,
+        delivery_state TEXT NOT NULL DEFAULT 'NONE',
+        updated_at_utc TEXT NOT NULL
+      );
       CREATE TABLE IF NOT EXISTS local_budget_debits (
         request_id TEXT PRIMARY KEY,
         budget_id TEXT NOT NULL,
@@ -1260,6 +1270,7 @@ def local_budget_reserve(config,call):
     for attempt in range(2):
         missing_lease=False
         with _ops_connect() as conn:
+            conn.execute('BEGIN IMMEDIATE')
             lease=_active_verified_product_lease(conn,config)
             if not lease or str(lease.get("usage_mode") or "")!="LOCAL_BUDGET":
                 missing_lease=True
@@ -1330,6 +1341,7 @@ def local_budget_reserve(config,call):
 
 def local_budget_commit(request_id):
     with _ops_connect() as conn:
+        conn.execute('BEGIN IMMEDIATE')
         row=conn.execute(
             "SELECT budget_id,units,state FROM local_budget_debits WHERE request_id = ?",
             (str(request_id),),
@@ -1365,6 +1377,7 @@ def local_budget_commit(request_id):
 
 def local_budget_release(request_id):
     with _ops_connect() as conn:
+        conn.execute('BEGIN IMMEDIATE')
         row=conn.execute(
             "SELECT budget_id,state FROM local_budget_debits WHERE request_id = ?",
             (str(request_id),),
@@ -1984,6 +1997,7 @@ def process_start(command,cwd=None,timeout_ms=1000,max_lines=200):
             os.execv("/bin/bash",["/bin/bash","-lc",command])
         except Exception:
             os._exit(127)
+    _relay_progress('MANAGED_PROCESS',pid=pid,start_marker=_pid_start_marker(pid))
     os.set_blocking(fd,False)
     sid="HARA-PROC-"+uuid.uuid4().hex
     session={"session_id":sid,"pid":pid,"fd":fd,"started_at_utc":utcnow(),"command_sha256":hashlib.sha256(command.encode()).hexdigest(),"cwd":str(work),"lines":[],"partial":"","base_line":0,"cursor":0,"truncated":False,"exit_code":None}
@@ -2454,7 +2468,9 @@ def post_json(url, token, payload, timeout=25):
         with NO_REDIRECT_OPENER.open(req, timeout=timeout) as response:
             if response.status == 204:
                 return None
-            return json.loads(response.read().decode() or "{}")
+            raw=response.read(512*1024+1)
+            if len(raw)>512*1024:raise ValueError('COMMANDER_RESPONSE_TOO_LARGE')
+            return json.loads(raw.decode() or "{}")
     except urllib.error.HTTPError as exc:
         if exc.code == 204:
             return None
@@ -3085,74 +3101,506 @@ def execute_tool(config, call):
 def complete(config, call, state, result, error_code=None):
     body={"call_id":call["call_id"],"state":state,"result":result}
     if error_code: body["error_code"]=error_code
-    post_json(config["HARA_COMMANDER_URL"]+"/api/device/calls/complete",config["HARA_DEVICE_TOKEN"],body)
+    reply=post_json(config["HARA_COMMANDER_URL"]+"/api/device/calls/complete",config["HARA_DEVICE_TOKEN"],body)
+    if (not isinstance(reply,dict) or reply.get('ok') is not True or
+        reply.get('call_id')!=call['call_id'] or reply.get('state')!=state):
+        raise ValueError('CALL_COMPLETION_NOT_ACKNOWLEDGED')
+    return reply
+
+# Relay journal and outbox share the enrollment-scoped, mode-0600 SQLite store.
+# Call payloads are hashed, never retained. An unacknowledged result is private
+# delivery state (bounded like the server); scrub it after ACK/confirmed expiry.
+def _relay_call_fingerprint(call):
+    return hashlib.sha256(json.dumps({k:call.get(k) for k in
+        ('call_id','request_id','tool_id','payload','usage')},sort_keys=True,
+        separators=(',',':')).encode()).hexdigest()
+
+
+def relay_call_begin(call):
+    request_id=str(call.get('request_id') or '')
+    call_id=str(call.get('call_id') or '')
+    if not request_id or not call_id or max(len(request_id),len(call_id))>180:
+        raise ValueError('CALL_IDENTITY_INVALID')
+    fingerprint=_relay_call_fingerprint(call)
+    with _ops_connect() as conn:
+        conn.execute('BEGIN IMMEDIATE')
+        row=conn.execute('SELECT fingerprint FROM relay_call_journal WHERE request_id=?',
+                         (request_id,)).fetchone()
+        if row:
+            raise ValueError('CALL_REPLAY_REFUSED' if row['fingerprint']==fingerprint
+                             else 'CALL_IDEMPOTENCY_CONFLICT')
+        conn.execute('INSERT INTO relay_call_journal(request_id,call_id,fingerprint,phase,updated_at_utc) VALUES(?,?,?,?,?)',
+                     (request_id,call_id,fingerprint,'PREPARING',utcnow()))
+        conn.commit()
+
+
+def relay_call_phase(call,phase,receipt_sha=None):
+    if phase not in {'RESERVED','EXECUTING','EXECUTED','FAILED','UNCERTAIN'}:
+        raise ValueError('CALL_PHASE_INVALID')
+    with _ops_connect() as conn:
+        conn.execute('BEGIN IMMEDIATE')
+        conn.execute('UPDATE relay_call_journal SET phase=?,receipt_sha256=COALESCE(?,receipt_sha256),updated_at_utc=? WHERE request_id=?',
+                     (phase,receipt_sha,utcnow(),str(call['request_id'])))
+        conn.commit()
+    _relay_progress('PHASE',phase=phase,request_id=str(call['request_id']))
+
+
+def _relay_completion(call,state,result,error_code=None):
+    body={'call_id':call['call_id'],'state':state,'result':result}
+    if error_code: body['error_code']=error_code
+    raw=json.dumps(body,sort_keys=True,separators=(',',':'),ensure_ascii=False)
+    if len(raw.encode())>256*1024:
+        raise ValueError('CALL_COMPLETION_TOO_LARGE')
+    with _ops_connect() as conn:
+        conn.execute("UPDATE relay_call_journal SET completion_json=?,delivery_state=?,updated_at_utc=?,phase=CASE WHEN ?='COMPLETED' THEN 'EXECUTED' ELSE phase END WHERE request_id=?",
+                     (raw,'PENDING',utcnow(),state,str(call['request_id'])))
+        conn.commit()
+
+
+def _relay_deliver(config,request_id,body,call=None):
+    try:
+        target=call or {'call_id':body['call_id']}
+        if body.get('error_code'):
+            complete(config,target,body['state'],body['result'],body['error_code'])
+        else:
+            complete(config,target,body['state'],body['result'])
+    except Exception as exc:
+        code=safe_error_code(exc)
+        if isinstance(exc,urllib.error.HTTPError) and exc.code==409:
+            try:
+                wire=json.loads(exc.read(4096))
+                code=str(wire.get('code') or wire.get('error') or code)
+            except (ValueError,OSError): pass
+        with _ops_connect() as conn:
+            conn.execute('UPDATE relay_call_journal SET updated_at_utc=? WHERE request_id=?',(utcnow(),request_id));conn.commit()
+        if code=='DEVICE_CALL_EXPIRED':
+            with _ops_connect() as conn:
+                conn.execute("UPDATE relay_call_journal SET delivery_state='EXPIRED',completion_json=NULL,updated_at_utc=? WHERE request_id=?",
+                             (utcnow(),request_id));conn.commit()
+        raise
+    with _ops_connect() as conn:
+        conn.execute("UPDATE relay_call_journal SET delivery_state='ACKNOWLEDGED',completion_json=NULL,updated_at_utc=? WHERE request_id=?",
+                     (utcnow(),request_id));conn.commit()
+
+
+def reconcile_relay_calls(config=None,limit=64):
+    # Called only after the previous executor has been reaped. No tool is ever
+    # invoked here. A crash across the effect/checkpoint boundary stays uncertain.
+    with _ops_connect() as conn:
+        rows=[dict(r) for r in conn.execute("SELECT * FROM relay_call_journal WHERE phase IN ('PREPARING','RESERVED','EXECUTING') OR completion_json IS NOT NULL OR (phase='EXECUTED' AND delivery_state='NONE') ORDER BY updated_at_utc LIMIT ?",(int(limit),))]
+    summary={'committed':0,'released':0,'uncertain':0,'delivered':0}
+    for row in rows:
+        request=row['request_id'];phase=row['phase']
+        with _ops_connect() as conn:
+            debit=conn.execute('SELECT state FROM local_budget_debits WHERE request_id=?',(request,)).fetchone()
+        if phase=='EXECUTED':
+            if debit and debit['state']=='RESERVED':
+                local_budget_commit(request);summary['committed']+=1
+        elif phase in {'PREPARING','RESERVED','FAILED'}:
+            if debit and debit['state']=='RESERVED':
+                local_budget_release(request);summary['released']+=1
+            if phase!='FAILED':
+                # A durable EXECUTING checkpoint is mandatory before effects.
+                with _ops_connect() as conn:
+                    conn.execute("UPDATE relay_call_journal SET phase='FAILED',updated_at_utc=? WHERE request_id=?",
+                                 (utcnow(),request));conn.commit()
+                if not row['completion_json']:
+                    body={'state':'DENIED','runtime_authority_from_chatgpt':False,
+                          'mutation_performed':False,'result':{},'blocker':{'code':'DEVICE_CALL_TIMEOUT'}}
+                    _relay_completion({'call_id':row['call_id'],'request_id':request},'FAILED',body,'DEVICE_CALL_TIMEOUT')
+        elif phase in {'EXECUTING','UNCERTAIN'}:
+            summary['uncertain']+=1
+            with _ops_connect() as conn:
+                conn.execute("UPDATE relay_call_journal SET phase='UNCERTAIN',updated_at_utc=? WHERE request_id=?",
+                             (utcnow(),request));conn.commit()
+            if not row['completion_json']:
+                body={'state':'INDETERMINATE','runtime_authority_from_chatgpt':False,
+                      'mutation_performed':None,'result':{},'blocker':{'code':'CALL_OUTCOME_UNCERTAIN'}}
+                _relay_completion({'call_id':row['call_id'],'request_id':request},'FAILED',body,'CALL_OUTCOME_UNCERTAIN')
+        if config:
+            with _ops_connect() as conn:
+                pending=conn.execute('SELECT completion_json FROM relay_call_journal WHERE request_id=?',(request,)).fetchone()
+            if pending and pending['completion_json']:
+                _relay_deliver(config,request,json.loads(pending['completion_json']))
+                summary['delivered']+=1
+    return summary
+
+
+_RELAY_PROGRESS_CHANNEL=None
+
+def _relay_progress(kind,**details):
+    if _RELAY_PROGRESS_CHANNEL is not None:
+        _RELAY_PROGRESS_CHANNEL.send({'kind':kind,**details})
+
 
 def execute_call(config,call):
     started=time.monotonic()
-    call["_transport"]="OUTBOUND_RELAY"
-    budget_reservation=None
-    budget_committed=False
-    if effective_approval_mode(config)!="PERSISTENT_TRUSTED" and not operator_session_active():
-        code="LOCAL_OPERATOR_SESSION_REQUIRED"
-        append_console_event("DENIED",call,state="DENIED",error_code=code)
-        complete(config,call,"FAILED",{
-            "state":"DENIED","operational_authority":"LOCAL_OPERATOR_SESSION",
-            "runtime_authority_from_chatgpt":False,"mutation_performed":False,
-            "result":{},"blocker":{"code":code},
-        },code)
+    call['_transport']='OUTBOUND_RELAY'
+    relay_call_begin(call)
+    reservation=None
+    executing=False
+    if effective_approval_mode(config)!='PERSISTENT_TRUSTED' and not operator_session_active():
+        code='LOCAL_OPERATOR_SESSION_REQUIRED'
+        result={'state':'DENIED','operational_authority':'LOCAL_OPERATOR_SESSION',
+                'runtime_authority_from_chatgpt':False,'mutation_performed':False,
+                'result':{},'blocker':{'code':code}}
+        relay_call_phase(call,'FAILED')
+        _relay_completion(call,'FAILED',result,code)
+        _relay_deliver(config,str(call['request_id']),{'call_id':call['call_id'],'state':'FAILED','result':result,'error_code':code})
         return
-    append_console_event("RECEIVED",call,state="PENDING")
     try:
-        budget_reservation=local_budget_reserve(config,call)
-        if _is_mutation_tool(call.get("tool_id")):
-            call["_local_approval"]=request_local_approval(call)
-        append_console_event("EXECUTING",call,state="EXECUTING")
+        append_console_event('RECEIVED',call,state='PENDING')
+        _relay_check_deadline()
+        reservation=local_budget_reserve(config,call)
+        relay_call_phase(call,'RESERVED')
+        if _is_mutation_tool(call.get('tool_id')):
+            call['_local_approval']=request_local_approval(call)
+        append_console_event('EXECUTING',call,state='EXECUTING')
+        _relay_check_deadline()
+        relay_call_phase(call,'EXECUTING')
+        executing=True
         result=execute_tool(config,call)
-        budget_commit=None
-        if budget_reservation:
-            budget_commit=local_budget_commit(call.get("request_id"))
-            budget_committed=True
     except Exception as exc:
         code=safe_error_code(exc)
-        if budget_reservation and not budget_committed:
-            try:
-                local_budget_release(call.get("request_id"))
-            except Exception:
-                pass
-        operational = local_mcp_operational_error(code,"",{}) is not None
-        append_console_event(
-            "OPERATIONAL" if operational else "DENIED",
-            call,
-            state="EXPECTED" if operational else "FAILED",
-            error_code=code,
-            duration_ms=round((time.monotonic()-started)*1000),
-        )
-        complete(config,call,"FAILED",{
-            "state":"DENIED","operational_authority":"LOCAL_OPERATOR_SESSION",
-            "runtime_authority_from_chatgpt":False,"mutation_performed":False,
-            "result":{},"blocker":{"code":code},
-        },code)
+        uncertain=executing and _is_mutation_tool(call.get('tool_id'))
+        relay_call_phase(call,'UNCERTAIN' if uncertain else 'FAILED')
+        if not uncertain:
+            local_budget_release(call.get('request_id'))
+        result={'state':'INDETERMINATE' if uncertain else 'DENIED',
+                'operational_authority':'LOCAL_OPERATOR_SESSION',
+                'runtime_authority_from_chatgpt':False,'mutation_performed':None if uncertain else False,
+                'result':{},'blocker':{'code':code}}
+        append_console_event('OPERATIONAL' if uncertain else 'DENIED',call,
+                             state='UNCERTAIN' if uncertain else 'FAILED',error_code=code)
+        _relay_completion(call,'FAILED',result,code)
+        _relay_deliver(config,str(call['request_id']),{'call_id':call['call_id'],'state':'FAILED','result':result,'error_code':code})
         return
+    # Persist the exact result before committing quota or attempting delivery.
+    # Any failure here leaves EXECUTING/EXECUTED for conservative recovery;
+    # success is never converted into denial, refund or tool re-execution.
+    _relay_completion(call,'COMPLETED',result)
+    relay_call_phase(call,'EXECUTED',result.get('bridge_receipt_sha256') if isinstance(result,dict) else None)
+    if reservation:
+        local_budget_commit(call.get('request_id'))
+    _relay_deliver(config,str(call['request_id']),{'call_id':call['call_id'],'state':'COMPLETED','result':result},call)
+    append_console_event('PASS',call,state='COMPLETED',
+                         receipt_sha256=result.get('bridge_receipt_sha256') if isinstance(result,dict) else None,
+                         duration_ms=round((time.monotonic()-started)*1000))
 
-    # Delivery failure preserves execution truth for reconciliation; do not
-    # issue a contradictory FAILED terminal state or retry the tool here.
-    complete(config,call,"COMPLETED",result)
-    if budget_commit and budget_commit.get("exhausted"):
+
+# The service process supervises two disposable workers. No tool, SQLite query,
+# lease refresh, or network request runs on the supervisor's scheduling path.
+# A platform-confirmed heartbeat, rather than PID existence, proves recovery.
+RELAY_HEARTBEAT_STALE_SECONDS=150.0  # 30 s margin inside the 180 s detection SLO
+RELAY_WORKER_TIMEOUT_SECONDS=35.0
+RELAY_CALL_LIMITS={'hara.process.run':20.0,'hara.process.start':15.0}
+_RELAY_CALL_DEADLINE=None
+
+
+def relay_call_deadline(call):
+    try:
+        expires=datetime.fromisoformat(str(call['expires_at_utc']).replace('Z','+00:00'))
+        if expires.tzinfo is None: raise ValueError('naive')
+        remaining=expires.timestamp()-time.time()
+    except (KeyError,ValueError,OverflowError):
+        raise ValueError('CALL_DEADLINE_REQUIRED') from None
+    limit=RELAY_CALL_LIMITS.get(str(call.get('tool_id')),30.0)
+    # Consent may wait within the platform deadline, but never blocks heartbeat.
+    return time.monotonic()+max(0.0,min(limit,remaining))
+
+
+def _relay_check_deadline():
+    if _RELAY_CALL_DEADLINE is not None and time.monotonic()>=_RELAY_CALL_DEADLINE:
+        raise ValueError('DEVICE_CALL_EXPIRED')
+
+
+def _relay_worker_entry(target,config,channel):
+    global _RELAY_PROGRESS_CHANNEL
+    os.setsid()
+    _RELAY_PROGRESS_CHANNEL=channel
+    def terminate(_signum,_frame):
+        cleanup_process_sessions()
+        raise SystemExit(0)
+    signal.signal(signal.SIGTERM,terminate)
+    try:
+        target(config,channel)
+    except (Exception,KeyboardInterrupt) as exc:
+        _relay_progress('ERROR',code=safe_error_code(exc))
+    finally:
+        cleanup_process_sessions()
+        channel.close()
+
+
+def _relay_heartbeat_worker(config,channel):
+    failures=0
+    while True:
+        _relay_progress('HEARTBEAT_ATTEMPT')
         try:
-            refresh_product_lease(config)
-            append_console_event("LOCAL_BUDGET_ROLLOVER",call,state="READY")
-        except Exception as refresh_exc:
-            append_console_event(
-                "PRODUCT_LEASE_DEGRADED",
-                call,
-                state="DEGRADED",
-                error_code=safe_error_code(refresh_exc),
-            )
-    append_console_event(
-        "PASS",call,state="COMPLETED",
-        receipt_sha256=result.get("bridge_receipt_sha256") if isinstance(result,dict) else None,
-        duration_ms=round((time.monotonic()-started)*1000),
-    )
+            reply=post_json(config['HARA_COMMANDER_URL']+'/api/device/heartbeat',
+                config['HARA_DEVICE_TOKEN'],{'device_id':config['HARA_DEVICE_ID'],
+                'architecture':config['HARA_DEVICE_ARCH'],'agent_version':AGENT_VERSION,
+                'approval_mode':effective_approval_mode(config)},timeout=20)
+            if (not isinstance(reply,dict) or reply.get('ok') is not True or
+                reply.get('schema')!='hara.commander-device-heartbeat.v1' or
+                reply.get('device_id')!=config['HARA_DEVICE_ID'] or reply.get('state')!='ACTIVE'):
+                raise ValueError('HEARTBEAT_NOT_CONFIRMED')
+            _relay_progress('HEARTBEAT_CONFIRMED')
+            # Status I/O can stall only this replaceable worker, not the guardian.
+            try_write_runtime_status(heartbeat_at=utcnow(),error_code=None,error_at=None)
+            failures=0;delay=float(HEARTBEAT_SECONDS)
+        except Exception as exc:
+            code=safe_error_code(exc)
+            if code in {'HTTP_401','HTTP_403','DEVICE_AUTH_INVALID'}:
+                _relay_progress('REVOKED',code=code);return
+            failures=min(6,failures+1)
+            delay=min(60.0,(30.0 if code=='HTTP_429' else 2.0)*(2**(failures-1)))
+            _relay_progress('HEARTBEAT_RETRY',delay=delay,code=code)
+        time.sleep(delay)
+
+
+def _relay_recover_claims(config):
+    # These identities/fingerprints came from authenticated CALL messages held
+    # by the surviving supervisor, before any potentially blocking local I/O.
+    # Absence of a journal proves no tool was entered (durable checkpoint fence).
+    for call in config.get('_relay_abandoned_calls',[]):
+        if not re.fullmatch(r'[0-9a-f]{64}',str(call.get('fingerprint',''))):
+            raise ValueError('CALL_RECOVERY_BINDING_INVALID')
+        with _ops_connect() as conn:
+            conn.execute('BEGIN IMMEDIATE')
+            row=conn.execute('SELECT call_id,fingerprint FROM relay_call_journal WHERE request_id=?',(call['request_id'],)).fetchone()
+            if row:
+                if row['call_id']!=call['call_id'] or row['fingerprint']!=call['fingerprint']:
+                    raise ValueError('CALL_IDEMPOTENCY_CONFLICT')
+            else:
+                conn.execute('INSERT INTO relay_call_journal(request_id,call_id,fingerprint,phase,updated_at_utc) VALUES(?,?,?,?,?)',
+                             (call['request_id'],call['call_id'],call['fingerprint'],'PREPARING',utcnow()))
+            conn.commit()
+
+
+def _relay_executor_worker(config,channel):
+    global _RELAY_CALL_DEADLINE
+    _relay_recover_claims(config)
+    reconcile_relay_calls()
+    _relay_progress('READY')
+    last_lease=0.0;last_reconciliation=0.0;backoff=0.0
+    while True:
+        _relay_progress('BUSY')
+        try:
+            now=time.monotonic()
+            if now-last_reconciliation>=10:
+                try:reconcile_relay_calls(config,limit=1)
+                except Exception as exc:
+                    if safe_error_code(exc) in {'HTTP_401','HTTP_403'}:raise
+                    _relay_progress('ERROR',code=safe_error_code(exc))
+                last_reconciliation=now
+                _relay_progress('BUSY')
+            if now-last_lease>=PRODUCT_LEASE_REFRESH_SECONDS:
+                try:refresh_product_lease(config);last_lease=now
+                except Exception as exc:
+                    code=safe_error_code(exc)
+                    if code in {'HTTP_401','HTTP_403'}:
+                        _relay_progress('REVOKED',code=code);return
+                    _relay_progress('ERROR',code=code)
+            _relay_progress('BUSY')
+            call=post_json(config['HARA_COMMANDER_URL']+'/api/device/calls/next',
+                           config['HARA_DEVICE_TOKEN'],{},timeout=25)
+            if call:
+                _RELAY_CALL_DEADLINE=relay_call_deadline(call)
+                _relay_progress('CALL',request_id=str(call['request_id']),call_id=str(call['call_id']),
+                                deadline=_RELAY_CALL_DEADLINE,fingerprint=_relay_call_fingerprint(call))
+                _relay_check_deadline()
+                try:execute_call(config,call)
+                finally:_RELAY_CALL_DEADLINE=None
+            backoff=0.0
+        except Exception as exc:
+            code=safe_error_code(exc)
+            if code in {'HTTP_401','HTTP_403'}:
+                _relay_progress('REVOKED',code=code);return
+            backoff=min(60.0,30.0 if backoff==0 else backoff*2) if code=='HTTP_429' else 2.0
+            _relay_progress('ERROR',code=code)
+        _relay_progress('READY')
+        time.sleep(backoff or float(CALL_POLL_HOT_SECONDS))
+
+
+class RelaySupervisor:
+    def __init__(self,config,*,heartbeat_target=None,executor_target=None,report=None,settings=None):
+        import multiprocessing
+        if transport_mode(config)!='OUTBOUND_RELAY':raise ValueError('RELAY_TRANSPORT_REQUIRED')
+        self.config=dict(config)
+        start_method=(settings or {}).get('start_method') or ('fork' if heartbeat_target or executor_target else 'spawn')
+        self.context=multiprocessing.get_context(start_method)
+        self.targets={'heartbeat':heartbeat_target or _relay_heartbeat_worker,
+                      'executor':executor_target or _relay_executor_worker}
+        self.report=report or self._report
+        self.settings={'heartbeat_stale':RELAY_HEARTBEAT_STALE_SECONDS,
+                       'worker_timeout':RELAY_WORKER_TIMEOUT_SECONDS,
+                       'heartbeat_interval':float(HEARTBEAT_SECONDS),
+                       'restart_cooldown':5.0,'restart_window':1800.0,'max_restarts':2}
+        if settings:self.settings.update(settings)
+        self.children={};self.attempts={'heartbeat':[],'executor':[]}
+        self.restart_counts={'heartbeat':0,'executor':0}
+        self.heartbeat_confirmations=0;self.last_heartbeat=None;self.started=None
+        self.revoked=False;self.recovering={};self.states={};self.blocked_until={};self.abandoned={}
+
+    @staticmethod
+    def _report(event):
+        # Independent of SQLite/JSONL and of the executor. systemd captures
+        # stderr; this local alert is not a remote notification receipt.
+        os.write(2,(json.dumps(event,sort_keys=True)+'\n').encode())
+
+    def _event(self,kind,state,now):
+        if self.states.get(kind)==state:return
+        self.states[kind]=state
+        self.report({'schema':'hara.commander.relay-health.v1','worker':kind,
+                     'state':state,'monotonic':now})
+
+    def _spawn(self,kind,now):
+        receive,send=self.context.Pipe(duplex=False)
+        config=dict(self.config)
+        if kind=='executor':config['_relay_abandoned_calls']=list(self.abandoned.values())
+        process=self.context.Process(target=_relay_worker_entry,
+                    args=(self.targets[kind],config,send),daemon=True)
+        process.start();send.close()
+        self.children[kind]={'process':process,'channel':receive,
+            'deadline':now+self.settings['worker_timeout'],'managed':{},'ready':False,'network_backoff':False}
+
+    def _stop(self,kind):
+        child=self.children.get(kind)
+        if not child:return True
+        # Only tracked PTY groups with the exact start marker belong to this
+        # worker. Never signal arbitrary PIDs or another enrollment's process.
+        for pid,marker in child['managed'].items():
+            if marker and _pid_start_marker(pid)==marker:
+                try:os.killpg(pid,signal.SIGKILL)
+                except OSError:pass
+        process=child['process']
+        if process.is_alive():process.terminate()
+        process.join(timeout=.4)
+        if process.is_alive():process.kill();process.join(timeout=.4)
+        unresolved=False
+        for pid,marker in child['managed'].items():
+            if marker and _pid_start_marker(pid)==marker:
+                try:
+                    raw=Path(f'/proc/{pid}/stat').read_text()
+                    unresolved=unresolved or raw[raw.rfind(')')+2:].split()[0]!='Z'
+                except (OSError,IndexError):pass
+        if process.is_alive() or unresolved:
+            child['fenced']=True
+            return False
+        self.children.pop(kind,None)
+        child['channel'].close()
+        return True
+
+    def close(self):
+        for kind in list(self.children):self._stop(kind)
+
+    def _restart(self,kind,now):
+        self._event(kind,'STALLED',now)
+        call=self.children.get(kind,{}).get('call')
+        if call and kind=='executor':self.abandoned[call['request_id']]=call
+        if not self._stop(kind):
+            self._event(kind,'DEGRADED',now)
+            return
+        recent=[t for t in self.attempts[kind] if now-t<self.settings['restart_window']]
+        self.attempts[kind]=recent
+        if len(recent)>=self.settings['max_restarts']:
+            self.blocked_until[kind]=recent[0]+self.settings['restart_window']
+            self._event(kind,'DEGRADED',now);return
+        delay=max(0.0,self.settings['restart_cooldown']-(now-recent[-1])) if recent else 0.0
+        if delay:delay+=int.from_bytes(os.urandom(2),'big')/65535.0
+        self.attempts[kind].append(now+delay)
+        self.restart_counts[kind]+=1
+        self.recovering[kind]=now
+        self._event(kind,'RECOVERING',now)
+        if delay:self.blocked_until[kind]=now+delay
+        else:self._spawn(kind,now)
+
+    def step(self,*,authorized):
+        now=time.monotonic()
+        if not authorized or self.revoked:
+            self.close();self.started=None;self.last_heartbeat=None;self.recovering.clear();return
+        if self.started is None:self.started=now
+        for kind in self.targets:
+            if kind not in self.children and now>=self.blocked_until.get(kind,0):self._spawn(kind,now)
+        for kind,child in list(self.children.items()):
+            if child.get('fenced'):
+                if not child['process'].is_alive():self._stop(kind)
+                continue
+            channel=child['channel']
+            for _ in range(64):
+                if not channel.poll():break
+                try:message=channel.recv()
+                except EOFError:break
+                tag=message.get('kind')
+                if tag=='REVOKED':
+                    self.revoked=True;self._event(kind,'DEGRADED',now);self.close();return
+                if kind=='heartbeat' and tag=='HEARTBEAT_CONFIRMED':
+                    self.last_heartbeat=now;self.heartbeat_confirmations+=1
+                    child['network_backoff']=False
+                    child['deadline']=now+self.settings['heartbeat_interval']+self.settings['worker_timeout']
+                elif kind=='heartbeat' and tag=='HEARTBEAT_ATTEMPT':
+                    child['deadline']=now+self.settings['worker_timeout']
+                elif kind=='heartbeat' and tag=='HEARTBEAT_RETRY':
+                    child['deadline']=now+min(60,float(message['delay']))+self.settings['worker_timeout']
+                    child['network_backoff']=True
+                elif kind=='executor' and tag=='CALL':
+                    child['deadline']=min(float(message['deadline']),now+900)
+                    child['ready']=False
+                    child['call']={k:message.get(k) for k in ('request_id','call_id','fingerprint')}
+                elif kind=='executor' and tag in {'BUSY','READY'}:
+                    child['deadline']=now+self.settings['worker_timeout']
+                    child['ready']=tag=='READY'
+                    if tag=='READY':child['call']=None;self.abandoned.clear()
+                elif kind=='executor' and tag=='MANAGED_PROCESS':
+                    child['managed'][int(message['pid'])]=message.get('start_marker')
+                elif kind=='executor' and tag=='PHASE':
+                    phase=(str(message.get('request_id',''))[:180],str(message.get('phase',''))[:30])
+                    if child.get('last_phase')!=phase:
+                        child['last_phase']=phase
+                        self.report({'schema':'hara.commander.relay-health.v1','worker':kind,
+                                     'state':'PHASE','request_id':phase[0],'phase':phase[1],'monotonic':now})
+                # PHASE is diagnostic only. It never extends a call deadline.
+            absent=kind=='heartbeat' and now-(self.last_heartbeat or self.started)>=self.settings['heartbeat_stale']
+            if absent and child['network_backoff'] and child['process'].is_alive() and now<child['deadline']:
+                # A responsive network retry loop is not a frozen worker. Keep
+                # probing within 60 s while offline, even when restart budget is
+                # exhausted. Restored connectivity must not wait for the circuit.
+                if kind not in self.recovering:
+                    self._event(kind,'STALLED',now)
+                    self._event(kind,'RECOVERING',now)
+                    self.recovering[kind]=now
+                    self._event(kind,'DEGRADED',now)
+            elif not child['process'].is_alive() or now>=child['deadline'] or absent:
+                self._restart(kind,now)
+        for kind,at in list(self.recovering.items()):
+            child=self.children.get(kind)
+            if child and self.last_heartbeat is not None and self.last_heartbeat>at:
+                if kind=='heartbeat' or child['ready']:
+                    self._event(kind,'RECOVERED',now);del self.recovering[kind]
+
+
+def run_supervised_relay(config):
+    startup=_enrollment_context(config)
+    guardian=RelaySupervisor(config)
+    previous={}
+    def stop(_signal,_frame):raise KeyboardInterrupt
+    for signum in (signal.SIGTERM,signal.SIGINT):
+        previous[signum]=signal.signal(signum,stop)
+    try:
+        while True:
+            current=load_config()
+            if _enrollment_context(current)!=startup:raise ValueError('ENROLLMENT_CHANGED_RESTART_REQUIRED')
+            if transport_mode(current)!='OUTBOUND_RELAY':raise ValueError('TRANSPORT_CHANGED_RESTART_REQUIRED')
+            authorized=effective_approval_mode(current)=='PERSISTENT_TRUSTED' or operator_session_active()
+            if effective_approval_mode(current)!=effective_approval_mode(guardian.config):
+                guardian.close();guardian.config=dict(current)
+            guardian.step(authorized=authorized)
+            time.sleep(.1)
+    except KeyboardInterrupt:pass
+    finally:
+        guardian.close()
+        for signum,handler in previous.items():signal.signal(signum,handler)
+
 
 def self_test():
     global RECEIPT_DIR
@@ -4206,91 +4654,7 @@ def main():
         append_console_event("AGENT_LOCAL_TUNNEL",state="CONTROL_ONLY",action_summary="cloud_polling=disabled; telemetry_hourly=true")
         run_local_tunnel_agent_telemetry(config)
         return
-    last_heartbeat=0.0
-    last_product_lease=0.0
-    poll_hot_until=time.monotonic()+CALL_POLL_STARTUP_HOT_SECONDS
-    last_error_code=None
-    last_error_write=0.0
-    rate_limit_backoff_seconds=0
-    rate_limit_backoff_until=0.0
-    was_authorized=False
-    persistent=effective_approval_mode(config)=="PERSISTENT_TRUSTED"
-    if not operator_session_active() and not persistent:
-        mark_device_offline(config)
-        append_console_event("AGENT_INERT", state="LOCAL_SESSION_REQUIRED")
-    elif persistent:
-        append_console_event("AGENT_ONLINE",state="PERSISTENT_TRUSTED")
-    while True:
-        current=load_config()
-        if _enrollment_context(current)!=startup_enrollment:
-            cleanup_process_sessions()
-            raise RuntimeError("ENROLLMENT_CHANGED_RESTART_REQUIRED")
-        now=time.monotonic()
-        persistent=effective_approval_mode(config)=="PERSISTENT_TRUSTED"
-        authorized=persistent or operator_session_active()
-        if not authorized:
-            if was_authorized:
-                killed=cleanup_process_sessions()
-                if killed: append_console_event("PROCESS_REVOKE",state="KILLED",action_summary=f"managed_processes={killed}")
-            was_authorized=False
-            time.sleep(1)
-            continue
-        if not was_authorized:
-            last_heartbeat=0.0
-            poll_hot_until=now+CALL_POLL_STARTUP_HOT_SECONDS
-            append_console_event("AGENT_ONLINE",state="PERSISTENT_TRUSTED" if persistent else "AUTHORIZED")
-            was_authorized=True
-        if now < rate_limit_backoff_until:
-            time.sleep(min(5.0, max(0.1, rate_limit_backoff_until-now)))
-            continue
-        try:
-            if now-last_heartbeat>=HEARTBEAT_SECONDS:
-                post_json(config["HARA_COMMANDER_URL"]+"/api/device/heartbeat",config["HARA_DEVICE_TOKEN"],{
-                    "device_id":config["HARA_DEVICE_ID"],"architecture":config["HARA_DEVICE_ARCH"],"agent_version":AGENT_VERSION,
-                    "approval_mode":effective_approval_mode(config),
-                    "activity_snapshots":local_activity_heartbeat_snapshot(),
-                })
-                last_heartbeat=now
-                last_error_code=None
-                try_write_runtime_status(heartbeat_at=utcnow(),error_code=None,error_at=None)
-            if now-last_product_lease>=PRODUCT_LEASE_REFRESH_SECONDS:
-                try:
-                    refresh_product_lease(config)
-                    last_product_lease=now
-                except Exception as exc:
-                    append_console_event(
-                        "PRODUCT_LEASE_DEGRADED",
-                        state="DEGRADED",
-                        error_code=safe_error_code(exc),
-                    )
-            call=post_json(config["HARA_COMMANDER_URL"]+"/api/device/calls/next",config["HARA_DEVICE_TOKEN"],{})
-            if call:
-                poll_hot_until=time.monotonic()+CALL_POLL_HOT_WINDOW_SECONDS
-                execute_call(config,call)
-            rate_limit_backoff_seconds=0
-            rate_limit_backoff_until=0.0
-        except Exception as exc:
-            code=safe_error_code(exc)
-            if code == "HTTP_429":
-                rate_limit_backoff_seconds = min(
-                    RATE_LIMIT_BACKOFF_MAX_SECONDS,
-                    RATE_LIMIT_BACKOFF_INITIAL_SECONDS if rate_limit_backoff_seconds <= 0
-                    else rate_limit_backoff_seconds * 2,
-                )
-                rate_limit_backoff_until=time.monotonic()+rate_limit_backoff_seconds
-                poll_hot_until=0.0
-                append_console_event(
-                    "TRANSPORT_BACKOFF",
-                    state="DEGRADED",
-                    error_code=code,
-                    action_summary=f"retry_after_seconds={rate_limit_backoff_seconds}",
-                )
-            if code != last_error_code or now-last_error_write>=60:
-                try_write_runtime_status(error_code=code,error_at=utcnow())
-                last_error_code=code
-                last_error_write=now
-        sleep_seconds=CALL_POLL_HOT_SECONDS if time.monotonic()<poll_hot_until else CALL_POLL_IDLE_SECONDS
-        time.sleep(sleep_seconds)
+    run_supervised_relay(config)
 
 if __name__=="__main__":
     main()

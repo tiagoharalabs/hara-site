@@ -1,6 +1,7 @@
 """Synthetic call completion transport failures must not rewrite execution truth."""
 import importlib.util
 from pathlib import Path
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -12,6 +13,10 @@ class CallCompletionTests(unittest.TestCase):
         spec = importlib.util.spec_from_file_location('completion056', SOURCE)
         self.agent = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(self.agent)
+        temporary=tempfile.TemporaryDirectory(prefix='hara-completion-')
+        self.addCleanup(temporary.cleanup)
+        self.agent.DATA_DIR=Path(temporary.name)
+        self.agent.OPERATIONS_DB_FILE=Path(temporary.name)/'operations.sqlite3'
         self.config = {'HARA_COMMANDER_APPROVAL_MODE': 'PERSISTENT_TRUSTED'}
         self.call = {'call_id': 'synthetic-call', 'request_id': 'synthetic-request',
                      'tool_id': 'hara.ping', 'payload': {}}
