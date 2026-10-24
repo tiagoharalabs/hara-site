@@ -1,0 +1,77 @@
+{
+  "schema": "hara.commander.r163.hosted-dev-two-gates.v1",
+  "captured_at_utc": "2026-10-24T17:54:18.257320+00:00",
+  "scope": "ISOLATED_HOSTED_DEV_TEST_ONLY",
+  "source_commit_before_evidence": "839975e1d6db854b5e6732ab7fb07d4b1e146c04",
+  "codex_056_source_commit": "fbfb107443cda9d04e38abce01bd472a812a87f8",
+  "codex_outbox_source_sha256": "0d74ba6009b7cad12a10e4e2e328061fe6ac02d2a8b6466501341649a3c8e6bf",
+  "hosting": {
+    "main": {
+      "worker": "hara-commander-r163-canary-20261024",
+      "url": "https://hara-commander-r163-canary-20261024.tiago-sartori.workers.dev",
+      "version_id": "2046ca2e-3f0e-4754-b057-ba22a1a7acb3",
+      "d1_name": "hara-commander-r163-canary-dev-20261024",
+      "d1_id": "e769835e-0748-4f41-b868-c7c76b627fe9"
+    },
+    "sink": {
+      "worker": "hara-commander-r163-sink-20261024",
+      "url": "https://hara-commander-r163-sink-20261024.tiago-sartori.workers.dev",
+      "version_id": "b26edd36-a8a6-4b6f-91f2-ef0289ecff68",
+      "d1_name": "hara-commander-r163-notify-sink-dev-20261024",
+      "d1_id": "1705c446-7ad4-4149-a8d5-baded898376f"
+    }
+  },
+  "gate_1": {
+    "state": "PASS_HOSTED_QA",
+    "real_hosted_worker_http_checks": "7/7 PASS",
+    "real_heartbeat_cron_and_recovery": "PASS",
+    "offline_detection_seconds": 125.903,
+    "offline_detection_limit_seconds": 180,
+    "recovery_upper_bound_seconds": 2.028,
+    "recovery_limit_seconds": 300,
+    "server_incident_id": "offline-c120147a47401384c487a59e05ff8366ce87c4a3",
+    "d1_independent_readback": true,
+    "private_fixture_synthetic": true
+  },
+  "gate_2": {
+    "state": "PASS_HOSTED_QA_RECIPIENT_ONLY",
+    "real_https_recipient": true,
+    "independent_d1": true,
+    "independent_d1_receipt_match": true,
+    "outbox_initial_ingest_ack": "PERSISTED_NOT_DELIVERED",
+    "outbox_terminal_state": "DELIVERED",
+    "receipt_ref": "eee607cd3a1d82ee67cf3d6ac5dd4b7b6495a7e84988db02cdb1ac2284796204",
+    "event_id": "9f99b78dc3f9365406ec499891bc1801",
+    "authenticated_secondary_readback": true,
+    "repeat_after_delivery": "EMPTY_NO_REPLAY",
+    "sink_bad_auth_denied": true,
+    "sink_conflicting_event_denied": true,
+    "customer_human_notification_proven": false,
+    "email_or_push_sent": false
+  },
+  "local_qa": {
+    "recovery_contract_cases": "23/23 PASS",
+    "portal_dom_cases": "3/3 PASS",
+    "node_test_files": "44/44 PASS",
+    "local_loopback_worker_and_d1": "11/11 PASS"
+  },
+  "source_evidence_sha256": {
+    "qa_sink_worker": "9fd26de2f95310fc5a74a2cd76b01bde3a1c633eea0d3d0cad482f66d02779aa",
+    "hosted_canary_client": "e0b9a848aac8feeff6257600f0e601c035d1b50eee49077adfbbfdca5e71652c",
+    "hosted_notification_sender": "ebc5670c94b607fd80b8f480831d759d9991a5f0a272b64901beabab2e647329",
+    "hosted_cron_watcher": "d11b61362720620d4c756c97d8acf8da4a450943b6e89d47d1c0b50cf991bef8",
+    "delivery_result": "85a46ae64e3e114c696b4fc8b1cda1f1de53f724c6e761fb1a72dd3efbac5e04",
+    "cron_result": "748f46d8fcec31a42527524f96cde613499e8027410538b87cf46c953712a270"
+  },
+  "governance": {
+    "no_production_mutation": true,
+    "no_shared_dev_worker_or_d1_mutation": true,
+    "no_customer_device_token_used": true,
+    "review_only_workers_left_online": true,
+    "development_cron": "* * * * *",
+    "external_customer_sink_approved": false,
+    "commercial_release_admission_or_signature": false,
+    "customer_delivery_gate_still_required": true,
+    "notes": "QA sink delivery is real independent HTTPS/D1, NOT evidence that a human received a notification. Cloudflare QA resources are separate and must be retired or maintained by owner."
+  }
+}

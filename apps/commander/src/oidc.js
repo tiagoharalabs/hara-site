@@ -1,0 +1,430 @@
+const encoder = new TextEncoder();
+
+const OIDC_PUBLIC_CACHE_TTL_MS = 5 * 60 * 1000;
+const discoveryCache = new Map();
+const jwksCache = new Map();
+
+function cacheGet(cache, key) {
+  const entry = cache.get(key);
+  if (!entry || entry.expires_at_ms <= Date.now()) {
+    cache.delete(key);
+    return null;
+  }
+  return entry.value;
+}
+
+function cachePut(cache, key, value) {
+  cache.set(key, {
+    value,
+    expires_at_ms: Date.now() + OIDC_PUBLIC_CACHE_TTL_MS,
+  });
+  return value;
+}
+
+function b64url(bytes) {
+  let binary = "";
+  const view = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  for (const byte of view) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function decodeB64url(value) {
+  const padded = value.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((value.length + 3) % 4);
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+export function randomToken(bytes = 32) {
+  const buffer = new Uint8Array(bytes);
+  crypto.getRandomValues(buffer);
+  return b64url(buffer);
+}
+
+export async function sha256(value) {
+  return b64url(await crypto.subtle.digest("SHA-256", encoder.encode(String(value))));
+}
+
+export function normalizeIssuer(value) {
+  const issuer = String(value || "").trim();
+  if (!issuer) throw new Error("OIDC_NOT_CONFIGURED");
+  const url = new URL(issuer);
+  if (
+    url.protocol !== "https:"
+    || url.username
+    || url.password
+    || url.search
+    || url.hash
+  ) {
+    throw new Error("OIDC_ISSUER_INVALID");
+  }
+  if (!url.pathname.endsWith("/")) url.pathname += "/";
+  return url.toString();
+}
+
+function requireHttpsMetadataEndpoint(value, code) {
+  const text = String(value || "").trim();
+  if (!text) throw new Error("OIDC_DISCOVERY_INCOMPLETE");
+  let url;
+  try {
+    url = new URL(text);
+  } catch (_error) {
+    throw new Error(code);
+  }
+  if (
+    url.protocol !== "https:"
+    || url.username
+    || url.password
+    || url.hash
+  ) {
+    throw new Error(code);
+  }
+  return text;
+}
+
+export async function oidcDiscovery(issuer) {
+  const normalized = normalizeIssuer(issuer);
+  const cached = cacheGet(discoveryCache, normalized);
+  if (cached) return cached;
+
+  const endpoint = new URL(".well-known/openid-configuration", normalized).toString();
+  const response = await fetch(endpoint, {
+    headers: { accept: "application/json" },
+  });
+  if (!response.ok) throw new Error("OIDC_DISCOVERY_FAILED");
+  const metadata = await response.json();
+  if (normalizeIssuer(metadata.issuer) !== normalized) throw new Error("OIDC_ISSUER_MISMATCH");
+  for (const field of ["authorization_endpoint", "token_endpoint", "jwks_uri"]) {
+    if (!metadata[field]) throw new Error("OIDC_DISCOVERY_INCOMPLETE");
+    requireHttpsMetadataEndpoint(metadata[field], "OIDC_DISCOVERY_ENDPOINT_INVALID");
+  }
+  if (metadata.userinfo_endpoint) {
+    requireHttpsMetadataEndpoint(metadata.userinfo_endpoint, "OIDC_DISCOVERY_ENDPOINT_INVALID");
+  }
+  if (metadata.introspection_endpoint) {
+    requireHttpsMetadataEndpoint(metadata.introspection_endpoint, "OIDC_DISCOVERY_ENDPOINT_INVALID");
+  }
+  return cachePut(discoveryCache, normalized, metadata);
+}
+
+async function oidcJwks(metadata, { forceRefresh = false } = {}) {
+  const uri = requireHttpsMetadataEndpoint(metadata?.jwks_uri, "OIDC_DISCOVERY_ENDPOINT_INVALID");
+  if (!forceRefresh) {
+    const cached = cacheGet(jwksCache, uri);
+    if (cached) return cached;
+  }
+
+  const response = await fetch(uri, {
+    headers: { accept: "application/json" },
+  });
+  if (!response.ok) throw new Error("OIDC_JWKS_FAILED");
+  const payload = await response.json();
+  const keys = Array.isArray(payload?.keys) ? payload.keys : [];
+  return cachePut(jwksCache, uri, keys);
+}
+
+function selectSigningJwk(keys, header) {
+  return keys.find((item) => (
+    item
+    && item.kid === header.kid
+    && item.kty === "RSA"
+    && (!item.use || item.use === "sig")
+    && (!item.alg || item.alg === "RS256")
+    && (
+      !item.key_ops
+      || (Array.isArray(item.key_ops) && item.key_ops.includes("verify"))
+    )
+  ));
+}
+
+export async function pkceChallenge(verifier) {
+  return sha256(verifier);
+}
+
+export async function oidcUserInfo({ metadata, accessToken }) {
+  if (!metadata?.userinfo_endpoint || !accessToken) throw new Error("OIDC_USERINFO_UNAVAILABLE");
+  const response = await fetch(metadata.userinfo_endpoint, {
+    headers: {
+      accept: "application/json",
+      authorization: "Bearer " + String(accessToken),
+    },
+    redirect: "manual",
+  });
+  if (response.status >= 300 && response.status < 400) {
+    throw new Error("OIDC_USERINFO_REDIRECT_DENIED");
+  }
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || !payload.sub) throw new Error("OIDC_USERINFO_FAILED");
+  return payload;
+}
+
+export async function introspectAccessToken({
+  metadata,
+  accessToken,
+  clientId,
+  clientSecret,
+}) {
+  const endpoint = requireHttpsMetadataEndpoint(
+    metadata?.introspection_endpoint,
+    "OIDC_INTROSPECTION_ENDPOINT_INVALID",
+  );
+  if (!accessToken || !clientId || !clientSecret) {
+    throw new Error("OIDC_INTROSPECTION_NOT_CONFIGURED");
+  }
+  const basic = btoa(
+    formUrlEncodeComponent(clientId) + ":" + formUrlEncodeComponent(clientSecret),
+  );
+  const form = new URLSearchParams({
+    token: String(accessToken),
+    token_type_hint: "access_token",
+  });
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      accept: "application/json",
+      authorization: "Basic " + basic,
+      "content-type": "application/x-www-form-urlencoded",
+    },
+    body: form.toString(),
+    redirect: "manual",
+  });
+  if (response.status >= 300 && response.status < 400) {
+    throw new Error("OIDC_INTROSPECTION_REDIRECT_DENIED");
+  }
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || typeof payload.active !== "boolean") {
+    throw new Error("OIDC_INTROSPECTION_FAILED");
+  }
+  return payload;
+}
+
+function formUrlEncodeComponent(value) {
+  return new URLSearchParams([["v", String(value)]]).toString().slice(2);
+}
+
+export async function exchangeAuthorizationCode({
+  metadata,
+  clientId,
+  clientSecret,
+  clientAuth,
+  code,
+  verifier,
+  redirectUri,
+}) {
+  const form = new URLSearchParams({
+    grant_type: "authorization_code",
+    code,
+    code_verifier: verifier,
+    redirect_uri: redirectUri,
+  });
+
+  const headers = {
+    "content-type": "application/x-www-form-urlencoded",
+    accept: "application/json",
+  };
+
+  if (clientAuth === "BASIC") {
+    if (!clientSecret) throw new Error("OIDC_CLIENT_AUTH_INVALID");
+    const basic = btoa(
+      formUrlEncodeComponent(clientId) + ":" + formUrlEncodeComponent(clientSecret),
+    );
+    headers.authorization = "Basic " + basic;
+  } else if (clientAuth === "NONE") {
+    form.set("client_id", clientId);
+  } else {
+    throw new Error("OIDC_CLIENT_AUTH_INVALID");
+  }
+
+  const response = await fetch(metadata.token_endpoint, {
+    method: "POST",
+    headers,
+    body: form.toString(),
+    redirect: "manual",
+  });
+  if (response.status >= 300 && response.status < 400) {
+    throw new Error("OIDC_TOKEN_REDIRECT_DENIED");
+  }
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || !payload.id_token) throw new Error("OIDC_TOKEN_EXCHANGE_FAILED");
+  return payload;
+}
+
+export async function verifyIdToken({ idToken, metadata, issuer, clientId, nonce }) {
+  const parts = String(idToken || "").split(".");
+  if (parts.length !== 3) throw new Error("OIDC_ID_TOKEN_INVALID");
+
+  const header = JSON.parse(new TextDecoder().decode(decodeB64url(parts[0])));
+  const claims = JSON.parse(new TextDecoder().decode(decodeB64url(parts[1])));
+
+  if (header.alg !== "RS256" || !header.kid) throw new Error("OIDC_ID_TOKEN_ALG_REJECTED");
+
+  let keys = await oidcJwks(metadata);
+  let jwk = selectSigningJwk(keys, header);
+  if (!jwk) {
+    // Key rotation must not be blocked by a still-valid short cache entry.
+    keys = await oidcJwks(metadata, { forceRefresh: true });
+    jwk = selectSigningJwk(keys, header);
+  }
+  if (!jwk) throw new Error("OIDC_SIGNING_KEY_NOT_FOUND");
+
+  const key = await crypto.subtle.importKey(
+    "jwk",
+    jwk,
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+    false,
+    ["verify"],
+  );
+  const valid = await crypto.subtle.verify(
+    "RSASSA-PKCS1-v1_5",
+    key,
+    decodeB64url(parts[2]),
+    encoder.encode(parts[0] + "." + parts[1]),
+  );
+  if (!valid) throw new Error("OIDC_ID_TOKEN_SIGNATURE_INVALID");
+
+  const expectedIssuer = normalizeIssuer(issuer);
+  if (typeof claims.iss !== "string" || normalizeIssuer(claims.iss) !== expectedIssuer) {
+    throw new Error("OIDC_ISSUER_MISMATCH");
+  }
+  const audiences = Array.isArray(claims.aud) ? claims.aud : [claims.aud];
+  if (
+    audiences.length === 0
+    || audiences.some((audience) => typeof audience !== "string" || !audience)
+    || !audiences.includes(clientId)
+  ) {
+    throw new Error("OIDC_AUDIENCE_MISMATCH");
+  }
+  if (
+    claims.azp !== undefined
+    && (typeof claims.azp !== "string" || !claims.azp)
+  ) {
+    throw new Error("OIDC_AUTHORIZED_PARTY_INVALID");
+  }
+  if (audiences.length > 1 && !claims.azp) throw new Error("OIDC_AUTHORIZED_PARTY_MISSING");
+  if (claims.azp && claims.azp !== clientId) throw new Error("OIDC_AUTHORIZED_PARTY_MISMATCH");
+  if (claims.nonce !== nonce) throw new Error("OIDC_NONCE_MISMATCH");
+  if (!claims.sub || typeof claims.sub !== "string") throw new Error("OIDC_SUBJECT_MISSING");
+  if (claims.sub.length > 255 || !/^[ -~]+$/.test(claims.sub)) {
+    throw new Error("OIDC_SUBJECT_INVALID");
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  if (!Number.isFinite(claims.exp) || claims.exp < now - 30) throw new Error("OIDC_ID_TOKEN_EXPIRED");
+  if (claims.nbf !== undefined && !Number.isFinite(claims.nbf)) {
+    throw new Error("OIDC_ID_TOKEN_NBF_INVALID");
+  }
+  if (Number.isFinite(claims.nbf) && claims.nbf > now + 30) {
+    throw new Error("OIDC_ID_TOKEN_NOT_YET_VALID");
+  }
+  if (!Number.isFinite(claims.iat) || claims.iat > now + 60) {
+    throw new Error("OIDC_ID_TOKEN_IAT_INVALID");
+  }
+
+  return claims;
+}
+
+export function validateAccessTokenClaims({
+  claims,
+  issuer,
+  clientId,
+  requiredScopes = [],
+  nowSeconds = Math.floor(Date.now() / 1000),
+}) {
+  if (!claims || typeof claims !== "object") throw new Error("OIDC_ACCESS_TOKEN_INVALID");
+
+  const expectedIssuer = normalizeIssuer(issuer);
+  if (typeof claims.iss !== "string" || normalizeIssuer(claims.iss) !== expectedIssuer) {
+    throw new Error("OIDC_ACCESS_TOKEN_ISSUER_MISMATCH");
+  }
+
+  const audiences = Array.isArray(claims.aud) ? claims.aud : [claims.aud];
+  if (
+    audiences.length === 0
+    || audiences.some((audience) => typeof audience !== "string" || !audience)
+    || !audiences.includes(clientId)
+  ) {
+    throw new Error("OIDC_ACCESS_TOKEN_AUDIENCE_MISMATCH");
+  }
+
+  const clientClaim = claims.client_id;
+  const azpClaim = claims.azp;
+  if (clientClaim !== undefined && (typeof clientClaim !== "string" || !clientClaim)) {
+    throw new Error("OIDC_ACCESS_TOKEN_CLIENT_INVALID");
+  }
+  if (azpClaim !== undefined && (typeof azpClaim !== "string" || !azpClaim)) {
+    throw new Error("OIDC_ACCESS_TOKEN_AZP_INVALID");
+  }
+  if (clientClaim && clientClaim !== clientId) throw new Error("OIDC_ACCESS_TOKEN_CLIENT_MISMATCH");
+  if (azpClaim && azpClaim !== clientId) throw new Error("OIDC_ACCESS_TOKEN_AZP_MISMATCH");
+  if (!clientClaim && !azpClaim) throw new Error("OIDC_ACCESS_TOKEN_CLIENT_BINDING_MISSING");
+
+  if (!claims.sub || typeof claims.sub !== "string") throw new Error("OIDC_ACCESS_TOKEN_SUBJECT_MISSING");
+  if (claims.sub.length > 255 || !/^[ -~]+$/.test(claims.sub)) {
+    throw new Error("OIDC_ACCESS_TOKEN_SUBJECT_INVALID");
+  }
+
+  if (!Number.isFinite(claims.exp) || claims.exp < nowSeconds - 30) throw new Error("OIDC_ACCESS_TOKEN_EXPIRED");
+  if (claims.nbf !== undefined && !Number.isFinite(claims.nbf)) throw new Error("OIDC_ACCESS_TOKEN_NBF_INVALID");
+  if (Number.isFinite(claims.nbf) && claims.nbf > nowSeconds + 30) throw new Error("OIDC_ACCESS_TOKEN_NOT_YET_VALID");
+  if (!Number.isFinite(claims.iat) || claims.iat > nowSeconds + 60) throw new Error("OIDC_ACCESS_TOKEN_IAT_INVALID");
+
+  const scopes = Array.isArray(claims.scope)
+    ? claims.scope.map(String)
+    : String(claims.scope || "").split(/\s+/).filter(Boolean);
+  for (const required of requiredScopes) {
+    if (!scopes.includes(required)) throw new Error("OIDC_ACCESS_TOKEN_SCOPE_MISSING");
+  }
+
+  return {
+    claims,
+    audiences,
+    scopes,
+    client_binding: clientClaim ? "client_id" : "azp",
+  };
+}
+
+export async function verifyAccessToken({
+  accessToken,
+  metadata,
+  issuer,
+  clientId,
+  requiredScopes = [],
+}) {
+  const parts = String(accessToken || "").split(".");
+  if (parts.length !== 3) throw new Error("OIDC_ACCESS_TOKEN_NOT_JWT");
+
+  const header = JSON.parse(new TextDecoder().decode(decodeB64url(parts[0])));
+  const claims = JSON.parse(new TextDecoder().decode(decodeB64url(parts[1])));
+  if (header.alg !== "RS256" || !header.kid) throw new Error("OIDC_ACCESS_TOKEN_ALG_REJECTED");
+
+  let keys = await oidcJwks(metadata);
+  let jwk = selectSigningJwk(keys, header);
+  if (!jwk) {
+    keys = await oidcJwks(metadata, { forceRefresh: true });
+    jwk = selectSigningJwk(keys, header);
+  }
+  if (!jwk) throw new Error("OIDC_ACCESS_TOKEN_SIGNING_KEY_NOT_FOUND");
+
+  const key = await crypto.subtle.importKey(
+    "jwk",
+    jwk,
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+    false,
+    ["verify"],
+  );
+  const valid = await crypto.subtle.verify(
+    "RSASSA-PKCS1-v1_5",
+    key,
+    decodeB64url(parts[2]),
+    encoder.encode(parts[0] + "." + parts[1]),
+  );
+  if (!valid) throw new Error("OIDC_ACCESS_TOKEN_SIGNATURE_INVALID");
+
+  return validateAccessTokenClaims({
+    claims,
+    issuer,
+    clientId,
+    requiredScopes,
+  });
+}

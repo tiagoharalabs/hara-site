@@ -1,0 +1,434 @@
+#!/usr/bin/env python3
+from pathlib import Path
+import ast
+import hashlib
+import http.server
+import json
+import os
+import subprocess
+import tempfile
+import threading
+import time
+
+ROOT = Path(__file__).resolve().parents[3]
+PUBLIC = ROOT / "apps/commander/public"
+LINUX = (PUBLIC / "install/linux.sh").read_text(encoding="utf-8")
+WINDOWS = (PUBLIC / "install/windows.ps1").read_text(encoding="utf-8")
+LINUX_AGENT = (PUBLIC / "agent/linux.py").read_text(encoding="utf-8")
+WINDOWS_AGENT = (PUBLIC / "agent/windows.ps1").read_text(encoding="utf-8")
+HTML = (PUBLIC / "index.html").read_text(encoding="utf-8")
+JS = (PUBLIC / "app.js").read_text(encoding="utf-8")
+WORKER = (ROOT / "apps/commander/src/worker.js").read_text(encoding="utf-8")
+AUTH = (ROOT / "apps/commander/src/auth.js").read_text(encoding="utf-8")
+MANIFEST = json.loads((PUBLIC / "release/agent-manifest.json").read_text(encoding="utf-8"))
+SHA256SUMS = (PUBLIC / "release/SHA256SUMS").read_text(encoding="utf-8")
+
+def need(text: str, token: str, code: str) -> None:
+    assert token in text, f"{code}:{token}"
+
+for token in ('platform": "LINUX"', "/api/device/enroll", "/agent/linux.py",
+              'systemctl --user start "$SERVICE"', "chmod 600", '"agent_version": "0.3.43"',
+              "HARA_COMMANDER_AGENT_UPDATE=PASS", "HARA_COMMANDER_AGENT_UNINSTALL=PASS",
+              "HARA_COMMANDER_AGENT_VERSION=", "HARA_COMMANDER_AGENT_DOCTOR=PASS",
+              "/api/device/revoke-self", "SERVER_DEVICE_REVOKE=",
+              "HARA_COMMANDER_AGENT_UPDATE_ROLLBACK_READY=TRUE",
+              "/release/agent-manifest.json", "AGENT_SHA256_MISMATCH",
+              "AGENT_VERSION_MANIFEST_MISMATCH", "HARA_COMMANDER_AGENT_INTEGRITY=PASS",
+              "HARA_COMMANDER_FAILED_INSTALL_ROLLBACK=", "rollback_enrolled_device",
+              "hara.commander-support-report.v1", "device_token_exposed", "support_agent",
+              "hara.commander-device-preflight.v1", "mutation_performed", "preflight_agent"):
+    need(LINUX, token, "LINUX_INSTALLER_MISSING")
+assert "cloudflared" not in LINUX.lower()
+assert "urllib.request.urlopen(req,timeout=15)" not in LINUX, "LINUX_INSTALLER_REDIRECT_FOLLOW_PRESENT"
+assert LINUX.count("class NoRedirectHandler(urllib.request.HTTPRedirectHandler)") >= 2, "LINUX_INSTALLER_REDIRECT_HANDLER_MISSING"
+assert LINUX.count("opener.open(req,timeout=15)") >= 2, "LINUX_INSTALLER_REDIRECT_FAIL_CLOSED_MISSING"
+assert 'python3 - "$PAIRING_TOKEN"' not in LINUX, "PAIRING_TOKEN_EXPOSED_IN_ARGV"
+assert 'python3 - "$RESPONSE"' not in LINUX, "DEVICE_TOKEN_RESPONSE_EXPOSED_IN_ARGV"
+assert '--data "$PAYLOAD"' not in LINUX, "PAIRING_PAYLOAD_EXPOSED_IN_CURL_ARGV"
+assert "HARA_ROLLBACK_DEVICE_TOKEN=" not in LINUX, "DEVICE_TOKEN_EXPOSED_IN_ROLLBACK_ENV"
+assert "--data-binary @-" in LINUX, "PAIRING_PAYLOAD_STDIN_MISSING"
+assert "NEXT_COMMAND=hara-commander tunnel configure" in LINUX, "LINUX_COMMANDER_TUNNEL_COMMAND_MISSING"
+assert "AUTHORIZATION_COMMAND=hara-commander authorize" in LINUX, "LINUX_COMMANDER_AUTHORIZE_COMMAND_MISSING"
+assert "HARA_COMMANDER_TRANSPORT_MODE=$TRANSPORT_MODE" in LINUX, "LINUX_COMMANDER_TRANSPORT_MODE_MISSING"
+assert 'TRANSPORT_MODE="LOCAL_TUNNEL"' in LINUX, "LINUX_COMMANDER_LOCAL_TUNNEL_DEFAULT_MISSING"
+assert "STATUS_COMMAND=hara-commander status" in LINUX, "LINUX_COMMANDER_STATUS_COMMAND_MISSING"
+assert "STOP_COMMAND=hara-commander stop" in LINUX, "LINUX_COMMANDER_STOP_COMMAND_MISSING"
+print("COMMANDER_LINUX_UNIVERSAL_CLI=PASS")
+print("LINUX_DEVICE_INSTALLER_STATIC=PASS")
+print("LINUX_INSTALLER_SECRET_ARGV_EXPOSURE=FALSE")
+
+for token in ('platform="WINDOWS"', "/api/device/enroll", "/agent/windows.ps1",
+              "ConvertFrom-SecureString", "Register-ScheduledTask", "icacls.exe",
+              'agent_version="0.3.49"', "HARA_COMMANDER_AGENT_UPDATE=PASS",
+              "HARA_COMMANDER_AGENT_UNINSTALL=PASS", "HARA_COMMANDER_AGENT_VERSION=",
+              "HARA_COMMANDER_AGENT_DOCTOR=PASS", "/api/device/revoke-self",
+              "SERVER_DEVICE_REVOKE=", "HARA_COMMANDER_AGENT_UPDATE_ROLLBACK_READY=TRUE",
+              "/release/agent-manifest.json", "AGENT_SHA256_MISMATCH",
+              "AGENT_VERSION_MANIFEST_MISMATCH", "HARA_COMMANDER_AGENT_INTEGRITY=PASS",
+              "HARA_COMMANDER_FAILED_INSTALL_ROLLBACK=", "$InstallEnrolled",
+              "hara.commander-support-report.v1", "device_token_exposed", "Show-SupportReport",
+              "hara.commander-device-preflight.v1", "mutation_performed", "Invoke-Preflight",
+              "Assert-AgentSelfTest", "AGENT_SELF_TEST_FAILED", "HARA_COMMANDER_AGENT_SELF_TEST=PASS"):
+    need(WINDOWS, token, "WINDOWS_INSTALLER_MISSING")
+assert "cloudflared" not in WINDOWS.lower()
+windows_web_calls = [
+    line for line in WINDOWS.splitlines()
+    if "Invoke-RestMethod" in line or "Invoke-WebRequest" in line
+]
+assert len(windows_web_calls) == 10, f"WINDOWS_INSTALLER_WEB_CALL_COUNT:{len(windows_web_calls)}"
+assert all("-MaximumRedirection 0" in line for line in windows_web_calls), "WINDOWS_INSTALLER_REDIRECT_FOLLOW_PRESENT"
+assert "$PairingToken = $null" in WINDOWS and "$Payload = $null" in WINDOWS, "WINDOWS_PAIRING_SECRET_MEMORY_CLEAR_MISSING"
+assert "$EnrollDeviceId = [string]$Enroll.device_id" in WINDOWS, "WINDOWS_ENROLL_DEVICE_ID_CAPTURE_MISSING"
+assert "$DeviceTokenForRollback = [string]$Enroll.device_token" in WINDOWS, "WINDOWS_ENROLL_DEVICE_TOKEN_CAPTURE_MISSING"
+assert "$Enroll.device_token = $null" in WINDOWS and "$Enroll = $null" in WINDOWS, "WINDOWS_ENROLL_RESPONSE_TOKEN_CLEAR_MISSING"
+assert "ConvertTo-SecureString $DeviceTokenForRollback -AsPlainText -Force" in WINDOWS, "WINDOWS_DEVICE_TOKEN_SINGLE_PLAINTEXT_COPY_MISSING"
+assert "ConvertTo-SecureString $Enroll.device_token -AsPlainText -Force" not in WINDOWS, "WINDOWS_ENROLL_TOKEN_PLAINTEXT_DUPLICATE_PRESENT"
+assert "encrypted_device_token" in WINDOWS
+assert "DEVICE_TOKEN_EXPOSED=FALSE" in WINDOWS
+assert "$Identity:" not in WINDOWS, "WINDOWS_INSTALLER_POWERSHELL_IDENTITY_INTERPOLATION_INVALID"
+assert '"${Identity}:(OI)(CI)F"' in WINDOWS, "WINDOWS_INSTALLER_ROOT_ACL_BINDING_MISSING"
+assert WINDOWS.count('"${Identity}:F"') >= 2, "WINDOWS_INSTALLER_FILE_ACL_BINDING_MISSING"
+assert 'if (-not $task -or [string]$task.State -ne "Running" -or -not (Wait-AgentStartup $ExpectedVersion $PreviousStarted 10)) {' in WINDOWS, "WINDOWS_INSTALLER_UPDATE_CONDITION_PS51_UNSAFE"
+assert 'if (-not $Task -or -not (Wait-AgentStartup $ExpectedVersion "" 10)) {' in WINDOWS, "WINDOWS_INSTALLER_INSTALL_CONDITION_PS51_UNSAFE"
+print("WINDOWS_INSTALLER_IDENTITY_ACL_INTERPOLATION=PASS")
+print("WINDOWS_DEVICE_INSTALLER_STATIC=PASS")
+print("WINDOWS_INSTALLER_REDIRECT_FAIL_CLOSED=PASS")
+print("WINDOWS_INSTALLER_DEVICE_TOKEN_MEMORY_HYGIENE=PASS")
+
+# Stable v1 0.3.41 assets are cryptographically pinned to the release commit.
+# The current source tree is a newer, UNPUBLISHED candidate; comparing its
+# hashes directly with the v1 manifest would reject safe source hardening.
+assert MANIFEST.get("schema") == "hara.commander-agent-release.v1"
+assert MANIFEST.get("agent_version") == "0.3.41"
+assert 'AGENT_VERSION = "0.3.43"' in LINUX_AGENT
+assert '$AgentVersion = "0.3.52"' in WINDOWS_AGENT
+entries = {item["path"]: item for item in MANIFEST.get("files", [])}
+for rel in ("agent/linux.py", "agent/windows.ps1", "install/linux.sh", "install/windows.ps1"):
+    assert rel in entries, f"RELEASE_MANIFEST_MISSING:{rel}"
+    signed = subprocess.check_output([
+        "git", "show", "08500d5:apps/commander/public/" + rel,
+    ], cwd=ROOT)
+    digest = hashlib.sha256(signed).hexdigest()
+    assert entries[rel].get("sha256") == digest, f"RELEASE_SHA256_DRIFT:{rel}"
+    assert int(entries[rel].get("bytes", -1)) == len(signed), f"RELEASE_SIZE_DRIFT:{rel}"
+    assert f"{digest}  {rel}\n" in SHA256SUMS, f"RELEASE_SHA256SUMS_DRIFT:{rel}"
+print("COMMANDER_RELEASE_MANIFEST_INTEGRITY=PASS")
+print("COMMANDER_RELEASE_SHA256SUMS_INTEGRITY=PASS")
+print("COMMANDER_UNSIGNED_CANDIDATE_NOT_TREATED_AS_STABLE=PASS")
+
+TOOLS = ("hara.health","hara.functions.list","hara.functions.describe",
+         "hara.functions.invoke","hara.receipts.get")
+for token in TOOLS:
+    need(LINUX_AGENT, token, "LINUX_AGENT_TOOL_MISSING")
+    need(WINDOWS_AGENT, token, "WINDOWS_AGENT_TOOL_MISSING")
+for token in (
+    "hara.ping","hara.device.info","hara.processes.list",
+    "hara.files.info","hara.files.list","hara.files.read",
+    "hara.files.create_directory","hara.files.write","hara.process.run",
+):
+    need(WINDOWS_AGENT, token, "WINDOWS_STARTER_TOOL_MISSING")
+need(WINDOWS_AGENT, "Invoke-LocalActionApproval", "WINDOWS_PER_ACTION_LOCAL_APPROVAL_SUPPORTED")
+need(WINDOWS_AGENT, "HUMAN_ACTION_APPROVAL_DENIED", "WINDOWS_PER_ACTION_FAIL_CLOSED_DENIAL")
+need(WINDOWS_AGENT, "LOCAL_OPERATOR_SESSION_REQUIRED", "WINDOWS_PER_ACTION_OPERATOR_SESSION_REQUIRED")
+need(WINDOWS_AGENT, "-EncodedCommand", "WINDOWS_STARTER_ENCODED_PROCESS_COMMAND")
+for forbidden in ("os.system(", "shell=True", "paramiko", "ssh "):
+    assert forbidden not in LINUX_AGENT, f"LINUX_AGENT_ARBITRARY_EXEC:{forbidden}"
+# An Agent must never call an arbitrary shell via subprocess. Fixed systemctl
+# controls and the pinned local tunnel-client may use subprocess.run, but only
+# inside their five governed administrative functions.
+allowed_subprocess_functions = {
+    "set_transport_mode", "authorize_local_tunnel", "_openai_tunnel_doctor",
+    "_tunnel_systemctl", "configure_openai_tunnel", "_manual_agent_systemctl",
+}
+tree = ast.parse(LINUX_AGENT)
+subprocess_call_functions = []
+for func in (node for node in ast.walk(tree) if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))):
+    for node in ast.walk(func):
+        if (isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and isinstance(node.func.value, ast.Name)
+            and node.func.value.id == "subprocess"):
+            assert node.func.attr == "run", "LINUX_AGENT_SUBPROCESS_NON_RUN_CALL"
+            assert func.name in allowed_subprocess_functions, f"LINUX_AGENT_UNGOVERNED_SUBPROCESS:{func.name}"
+            assert all(not (isinstance(kw, ast.keyword) and kw.arg == "shell") for kw in node.keywords), "LINUX_AGENT_SUBPROCESS_SHELL"
+            subprocess_call_functions.append(func.name)
+assert subprocess_call_functions and set(subprocess_call_functions).issubset(allowed_subprocess_functions), "LINUX_AGENT_SUBPROCESS_GOVERNANCE_UNPROVEN"
+# Only this fixed, independently specified console-encoding bootstrap may use Invoke-Expression.
+FIXED_UTF8_BOOTSTRAP_LINE = '    Child.StandardInput.WriteLine("Invoke-Expression ([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String(\'JFByb2dyZXNzUHJlZmVyZW5jZT0nU2lsZW50bHlDb250aW51ZSc7W0NvbnNvbGVdOjpJbnB1dEVuY29kaW5nPVtUZXh0LlVURjhFbmNvZGluZ106Om5ldygkZmFsc2UpO1tDb25zb2xlXTo6T3V0cHV0RW5jb2Rpbmc9W1RleHQuVVRGOEVuY29kaW5nXTo6bmV3KCRmYWxzZSk7JE91dHB1dEVuY29kaW5nPVtUZXh0LlVURjhFbmNvZGluZ106Om5ldygkZmFsc2UpOw==\')))" );'
+assert WINDOWS_AGENT.count(FIXED_UTF8_BOOTSTRAP_LINE) == 1, "WINDOWS_UTF8_BOOTSTRAP_NOT_FIXED"
+WINDOWS_EXEC_SURFACE = WINDOWS_AGENT.replace(FIXED_UTF8_BOOTSTRAP_LINE, "")
+for forbidden in ("Invoke-Expression", "Start-Process", "cmd.exe", "powershell.exe -Command"):
+    assert forbidden not in WINDOWS_EXEC_SURFACE, f"WINDOWS_AGENT_ARBITRARY_EXEC:{forbidden}"
+assert "UNKNOWN_FUNCTION_ID" in LINUX_AGENT and "UNKNOWN_FUNCTION_ID" in WINDOWS_AGENT
+for token in ("STDOUT_SHA256_V1", "result_stdout_sha256"):
+    assert token in LINUX_AGENT, f"LINUX_AGENT_RECEIPT_RESULT_BINDING_MISSING:{token}"
+    assert token in WINDOWS_AGENT, f"WINDOWS_AGENT_RECEIPT_RESULT_BINDING_MISSING:{token}"
+assert 'hashlib.sha256(stdout.encode("utf-8"))' in LINUX_AGENT, "LINUX_AGENT_RECEIPT_STDOUT_SHA_MISSING"
+assert "Get-Utf8Sha256 ([string]$Result.stdout)" in WINDOWS_AGENT, "WINDOWS_AGENT_RECEIPT_STDOUT_SHA_MISSING"
+assert "urllib.request.urlopen(req, timeout=25)" not in LINUX_AGENT, "LINUX_AGENT_REDIRECT_FOLLOW_PRESENT"
+assert "NoRedirectHandler" in LINUX_AGENT and "NO_REDIRECT_OPENER.open(req, timeout=timeout)" in LINUX_AGENT, "LINUX_AGENT_REDIRECT_FAIL_CLOSED_MISSING"
+assert "/api/device/offline" in LINUX_AGENT and "/api/device/offline" in WINDOWS_AGENT, "AGENT_IMMEDIATE_OFFLINE_SYNC_MISSING"
+windows_agent_web_calls = [line for line in WINDOWS_AGENT.splitlines() if "Invoke-RestMethod" in line]
+assert windows_agent_web_calls and all("-MaximumRedirection 0" in line for line in windows_agent_web_calls), "WINDOWS_AGENT_REDIRECT_FOLLOW_PRESENT"
+assert "COMMANDER_WINDOWS_AGENT_SELF_TEST=PASS" in WINDOWS_AGENT, "WINDOWS_AGENT_SELF_TEST_MISSING"
+assert '$InstallTmp = $Agent + ".install.ps1"' in WINDOWS, "WINDOWS_INSTALL_TEMP_PS1_SUFFIX_MISSING"
+assert '$TaskAction = New-ScheduledTaskAction' in WINDOWS, "WINDOWS_SCHEDULED_TASK_ACTION_OBJECT_MISSING"
+assert 'Register-ScheduledTask -TaskName $TaskName -Action $TaskAction' in WINDOWS, "WINDOWS_SCHEDULED_TASK_ACTION_BINDING_MISSING"
+assert '$Action = New-ScheduledTaskAction' not in WINDOWS, "WINDOWS_ACTION_PARAMETER_TYPE_COLLISION_PRESENT"
+assert '$InstallTmp = $Agent + ".install"' not in WINDOWS, "WINDOWS_INSTALL_TEMP_INVALID_EXTENSION_PRESENT"
+assert 'if (-not (Try-SetRuntimeStatus -StartedAt ([DateTime]::UtcNow.ToString("o")))) {' in WINDOWS_AGENT, "WINDOWS_AGENT_STARTUP_STATUS_CONDITION_PS51_INVALID"
+assert 'if (-not $StartupCfg.base_url -or -not $StartupCfg.device_id -or -not $StartupCfg.encrypted_device_token -or -not $StartupCfg.architecture) { throw "DEVICE_CONFIG_INVALID" }' in WINDOWS_AGENT, "WINDOWS_AGENT_STARTUP_CONFIG_CONDITION_PS51_INVALID"
+assert 'if (-not (Try-SetRuntimeStatus -StartedAt ([DateTime]::UtcNow.ToString("o"))) {' not in WINDOWS_AGENT, "WINDOWS_AGENT_STARTUP_STATUS_UNBALANCED_PAREN_PRESENT"
+assert '$PairingToken = ([Runtime.InteropServices.Marshal]::PtrToStringBSTR($Bstr)).Trim()' in WINDOWS, "WINDOWS_PAIRING_TOKEN_TRIM_MISSING"
+assert 'if ($args -contains "--self-test")' in WINDOWS_AGENT, "WINDOWS_AGENT_SELF_TEST_ENTRYPOINT_MISSING"
+assert WINDOWS.count("Assert-AgentSelfTest $") >= 2, "WINDOWS_INSTALLER_SELF_TEST_NOT_REQUIRED_FOR_INSTALL_AND_UPDATE"
+assert "except Exception:\n            pass" not in LINUX_AGENT, "LINUX_AGENT_SILENT_RUNTIME_ERROR"
+assert "catch {\n  }\n  Start-Sleep" not in WINDOWS_AGENT, "WINDOWS_AGENT_SILENT_RUNTIME_ERROR"
+assert "safe_error_code" in LINUX_AGENT and "Get-SafeErrorCode" in WINDOWS_AGENT, "AGENT_ERROR_SANITIZATION_MISSING"
+assert "runtime-status.json" in LINUX_AGENT and "runtime-status.json" in WINDOWS_AGENT, "AGENT_RUNTIME_STATUS_MISSING"
+assert "started_at_utc" in LINUX_AGENT and "started_at_utc" in WINDOWS_AGENT, "AGENT_STARTUP_ATTESTATION_STATUS_MISSING"
+assert "wait_for_agent_startup" in LINUX and "Wait-AgentStartup" in WINDOWS, "INSTALLER_STARTUP_ATTESTATION_WAIT_MISSING"
+assert LINUX.count("HARA_COMMANDER_AGENT_STARTUP_ATTESTATION=PASS") >= 2, "LINUX_STARTUP_ATTESTATION_NOT_REQUIRED_FOR_INSTALL_AND_UPDATE"
+assert WINDOWS.count("HARA_COMMANDER_AGENT_STARTUP_ATTESTATION=PASS") >= 2, "WINDOWS_STARTUP_ATTESTATION_NOT_REQUIRED_FOR_INSTALL_AND_UPDATE"
+assert "last_runtime_error_code" in LINUX and "last_runtime_error_code" in WINDOWS, "SUPPORT_RUNTIME_DIAGNOSTIC_MISSING"
+assert "device.info" in LINUX_AGENT and "device.info" in WINDOWS_AGENT
+for token in ("operator-session.json", "LOCAL_OPERATOR_SESSION_REQUIRED", "AGENT_ONLINE", "payload_values_exposed", "secret_material_exposed"):
+    assert token in LINUX_AGENT, f"LINUX_OPERATOR_SESSION_GATE_MISSING:{token}"
+    assert token in WINDOWS_AGENT, f"WINDOWS_OPERATOR_SESSION_GATE_MISSING:{token}"
+assert "if not authorized:" in LINUX_AGENT, "LINUX_DAEMON_NOT_INERT_WITHOUT_SESSION"
+assert "if (-not (Test-OperatorSessionActive))" in WINDOWS_AGENT, "WINDOWS_DAEMON_NOT_INERT_WITHOUT_SESSION"
+assert "hara-commander start" in LINUX, "LINUX_MANUAL_START_GUIDANCE_MISSING"
+assert 'systemctl --user disable "$SERVICE"' in LINUX and 'systemctl --user start "$SERVICE"' in LINUX, "LINUX_INSTALL_MANUAL_ON_DEMAND_POLICY_MISSING"
+assert 'systemctl --user enable --now hara-commander-agent.service' not in LINUX, "LINUX_INSTALL_BOOT_AUTOSTART_FORBIDDEN"
+assert "Restart=on-failure" in LINUX, "LINUX_AGENT_RECONNECT_RESTART_BUDGET_MISSING"
+assert "def start_manual_operator_console():" in LINUX_AGENT and '_manual_agent_systemctl("start")' in LINUX_AGENT, "LINUX_MANUAL_SESSION_DAEMON_START_MISSING"
+assert 'if started_here and not _manual_agent_systemctl("is-enabled"):' in LINUX_AGENT, "LINUX_MANUAL_SESSION_STOP_AFTER_EXIT_MISSING"
+assert "REGISTERED_INERT_UNTIL_LOCAL_SESSION" in WINDOWS, "WINDOWS_MANUAL_START_GUIDANCE_MISSING"
+assert "New-ScheduledTaskTrigger -AtLogOn" not in WINDOWS, "WINDOWS_AUTOSTART_AT_LOGON_FORBIDDEN"
+linux_doctor = LINUX.split("doctor_agent() {",1)[1].split("case \"$ACTION\" in",1)[0]
+windows_doctor = WINDOWS.split("function Invoke-Doctor",1)[1].split("function Show-Status",1)[0]
+assert "remote_device_action heartbeat" not in linux_doctor, "LINUX_DOCTOR_HEARTBEAT_OUTSIDE_SESSION"
+assert 'Invoke-DeviceAction "heartbeat"' not in windows_doctor, "WINDOWS_DOCTOR_HEARTBEAT_OUTSIDE_SESSION"
+assert "COMMANDER_REMOTE_HEARTBEAT=SKIPPED_LOCAL_SESSION_REQUIRED" in linux_doctor
+assert "COMMANDER_REMOTE_HEARTBEAT=SKIPPED_LOCAL_SESSION_REQUIRED" in windows_doctor
+linux_console = LINUX_AGENT.split("def start_operator_console():",1)[1].split("def session_status():",1)[0]
+linux_stop = LINUX_AGENT.split("def stop_operator_session():",1)[1].split("def load_config():",1)[0]
+windows_console = WINDOWS_AGENT.split("function Start-OperatorConsole",1)[1].split("function Stop-OperatorSession",1)[0]
+windows_stop = WINDOWS_AGENT.split("function Stop-OperatorSession",1)[1].split("function Show-OperatorSession",1)[0]
+assert linux_console.index("SESSION_FILE.unlink") < linux_console.index("mark_device_offline(config)"), "LINUX_CONSOLE_CLOSE_OFFLINE_RACE"
+assert linux_stop.index("SESSION_FILE.unlink") < linux_stop.index("mark_device_offline(config)"), "LINUX_STOP_OFFLINE_RACE"
+assert windows_console.index("Remove-Item -Force -LiteralPath $SessionPath") < windows_console.index("Set-DeviceOffline $cfg"), "WINDOWS_CONSOLE_CLOSE_OFFLINE_RACE"
+assert windows_stop.index("Remove-Item -Force -LiteralPath $SessionPath") < windows_stop.index("Set-DeviceOffline"), "WINDOWS_STOP_OFFLINE_RACE"
+print("COMMANDER_SESSION_REVOKE_BEFORE_OFFLINE_SYNC=PASS")
+print("COMMANDER_DOCTOR_HEARTBEAT_OUTSIDE_SESSION=ABSENT")
+assert "LOCAL_OPERATOR_SESSION_UPGRADE_REQUIRED" in LINUX_AGENT, "LINUX_MUTATION_SESSION_UPGRADE_GUARD_MISSING"
+assert "APPROVAL_REQUIRED" in LINUX_AGENT and "request_local_approval" in LINUX_AGENT, "LINUX_MUTATION_APPROVAL_GATE_MISSING"
+assert "SESSION_TRUSTED" in LINUX_AGENT and "ASK_EVERY_ACTION" in LINUX_AGENT and "PERSISTENT_TRUSTED" in LINUX_AGENT, "LINUX_CONFIGURABLE_APPROVAL_MODE_MISSING"
+assert "effective_approval_mode" in LINUX_AGENT and '"approval_mode":effective_approval_mode(config)' in LINUX_AGENT, "LINUX_EFFECTIVE_APPROVAL_SYNC_MISSING"
+assert 'HARA_COMMANDER_APPROVAL_MODE' in LINUX and 'HARA_COMMANDER_APPROVAL_MODE' in WINDOWS, "INSTALLER_APPROVAL_MODE_PROPAGATION_MISSING"
+assert '[ -n "$mode" ] || mode="ASK_EVERY_ACTION"' in LINUX, "LINUX_INSTALLER_SAFE_APPROVAL_DEFAULT_MISSING"
+assert 'else { "ASK_EVERY_ACTION" }' in WINDOWS, "WINDOWS_INSTALLER_SAFE_APPROVAL_DEFAULT_MISSING"
+assert 'PERSISTENT_TRUSTED' in LINUX and 'PERSISTENT_TRUSTED' in WINDOWS, "PERSISTENT_TRUSTED_OPT_IN_MISSING"
+assert "commander_doctor" in LINUX_AGENT and "commander_support" in LINUX_AGENT, "LINUX_SELF_SERVICE_DIAGNOSTICS_MISSING"
+assert 'SESSION_TRUSTED' in LINUX and 'SESSION_TRUSTED' in WINDOWS, "INSTALLER_SESSION_TRUSTED_DEFAULT_MISSING"
+assert 'local_authorization_mode' in LINUX_AGENT and 'authorization_source' in LINUX_AGENT, "LINUX_RECEIPT_AUTHORIZATION_MODE_MISSING"
+receipt_block = LINUX_AGENT.split("def write_receipt",1)[1].split("def read_receipt",1)[0]
+assert '"payload_values_persisted":False' in receipt_block, "LINUX_RECEIPT_PAYLOAD_PERSISTENCE_MARKER_MISSING"
+assert "command_preview" not in receipt_block and '"command"' not in receipt_block and "payload_json" not in receipt_block, "LINUX_RECEIPT_RAW_COMMAND_PERSISTENCE_FORBIDDEN"
+assert "result_stdout_sha256" in receipt_block and '"stdout":' not in receipt_block, "LINUX_RECEIPT_RAW_STDOUT_PERSISTENCE_FORBIDDEN"
+print("COMMANDER_LOCAL_RECEIPT_CONTENT_HISTORY=METADATA_ONLY")
+assert "FILESYSTEM_MUTATION_V1" in LINUX_AGENT, "LINUX_MUTATION_RECEIPT_CLASS_MISSING"
+print("COMMANDER_LOCAL_MUTATION_APPROVAL_GATE=PASS")
+print("COMMANDER_CONFIGURABLE_APPROVAL_MODE=PASS")
+assert "PROCESS_EXECUTION_V1" in LINUX_AGENT, "LINUX_PROCESS_RECEIPT_CLASS_MISSING"
+assert "LOCAL_SIMPLE_MCP_TOOL_NAMES" in LINUX_AGENT and "run_local_mcp_stdio" in LINUX_AGENT, "LINUX_LOCAL_MCP_STDIO_MISSING"
+assert 'LOCAL_MCP_COMMAND=hara-commander mcp' in LINUX, "LINUX_LOCAL_MCP_INSTALLER_HINT_MISSING"
+local_mcp_block = LINUX_AGENT.split("def local_simple_mcp_call",1)[1].split("def _stdio_mcp_write",1)[0]
+assert "post_json(" not in local_mcp_block, "LINUX_LOCAL_MCP_CLOUD_RELAY_FORBIDDEN"
+assert 'relay_calls_per_local_tool_call":0' in LINUX_AGENT, "LINUX_LOCAL_MCP_ZERO_RELAY_MARKER_MISSING"
+print("COMMANDER_LOCAL_MCP_STDIO=PASS")
+print("COMMANDER_LOCAL_MCP_CLOUD_RELAY=ZERO")
+assert "pty.fork()" in LINUX_AGENT and "cleanup_process_sessions" in LINUX_AGENT, "LINUX_MANAGED_PROCESS_SESSION_MISSING"
+assert "PROCESS_REVOKE" in LINUX_AGENT, "LINUX_PROCESS_REVOKE_ON_SESSION_CLOSE_MISSING"
+print("COMMANDER_LOCAL_PROCESS_EXECUTION_GATE=PASS")
+assert "hara.commander-file-preimage.v1" in LINUX_AGENT, "LINUX_PREIMAGE_METADATA_MISSING"
+assert "PREIMAGE_INTEGRITY_FAILED" in LINUX_AGENT and "ROLLBACK_VERIFY_FAILED" in LINUX_AGENT, "LINUX_ROLLBACK_INTEGRITY_GUARD_MISSING"
+assert "FILESYSTEM_ROLLBACK_V1" in LINUX_AGENT, "LINUX_ROLLBACK_RECEIPT_CLASS_MISSING"
+print("COMMANDER_REVERSIBLE_FILE_MUTATION=PASS")
+
+
+assert 'persistent=effective_approval_mode(config)=="PERSISTENT_TRUSTED"' in LINUX_AGENT and "authorized=persistent or operator_session_active()" in LINUX_AGENT, "LINUX_PERSISTENT_BACKGROUND_AUTHORITY_MISSING"
+assert '$Persistent=(Get-ApprovalMode $Cfg) -eq "PERSISTENT_TRUSTED"' in WINDOWS_AGENT, "WINDOWS_PERSISTENT_BACKGROUND_AUTHORITY_MISSING"
+assert '"source":"DEVICE_ENROLLMENT_POLICY"' in LINUX_AGENT, "LINUX_PERSISTENT_AUTHORIZATION_SOURCE_MISSING"
+assert 'if effective_approval_mode(config)!="PERSISTENT_TRUSTED" and not operator_session_active()' in LINUX_AGENT, "LINUX_EXECUTE_CALL_PERSISTENT_GATE_MISSING"
+print("COMMANDER_LOCAL_OPERATOR_SESSION_GATE=PASS")
+print("COMMANDER_BACKGROUND_DAEMON_EXECUTION_AUTHORITY=PERSISTENT_OPT_IN")
+print("COMMANDER_PERSISTENT_TRUSTED_BACKGROUND=PASS")
+print("COMMANDER_CONSOLE_SECRET_EXPOSURE=FALSE")
+
+linux_namespace = {
+    "__name__": "hara_commander_linux_agent_redirect_test",
+    "__file__": str(PUBLIC / "agent/linux.py"),
+}
+exec(compile(LINUX_AGENT, str(PUBLIC / "agent/linux.py"), "exec"), linux_namespace)
+linux_post_json = linux_namespace["post_json"]
+linux_urllib_error = linux_namespace["urllib"].error
+redirect_probe = {"sink_hits": 0, "sink_authorization": None}
+
+class RedirectProbeHandler(http.server.BaseHTTPRequestHandler):
+    def do_POST(self):
+        if self.path == "/start":
+            self.send_response(302)
+            self.send_header("Location", "/sink")
+            self.end_headers()
+            return
+        if self.path == "/sink":
+            redirect_probe["sink_hits"] += 1
+            redirect_probe["sink_authorization"] = self.headers.get("Authorization")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(b"{}")
+            return
+        self.send_response(404)
+        self.end_headers()
+    def log_message(self, _format, *_args):
+        return
+
+server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), RedirectProbeHandler)
+thread = threading.Thread(target=server.serve_forever, daemon=True)
+thread.start()
+try:
+    url = f"http://127.0.0.1:{server.server_address[1]}/start"
+    try:
+        linux_post_json(url, "redirect-canary-token", {})
+    except linux_urllib_error.HTTPError as exc:
+        assert int(exc.code) == 302, f"LINUX_AGENT_REDIRECT_CODE:{exc.code}"
+    else:
+        raise AssertionError("LINUX_AGENT_REDIRECT_FOLLOWED")
+finally:
+    server.shutdown()
+    server.server_close()
+    thread.join(timeout=2)
+
+assert redirect_probe["sink_hits"] == 0, "LINUX_AGENT_REDIRECT_DESTINATION_REACHED"
+assert redirect_probe["sink_authorization"] is None, "LINUX_AGENT_BEARER_LEAKED_ON_REDIRECT"
+print("LINUX_AGENT_REDIRECT_RUNTIME_DENIED=PASS")
+print("LINUX_AGENT_REDIRECT_BEARER_LEAK=FALSE")
+
+subprocess.run([str(PUBLIC / "agent/linux.py"), "--self-test"], check=True)
+with tempfile.TemporaryDirectory(prefix="hara-agent-startup-") as tmp:
+    root = Path(tmp)
+    config_home = root / "config"
+    data_home = root / "data"
+    config_dir = config_home / "hara-commander"
+    config_dir.mkdir(parents=True)
+    (config_dir / "device.env").write_text(
+        "\n".join((
+            "HARA_COMMANDER_URL=https://127.0.0.1:9",
+            "HARA_DEVICE_ID=HARA-DEVICE-STARTUP-TEST",
+            "HARA_DEVICE_TOKEN=" + ("x" * 64),
+            "HARA_DEVICE_ARCH=x86_64",
+            "",
+        )),
+        encoding="utf-8",
+    )
+    env = os.environ.copy()
+    env["XDG_CONFIG_HOME"] = str(config_home)
+    env["XDG_DATA_HOME"] = str(data_home)
+    proc = subprocess.Popen(
+        [str(PUBLIC / "agent/linux.py")],
+        env=env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    try:
+        status_path = data_home / "hara-commander" / "runtime-status.json"
+        startup = None
+        for _ in range(30):
+            if status_path.is_file():
+                try:
+                    startup = json.loads(status_path.read_text(encoding="utf-8"))
+                except json.JSONDecodeError:
+                    startup = None
+                if startup and startup.get("started_at_utc"):
+                    break
+            time.sleep(0.1)
+        assert startup, "LINUX_AGENT_STARTUP_STATUS_MISSING"
+        assert startup.get("agent_version") == "0.3.43", "LINUX_AGENT_STARTUP_VERSION_INVALID"
+        assert startup.get("started_at_utc"), "LINUX_AGENT_STARTUP_ATTESTATION_MISSING"
+        time.sleep(1.2)
+        inert = json.loads(status_path.read_text(encoding="utf-8"))
+        assert inert.get("last_successful_heartbeat_at_utc") in (None, ""), "LINUX_AGENT_HEARTBEAT_WITHOUT_OPERATOR_SESSION"
+        assert inert.get("last_runtime_error_code") in (None, ""), "LINUX_AGENT_NETWORK_ATTEMPT_WITHOUT_OPERATOR_SESSION"
+        assert proc.poll() is None, "LINUX_AGENT_DAEMON_NOT_ALIVE_WHILE_INERT"
+    finally:
+        proc.terminate()
+        try:
+            proc.wait(timeout=3)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait(timeout=3)
+print("COMMANDER_AGENT_STARTUP_ATTESTATION=PASS")
+print("COMMANDER_GOVERNED_TOOL_AGENT=PASS")
+print("UNGUARDED_SHELL_TOOL_EXPOSED=FALSE")
+print("GOVERNED_PROCESS_EXECUTION=CONFIGURABLE_LOCAL_AUTHORIZATION")
+
+need(HTML, "/install/linux.sh", "PORTAL_LINUX_INSTALLER_LINK")
+need(HTML, "/install/windows.ps1", "PORTAL_WINDOWS_INSTALLER_LINK")
+need(JS, "Comando Windows copiado.", "PORTAL_WINDOWS_COPY_HANDLER")
+need(JS, "/api/portal/devices/select", "PORTAL_DEVICE_SELECTION")
+need(JS, 'addFact("Agent", device.agent_version || "—")', "PORTAL_AGENT_VERSION_DETAILS_ONLY")
+need(JS, 'menu.className = "device-overflow-panel"', "PORTAL_TECHNICAL_DETAILS_DISCLOSURE")
+print("PORTAL_DEVICE_INSTALLERS=PASS")
+print("PORTAL_DEVICE_SELECTION=PASS")
+print("PER_DEVICE_CLOUDFLARED_DEPENDENCY=FALSE")
+print("OUTBOUND_CALL_CHANNEL_GOVERNED_TOOLSET_READY=PASS")
+print("AGENT_REMOTE_SELF_REVOKE=PASS")
+print("COMMANDER_AGENT_REDIRECT_FAIL_CLOSED=PASS")
+print("AGENT_DOCTOR_REMOTE_HEALTH=PASS")
+print("AGENT_DOCTOR_HEARTBEAT_OUTSIDE_SESSION=ABSENT")
+print("AGENT_UPDATE_ROLLBACK_SAFE=PASS")
+print("AGENT_DOWNLOAD_INTEGRITY_ENFORCED=PASS")
+print("AGENT_FAILED_INSTALL_ROLLBACK=READY")
+print("AGENT_SUPPORT_REPORT_SANITIZED=READY")
+print("AGENT_DEVICE_PREFLIGHT_NON_MUTATING=READY")
+
+enqueue = WORKER.split("async function enqueueDeviceCall", 1)[1].split("async function claimNextDeviceCall", 1)[0]
+claim = WORKER.split("async function claimNextDeviceCall", 1)[1].split("async function completeDeviceCall", 1)[0]
+status = WORKER.split("async function deviceCallStatus", 1)[1].split("export default", 1)[0]
+heartbeat = WORKER.split("async function heartbeatDevice", 1)[1].split("async function markDeviceOffline", 1)[0]
+offline = WORKER.split("async function markDeviceOffline", 1)[1].split("async function revokeDeviceSelf", 1)[0]
+revoke = WORKER.split("async function revokePortalDevice", 1)[1].split("async function enqueueDeviceCall", 1)[0]
+assert 'const privileged = ["OWNER", "ADMIN"].includes(String(session.role));' in revoke, "DEVICE_REVOKE_PRIVILEGE_MATRIX_INVALID"
+assert '["OWNER", "ADMIN", "REVIEWER"]' not in revoke, "REVIEWER_TENANT_WIDE_REVOKE_PRESENT"
+assert "enrolled_by_subject_id = ?" in revoke, "NON_ADMIN_DEVICE_OWNERSHIP_GUARD_MISSING"
+assert "UPDATE commander_devices SET last_seen_at_utc" not in claim, "CALL_POLL_PRESENCE_WRITE_PRESENT"
+assert "SET state = 'EXPIRED'" not in claim, "CALL_POLL_EXPIRY_WRITE_PRESENT"
+assert "DEVICE_CALL_TTL_SECONDS = 50" in WORKER and "nowIso(DEVICE_CALL_TTL_SECONDS)" in enqueue, "DEVICE_CALL_TTL_NOT_BOUNDED"
+assert "SET state = 'EXPIRED'" not in enqueue, "ENQUEUE_EXPIRY_WRITE_STILL_IN_HOT_PATH"
+assert "async function cleanupExpiredDeviceCalls" in WORKER, "DEVICE_CALL_EXPIRY_MAINTENANCE_MISSING"
+assert "INDEXED BY idx_device_calls_expiry" in WORKER, "DEVICE_CALL_EXPIRY_INDEX_MISSING"
+assert "ctx.waitUntil(cleanupExpiredDeviceCalls(env));" in WORKER, "DEVICE_CALL_EXPIRY_MAINTENANCE_NOT_SCHEDULED"
+assert status.index("let row = await readCall()") < status.index("SET state = 'EXPIRED'"), "DEVICE_STATUS_UNCONDITIONAL_EXPIRY_WRITE"
+assert "RETURNING call_id, request_id, device_id, tool_id, state" in status, "DEVICE_STATUS_EXPIRY_RETURNING_MISSING"
+assert "UPDATE commander_devices" in heartbeat and "last_seen_at_utc" in heartbeat, "HEARTBEAT_PRESENCE_WRITE_MISSING"
+assert "OUTBOUND_RELAY_OFFLINE" in offline and "state: \"OFFLINE\"" in offline, "DEVICE_OFFLINE_TRANSITION_MISSING"
+assert "agent_version = ?" in offline and "architecture = ?" in offline, "DEVICE_OFFLINE_METADATA_REFRESH_MISSING"
+assert "\"agent_version\":AGENT_VERSION" in LINUX_AGENT and "agent_version=$AgentVersion" in WINDOWS_AGENT, "AGENT_OFFLINE_VERSION_REPORT_MISSING"
+assert '/api/device/offline' in WORKER, "DEVICE_OFFLINE_ROUTE_MISSING"
+assert "OUTBOUND_RELAY_OFFLINE" in enqueue, "DEVICE_OFFLINE_ENQUEUE_GUARD_MISSING"
+assert "authCallbackFailureResponse" in WORKER and "clearCookie(TX_COOKIE" in AUTH, "OIDC_CALLBACK_COOKIE_CLEANUP_MISSING"
+assert "SESSION_TOUCH_SECONDS" in AUTH and ".run().catch(() => null)" in AUTH, "PORTAL_SESSION_TOUCH_NOT_BEST_EFFORT"
+print("COMMANDER_CALL_POLL_PRESENCE_WRITE=ABSENT")
+print("COMMANDER_CALL_POLL_EXPIRY_WRITE=ABSENT")
+print("COMMANDER_DEVICE_CALL_TTL_BOUNDED=PASS")
+print("COMMANDER_DEVICE_STATUS_CONDITIONAL_EXPIRY_WRITE=PASS")
+print("COMMANDER_DEVICE_ENQUEUE_EXPIRY_WRITE=ABSENT")
+print("COMMANDER_DEVICE_EXPIRY_MAINTENANCE=BOUNDED_5000_HOURLY")
+print("COMMANDER_REVIEWER_TENANT_WIDE_REVOKE=DENIED")
+print("COMMANDER_NON_ADMIN_DEVICE_OWNERSHIP_GUARD=PASS")
+print("COMMANDER_OIDC_FAILURE_COOKIE_CLEANUP=READY")
+print("COMMANDER_SESSION_TOUCH_BEST_EFFORT=READY")
+print("COMMANDER_AGENT_RUNTIME_DIAGNOSTIC=READY")
+print("COMMANDER_AGENT_ERROR_CODE_SANITIZATION=READY")

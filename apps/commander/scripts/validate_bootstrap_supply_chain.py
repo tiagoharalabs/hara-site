@@ -1,0 +1,198 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import hashlib
+import json
+import subprocess
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[3]
+APP = ROOT / "apps/commander"
+PUBLIC = APP / "public"
+LINUX = (PUBLIC / "install/linux.sh").read_text(encoding="utf-8")
+WINDOWS = (PUBLIC / "install/windows.ps1").read_text(encoding="utf-8")
+INDEX = (PUBLIC / "index.html").read_text(encoding="utf-8")
+APP_JS = (PUBLIC / "app.js").read_text(encoding="utf-8")
+MANIFEST_PATH = PUBLIC / "release/agent-manifest.json"
+
+LINUX_BOOTSTRAP = (
+    "(tmp=$(mktemp) && trap 'rm -f $tmp' EXIT && "
+    "curl -fsS --proto '=https' --tlsv1.2 --location --max-redirs 0 "
+    "https://commander.haralabs.com.br/install/linux.sh -o $tmp && "
+    "HARA_COMMANDER_APPROVAL_MODE=ASK_EVERY_ACTION "
+    "HARA_COMMANDER_TRANSPORT_MODE=OUTBOUND_RELAY "
+    "HARA_COMMANDER_TUNNEL_AUTOSTART=OFF "
+    "HARA_COMMANDER_URL=https://commander.haralabs.com.br bash $tmp)"
+)
+WINDOWS_BOOTSTRAP = (
+    "$haraPrevUrl=$env:HARA_COMMANDER_URL; "
+    "$haraPrevApproval=$env:HARA_COMMANDER_APPROVAL_MODE; "
+    "$haraInstaller=Join-Path $env:TEMP ('hara-commander-install-'+[guid]::NewGuid().ToString('N')+'.ps1'); "
+    "try { $env:HARA_COMMANDER_URL='https://commander.haralabs.com.br'; "
+    "$env:HARA_COMMANDER_APPROVAL_MODE='ASK_EVERY_ACTION'; "
+    "Invoke-WebRequest -Uri https://commander.haralabs.com.br/install/windows.ps1 "
+    "-OutFile $haraInstaller -UseBasicParsing -MaximumRedirection 0 -ErrorAction Stop; "
+    "& powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $haraInstaller; "
+    "if ($LASTEXITCODE -ne 0) { throw ('HARA_COMMANDER_INSTALL_EXIT_'+$LASTEXITCODE) } "
+    "} finally { Remove-Item -LiteralPath $haraInstaller -Force -ErrorAction SilentlyContinue; "
+    "$env:HARA_COMMANDER_URL=$haraPrevUrl; "
+    "$env:HARA_COMMANDER_APPROVAL_MODE=$haraPrevApproval }"
+)
+SUMS_PATH = PUBLIC / "release/SHA256SUMS"
+DRIFT = (APP / "scripts/validate_prod_runtime_drift.py").read_text(encoding="utf-8")
+
+EXPECTED = (
+    "agent/linux.py",
+    "agent/windows.ps1",
+    "install/linux.sh",
+    "install/windows.ps1",
+)
+
+def need(ok: bool, code: str) -> None:
+    if not ok:
+        raise SystemExit(f"COMMANDER_SUPPLY_CHAIN_{code}=FAIL")
+    print(f"COMMANDER_SUPPLY_CHAIN_{code}=PASS")
+
+def sha(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+def main() -> int:
+    proc = subprocess.run(
+        ["python3", "apps/commander/scripts/verify_commander_public_artifacts.py", "--check"],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    need(proc.returncode == 0, "SIGNED_V1_GIT_CONTINGENCY_CRYPTOGRAPHIC_PROOF")
+
+    manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+    need(manifest.get("schema") == "hara.commander-agent-release.v1", "MANIFEST_SCHEMA")
+    entries = {str(x.get("path")): x for x in manifest.get("files", [])}
+    need(tuple(entries.keys()) == EXPECTED, "MANIFEST_EXACT_FILE_SET")
+
+    sums = SUMS_PATH.read_text(encoding="utf-8")
+    for rel in EXPECTED:
+        # Compare only the immutable signed v1 Git release to its manifesto.
+        # The current candidate sources intentionally differ and are NOT signed.
+        body = subprocess.check_output(
+            ["git","show","08500d5:apps/commander/public/"+rel],cwd=ROOT)
+        digest = hashlib.sha256(body).hexdigest()
+        entry = entries[rel]
+        code = rel.upper().replace("/", "_").replace(".", "_")
+        need(entry.get("sha256") == digest, "MANIFEST_SHA_" + code)
+        need(int(entry.get("bytes", -1)) == len(body), "MANIFEST_SIZE_" + code)
+        need(f"{digest}  {rel}\n" in sums, "SUMS_" + code)
+
+    need('BASE_URL="${HARA_COMMANDER_URL:-https://commander.haralabs.com.br}"' in LINUX, "LINUX_DEFAULT_HTTPS")
+    need('"https://commander.haralabs.com.br"' in WINDOWS, "WINDOWS_DEFAULT_HTTPS")
+    need("http://" not in LINUX and "http://" not in WINDOWS, "NO_PLAINTEXT_HTTP")
+    need("--insecure" not in LINUX and " -k" not in LINUX, "LINUX_TLS_BYPASS_ABSENT")
+    need("-SkipCertificateCheck" not in WINDOWS, "WINDOWS_TLS_BYPASS_ABSENT")
+
+    need(
+        LINUX_BOOTSTRAP in INDEX
+        and "function installCommandLinux()" in APP_JS
+        and 'HARA_COMMANDER_APPROVAL_MODE=ASK_EVERY_ACTION' in APP_JS
+        and 'HARA_COMMANDER_TUNNEL_AUTOSTART=OFF' in APP_JS
+        and " HARA_COMMANDER_URL=https://commander.haralabs.com.br bash $tmp)" in APP_JS,
+        "LINUX_BOOTSTRAP_UI_COPY_PARITY",
+    )
+    need(
+        WINDOWS_BOOTSTRAP in INDEX
+        and "function installCommandWindows()" in APP_JS
+        and "$haraPrevApproval=$env:HARA_COMMANDER_APPROVAL_MODE;" in APP_JS
+        and "$env:HARA_COMMANDER_APPROVAL_MODE='ASK_EVERY_ACTION'" in APP_JS
+        and "installApprovalMode" not in APP_JS
+        and "$env:HARA_COMMANDER_APPROVAL_MODE=$haraPrevApproval" in APP_JS,
+        "WINDOWS_BOOTSTRAP_UI_COPY_PARITY",
+    )
+    need("curl -fsSL https://commander.haralabs.com.br/install/linux.sh | bash" not in INDEX + APP_JS,
+         "LINUX_BOOTSTRAP_REDIRECT_DEFAULT_ABSENT")
+    need("irm https://commander.haralabs.com.br/install/windows.ps1 | iex" not in INDEX + APP_JS,
+         "WINDOWS_BOOTSTRAP_REDIRECT_DEFAULT_ABSENT")
+    need("--proto '=https'" in LINUX_BOOTSTRAP and "--tlsv1.2" in LINUX_BOOTSTRAP,
+         "LINUX_BOOTSTRAP_TLS_PIN")
+    need("--location --max-redirs 0" in LINUX_BOOTSTRAP,
+         "LINUX_BOOTSTRAP_REDIRECT_DENIED")
+    need("-MaximumRedirection 0" in WINDOWS_BOOTSTRAP,
+         "WINDOWS_BOOTSTRAP_REDIRECT_DENIED")
+    need(
+        "HARA_COMMANDER_URL=https://commander.haralabs.com.br bash $tmp" in LINUX_BOOTSTRAP,
+        "LINUX_BOOTSTRAP_CANONICAL_ORIGIN_PIN",
+    )
+    need(
+        "| HARA_COMMANDER_URL=https://commander.haralabs.com.br bash" not in LINUX_BOOTSTRAP
+        and " -o $tmp && " in LINUX_BOOTSTRAP
+        and "trap 'rm -f $tmp' EXIT" in LINUX_BOOTSTRAP,
+        "LINUX_BOOTSTRAP_FETCH_FAILURE_PROPAGATES",
+    )
+    need(
+        "$env:HARA_COMMANDER_URL='https://commander.haralabs.com.br';" in WINDOWS_BOOTSTRAP
+        and "$env:HARA_COMMANDER_URL=$haraPrevUrl" in WINDOWS_BOOTSTRAP,
+        "WINDOWS_BOOTSTRAP_CANONICAL_ORIGIN_PIN",
+    )
+    need(
+        "$haraInstaller=Join-Path $env:TEMP" in WINDOWS_BOOTSTRAP
+        and "Invoke-WebRequest -Uri https://commander.haralabs.com.br/install/windows.ps1" in WINDOWS_BOOTSTRAP
+        and "-OutFile $haraInstaller" in WINDOWS_BOOTSTRAP
+        and "-ErrorAction Stop" in WINDOWS_BOOTSTRAP
+        and "& powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $haraInstaller" in WINDOWS_BOOTSTRAP
+        and "HARA_COMMANDER_INSTALL_EXIT_" in WINDOWS_BOOTSTRAP
+        and "Remove-Item -LiteralPath $haraInstaller -Force -ErrorAction SilentlyContinue" in WINDOWS_BOOTSTRAP
+        and "iex" not in WINDOWS_BOOTSTRAP.lower(),
+        "WINDOWS_BOOTSTRAP_FETCH_FAILURE_PROPAGATES",
+    )
+    need(
+        "iex ([string]$haraBootstrap)" not in INDEX + APP_JS
+        and "$haraBootstrap=irm " not in INDEX + APP_JS,
+        "WINDOWS_BOOTSTRAP_IEX_ABSENT",
+    )
+
+    fail_chain = subprocess.run(
+        [
+            "bash",
+            "-c",
+            "(tmp=$(mktemp) && trap 'rm -f $tmp' EXIT && false && bash $tmp)",
+        ],
+        cwd=ROOT,
+        check=False,
+    )
+    need(fail_chain.returncode != 0, "LINUX_BOOTSTRAP_FAILURE_CHAIN_FAILS_CLOSED")
+
+    need("/release/agent-manifest.json" in LINUX, "LINUX_MANIFEST_FETCH")
+    need("AGENT_SHA256_MISMATCH" in LINUX, "LINUX_SHA_ENFORCEMENT")
+    need("AGENT_VERSION_MANIFEST_MISMATCH" in LINUX, "LINUX_VERSION_ENFORCEMENT")
+    need("--self-test" in LINUX, "LINUX_SELF_TEST")
+
+    need("/release/agent-manifest.json" in WINDOWS, "WINDOWS_MANIFEST_FETCH")
+    need("AGENT_SHA256_MISMATCH" in WINDOWS, "WINDOWS_SHA_ENFORCEMENT")
+    need("AGENT_VERSION_MANIFEST_MISMATCH" in WINDOWS, "WINDOWS_VERSION_ENFORCEMENT")
+    need("Assert-AgentIntegrity" in WINDOWS, "WINDOWS_INTEGRITY_FUNCTION")
+
+    for public_path in (
+        "/install/linux.sh",
+        "/install/windows.ps1",
+        "/agent/linux.py",
+        "/agent/windows.ps1",
+        "/release/agent-manifest.json",
+        "/release/agent-manifest.sig.json",
+        "/release/release-signing-public.jwk",
+        "/release/SHA256SUMS",
+    ):
+        need(public_path in DRIFT, "RUNTIME_DRIFT_" + public_path.upper().replace("/", "_").replace(".", "_"))
+
+    need("Assert-AgentSelfTest" in WINDOWS, "WINDOWS_SELF_TEST_FUNCTION")
+    need(WINDOWS.count("Assert-AgentSelfTest $") >= 2, "WINDOWS_SELF_TEST_INSTALL_AND_UPDATE")
+    need("AGENT_SELF_TEST_FAILED" in WINDOWS, "WINDOWS_SELF_TEST_FAIL_CLOSED")
+
+    print("COMMANDER_BOOTSTRAP_INITIAL_TRUST=WEB_ORIGIN")
+    print("COMMANDER_RELEASE_MANIFEST_INDEPENDENT_TRUST_ANCHOR=PASS")
+    print("COMMANDER_BOOTSTRAP_OUT_OF_BAND_TRUST=PENDING_GA_MATURITY")
+    print("COMMANDER_AGENT_POST_BOOTSTRAP_INTEGRITY=PASS")
+    print("COMMANDER_RELEASE_RUNTIME_ATTESTATION=READY")
+    print("COMMANDER_SUPPLY_CHAIN=PASS")
+    return 0
+
+if __name__ == "__main__":
+    raise SystemExit(main())

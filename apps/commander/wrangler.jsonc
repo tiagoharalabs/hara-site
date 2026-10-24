@@ -1,0 +1,130 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "hara-commander",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-09-21",
+  "workers_dev": false,
+  "preview_urls": false,
+  "triggers": {
+    "crons": [
+      "17 * * * *",
+      "* * * * *"
+    ]
+  },
+  "assets": {
+    "directory": "public",
+    "binding": "ASSETS",
+    "run_worker_first": [
+      "/api/*",
+      "/auth/*"
+    ],
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "404-page"
+  },
+  "vars": {
+    "ENVIRONMENT": "PROD",
+    "STORAGE_MODE": "REMOTE_PROD",
+    "MCP_BASE_URL": "https://mcp.haralabs.com.br/mcp",
+    "MCP_ACCESS_ISSUER": "https://proud-sun-7542.cloudflareaccess.com",
+    "AUTH_ISSUER": "https://auth.haralabs.com.br/",
+    "AUTH_CLIENT_ID": "391790882505949187",
+    "AUTH_PROVIDER_LABEL": "HARA Identity",
+    "AUTH_CLIENT_AUTH": "BASIC",
+    "CUSTOMER_MCP_EDGE_ENABLED": "true",
+    "CUSTOMER_MCP_RESOURCE": "https://commander.haralabs.com.br/api/mcp",
+    "DEVICE_EVENT_V2_ENABLED": "true",
+    "DEVICE_EVENT_V2_CANARY_DEVICE_ID": "HARA-DEVICE-e032ffff-f2d2-43ad-b2a8-f5385a900f62"
+  },
+  "ratelimits": [
+    {
+      "name": "RATE_LIMIT_LOGIN",
+      "namespace_id": "1892601",
+      "simple": {
+        "limit": 30,
+        "period": 60
+      }
+    },
+    {
+      "name": "RATE_LIMIT_DEVICE_ENROLL_CLIENT",
+      "namespace_id": "1892602",
+      "simple": {
+        "limit": 60,
+        "period": 60
+      }
+    },
+    {
+      "name": "RATE_LIMIT_DEVICE_ENROLL_TOKEN",
+      "namespace_id": "1892603",
+      "simple": {
+        "limit": 10,
+        "period": 60
+      }
+    },
+    {
+      "name": "RATE_LIMIT_PORTAL_MUTATION",
+      "namespace_id": "1892604",
+      "simple": {
+        "limit": 60,
+        "period": 60
+      }
+    },
+    {
+      "name": "RATE_LIMIT_MCP_AUTH_FAILURE",
+      "namespace_id": "1892605",
+      "simple": {
+        "limit": 20,
+        "period": 60
+      }
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "PRODUCT_DB",
+      "database_name": "hara-commander-product-prod",
+      "database_id": "2c6473ff-9f65-4ee3-b9aa-a68996d47c46",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "TENANT_QUOTA",
+        "class_name": "TenantQuota"
+      },
+      {
+        "name": "DEVICE_CHANNEL",
+        "class_name": "DeviceChannel"
+      },
+      {
+        "name": "STRICT_RATE_LIMIT",
+        "class_name": "SecurityRateLimit"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": [
+        "TenantQuota"
+      ]
+    },
+    {
+      "tag": "v2",
+      "new_sqlite_classes": [
+        "SecurityRateLimit"
+      ]
+    },
+    {
+      "tag": "v3",
+      "new_sqlite_classes": [
+        "DeviceChannel"
+      ]
+    }
+  ],
+  "routes": [
+    {
+      "pattern": "commander.haralabs.com.br",
+      "custom_domain": true
+    }
+  ]
+}
