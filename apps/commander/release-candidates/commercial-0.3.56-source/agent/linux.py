@@ -3112,23 +3112,6 @@ def execute_call(config,call):
         if budget_reservation:
             budget_commit=local_budget_commit(call.get("request_id"))
             budget_committed=True
-        complete(config,call,"COMPLETED",result)
-        if budget_commit and budget_commit.get("exhausted"):
-            try:
-                refresh_product_lease(config)
-                append_console_event("LOCAL_BUDGET_ROLLOVER",call,state="READY")
-            except Exception as refresh_exc:
-                append_console_event(
-                    "PRODUCT_LEASE_DEGRADED",
-                    call,
-                    state="DEGRADED",
-                    error_code=safe_error_code(refresh_exc),
-                )
-        append_console_event(
-            "PASS",call,state="COMPLETED",
-            receipt_sha256=result.get("bridge_receipt_sha256") if isinstance(result,dict) else None,
-            duration_ms=round((time.monotonic()-started)*1000),
-        )
     except Exception as exc:
         code=safe_error_code(exc)
         if budget_reservation and not budget_committed:
@@ -3149,6 +3132,27 @@ def execute_call(config,call):
             "runtime_authority_from_chatgpt":False,"mutation_performed":False,
             "result":{},"blocker":{"code":code},
         },code)
+        return
+
+    # Delivery failure preserves execution truth for reconciliation; do not
+    # issue a contradictory FAILED terminal state or retry the tool here.
+    complete(config,call,"COMPLETED",result)
+    if budget_commit and budget_commit.get("exhausted"):
+        try:
+            refresh_product_lease(config)
+            append_console_event("LOCAL_BUDGET_ROLLOVER",call,state="READY")
+        except Exception as refresh_exc:
+            append_console_event(
+                "PRODUCT_LEASE_DEGRADED",
+                call,
+                state="DEGRADED",
+                error_code=safe_error_code(refresh_exc),
+            )
+    append_console_event(
+        "PASS",call,state="COMPLETED",
+        receipt_sha256=result.get("bridge_receipt_sha256") if isinstance(result,dict) else None,
+        duration_ms=round((time.monotonic()-started)*1000),
+    )
 
 def self_test():
     global RECEIPT_DIR
