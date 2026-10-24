@@ -49,6 +49,7 @@ import {
   observeHeartbeatRecovery, cleanupRecoveryEvents,
 } from "./recovery-alerts.mjs";
 import { readTenantDeviceTelemetry } from "./device-telemetry.mjs";
+import { dispatchRecoveryDeliveries } from "./recovery-delivery.mjs";
 import { customerStatusWaitMs, CUSTOMER_STATUS_TIMEOUT_MS } from "./device-status-poll.mjs";
 import { CALL_ROW_FIELDS, parseCallMetadata, settleCallUsage, readScopedCall, acceptedCallStatus, publicAcceptedCallStatus } from "./approval-relay-storage.mjs";
 import { asyncApprovalDevice, asyncApprovalTool, asyncApprovalProfile, claimedApprovalExpiresAt, isApprovalCallHandle, pendingApprovalResult, safeCallResultMetadata, replayCallResultMetadata, ASYNC_APPROVAL_RESERVATION_TTL_SECONDS, TERMINAL_CALL_STATES } from "./approval-async-relay.mjs";
@@ -6439,7 +6440,10 @@ export default {
     requireRuntime(env);
     // Opt-in minute cron is separate from the existing hourly maintenance.
     if (event.cron === "* * * * *") {
-      if (recoveryAlertsEnabled(env)) ctx.waitUntil(detectOfflineRecoveryEvents(env));
+      if (recoveryAlertsEnabled(env)) ctx.waitUntil((async()=>{
+        await detectOfflineRecoveryEvents(env);
+        await dispatchRecoveryDeliveries(env);
+      })());
       return;
     }
     if (recoveryAlertsEnabled(env)) ctx.waitUntil(cleanupRecoveryEvents(env));
