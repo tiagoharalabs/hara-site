@@ -139,6 +139,7 @@ export async function dispatchRecoveryDeliveries(env,{fetchImpl=fetch,nowMs=Date
  if(!Number.isSafeInteger(nowMs)||nowMs<0||!Number.isSafeInteger(maxEvents)||maxEvents<1||maxEvents>10||
     !Number.isSafeInteger(timeoutMs)||timeoutMs<1||timeoutMs>5000)throw Error('RECOVERY_DELIVERY_BUDGET_INVALID');
  summary.state='COMPLETE';const start=performance.now();
+ const clock=()=>exclusiveDeviceLeases?nowMs+Math.floor(performance.now()-start):nowMs;
  for(const target of targets){
   if(summary.attempted>=maxEvents||performance.now()-start>=20000)break;
   // Stage only matching, live enrollments. No callback-supplied tenant or URL.
@@ -167,7 +168,7 @@ export async function dispatchRecoveryDeliveries(env,{fetchImpl=fetch,nowMs=Date
        WHERE pr.tenant_id=r.tenant_id AND pr.device_id=r.device_id AND pr.incident_id=r.incident_id
         AND pr.generation=r.generation AND pr.sequence<r.sequence AND COALESCE(p.state,'MISSING')<>'DELIVERED')
      ORDER BY r.persisted_at_utc,r.event_id LIMIT 1) AND binding_id=? AND tenant_id=? RETURNING *`)
-    .bind(nowMs+timeoutMs+10000,target.id,target.tenant_id,nowMs,nowMs,...scope,target.id,target.tenant_id).first();
+    .bind(clock()+timeoutMs+10000,target.id,target.tenant_id,clock(),clock(),...scope,target.id,target.tenant_id).first();
    if(!row)break;
    summary.attempted++;
    const source=await env.PRODUCT_DB.prepare(`SELECT r.*,d.state AS device_state,d.revoked_at_utc FROM commander_device_recovery_events r
@@ -177,7 +178,7 @@ export async function dispatchRecoveryDeliveries(env,{fetchImpl=fetch,nowMs=Date
    try{
     if(!source||source.device_state!=='ACTIVE'||source.revoked_at_utc||!recoveryDeviceEnabled(env,source))throw Error('RECOVERY_DEVICE_NOT_ACTIVE');
     if(exclusiveDeviceLeases){
-     deviceLease=await claimRecoveryDeviceLease(env,source,nowMs);
+     deviceLease=await claimRecoveryDeviceLease(env,source,clock());
      if(!deviceLease)throw Error('RECOVERY_DEVICE_LEASE_HELD');
     }
     const body=envelope(source,target);if(!body)throw Error('RECOVERY_RECEIVER_UNSUPPORTED');
@@ -189,10 +190,11 @@ export async function dispatchRecoveryDeliveries(env,{fetchImpl=fetch,nowMs=Date
    const next=nowMs+Math.min(3600000,5000*2**Math.min(16,row.attempts-1));
    const result=await env.PRODUCT_DB.prepare(`UPDATE recovery_delivery_outbox SET state=?,next_attempt_ms=?,lease_until_ms=0,receipt_ref=?,receipt_sha256=?
     WHERE event_id=? AND binding_id=? AND tenant_id=? AND state='INFLIGHT' AND attempts=?${deviceLease?
-     ' AND EXISTS(SELECT 1 FROM recovery_device_leases l WHERE l.device_id=? AND l.tenant_id=? AND l.lease_token=? AND l.lease_until_ms>?)':''}`)
+     ` AND EXISTS(SELECT 1 FROM recovery_device_leases l JOIN commander_devices d ON d.device_id=l.device_id AND d.tenant_id=l.tenant_id WHERE l.device_id=? AND l.tenant_id=? AND l.lease_token=? AND l.lease_until_ms>? AND d.state='ACTIVE' AND d.revoked_at_utc IS NULL)`:''}`)
     .bind(state,next,state==='DELIVERED'?receipt.receipt_ref:null,state==='DELIVERED'?await sha(stable(receipt)):null,
      row.event_id,target.id,target.tenant_id,row.attempts,
-     ...(deviceLease?[deviceLease.device_id,deviceLease.tenant_id,deviceLease.lease_token,nowMs]:[])).run();
+     ...(deviceLease?[deviceLease.device_id,deviceLease.tenant_id,deviceLease.lease_token,clock()]:[])).run();
+   if(exclusiveDeviceLeases&&!result.meta?.changes)summary.held++;
    if(deviceLease)await releaseRecoveryDeviceLease(env,deviceLease);
    if(result.meta?.changes&&state==='DELIVERED')summary.delivered++;
    if(state==='EXHAUSTED')summary.exhausted++;
