@@ -12,6 +12,18 @@ const MAX_TRANSIENT_REQUEST_BYTES = 160 * 1024;
 const MAX_TRANSIENT_RESULT_BYTES = 320 * 1024;
 const TRANSIENT_RPC_TIMEOUT_MS = 45 * 1000;
 const MAX_TRANSIENT_INFLIGHT = 1;
+const PROBE_REQUEST = 'HARA_EVENT_V2_PROBE_V1';
+const PROBE_RESPONSE = 'HARA_EVENT_V2_PROBE_ACK_V1';
+
+function currentSockets(ctx) {
+  return ctx.getWebSockets().filter(socket => {
+    if (socket.readyState !== WebSocket.OPEN) return false;
+    try {
+      const attachment=socket.deserializeAttachment();
+      return Boolean(attachment && !attachment.superseded);
+    } catch { return false; }
+  });
+}
 
 function nowIso() {
   return new Date().toISOString();
@@ -49,9 +61,15 @@ async function markConnected(env, tenantId, deviceId) {
         )`
   ).bind(seenAt, tenantId, deviceId, refreshCutoff).run();
 
-  // The Worker authenticated this device immediately before handing the request
-  // to the DO. A zero-change update therefore means presence is already fresh,
-  // not that the channel is unauthenticated.
+  // Authentication and this D1 write are separate async boundaries. A zero
+  // update can also mean concurrent revocation; never accept it blindly.
+  if (!result.meta?.changes) {
+    const active=await env.PRODUCT_DB.prepare(
+      "SELECT 1 AS active FROM commander_devices WHERE tenant_id=? AND device_id=? "+
+      "AND state='ACTIVE' AND revoked_at_utc IS NULL AND tunnel_mode='EVENT_V2'"
+    ).bind(tenantId,deviceId).first();
+    if (!active) throw new Error("CHANNEL_DEVICE_NOT_ACTIVE");
+  }
   return {
     seen_at_utc: seenAt,
     durable_write: Boolean(result.meta?.changes),
@@ -102,9 +120,7 @@ async function markDisconnected(env, attachment) {
 async function scheduleDisconnected(ctx, attachment) {
   if (!attachment || attachment.superseded) return;
 
-  const stillConnected = ctx.getWebSockets().some(
-    (socket) => socket.readyState === WebSocket.OPEN
-  );
+  const stillConnected = currentSockets(ctx).length > 0;
   if (stillConnected) return;
 
   const tenantId = cleanIdentifier(attachment.tenant_id, 180);
@@ -205,6 +221,20 @@ export class DeviceChannel extends DurableObject {
     this.ctx = ctx;
     this.env = env;
     this.pendingTransient = new Map();
+    this.presenceTail=Promise.resolve();
+    // Static probes remain in the hibernation runtime, without D1 writes or
+    // waking a JS handler. https://developers.cloudflare.com/durable-objects/api/state/#setwebsocketautoresponse
+    if (typeof ctx.setWebSocketAutoResponse === 'function') {
+      ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair(PROBE_REQUEST,PROBE_RESPONSE));
+    }
+  }
+
+  withPresence(action) {
+    // Serialize only connect/close/alarm presence writes. A long transient RPC
+    // must not hold this fence or prevent its socket result from arriving.
+    const operation=this.presenceTail.then(action);
+    this.presenceTail=operation.catch(()=>{});
+    return operation;
   }
 
   async fetch(request) {
@@ -220,6 +250,7 @@ export class DeviceChannel extends DurableObject {
         const tenantId = cleanIdentifier(request.headers.get("x-hara-tenant-id"), 180);
         const deviceId = cleanIdentifier(request.headers.get("x-hara-device-id"), 180);
 
+        return await this.withPresence(async()=>{
         await clearPendingOffline(this.ctx);
         await markConnected(this.env, tenantId, deviceId);
 
@@ -251,6 +282,7 @@ export class DeviceChannel extends DurableObject {
         ]);
 
         return new Response(null, { status: 101, webSocket: client });
+        });
       }
 
       if (url.pathname === "/notify" && request.method === "POST") {
@@ -263,11 +295,9 @@ export class DeviceChannel extends DurableObject {
         });
 
         let delivered = 0;
-        for (const socket of this.ctx.getWebSockets()) {
-          if (socket.readyState === WebSocket.OPEN) {
+        for (const socket of currentSockets(this.ctx)) {
             socket.send(event);
             delivered += 1;
-          }
         }
 
         return json({
@@ -275,6 +305,31 @@ export class DeviceChannel extends DurableObject {
           ok: true,
           delivered,
           call_id: callId,
+        });
+      }
+
+      if (url.pathname === "/invalidate" && request.method === "POST") {
+        const tenantId=cleanIdentifier(request.headers.get("x-hara-tenant-id"),180);
+        const deviceId=cleanIdentifier(request.headers.get("x-hara-device-id"),180);
+        return await this.withPresence(async()=>{
+          const row=await this.env.PRODUCT_DB.prepare(
+            "SELECT state,revoked_at_utc,tunnel_mode FROM commander_devices WHERE tenant_id=? AND device_id=?"
+          ).bind(tenantId,deviceId).first();
+          if(!row || (row.state==='ACTIVE'&&!row.revoked_at_utc&&
+             !['EVENT_V2_OFFLINE','OUTBOUND_RELAY_OFFLINE'].includes(row.tunnel_mode)))throw new Error('CHANNEL_INVALIDATION_PRECONDITION');
+          for(const socket of this.ctx.getWebSockets()){
+            const attachment=socket.deserializeAttachment();
+            if(attachment?.tenant_id!==tenantId||attachment?.device_id!==deviceId)continue;
+            socket.serializeAttachment({...attachment,superseded:true});
+            for(const [id,pending] of this.pendingTransient){
+              if(pending.socket!==socket)continue;
+              pending.reject(new Error('CHANNEL_TRANSIENT_DISCONNECTED'));
+              this.pendingTransient.delete(id);
+            }
+            try{socket.close(4003,'CHANNEL_AUTHORIZATION_ENDED');}catch{}
+          }
+          await clearPendingOffline(this.ctx);
+          return json({ok:true,invalidated:true});
         });
       }
 
@@ -294,15 +349,16 @@ export class DeviceChannel extends DurableObject {
           throw new Error("CHANNEL_TRANSIENT_BUSY");
         }
 
-        const sockets = this.ctx.getWebSockets().filter((socket) => {
-          if (socket.readyState !== WebSocket.OPEN) return false;
-          try {
-            return !(socket.deserializeAttachment() || {}).superseded;
-          } catch (_error) {
-            return false;
-          }
-        });
+        const sockets = currentSockets(this.ctx);
         if (sockets.length < 1) throw new Error("CHANNEL_TRANSIENT_OFFLINE");
+        const attachment=sockets[0].deserializeAttachment();
+        const active=await this.env.PRODUCT_DB.prepare(
+          "SELECT 1 AS active FROM commander_devices WHERE tenant_id=? AND device_id=? "+
+          "AND state='ACTIVE' AND revoked_at_utc IS NULL AND tunnel_mode='EVENT_V2'"
+        ).bind(attachment.tenant_id,attachment.device_id).first();
+        // Revalidate after the external D1 await: reconnect/revocation may have
+        // invalidated the originally selected socket while this request yielded.
+        if(!active || !currentSockets(this.ctx).includes(sockets[0]))throw new Error('CHANNEL_DEVICE_NOT_ACTIVE');
 
         const event = JSON.stringify({
           schema: EVENT_SCHEMA,
@@ -317,8 +373,10 @@ export class DeviceChannel extends DurableObject {
           throw new Error("CHANNEL_MESSAGE_TOO_LARGE");
         }
 
+        let claim;
         const resultPromise = new Promise((resolve, reject) => {
-          this.pendingTransient.set(callId, { resolve, reject });
+          claim={ resolve, reject, socket:sockets[0] };
+          this.pendingTransient.set(callId, claim);
         });
 
         try {
@@ -331,16 +389,14 @@ export class DeviceChannel extends DurableObject {
           ]);
           return json(result);
         } finally {
-          this.pendingTransient.delete(callId);
+          if(this.pendingTransient.get(callId)===claim)this.pendingTransient.delete(callId);
         }
       }
 
       if (url.pathname === "/status" && request.method === "GET") {
         return json({
           schema: CHANNEL_SCHEMA,
-          connected: this.ctx.getWebSockets().filter(
-            (socket) => socket.readyState === WebSocket.OPEN
-          ).length,
+          connected: currentSockets(this.ctx).length,
         });
       }
 
@@ -364,6 +420,10 @@ export class DeviceChannel extends DurableObject {
   }
 
   async webSocketMessage(socket, message) {
+    const attachment=socket.deserializeAttachment();
+    if (!attachment || attachment.superseded) return;
+    // Fallback only for local test runtimes without automatic text responses.
+    if(message===PROBE_REQUEST){socket.send(PROBE_RESPONSE);return;}
     let payload;
     try {
       const raw = typeof message === "string"
@@ -425,7 +485,8 @@ export class DeviceChannel extends DurableObject {
         }
         const signal = cleanLearningSignal(payload.learning_signal);
         const pending = this.pendingTransient.get(callId);
-        if (!pending) return;
+        if (!pending || pending.socket!==socket) return;
+        this.pendingTransient.delete(callId);
         pending.resolve({
           schema: "hara.commander-transient-rpc.v1",
           ok: state === "COMPLETED",
@@ -450,28 +511,24 @@ export class DeviceChannel extends DurableObject {
     // Short network blips are coalesced in the per-device DO instead of
     // amplifying into an immediate OFFLINE -> ONLINE D1 write pair.
     try {
-      await scheduleDisconnected(this.ctx, socket.deserializeAttachment());
+      await this.withPresence(()=>scheduleDisconnected(this.ctx, socket.deserializeAttachment()));
     } catch (_error) {
       // Presence will fail stale after the bounded Event V2 liveness window.
     }
-    const stillConnected = this.ctx.getWebSockets().some(
-      (candidate) => candidate.readyState === WebSocket.OPEN
-    );
-    if (!stillConnected) {
-      for (const pending of this.pendingTransient.values()) {
+    for (const [id,pending] of this.pendingTransient) {
+      if (pending.socket===socket) {
         pending.reject(new Error("CHANNEL_TRANSIENT_DISCONNECTED"));
+        this.pendingTransient.delete(id);
       }
-      this.pendingTransient.clear();
     }
   }
 
   async alarm() {
+    return this.withPresence(async()=>{
     const pending = await this.ctx.storage.get(PENDING_OFFLINE_KEY);
     if (!pending) return;
 
-    const reconnected = this.ctx.getWebSockets().some(
-      (socket) => socket.readyState === WebSocket.OPEN
-    );
+    const reconnected = currentSockets(this.ctx).length > 0;
     if (reconnected) {
       await this.ctx.storage.delete(PENDING_OFFLINE_KEY);
       return;
@@ -480,13 +537,15 @@ export class DeviceChannel extends DurableObject {
     // Let an uncaught failure retry under the Durable Objects alarm contract.
     await markDisconnected(this.env, pending);
     await this.ctx.storage.delete(PENDING_OFFLINE_KEY);
+    });
   }
 
   webSocketError(socket, _error) {
-    for (const pending of this.pendingTransient.values()) {
+    for (const [id,pending] of this.pendingTransient) {
+      if(pending.socket!==socket)continue;
       pending.reject(new Error("CHANNEL_TRANSIENT_DISCONNECTED"));
+      this.pendingTransient.delete(id);
     }
-    this.pendingTransient.clear();
     try {
       socket.close(1011, "CHANNEL_SOCKET_ERROR");
     } catch (_closeError) {

@@ -632,6 +632,18 @@ async function openDeviceEventChannel(env, request) {
   }));
 }
 
+async function invalidateDeviceEventChannel(env, tenantId, deviceId) {
+  if(!eventV2Enabled(env)||!env.DEVICE_CHANNEL)return false;
+  try {
+    const stub=env.DEVICE_CHANNEL.getByName(deviceChannelName(tenantId,deviceId));
+    const response=await stub.fetch(new Request('https://device-channel/invalidate',{
+      method:'POST',headers:{'x-hara-channel-authenticated':'1','x-hara-tenant-id':tenantId,
+        'x-hara-device-id':deviceId,'content-type':'application/json'},body:'{}',
+    }));
+    return response.ok && (await response.json()).invalidated===true;
+  } catch {return false;} // Revocation in D1 remains authoritative on failure.
+}
+
 async function notifyDeviceEventChannel(env, tenantId, deviceId, callId) {
   if (!eventV2Enabled(env) || !env.DEVICE_CHANNEL) {
     return { attempted: false, delivered: 0 };
@@ -2990,11 +3002,13 @@ async function markDeviceOffline(env, request, body) {
       WHERE device_id = ? AND state = 'ACTIVE' AND revoked_at_utc IS NULL`
   ).bind(seenAt, agentVersion, architecture, approvalMode, device.device_id).run();
   if (!result.meta?.changes) throw new Error("DEVICE_AUTH_INVALID");
+  const eventChannelInvalidated=await invalidateDeviceEventChannel(env,device.tenant_id,device.device_id);
   return {
     schema: "hara.commander-device-offline.v1",
     ok: true,
     device_id: device.device_id,
     state: "OFFLINE",
+    event_channel_invalidated:eventChannelInvalidated,
     server_time_utc: seenAt,
   };
 }
@@ -3031,6 +3045,7 @@ async function revokeDeviceSelf(env, request) {
     state: "REVOKED",
     revoked_at_utc: revokedAt,
     pending_calls_cancelled: true,
+    event_channel_invalidated:await invalidateDeviceEventChannel(env,device.tenant_id,device.device_id),
   };
 }
 
@@ -3095,6 +3110,7 @@ async function revokePortalDevice(env, session, body) {
     state: "REVOKED",
     revoked_at_utc: revokedAt,
     pending_calls_cancelled: true,
+    event_channel_invalidated:await invalidateDeviceEventChannel(env,session.tenant_id,deviceId),
   };
 }
 

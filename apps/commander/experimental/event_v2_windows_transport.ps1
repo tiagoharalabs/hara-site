@@ -35,10 +35,62 @@ function New-EventV2Client([string]$DeviceToken) {
 
 function Connect-EventV2Client($Client,[Uri]$Uri,[Threading.CancellationToken]$CancellationToken) {
   if ($Uri.Scheme -ne "wss") { throw "WINDOWS_EVENT_V2_WSS_REQUIRED" }
-  $Client.ConnectAsync($Uri,$CancellationToken).GetAwaiter().GetResult()
+  $deadline=[Threading.CancellationTokenSource]::CreateLinkedTokenSource([Threading.CancellationToken[]]@($CancellationToken))
+  try {
+    $deadline.CancelAfter(25000)
+    $Client.ConnectAsync($Uri,$deadline.Token).GetAwaiter().GetResult()
+  } finally {$deadline.Dispose()}
   if ($Client.State -ne [System.Net.WebSockets.WebSocketState]::Open) {
     throw "WINDOWS_EVENT_V2_CONNECT_FAILED"
   }
+}
+
+function Get-EventV2Monotonic {
+  return [Diagnostics.Stopwatch]::GetTimestamp()/[double][Diagnostics.Stopwatch]::Frequency
+}
+function New-EventV2Watchdog([double]$Now) {
+  return @{lastProbe=$Now;awaiting=$false;deadline=0.0;sendTask=$null}
+}
+function Wait-EventV2Send($Task,$Client,[Threading.CancellationToken]$CancellationToken,[int]$TimeoutMs=20000) {
+  if($TimeoutMs -lt 1 -or $TimeoutMs -gt 20000){throw 'WINDOWS_EVENT_V2_SEND_TIMEOUT_INVALID'}
+  $CancellationToken.ThrowIfCancellationRequested()
+  if($Task.IsCompleted){[void]$Task.GetAwaiter().GetResult();return}
+  try {$done=$Task.Wait($TimeoutMs,$CancellationToken)}
+  catch [AggregateException] {[void]$Task.GetAwaiter().GetResult();throw}
+  if(-not $done){$Client.Abort();throw 'WINDOWS_EVENT_V2_SEND_TIMEOUT'}
+  [void]$Task.GetAwaiter().GetResult()
+}
+function Wait-EventV2ProbeSend($State,$Client,[Threading.CancellationToken]$CancellationToken,[double]$Now=(Get-EventV2Monotonic)) {
+  if($null -eq $State.sendTask){return}
+  if($State.sendTask.IsCompleted){Wait-EventV2Send $State.sendTask $Client $CancellationToken;return}
+  if($Now -ge $State.deadline){$Client.Abort();throw 'WINDOWS_EVENT_V2_PONG_TIMEOUT'}
+  $remaining=[int][Math]::Max(1,[Math]::Min(20000,[Math]::Ceiling(($State.deadline-$Now)*1000)))
+  Wait-EventV2Send $State.sendTask $Client $CancellationToken $remaining
+}
+function Step-EventV2Watchdog($State,$Client,[Threading.CancellationToken]$CancellationToken,[double]$Now) {
+  $CancellationToken.ThrowIfCancellationRequested()
+  if($Client.State -ne [Net.WebSockets.WebSocketState]::Open){throw 'WINDOWS_EVENT_V2_SOCKET_NOT_OPEN'}
+  if($State.awaiting -or ($State.sendTask -and -not $State.sendTask.IsCompleted)){
+    if($Now -ge $State.deadline){$Client.Abort();throw 'WINDOWS_EVENT_V2_PONG_TIMEOUT'}
+    if($State.sendTask.IsCompleted){[void]$State.sendTask.GetAwaiter().GetResult()}
+    return [int][Math]::Max(1,[Math]::Ceiling(($State.deadline-$Now)*1000))
+  }
+  if($Now-$State.lastProbe -ge 60){
+    # PS 5.1 ClientWebSocket does not expose .NET 9 KeepAliveTimeout. A static
+    # text probe uses Cloudflare hibernation auto-response without a D1 write.
+    # https://developers.cloudflare.com/durable-objects/api/state/#setwebsocketautoresponse
+    $bytes=[Text.Encoding]::UTF8.GetBytes('HARA_EVENT_V2_PROBE_V1')
+    $State.awaiting=$true;$State.lastProbe=$Now;$State.deadline=$Now+20
+    $State.sendTask=$Client.SendAsync([ArraySegment[byte]]::new($bytes),[Net.WebSockets.WebSocketMessageType]::Text,$true,$CancellationToken)
+    # Never block the watchdog waiting for its own send to complete.
+    return 20000
+  }
+  return [int][Math]::Max(1,[Math]::Ceiling((60-($Now-$State.lastProbe))*1000))
+}
+function Confirm-EventV2Watchdog($State,[string]$Text,[double]$Now) {
+  if($Text -cne 'HARA_EVENT_V2_PROBE_ACK_V1' -or -not $State.awaiting -or $Now -ge $State.deadline){return $false}
+  $State.awaiting=$false
+  return $true
 }
 
 function Start-EventV2Receive($Client,[Threading.CancellationToken]$CancellationToken) {
@@ -83,12 +135,13 @@ function Send-EventV2Liveness($Client,[Threading.CancellationToken]$Cancellation
   $bytes = [Text.Encoding]::UTF8.GetBytes($payload)
   if ($bytes.Length -gt $MaxWakeEventBytes) { throw "WINDOWS_EVENT_V2_LIVENESS_SIZE_INVALID" }
   $segment = [ArraySegment[byte]]::new($bytes)
-  $Client.SendAsync(
+  $send=$Client.SendAsync(
     $segment,
     [System.Net.WebSockets.WebSocketMessageType]::Text,
     $true,
     $CancellationToken
-  ).GetAwaiter().GetResult()
+  )
+  Wait-EventV2Send $send $Client $CancellationToken
 }
 
 function Test-EventV2Identifier([string]$Value,[int]$MaxLength,[string]$Code) {
@@ -155,12 +208,13 @@ function Send-EventV2TransientResult(
     throw "WINDOWS_EVENT_V2_TRANSIENT_RESULT_TOO_LARGE"
   }
   $segment = [ArraySegment[byte]]::new($bytes)
-  $Client.SendAsync(
+  $send=$Client.SendAsync(
     $segment,
     [System.Net.WebSockets.WebSocketMessageType]::Text,
     $true,
     $CancellationToken
-  ).GetAwaiter().GetResult()
+  )
+  Wait-EventV2Send $send $Client $CancellationToken
 }
 
 

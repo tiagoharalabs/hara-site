@@ -24,6 +24,8 @@ import os
 import socket
 import ssl
 import struct
+import time
+import weakref
 from dataclasses import dataclass
 from typing import BinaryIO
 from urllib.parse import urlsplit
@@ -35,6 +37,8 @@ MAX_TRANSIENT_REQUEST_BYTES = 160 * 1024
 MAX_TRANSIENT_RESULT_BYTES = 320 * 1024
 MAX_EVENT_BYTES = MAX_TRANSIENT_RESULT_BYTES
 KEEPALIVE_IDLE_SECONDS = 60.0
+PONG_TIMEOUT_SECONDS = 20.0
+_PENDING_PONG = weakref.WeakKeyDictionary()
 RECONNECT_BASE_SECONDS = 10.0
 RECONNECT_MAX_SECONDS = 15.0
 MAX_CONTROL_PAYLOAD_BYTES = 125
@@ -200,34 +204,40 @@ def decode_server_frame(raw: bytes, max_bytes: int = MAX_EVENT_BYTES) -> ServerF
     return ServerFrame(opcode=opcode, payload=raw[offset:offset + length], consumed=offset + length)
 
 
-def read_exact(stream: BinaryIO, count: int) -> bytes:
+def read_exact(stream: BinaryIO, count: int, deadline: float | None = None) -> bytes:
     chunks = bytearray()
     while len(chunks) < count:
+        if deadline is not None:
+            remaining=deadline-time.monotonic()
+            if remaining<=0:raise fail("EVENT_V2_PONG_TIMEOUT")
+            stream.settimeout(min(remaining,stream.gettimeout() or remaining))
         data = stream.read(count - len(chunks))
+        if deadline is not None and time.monotonic()>=deadline:
+            raise fail("EVENT_V2_PONG_TIMEOUT")
         if not data:
             raise fail("EVENT_V2_SOCKET_CLOSED")
         chunks.extend(data)
     return bytes(chunks)
 
 
-def recv_server_frame(sock: socket.socket, max_bytes: int = MAX_EVENT_BYTES) -> ServerFrame:
-    first_two = read_exact(sock, 2)
+def recv_server_frame(sock: socket.socket, max_bytes: int = MAX_EVENT_BYTES, deadline: float | None = None) -> ServerFrame:
+    first_two = read_exact(sock, 2, deadline)
     first, second = first_two[0], first_two[1]
     if second & 0x80:
         raise fail("EVENT_V2_SERVER_MASK_DENIED")
     length_code = second & 0x7F
     extra = b""
     if length_code == 126:
-        extra = read_exact(sock, 2)
+        extra = read_exact(sock, 2, deadline)
         length = struct.unpack("!H", extra)[0]
     elif length_code == 127:
-        extra = read_exact(sock, 8)
+        extra = read_exact(sock, 8, deadline)
         length = struct.unpack("!Q", extra)[0]
     else:
         length = length_code
     if length > max_bytes:
         raise fail("EVENT_V2_MESSAGE_TOO_LARGE")
-    payload = read_exact(sock, length)
+    payload = read_exact(sock, length, deadline)
     return decode_server_frame(first_two + extra + payload, max_bytes=max_bytes)
 
 
@@ -407,14 +417,21 @@ def recv_event_or_keepalive(
 
     prior_timeout = sock.gettimeout()
     try:
-        sock.settimeout(idle_seconds)
+        pending = _PENDING_PONG.get(sock)
+        if pending and time.monotonic() >= pending[1]:
+            raise fail("EVENT_V2_PONG_TIMEOUT")
+        sock.settimeout(min(idle_seconds, pending[1]-time.monotonic()) if pending else idle_seconds)
         try:
-            frame = recv_server_frame(sock)
+            frame = recv_server_frame(sock,deadline=pending[1] if pending else None)
         except socket.timeout:
             # Protocol PING is transport keepalive only. Cloudflare's
             # hibernation runtime answers incoming protocol PING with PONG
             # without invoking the Durable Object message handler.
-            send_ping(sock)
+            if pending:
+                raise fail("EVENT_V2_PONG_TIMEOUT") from None
+            nonce=os.urandom(8)
+            send_ping(sock,nonce)
+            _PENDING_PONG[sock]=(nonce,time.monotonic()+PONG_TIMEOUT_SECONDS)
             return None
 
         if frame.opcode == 0x9:
@@ -422,6 +439,8 @@ def recv_event_or_keepalive(
             send_pong(sock, frame.payload)
             return None
         if frame.opcode == 0xA:
+            if pending and frame.payload == pending[0]:
+                _PENDING_PONG.pop(sock,None)
             return None
         if frame.opcode == 0x8:
             raise fail("EVENT_V2_SERVER_CLOSED")
@@ -431,6 +450,7 @@ def recv_event_or_keepalive(
 
 
 def close_socket(sock: socket.socket, code: int = 1000) -> None:
+    _PENDING_PONG.pop(sock,None)
     try:
         sock.sendall(encode_client_frame(0x8, struct.pack("!H", code)))
     except Exception:

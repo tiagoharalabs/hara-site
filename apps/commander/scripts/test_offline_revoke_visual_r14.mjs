@@ -97,10 +97,13 @@ const ctxt=vm.createContext({
   cleanId:x=>String(x||""),
   nowIso:()=>"2026-10-23T19:00:00.000Z"
 });
-vm.runInContext(func,ctxt);
+const channelFlag=segment(worker,"function eventV2Enabled(env) {","function transientRpcEnabled(env) {");
+const invalidator=segment(worker,"async function invalidateDeviceEventChannel(","async function notifyDeviceEventChannel(");
+vm.runInContext(channelFlag+invalidator+func,ctxt);
 const owner={tenant_id:"tenant-A",subject_id:"subject-A",role:"OWNER"};
 const ret=await ctxt.revokePortalDevice({PRODUCT_DB:mockDb},owner,{device_id:offlineId});
 assert.equal(ret.ok,true);assert.equal(ret.state,"REVOKED");assert.equal(ret.device_id,offlineId);
+assert.equal(ret.event_channel_invalidated,false,"absence of a DO binding cannot claim socket invalidation");
 assert.equal(db.prepare("SELECT state FROM commander_devices WHERE device_id=?").get(offlineId).state,"REVOKED");
 pass("OFFLINE_BACKEND_REVOKES_WITHOUT_HEARTBEAT");
 assert.equal(db.prepare("SELECT state FROM commander_device_calls WHERE device_id=?").get(offlineId).state,"CANCELLED");

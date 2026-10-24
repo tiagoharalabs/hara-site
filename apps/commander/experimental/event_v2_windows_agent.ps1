@@ -438,7 +438,9 @@ function New-LocalShutdownPipe {
 function Get-ReconnectDelaySeconds([int]$Attempt) {
   if ($Attempt -lt 0) { throw "WINDOWS_EVENT_V2_RECONNECT_ATTEMPT_INVALID" }
   $cap = [Math]::Min($ReconnectMaxSeconds, $ReconnectBaseSeconds * [Math]::Pow(2,[Math]::Min($Attempt,20)))
-  return ([Security.Cryptography.RandomNumberGenerator]::GetInt32(0,1000000) / 1000000.0) * $cap
+  $rng=[Security.Cryptography.RandomNumberGenerator]::Create();$bytes=New-Object byte[] 4
+  try {$rng.GetBytes($bytes)}finally{$rng.Dispose()}
+  return ([BitConverter]::ToUInt32($bytes,0)/4294967296.0)*$cap
 }
 
 function Invoke-ConnectedSession($Cfg,[string]$Token) {
@@ -461,16 +463,20 @@ function Invoke-ConnectedSession($Cfg,[string]$Token) {
     $livenessDelayMs = [int]($livenessIntervalSeconds * 1000)
     $livenessTask = [Threading.Tasks.Task]::Delay($livenessDelayMs,$cts.Token)
     $receive = Start-EventV2Receive $client $cts.Token
+    $watchdog = New-EventV2Watchdog (Get-EventV2Monotonic)
     while ($true) {
+      $probeWaitMs=Step-EventV2Watchdog $watchdog $client $cts.Token (Get-EventV2Monotonic)
       $waitTasks = [Threading.Tasks.Task[]]@(
         [Threading.Tasks.Task]$receive.Task,
         [Threading.Tasks.Task]$shutdownTask,
         [Threading.Tasks.Task]$livenessTask
       )
-      $completed = [Threading.Tasks.Task]::WaitAny($waitTasks)
+      $completed = [Threading.Tasks.Task]::WaitAny($waitTasks,$probeWaitMs)
+      if ($completed -eq -1) { continue }
 
       if ($completed -eq 1) { throw "WINDOWS_EVENT_V2_LOCAL_SHUTDOWN_REQUESTED" }
       if ($completed -eq 2) {
+        Wait-EventV2ProbeSend $watchdog $client $cts.Token (Get-EventV2Monotonic)
         Send-EventV2Liveness $client $cts.Token
         $livenessTask = [Threading.Tasks.Task]::Delay($livenessDelayMs,$cts.Token)
         continue
@@ -478,6 +484,7 @@ function Invoke-ConnectedSession($Cfg,[string]$Token) {
 
       $text = Complete-EventV2Receive $receive
       $receive = Start-EventV2Receive $client $cts.Token
+      if (Confirm-EventV2Watchdog $watchdog $text (Get-EventV2Monotonic)) { continue }
       $wake = Parse-EventV2Wake $text
       if ([string]$wake.type -eq "CALL_AVAILABLE") {
         # The event call_id is never execution authority. It only wakes one
@@ -485,6 +492,7 @@ function Invoke-ConnectedSession($Cfg,[string]$Token) {
         Invoke-DurableDrain $Cfg $Token | Out-Null
       } elseif ([string]$wake.type -eq "CALL_TRANSIENT") {
         $transientResult = Invoke-TransientCall $Cfg $wake
+        Wait-EventV2ProbeSend $watchdog $client $cts.Token (Get-EventV2Monotonic)
         Send-EventV2TransientResult $client $cts.Token $transientResult
       }
     }
