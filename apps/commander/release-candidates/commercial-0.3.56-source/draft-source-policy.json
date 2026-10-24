@@ -5,17 +5,17 @@
   "artifacts": {
     "agent/linux.py": {
       "classification": "commercial-candidate",
-      "source_commit": "cdd24758ecbbf93bcad4079a284301dce348dbbf",
+      "source_commit": "21086ebdbefd19d475eec8928b96f10309020a3d",
       "source_path": "apps/commander/release-candidates/commercial-0.3.56-source/agent/linux.py",
       "review_reference": "apps/commander/release-candidates/commercial-0.3.56-source/README.md",
-      "sha256": "855578adb084b79ef6b377dbf15ef1856c2507a316087e55bbf98b31a6883720"
+      "sha256": "1f00947563b4e399a5ee573bf422c83fbb0050a665096bc8c0d9771b487fba1d"
     },
     "agent/windows.ps1": {
       "classification": "commercial-candidate",
-      "source_commit": "cdacc336ca35e9c9b1d7ecf0b06c07141fa80e8b",
+      "source_commit": "30e710e626b5b4795be7a6c5bab99fdeb6466217",
       "source_path": "apps/commander/release-candidates/commercial-0.3.56-source/agent/windows.ps1",
       "review_reference": "apps/commander/release-candidates/commercial-0.3.56-source/README.md",
-      "sha256": "6c6fb0c3754f760a1fe76e97fa8937f3771b151b4ee80dd21a725b3a06518e48"
+      "sha256": "82e300969f33f300585886f6f16a7d10078c3a15d88662c853e012824f0e37fe"
     },
     "install/linux.sh": {
       "classification": "commercial-candidate",
