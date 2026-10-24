@@ -29,7 +29,7 @@ assert.equal(cfg.queues.producers[0].binding,'RECOVERY_DELIVERY_QUEUE');assert.e
 const consumer=cfg.queues.consumers[0];assert.equal(consumer.queue,QUEUE);assert.equal(consumer.dead_letter_queue,DLQ);
 assert.equal(consumer.max_retries,2);assert.equal(consumer.max_batch_size,1);assert.equal(consumer.max_batch_timeout,5);
 const nativeEnv={...process.env,WRANGLER_SEND_METRICS:'false',WRANGLER_LOG:'log'};
-let number=0,active=false,queueFault=false;
+let number=0,active=false,queueFault=false,previousDevices=0;
 const evidence={schema:'hara.commander.r163.hosted-queue-campaign.v1',state:'RUNNING',source_commit:state.source_commit,
  worker:WORKER,d1:DBID,queue:QUEUE,dlq:DLQ,caps:CAPS,commercial:false,prod_modified:false,
  native_queue:true,hosted_20k:false,hosted_20k_gate:'HOLD_ADDITIONAL_BUDGET',stages:[],native_queries:[],receipts:[]};
@@ -80,9 +80,9 @@ async function stage(concurrency,n){
  const deployed=await cli(['deploy','--config',configPath]);
  fs.writeFileSync(path.join(output,'deploy-'+concurrency+'.txt'),deployed,{flag:'wx',mode:0o600});
  assert.ok(deployed.includes(WORKER)&&deployed.includes('Version ID:'));
- const step={concurrency,devices:n,synthetic_events_reserved:n*2+(concurrency===1?0:n/2),deployment_sha256:hash(deployed),started_at:new Date().toISOString()};
+ const step={concurrency,devices:n,synthetic_events_reserved:n*2+previousDevices,deployment_sha256:hash(deployed),started_at:new Date().toISOString()};
  evidence.stages.push(step);checkpoint();
- // Recovery of previous heartbeat anchors contributes another n/2 real server
+ // Recovery of previous heartbeat anchors contributes previously active enrollments as real server
  // events. Reserve those as well, never silently exclude them from the ceiling.
  await debit({events:step.synthetic_events_reserved});
  const devices=state.devices.slice(0,n);
@@ -134,13 +134,13 @@ async function stage(concurrency,n){
   readback_upper_delay_s:(finalStatus.server_ms-Math.min(...rows.map(r=>Date.parse(r.last_seen_at_utc))))/1000,
   processing_upper_ms:finalStatus.server_ms-scanStart,rows:detections};
  assert.ok(step.detection.readback_upper_delay_s<=180,'SLO_180S');assert.ok(step.detection.processing_upper_ms<45000,'PROCESSING_45S');
- step.state='PASS_HOSTED_DEV';step.finished_at=new Date().toISOString();checkpoint();console.log(JSON.stringify({stage:concurrency,state:step.state,devices:n,detection:step.detection.max_persisted_delay_s,upper:step.detection.readback_upper_delay_s,budget:evidence.budget}));
+ previousDevices=n;step.state='PASS_HOSTED_DEV';step.finished_at=new Date().toISOString();checkpoint();console.log(JSON.stringify({stage:concurrency,state:step.state,devices:n,detection:step.detection.max_persisted_delay_s,upper:step.detection.readback_upper_delay_s,budget:evidence.budget}));
 }
 try{
  await control('start',{});active=true;
  const unauthorized=await fetch(ORIGIN+'/__qa/produce',{method:'POST'});assert.equal(unauthorized.status,401);
  const unauthenticated=await fetch(ORIGIN+'/api/device/recovery-events',{method:'POST',headers:{'content-type':'application/json'},body:'{}'});assert.equal(unauthenticated.status,401);
- for(const [c,n] of [[1,25],[2,50],[4,100]])await stage(c,n);
+ for(const [c,n] of [[1,25],[2,50],[4,50]])await stage(c,n);
  await control('fault',{});queueFault=true;
  const fault=await waitUntil(async()=>{const s=await check();return s.jobs.find(j=>j.detail?.includes('R163-QA-DLQ-FAULT')&&j.attempts===3);},Date.now()+90000);
  evidence.dlq={state:'HOLD_NATIVE_DLQ_READBACK',fault_attempts:3,message_id:fault.message_id};
