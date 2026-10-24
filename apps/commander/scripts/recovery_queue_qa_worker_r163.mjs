@@ -2,7 +2,7 @@
 // configuration imports this laboratory control plane or its synthetic faults.
 import worker from '../src/worker.js';
 import {enqueueRecoveryWork,consumeRecoveryWork} from '../src/recovery-fanout.mjs';
-import {budgeted,CAPS} from './recovery_queue_budget_r163.mjs';
+import {budgeted,CAPS,startRecoveryBudget} from './recovery_queue_budget_r163.mjs';
 const QUEUE='hara-commander-r163-recovery-dev-20261024';
 const json=(o,status=200)=>Response.json(o,{status,headers:{'cache-control':'no-store'}});
 const isolated=env=>env.ENVIRONMENT==='DEV'&&env.R163_QA_ISOLATED==='true';
@@ -25,8 +25,7 @@ export default {
      return json({schema:'hara.commander.r163.queue-campaign.v1',budget:row,caps:CAPS,jobs:jobs.results,server_ms:Date.now(),commercial:false});
     }
     if(path==='/__qa/start'&&request.method==='POST'){
-     const now=Date.now();await env.PRODUCT_DB.prepare(`UPDATE r163_qa_budget SET state='ACTIVE',start_ms=?,deadline_ms=?
-      WHERE id=1 AND state='PAUSED' AND start_ms=0`).bind(now,now+CAPS.active_ms).run();return json({state:'STARTED'});
+     const row=await startRecoveryBudget(env.PRODUCT_DB);return json({state:row.state,deadline_ms:row.deadline_ms});
     }
     if(path==='/__qa/stop'&&request.method==='POST'){
      await env.PRODUCT_DB.prepare("UPDATE r163_qa_budget SET state='PAUSED' WHERE id=1").run();return json({state:'PAUSED'});

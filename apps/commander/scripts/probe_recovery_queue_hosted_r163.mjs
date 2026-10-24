@@ -56,7 +56,7 @@ const literal=x=>x===null?'NULL':typeof x==='number'?String(x):"'"+String(x).rep
 async function query(sql,{sink=false,maxWrites=0,maxReads=20000}={}){
  if(active){const s=await check();assert.ok(s.budget.rows_written+s.budget.reserved_write+maxWrites+16<CAPS.writes);
   assert.ok(s.budget.rows_read+s.budget.reserved_read+maxReads+16<CAPS.reads);}
- const file=path.join(output,'query-'+String(++number).padStart(4,'0')+'.json');
+ const file=path.join(output,'query-attempt-'+(state.attempt||1)+'-'+String(++number).padStart(4,'0')+'.json');
  const o=JSON.parse(await cli(['d1','execute',sink?'hara-commander-r163-notify-sink-dev-20261024':DB,'--remote','--config',sink?state.sink_config:configPath,'--json','--command',sql]));
  assert.ok(o.length&&o.every(r=>r.success===true));fs.writeFileSync(file,JSON.stringify(o,null,2)+'\n',{flag:'wx',mode:0o600});
  const reads=o.reduce((n,r)=>n+r.meta.rows_read,0),writes=o.reduce((n,r)=>n+r.meta.rows_written,0);
@@ -78,7 +78,7 @@ async function stage(concurrency,n){
  cfg.queues.consumers[0].max_concurrency=concurrency;cfg.vars.COMMANDER_RECOVERY_SCAN_CONCURRENCY=String(concurrency);
  fs.writeFileSync(configPath,JSON.stringify(cfg,null,2)+'\n',{mode:0o600});
  const deployed=await cli(['deploy','--config',configPath]);
- fs.writeFileSync(path.join(output,'deploy-'+concurrency+'.txt'),deployed,{flag:'wx',mode:0o600});
+ fs.writeFileSync(path.join(output,'deploy-'+concurrency+'-attempt-'+(state.attempt||1)+'.txt'),deployed,{flag:'wx',mode:0o600});
  assert.ok(deployed.includes(WORKER)&&deployed.includes('Version ID:'));
  const step={concurrency,devices:n,synthetic_events_reserved:n*2+previousDevices,deployment_sha256:hash(deployed),started_at:new Date().toISOString()};
  evidence.stages.push(step);checkpoint();
@@ -137,7 +137,7 @@ async function stage(concurrency,n){
  previousDevices=n;step.state='PASS_HOSTED_DEV';step.finished_at=new Date().toISOString();checkpoint();console.log(JSON.stringify({stage:concurrency,state:step.state,devices:n,detection:step.detection.max_persisted_delay_s,upper:step.detection.readback_upper_delay_s,budget:evidence.budget}));
 }
 try{
- await control('start',{});active=true;
+ assert.equal((await control('start',{})).state,'ACTIVE');active=true;
  const unauthorized=await fetch(ORIGIN+'/__qa/produce',{method:'POST'});assert.equal(unauthorized.status,401);
  const unauthenticated=await fetch(ORIGIN+'/api/device/recovery-events',{method:'POST',headers:{'content-type':'application/json'},body:'{}'});assert.equal(unauthenticated.status,401);
  for(const [c,n] of [[1,25],[2,50],[4,50]])await stage(c,n);

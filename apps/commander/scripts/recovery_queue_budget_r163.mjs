@@ -66,3 +66,14 @@ export async function budgeted(env,{reads,writes},fn){
  }
  return result;
 }
+export async function startRecoveryBudget(db,now=Date.now()){
+ // Resume a paused attempt in the same window. Never renew a deadline, reset
+ // counters/reservations, or reactivate an anomalous/expired campaign.
+ const row=await db.prepare(`UPDATE r163_qa_budget SET state='ACTIVE',
+  start_ms=CASE WHEN start_ms=0 THEN ? ELSE start_ms END,
+  deadline_ms=CASE WHEN start_ms=0 THEN ? ELSE deadline_ms END
+  WHERE id=1 AND state='PAUSED' AND (start_ms=0 OR deadline_ms>?)
+   AND rows_read+reserved_read<? AND rows_written+reserved_write<? AND queue_ops_upper<? AND events_reserved<=?
+  RETURNING *`).bind(now,now+CAPS.active_ms,now,CAPS.reads,CAPS.writes,CAPS.queue,CAPS.events).first();
+ if(!row)throw Error('HOLD_CAMPAIGN_NOT_RESUMABLE');return row;
+}

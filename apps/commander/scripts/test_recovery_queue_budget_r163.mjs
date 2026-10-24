@@ -68,3 +68,21 @@ test('versioned config is restricted to the exact dedicated QA resources',async(
  assert.equal(c.queues.producers[0].binding,'RECOVERY_DELIVERY_QUEUE');
  assert.equal(c.vars.DEVICE_EVENT_V2_ENABLED,'false');
 });
+test('resume retains original deadline, counters and reserved event budget',async t=>{
+ const {startRecoveryBudget}=await import('./recovery_queue_budget_r163.mjs');
+ const f=fixture(t,{state:'PAUSED',writes:123});f.db.exec('UPDATE r163_qa_budget SET events_reserved=50');
+ const before=f.row();const row=await startRecoveryBudget(f.env.PRODUCT_DB,Date.now());
+ assert.equal(row.state,'ACTIVE');assert.equal(row.deadline_ms,before.deadline_ms);assert.equal(row.rows_written,123);assert.equal(row.events_reserved,50);
+});
+for(const fields of [{state:'STOPPED'},{state:'PAUSED',deadline:Date.now()-1},{state:'PAUSED',writes:CAPS.writes}])
+test('expired/anomalous/spent campaign cannot resume '+JSON.stringify(fields),async t=>{
+ const {startRecoveryBudget}=await import('./recovery_queue_budget_r163.mjs');const f=fixture(t,fields);
+ await assert.rejects(()=>startRecoveryBudget(f.env.PRODUCT_DB),/HOLD_CAMPAIGN_NOT_RESUMABLE/);
+});
+test('synthetic enrollment uses the exact existing base64url resolver contract',async()=>{
+ const {enrollmentCredentialHash,repairSyntheticCredentialSql}=await import('./recovery_queue_qa_fixture_r163.mjs');
+ const {createHash}=await import('node:crypto');
+ assert.equal(await enrollmentCredentialHash('synthetic-credential'),createHash('sha256').update('synthetic-credential').digest('base64url'));
+ assert.notEqual(await enrollmentCredentialHash('synthetic-credential'),createHash('sha256').update('synthetic-credential').digest('hex'));
+ await assert.rejects(()=>repairSyntheticCredentialSql([],'PROD'),/HOLD_SYNTHETIC_FIXTURE_SCOPE/);
+});
