@@ -1385,8 +1385,14 @@ public sealed class HaraWindowsProcessSession : IDisposable {
     Child = new Process();
     Child.StartInfo.FileName = "powershell.exe";
     string bootstrap=Encoding.UTF8.GetString(Convert.FromBase64String("JFByb2dyZXNzUHJlZmVyZW5jZT0nU2lsZW50bHlDb250aW51ZSc7W0NvbnNvbGVdOjpJbnB1dEVuY29kaW5nPVtUZXh0LlVURjhFbmNvZGluZ106Om5ldygkZmFsc2UpO1tDb25zb2xlXTo6T3V0cHV0RW5jb2Rpbmc9W1RleHQuVVRGOEVuY29kaW5nXTo6bmV3KCRmYWxzZSk7JE91dHB1dEVuY29kaW5nPVtUZXh0LlVURjhFbmNvZGluZ106Om5ldygkZmFsc2UpOw=="));
+    // EncodedCommand normally maps a nonzero native exit to 1. Preserve the
+    // final native exit code, while a successful final command still exits 0.
+    // The newline also prevents a trailing comment swallowing the epilogue.
+    string oneShotScript = bootstrap + "\n& {\n" + command + "\n" +
+      "if (`$?) { exit 0 }\n" +
+      "if (`$LASTEXITCODE -is [int] -and `$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }\nexit 1\n}\n";
     Child.StartInfo.Arguments = oneShot
-      ? "-NoLogo -NoProfile -NonInteractive -EncodedCommand " + Convert.ToBase64String(Encoding.Unicode.GetBytes(bootstrap+command))
+      ? "-NoLogo -NoProfile -NonInteractive -EncodedCommand " + Convert.ToBase64String(Encoding.Unicode.GetBytes(oneShotScript))
       : "-NoLogo -NoProfile -NonInteractive -Command -";
     Child.StartInfo.UseShellExecute = false;
     Child.StartInfo.CreateNoWindow = true;

@@ -1,5 +1,13 @@
 param([string]$AgentPath,[string]$InstallerPath)
 $ErrorActionPreference='Stop'
+if([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT -or
+   $PSVersionTable.PSVersion.Major -ne 5 -or $PSVersionTable.PSVersion.Minor -ne 1){
+ throw 'WINDOWS_POWERSHELL_51_REQUIRED'
+}
+$nativeOs=Get-CimInstance -ClassName Win32_OperatingSystem
+if([int]$nativeOs.BuildNumber -lt 22000){throw 'WINDOWS_11_REQUIRED'}
+$effectivePolicy=Get-ExecutionPolicy
+if([string]$effectivePolicy -eq 'Bypass'){throw 'BYPASS_POLICY_REFUSED'}
 $qa=Join-Path ([IO.Path]::GetTempPath()) ('hara-commercial-056-native-'+[guid]::NewGuid().ToString('N'))
 $priorLocal=$env:LOCALAPPDATA
 $results=New-Object Collections.Generic.List[string]
@@ -24,6 +32,11 @@ try {
  . ([scriptblock]::Create($source.Substring(0,$cut)))
  Invoke-AgentSelfTest
  Check $true 'AGENT_SELF_TEST'
+ $synthetic='qa-only-'+[guid]::NewGuid().ToString('N')
+ $protected=ConvertFrom-SecureString (ConvertTo-SecureString $synthetic -AsPlainText -Force)
+ Check ((Get-PlainText (ConvertTo-SecureString $protected)) -ceq $synthetic) 'NATIVE_DPAPI_ROUNDTRIP'
+ $synthetic=$null;$protected=$null
+ Check ($null -ne (Get-Command Get-ScheduledTask -ErrorAction Stop)) 'TASK_SCHEDULER_CMDLET_AVAILABLE_ONLY'
  $cfg=[pscustomobject]@{base_url='https://commander.invalid';device_id='device-a';tenant_id='tenant-a';architecture='test';encrypted_device_token='synthetic-protected-a';approval_mode='ASK_EVERY_ACTION'}
  New-Item -ItemType Directory -Path $Root -Force | Out-Null
  $cfg | ConvertTo-Json -Compress | Set-Content -LiteralPath $ConfigPath -Encoding UTF8
@@ -60,6 +73,27 @@ try {
  $receipt=New-Receipt $cfg $call 'PASS' @{}
  Check ((Get-Receipt $receipt $cfg).device_id -ceq 'device-a') 'BOUND_RECEIPT_READ'
  Denied {Get-Receipt $receipt $other} 'RECEIPT_ENROLLMENT_MISMATCH'
+ # Native process.run envelope, with a synthetic enrollment and no network.
+ $processCfg=$cfg | Select-Object *;$processCfg.approval_mode='PERSISTENT_TRUSTED'
+ $processCfg | ConvertTo-Json -Compress | Set-Content -LiteralPath $ConfigPath -Encoding UTF8
+ foreach($expected in @(0,7)){
+  $processCall=[pscustomobject]@{call_id=('qa-native-'+$expected);request_id=('qa-native-'+$expected);tool_id='hara.process.run';payload=[pscustomobject]@{command=('cmd.exe /d /c exit '+$expected);cwd=$qa;timeout_ms=5000;max_lines=20}}
+  $response=Invoke-Tool $processCfg $processCall
+  $inner=$response.result.stdout | ConvertFrom-Json
+  Check ($inner.exit_code -eq $expected -and $response.result.process_exit_code -eq $expected) ('NATIVE_PROCESS_RUN_ENVELOPE_EXIT_'+$expected)
+  Check (-not $inner.timed_out -and -not $inner.session_retained) ('NATIVE_PROCESS_RUN_REAPED_'+$expected)
+ }
+ $cfg | ConvertTo-Json -Compress | Set-Content -LiteralPath $ConfigPath -Encoding UTF8
+ Write-ConsoleEvent 'OLD_SYNTHETIC_EVENT' $null 'PASS'
+ $historyBefore=[IO.File]::ReadAllBytes($ConsoleEvents)
+ [long]$liveCursor=Get-ConsoleStreamCursor
+ Check (@(Read-NewConsoleEvents ([ref]$liveCursor)).Count -eq 0) 'REOPENED_FEED_STARTS_AT_EOF'
+ Write-ConsoleEvent 'NEW_SYNTHETIC_EVENT' $null 'PASS'
+ $fresh=@(Read-NewConsoleEvents ([ref]$liveCursor))
+ Check ($fresh.Count -eq 1 -and $fresh[0].event -ceq 'NEW_SYNTHETIC_EVENT') 'FEED_NEW_EVENT_ONCE'
+ Check (@(Read-NewConsoleEvents ([ref]$liveCursor)).Count -eq 0) 'FEED_NO_DUPLICATE'
+ $historyAfter=[IO.File]::ReadAllBytes($ConsoleEvents)
+ Check ([Convert]::ToBase64String($historyBefore) -ceq [Convert]::ToBase64String($historyAfter,0,$historyBefore.Length)) 'FEED_PRESERVES_HISTORY_BYTES'
  $legacy=Join-Path $Root 'console-events.jsonl'
  [IO.File]::WriteAllText($legacy,'{"at_utc":"2026-10-23T00:00:00Z","event":"OLD","action_summary":"synthetic-private-do-not-display"}'+"`n")
  $legacyHash=(Get-FileHash $legacy -Algorithm SHA256).Hash
@@ -96,7 +130,7 @@ try {
  [IO.File]::WriteAllText($Agent,'$AgentVersion = "0.3.55"')
  Assert-AgentVersionFloor '0.3.56'
  Check $true 'INSTALLER_MONOTONIC_UPGRADE_ALLOWED'
- @{state='PASS_NATIVE_WINDOWS_NO_INSTALL_NO_PAIR';ps_version=$PSVersionTable.PSVersion.ToString();checks=$results.Count;cases=@($results);installed=$false;paired=$false;network_used=$false} | ConvertTo-Json -Depth 5
+ @{state='PASS_NATIVE_WINDOWS_NO_INSTALL_NO_PAIR';windows_build=[string]$nativeOs.BuildNumber;execution_policy=[string]$effectivePolicy;task_lifecycle_accepted=$false;reboot_accepted=$false;ps_version=$PSVersionTable.PSVersion.ToString();checks=$results.Count;cases=@($results);installed=$false;paired=$false;network_used=$false} | ConvertTo-Json -Depth 5
 } finally {
  $env:LOCALAPPDATA=$priorLocal
  if(Test-Path $qa){Remove-Item -LiteralPath $qa -Recurse -Force}
