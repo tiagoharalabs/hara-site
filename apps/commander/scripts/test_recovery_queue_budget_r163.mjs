@@ -64,8 +64,11 @@ test('versioned config is restricted to the exact dedicated QA resources',async(
  assert.equal(c.name,'hara-commander-r163-canary-20261024');assert.equal(c.vars.ENVIRONMENT,'DEV');
  assert.equal(c.routes,undefined);assert.equal(c.vars.R163_QA_AUTOMATIC_CRON,'false');
  assert.equal(c.d1_databases.length,1);assert.equal(c.d1_databases[0].database_id,'e769835e-0748-4f41-b868-c7c76b627fe9');
- assert.deepEqual(c.queues.consumers,[{queue:'hara-commander-r163-recovery-dev-20261024',max_batch_size:1,max_batch_timeout:5,max_concurrency:1,max_retries:2,dead_letter_queue:'hara-commander-r163-recovery-dlq-dev-20261024'}]);
+ assert.deepEqual(c.queues.consumers.slice(0,1),[{queue:'hara-commander-r163-recovery-dev-20261024',max_batch_size:1,max_batch_timeout:5,max_concurrency:1,max_retries:2,dead_letter_queue:'hara-commander-r163-recovery-dlq-dev-20261024'}]);
  assert.equal(c.queues.producers[0].binding,'RECOVERY_DELIVERY_QUEUE');
+ assert.equal(c.queues.consumers[1].queue,c.queues.consumers[0].dead_letter_queue);
+ assert.equal(c.queues.consumers[1].max_concurrency,1);
+ assert.equal(c.queues.consumers[1].dead_letter_queue,undefined);
  assert.equal(c.vars.DEVICE_EVENT_V2_ENABLED,'false');
 });
 test('resume retains original deadline, counters and reserved event budget',async t=>{

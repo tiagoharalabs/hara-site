@@ -1,27 +1,60 @@
 {
- "name":"hara-commander-r163-canary-20261024",
- "main":"./scripts/recovery_queue_qa_worker_r163.mjs",
- "compatibility_date":"2026-09-21",
- "workers_dev":true,
- "preview_urls":false,
- "vars":{
-  "ENVIRONMENT":"DEV","STORAGE_MODE":"REMOTE_DEV",
-  "DEVICE_EVENT_V2_ENABLED":"false",
-  "COMMANDER_RECOVERY_ALERTS_ENABLED":"true",
-  "COMMANDER_RECOVERY_FANOUT_ENABLED":"true",
-  "COMMANDER_RECOVERY_SCAN_CONCURRENCY":"1",
-  "COMMANDER_RECOVERY_SCAN_BATCHED":"true",
-  "COMMANDER_RECOVERY_QUEUE_RETRY_SECONDS":"15",
-  "COMMANDER_RECOVERY_DELIVERY_ENABLED":"true",
-  "COMMANDER_RECOVERY_DELIVERY_ALLOWED_ORIGINS":"[\"https://hara-commander-r163-sink-20261024.tiago-sartori.workers.dev\"]",
-  "COMMANDER_RECOVERY_DELIVERY_TARGETS":"[{\"tenant_id\":\"HARA-R163-QUEUE-DEV-20261024\",\"id\":\"qa-queue-163\",\"kind\":\"QA_RECIPIENT_V1\",\"origin\":\"https://hara-commander-r163-sink-20261024.tiago-sartori.workers.dev\",\"writePath\":\"/notify\",\"readPath\":\"/receipt/\",\"writeSecret\":\"R163_QA_WRITE\",\"readSecret\":\"R163_QA_READ\"}]",
-  "R163_QA_ISOLATED":"true","R163_QA_AUTOMATIC_CRON":"false",
-  "R163_QA_CONTROL_SHA256":"REQUIRES_PRIVATE_CAMPAIGN_SHA256"
- },
- "d1_databases":[{"binding":"PRODUCT_DB","database_name":"hara-commander-r163-canary-dev-20261024","database_id":"e769835e-0748-4f41-b868-c7c76b627fe9"}],
- "triggers":{"crons":["* * * * *"]},
- "queues":{
-  "producers":[{"binding":"RECOVERY_DELIVERY_QUEUE","queue":"hara-commander-r163-recovery-dev-20261024"}],
-  "consumers":[{"queue":"hara-commander-r163-recovery-dev-20261024","max_batch_size":1,"max_batch_timeout":5,"max_concurrency":1,"max_retries":2,"dead_letter_queue":"hara-commander-r163-recovery-dlq-dev-20261024"}]
- }
+  "name": "hara-commander-r163-canary-20261024",
+  "main": "./scripts/recovery_queue_qa_worker_r163.mjs",
+  "compatibility_date": "2026-09-21",
+  "workers_dev": true,
+  "preview_urls": false,
+  "vars": {
+    "ENVIRONMENT": "DEV",
+    "STORAGE_MODE": "REMOTE_DEV",
+    "DEVICE_EVENT_V2_ENABLED": "false",
+    "COMMANDER_RECOVERY_ALERTS_ENABLED": "true",
+    "COMMANDER_RECOVERY_FANOUT_ENABLED": "true",
+    "COMMANDER_RECOVERY_SCAN_CONCURRENCY": "1",
+    "COMMANDER_RECOVERY_SCAN_BATCHED": "true",
+    "COMMANDER_RECOVERY_QUEUE_RETRY_SECONDS": "15",
+    "COMMANDER_RECOVERY_DELIVERY_ENABLED": "true",
+    "COMMANDER_RECOVERY_DELIVERY_ALLOWED_ORIGINS": "[\"https://hara-commander-r163-sink-20261024.tiago-sartori.workers.dev\"]",
+    "COMMANDER_RECOVERY_DELIVERY_TARGETS": "[{\"tenant_id\":\"HARA-R163-QUEUE-DEV-20261024\",\"id\":\"qa-queue-163\",\"kind\":\"QA_RECIPIENT_V1\",\"origin\":\"https://hara-commander-r163-sink-20261024.tiago-sartori.workers.dev\",\"writePath\":\"/notify\",\"readPath\":\"/receipt/\",\"writeSecret\":\"R163_QA_WRITE\",\"readSecret\":\"R163_QA_READ\"}]",
+    "R163_QA_ISOLATED": "true",
+    "R163_QA_AUTOMATIC_CRON": "false",
+    "R163_QA_CONTROL_SHA256": "REQUIRES_PRIVATE_CAMPAIGN_SHA256"
+  },
+  "d1_databases": [
+    {
+      "binding": "PRODUCT_DB",
+      "database_name": "hara-commander-r163-canary-dev-20261024",
+      "database_id": "e769835e-0748-4f41-b868-c7c76b627fe9"
+    }
+  ],
+  "triggers": {
+    "crons": [
+      "* * * * *"
+    ]
+  },
+  "queues": {
+    "producers": [
+      {
+        "binding": "RECOVERY_DELIVERY_QUEUE",
+        "queue": "hara-commander-r163-recovery-dev-20261024"
+      }
+    ],
+    "consumers": [
+      {
+        "queue": "hara-commander-r163-recovery-dev-20261024",
+        "max_batch_size": 1,
+        "max_batch_timeout": 5,
+        "max_concurrency": 1,
+        "max_retries": 2,
+        "dead_letter_queue": "hara-commander-r163-recovery-dlq-dev-20261024"
+      },
+      {
+        "queue": "hara-commander-r163-recovery-dlq-dev-20261024",
+        "max_batch_size": 1,
+        "max_batch_timeout": 5,
+        "max_concurrency": 1,
+        "max_retries": 2
+      }
+    ]
+  }
 }

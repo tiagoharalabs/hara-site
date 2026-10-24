@@ -2,8 +2,10 @@
 // configuration imports this laboratory control plane or its synthetic faults.
 import worker from '../src/worker.js';
 import {enqueueRecoveryWork,consumeRecoveryWork} from '../src/recovery-fanout.mjs';
+import {acceptR163Dlq} from './recovery_queue_dlq_r163.mjs';
 import {budgeted,CAPS,startRecoveryBudget} from './recovery_queue_budget_r163.mjs';
 const QUEUE='hara-commander-r163-recovery-dev-20261024';
+const DLQ='hara-commander-r163-recovery-dlq-dev-20261024';
 const json=(o,status=200)=>Response.json(o,{status,headers:{'cache-control':'no-store'}});
 const isolated=env=>env.ENVIRONMENT==='DEV'&&env.R163_QA_ISOLATED==='true';
 async function auth(request,env){
@@ -22,7 +24,8 @@ export default {
     if(path==='/__qa/status'&&request.method==='GET'){
      const row=await env.PRODUCT_DB.prepare('SELECT * FROM r163_qa_budget WHERE id=1').first();
      const jobs=await env.PRODUCT_DB.prepare('SELECT * FROM r163_qa_jobs ORDER BY message_id LIMIT 300').all();
-     return json({schema:'hara.commander.r163.queue-campaign.v1',budget:row,caps:CAPS,jobs:jobs.results,server_ms:Date.now(),commercial:false});
+     const dlq=await env.PRODUCT_DB.prepare('SELECT * FROM r163_qa_dlq ORDER BY observed_ms LIMIT 100').all();
+     return json({schema:'hara.commander.r163.queue-campaign.v1',budget:row,caps:CAPS,jobs:jobs.results,dlq:dlq.results,server_ms:Date.now(),commercial:false});
     }
     if(path==='/__qa/start'&&request.method==='POST'){
      const row=await startRecoveryBudget(env.PRODUCT_DB);return json({state:row.state,deadline_ms:row.deadline_ms});
@@ -61,8 +64,11 @@ export default {
   if(isolated(env)&&env.R163_QA_AUTOMATIC_CRON==='true')ctx.waitUntil(produce(env));
  },
  async queue(batch,env){
-  if(!isolated(env)||batch.queue!==QUEUE)throw Error('HOLD_QA_QUEUE_IDENTITY');
+  if(!isolated(env)||![QUEUE,DLQ].includes(batch.queue))throw Error('HOLD_QA_QUEUE_IDENTITY');
   if(batch.messages.length!==1)throw Error('HOLD_QA_BATCH_SIZE');
+  if(batch.queue===DLQ){
+   await acceptR163Dlq(batch,env);return;
+  }
   const message=batch.messages[0],body=message.body;
   const fault=body?.kind==='SCAN'&&body.device_ids?.length===1&&body.device_ids[0]==='R163-QA-DLQ-FAULT';
   const n=(body?.device_ids||body?.event_ids||[]).length;

@@ -143,8 +143,10 @@ try{
  for(const [c,n] of [[1,25],[2,50],[4,50]])await stage(c,n);
  await control('fault',{});queueFault=true;
  const fault=await waitUntil(async()=>{const s=await check();return s.jobs.find(j=>j.detail?.includes('R163-QA-DLQ-FAULT')&&j.attempts===3);},Date.now()+90000);
- evidence.dlq={state:'HOLD_NATIVE_DLQ_READBACK',fault_attempts:3,message_id:fault.message_id};
- evidence.budget=(await check()).budget;evidence.state='PASS_CAMPAIGN_PENDING_DLQ_READBACK';checkpoint();
+ const expectedBody={schema:'hara.commander.recovery-work.v1',kind:'SCAN',device_ids:['R163-QA-DLQ-FAULT']};
+ const receipt=await waitUntil(async()=>{const s=await check();return s.dlq.find(r=>r.body_sha256===hash(JSON.stringify(expectedBody))&&r.queue_name===DLQ);},Date.now()+90000);
+ evidence.dlq={state:'PASS_NATIVE_DLQ_READBACK',fault_attempts:3,source_message_id:fault.message_id,receipt};
+ evidence.budget=(await check()).budget;evidence.state='PASS_HOSTED_QUEUE_DLQ_AND_SLO';checkpoint();
  console.log(JSON.stringify({state:evidence.state,evidence_sha256:hash(fs.readFileSync(path.join(output,'campaign-evidence.json'))),output}));
 }catch(error){
  evidence.state='FAIL_STOPPED';evidence.error={type:error.constructor.name,message:String(error.message).slice(0,600)};checkpoint();

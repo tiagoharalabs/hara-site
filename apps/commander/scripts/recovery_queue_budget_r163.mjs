@@ -9,7 +9,9 @@ export const BUDGET_SCHEMA=`CREATE TABLE IF NOT EXISTS r163_qa_budget(
  invocations INTEGER NOT NULL DEFAULT 0,anomaly TEXT);
  CREATE TABLE IF NOT EXISTS r163_qa_jobs(
  message_id TEXT PRIMARY KEY,kind TEXT NOT NULL,attempts INTEGER NOT NULL DEFAULT 0,
- outcome TEXT NOT NULL,completed_ms INTEGER,detail TEXT);`;
+ outcome TEXT NOT NULL,completed_ms INTEGER,detail TEXT);
+ CREATE TABLE IF NOT EXISTS r163_qa_dlq(
+ message_id TEXT PRIMARY KEY,queue_name TEXT NOT NULL,body_sha256 TEXT NOT NULL,observed_ms INTEGER NOT NULL);`;
 export function withinBudget(row,now=Date.now()){
  return row&&row.state==='ACTIVE'&&now<row.deadline_ms&&
   row.rows_read+row.reserved_read<CAPS.reads&&row.rows_written+row.reserved_write<CAPS.writes&&
