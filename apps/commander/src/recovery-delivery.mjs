@@ -97,11 +97,17 @@ async function deliver(env,target,event,fetchImpl,signal,attempt){
  if(!qa)validateReceipt(accepted,target,event,hash);
  return validateReceipt(await readJson(await read()),target,event,hash,accepted.receipt_ref);
 }
-export async function dispatchRecoveryDeliveries(env,{fetchImpl=fetch,nowMs=Date.now(),maxEvents=10,timeoutMs=5000}={}){
+export async function dispatchRecoveryDeliveries(env,{fetchImpl=fetch,nowMs=Date.now(),maxEvents=10,timeoutMs=5000,eventIds}={}){
  const summary={state:'DISABLED',staged:0,attempted:0,delivered:0,held:0,exhausted:0};
  if(env?.COMMANDER_RECOVERY_DELIVERY_ENABLED!=='true')return summary;
  let targets;
  try{targets=targetsFor(env);}catch{return {...summary,state:'HOLD_RECOVERY_TARGET_CONFIG'};}
+ // An internal QA/job selection is a restriction, never a new authority. Keep
+ // canonical predecessor fences even when a predecessor is outside this list.
+ if(eventIds!==undefined&&(!Array.isArray(eventIds)||!eventIds.length||eventIds.length>10||
+    eventIds.some(id=>typeof id!=='string'||!/^HARA-REC-[0-9a-f]{48}$/.test(id))||
+    new Set(eventIds).size!==eventIds.length))throw Error('RECOVERY_DELIVERY_SCOPE_INVALID');
+ const scope=eventIds||[],scopeClause=alias=>scope.length?` AND ${alias}event_id IN (${scope.map(()=>'?').join(',')})`:'';
  if(!Number.isSafeInteger(nowMs)||nowMs<0||!Number.isSafeInteger(maxEvents)||maxEvents<1||maxEvents>10||
     !Number.isSafeInteger(timeoutMs)||timeoutMs<1||timeoutMs>5000)throw Error('RECOVERY_DELIVERY_BUDGET_INVALID');
  summary.state='COMPLETE';const start=performance.now();
@@ -111,8 +117,8 @@ export async function dispatchRecoveryDeliveries(env,{fetchImpl=fetch,nowMs=Date
   const candidates=await env.PRODUCT_DB.prepare(`SELECT r.* FROM commander_device_recovery_events r
    JOIN commander_devices d ON d.device_id=r.device_id AND d.tenant_id=r.tenant_id
    WHERE r.tenant_id=? AND d.state='ACTIVE' AND d.revoked_at_utc IS NULL
-    AND NOT EXISTS(SELECT 1 FROM recovery_delivery_outbox o WHERE o.event_id=r.event_id AND o.binding_id=?)
-   ORDER BY r.persisted_at_utc,r.device_id,r.incident_id,r.generation,r.sequence,r.event_id LIMIT ?`).bind(target.tenant_id,target.id,maxEvents).all();
+    AND NOT EXISTS(SELECT 1 FROM recovery_delivery_outbox o WHERE o.event_id=r.event_id AND o.binding_id=?)${scopeClause('r.')}
+   ORDER BY r.persisted_at_utc,r.device_id,r.incident_id,r.generation,r.sequence,r.event_id LIMIT ?`).bind(target.tenant_id,target.id,...scope,maxEvents).all();
   for(const row of candidates.results||[]){
    if(!recoveryDeviceEnabled(env,row)||!envelope(row,target)){summary.held++;continue;}
    const inserted=await env.PRODUCT_DB.prepare(`INSERT OR IGNORE INTO recovery_delivery_outbox
@@ -120,20 +126,20 @@ export async function dispatchRecoveryDeliveries(env,{fetchImpl=fetch,nowMs=Date
    summary.staged+=Number(inserted.meta?.changes||0);
   }
   await env.PRODUCT_DB.prepare(`UPDATE recovery_delivery_outbox SET state='EXHAUSTED',lease_until_ms=0
-   WHERE binding_id=? AND tenant_id=? AND state='INFLIGHT' AND attempts>=8 AND lease_until_ms<=?`).bind(target.id,target.tenant_id,nowMs).run();
+   WHERE binding_id=? AND tenant_id=? AND state='INFLIGHT' AND attempts>=8 AND lease_until_ms<=?${scopeClause('')}`).bind(target.id,target.tenant_id,nowMs,...scope).run();
   while(summary.attempted<maxEvents&&performance.now()-start<20000){
    const row=await env.PRODUCT_DB.prepare(`UPDATE recovery_delivery_outbox SET state='INFLIGHT',attempts=attempts+1,lease_until_ms=?
     WHERE event_id=(SELECT o.event_id FROM recovery_delivery_outbox o
      JOIN commander_device_recovery_events r ON r.event_id=o.event_id AND r.tenant_id=o.tenant_id
      JOIN commander_devices d ON d.device_id=r.device_id AND d.tenant_id=r.tenant_id
      WHERE o.binding_id=? AND o.tenant_id=? AND o.attempts<8 AND d.state='ACTIVE' AND d.revoked_at_utc IS NULL
-      AND ((o.state IN ('PENDING','RETRY') AND o.next_attempt_ms<=?) OR (o.state='INFLIGHT' AND o.lease_until_ms<=?))
+      AND ((o.state IN ('PENDING','RETRY') AND o.next_attempt_ms<=?) OR (o.state='INFLIGHT' AND o.lease_until_ms<=?))${scopeClause('o.')}
       AND NOT EXISTS(SELECT 1 FROM commander_device_recovery_events pr
        LEFT JOIN recovery_delivery_outbox p ON p.event_id=pr.event_id AND p.binding_id=o.binding_id AND p.tenant_id=o.tenant_id
        WHERE pr.tenant_id=r.tenant_id AND pr.device_id=r.device_id AND pr.incident_id=r.incident_id
         AND pr.generation=r.generation AND pr.sequence<r.sequence AND COALESCE(p.state,'MISSING')<>'DELIVERED')
      ORDER BY r.persisted_at_utc,r.event_id LIMIT 1) AND binding_id=? AND tenant_id=? RETURNING *`)
-    .bind(nowMs+timeoutMs+10000,target.id,target.tenant_id,nowMs,nowMs,target.id,target.tenant_id).first();
+    .bind(nowMs+timeoutMs+10000,target.id,target.tenant_id,nowMs,nowMs,...scope,target.id,target.tenant_id).first();
    if(!row)break;
    summary.attempted++;
    const source=await env.PRODUCT_DB.prepare(`SELECT r.*,d.state AS device_state,d.revoked_at_utc FROM commander_device_recovery_events r
