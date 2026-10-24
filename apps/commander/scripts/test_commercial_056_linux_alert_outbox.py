@@ -83,9 +83,9 @@ class RecoveryOutboxTests(unittest.TestCase):
             self.assertEqual(self.outbox.send_once(authorized=False)['state'], 'PAUSED')
             send.assert_not_called()
         with patch.object(self.a, 'post_json', side_effect=urllib.error.HTTPError('https://commander.invalid', 403, 'fixture', None, None)):
-            self.assertEqual(self.outbox.send_once()['state'], 'REVOKED')
+            self.assertEqual(self.outbox.send_once()['state'], 'BLOCKED_AUTH')
         with patch.object(self.a, 'post_json') as send:
-            self.assertEqual(self.a.RecoveryEventOutbox(self.cfg).send_once()['state'], 'REVOKED')
+            self.assertEqual(self.a.RecoveryEventOutbox(self.cfg).send_once()['state'], 'BLOCKED_AUTH')
             send.assert_not_called()
 
     def test_outbox_is_separate_from_tool_journal_and_has_no_credential_bytes(self):
@@ -131,6 +131,38 @@ class RecoveryOutboxTests(unittest.TestCase):
         with patch.object(self.a.os, 'setsid'), patch.object(self.a.signal, 'signal'), patch.object(self.a, 'cleanup_process_sessions'):
             self.a._relay_worker_entry(target, self.cfg, channel)
         self.assertEqual(observed, [self.outbox.path.parent / 'operations.sqlite3'])
+
+    def test_recovery_route_denial_cannot_revoke_the_base_agent(self):
+        messages = []
+        def progress(tag, **fields):
+            messages.append(tag)
+            if tag == 'READY': raise KeyboardInterrupt
+        with patch.object(self.a, 'assert_current_enrollment'), \
+             patch.object(self.a, 'effective_approval_mode', return_value='PERSISTENT_TRUSTED'), \
+             patch.object(self.a.RecoveryEventOutbox, 'send_once', return_value={'state':'BLOCKED_AUTH'}), \
+             patch.object(self.a, '_relay_progress', side_effect=progress):
+            try: self.a._relay_alert_worker(self.cfg, None)
+            except KeyboardInterrupt: pass
+        self.assertNotIn('REVOKED', messages, 'route admission is distinct from enrollment revocation')
+        self.assertIn('ALERTS_BLOCKED', messages)
+
+    def test_spawn_restores_private_parent_state_root(self):
+        expected_root = Path(self.tmp.name) / 'parent-selected-state'
+        self.a.DATA_DIR = Path(self.tmp.name) / 'fresh-import-default'
+        observed = []
+        config = {**self.cfg, '_relay_state_root': str(expected_root)}
+        with patch.object(self.a.os, 'setsid'), patch.object(self.a.signal, 'signal'), patch.object(self.a, 'cleanup_process_sessions'):
+            self.a._relay_worker_entry(lambda c, pipe: observed.append(self.a.OPERATIONS_DB_FILE), config, unittest.mock.Mock())
+        self.assertEqual(observed, [expected_root / 'enrollments' / self.a._enrollment_context(self.cfg) / 'operations.sqlite3'])
+        self.assertFalse((Path(self.tmp.name) / 'fresh-import-default').exists())
+
+    def test_exhausted_alert_remains_visible_after_restart(self):
+        self.outbox.enqueue('executor', 'STALLED')
+        with patch.object(self.a, 'post_json', side_effect=TimeoutError):
+            for attempt in range(33): self.outbox.send_once(now_ms=10**12+attempt*3600000)
+        with patch.object(self.a, 'post_json') as send:
+            self.assertEqual(self.a.RecoveryEventOutbox(self.cfg).send_once(now_ms=10**12+10**9)['state'], 'EXHAUSTED')
+            send.assert_not_called()
 
 
 if __name__ == '__main__':

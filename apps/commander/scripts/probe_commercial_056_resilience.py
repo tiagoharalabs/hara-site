@@ -49,6 +49,10 @@ def fixture_heartbeat(config,channel):
     configure_fixture(config)._relay_heartbeat_worker(config,channel)
 
 
+def fixture_alerts(config,channel):
+    configure_fixture(config)._relay_alert_worker(config,channel)
+
+
 def fixture_executor(config,channel):
     a=configure_fixture(config)
     a.refresh_product_lease=lambda _:None
@@ -75,6 +79,11 @@ class Fixture:
         self.heartbeats=[];self.events=[];self.claims={};self.completed={};self.next_call=0
         self.lock=threading.Lock();self.sqlite_lock=None
         self.outage_seconds=(.45 if smoke else 190.0) if case=='outage' else 0
+        root.mkdir(parents=True,exist_ok=True,mode=0o700)
+        self.recovery_db=root/'platform-recovery.sqlite3'
+        with sqlite3.connect(self.recovery_db) as db:
+            db.execute('CREATE TABLE events(event_id TEXT PRIMARY KEY,body TEXT NOT NULL,state TEXT NOT NULL)')
+        self.recovery_db.chmod(0o600)
         fixture=self
         class Handler(BaseHTTPRequestHandler):
             def log_message(self,*_):pass
@@ -85,6 +94,17 @@ class Fixture:
                 if size>256*1024:self.reply(413,{});return
                 body=json.loads(self.rfile.read(size) or b'{}')
                 elapsed=time.monotonic()-fixture.started
+                if self.path.endswith('/recovery-events'):
+                    if elapsed<fixture.outage_seconds:self.reply(503,{'error':'FIXTURE_OFFLINE'});return
+                    event_id=body.get('event_id')
+                    raw=json.dumps(body,sort_keys=True,separators=(',',':'))
+                    with sqlite3.connect(fixture.recovery_db) as db:
+                        prior=db.execute('SELECT body FROM events WHERE event_id=?',(event_id,)).fetchone()
+                        if prior and prior[0]!=raw:self.reply(409,{'error':'IDEMPOTENCY_CONFLICT'});return
+                        db.execute('INSERT OR IGNORE INTO events VALUES(?,?,?)',(event_id,raw,body.get('state')))
+                    self.reply(202,{'schema':'hara.commander.recovery-ingest.v1','ack':'PERSISTED',
+                        'event_id':'HARA-REC-'+hashlib.sha256(event_id.encode()).hexdigest()[:48],
+                        'client_event_id':event_id,'external_delivery_confirmed':False});return
                 if self.path.endswith('/heartbeat'):
                     if elapsed<fixture.outage_seconds:self.reply(503,{'error':'FIXTURE_OFFLINE'});return
                     if body.get('device_id')!=fixture.config['HARA_DEVICE_ID']:self.reply(403,{});return
@@ -136,15 +156,17 @@ class Fixture:
         settings={'start_method':'spawn'}
         if smoke:settings.update(heartbeat_stale=.3,worker_timeout=.6,heartbeat_interval=.1,restart_cooldown=.01)
         self.guard=a.RelaySupervisor(self.config,heartbeat_target=fixture_heartbeat,
-                 executor_target=fixture_executor,report=self.report,settings=settings)
+                 executor_target=fixture_executor,alert_target=fixture_alerts,
+                 recovery_outbox=a.RecoveryEventOutbox(self.config),report=self.report,settings=settings)
 
     def report(self,event):
         self.events.append(event)
-        if self.case=='sqlite' and event['state']=='RECOVERING' and self.sqlite_lock:
+        if self.case=='sqlite' and event['worker']=='executor' and event['state']=='RECOVERING' and self.sqlite_lock:
             self.sqlite_lock.commit()
 
     def result(self):
-        events=[e for e in self.events if e['state']!='PHASE']
+        expected_worker='heartbeat' if self.case=='outage' else 'executor'
+        events=[e for e in self.events if e['state']!='PHASE' and e['worker']==expected_worker]
         stalled=next((e['monotonic'] for e in events if e['state']=='STALLED'),None)
         attempt=next((e['monotonic'] for e in events if e['state']=='RECOVERING'),None)
         recovered=next((e['monotonic'] for e in events if e['state']=='RECOVERED'),None)
@@ -160,7 +182,11 @@ class Fixture:
             result=completed.get('recovered');confirmed=result['at'] if result and result['body']['state']=='COMPLETED' else None
             terminal=completed.get('fault',{}).get('body',{}).get('state')=='FAILED'
             passed=bool(terminal and stalled and attempt and recovered and confirmed and len(heartbeats)>=2 and stalled-anchor<=180 and confirmed-attempt<=300)
-        return {'case':self.case,'passed':passed,'detected_seconds':None if not stalled else round(stalled-anchor,3),
+        with sqlite3.connect(self.recovery_db) as db:
+            persisted_states={row[0] for row in db.execute('SELECT state FROM events')}
+        passed=passed and {'STALLED','RECOVERING','RECOVERED'}.issubset(persisted_states)
+        return {'case':self.case,'passed':passed,'persisted_recovery_states':sorted(persisted_states),
+                'detected_seconds':None if not stalled else round(stalled-anchor,3),
                 'attempt_seconds':None if not attempt else round(attempt-anchor,3),
                 'functional_recovery_seconds_after_restoration':None if not confirmed or not restored else round(confirmed-restored,3),
                 'heartbeat_confirmations':len(heartbeats),'restart_counts':dict(self.guard.restart_counts),
@@ -196,6 +222,7 @@ def main():
                     'production_default_slo_seconds':{'detect':180,'recover_after_connectivity':300},
                     'real_tls_control_plane_fixture':True,'tls_verification_disabled':False,
                     'real_process_start_method':'spawn','real_sqlite_lock_injection':True,
+                    'recovery_outbox_and_independent_sender_enabled':True,
                     'cases':results,'native_vm_acceptance':False,'deployed_platform_acceptance':False,
                     'installed':False,'production_release_approved':False,
                     'source_sha256':hashlib.sha256(SOURCE.read_bytes()).hexdigest()}

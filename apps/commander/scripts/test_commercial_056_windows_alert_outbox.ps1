@@ -40,7 +40,7 @@ public static class HaraAlertFixtureSqliteResolver {
  [HaraWinSqlite]::Execute($proof,'CREATE TABLE proof(value TEXT)',@())
  [HaraWinSqlite]::Execute($proof,'INSERT INTO proof VALUES(?)',@('synthetic'))
  Check (@([HaraWinSqlite]::Query($proof,'SELECT value FROM proof',@()))[0].value -ceq 'synthetic') 'SQLITE_REAL_ABI'
- $required=@('Initialize-WindowsRecoveryOutbox','Add-WindowsRecoveryEvent','Send-WindowsRecoveryEvents','Get-WindowsRecoveryNow')
+ $required=@('Initialize-WindowsRecoveryOutbox','Add-WindowsRecoveryEvent','Send-WindowsRecoveryEvents','Get-WindowsRecoveryNow','Get-WindowsRecoveryProgressKind')
  $missing=@($required | Where-Object {-not (Get-Command $_ -CommandType Function -ErrorAction SilentlyContinue)})
  if($missing.Count){
   @{state='RED_WINDOWS_ALERT_OUTBOX_API_ABSENT';missing=$missing;checks=$checks.Count;source_sha256=$sourceSha;real_sqlite=$true;windows_native=$native;installed=$false;network_used=$false} | ConvertTo-Json -Depth 5
@@ -201,6 +201,23 @@ public static class HaraAlertFixtureSqliteResolver {
   }
   Send
   Check ($attempts -eq 0) 'INVALID_METADATA_NOT_PERSISTED_OR_TRANSMITTED'
+ }
+ Case 'route-auth-is-not-enrollment-revocation' {
+  Add 'executor' 'STALLED' | Out-Null
+  $script:networkMode='revoked'
+  $result=Send-WindowsRecoveryEvents $cfg 'synthetic-device-token-not-a-real-credential' $true
+  Check ($result.state -ceq 'BLOCKED_AUTH') 'AUTHORITY_DENIAL_SCOPED_TO_ALERT_TRANSPORT'
+  Check ((Get-WindowsRecoveryProgressKind $result.state) -ceq 'ALERTS_BLOCKED') 'ALERT_DENIAL_CANNOT_REVOKE_BASE_AGENT'
+  Check ((Get-WindowsRecoveryProgressKind 'PERSISTED') -ceq 'ALERTS_PERSISTED') 'ONLY_CORRELATED_PERSISTENCE_PROVES_ALERT_RECOVERY'
+ }
+ Case 'exhausted-alert-is-visible-after-restart' {
+  Add 'executor' 'STALLED' | Out-Null
+  $script:networkMode='offline'
+  foreach($n in 1..33){Advance;Send}
+  Initialize-WindowsRecoveryOutbox $cfg | Out-Null
+  $result=Send-WindowsRecoveryEvents $cfg 'synthetic-device-token-not-a-real-credential' $true
+  Check ($result.state -ceq 'EXHAUSTED') 'EXHAUSTED_ALERT_NOT_SILENT_EMPTY_QUEUE'
+  Check ((Get-WindowsRecoveryProgressKind $result.state) -ceq 'ALERTS_BLOCKED') 'EXHAUSTION_VISIBLE_TO_GUARDIAN'
  }
  $result=@{state=$(if($failures.Count){'FAIL_WINDOWS_ALERT_OUTBOX'}else{'PASS_WINDOWS_ALERT_OUTBOX_SOURCE_QA'});checks=$checks.Count;cases=$caseCount;failures=$failures.ToArray();source_sha256=$sourceSha;real_sqlite=$true;windows_native=$native;native_vm_acceptance=$false;installed=$false;paired=$false;network_used=$false}
  $result | ConvertTo-Json -Depth 7

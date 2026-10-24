@@ -2365,6 +2365,11 @@ function Invoke-WithWindowsRelayLock([scriptblock]$Action) {
 }
 
 function Get-WindowsRecoveryNow {return [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()}
+function Get-WindowsRecoveryProgressKind([string]$State) {
+  if(@('BLOCKED_AUTH','EXHAUSTED','EXPIRED') -ccontains $State){return 'ALERTS_BLOCKED'}
+  if($State -ceq 'PERSISTED'){return 'ALERTS_PERSISTED'}
+  return $null
+}
 function Initialize-WindowsRecoveryOutbox($Cfg) {
   $context=Get-EnrollmentContext $Cfg
   if(Test-Path -LiteralPath $ConfigPath -PathType Leaf){
@@ -2427,7 +2432,7 @@ WHERE NOT EXISTS(SELECT 1 FROM (SELECT health FROM recovery_events WHERE worker=
 function Send-WindowsRecoveryEvents($Cfg,[string]$Token,[bool]$Authorized=$true) {
   if(-not $Authorized){return @{state='PAUSED'}}
   $path=Initialize-WindowsRecoveryOutbox $Cfg
-  if(@([HaraWinSqlite]::Query($path,"SELECT 1 AS n FROM recovery_meta WHERE key='revoked'",@())).Count){return @{state='REVOKED'}}
+  if(@([HaraWinSqlite]::Query($path,"SELECT 1 AS n FROM recovery_meta WHERE key='access_denied'",@())).Count){return @{state='BLOCKED_AUTH'}}
   $now=[long](Get-WindowsRecoveryNow)
   [HaraWinSqlite]::Execute($path,"UPDATE recovery_events SET state='EXPIRED' WHERE state IN ('PENDING','RETRY','INFLIGHT') AND created_ms<?",@($now-7L*86400000))
   [HaraWinSqlite]::Execute($path,"UPDATE recovery_events SET state='EXHAUSTED',lease_ms=0 WHERE state='INFLIGHT' AND lease_ms<=? AND attempts>=32",@($now))
@@ -2439,7 +2444,10 @@ WHERE event_id=(SELECT e.event_id FROM recovery_events e WHERE e.attempts<32
   AND p.sequence<e.sequence AND p.state<>'PERSISTED')
  ORDER BY e.ordinal LIMIT 1) RETURNING *
 '@,@(($now+15000),$now,$now)))
-  if(-not $rows.Count){return @{state='EMPTY'}}
+  if(-not $rows.Count){
+    $terminal=@([HaraWinSqlite]::Query($path,"SELECT state FROM recovery_events WHERE state IN ('EXHAUSTED','EXPIRED') ORDER BY ordinal LIMIT 1",@()))
+    return @{state=$(if($terminal.Count){[string]$terminal[0].state}else{'EMPTY'})}
+  }
   $row=$rows[0];$event=ConvertTo-WindowsRecoveryEvent $row
   $serverId=$null
   try {
@@ -2451,9 +2459,9 @@ WHERE event_id=(SELECT e.event_id FROM recovery_events e WHERE e.attempts<32
     $state='PERSISTED';$serverId=[string]$reply.event_id
   } catch {
     $code=Get-SafeErrorCode $_
-    $state=if($code -cin @('HTTP_401','HTTP_403')){'REVOKED'}elseif([long]$row.attempts -ge 32){'EXHAUSTED'}else{'RETRY'}
+    $state=if($code -cin @('HTTP_401','HTTP_403')){'BLOCKED_AUTH'}elseif([long]$row.attempts -ge 32){'EXHAUSTED'}else{'RETRY'}
   }
-  if($state -ceq 'REVOKED'){[HaraWinSqlite]::Execute($path,"INSERT OR REPLACE INTO recovery_meta VALUES('revoked','1')",@())}
+  if($state -ceq 'BLOCKED_AUTH'){[HaraWinSqlite]::Execute($path,"INSERT OR REPLACE INTO recovery_meta VALUES('access_denied','1')",@())}
   $delay=[long][Math]::Min(300000,5000*[Math]::Pow(2,[Math]::Min(16,[long]$row.attempts-1)))
   $saved=@([HaraWinSqlite]::Query($path,"UPDATE recovery_events SET state=?,server_event_id=?,next_ms=?,lease_ms=0 WHERE event_id=? AND state='INFLIGHT' AND attempts=? RETURNING event_id",@($state,$serverId,($now+$delay),[string]$row.event_id,[long]$row.attempts)))
   return @{state=$(if($saved.Count){$state}else{'STALE_ATTEMPT'});event_id=[string]$row.event_id}
@@ -2831,6 +2839,8 @@ function Step-WindowsRelaySupervisor($State,$Cfg,[bool]$Authorized,[double]$Now=
     try {$messages=@(Read-WindowsRelayProgress $child.process)}catch{Restart-WindowsRelayChild $State $Cfg $role $Now;continue}
     foreach($message in $messages){
       $tag=[string]$message.kind
+      if($role -ceq 'alerts' -and $tag -ceq 'ALERTS_BLOCKED'){Write-WindowsRelayHealth $State $role 'DEGRADED' $Now}
+      elseif($role -ceq 'alerts' -and $tag -ceq 'ALERTS_PERSISTED'){Write-WindowsRelayHealth $State $role 'RECOVERED' $Now}
       if($tag -ceq 'REVOKED'){$State.revoked=$true;Step-WindowsRelaySupervisor $State $Cfg $false $Now;return}
       if($role -ceq 'heartbeat'){
         if($tag -ceq 'HEARTBEAT_CONFIRMED'){$State.lastHeartbeat=$Now;$State.heartbeatCount++;$child.networkBackoff=$false;$child.deadline=$Now+$HeartbeatSeconds+35}
@@ -2936,8 +2946,11 @@ function Start-WindowsRelayWorker([string[]]$WorkerArgs) {
         } elseif($WorkerArgs[1] -ceq 'alerts') {
           Write-WindowsRelayProgress 'BUSY'
           $sent=Send-WindowsRecoveryEvents $cfg $deviceToken $true
-          if($sent.state -ceq 'REVOKED'){throw 'HTTP_403'}
-          $delay=if($sent.state -ceq 'PERSISTED'){0.1}else{2.0}
+          $progress=Get-WindowsRecoveryProgressKind ([string]$sent.state)
+          if($progress){Write-WindowsRelayProgress $progress}
+          # Alert-route admission does not revoke the base Agent. Enrollment
+          # authority remains the authenticated heartbeat/executor response.
+          $delay=if($progress -ceq 'ALERTS_BLOCKED'){60.0}elseif($sent.state -ceq 'PERSISTED'){0.1}else{2.0}
         } else {
           Write-WindowsRelayProgress 'BUSY'
           if((Get-WindowsRelayNow)-$lastRepair -ge 10){

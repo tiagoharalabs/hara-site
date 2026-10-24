@@ -3316,7 +3316,7 @@ def _relay_check_deadline():
 
 
 def _relay_worker_entry(target,config,channel):
-    global _RELAY_PROGRESS_CHANNEL
+    global _RELAY_PROGRESS_CHANNEL,DATA_DIR
     os.setsid()
     _RELAY_PROGRESS_CHANNEL=channel
     def terminate(_signum,_frame):
@@ -3326,6 +3326,10 @@ def _relay_worker_entry(target,config,channel):
     try:
         # spawn imports fresh module globals; restore the enrollment fence
         # before any worker opens the effect/budget journal.
+        if config.get('_relay_state_root'):
+            root=Path(config['_relay_state_root'])
+            if not root.is_absolute():raise ValueError('ENROLLMENT_STATE_PATH_INVALID')
+            DATA_DIR=root
         if config.get('HARA_COMMANDER_URL'):configure_enrollment_state(config)
         target(config,channel)
     except (Exception,KeyboardInterrupt) as exc:
@@ -3508,8 +3512,8 @@ class RecoveryEventOutbox:
         now = int(time.time()*1000) if now_ms is None else int(now_ms)
         with self._connect() as db:
             db.execute('BEGIN IMMEDIATE')
-            if db.execute("SELECT 1 FROM recovery_meta WHERE key='revoked'").fetchone():
-                db.commit(); return {'state':'REVOKED'}
+            if db.execute("SELECT 1 FROM recovery_meta WHERE key='access_denied'").fetchone():
+                db.commit(); return {'state':'BLOCKED_AUTH'}
             db.execute("UPDATE recovery_events SET state='EXHAUSTED',lease_ms=0 WHERE state='INFLIGHT' AND lease_ms<=? AND attempts>=32", (now,))
             db.execute("UPDATE recovery_events SET state='EXPIRED' WHERE state IN ('PENDING','RETRY','INFLIGHT') AND created_ms<?",
                        (now-7*86400000,))
@@ -3518,7 +3522,9 @@ class RecoveryEventOutbox:
               AND NOT EXISTS(SELECT 1 FROM recovery_events p WHERE p.incident=e.incident
                 AND p.sequence<e.sequence AND p.state<>'PERSISTED')
               ORDER BY e.created_ms,e.incident,e.sequence LIMIT 1''', (now,now)).fetchone()
-            if not row: db.commit(); return {'state':'EMPTY'}
+            if not row:
+                terminal=db.execute("SELECT state FROM recovery_events WHERE state IN ('EXHAUSTED','EXPIRED') ORDER BY created_ms LIMIT 1").fetchone()
+                db.commit(); return {'state':terminal['state'] if terminal else 'EMPTY'}
             attempt = row['attempts'] + 1
             db.execute("UPDATE recovery_events SET state='INFLIGHT',attempts=?,lease_ms=? WHERE event_id=?",
                        (attempt,now+15000,row['event_id']))
@@ -3536,11 +3542,11 @@ class RecoveryEventOutbox:
             state='PERSISTED';server_id=reply['event_id']
         except Exception as exc:
             code=safe_error_code(exc)
-            state='REVOKED' if code in {'HTTP_401','HTTP_403'} else ('EXHAUSTED' if attempt>=32 else 'RETRY')
+            state='BLOCKED_AUTH' if code in {'HTTP_401','HTTP_403'} else ('EXHAUSTED' if attempt>=32 else 'RETRY')
         delay=min(300000,5000*2**min(16,attempt-1))
         with self._connect() as db:
             db.execute('BEGIN IMMEDIATE')
-            if state=='REVOKED': db.execute("INSERT OR REPLACE INTO recovery_meta VALUES('revoked','1')")
+            if state=='BLOCKED_AUTH': db.execute("INSERT OR REPLACE INTO recovery_meta VALUES('access_denied','1')")
             changed=db.execute("UPDATE recovery_events SET state=?,server_event_id=?,next_ms=?,lease_ms=0 WHERE event_id=? AND state='INFLIGHT' AND attempts=?",
                                (state,server_id,now+delay,row['event_id'],attempt)).rowcount
             db.commit()
@@ -3554,14 +3560,18 @@ def _relay_alert_worker(config, channel):
         authorized=effective_approval_mode(config)=='PERSISTENT_TRUSTED' or operator_session_active()
         _relay_progress('BUSY')
         result=outbox.send_once(authorized=authorized)
-        if result['state']=='REVOKED': _relay_progress('REVOKED',code='DEVICE_AUTH_INVALID'); return
-        delay=.1 if result['state']=='PERSISTED' else 2.0
+        blocked=result['state'] in {'BLOCKED_AUTH','EXHAUSTED','EXPIRED'}
+        if blocked:_relay_progress('ALERTS_BLOCKED',code='RECOVERY_'+result['state'])
+        elif result['state']=='PERSISTED':_relay_progress('ALERTS_PERSISTED')
+        # Alert-route permission is not enrollment authority. Only the normal
+        # authenticated heartbeat/executor may revoke the whole guardian.
+        delay=60.0 if blocked else (.1 if result['state']=='PERSISTED' else 2.0)
         _relay_progress('READY',delay=delay)
         time.sleep(delay)
 
 
 class RelaySupervisor:
-    def __init__(self,config,*,heartbeat_target=None,executor_target=None,report=None,settings=None,recovery_outbox=None):
+    def __init__(self,config,*,heartbeat_target=None,executor_target=None,alert_target=None,report=None,settings=None,recovery_outbox=None):
         import multiprocessing
         if transport_mode(config)!='OUTBOUND_RELAY':raise ValueError('RELAY_TRANSPORT_REQUIRED')
         self.config=dict(config)
@@ -3570,7 +3580,8 @@ class RelaySupervisor:
         self.targets={'heartbeat':heartbeat_target or _relay_heartbeat_worker,
                       'executor':executor_target or _relay_executor_worker}
         self.recovery_outbox=recovery_outbox
-        if recovery_outbox is not None:self.targets['alerts']=_relay_alert_worker
+        self.state_root=DATA_DIR
+        if recovery_outbox is not None:self.targets['alerts']=alert_target or _relay_alert_worker
         self.report=report or self._report
         self.settings={'heartbeat_stale':RELAY_HEARTBEAT_STALE_SECONDS,
                        'worker_timeout':RELAY_WORKER_TIMEOUT_SECONDS,
@@ -3614,6 +3625,7 @@ class RelaySupervisor:
     def _spawn(self,kind,now):
         receive,send=self.context.Pipe(duplex=False)
         config=dict(self.config)
+        config['_relay_state_root']=str(self.state_root)
         if kind=='executor':config['_relay_abandoned_calls']=list(self.abandoned.values())
         process=self.context.Process(target=_relay_worker_entry,
                     args=(self.targets[kind],config,send),daemon=True)
@@ -3690,6 +3702,8 @@ class RelaySupervisor:
                 try:message=channel.recv()
                 except EOFError:break
                 tag=message.get('kind')
+                if kind=='alerts' and tag=='ALERTS_BLOCKED':self._event(kind,'DEGRADED',now)
+                elif kind=='alerts' and tag=='ALERTS_PERSISTED':self._event(kind,'RECOVERED',now)
                 if tag=='REVOKED':
                     self.revoked=True;self._event(kind,'DEGRADED',now);self.close();return
                 if kind=='heartbeat' and tag=='HEARTBEAT_CONFIRMED':
