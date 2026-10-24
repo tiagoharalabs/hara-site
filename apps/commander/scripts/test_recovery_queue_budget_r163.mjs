@@ -89,3 +89,13 @@ test('synthetic enrollment uses the exact existing base64url resolver contract',
  assert.notEqual(await enrollmentCredentialHash('synthetic-credential'),createHash('sha256').update('synthetic-credential').digest('hex'));
  await assert.rejects(()=>repairSyntheticCredentialSql([],'PROD'),/HOLD_SYNTHETIC_FIXTURE_SCOPE/);
 });
+test('paused status reads are metered without activating or renewing a budget',async t=>{
+ const {readRecoveryQaStatus}=await import('./recovery_queue_budget_r163.mjs');const f=fixture(t,{state:'PAUSED'});
+ const before=f.row();const r=await readRecoveryQaStatus(f.env);
+ assert.equal(r.budget.state,'PAUSED');assert.equal(r.budget.deadline_ms,before.deadline_ms);
+ assert.equal(r.budget.rows_written,4);assert.ok(r.budget.rows_read>=4);assert.equal(r.budget.reserved_write,0);
+});
+test('status refuses reads when its reservation would exceed a cap',async t=>{
+ const {readRecoveryQaStatus}=await import('./recovery_queue_budget_r163.mjs');const f=fixture(t,{reads:CAPS.reads-100});
+ await assert.rejects(()=>readRecoveryQaStatus(f.env),/HOLD_STATUS_BUDGET/);
+});

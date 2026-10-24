@@ -69,8 +69,8 @@ async function deviceRequest(device,route,body,expected){
  const value=await r.json();assert.equal(r.status,expected,'DEVICE_RESPONSE_'+JSON.stringify(value));return value;
 }
 async function map(items,fn){let cursor=0;await Promise.all(Array.from({length:4},async()=>{while(cursor<items.length)await fn(items[cursor++]);}));}
-async function waitUntil(test,deadlineMs){
- while(Date.now()<deadlineMs){const r=await test();if(r)return r;await new Promise(r=>setTimeout(r,1500));}
+async function waitUntil(test,deadlineMs,{intervalMs=1500}={}){
+ while(Date.now()<deadlineMs){const r=await test();if(r)return r;await new Promise(r=>setTimeout(r,intervalMs));}
  throw Error('MEASUREMENT_DEADLINE');
 }
 async function stage(concurrency,n){
@@ -118,7 +118,7 @@ async function stage(concurrency,n){
  const replayJobCount=(await check()).jobs.length;await control('produce',{});
  await new Promise(r=>setTimeout(r,1500));assert.equal((await check()).jobs.length,replayJobCount,'CONFIRMED_NOTIFICATION_REQUEUED');
  const lastHeartbeat=Math.max(...rows.map(r=>Date.parse(r.last_seen_at_utc)));
- await waitUntil(async()=>{await check();return Date.now()>=lastHeartbeat+121000;},lastHeartbeat+125000);
+ await waitUntil(async()=>{await check();return Date.now()>=lastHeartbeat+121000;},lastHeartbeat+125000,{intervalMs:5000});
  const scanStart=Date.now(),before=(await check()).jobs.filter(j=>j.kind==='SCAN').map(j=>j.message_id);
  step.scan_enqueue=await control('produce',{});
  let finalStatus;

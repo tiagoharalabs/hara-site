@@ -79,3 +79,30 @@ export async function startRecoveryBudget(db,now=Date.now()){
   RETURNING *`).bind(now,now+CAPS.active_ms,now,CAPS.reads,CAPS.writes,CAPS.queue,CAPS.events).first();
  if(!row)throw Error('HOLD_CAMPAIGN_NOT_RESUMABLE');return row;
 }
+export async function readRecoveryQaStatus(env){
+ if(env.ENVIRONMENT!=='DEV'||env.R163_QA_ISOLATED!=='true')throw Error('HOLD_QA_ISOLATION');
+ const db=env.PRODUCT_DB,reads=1024,writes=4;
+ // Status polling consumes D1 too. Reserve it globally even while PAUSED or
+ // after the load deadline; a read never reactivates or replenishes a campaign.
+ const held=await db.prepare(`UPDATE r163_qa_budget SET reserved_read=reserved_read+?,reserved_write=reserved_write+?
+  WHERE id=1 AND rows_read+reserved_read+?<=? AND rows_written+reserved_write+?<=? RETURNING id`)
+  .bind(reads,writes,reads,CAPS.reads,writes,CAPS.writes).first();
+ if(!held)throw Error('HOLD_STATUS_BUDGET');
+ let read=4,anomaly=null,jobs,dlq;
+ try{
+  const query=async sql=>{
+   const r=await db.prepare(sql).bind().all();
+   if(!r?.meta||!Number.isSafeInteger(r.meta.rows_read)||r.meta.rows_written!==0)throw Error('HOLD_STATUS_D1_METER');
+   read+=r.meta.rows_read;if(read>reads)throw Error('HOLD_STATUS_RESERVATION');return r.results||[];
+  };
+  jobs=await query('SELECT * FROM r163_qa_jobs ORDER BY message_id LIMIT 300');
+  dlq=await query('SELECT * FROM r163_qa_dlq ORDER BY observed_ms LIMIT 100');
+ }catch(error){anomaly=error.message;throw error;}
+ finally{
+  await db.prepare(`UPDATE r163_qa_budget SET reserved_read=reserved_read-?,reserved_write=reserved_write-?,
+   rows_read=rows_read+?,rows_written=rows_written+?,state=CASE WHEN ? IS NULL THEN state ELSE 'STOPPED' END,
+   anomaly=COALESCE(?,anomaly) WHERE id=1`).bind(reads,writes,read,writes,anomaly,anomaly).run();
+ }
+ const budget=await db.prepare('SELECT * FROM r163_qa_budget WHERE id=1').bind().first();
+ return {schema:'hara.commander.r163.queue-campaign.v1',budget,caps:CAPS,jobs,dlq,server_ms:Date.now(),commercial:false};
+}

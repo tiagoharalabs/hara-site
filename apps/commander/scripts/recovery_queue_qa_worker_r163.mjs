@@ -3,7 +3,7 @@
 import worker from '../src/worker.js';
 import {enqueueRecoveryWork,consumeRecoveryWork} from '../src/recovery-fanout.mjs';
 import {acceptR163Dlq} from './recovery_queue_dlq_r163.mjs';
-import {budgeted,CAPS,startRecoveryBudget} from './recovery_queue_budget_r163.mjs';
+import {budgeted,CAPS,startRecoveryBudget,readRecoveryQaStatus} from './recovery_queue_budget_r163.mjs';
 const QUEUE='hara-commander-r163-recovery-dev-20261024';
 const DLQ='hara-commander-r163-recovery-dlq-dev-20261024';
 const json=(o,status=200)=>Response.json(o,{status,headers:{'cache-control':'no-store'}});
@@ -22,10 +22,7 @@ export default {
    if(!await auth(request,env))return json({code:'AUTH_REQUIRED'},401);
    try{
     if(path==='/__qa/status'&&request.method==='GET'){
-     const row=await env.PRODUCT_DB.prepare('SELECT * FROM r163_qa_budget WHERE id=1').first();
-     const jobs=await env.PRODUCT_DB.prepare('SELECT * FROM r163_qa_jobs ORDER BY message_id LIMIT 300').all();
-     const dlq=await env.PRODUCT_DB.prepare('SELECT * FROM r163_qa_dlq ORDER BY observed_ms LIMIT 100').all();
-     return json({schema:'hara.commander.r163.queue-campaign.v1',budget:row,caps:CAPS,jobs:jobs.results,dlq:dlq.results,server_ms:Date.now(),commercial:false});
+     return json(await readRecoveryQaStatus(env));
     }
     if(path==='/__qa/start'&&request.method==='POST'){
      const row=await startRecoveryBudget(env.PRODUCT_DB);return json({state:row.state,deadline_ms:row.deadline_ms});
