@@ -1,0 +1,26 @@
+/* Source-only recovery inbox. Hidden until an authorized backend returns events. */
+.commander-recovery-inbox {
+  margin: 0 auto 1rem;
+  padding: 1rem 1.25rem;
+  max-width: 1120px;
+  border: 1px solid rgba(170, 109, 35, .44);
+  border-radius: 14px;
+  background: rgba(203, 151, 58, .10);
+  color: inherit;
+  font: inherit;
+}
+.commander-recovery-inbox[hidden] { display:none!important; }
+.commander-recovery-inbox h2 { font-size:1rem; margin:0 0 .25rem; }
+.commander-recovery-inbox p { font-size:.83rem; margin:.25rem 0 .75rem; opacity:.78; }
+.commander-recovery-alert-list { margin:0; padding:0; list-style:none; }
+.commander-recovery-alert-list li {
+  display:flex; flex-wrap:wrap; align-items:center; gap:.75rem;
+  justify-content:space-between; padding:.6rem 0; border-top:1px solid rgba(130,130,130,.2);
+}
+.commander-recovery-alert-list span { font-size:.88rem; min-width:12rem; overflow-wrap:anywhere; }
+.commander-recovery-alert-list button {
+  border:1px solid currentColor; border-radius:8px; padding:.4rem .75rem;
+  color:inherit; background:transparent; cursor:pointer; font:inherit; font-size:.83rem;
+}
+.commander-recovery-alert-list button:disabled { opacity:.45; cursor:wait; }
+.commander-recovery-alert-list button:focus-visible { outline:2px solid currentColor;outline-offset:2px; }

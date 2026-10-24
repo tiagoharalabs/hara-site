@@ -1,0 +1,2782 @@
+(() => {
+  // PORTAL_READ_COORDINATOR_BEGIN
+  // Per-tab only: no persistent cache of identities, grants, cookies or data.
+  // Writes are never shared, retried or suppressed, and invalidate older reads.
+  function createPortalReadCoordinator(fetchImpl, origin, options = {}) {
+    const now = options.now || (() => Date.now());
+    const schedule = options.setTimeout || setTimeout;
+    const cancelTimer = options.clearTimeout || clearTimeout;
+    const random = options.random || Math.random;
+    const timeoutMs = options.timeoutMs || 12000;
+    // Bound the buffered JSON read, not downloads or caller-customized fetches.
+    const maxResponseBytes = Number.isSafeInteger(options.maxResponseBytes)
+      && options.maxResponseBytes > 0 && options.maxResponseBytes <= 8 * 1024 * 1024
+      ? options.maxResponseBytes : 2 * 1024 * 1024;
+    const allowed = new Set([
+      "/api/portal/auth-config", "/api/portal/session", "/api/portal/bootstrap",
+      "/api/portal/dashboard", "/api/portal/devices", "/api/portal/billing",
+      "/api/portal/beta-access", "/api/health",
+    ]);
+    const sharedOptions = new Set(["method", "cache", "credentials"]);
+    const pending = new Map();
+    const cooldowns = new Map();
+    let generation = 0;
+    function invalidate() {
+      generation += 1;
+      for (const entry of pending.values()) entry.controller.abort();
+      pending.clear();
+      cooldowns.clear();
+    }
+    function unavailable(code, seconds = 1, status = 503) {
+      return new Response(JSON.stringify({ ok: false, code }), {
+        status, headers: { "content-type": "application/json", "cache-control": "no-store", "retry-after": String(Math.max(1, Math.ceil(seconds))) },
+      });
+    }
+    async function readBoundedBody(response, controller) {
+      if (response.body === null) return null;
+      if (!response.body || typeof response.body.getReader !== "function") {
+        controller.abort();
+        throw new Error("PORTAL_READ_STREAM_UNAVAILABLE");
+      }
+      const reader = response.body.getReader();
+      const chunks = [];
+      let size = 0;
+      let readerStopped = false;
+      const stopReader = () => {
+        if (readerStopped) return;
+        readerStopped = true;
+        try { Promise.resolve(reader.cancel()).catch(() => {}); }
+        catch (_error) { /* Cancellation is best effort; still reject the read. */ }
+      };
+      controller.signal.addEventListener("abort", stopReader, { once: true });
+      try {
+        const declared = Number(response.headers.get("content-length"));
+        if (Number.isFinite(declared) && declared > maxResponseBytes) {
+          throw new Error("PORTAL_READ_RESPONSE_TOO_LARGE");
+        }
+        while (true) {
+          if (controller.signal.aborted) throw new DOMException("Read invalidated", "AbortError");
+          const { done, value } = await reader.read();
+          if (controller.signal.aborted) throw new DOMException("Read invalidated", "AbortError");
+          if (done) break;
+          size += value.byteLength;
+          if (size > maxResponseBytes) throw new Error("PORTAL_READ_RESPONSE_TOO_LARGE");
+          chunks.push(value);
+        }
+        const buffer = new Uint8Array(size);
+        let position = 0;
+        for (const chunk of chunks) { buffer.set(chunk, position); position += chunk.byteLength; }
+        return buffer;
+      } catch (error) {
+        controller.abort();
+        // The timeout may have fired before this reader existed.
+        stopReader();
+        throw error;
+      } finally {
+        controller.signal.removeEventListener("abort", stopReader);
+        reader.releaseLock();
+      }
+    }
+    async function request(input, init = {}) {
+      let url;
+      const inputIsRequest = typeof Request !== "undefined" && input instanceof Request;
+      const target = inputIsRequest ? input.url : input;
+      try { url = typeof target === "string" || target instanceof URL ? new URL(target, origin) : null; }
+      catch (_error) { url = null; }
+      const method = String(init.method || (inputIsRequest ? input.method : "GET")).toUpperCase();
+      const sameOrigin = url && url.origin === origin;
+      if (sameOrigin && method !== "GET" && (url.pathname.startsWith("/api/portal/") || url.pathname === "/auth/logout")) {
+        invalidate();
+        try {
+          // Send the original write once; preserve its body, headers and signal.
+          return await fetchImpl(input, init);
+        } finally {
+          // Reads may start while the write is pending. Invalidate them on
+          // completion too, including uncertain failures. Never retry writes.
+          invalidate();
+        }
+      }
+      // Custom policies, Request/URL objects and non-portal traffic stay native.
+      const ordinaryOptions = Object.keys(init).every(key => sharedOptions.has(key));
+      if (typeof input !== "string" || !sameOrigin || method !== "GET" || !allowed.has(url.pathname)
+          || !ordinaryOptions || (init.cache && !["default", "no-store"].includes(init.cache))
+          || (init.credentials && init.credentials !== "same-origin")) return fetchImpl(input, init);
+      if (url.search || url.username || url.password) return fetchImpl(input, init);
+      const resource = url.pathname;
+      // Respect differing HTTP cache policies even while requests overlap.
+      const key = resource + ":" + (init.cache || "default");
+      const cooldown = cooldowns.get(resource);
+      if (cooldown && cooldown.until > now()) return unavailable("PORTAL_READ_BACKOFF", (cooldown.until - now()) / 1000, cooldown.status);
+      if (cooldown) cooldowns.delete(resource);
+      if (pending.has(key)) return (await pending.get(key).promise).clone();
+      const controller = new AbortController();
+      const startGeneration = generation;
+      const entry = { controller, promise: null };
+      const timer = schedule(() => controller.abort(), timeoutMs);
+      entry.promise = (async () => {
+        const response = await fetchImpl(input, { ...init, signal: controller.signal });
+        const body = await readBoundedBody(response, controller);
+        if (generation !== startGeneration || controller.signal.aborted) throw new DOMException("Read invalidated", "AbortError");
+        if (response.status === 429 || response.status === 503) {
+          const header = response.headers.get("retry-after");
+          let delay = header && /^\d+(?:\.\d+)?$/.test(header.trim()) ? Number(header) * 1000 : Date.parse(header || "") - now();
+          if (!Number.isFinite(delay) || delay < 0) delay = 2000 + random() * 1000;
+          cooldowns.set(resource, { until: now() + Math.max(1000, delay), status: response.status });
+        }
+        return new Response([204,205,304].includes(response.status) ? null : body, {
+          status: response.status, statusText: response.statusText, headers: response.headers,
+        });
+      })().finally(() => {
+        cancelTimer(timer);
+        if (pending.get(key) === entry) pending.delete(key);
+      });
+      pending.set(key, entry);
+      return (await entry.promise).clone();
+    }
+    request.invalidate = invalidate;
+    return request;
+  }
+  // PORTAL_READ_COORDINATOR_END
+
+  const portalFetch = createPortalReadCoordinator((...args) => fetch(...args), location.origin);
+  const views = [...document.querySelectorAll("[data-view]")];
+  const toast = document.getElementById("toast");
+  const sidebarTemplate = document.getElementById("sidebarTemplate");
+  const banner = document.getElementById("systemBanner");
+  const bannerTitle = document.getElementById("systemBannerTitle");
+  const bannerMessage = document.getElementById("systemBannerMessage");
+  const bannerAction = document.getElementById("systemBannerAction");
+  const appViews = new Set(["dashboard", "devices", "usage", "plans", "connections", "security", "help"]);
+  const publicViews = new Set(["landing", "login", "signup", ...appViews]);
+  const viewTitles = Object.freeze({
+    landing: "HARA Commander",
+    login: "Entrar · HARA Commander",
+    signup: "Criar conta · HARA Commander",
+    dashboard: "Visão geral · HARA Commander",
+    devices: "Computadores · HARA Commander",
+    usage: "Uso · HARA Commander",
+    plans: "Plano e cobrança · HARA Commander",
+    connections: "Conexões · HARA Commander",
+    security: "Configurações · HARA Commander",
+    help: "Ajuda · HARA Commander",
+  });
+  const params = new URLSearchParams(location.search);
+  const root = document.documentElement;
+  const themeBtn = document.querySelector(".theme-toggle");
+  const neonBtn = document.querySelector(".neon-toggle");
+  const themeMeta = document.querySelector('meta[name="theme-color"]');
+  const guestActions = document.querySelector("[data-auth-guest]");
+  const sessionActions = document.querySelector("[data-auth-session]");
+  const localHost = location.hostname === "127.0.0.1" || location.hostname === "localhost";
+  const scenario = localHost
+    ? String(params.get("scenario") || "").trim().toLowerCase()
+    : "";
+  const authError = String(params.get("auth_error") || "").trim().toUpperCase();
+  const remotePortal = !localHost;
+  let retryAction = null;
+  let authProviderConfigured = false;
+  let sessionAuthenticated = false;
+  // Retire every in-flight portal read when this tab loses its session.
+  let portalSessionGeneration = 0;
+  let sessionDegraded = false;
+  let sessionDegradedReason = "";
+  let currentRole = "";
+  let skipNextWorkspaceLoad = false;
+  let dashboardCache = null;
+  let dashboardCacheAt = 0;
+  let devicesCache = null;
+  let devicesCacheAt = 0;
+  let expandedDeviceId = null;
+  let pairingExpiryTimer = null;
+  const activityCache = new Map();
+  let activityReadGeneration = 0;
+  const activityTriggerReads = new WeakMap();
+  let activityWindow = "7d";
+  const ACTIVITY_CACHE_MS = 15000;
+  const LOCAL_ACTIVITY_ORIGIN = "http://127.0.0.1:32145";
+  const LOCAL_ACTIVITY_TIMEOUT_MS = 900;
+  const LOCAL_SUPPORT_TIMEOUT_MS = 1500;
+  let pendingRevokeDeviceId = null;
+  let revokeRequestPending = false;
+  let revokeFailureMessage = "";
+  let historyScope = "";
+  let historyClearConfirmation = false;
+  let historyClearPending = false;
+  let historyClearFailureMessage = "";
+  let currentView = null;
+  let deviceSectionTab = "devices";
+  let deviceTab = "active";
+  // Commercial onboarding is always manual-start and per-action approval.
+  // Advanced technicians may opt into OS-level persistence after installation.
+  let installTransportMode = "OUTBOUND_RELAY";
+  let installOs = "linux";
+
+  function currentTheme() {
+    return root.dataset.theme === "dark" ? "dark" : "light";
+  }
+
+  function currentNeon() {
+    return root.dataset.neon === "on";
+  }
+
+  function syncNeonUi() {
+    const on = currentNeon();
+    if (!neonBtn) return;
+    neonBtn.setAttribute("aria-pressed", String(on));
+    neonBtn.setAttribute("aria-label", on ? "Desativar Neon" : "Ativar Neon");
+    neonBtn.title = on ? "Neon ON" : "Neon OFF";
+  }
+
+  function syncThemeUi() {
+    const dark = currentTheme() === "dark";
+    if (themeBtn) {
+      themeBtn.setAttribute("aria-pressed", String(dark));
+      themeBtn.setAttribute("aria-label", dark ? "Ativar modo claro" : "Ativar modo escuro");
+      themeBtn.title = dark ? "Modo claro" : "Modo escuro";
+    }
+    if (themeMeta) themeMeta.setAttribute("content", dark ? "#061721" : "#f7fcff");
+    root.style.colorScheme = dark ? "dark" : "light";
+  }
+
+  syncThemeUi();
+  if (!root.dataset.neon) root.dataset.neon = "off";
+  syncNeonUi();
+  themeBtn?.addEventListener("click", () => {
+    const next = currentTheme() === "dark" ? "light" : "dark";
+    root.dataset.theme = next;
+    try { localStorage.setItem("hara-theme", next); } catch (_error) {}
+    syncThemeUi();
+  });
+
+  neonBtn?.addEventListener("click", () => {
+    const next = currentNeon() ? "off" : "on";
+    root.dataset.neon = next;
+    try { localStorage.setItem("hara-neon", next); } catch (_error) {}
+    syncNeonUi();
+  });
+
+  function validApiBase(value) {
+    if (!value) return null;
+    try {
+      const url = new URL(value);
+      if (url.protocol === "https:") return url.origin;
+      if (url.protocol === "http:" && (url.hostname === "127.0.0.1" || url.hostname === "localhost")) return url.origin;
+    } catch (_error) {}
+    return null;
+  }
+
+  const apiBase = localHost
+    ? (validApiBase(params.get("api")) || "http://127.0.0.1:9192")
+    : location.origin;
+  const dashboardPath = localHost ? "/api/dev/dashboard" : "/api/portal/dashboard";
+  const PORTAL_DASHBOARD_CACHE_MS = 30 * 1000;
+  const PORTAL_DEVICES_CACHE_MS = 15 * 1000;
+
+  async function startRemoteAuth(signup = false, forceLogin = false) {
+    if (!remotePortal) {
+      route(signup ? "signup" : "login");
+      return;
+    }
+    // Auth availability in the browser is advisory only. A transient failure of
+    // /api/portal/auth-config must never block a valid OIDC login. Recheck once
+    // to refresh the UI, then let /auth/login remain the server-side authority.
+    if (!authProviderConfigured) await configureAuthUi();
+    const target = "/auth/login?return_to=" + encodeURIComponent("/#devices")
+      + (signup ? "&screen_hint=signup" : "")
+      + (forceLogin ? "&force_login=1" : "");
+    location.assign(target);
+  }
+
+  async function configureAuthUi() {
+    if (!remotePortal) return;
+    try {
+      const response = await portalFetch("/api/portal/auth-config", { cache: "no-store" });
+      const config = await response.json();
+      authProviderConfigured = Boolean(response.ok && config.configured);
+
+      document.querySelectorAll("[data-auth-form]").forEach((form) => {
+        form.querySelectorAll("input").forEach((input) => {
+          input.disabled = true;
+          input.setAttribute("aria-disabled", "true");
+        });
+        const submit = form.querySelector('button[type="submit"]');
+        if (submit) {
+          submit.disabled = !authProviderConfigured;
+          submit.textContent = form.dataset.authForm === "signup"
+            ? "Continuar para cadastro seguro"
+            : "Continuar para login seguro";
+        }
+      });
+
+    } catch (_error) {
+      authProviderConfigured = false;
+    }
+  }
+
+  function setGuestHeader() {
+    portalSessionGeneration += 1;
+    portalFetch.invalidate();
+    sessionAuthenticated = false;
+    sessionDegraded = false;
+    sessionDegradedReason = "";
+    currentRole = "";
+    pendingRevokeDeviceId = null;
+    revokeFailureMessage = "";
+    historyScope = "";
+    historyClearConfirmation = false;
+    historyClearPending = false;
+    historyClearFailureMessage = "";
+    // Retire pending diagnostics before clearing their session-local data.
+    activityReadGeneration += 1;
+    activityCache.clear();
+    const diagnosticsPanel = document.getElementById("internalBetaDiagnostics");
+    if (diagnosticsPanel) diagnosticsPanel.hidden = true;
+    dashboardCache = null;
+    dashboardCacheAt = 0;
+    devicesCache = null;
+    devicesCacheAt = 0;
+    if (guestActions) guestActions.hidden = false;
+    if (sessionActions) sessionActions.hidden = true;
+    document.body.classList.remove("session-authenticated");
+  }
+
+  function setAuthenticatedHeader(payload) {
+    sessionAuthenticated = true;
+    sessionDegraded = payload?.availability?.degraded === true;
+    sessionDegradedReason = String(payload?.availability?.reason || "");
+    if (guestActions) guestActions.hidden = true;
+    if (sessionActions) sessionActions.hidden = false;
+    document.body.classList.add("session-authenticated");
+    applyIdentityFields(payload);
+  }
+
+  async function logoutRemote() {
+    if (remotePortal) {
+      try {
+        const response = await portalFetch("/auth/logout", { method: "POST", cache: "no-store" });
+        if (!response.ok) throw new Error("HTTP_" + response.status);
+      } catch (_error) {
+        showToast("Não foi possível encerrar a sessão agora. Tente novamente.");
+        return;
+      }
+    }
+    setGuestHeader();
+    route("landing");
+  }
+
+  function number(value) {
+    return new Intl.NumberFormat("pt-BR").format(Number(value || 0));
+  }
+
+  function setText(id, value) {
+    const node = document.getElementById(id);
+    if (node) node.textContent = value;
+  }
+
+  function setState(label, detail, healthy = false) {
+    const node = document.getElementById("dashboardState");
+    if (node) {
+      node.textContent = label;
+      node.classList.toggle("healthy", healthy);
+    }
+    const card = document.getElementById("dashboardSelectedCard");
+    if (card) {
+      card.classList.toggle("state-ready", healthy);
+      card.classList.toggle("state-offline", label === "Offline");
+      card.classList.toggle("state-waiting", label === "Aguardando");
+    }
+    setText("dashboardStateDetail", detail);
+  }
+
+  function hideBanner() {
+    if (!banner) return;
+    banner.hidden = true;
+    banner.className = "system-banner";
+    if (bannerAction) bannerAction.hidden = true;
+    retryAction = null;
+  }
+
+  function showBanner(kind, title, message, actionLabel = null, action = null) {
+    if (!banner) return;
+    banner.hidden = false;
+    banner.className = "system-banner show " + kind;
+    bannerTitle.textContent = title;
+    bannerMessage.textContent = message;
+    retryAction = action;
+    bannerAction.hidden = !actionLabel;
+    if (actionLabel) bannerAction.textContent = actionLabel;
+  }
+
+  function setLoading(active) {
+    document.body.classList.toggle("product-loading", active);
+    document.querySelectorAll(".workspace-main").forEach((node) => {
+      const busy = Boolean(active && node.closest(".view.active"));
+      node.setAttribute("aria-busy", String(busy));
+    });
+  }
+
+  function initials(value) {
+    const parts = String(value || "").trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return "HA";
+    return (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase();
+  }
+
+  function roleLabel(value) {
+    const role = String(value || "").trim().toUpperCase();
+    const labels = {
+      OWNER: "Proprietário",
+      ADMIN: "Administrador",
+      MEMBER: "Membro",
+      REVIEWER: "Revisor",
+    };
+    return labels[role] || (role ? role.charAt(0) + role.slice(1).toLowerCase() : "Proprietário");
+  }
+
+  function applyIdentityFields(payload) {
+    const tenantName = String(payload?.tenant?.display_name || "Seu workspace");
+    const userName = String(payload?.subject?.display_name || "Conta HARA");
+    currentRole = String(payload?.subject?.role || "").trim().toUpperCase();
+    const userRole = roleLabel(currentRole);
+    document.querySelectorAll("[data-tenant-name]").forEach((node) => { node.textContent = tenantName; });
+    document.querySelectorAll("[data-user-name]").forEach((node) => { node.textContent = userName; });
+    const subjectId = String(payload?.subject?.subject_id || "—");
+    const tenantId = String(payload?.tenant?.tenant_id || "—");
+    const nextHistoryScope = tenantId + ":" + subjectId;
+    if (nextHistoryScope !== historyScope) {
+      historyScope = nextHistoryScope;
+      historyClearConfirmation = false;
+      historyClearFailureMessage = "";
+      historyClearPending = false;
+      pendingRevokeDeviceId = null;
+    }
+    document.querySelectorAll("[data-user-role]").forEach((node) => { node.textContent = userRole; });
+    document.querySelectorAll("[data-user-initials]").forEach((node) => { node.textContent = initials(userName); });
+    document.querySelectorAll("[data-security-subject]").forEach((node) => { node.textContent = subjectId; });
+    document.querySelectorAll("[data-security-tenant]").forEach((node) => { node.textContent = tenantId; });
+    document.querySelectorAll("[data-security-role]").forEach((node) => { node.textContent = userRole; });
+  }
+
+  function applyIdentity(payload) {
+    applyIdentityFields(payload);
+    setAuthenticatedHeader(payload);
+  }
+
+  function applyDashboard(payload) {
+    if (!payload?.entitlement || !payload?.usage) return;
+    applyIdentity(payload);
+    const plan = payload.entitlement.plan_name || payload.entitlement.plan_code || "—";
+    const planCode = String(payload.entitlement.plan_code || "").trim().toUpperCase();
+    const consumedRaw = payload.usage.consumed_units;
+    const consumed = consumedRaw == null ? 0 : Number(consumedRaw);
+    const limit = payload.usage.limit == null ? null : Number(payload.usage.limit);
+    const unmetered = payload.usage.metered === false || limit == null;
+    const usageAvailable = payload.usage.available !== false;
+    const remaining = payload.usage.remaining_units;
+    const percent = usageAvailable && !unmetered && limit ? Math.min(100, (consumed / limit) * 100) : 0;
+
+    setText("landingPlan", plan);
+    setText("landingUsage", unmetered ? "Ilimitado" : (usageAvailable ? number(consumed) : "—"));
+    setText("landingLimit", unmetered ? "" : "de " + number(limit));
+    setText("dashboardPlan", plan);
+    const planCard = document.getElementById("planSummaryCard");
+    const isTrial = planCode === "TRIAL";
+    if (planCard) planCard.classList.toggle("trial", isTrial);
+    setText(
+      "dashboardPlanDetail",
+      isTrial ? "Plano Free · 10.000 chamadas/mês" : (unmetered ? "Plano sem franquia mensal" : "Plano ativo"),
+    );
+    setText("dashboardConsumed", unmetered ? "Ilimitado" : (usageAvailable ? number(consumed) : "—"));
+    setText("dashboardLimit", unmetered ? "" : "/ " + number(limit));
+    setText(
+      "dashboardPercent",
+      unmetered
+        ? "Sem franquia mensal de execuções governadas"
+        : (usageAvailable ? percent.toFixed(2).replace(".", ",") + "% utilizado" : "Uso temporariamente indisponível"),
+    );
+    const dashboardBar = document.getElementById("dashboardUsageProgress");
+    if (dashboardBar) dashboardBar.style.width = (limit == null ? 0 : percent) + "%";
+    const dashboardProgress = dashboardBar?.parentElement;
+    if (dashboardProgress) dashboardProgress.setAttribute("aria-valuenow", String(Math.round(percent)));
+    const usageCard = document.getElementById("usageSummaryCard");
+    if (usageCard) {
+      usageCard.classList.toggle("usage-warning", percent >= 80 && percent < 100);
+      usageCard.classList.toggle("usage-exhausted", percent >= 100);
+    }
+    setText("usageConsumed", unmetered ? "Ilimitado" : (usageAvailable ? number(consumed) : "—"));
+    setText("usageLimit", unmetered ? "" : "de " + number(limit));
+    setText(
+      "usageRemaining",
+      unmetered
+        ? "Sem franquia mensal de execuções governadas"
+        : (usageAvailable ? number(remaining) + " execuções disponíveis" : "Uso temporariamente indisponível"),
+    );
+    setText("usagePeriod", unmetered ? "Sem limite" : (payload.usage.period_key || "—"));
+
+
+    const history = payload.transaction_history || {};
+    const bill = payload.billing_summary || {};
+    const historyAvailable = history.available === true && history.calls_period != null;
+    const formatDate = (iso) => {
+      if (!iso || !Number.isFinite(Date.parse(iso))) return null;
+      return new Intl.DateTimeFormat("pt-BR", { day: "2-digit",
+        month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(iso));
+    };
+    const periodStart = formatDate(history.period_start_utc);
+    const periodEndExclusive = history.period_end_utc && Number.isFinite(Date.parse(history.period_end_utc))
+      ? new Date(Date.parse(history.period_end_utc) - 86400000).toISOString() : null;
+    const periodEnd = formatDate(periodEndExclusive);
+    const periodLabel = periodStart && periodEnd
+      ? periodStart + " — " + periodEnd + " (UTC)" : "Período não informado";
+    const paymentEnd = formatDate(bill.current_period_end_utc);
+    const isNoCharge = bill.no_charge === true || planCode === "FOUNDER_INTERNAL";
+    const hasSubscription = bill.subscription_present === true;
+    const cancels = bill.cancel_at_period_end === true;
+    const chargeStatus = isNoCharge ? "Sem cobrança" :
+      hasSubscription ? (String(bill.subscription_status || "").toLowerCase() === "past_due"
+        ? "Pagamento pendente" : "Cobrança ativa") : "Não vinculada";
+    // Show a count, not the quota label 'Ilimitado': those are different facts.
+    setText("usageConsumed", historyAvailable ? number(history.calls_period) : "—");
+    setText("usageLimit", "");
+    setText("usageRemaining", historyAvailable ? "Execuções no mês de apuração atual" :
+      "Contagem do período temporariamente indisponível");
+    setText("usagePeriod", periodLabel);
+    setText("usageCardTransactions", historyAvailable ? number(history.calls_period) : "—");
+    setText("usageCardTransactionsDetail", historyAvailable
+      ? "Execuções de " + periodLabel + " · sem janela móvel de sete dias"
+      : "Apuração temporariamente indisponível");
+    setText("usageCardCapacity", chargeStatus);
+    setText("usageCardCapacityDetail", isNoCharge ? "Plano interno/Free sem cobrança" :
+      hasSubscription ? (paymentEnd ? "Fim do ciclo: " + paymentEnd : "Vencimento não informado")
+        : "Assinatura não vinculada a uma cobrança");
+    setText("usageCardPlan", plan);
+    setText("usageCardPlanDetail", isNoCharge ? "Plano ativo sem cobrança" : "Plano e condições comerciais");
+    setText("usageCardPeriod", paymentEnd ? paymentEnd :
+      (isNoCharge ? "Sem vencimento" : "Não informado"));
+    setText("usageCardPeriodDetail", hasSubscription ?
+      (cancels ? "Encerramento no fim do ciclo" : "Renovação conforme assinatura")
+      : (isNoCharge ? "Sem renovação de pagamento" : "Consulte Plano e cobrança"));
+    const internalHistory = document.getElementById("usageInternalHistory");
+    if (internalHistory) {
+      const allowed = planCode === "FOUNDER_INTERNAL" && history.internal_lifetime_calls != null;
+      internalHistory.hidden = !allowed;
+      if (allowed) setText("usageInternalLifetime", number(history.internal_lifetime_calls));
+    }
+    const bar = document.getElementById("usageProgress");
+    if (bar) bar.style.width = (unmetered || !usageAvailable ? 0 : percent) + "%";
+    if (!usageAvailable) {
+      showBanner(
+        "info",
+        "Uso temporariamente indisponível",
+        "Plano, sessão e computadores continuam disponíveis. Tente atualizar o uso novamente em instantes.",
+        "Atualizar uso",
+        loadProductDashboard,
+      );
+    }
+    // Device state and operational activity are hydrated independently.
+  }
+
+  function activityDuration(ms) {
+    const value=Number(ms);
+    if (!Number.isFinite(value) || value < 0) return "—";
+    if (value < 1000) return Math.round(value) + " ms";
+    return (value/1000).toFixed(value < 10 * 1000 ? 2 : 1).replace(".",",") + " s";
+  }
+
+  function activityWhen(value) {
+    const date=new Date(String(value || ""));
+    if (!Number.isFinite(date.getTime())) return "—";
+    return new Intl.DateTimeFormat("pt-BR",{
+      day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit"
+    }).format(date);
+  }
+
+  function localActivityToPortal(payload) {
+    if (payload?.schema !== "hara.commander-local-activity.v2" || payload?.local_direct !== true) return null;
+    const events=Array.isArray(payload.events) ? payload.events : [];
+    const transactions=events.map((item)=>({
+      created_at_utc:item.at_utc || null,
+      tool_id:item.tool_id || item.function_id || "—",
+      computer:payload.computer || "Este computador",
+      state:item.state || (item.event === "PASS" ? "COMPLETED" : (item.event === "DENIED" ? "FAILED" : item.event)),
+      total_ms:item.duration_ms,
+      queue_ms:0,
+      execution_ms:item.duration_ms,
+      transport_mode:item.transport_mode || "LOCAL_AGENT",
+      agent_version:payload.agent_version || null,
+      error_code:item.error_code || null,
+      trace_id:item.receipt_sha256 || "",
+      action_summary:item.action_summary || null,
+      source:"LOCAL_SQLITE",
+    }));
+    return {
+      schema:"hara.commander-portal-activity.v2",
+      scope:"LOCAL_DEVICE",
+      source:"LOCALHOST_SQLITE",
+      detail_location:"LOCAL_DEVICE",
+      local_direct:true,
+      local_device_id:payload.device_id || null,
+      snapshot_coverage_percent:100,
+      window:payload.window || {},
+      privacy:payload.privacy || {},
+      summary:{...(payload.summary || {}),device_count:1},
+      slo:payload.slo || null,
+      diagnostics:payload.diagnostics || {top_tools:[],top_errors:[]},
+      transactions,
+    };
+  }
+
+  function mergeLocalActivityDetail(cloud,local) {
+    if (!local) return cloud;
+    if (!cloud) return local;
+    const transactions=[
+      ...(Array.isArray(local.transactions) ? local.transactions : []),
+      ...(Array.isArray(cloud.transactions) ? cloud.transactions : []),
+    ].sort((a,b)=>Date.parse(String(b.created_at_utc || ""))-Date.parse(String(a.created_at_utc || ""))).slice(0,50);
+    return {
+      ...cloud,
+      source:String(cloud.source || "CLOUD") + "+LOCALHOST_DETAIL",
+      detail_location:"LOCAL_DEVICE_WITH_CLOUD_FALLBACK",
+      local_direct:true,
+      local_device_id:local.local_device_id,
+      transactions,
+    };
+  }
+
+  async function localLoopbackPermissionState() {
+    try {
+      if (!navigator.permissions?.query) return "unknown";
+      const status=await navigator.permissions.query({name:"loopback-network"});
+      return String(status?.state || "unknown");
+    } catch (_error) {
+      return "unknown";
+    }
+  }
+
+  async function shouldAttemptLocalActivity(explicitUserRefresh=false) {
+    const state=await localLoopbackPermissionState();
+    if (state === "granted") return true;
+    if (state === "denied") return false;
+    return explicitUserRefresh;
+  }
+
+  async function fetchLocalActivityDirect(windowKey) {
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),LOCAL_ACTIVITY_TIMEOUT_MS);
+    try {
+      const url=LOCAL_ACTIVITY_ORIGIN + "/v1/activity?limit=50&window=" + encodeURIComponent(windowKey);
+      const options={
+        cache:"no-store",
+        mode:"cors",
+        credentials:"omit",
+        signal:controller.signal,
+        targetAddressSpace:"loopback",
+      };
+      const response=await portalFetch(new Request(url,options));
+      if (!response.ok) return null;
+      return localActivityToPortal(await response.json().catch(()=>null));
+    } catch (_error) {
+      return null;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  function supportReportPrivacySafe(report) {
+    if (!report || report.schema !== "hara.commander-support-report.v2") return false;
+    const privacy=report.privacy || {};
+    return [
+      "secret_material_exposed",
+      "customer_content_included",
+      "command_content_included",
+      "payload_content_included",
+      "result_content_included",
+    ].every((key)=>privacy[key] === false);
+  }
+
+  async function fetchLocalSupportReport() {
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),LOCAL_SUPPORT_TIMEOUT_MS);
+    try {
+      const request=new Request(LOCAL_ACTIVITY_ORIGIN + "/v1/support",{
+        cache:"no-store",
+        mode:"cors",
+        credentials:"omit",
+        signal:controller.signal,
+        targetAddressSpace:"loopback",
+      });
+      const response=await portalFetch(request);
+      if (!response.ok) return null;
+      const payload=await response.json().catch(()=>null);
+      return supportReportPrivacySafe(payload) ? payload : null;
+    } catch (_error) {
+      return null;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  async function submitLocalSupportReport(trigger=null) {
+    const statusNode=document.getElementById("supportReportStatus");
+    const original=trigger?.textContent || "Enviar diagnóstico";
+    if (!remotePortal || !sessionAuthenticated) {
+      if (statusNode) statusNode.textContent="Entre no Commander para enviar um diagnóstico.";
+      return;
+    }
+    if (!["OWNER","ADMIN"].includes(String(currentRole || "").toUpperCase())) {
+      if (statusNode) statusNode.textContent="Somente OWNER/ADMIN podem enviar diagnósticos ao suporte.";
+      return;
+    }
+    const allowed=await shouldAttemptLocalActivity(true);
+    if (!allowed) {
+      if (statusNode) statusNode.textContent="O navegador bloqueou o acesso ao Agent local. Use o comando Diagnóstico na lista de computadores.";
+      return;
+    }
+    if (trigger) {
+      trigger.disabled=true;
+      trigger.textContent="Coletando…";
+    }
+    try {
+      const report=await fetchLocalSupportReport();
+      if (!report) throw new Error("LOCAL_SUPPORT_UNAVAILABLE");
+      if (trigger) trigger.textContent="Enviando…";
+      const response=await portalFetch("/api/portal/support-reports",{
+        method:"POST",
+        cache:"no-store",
+        credentials:"same-origin",
+        headers:{"content-type":"application/json"},
+        body:JSON.stringify(report),
+      });
+      if (handlePortalAuthFailure(response,"Entre novamente para enviar o diagnóstico.")) return;
+      const payload=await response.json().catch(()=>({}));
+      if (!response.ok) throw new Error(String(payload?.code || "SUPPORT_REPORT_SUBMIT_FAILED"));
+      const expires=payload?.expires_at_utc ? new Date(payload.expires_at_utc).toLocaleDateString("pt-BR") : "30 dias";
+      if (statusNode) statusNode.textContent="Diagnóstico sanitizado enviado · retenção até " + expires + ".";
+      showToast("Diagnóstico sanitizado enviado ao suporte.");
+    } catch (error) {
+      const code=String(error?.message || "");
+      if (statusNode) {
+        statusNode.textContent=code === "LOCAL_SUPPORT_UNAVAILABLE"
+          ? "O Agent local não respondeu. Use Diagnóstico na lista de computadores como fallback."
+          : (code === "SUPPORT_REPORT_ADMIN_REQUIRED"
+            ? "Somente OWNER/ADMIN podem enviar diagnósticos."
+            : "Não foi possível enviar o diagnóstico agora. Tente novamente.");
+      }
+    } finally {
+      if (trigger?.isConnected) {
+        trigger.disabled=false;
+        trigger.textContent=original;
+      }
+    }
+  }
+
+  function activityTag(state) {
+    const value=String(state || "").toUpperCase();
+    if (value === "COMPLETED") return ["PASS","committed"];
+    if (value === "FAILED") return ["FALHA","denied"];
+    if (value === "PENDING") return ["PENDENTE","released"];
+    if (value === "EXECUTING") return ["EXECUTANDO","released"];
+    if (value === "EXPIRED") return ["EXPIRADA","denied"];
+    if (value === "CANCELLED") return ["CANCELADA","released"];
+    return [value || "—","released"];
+  }
+
+  function renderActivityBreakdown(targetId,items,labelKey,emptyTitle,emptyText) {
+    const target=document.getElementById(targetId);
+    if (!target) return;
+    target.replaceChildren();
+    if (!Array.isArray(items) || !items.length) {
+      const empty=document.createElement("div");
+      empty.className="empty-state compact";
+      const strong=document.createElement("strong");
+      strong.textContent=emptyTitle;
+      empty.append(strong,document.createTextNode(emptyText));
+      target.append(empty);
+      return;
+    }
+    const max=Math.max(...items.map((item)=>Number(item.calls || 0)),1);
+    items.forEach((item)=>{
+      const row=document.createElement("div");
+      row.className="activity-breakdown-row";
+      const label=document.createElement("span");
+      label.textContent=String(item[labelKey] || "—");
+      label.title=label.textContent;
+      const bar=document.createElement("i");
+      bar.style.width=Math.max(4,Math.round((Number(item.calls || 0)/max)*100))+"%";
+      const count=document.createElement("b");
+      count.textContent=number(item.calls || 0);
+      row.append(label,bar,count);
+      target.append(row);
+    });
+  }
+
+  function renderActivity(payload) {
+    const diagnosticsPanel=document.getElementById("internalBetaDiagnostics");
+    const localOnly=payload?.local_direct === true || String(payload?.source || "").startsWith("LOCALHOST_SQLITE");
+    if (diagnosticsPanel) diagnosticsPanel.hidden=!localOnly;
+    if (!localOnly) return;
+    const summary=payload?.summary || {};
+    setText("activityTotal",number(summary.total_calls || 0));
+    const scopeLabel=payload?.scope === "TENANT"
+      ? "Workspace inteiro"
+      : (payload?.scope === "LOCAL_DEVICE" ? "Este computador" : "Suas execuções");
+    const windowLabel=String(payload?.window?.label || "");
+    const localCoverage=Number(payload?.snapshot_coverage_percent);
+    const sourceLabel=payload?.local_direct === true
+      ? " · detalhe local"
+      : (String(payload?.source || "").startsWith("LOCAL_DEVICE") && Number.isFinite(localCoverage)
+        ? " · " + String(localCoverage).replace(".", ",") + "% local"
+        : "");
+    setText("activityScope",scopeLabel + (windowLabel ? " · " + windowLabel : "") + sourceLabel);
+    setText("activitySuccessRate",summary.success_rate_percent == null ? "—" : String(summary.success_rate_percent).replace(".",",") + "%");
+    setText("activityTerminalSummary",number(summary.completed || 0) + " PASS · " + number(summary.failed || 0) + " falhas");
+    setText("activityAvgLatency",activityDuration(summary.avg_total_ms));
+    setText("activityLatencyStages","Fila " + activityDuration(summary.avg_queue_ms) + " · Agent " + activityDuration(summary.avg_execution_ms));
+    const transports=Array.isArray(summary.transport_modes) ? summary.transport_modes : [];
+    setText("activityTransport",transports[0] || "—");
+    setText("activityDeviceCount",number(summary.device_count || 0) + " computador(es) · " + (summary.under_3s_percent == null ? "—" : String(summary.under_3s_percent).replace(".",",") + "% < 3 s"));
+    const diagnostics=payload?.diagnostics || {};
+    renderActivityBreakdown("activityTopTools",diagnostics.top_tools,"tool_id","Sem atividade","Nenhuma tool executada nesta janela.");
+    renderActivityBreakdown("activityTopErrors",diagnostics.top_errors,"error_code","Sem falhas","Nenhuma falha registrada nesta janela.");
+
+    const success=summary.availability_success_rate_percent;
+    const availability=Number(success);
+    const localAvailabilityStatus=!Number.isFinite(availability)
+      ? "INSUFFICIENT_DATA"
+      : (availability >= 99 ? "PASS" : "DEGRADED");
+    setText("activitySloStatus",localAvailabilityStatus === "PASS" ? "OK" : (localAvailabilityStatus === "DEGRADED" ? "Degradado" : "Aguardando amostra"));
+    setText(
+      "activitySloDetail",
+      success == null
+        ? "Disponibilidade local ainda sem amostra suficiente."
+        : "Disponibilidade local " + String(success).replace(".",",") + "% · duração das tools não entra no SLO.",
+    );
+
+    const ledger=document.getElementById("usageLedger");
+    if (!ledger) return;
+    const header=ledger.querySelector(".tr.head");
+    ledger.replaceChildren();
+    if (header) ledger.append(header);
+
+    const rows=Array.isArray(payload?.transactions) ? payload.transactions : [];
+    if (!rows.length) {
+      const empty=document.createElement("div");
+      empty.className="empty-state";
+      const strong=document.createElement("strong");
+      const localDetail=String(payload?.detail_location || "").startsWith("LOCAL_DEVICE");
+      strong.textContent=localDetail ? "Histórico detalhado fica no computador" : "Nenhuma transação ainda";
+      empty.append(
+        strong,
+        document.createTextNode(
+          localDetail
+            ? "Os cards acima vieram do banco local do Agent. Comandos e detalhes permanecem na máquina do usuário."
+            : "As execuções governadas aparecerão aqui sem expor payloads ou resultados.",
+        ),
+      );
+      ledger.append(empty);
+      return;
+    }
+
+    rows.forEach((item)=>{
+      const row=document.createElement("div");
+      row.className="tr activity-row";
+
+      const when=document.createElement("span");
+      when.textContent=activityWhen(item.created_at_utc);
+
+      const tool=document.createElement("span");
+      tool.className="activity-tool";
+      tool.textContent=String(item.tool_id || "—");
+      tool.title=String(item.action_summary || item.source || "");
+
+      const computer=document.createElement("span");
+      computer.textContent=String(item.computer || "—");
+      computer.title=(String(item.transport_mode || "") + (item.agent_version ? " · Agent " + item.agent_version : "")).trim();
+
+      const state=document.createElement("span");
+      const [label,klass]=activityTag(item.state);
+      state.className="tag " + klass;
+      state.textContent=label;
+      if (item.error_code) state.title=String(item.error_code);
+
+      const duration=document.createElement("span");
+      duration.textContent=activityDuration(item.total_ms);
+      duration.title="Fila " + activityDuration(item.queue_ms) + " · execução " + activityDuration(item.execution_ms);
+
+      const trace=document.createElement("span");
+      trace.className="trace-code";
+      const traceId=String(item.trace_id || "");
+      trace.textContent=traceId ? traceId.slice(-8) : "—";
+      trace.title=traceId || (item.error_code || "");
+
+      row.append(when,tool,computer,state,duration,trace);
+      ledger.append(row);
+    });
+  }
+
+  function setActivityWindow(value) {
+    const next=["24h","7d","30d"].includes(String(value)) ? String(value) : "7d";
+    activityWindow=next;
+    document.querySelectorAll("[data-activity-window]").forEach((button)=>{
+      const active=button.dataset.activityWindow === next;
+      button.classList.toggle("active",active);
+      button.setAttribute("aria-checked",String(active));
+      button.tabIndex=active ? 0 : -1;
+    });
+    loadUsageActivity(null,true);
+  }
+
+  function csvCell(value) {
+    const text=String(value == null ? "" : value);
+    return '"' + text.replaceAll('"','""') + '"';
+  }
+
+  function exportUsageActivityCsv(trigger=null) {
+    const cached=activityCache.get(activityWindow);
+    const payload=cached?.payload;
+    const rows=Array.isArray(payload?.transactions) ? payload.transactions : [];
+    if (!rows.length) {
+      showToast("Não há transações nesta janela para exportar.");
+      return;
+    }
+    const header=["horario_utc","tool","computador","estado","duracao_ms","fila_ms","execucao_ms","transporte","agent","erro","rastro"];
+    const lines=[header.map(csvCell).join(",")];
+    rows.forEach((item)=>{
+      lines.push([
+        item.created_at_utc,item.tool_id,item.computer,item.state,item.total_ms,item.queue_ms,
+        item.execution_ms,item.transport_mode,item.agent_version,item.error_code,item.trace_id
+      ].map(csvCell).join(","));
+    });
+    const blob=new Blob(["\ufeff"+lines.join("\r\n")],{type:"text/csv;charset=utf-8"});
+    const url=URL.createObjectURL(blob);
+    const anchor=document.createElement("a");
+    anchor.href=url;
+    anchor.download="hara-commander-activity-"+activityWindow+".csv";
+    document.body.append(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+    if (trigger) showToast("CSV de metadados operacionais exportado.");
+  }
+
+  async function loadUsageActivity(trigger=null, force=false) {
+    if (!remotePortal || !sessionAuthenticated) return;
+    // The selected window may change while permissions or the Agent respond.
+    // Even a cache hit supersedes older requests; only the current read renders.
+    const requestedWindow=activityWindow;
+    const generation=++activityReadGeneration;
+    const isCurrent=()=>remotePortal && sessionAuthenticated
+      && generation === activityReadGeneration && requestedWindow === activityWindow;
+    const diagnosticsPanel=document.getElementById("internalBetaDiagnostics");
+    const cached=activityCache.get(requestedWindow);
+    if (!force && cached && Date.now()-cached.at < ACTIVITY_CACHE_MS) {
+      renderActivity(cached.payload);
+      return;
+    }
+    const priorTrigger=trigger ? activityTriggerReads.get(trigger) : null;
+    const triggerRead=trigger ? {
+      original:priorTrigger?.original ?? (trigger.textContent || "Atualizar"),
+      disabled:priorTrigger?.disabled ?? trigger.disabled,
+    } : null;
+    if (trigger) {
+      activityTriggerReads.set(trigger,triggerRead);
+      trigger.disabled=true;
+      trigger.textContent="Atualizando…";
+    }
+    try {
+      const permissionState=await localLoopbackPermissionState();
+      if (!isCurrent()) return;
+      if (permissionState === "denied") {
+        activityCache.delete(requestedWindow);
+        if (diagnosticsPanel) diagnosticsPanel.hidden=true;
+        if (trigger) showToast("Diagnóstico beta disponível somente no computador que executa o Agent local.");
+        return;
+      }
+      const payload=await fetchLocalActivityDirect(requestedWindow);
+      if (!isCurrent()) return;
+      if (!payload) {
+        activityCache.delete(requestedWindow);
+        if (diagnosticsPanel) diagnosticsPanel.hidden=true;
+        if (trigger) showToast("O Agent local não respondeu ao diagnóstico beta.");
+        return;
+      }
+      activityCache.set(requestedWindow,{at:Date.now(),payload});
+      renderActivity(payload);
+    } catch (_error) {
+      // A stale failure must not hide a newer success or expose error details.
+      if (!isCurrent()) return;
+      activityCache.delete(requestedWindow);
+      if (diagnosticsPanel) diagnosticsPanel.hidden=true;
+      if (trigger) showToast("Não foi possível atualizar o diagnóstico beta agora.");
+    } finally {
+      // Concurrent reads can use the same button. Only its latest owner resets it.
+      if (trigger && activityTriggerReads.get(trigger) === triggerRead) {
+        activityTriggerReads.delete(trigger);
+        if (trigger.isConnected) {
+          trigger.disabled=triggerRead.disabled;
+          trigger.textContent=triggerRead.original;
+        }
+      }
+    }
+  }
+
+  async function loadServiceHealth(trigger=null) {
+    const pill=document.getElementById("serviceHealthPill");
+    const detail=document.getElementById("serviceHealthDetail");
+    const original=trigger?.textContent || "Atualizar status";
+    if (trigger) {
+      trigger.disabled=true;
+      trigger.textContent="Verificando…";
+    }
+    if (pill) {
+      pill.classList.remove("healthy","degraded");
+      pill.innerHTML="<i></i> Verificando";
+    }
+    try {
+      const started=performance.now();
+      const response=await portalFetch("/api/health",{cache:"no-store"});
+      const payload=await response.json().catch(()=>({}));
+      const latency=Math.max(0,Math.round(performance.now()-started));
+      const ok=Boolean(response.ok && payload?.ok === true && payload?.service === "hara-commander");
+      if (pill) {
+        pill.classList.toggle("healthy",ok);
+        pill.classList.toggle("degraded",!ok);
+        pill.innerHTML="<i></i> " + (ok ? "Operacional" : "Degradado");
+      }
+      if (detail) detail.textContent=(ok ? "Serviço respondeu normalmente" : "O serviço respondeu com degradação") + " · " + latency + " ms · " + new Date().toLocaleTimeString("pt-BR");
+    } catch (_error) {
+      if (pill) {
+        pill.classList.remove("healthy");
+        pill.classList.add("degraded");
+        pill.innerHTML="<i></i> Indisponível";
+      }
+      if (detail) detail.textContent="Não foi possível alcançar o serviço agora.";
+    } finally {
+      if (trigger?.isConnected) {
+        trigger.disabled=false;
+        trigger.textContent=original;
+      }
+    }
+  }
+
+  async function hydrateSessionHeader() {
+    if (!remotePortal) return false;
+    const readEpoch = portalSessionGeneration;
+    try {
+      const response = await portalFetch("/api/portal/session", { cache: "no-store", credentials: "same-origin" });
+      if (readEpoch !== portalSessionGeneration) return false;
+      if (!response.ok) {
+        if (response.status === 401) setGuestHeader();
+        return false;
+      }
+      const payload = await response.json();
+      if (readEpoch !== portalSessionGeneration) return false;
+      applyIdentity(payload);
+      if (payload?.availability?.degraded === true) {
+        history.replaceState(null, "", location.pathname + "#plans");
+      }
+      return true;
+    } catch (_error) {
+      // Session chrome must never depend on quota/telemetry availability.
+      return false;
+    }
+  }
+
+  async function loadPortalBootstrap() {
+    if (!remotePortal) return null;
+    const readEpoch = portalSessionGeneration;
+    try {
+      const response = await portalFetch("/api/portal/bootstrap", {
+        cache: "no-store",
+        credentials: "same-origin",
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (readEpoch !== portalSessionGeneration) return null;
+      if (response.status === 401) {
+        setGuestHeader();
+        return false;
+      }
+      if (response.status === 403 && payload?.code === "ENTITLEMENT_NOT_FOUND") {
+        applyIdentity(payload);
+        setState("Aguardando", "Plano ativo necessário");
+        showBanner(
+          "warning",
+          "Plano não disponível",
+          "Sua conta está autenticada, mas ainda não possui um plano ativo do Commander.",
+        );
+        return true;
+      }
+      if (!response.ok) throw new Error("HTTP_" + response.status);
+      applyDashboard(payload);
+      renderDevices(payload.device_state);
+      dashboardCache = payload;
+      dashboardCacheAt = Date.now();
+      devicesCache = payload.device_state;
+      devicesCacheAt = Date.now();
+      return true;
+    } catch (_error) {
+      // Bootstrap is an optimization only. Fall back to the existing split reads.
+      return null;
+    }
+  }
+
+  function formatDeviceSeen(value) {
+    if (!value) return "Ainda não conectado";
+    const date = new Date(String(value));
+    if (Number.isNaN(date.getTime())) return "—";
+    return new Intl.DateTimeFormat("pt-BR", {
+      dateStyle: "short",
+      timeStyle: "medium",
+    }).format(date);
+  }
+
+  function formatDeviceSeenCompact(value) {
+    if (!value) return "Sem contato registrado";
+    const when = Date.parse(String(value));
+    if (!Number.isFinite(when)) return "Último contato indisponível";
+    const age = Math.max(0, Date.now() - when);
+    if (age < 60000) return "Agora";
+    if (age < 3600000) return "Há " + Math.floor(age / 60000) + " min";
+    if (age < 86400000) return "Há " + Math.floor(age / 3600000) + " h";
+    return "Último contato " + formatDeviceSeen(value);
+  }
+
+  function setDeviceSectionTab(next) {
+    const sections = ["devices", "connect", "commands"];
+    deviceSectionTab = sections.includes(next) ? next : "devices";
+    document.querySelectorAll("[data-device-section-tab]").forEach((button) => {
+      const active = button.dataset.deviceSectionTab === deviceSectionTab;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-selected", String(active));
+      button.tabIndex = active ? 0 : -1;
+    });
+    document.querySelectorAll("[data-device-section-panel]").forEach((panel) => {
+      panel.hidden = panel.dataset.deviceSectionPanel !== deviceSectionTab;
+    });
+    if (deviceSectionTab === "devices" && devicesCache) renderDevices(devicesCache);
+  }
+
+  function setDeviceTab(next) {
+    deviceTab = next === "history" ? "history" : "active";
+    historyClearConfirmation = false;
+    historyClearFailureMessage = "";
+    pendingRevokeDeviceId = null;
+    revokeFailureMessage = "";
+    document.querySelectorAll(".device-tabs button[data-device-tab]").forEach((button) => {
+      const active = button.dataset.deviceTab === deviceTab;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-selected", String(active));
+      button.tabIndex = active ? 0 : -1;
+    });
+    if (devicesCache) renderDevices(devicesCache);
+  }
+
+  function requestHistoryClear() {
+    if (deviceTab !== "history" || historyClearPending || !["OWNER","ADMIN"].includes(currentRole)) return;
+    historyClearConfirmation = true;
+    historyClearFailureMessage = "";
+    if (devicesCache) renderDevices(devicesCache);
+    document.querySelector("[data-confirm-history-clear]")?.focus({ preventScroll: false });
+  }
+
+  function cancelHistoryClear() {
+    if (historyClearPending) return;
+    historyClearConfirmation = false;
+    historyClearFailureMessage = "";
+    if (devicesCache) renderDevices(devicesCache);
+  }
+
+  async function confirmHistoryClear(trigger = null) {
+    if (deviceTab !== "history" || !historyClearConfirmation || historyClearPending || !devicesCache
+        || !["OWNER","ADMIN"].includes(currentRole)) return;
+    const expectedCount = (devicesCache.devices || []).filter(device => device.state === "REVOKED").length;
+    if (!expectedCount) return;
+    const generation = portalSessionGeneration;
+    const scope = historyScope;
+    const isCurrent = () => sessionAuthenticated
+      && generation === portalSessionGeneration && scope === historyScope;
+    historyClearPending = true;
+    historyClearFailureMessage = "";
+    if (devicesCache) renderDevices(devicesCache);
+    try {
+      const response = await portalFetch("/api/portal/devices/history/clear", {
+        method: "POST",
+        cache: "no-store",
+        credentials: "same-origin",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ expected_count: expectedCount }),
+      });
+      if (!isCurrent()) return;
+      const payload = await response.json().catch(() => ({}));
+      if (handlePortalAuthFailure(response, "Entre novamente para limpar o histórico.")) return;
+      if (!response.ok || payload?.ok !== true || payload?.state !== "CLEARED"
+          || payload?.deleted_count !== expectedCount) {
+        const message = response.status === 403
+          ? "Somente o proprietário ou administrador pode limpar o histórico."
+          : response.status === 409
+            ? "O histórico mudou desde a confirmação. Atualize a lista e tente novamente."
+            : "A limpeza não foi confirmada (HTTP " + response.status + "). Atualize antes de repetir.";
+        throw new Error(message);
+      }
+      historyClearConfirmation = false;
+      historyClearFailureMessage = "";
+      // A successful POST is authoritative. Refresh from the server, never
+      // fake a localStorage hide or allow old revoked entries to reappear.
+      try {
+        const refresh = await portalFetch("/api/portal/devices", {
+          cache: "no-store", credentials: "same-origin",
+        });
+        if (!isCurrent()) return;
+        if (!refresh.ok) throw new Error("HISTORY_READBACK_HTTP_" + refresh.status);
+        const latest = await refresh.json();
+        if (!isCurrent()) return;
+        if (!Array.isArray(latest?.devices)) throw new Error("HISTORY_READBACK_INVALID");
+        devicesCache = latest;
+        devicesCacheAt = Date.now();
+      } catch (_readbackError) {
+        if (!isCurrent()) return;
+        devicesCache = { ...devicesCache,
+          devices: (devicesCache.devices || []).filter(device => device.state !== "REVOKED") };
+        devicesCacheAt = 0;
+        showToast("Histórico removido no servidor. Atualize a lista para confirmar a visualização.");
+        return;
+      }
+      showToast("Histórico limpo: " + expectedCount
+        + (expectedCount === 1 ? " registro removido" : " registros removidos") + " do portal.");
+    } catch (error) {
+      if (!isCurrent()) return;
+      historyClearFailureMessage = String(error?.message || "Não foi possível confirmar a limpeza.");
+      showToast("Não foi possível confirmar a limpeza. Confira a mensagem no histórico.");
+    } finally {
+      historyClearPending = false;
+      if (isCurrent() && devicesCache) renderDevices(devicesCache);
+      if (trigger?.isConnected) trigger.disabled = false;
+    }
+  }
+
+  function deviceApprovalLabel(mode) {
+    const value=String(mode || "").toUpperCase();
+    if (value === "PERSISTENT_TRUSTED") return { label:"Sempre permitido", className:"persistent" };
+    if (value === "SESSION_TRUSTED") return { label:"Por sessão", className:"session" };
+    if (value === "ASK_EVERY_ACTION") return { label:"Confirmação", className:"ask" };
+    return { label:"Política padrão", className:"default" };
+  }
+
+  function deviceReadiness(device) {
+    if (device?.state === "REVOKED") return { label:"Revogado", className:"revoked", detail:"Acesso revogado" };
+    // A valid authorization lease is not proof of an active connection.
+    if (!device?.online) return { label:"Offline", className:"offline", detail:"Sem conexão ativa com o Agent" };
+    if (String(device?.tunnel_mode || "").toUpperCase() === "LOCAL_TUNNEL") {
+      if (device?.authorization_active) return { label:"Pronto", className:"ready", detail:"Conexão direta autorizada" };
+      return { label:"Atenção", className:"attention", detail:"Conectado; autorização local necessária" };
+    }
+    const mode=String(device?.approval_mode || "").toUpperCase();
+    if (mode === "PERSISTENT_TRUSTED" || mode === "SESSION_TRUSTED") {
+      return { label:"Pronto", className:"ready", detail:"Online e autorizado para uso" };
+    }
+    return { label:"Atenção", className:"attention", detail:"Online; confirmações locais ainda podem ser exigidas" };
+  }
+
+  function deviceDiagnosticCommand(platform) {
+    if (String(platform || "").toUpperCase() !== "WINDOWS") {
+      return "hara-commander doctor && hara-commander support";
+    }
+    return "$tmp=Join-Path $env:TEMP ('hara-commander-support-'+[guid]::NewGuid().ToString('N')+'.ps1'); try { Invoke-WebRequest -Uri https://commander.haralabs.com.br/install/windows.ps1 -OutFile $tmp -UseBasicParsing -MaximumRedirection 0 -ErrorAction Stop; & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $tmp -Action doctor; & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $tmp -Action support } finally { Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue }";
+  }
+
+  function toggleDeviceDetails(deviceId) {
+    const id = String(deviceId || "");
+    if (!id) return;
+    expandedDeviceId = expandedDeviceId === id ? null : id;
+    const list = document.getElementById("deviceList");
+    if (!list) return;
+    list.querySelectorAll(".device-row").forEach((row) => {
+      const button = row.querySelector("[data-toggle-device-details]");
+      const panel = row.querySelector(".device-overflow-panel");
+      if (!button || !panel) return;
+      const open = expandedDeviceId === button.dataset.toggleDeviceDetails;
+      panel.hidden = !open;
+      button.setAttribute("aria-expanded", String(open));
+      row.classList.toggle("device-details-open", open);
+    });
+  }
+
+  function renderDevices(payload) {
+    const list = document.getElementById("deviceList");
+    const devices = Array.isArray(payload?.devices) ? payload.devices : [];
+    const activeDevices = devices.filter((device) => device.state === "ACTIVE");
+    const revokedDevices = devices.filter((device) => device.state === "REVOKED");
+    const visibleDevices = deviceTab === "history" ? revokedDevices : activeDevices;
+    const historyTools = document.getElementById("deviceHistoryTools");
+    if (historyTools) historyTools.hidden = deviceTab !== "history";
+    const canClearHistory = ["OWNER","ADMIN"].includes(currentRole);
+    const historyClear = document.querySelector("[data-clear-revoked-history]");
+    if (historyClear) {
+      historyClear.hidden = deviceTab !== "history" || !canClearHistory || revokedDevices.length === 0;
+      historyClear.disabled = historyClearPending;
+    }
+    const clearConfirmation = document.getElementById("deviceHistoryClearConfirm");
+    if (clearConfirmation) {
+      clearConfirmation.hidden = deviceTab !== "history"
+        || !historyClearConfirmation || revokedDevices.length === 0 || !canClearHistory;
+      const count = clearConfirmation.querySelector("[data-history-clear-count]");
+      if (count) count.textContent = String(revokedDevices.length);
+      const confirm = clearConfirmation.querySelector("[data-confirm-history-clear]");
+      if (confirm) {
+        confirm.disabled = historyClearPending;
+        confirm.textContent = historyClearPending ? "Limpando…" : "Limpar histórico";
+      }
+      const cancel = clearConfirmation.querySelector("[data-cancel-history-clear]");
+      if (cancel) cancel.disabled = historyClearPending;
+      const error = clearConfirmation.querySelector("[data-history-clear-error]");
+      if (error) {
+        error.hidden = !historyClearFailureMessage;
+        error.textContent = historyClearFailureMessage;
+      }
+    }
+    const onlineCount = activeDevices.filter((device) => device.online).length;
+    const offlineCount = activeDevices.length - onlineCount;
+    const readyCount = activeDevices.filter((device) => deviceReadiness(device).className === "ready").length;
+
+    setText("deviceStatusSummary",
+      onlineCount + " online" + (offlineCount ? " · " + offlineCount + " offline" : ""));
+
+    setText("deviceActiveCount", number(activeDevices.length));
+    setText("deviceHistoryCount", number(revokedDevices.length));
+    setText("dashboardConnections", number(readyCount) + " pronto" + (readyCount === 1 ? "" : "s"));
+    setText("dashboardConnectionsDetail", activeDevices.length ? activeDevices.length + (activeDevices.length === 1 ? " computador ativo" : " computadores ativos") : "Instale o Commander Agent");
+    const devicesCard = document.getElementById("dashboardDevicesCard");
+    if (devicesCard) {
+      devicesCard.classList.toggle("state-ready", readyCount > 0);
+      devicesCard.classList.toggle("state-waiting", readyCount === 0);
+    }
+    setText("landingConnections", number(readyCount));
+    setText("landingConnectionsDetail", readyCount ? "Commander pronto" : "Nenhum computador autorizado");
+    if (readyCount > 0) {
+      setState(
+        "Pronto",
+        readyCount + (readyCount === 1 ? " computador autorizado" : " computadores autorizados"),
+        true,
+      );
+    } else if (activeDevices.length) {
+      setState("Aguardando", "Computadores precisam de autorização local");
+    } else {
+      setState("Aguardando", "Conecte seu computador");
+    }
+
+    if (!list) return;
+    list.replaceChildren();
+    // A list container must never reuse data-device-tab (reserved for tab
+    // buttons). Otherwise delegated clicks on child actions are mistaken for
+    // tab-selection clicks and revoke confirmation silently resets.
+    list.dataset.listTab = deviceTab;
+
+    if (!visibleDevices.length) {
+      const empty = document.createElement("div");
+      empty.className = "empty-state";
+      const title = document.createElement("strong");
+      if (deviceTab === "history") {
+        title.textContent = "Nenhum computador no histórico";
+        empty.append(title, document.createTextNode(
+          "Computadores revogados aparecerão aqui. Os registros limpos não voltam."));
+      } else {
+        title.textContent = "Nenhum dispositivo ativo";
+        empty.append(title, document.createTextNode("Abra “Conectar novo” para adicionar seu primeiro dispositivo."));
+      }
+      list.append(empty);
+      return;
+    }
+
+    visibleDevices.forEach((device) => {
+      const row = document.createElement("div");
+      row.className = "device-row";
+      if (device.state === "REVOKED") row.classList.add("historical");
+
+      const icon = document.createElement("span");
+      icon.className = "device-platform";
+      icon.textContent = device.platform === "WINDOWS" ? "WIN" : "LIN";
+
+      const body = document.createElement("div");
+      body.className = "device-copy";
+      const titleLine = document.createElement("div");
+      titleLine.className = "device-title-line";
+      const name = document.createElement("b");
+      name.textContent = String(device.device_name || "Computador");
+      titleLine.append(name);
+      // Authorization mode remains available in Details, not on every row.
+      const meta = document.createElement("small");
+      const localTunnel = String(device.tunnel_mode || "").toUpperCase() === "LOCAL_TUNNEL";
+      const platformLabel = String(device.platform || "").toUpperCase() === "WINDOWS" ? "Windows" : "Linux";
+      meta.textContent = platformLabel + " · " + formatDeviceSeenCompact(device.last_seen_at_utc);
+      body.append(titleLine, meta);
+
+      const readiness=deviceReadiness(device);
+      const state = document.createElement("span");
+      state.className = "device-state " + readiness.className;
+      state.textContent = readiness.label;
+      state.title = readiness.detail;
+
+      row.append(icon, body, state);
+
+      const actions = document.createElement("div");
+      actions.className = "device-actions";
+
+      if (device.state === "ACTIVE") {
+        const diagnostic = document.createElement("button");
+        diagnostic.className = "link-button device-primary-action";
+        diagnostic.type = "button";
+        diagnostic.dataset.copyDeviceDiagnostic = String(device.platform || "LINUX");
+        diagnostic.textContent = "Diagnóstico";
+        diagnostic.title = "Copiar comando local de diagnóstico";
+        actions.append(diagnostic);
+      }
+
+      // Keep the advanced panel inline so it cannot disappear behind other
+      // rows or browser-specific native disclosure positioning.
+      const toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.dataset.toggleDeviceDetails = String(device.device_id);
+      toggle.className = "device-overflow-toggle";
+      toggle.textContent = "⋯";
+      toggle.setAttribute("aria-label", "Detalhes e ações de " + String(device.device_name || "computador"));
+      toggle.title = "Detalhes e ações";
+      const menu = document.createElement("div");
+      menu.className = "device-overflow-panel";
+      menu.hidden = expandedDeviceId !== String(device.device_id);
+      menu.id = "device-details-" + String(device.device_id);
+      toggle.setAttribute("aria-controls", menu.id);
+      toggle.setAttribute("aria-expanded", String(!menu.hidden));
+
+      const heading = document.createElement("strong");
+      heading.className = "device-overflow-heading";
+      heading.textContent = "Detalhes";
+      menu.append(heading);
+
+      const facts = document.createElement("dl");
+      facts.className = "device-facts";
+      const addFact = (label, value) => {
+        if (value === null || value === undefined || value === "") return;
+        const entry = document.createElement("div");
+        const term = document.createElement("dt");
+        const description = document.createElement("dd");
+        term.textContent = label;
+        description.textContent = String(value);
+        entry.append(term, description);
+        facts.append(entry);
+      };
+      addFact("Sistema", platformLabel);
+      addFact("Arquitetura", device.architecture || "—");
+      addFact("Agent", device.agent_version || "—");
+      addFact("Transporte", localTunnel ? "Direct · OpenAI Tunnel" : "Cloud");
+      addFact("Autorização", deviceApprovalLabel(device.approval_mode).label);
+      addFact("Último contato", formatDeviceSeen(device.last_seen_at_utc));
+      if (localTunnel && device.local_authorized_until_utc) {
+        // Time-bounded signed lease, NOT the expiry of device enrollment.
+        addFact("Lease técnica válida até", formatDeviceSeen(device.local_authorized_until_utc));
+      }
+      if (device.state === "ACTIVE" && !device.revoked_at_utc) {
+        addFact("Vínculo da máquina", "Ativo até revogação");
+        if (!localTunnel) addFact("Reconexão", "Automática enquanto o Agent estiver iniciado");
+      }
+      if (localTunnel && device.last_metering_sync_at_utc) {
+        addFact("Uso sincronizado", formatDeviceSeen(device.last_metering_sync_at_utc));
+      }
+      menu.append(facts);
+
+      if (device.state === "ACTIVE") {
+        const secondaryActions = document.createElement("div");
+        secondaryActions.className = "device-overflow-actions";
+        // Only DIRECT LOCAL_TUNNEL needs a one-time local authorization code.
+        // OUTBOUND_RELAY / EVENT_V2 are already enrolled and must never show
+        // A misleading time-limited pairing label conflates enrollment and lease.
+        if (localTunnel && platformLabel !== "Windows") {
+          const authorize = document.createElement("button");
+          authorize.className = "link-button";
+          authorize.type = "button";
+          authorize.dataset.authorizeDevice = String(device.device_id);
+          authorize.textContent = device.authorization_active ? "Renovar acesso direto" : "Confirmar acesso direto";
+          authorize.title = "Código único de acesso direto; não altera o pareamento do dispositivo";
+          secondaryActions.append(authorize);
+        }
+
+        const revoke = document.createElement("button");
+        revoke.className = "link-button device-revoke-action";
+        revoke.type = "button";
+        revoke.dataset.revokeDevice = String(device.device_id);
+        revoke.textContent = "Revogar acesso";
+        secondaryActions.append(revoke);
+        menu.append(secondaryActions);
+        if (pendingRevokeDeviceId === String(device.device_id)) {
+          const confirmation = document.createElement("div");
+          confirmation.className = "device-revoke-confirm";
+          confirmation.dataset.revokeConfirmPanel = String(device.device_id);
+          confirmation.tabIndex = -1;
+          confirmation.setAttribute("role", "group");
+          confirmation.setAttribute("aria-label", "Confirmar revogação deste computador");
+          const title = document.createElement("strong");
+          title.textContent = "Revogar acesso de " + String(device.device_name || "computador") + "?";
+          const description = document.createElement("p");
+          description.textContent = "Matrícula terminada em "
+            + String(device.device_id || "").slice(-8) + " · Agent "
+            + String(device.agent_version || "—")
+            + ". Este registro não poderá mais se reconectar. Outras máquinas não serão afetadas.";
+          const buttons = document.createElement("div");
+          buttons.className = "device-revoke-confirm-actions";
+          const cancel = document.createElement("button");
+          cancel.type = "button";
+          cancel.className = "btn btn-secondary small";
+          cancel.dataset.cancelRevokeDevice = String(device.device_id);
+          cancel.textContent = "Cancelar";
+          cancel.disabled = revokeRequestPending;
+          const confirm = document.createElement("button");
+          confirm.type = "button";
+          confirm.className = "btn btn-danger small";
+          confirm.dataset.confirmRevokeDevice = String(device.device_id);
+          confirm.textContent = revokeRequestPending ? "Revogando…" : "Confirmar revogação";
+          confirm.disabled = revokeRequestPending;
+          buttons.append(cancel, confirm);
+          confirmation.append(title, description, buttons);
+          if (revokeFailureMessage) {
+            const error = document.createElement("p");
+            error.className = "device-revoke-error";
+            error.setAttribute("role", "alert");
+            error.textContent = revokeFailureMessage;
+            confirmation.append(error);
+          }
+          menu.append(confirmation);
+        }
+      }
+
+      actions.append(toggle);
+      row.append(actions, menu);
+      list.append(row);
+    });
+  }
+
+  function handlePortalAuthFailure(response, message) {
+    if (response.status !== 401) return false;
+    setGuestHeader();
+    route("login");
+    showBanner("warning", "Sessão expirada", message, "Entrar novamente", () => startRemoteAuth(false));
+    return true;
+  }
+
+  function renderDeviceLoading() {
+    const list = document.getElementById("deviceList");
+    if (!list) return;
+    list.setAttribute("aria-busy", "true");
+    list.replaceChildren();
+    for (let index = 0; index < 2; index += 1) {
+      const row = document.createElement("div");
+      row.className = "device-skeleton";
+      row.setAttribute("aria-hidden", "true");
+      row.innerHTML = '<i></i><span><b></b><small></small></span><em></em>';
+      list.append(row);
+    }
+  }
+
+  async function loadDevices(trigger = null, force = false) {
+    if (!remotePortal) return;
+    const readEpoch = portalSessionGeneration;
+    const forceRefresh = force || Boolean(trigger);
+    if (
+      !forceRefresh
+      && devicesCache
+      && Date.now() - devicesCacheAt < PORTAL_DEVICES_CACHE_MS
+    ) {
+      renderDevices(devicesCache);
+      return;
+    }
+
+    const originalLabel = trigger?.textContent || "Atualizar";
+    if (trigger) {
+      trigger.disabled = true;
+      trigger.textContent = "Atualizando…";
+    }
+    renderDeviceLoading();
+    try {
+      const response = await portalFetch("/api/portal/devices", { cache: "no-store", credentials: "same-origin" });
+      if (readEpoch !== portalSessionGeneration) return;
+      if (handlePortalAuthFailure(response, "Entre novamente para consultar seus computadores.")) return;
+      if (!response.ok) throw new Error("HTTP_" + response.status);
+      const payload = await response.json();
+      if (readEpoch !== portalSessionGeneration) return;
+      devicesCache = payload;
+      devicesCacheAt = Date.now();
+      renderDevices(payload);
+    } catch (_error) {
+      if (readEpoch !== portalSessionGeneration) return;
+      const list = document.getElementById("deviceList");
+      if (list) {
+        list.replaceChildren();
+        const empty = document.createElement("div");
+        empty.className = "empty-state";
+        const title = document.createElement("strong");
+        title.textContent = "Não foi possível atualizar agora";
+        empty.append(title, document.createTextNode("Sua conta continua ativa. Tente novamente."));
+        list.append(empty);
+      }
+    } finally {
+      if (readEpoch === portalSessionGeneration) {
+        const list = document.getElementById("deviceList");
+        if (list) list.setAttribute("aria-busy", "false");
+        if (trigger?.isConnected) {
+          trigger.disabled = false;
+          trigger.textContent = originalLabel;
+        }
+      }
+    }
+  }
+
+  function armPairingExpiry(expiresAt) {
+    if (pairingExpiryTimer) clearInterval(pairingExpiryTimer);
+    pairingExpiryTimer = null;
+    const expiry = document.getElementById("pairingExpiry");
+    const copyButton = document.querySelector("[data-copy-pairing]");
+    const deadline = Date.parse(String(expiresAt || ""));
+    if (!Number.isFinite(deadline)) {
+      if (expiry) expiry.textContent = "Expira em 10 minutos";
+      if (copyButton) copyButton.disabled = false;
+      return;
+    }
+
+    const tick = () => {
+      const remaining = deadline - Date.now();
+      if (remaining <= 0) {
+        if (expiry) expiry.textContent = "Expirado · gere um novo código";
+        setText("pairingToken", "EXPIRADO");
+        if (copyButton) copyButton.disabled = true;
+        if (pairingExpiryTimer) clearInterval(pairingExpiryTimer);
+        pairingExpiryTimer = null;
+        return;
+      }
+      const minutes = Math.max(1, Math.ceil(remaining / 60000));
+      const when = new Date(deadline);
+      if (expiry) {
+        expiry.textContent = "Expira em " + minutes + " min · "
+          + new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" }).format(when);
+      }
+      if (copyButton) copyButton.disabled = false;
+    };
+
+    tick();
+    pairingExpiryTimer = setInterval(tick, 15000);
+  }
+
+  async function createPairing() {
+    const buttons = [...document.querySelectorAll("[data-create-pairing]")];
+    buttons.forEach((button) => { button.disabled = true; });
+    try {
+      const response = await portalFetch("/api/portal/devices/pairing", {
+        method: "POST",
+        cache: "no-store",
+        credentials: "same-origin",
+      });
+      if (handlePortalAuthFailure(response, "Entre novamente para gerar um código de pareamento.")) return;
+      if (!response.ok) throw new Error("HTTP_" + response.status);
+      const payload = await response.json();
+      const token = String(payload?.pairing_token || "");
+      if (!token) throw new Error("PAIRING_TOKEN_MISSING");
+      setText("pairingToken", token);
+      const panel = document.getElementById("pairingPanel");
+      if (panel) {
+        panel.hidden = false;
+        panel.focus({ preventScroll: true });
+        panel.scrollIntoView({
+          behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+          block: "center",
+        });
+      }
+      armPairingExpiry(payload.expires_at_utc);
+      showToast("Código de pareamento criado. Ele funciona uma única vez.");
+    } catch (_error) {
+      showBanner("warning", "Pareamento indisponível", "Não foi possível gerar o código agora.", "Tentar novamente", createPairing);
+    } finally {
+      buttons.forEach((button) => { button.disabled = false; });
+    }
+  }
+
+  async function selectDevice(deviceId, trigger = null) {
+    const originalLabel = trigger?.textContent || "Usar este";
+    if (trigger) {
+      trigger.disabled = true;
+      trigger.textContent = "Selecionando…";
+    }
+    try {
+      const response = await portalFetch("/api/portal/devices/select", {
+        method: "POST",
+        cache: "no-store",
+        credentials: "same-origin",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ device_id: deviceId }),
+      });
+      if (handlePortalAuthFailure(response, "Entre novamente para selecionar o computador.")) return;
+      if (!response.ok) throw new Error("HTTP_" + response.status);
+      showToast("Computador selecionado para o Commander.");
+      await loadDevices(null, true);
+    } catch (_error) {
+      showToast("Não foi possível selecionar o computador.");
+    } finally {
+      if (trigger?.isConnected) {
+        trigger.disabled = false;
+        trigger.textContent = originalLabel;
+      }
+    }
+  }
+
+  function revokeDevice(deviceId) {
+    const id = String(deviceId || "");
+    const device = (devicesCache?.devices || []).find(item =>
+      String(item.device_id) === id && item.state === "ACTIVE");
+    if (!device || revokeRequestPending) {
+      showToast("Atualize a lista antes de revogar este computador.");
+      return;
+    }
+    expandedDeviceId = id;
+    pendingRevokeDeviceId = id;
+    revokeFailureMessage = "";
+    renderDevices(devicesCache);
+    // Re-rendering the list can move the new confirmation below the viewport,
+    // especially for the last/offline row. Bring the confirmation into view
+    // and focus its neutral container, never the destructive confirm button.
+    const panel = document.querySelector("[data-revoke-confirm-panel]");
+    if (panel) {
+      panel.scrollIntoView?.({ behavior: "smooth", block: "center" });
+      panel.focus?.({ preventScroll: true });
+      showToast("Confirme a revogação de " + String(device.device_name || "computador")
+        + ". Estar offline não impede a revogação.");
+    } else {
+      showToast("Não foi possível abrir a confirmação. Atualize a lista.");
+    }
+  }
+
+  function cancelDeviceRevocation(deviceId) {
+    if (revokeRequestPending || pendingRevokeDeviceId !== String(deviceId)) return;
+    pendingRevokeDeviceId = null;
+    revokeFailureMessage = "";
+    if (devicesCache) renderDevices(devicesCache);
+  }
+
+  async function authorizeDeviceForLocalTunnel(deviceId, trigger = null) {
+    const button = trigger;
+    if (button) button.disabled = true;
+    try {
+      const response = await portalFetch("/api/portal/devices/authorization-code", {
+        method:"POST",
+        credentials:"same-origin",
+        headers:{"content-type":"application/json"},
+        body:JSON.stringify({device_id:deviceId}),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (handlePortalAuthFailure(response,"Entre novamente para autorizar este computador.")) return;
+      if (!response.ok) throw new Error(String(payload?.code || "DEVICE_AUTHORIZATION_CREATE_FAILED"));
+      setText("deviceAuthorizationToken",String(payload.authorization_code || "—"));
+      setText("deviceAuthorizationExpiry","Código único válido por 10 minutos. O vínculo da máquina continua até revogação; a lease direta é temporária.");
+      const panel=document.getElementById("deviceAuthorizationPanel");
+      if (panel) { panel.hidden=false; panel.focus({preventScroll:false}); panel.scrollIntoView({behavior:"smooth",block:"nearest"}); }
+      showToast("Código de autorização gerado. Execute hara-commander authorize na máquina.");
+    } catch (_error) {
+      showToast("Não foi possível gerar a autorização local agora.");
+    } finally {
+      if (button) button.disabled = false;
+    }
+  }
+
+  async function confirmDeviceRevocation(deviceId, trigger = null) {
+    const id = String(deviceId || "");
+    if (pendingRevokeDeviceId !== id || revokeRequestPending || !trigger) return;
+    const device = (devicesCache?.devices || []).find(item =>
+      String(item.device_id) === id && item.state === "ACTIVE");
+    if (!device) {
+      revokeFailureMessage = "Matrícula não encontrada. Atualize a lista.";
+      if (devicesCache) renderDevices(devicesCache);
+      return;
+    }
+    revokeRequestPending = true;
+    trigger.disabled = true;
+    trigger.textContent = "Revogando…";
+    revokeFailureMessage = "";
+    try {
+      const response = await portalFetch("/api/portal/devices/revoke", {
+        method: "POST",
+        cache: "no-store",
+        credentials: "same-origin",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ device_id: id }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (handlePortalAuthFailure(response, "Entre novamente para revogar o computador.")) {
+        pendingRevokeDeviceId = null;
+        return;
+      }
+      if (!response.ok || payload?.ok !== true || payload?.state !== "REVOKED"
+          || String(payload?.device_id || "") !== id) {
+        const message = response.status === 403
+          ? "Sem permissão para revogar esta matrícula."
+          : response.status === 404 || response.status === 409
+            ? "Matrícula alterada ou não encontrada. Atualize a lista."
+            : "O servidor não confirmou a revogação (HTTP " + response.status + ").";
+        throw new Error(message);
+      }
+      pendingRevokeDeviceId = null;
+      revokeFailureMessage = "";
+      expandedDeviceId = null;
+      setDeviceTab("history");
+      await loadDevices(null, true);
+      showToast("Acesso de " + String(device.device_name || "computador")
+        + " revogado; registro movido para Histórico.");
+    } catch (error) {
+      revokeFailureMessage = String(error?.message || "Falha na revogação.");
+      showToast("Não foi possível revogar este computador.");
+      if (devicesCache) renderDevices(devicesCache);
+    } finally {
+      revokeRequestPending = false;
+      if (trigger?.isConnected) {
+        trigger.disabled = false;
+        trigger.textContent = "Confirmar revogação";
+      }
+    }
+  }
+
+  function setInstallOs(os) {
+    const target = os === "windows" ? "windows" : "linux";
+    installOs = target;
+    document.querySelectorAll("[data-os-choice]").forEach((button) => {
+      const active = button.dataset.osChoice === target;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-selected", String(active));
+      button.tabIndex = active ? 0 : -1;
+    });
+    document.querySelectorAll("[data-os-panel]").forEach((panel) => {
+      panel.hidden = panel.dataset.osPanel !== target;
+    });
+    setInstallTransportMode(target === "windows" ? "cloud" : (installTransportMode === "LOCAL_TUNNEL" ? "direct" : "cloud"));
+  }
+
+  function setInstallTransportMode(mode) {
+    installTransportMode = mode === "direct" && installOs === "linux" ? "LOCAL_TUNNEL" : "OUTBOUND_RELAY";
+    const direct = installTransportMode === "LOCAL_TUNNEL";
+    document.querySelectorAll("[data-transport-choice]").forEach((button) => {
+      const active = (button.dataset.transportChoice === "direct") === direct;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-checked", String(active));
+      button.disabled = installOs !== "linux" && button.dataset.transportChoice === "direct";
+    });
+    document.querySelectorAll("[data-cloud-onboarding-note]").forEach((node) => { node.hidden = direct; });
+    document.querySelectorAll("[data-direct-onboarding-note]").forEach((node) => { node.hidden = !direct; });
+    const note = document.getElementById("transportModeNote");
+    if (note) note.textContent = direct
+      ? "Direct: túnel privado por workspace. Exige tunnel_id e chave da OpenAI Platform; não serve para distribuição pública."
+      : "Cloud: o MCP comercial encaminha comandos via Cloudflare. Sem chave OpenAI. A execução ocorre na máquina e o conteúdo transita pelo Gateway.";
+    syncInstallCommands();
+  }
+
+  function installCommandLinux() {
+    return "(tmp=$(mktemp) && trap 'rm -f $tmp' EXIT && curl -fsS --proto '=https' --tlsv1.2 --location --max-redirs 0 https://commander.haralabs.com.br/install/linux.sh -o $tmp && HARA_COMMANDER_APPROVAL_MODE=ASK_EVERY_ACTION"
+      + " HARA_COMMANDER_TRANSPORT_MODE=" + installTransportMode
+      + " HARA_COMMANDER_TUNNEL_AUTOSTART=OFF"
+      + " HARA_COMMANDER_URL=https://commander.haralabs.com.br bash $tmp)";
+  }
+
+  function installCommandWindows() {
+    return "$haraPrevUrl=$env:HARA_COMMANDER_URL; $haraPrevApproval=$env:HARA_COMMANDER_APPROVAL_MODE; $haraInstaller=Join-Path $env:TEMP ('hara-commander-install-'+[guid]::NewGuid().ToString('N')+'.ps1'); try { $env:HARA_COMMANDER_URL='https://commander.haralabs.com.br'; $env:HARA_COMMANDER_APPROVAL_MODE='ASK_EVERY_ACTION'; Invoke-WebRequest -Uri https://commander.haralabs.com.br/install/windows.ps1 -OutFile $haraInstaller -UseBasicParsing -MaximumRedirection 0 -ErrorAction Stop; & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $haraInstaller; if ($LASTEXITCODE -ne 0) { throw ('HARA_COMMANDER_INSTALL_EXIT_'+$LASTEXITCODE) } } finally { Remove-Item -LiteralPath $haraInstaller -Force -ErrorAction SilentlyContinue; $env:HARA_COMMANDER_URL=$haraPrevUrl; $env:HARA_COMMANDER_APPROVAL_MODE=$haraPrevApproval }";
+  }
+
+  function syncInstallCommands() {
+    const linux = document.querySelector("[data-install-linux-code]");
+    const windows = document.querySelector("[data-install-windows-code]");
+    if (linux) linux.textContent = installCommandLinux();
+    if (windows) windows.textContent = installCommandWindows();
+  }
+
+  async function copyText(value, successMessage) {
+    const text = String(value || "");
+    try {
+      if (!text) throw new Error("COPY_EMPTY");
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const helper = document.createElement("textarea");
+        helper.value = text;
+        helper.setAttribute("readonly", "");
+        helper.style.position = "fixed";
+        helper.style.opacity = "0";
+        document.body.append(helper);
+        helper.select();
+        const copied = document.execCommand("copy");
+        helper.remove();
+        if (!copied) throw new Error("COPY_FALLBACK_FAILED");
+      }
+      showToast(successMessage);
+    } catch (_error) {
+      showToast("Não foi possível copiar automaticamente. Selecione e copie o texto manualmente.");
+    }
+  }
+
+  function applyScenario(name, payload) {
+    if (!name) return;
+    const limit = Number(payload?.usage?.limit || payload?.entitlement?.unit_limit || 10000);
+    const connections = document.querySelectorAll("#connectionList button:not([disabled])");
+
+    if (name === "loading") {
+      showBanner("info", "Carregando dados", "Consultando tenant, entitlement, quota e estado do Commander.");
+      return;
+    }
+    if (name === "empty") {
+      showBanner("info", "Workspace pronto", "Ainda não há execuções registradas neste workspace.");
+      return;
+    }
+    if (name === "auth-expired") {
+      setState("Sessão expirada", "Autenticação necessária");
+      showBanner("danger", "Sessão expirada", "Sua sessão expirou. Entre novamente para continuar.", "Entrar novamente", () => startRemoteAuth(false));
+      return;
+    }
+    if (name === "entitlement-suspended") {
+      setState("Suspenso", "Entitlement inativo");
+      connections.forEach((node) => { node.disabled = true; });
+      showBanner("warning", "Entitlement suspenso", "Operações governadas estão bloqueadas até a regularização do entitlement.");
+      return;
+    }
+    if (name === "quota-exhausted") {
+      setText("dashboardConsumed", number(limit));
+      setText("dashboardLimit", "/ " + number(limit));
+      setText("dashboardPercent", "100% utilizado");
+      setText("usageConsumed", number(limit));
+      setText("usageLimit", "de " + number(limit));
+      setText("usageRemaining", "0 unidades disponíveis");
+      const bar = document.getElementById("usageProgress");
+      if (bar) bar.style.width = "100%";
+      showBanner("warning", "Limite de uso atingido", "O período atingiu a capacidade disponível. Novas execuções ficam bloqueadas sem afetar comprovantes anteriores.");
+      return;
+    }
+    if (name === "mcp-unavailable") {
+      setState("Aguardando", "Cliente MCP ainda não conectado");
+      showBanner("info", "Conexão ainda não disponível", "Conecte o HARA Commander Agent e depois autorize ChatGPT ou Codex.", "Atualizar", loadProductDashboard);
+      return;
+    }
+    if (name === "receipt-unavailable") {
+      showBanner("warning", "Comprovante indisponível", "A execução foi registrada, mas o comprovante solicitado ainda não pôde ser recuperado.", "Tentar novamente", loadProductDashboard);
+      return;
+    }
+    if (name === "billing-disconnected") {
+      showBanner("info", "Cobrança ainda não conectada", "Este workspace ainda não possui um provedor de pagamento conectado.");
+      return;
+    }
+    if (name === "degraded") {
+      setState("Aguardando", "Dados de conta temporariamente indisponíveis");
+      showBanner("info", "Dados ainda não atualizados", "Sua conta continua autenticada. Tente atualizar os dados do Commander.", "Atualizar", loadProductDashboard);
+    }
+  }
+
+  async function loadProductDashboard(force = false) {
+    const readEpoch = portalSessionGeneration;
+    hideBanner();
+
+    if (
+      remotePortal
+      && !force
+      && dashboardCache
+      && Date.now() - dashboardCacheAt < PORTAL_DASHBOARD_CACHE_MS
+    ) {
+      applyDashboard(dashboardCache);
+      applyScenario(scenario, dashboardCache);
+      return;
+    }
+
+    setLoading(true);
+
+    if (scenario === "loading") {
+      applyScenario("loading", null);
+      setTimeout(() => setLoading(false), 900);
+      return;
+    }
+
+    if (!apiBase) {
+      setLoading(false);
+      showBanner("warning", "Serviço de produto não configurado", "Não foi possível localizar um endpoint válido para os dados do produto.");
+      return;
+    }
+
+    try {
+      const response = await portalFetch(apiBase + dashboardPath, { cache: "no-store", credentials: "same-origin" });
+      if (readEpoch !== portalSessionGeneration) return;
+      if (response.status === 401) {
+        setGuestHeader();
+        route("login");
+        applyScenario("auth-expired", null);
+        return;
+      }
+      if (response.status === 403) {
+        const payload = await response.json().catch(() => ({}));
+        if (payload?.code === "ENTITLEMENT_NOT_FOUND") {
+          setState("Aguardando", "Plano ativo necessário");
+          showBanner(
+            "warning",
+            "Plano não disponível",
+            "Sua conta está autenticada, mas ainda não possui um plano ativo do Commander.",
+          );
+          return;
+        }
+      }
+      if (!response.ok) throw new Error("HTTP_" + response.status);
+      const payload = await response.json();
+      if (readEpoch !== portalSessionGeneration) return;
+      if (remotePortal) {
+        dashboardCache = payload;
+        dashboardCacheAt = Date.now();
+      }
+      applyDashboard(payload);
+      applyScenario(scenario, payload);
+    } catch (_error) {
+      if (readEpoch !== portalSessionGeneration) return;
+      setState("Aguardando", "Dados da conta ainda não carregados");
+      showBanner("info", "Plano e uso temporariamente indisponíveis", "Sua sessão continua ativa. Atualize para consultar os dados do Commander novamente.", "Atualizar dados", loadProductDashboard);
+    } finally {
+      if (readEpoch === portalSessionGeneration) setLoading(false);
+    }
+  }
+
+  async function loadBillingState() {
+    if (!remotePortal || !sessionAuthenticated) return;
+    const readEpoch = portalSessionGeneration;
+
+    const statusNode = document.getElementById("billingPlanStatus");
+    const portalButton = document.querySelector("[data-billing-portal]");
+    const betaAccess = document.querySelector("[data-beta-access]");
+    const planButtons = document.querySelectorAll("[data-billing-plan]");
+
+    try {
+      const response = await portalFetch("/api/portal/billing", {
+        cache: "no-store",
+        credentials: "same-origin",
+      });
+      if (readEpoch !== portalSessionGeneration || !sessionAuthenticated) return;
+      if (!response.ok) return;
+      const payload = await response.json();
+      if (readEpoch !== portalSessionGeneration || !sessionAuthenticated) return;
+      const canManage = payload?.can_manage === true;
+      const activation = payload?.activation || {};
+      const readiness = {
+        provider: activation.provider_configured === true,
+        catalog: activation.standard_catalog_active === true,
+        price: activation.standard_price_configured === true,
+        checkout: activation.standard_checkout_ready === true,
+      };
+      Object.entries(readiness).forEach(([key,ready])=>{
+        const node=document.querySelector('[data-billing-ready="' + key + '"]');
+        if (!node) return;
+        node.classList.toggle("ready",ready);
+        node.classList.toggle("pending",!ready);
+        node.setAttribute("title",ready ? "Pronto" : "Pendente");
+      });
+
+      planButtons.forEach((button) => {
+        const planCode = String(button.dataset.billingPlan || "").toUpperCase();
+        const plan = payload?.plans?.[planCode];
+        const current = payload?.connection?.plan_code === planCode
+          && ["active", "trialing"].includes(String(payload?.connection?.subscription_status || "").toLowerCase());
+
+        if (current) {
+          button.disabled = true;
+          button.setAttribute("aria-disabled", "true");
+          button.textContent = "Assinatura ativa";
+          return;
+        }
+
+        const ready = Boolean(plan?.checkout_ready && canManage);
+        button.disabled = !ready;
+        button.setAttribute("aria-disabled", String(!ready));
+        button.textContent = ready
+          ? (planCode === "SCALE" ? "Assinar Scale" : "Assinar Standard")
+          : (planCode === "SCALE" ? "Roadmap" : "Em preparação");
+
+        const priceLabel = document.querySelector('[data-billing-price-label="' + planCode + '"]');
+        const commercial = plan?.commercial_terms || {};
+        if (priceLabel && commercial.price_display) {
+          const interval = commercial.billing_interval === "month" ? "/ mês" : "assinatura";
+          priceLabel.innerHTML = commercial.price_display + " <small>" + interval + "</small>";
+        } else if (priceLabel && ready) {
+          priceLabel.innerHTML = 'Preço no checkout <small>assinatura recorrente</small>';
+        }
+      });
+
+      if (betaAccess) {
+        const standardCurrent = payload?.connection?.plan_code === "STANDARD"
+          && ["active","trialing"].includes(String(payload?.connection?.subscription_status || "").toLowerCase());
+        betaAccess.hidden = Boolean(activation.first_checkout_ready || standardCurrent);
+        if (!betaAccess.hidden) {
+          const betaResponse=await portalFetch("/api/portal/beta-access",{cache:"no-store",credentials:"same-origin"});
+          if (readEpoch !== portalSessionGeneration || !sessionAuthenticated) return;
+          if (betaResponse.ok) {
+            const betaPayload=await betaResponse.json().catch(()=>({}));
+            if (readEpoch !== portalSessionGeneration || !sessionAuthenticated) return;
+            const state=String(betaPayload?.request?.state || "").toUpperCase();
+            if (["REQUESTED","CONTACTED"].includes(state)) {
+              betaAccess.disabled=true;
+              betaAccess.textContent="Solicitação enviada";
+            } else if (state === "APPROVED") {
+              betaAccess.disabled=true;
+              betaAccess.textContent="Acesso beta aprovado";
+            } else {
+              betaAccess.disabled=betaPayload?.can_request !== true;
+              betaAccess.textContent=betaPayload?.can_request === true ? "Solicitar acesso beta" : "Owner/Admin necessário";
+            }
+          }
+        }
+      }
+
+      if (portalButton) {
+        const ready = Boolean(payload?.connection?.customer_portal_ready && canManage);
+        portalButton.hidden = !ready;
+        portalButton.disabled = !ready;
+        portalButton.setAttribute("aria-disabled", String(!ready));
+      }
+
+      if (statusNode) {
+        if (payload?.connection?.subscription_present) {
+          const state = String(payload?.connection?.subscription_status || "conectada").replaceAll("_", " ");
+          statusNode.textContent = "Cobrança conectada. Status da assinatura: " + state + ".";
+        } else if (activation.first_checkout_ready) {
+          statusNode.textContent = "Pro disponível por R$ 80/mês, com chamadas ilimitadas. O pagamento é concluído no checkout seguro do Stripe.";
+        } else if (!activation.provider_configured) {
+          statusNode.textContent = "Checkout automático ainda não ativado. O Standard está disponível em beta por convite.";
+        } else if (!activation.standard_catalog_active) {
+          statusNode.textContent = "Stripe conectado. Aguardando publicação do catálogo Standard.";
+        } else if (!activation.standard_price_configured) {
+          statusNode.textContent = "Preço Pro aprovado em R$ 80/mês. Aguardando o Price ID correspondente no Stripe.";
+        } else {
+          statusNode.textContent = "Checkout Standard em preparação.";
+        }
+      }
+    } catch (_error) {
+      // Billing is additive. A billing read failure must not degrade the portal.
+    }
+  }
+
+  async function requestBetaAccess(button) {
+    if (!remotePortal || !sessionAuthenticated || !button) return;
+    const original=button.textContent || "Solicitar acesso beta";
+    button.disabled=true;
+    button.textContent="Enviando solicitação...";
+    try {
+      const response=await portalFetch("/api/portal/beta-access",{
+        method:"POST",
+        credentials:"same-origin",
+        headers:{"content-type":"application/json"},
+        body:"{}",
+      });
+      const payload=await response.json().catch(()=>({}));
+      if (!response.ok) throw new Error(String(payload?.code || "BETA_ACCESS_REQUEST_FAILED"));
+      button.textContent="Solicitação enviada";
+      showBanner("success","Solicitação recebida","Seu workspace entrou na fila do Pro Beta. O contato será feito usando a identidade já cadastrada.");
+    } catch (error) {
+      const code=String(error?.message || "BETA_ACCESS_REQUEST_FAILED");
+      const messages={
+        BETA_ACCESS_ADMIN_REQUIRED:"Somente OWNER ou ADMIN pode solicitar o Pro Beta para este workspace.",
+        BETA_ACCESS_PLAN_UNAVAILABLE:"O Pro Beta não está disponível para solicitação neste momento.",
+      };
+      button.disabled=false;
+      button.textContent=original;
+      showBanner("warning","Não foi possível solicitar o beta",messages[code] || "Tente novamente em alguns instantes.");
+    }
+  }
+
+  async function beginBillingCheckout(planCode, button) {
+    if (!remotePortal || !sessionAuthenticated || !planCode) return;
+    const original = button?.textContent || "Assinar";
+    if (button) {
+      button.disabled = true;
+      button.textContent = "Abrindo checkout...";
+    }
+
+    try {
+      const response = await portalFetch("/api/portal/billing/checkout", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ plan_code: planCode }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.url) {
+        throw new Error(String(payload?.code || "BILLING_CHECKOUT_FAILED"));
+      }
+      window.location.assign(payload.url);
+    } catch (error) {
+      const code = String(error?.message || "BILLING_CHECKOUT_FAILED");
+      const messages = {
+        BILLING_NOT_CONFIGURED: "A cobrança ainda não está configurada.",
+        BILLING_PLAN_UNAVAILABLE: "Este plano ainda não está disponível para assinatura.",
+        BILLING_PRICE_NOT_CONFIGURED: "O preço comercial deste plano ainda não foi publicado.",
+        BILLING_SUBSCRIPTION_ALREADY_EXISTS: "Já existe uma assinatura vinculada a este workspace.",
+        BILLING_ADMIN_REQUIRED: "Somente OWNER ou ADMIN pode alterar a assinatura.",
+      };
+      showBanner("warning", "Checkout não disponível", messages[code] || "Não foi possível abrir o checkout agora.");
+      if (button) {
+        button.disabled = false;
+        button.textContent = original;
+      }
+    }
+  }
+
+  async function openBillingPortal(button) {
+    if (!remotePortal || !sessionAuthenticated) return;
+    const original = button?.textContent || "Gerenciar cobrança";
+    if (button) {
+      button.disabled = true;
+      button.textContent = "Abrindo...";
+    }
+
+    try {
+      const response = await portalFetch("/api/portal/billing/portal", {
+        method: "POST",
+        credentials: "same-origin",
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.url) {
+        throw new Error(String(payload?.code || "BILLING_PORTAL_FAILED"));
+      }
+      window.location.assign(payload.url);
+    } catch (_error) {
+      showBanner("warning", "Cobrança indisponível", "Não foi possível abrir o portal de cobrança agora.");
+      if (button) {
+        button.disabled = false;
+        button.textContent = original;
+      }
+    }
+  }
+
+  function copySidebars() {
+    document.querySelectorAll("[data-sidebar]").forEach((node) => {
+      node.innerHTML = sidebarTemplate.innerHTML;
+    });
+  }
+
+  function closeMobileMoreMenus() {
+    document.querySelectorAll("[data-mobile-more]").forEach((button) => {
+      button.setAttribute("aria-expanded", "false");
+    });
+    document.querySelectorAll("[data-mobile-more-menu]").forEach((menu) => {
+      menu.hidden = true;
+    });
+  }
+
+  function toggleMobileMore(button) {
+    const nav = button.closest(".side-nav");
+    const menu = nav?.querySelector("[data-mobile-more-menu]");
+    if (!menu) return;
+    const opening = menu.hidden;
+    closeMobileMoreMenus();
+    menu.hidden = !opening;
+    button.setAttribute("aria-expanded", String(opening));
+    if (opening) menu.querySelector("button, a")?.focus({ preventScroll: true });
+  }
+
+  function showToast(message) {
+    toast.textContent = message;
+    toast.classList.add("show");
+    clearTimeout(showToast.timer);
+    showToast.timer = setTimeout(() => toast.classList.remove("show"), 3200);
+  }
+
+  function route(target, push = true) {
+    const requested = publicViews.has(target) ? target : "landing";
+    const protectedRoute = remotePortal && appViews.has(requested) && !sessionAuthenticated;
+    const recoveryRoute = remotePortal && sessionAuthenticated && sessionDegraded && appViews.has(requested) && requested !== "plans";
+    const next = protectedRoute ? "login" : (recoveryRoute ? "plans" : requested);
+    if (!push && currentView === next) return;
+    currentView = next;
+    document.title = viewTitles[next] || viewTitles.landing;
+    views.forEach((view) => view.classList.toggle("active", view.dataset.view === next));
+    document.querySelectorAll("[data-app-go]").forEach((button) => {
+      const active = button.dataset.appGo === next;
+      button.classList.toggle("active", active);
+      if (active) button.setAttribute("aria-current", "page");
+      else button.removeAttribute("aria-current");
+    });
+    document.querySelectorAll("[data-nav]").forEach((link) => {
+      const active = link.dataset.nav === next;
+      link.classList.toggle("active", active);
+      if (active) link.setAttribute("aria-current", "page");
+      else link.removeAttribute("aria-current");
+    });
+    const secondaryActive = ["usage", "plans", "security", "help"].includes(next);
+    document.querySelectorAll("[data-mobile-more]").forEach((button) => {
+      button.classList.toggle("active", secondaryActive);
+    });
+    closeMobileMoreMenus();
+    document.body.classList.toggle("workspace-mode", appViews.has(next));
+    if (location.hash !== "#" + next) {
+      if (push) history.pushState(null, "", "#" + next);
+      else if (protectedRoute) history.replaceState(null, "", "#" + next);
+    }
+    window.scrollTo({ top: 0, behavior: "instant" });
+    if (protectedRoute) {
+      // The login card already explains how to sign in; keep genuine auth errors visible.
+      hideBanner();
+      return;
+    }
+    if (sessionDegraded) {
+      showBanner(
+        "warning",
+        "Workspace temporariamente bloqueado",
+        sessionDegradedReason === "D1_WRITE_LIMIT"
+          ? "Sua identidade está autenticada, mas o backend atingiu o limite de escrita. Plano e cobrança continuam disponíveis para regularizar o acesso."
+          : "Sua identidade está autenticada, mas o workspace está temporariamente indisponível. Plano e cobrança continuam disponíveis.",
+      );
+      if (next === "plans") {
+        loadBillingState();
+        return;
+      }
+    }
+    if (skipNextWorkspaceLoad && appViews.has(next)) {
+      skipNextWorkspaceLoad = false;
+      if (next === "plans") loadBillingState();
+      if (next === "security") loadServiceHealth();
+      return;
+    }
+    if (next === "devices") {
+      setDeviceSectionTab("devices");
+      loadDevices();
+    } else if (appViews.has(next) || (next === "landing" && localHost)) {
+      loadProductDashboard();
+      if (next === "dashboard") loadDevices();
+      if (next === "plans") loadBillingState();
+      if (next === "security") loadServiceHealth();
+    }
+  }
+
+  copySidebars();
+  setInstallOs("linux");
+
+  if (bannerAction) {
+    bannerAction.addEventListener("click", () => {
+      if (retryAction) retryAction();
+    });
+  }
+
+  document.addEventListener("click", (event) => {
+    const mobileMore = event.target.closest("[data-mobile-more]");
+    if (mobileMore) {
+      event.preventDefault();
+      toggleMobileMore(mobileMore);
+      return;
+    }
+    if (!event.target.closest("[data-mobile-more-menu]")) closeMobileMoreMenus();
+
+    const go = event.target.closest("[data-go]");
+    if (go) {
+      event.preventDefault();
+      if (remotePortal && go.dataset.go === "login") {
+        startRemoteAuth(false);
+        return;
+      }
+      if (remotePortal && go.dataset.go === "signup") {
+        startRemoteAuth(true);
+        return;
+      }
+      if (remotePortal && go.dataset.go === "other-account") {
+        startRemoteAuth(false, true);
+        return;
+      }
+      route(go.dataset.go);
+      return;
+    }
+
+    const appGo = event.target.closest("[data-app-go]");
+    if (appGo) {
+      event.preventDefault();
+      route(appGo.dataset.appGo);
+      return;
+    }
+
+    const logout = event.target.closest("[data-logout]");
+    if (logout) {
+      event.preventDefault();
+      logoutRemote();
+      return;
+    }
+
+    const pairing = event.target.closest("[data-create-pairing]");
+    if (pairing) {
+      event.preventDefault();
+      createPairing();
+      return;
+    }
+
+    const activityWindowButton = event.target.closest("[data-activity-window]");
+    if (activityWindowButton) {
+      event.preventDefault();
+      setActivityWindow(activityWindowButton.dataset.activityWindow);
+      return;
+    }
+
+    const exportActivity = event.target.closest("[data-export-activity]");
+    if (exportActivity) {
+      event.preventDefault();
+      exportUsageActivityCsv(exportActivity);
+      return;
+    }
+
+    const refreshActivity = event.target.closest("[data-refresh-activity]");
+    if (refreshActivity) {
+      event.preventDefault();
+      loadUsageActivity(refreshActivity,true);
+      return;
+    }
+
+    const submitLocalSupport = event.target.closest("[data-submit-local-support]");
+    if (submitLocalSupport) {
+      event.preventDefault();
+      submitLocalSupportReport(submitLocalSupport);
+      return;
+    }
+
+    const refreshServiceHealth = event.target.closest("[data-refresh-service-health]");
+    if (refreshServiceHealth) {
+      event.preventDefault();
+      loadServiceHealth(refreshServiceHealth);
+      return;
+    }
+
+    const refreshDevices = event.target.closest("[data-refresh-devices]");
+    if (refreshDevices) {
+      event.preventDefault();
+      loadDevices(refreshDevices);
+      return;
+    }
+
+    const guideCommand = event.target.closest("[data-copy-guide-command]");
+    if (guideCommand) {
+      event.preventDefault();
+      const code = guideCommand.closest(".devices-command-copy")?.querySelector("code");
+      if (!code?.textContent?.trim()) {
+        showToast("Não foi possível copiar este comando.");
+        return;
+      }
+      copyText(code.textContent.trim(), "Comando copiado para o terminal.");
+      return;
+    }
+
+    const deviceDetailsButton = event.target.closest("[data-toggle-device-details]");
+    if (deviceDetailsButton) {
+      event.preventDefault();
+      toggleDeviceDetails(deviceDetailsButton.dataset.toggleDeviceDetails);
+      return;
+    }
+
+    const deviceDiagnostic = event.target.closest("[data-copy-device-diagnostic]");
+    if (deviceDiagnostic) {
+      event.preventDefault();
+      copyText(
+        deviceDiagnosticCommand(deviceDiagnostic.dataset.copyDeviceDiagnostic),
+        "Comando de diagnóstico copiado."
+      );
+      return;
+    }
+
+    const deviceSectionTabButton = event.target.closest("[data-device-section-tab]");
+    if (deviceSectionTabButton) {
+      event.preventDefault();
+      setDeviceSectionTab(deviceSectionTabButton.dataset.deviceSectionTab);
+      return;
+    }
+
+    const deviceTabButton = event.target.closest(".device-tabs button[data-device-tab]");
+    if (deviceTabButton) {
+      event.preventDefault();
+      setDeviceTab(deviceTabButton.dataset.deviceTab);
+      return;
+    }
+
+    const osChoice = event.target.closest("[data-os-choice]");
+    if (osChoice) {
+      event.preventDefault();
+      setInstallOs(osChoice.dataset.osChoice);
+      return;
+    }
+
+    const transportChoice = event.target.closest("[data-transport-choice]");
+    if (transportChoice) {
+      event.preventDefault();
+      setInstallTransportMode(transportChoice.dataset.transportChoice);
+      return;
+    }
+
+    const agentStartButton = event.target.closest("[data-copy-agent-start]");
+    if (agentStartButton) {
+      event.preventDefault();
+      const linux = agentStartButton.dataset.copyAgentStart === "linux";
+      const command = linux
+        ? "hara-commander start"
+        : "$agent=Join-Path $env:LOCALAPPDATA 'HARA Commander\\hara-commander-agent.ps1'; & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $agent start";
+      copyText(command, "Comando para iniciar manualmente copiado.");
+      return;
+    }
+    const agentStopButton = event.target.closest("[data-copy-agent-stop]");
+    if (agentStopButton) {
+      event.preventDefault();
+      const linux = agentStopButton.dataset.copyAgentStop === "linux";
+      const command = linux
+        ? "hara-commander stop"
+        : "$agent=Join-Path $env:LOCALAPPDATA 'HARA Commander\\hara-commander-agent.ps1'; & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $agent stop";
+      copyText(command, "Comando para desconectar copiado.");
+      return;
+    }
+
+    const copyLocalMcp = event.target.closest("[data-copy-local-mcp]");
+    if (copyLocalMcp) {
+      event.preventDefault();
+      copyText("hara-commander mcp", "Comando MCP local copiado.");
+      return;
+    }
+
+    const copySimpleMcp = event.target.closest("[data-copy-simple-mcp]");
+    if (copySimpleMcp) {
+      event.preventDefault();
+      copyText(window.location.origin + "/api/mcp?profile=simple", "URL MCP copiada.");
+      return;
+    }
+
+    const copyFirstPrompt = event.target.closest("[data-copy-first-prompt]");
+    if (copyFirstPrompt) {
+      event.preventDefault();
+      copyText("Verifique se meu computador está online e mostre as informações básicas dele.", "Prompt de teste copiado.");
+      return;
+    }
+
+    const copyTunnelStart = event.target.closest("[data-copy-tunnel-start]");
+    if (copyTunnelStart) {
+      event.preventDefault();
+      copyText("hara-commander tunnel start", "Comando de conexão manual copiado.");
+      return;
+    }
+
+    const copyLinux = event.target.closest("[data-copy-linux]");
+    if (copyLinux) {
+      event.preventDefault();
+      copyText(installCommandLinux(), "Comando Linux copiado.");
+      return;
+    }
+
+    const copyWindows = event.target.closest("[data-copy-windows]");
+    if (copyWindows) {
+      event.preventDefault();
+      copyText(installCommandWindows(), "Comando Windows copiado.");
+      return;
+    }
+
+    const copyDeviceAuthorization = event.target.closest("[data-copy-device-authorization]");
+    if (copyDeviceAuthorization) {
+      event.preventDefault();
+      copyText(document.getElementById("deviceAuthorizationToken")?.textContent || "", "Código de autorização copiado.");
+      return;
+    }
+
+    const copyPairing = event.target.closest("[data-copy-pairing]");
+    if (copyPairing) {
+      event.preventDefault();
+      copyText(document.getElementById("pairingToken")?.textContent || "", "Código de pareamento copiado.");
+      return;
+    }
+
+    const authorizeDeviceButton = event.target.closest("[data-authorize-device]");
+    if (authorizeDeviceButton) {
+      event.preventDefault();
+      authorizeDeviceForLocalTunnel(authorizeDeviceButton.dataset.authorizeDevice, authorizeDeviceButton);
+      return;
+    }
+
+    const confirmRevoke = event.target.closest("[data-confirm-revoke-device]");
+    if (confirmRevoke) {
+      event.preventDefault();
+      confirmDeviceRevocation(confirmRevoke.dataset.confirmRevokeDevice, confirmRevoke);
+      return;
+    }
+    const cancelRevoke = event.target.closest("[data-cancel-revoke-device]");
+    if (cancelRevoke) {
+      event.preventDefault();
+      cancelDeviceRevocation(cancelRevoke.dataset.cancelRevokeDevice);
+      return;
+    }
+    const clearRevokedHistory = event.target.closest("[data-clear-revoked-history]");
+    if (clearRevokedHistory) {
+      event.preventDefault();
+      requestHistoryClear();
+      return;
+    }
+    const confirmClearHistory = event.target.closest("[data-confirm-history-clear]");
+    if (confirmClearHistory) {
+      event.preventDefault();
+      confirmHistoryClear(confirmClearHistory);
+      return;
+    }
+    const cancelClearHistory = event.target.closest("[data-cancel-history-clear]");
+    if (cancelClearHistory) {
+      event.preventDefault();
+      cancelHistoryClear();
+      return;
+    }
+    // History clearing is server-side and permanent; there is no local hide/restore action.
+
+    const revokeDeviceButton = event.target.closest("[data-revoke-device]");
+    if (revokeDeviceButton) {
+      event.preventDefault();
+      revokeDevice(revokeDeviceButton.dataset.revokeDevice);
+      return;
+    }
+
+    const betaAccess = event.target.closest("[data-beta-access]");
+    if (betaAccess) {
+      event.preventDefault();
+      if (!betaAccess.disabled) requestBetaAccess(betaAccess);
+      return;
+    }
+
+    const billingPlan = event.target.closest("[data-billing-plan]");
+    if (billingPlan) {
+      event.preventDefault();
+      if (!billingPlan.disabled) {
+        beginBillingCheckout(billingPlan.dataset.billingPlan, billingPlan);
+      }
+      return;
+    }
+
+    const billingPortal = event.target.closest("[data-billing-portal]");
+    if (billingPortal) {
+      event.preventDefault();
+      if (!billingPortal.disabled) openBillingPortal(billingPortal);
+      return;
+    }
+
+  });
+
+  document.addEventListener("keydown", (event) => {
+    const osChoice = event.target.closest?.("[data-os-choice]");
+    if (osChoice && ["ArrowLeft", "ArrowRight"].includes(event.key)) {
+      event.preventDefault();
+      const nextOs = osChoice.dataset.osChoice === "linux" ? "windows" : "linux";
+      setInstallOs(nextOs);
+      document.querySelector('[data-os-choice="' + nextOs + '"]')?.focus();
+      return;
+    }
+
+    const transportChoice = event.target.closest?.("[data-transport-choice]");
+    if (transportChoice && ["ArrowLeft", "ArrowRight"].includes(event.key)) {
+      event.preventDefault();
+      const next = transportChoice.dataset.transportChoice === "cloud" ? "direct" : "cloud";
+      setInstallTransportMode(next);
+      document.querySelector('[data-transport-choice="' + (installTransportMode === "LOCAL_TUNNEL" ? "direct" : "cloud") + '"]')?.focus();
+      return;
+    }
+
+    const activityWindowButton = event.target.closest?.("[data-activity-window]");
+    if (activityWindowButton && ["ArrowLeft","ArrowRight"].includes(event.key)) {
+      event.preventDefault();
+      const windows=["24h","7d","30d"];
+      const current=windows.indexOf(activityWindowButton.dataset.activityWindow);
+      const delta=event.key === "ArrowRight" ? 1 : -1;
+      const next=windows[(current+delta+windows.length)%windows.length];
+      setActivityWindow(next);
+      document.querySelector('[data-activity-window="' + next + '"]')?.focus();
+      return;
+    }
+
+    const deviceSectionTabButton = event.target.closest?.("[data-device-section-tab]");
+    if (deviceSectionTabButton && ["ArrowLeft", "ArrowRight"].includes(event.key)) {
+      event.preventDefault();
+      const order = ["devices", "connect", "commands"];
+      const index = order.indexOf(deviceSectionTabButton.dataset.deviceSectionTab);
+      const delta = event.key === "ArrowRight" ? 1 : -1;
+      const nextSection = order[(index + delta + order.length) % order.length];
+      setDeviceSectionTab(nextSection);
+      document.querySelector('[data-device-section-tab="' + nextSection + '"]')?.focus();
+      return;
+    }
+
+    const deviceTabButton = event.target.closest?.(".device-tabs button[data-device-tab]");
+    if (deviceTabButton && ["ArrowLeft", "ArrowRight"].includes(event.key)) {
+      event.preventDefault();
+      const nextTab = deviceTabButton.dataset.deviceTab === "active" ? "history" : "active";
+      setDeviceTab(nextTab);
+      document.querySelector('[data-device-tab="' + nextTab + '"]')?.focus();
+      return;
+    }
+    if (event.key === "Escape") closeMobileMoreMenus();
+  });
+
+  document.querySelectorAll("[data-auth-form]").forEach((form) => {
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      if (remotePortal) {
+        startRemoteAuth(form.dataset.authForm === "signup");
+        return;
+      }
+      const label = form.dataset.authForm === "signup"
+        ? "Prévia local carregada. Nenhuma credencial foi persistida."
+        : "Prévia local carregada. Nenhuma credencial foi enviada.";
+      showToast(label);
+      route("devices");
+      form.reset();
+    });
+  });
+
+  window.addEventListener("popstate", () => route(location.hash.slice(1) || "landing", false));
+  window.addEventListener("hashchange", () => route(location.hash.slice(1) || "landing", false));
+
+  async function bootstrapInitialView() {
+    try {
+      await configureAuthUi();
+      const initialRoute = location.hash.slice(1) || "landing";
+
+      if (remotePortal) {
+        let authenticated;
+        if (appViews.has(initialRoute)) {
+          const hydrated = await loadPortalBootstrap();
+          if (hydrated === true) {
+            authenticated = true;
+            skipNextWorkspaceLoad = true;
+          } else if (hydrated === false) {
+            authenticated = false;
+          } else {
+            authenticated = await hydrateSessionHeader();
+          }
+        } else {
+          authenticated = await hydrateSessionHeader();
+        }
+        if (!authenticated) setGuestHeader();
+      } else {
+        setGuestHeader();
+      }
+
+      route(initialRoute, false);
+
+      if (authError) {
+        const authMessages = {
+          IDENTITY_NOT_PROVISIONED: "A conta escolhida foi autenticada, mas não tem acesso a este workspace. Use outra conta HARA Identity autorizada.",
+          IDENTITY_INACTIVE: "Esta identidade está inativa no Commander.",
+          IDENTITY_INVITE_EXPIRED: "O convite desta identidade expirou.",
+          OIDC_STATE_EXPIRED: "A tentativa de login expirou. Inicie o login novamente.",
+          OIDC_STATE_INVALID: "A validação de segurança do login falhou. Inicie o login novamente.",
+          OIDC_STATE_REPLAYED: "Esta tentativa de login já foi utilizada. Inicie uma nova.",
+          OIDC_PROVIDER_ERROR: "O provedor de identidade recusou ou cancelou o login.",
+          AUTH_CALLBACK_FAILED: "Não foi possível concluir o login seguro.",
+        };
+        const useAnotherAccount = authError === "IDENTITY_NOT_PROVISIONED";
+        showBanner(
+          "warning",
+          "Login não concluído",
+          authMessages[authError] || "Não foi possível concluir o login seguro.",
+          useAnotherAccount ? "Usar outra conta" : "Tentar novamente",
+          () => startRemoteAuth(false, useAnotherAccount),
+        );
+        history.replaceState(null, "", location.pathname + "#login");
+        route("login", false);
+      }
+
+      if (localHost) loadProductDashboard();
+    } finally {
+      requestAnimationFrame(() => root.classList.remove("auth-bootstrap-pending"));
+    }
+  }
+
+  bootstrapInitialView();
+})();

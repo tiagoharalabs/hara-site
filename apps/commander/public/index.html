@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="theme-color" content="#eef8fd" />
+  <script>
+    (()=>{const root=document.documentElement;root.classList.add("auth-bootstrap-pending");setTimeout(()=>root.classList.remove("auth-bootstrap-pending"),3000);try{const saved=localStorage.getItem("hara-theme");const theme=saved||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");root.dataset.theme=theme;root.style.colorScheme=theme;root.dataset.neon=localStorage.getItem("hara-neon")==="on"?"on":"off"}catch(e){root.dataset.neon="off"}})();
+  </script>
+  <style>html.auth-bootstrap-pending body>*{visibility:hidden}html.auth-bootstrap-pending body::before{content:"HARA COMMANDER · verificando sessão";position:fixed;inset:0;display:grid;place-items:center;visibility:visible;background:#eef8fd;color:#315d78;font:600 12px/1.4 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:.12em}html[data-theme="dark"].auth-bootstrap-pending body::before{background:#061721;color:#a9c8d9}</style>
+  <title>HARA Commander</title>
+  <link rel="icon" type="image/webp" href="./assets/hara-commander-royal.webp?v=20261022-capybara-original-r1" />
+  <link rel="stylesheet" href="./styles.css?v=20261014-usage-help-ui-v1" />
+  <link rel="stylesheet" href="./advanced-layout.css?v=20261022-direct-visible-r9" />
+  <link rel="stylesheet" href="./layout-legibility-r7.css?v=20261023-offline-revoke-r14" />
+  <link rel="stylesheet" href="./ux-auth-settings-r11.css?v=20261023-gold-luxe-r11" />
+  <link rel="stylesheet" href="./recovery-alerts.css?v=20261024-recovery-inbox-r1" />
+</head>
+<body>
+  <a class="skip-link" href="#mainContent">Pular para o conteúdo</a>
+  <header class="topbar">
+    <a class="brand" href="https://www.haralabs.com.br/" target="_blank" rel="noreferrer" aria-label="Abrir site HARA Labs">
+      <img src="./assets/hara-commander-royal.webp?v=20261022-capybara-original-r1" alt="" />
+      <span class="brand-copy">
+        <b>HARA</b><em>Labs</em>
+        <small>COMMANDER</small>
+      </span>
+    </a>
+
+    <div class="top-actions">
+      <button class="theme-toggle" type="button" aria-label="Ativar modo escuro" aria-pressed="false" title="Alternar tema">
+        <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 15.2A8.5 8.5 0 0 1 8.8 4 8.5 8.5 0 1 0 20 15.2Z"/></svg>
+        <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.5"/><path d="M12 2v2.2M12 19.8V22M4.93 4.93l1.56 1.56M17.51 17.51l1.56 1.56M2 12h2.2M19.8 12H22M4.93 19.07l1.56-1.56M17.51 6.49l1.56-1.56"/></svg>
+      </button>
+      <button class="neon-toggle" type="button" aria-label="Ativar Neon" aria-pressed="false" title="Neon OFF">
+        <svg class="neon-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M13.4 2 5.8 13.2h5.3L9.8 22l8.4-12.2h-5.5L13.4 2Z"/></svg>
+      </button>
+      <div class="top-guest-actions" data-auth-guest>
+        <button class="btn btn-ghost" type="button" data-go="login">Entrar</button>
+        <button class="btn btn-primary" type="button" data-go="signup">Criar conta</button>
+      </div>
+      <div class="top-session-actions" data-auth-session hidden>
+        <button class="top-session-user" type="button" data-app-go="dashboard" title="Abrir workspace">
+          <span class="top-session-avatar" data-user-initials>HA</span>
+          <span class="top-session-copy"><b data-user-name>Conta HARA</b><small data-user-role>Proprietário</small></span>
+        </button>
+        <button class="btn btn-ghost top-logout" type="button" data-logout>Sair</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="system-banner" id="systemBanner" role="status" aria-live="polite" aria-atomic="true" hidden>
+    <div>
+      <strong id="systemBannerTitle">Estado do Commander</strong>
+      <span id="systemBannerMessage">—</span>
+    </div>
+    <button class="btn btn-secondary small" id="systemBannerAction" type="button" hidden>Repetir</button>
+  </div>
+
+  <main id="mainContent" tabindex="-1">
+    <section class="view active" data-view="landing" aria-labelledby="landing-title">
+      <div class="landing-shell">
+        <div class="hero-copy">
+          <span class="eyebrow">HARA COMMANDER</span>
+          <h1 id="landing-title">Conecte ChatGPT e Codex ao seu computador com controle HARA.</h1>
+          <p class="hero-lead">
+            Instale o Commander Agent no Linux ou Windows, autorize seu cliente de IA e use uma conexão segura de saída —
+            sem abrir portas no roteador e sem entregar sua senha ao HARA.
+          </p>
+
+          <div class="hero-actions">
+            <button class="btn btn-primary btn-large" type="button" data-go="signup">Começar com o Commander</button>
+            <button class="btn btn-secondary btn-large" type="button" data-go="login">Já tenho uma conta</button>
+          </div>
+
+          <div class="trust-row" aria-label="Características do produto">
+            <span><b>Conta HARA</b><small>Login centralizado</small></span>
+            <span><b>ChatGPT / Codex</b><small>Integração governada</small></span>
+            <span><b>Comprovantes</b><small>Execuções auditáveis</small></span>
+            <span><b>Somente saída</b><small>Sem portas abertas</small></span>
+          </div>
+        </div>
+
+        <div class="hero-console" aria-label="Prévia ilustrativa do painel Commander">
+          <div class="console-head">
+            <div class="console-brand">
+              <img src="./assets/hara-commander-royal.webp?v=20261022-capybara-original-r1" alt="" />
+              <div><strong>Commander</strong><span data-tenant-name>Seu workspace</span></div>
+            </div>
+            <span class="status-pill"><i></i> Prévia</span>
+          </div>
+
+          <div class="metric-grid">
+            <article><span>Plano</span><strong id="landingPlan">—</strong><small>após login</small></article>
+            <article><span>Uso</span><strong id="landingUsage">—</strong><small id="landingLimit">após login</small></article>
+            <article><span>Conexões</span><strong id="landingConnections">—</strong><small id="landingConnectionsDetail">após login</small></article>
+            <article><span>Comprovantes</span><strong>—</strong><small>após execuções</small></article>
+          </div>
+
+          <div class="usage-preview">
+            <div class="usage-title"><span>Uso governado</span><b>Exemplo visual</b></div>
+            <div class="mini-chart" aria-hidden="true">
+              <span style="height:30%"></span><span style="height:42%"></span><span style="height:36%"></span>
+              <span style="height:55%"></span><span style="height:71%"></span><span style="height:62%"></span>
+              <span style="height:79%"></span><span style="height:64%"></span><span style="height:51%"></span>
+              <span style="height:68%"></span><span style="height:91%"></span><span style="height:82%"></span>
+            </div>
+          </div>
+
+          <div class="console-events">
+            <span><i></i> Agent conectado <b>EXEMPLO</b></span>
+            <span><i></i> Cliente de IA autorizado <b>EXEMPLO</b></span>
+            <span><i></i> Comprovante auditável <b>EXEMPLO</b></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="value-strip">
+        <span class="eyebrow">PRODUTO HARA LABS</span>
+        <h2>Uma conexão simples para a IA operar no seu computador sem expor acesso remoto.</h2>
+        <div class="feature-grid">
+          <article>
+            <span class="feature-no">01</span>
+            <h3>Acesso centralizado</h3>
+            <p>Entre no seu workspace pelo HARA Identity e gerencie suas conexões em um só lugar.</p>
+          </article>
+          <article>
+            <span class="feature-no">02</span>
+            <h3>Uso controlado</h3>
+            <p>Cada execução governada contabiliza o uso de forma consistente, sem cobrança duplicada por repetição técnica.</p>
+          </article>
+          <article>
+            <span class="feature-no">03</span>
+            <h3>Comprovantes por execução</h3>
+            <p>Cada operação concluída pode ser vinculada a um comprovante auditável do resultado retornado.</p>
+          </article>
+          <article>
+            <span class="feature-no">04</span>
+            <h3>Sem acesso irrestrito</h3>
+            <p>O Commander expõe somente funções autorizadas e governadas; não oferece shell arbitrário ao cliente de IA.</p>
+          </article>
+        </div>
+      </div>
+      <div class="product-legal-links" aria-label="Links legais do Commander">
+        <span>HARA Commander</span>
+        <a href="https://www.haralabs.com.br/legal/termos/" target="_blank" rel="noreferrer">Termos de Uso</a>
+        <a href="https://www.haralabs.com.br/legal/privacidade/" target="_blank" rel="noreferrer">Privacidade</a>
+        <a href="https://www.haralabs.com.br/support/" target="_blank" rel="noreferrer">Suporte</a>
+      </div>
+    </section>
+
+    <section class="view auth-view" data-view="login" aria-labelledby="login-title">
+      <div class="auth-wrap">
+        <button class="back-link" type="button" data-go="landing">← Voltar ao Commander</button>
+        <div class="auth-card">
+          <div class="auth-brand">
+            <img src="./assets/hara-commander-royal.webp?v=20261022-capybara-original-r1" alt="" />
+            <span><b>HARA Commander</b><small>Conexão segura para IA</small></span>
+          </div>
+          <span class="eyebrow">ACESSO</span>
+          <h1 id="login-title">Entre no seu workspace.</h1>
+          <p>Use sua identidade HARA para acessar seus computadores, uso e conexões do Commander.</p>
+
+          <div class="identity-gateway">
+            <span class="identity-gateway-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2 20 5v6c0 5.2-3.3 8.4-8 11-4.7-2.6-8-5.8-8-11V5l8-3Z"/>
+                <path d="m9 12 2 2 4-4"/>
+              </svg>
+            </span>
+            <span class="identity-gateway-copy">
+              <strong>HARA Identity</strong>
+              <span>Autenticação segura e centralizada.</span>
+            </span>
+          </div>
+
+          <form class="auth-form" data-auth-form="login">
+            <button class="btn btn-primary btn-block" type="button" data-go="login">Entrar com HARA Identity</button>
+            <button class="btn btn-secondary btn-block" type="button" data-go="other-account">Usar outra conta</button>
+          </form>
+
+          <p class="auth-switch">Ainda não possui conta? <button type="button" data-go="signup">Criar conta</button></p>
+          <p class="auth-legal"><a href="https://www.haralabs.com.br/legal/termos/" target="_blank" rel="noreferrer">Termos</a><span>·</span><a href="https://www.haralabs.com.br/legal/privacidade/" target="_blank" rel="noreferrer">Privacidade</a></p>
+        </div>
+      </div>
+    </section>
+
+    <section class="view auth-view" data-view="signup" aria-labelledby="signup-title">
+      <div class="auth-wrap">
+        <button class="back-link" type="button" data-go="landing">← Voltar ao Commander</button>
+        <div class="auth-card wide">
+          <div class="auth-brand">
+            <img src="./assets/hara-commander-royal.webp?v=20261022-capybara-original-r1" alt="" />
+            <span><b>HARA Commander</b><small>Novo workspace</small></span>
+          </div>
+          <span class="eyebrow">CRIAR CONTA</span>
+          <h1 id="signup-title">Prepare seu workspace.</h1>
+          <p>Sua identidade e seu workspace são provisionados de forma segura pelo HARA Identity.</p>
+
+          <div class="identity-gateway">
+            <span class="identity-gateway-label">HARA IDENTITY</span>
+            <strong>Crie sua identidade com segurança</strong>
+            <p>Cadastro, senha, verificação de e-mail e recuperação ficam centralizados no HARA Identity.</p>
+          </div>
+
+          <form class="auth-form" data-auth-form="signup">
+            <button class="btn btn-primary btn-block" type="submit">Criar conta com HARA Identity</button>
+          </form>
+
+          <p class="auth-switch">Já possui conta? <button type="button" data-go="login">Entrar</button></p>
+          <p class="auth-legal"><a href="https://www.haralabs.com.br/legal/termos/" target="_blank" rel="noreferrer">Termos</a><span>·</span><a href="https://www.haralabs.com.br/legal/privacidade/" target="_blank" rel="noreferrer">Privacidade</a></p>
+        </div>
+      </div>
+    </section>
+
+    <section class="view app-view" data-view="dashboard" aria-labelledby="dashboard-title">
+      <div class="app-shell">
+        <aside class="sidebar" data-sidebar></aside>
+
+        <div class="workspace-main">
+          <header class="workspace-head">
+            <div>
+              <h1 id="dashboard-title">Visão geral</h1>
+              <p>Conecte seu computador ao ChatGPT, Codex e outros clientes MCP.</p>
+            </div>
+          </header>
+
+          <div class="summary-grid">
+            <article class="summary-card accent" id="planSummaryCard">
+              <span>Plano atual</span><strong id="dashboardPlan">—</strong><small id="dashboardPlanDetail">carregando dados da conta</small>
+            </article>
+            <article class="summary-card usage-summary" id="usageSummaryCard">
+              <span>Uso do período</span><strong><span id="dashboardConsumed">—</span> <em id="dashboardLimit"></em></strong>
+              <div class="summary-progress" role="progressbar" aria-label="Uso do período" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="dashboardUsageProgress"></i></div>
+              <small id="dashboardPercent">carregando limite</small>
+            </article>
+            <article class="summary-card" id="dashboardDevicesCard">
+              <span>Computadores</span><strong id="dashboardConnections">—</strong><small id="dashboardConnectionsDetail">carregando computadores</small>
+            </article>
+            <article class="summary-card" id="dashboardSelectedCard">
+              <span>Computador selecionado</span><strong id="dashboardState">—</strong><small id="dashboardStateDetail">carregando seleção</small>
+            </article>
+          </div>
+
+          <div class="setup-grid">
+            <article class="setup-card">
+              <span class="setup-step">01</span>
+              <div>
+                <small>SEU COMPUTADOR</small>
+                <h2>Instale o Commander Agent</h2>
+                <p>O Agent fica instalado, mas o acesso da IA só é liberado quando você abre uma sessão local no terminal. Sem sessão, ele permanece inerte.</p>
+              </div>
+              <button class="btn btn-primary" type="button" data-app-go="devices">Conectar computador</button>
+            </article>
+            <article class="setup-card">
+              <span class="setup-step">02</span>
+              <div>
+                <small>CHATGPT / CODEX</small>
+                <h2>Acompanhe as integrações</h2>
+                <p>As conexões com ChatGPT e Codex estão em homologação. Consulte esta área para acompanhar quando a autorização estiver disponível.</p>
+              </div>
+              <button class="btn btn-secondary" type="button" data-app-go="connections">Ver integrações</button>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="view app-view" data-view="devices" aria-label="Computadores">
+      <div class="app-shell">
+        <aside class="sidebar" data-sidebar></aside>
+        <div class="workspace-main">
+          <div class="devices-section-tabs" role="tablist" aria-label="Gerenciar computadores">
+            <button class="active" type="button" role="tab" aria-selected="true" tabindex="0" data-device-section-tab="devices">
+              Dispositivos
+            </button>
+            <button type="button" role="tab" aria-selected="false" tabindex="-1" data-device-section-tab="connect">
+              <span aria-hidden="true">＋</span> Adicionar
+            </button>
+            <button type="button" role="tab" aria-selected="false" tabindex="-1" data-device-section-tab="commands">
+              Avançado
+            </button>
+          </div>
+
+          <div class="devices-section-panel" data-device-section-panel="devices" role="tabpanel">
+            <article class="panel devices-panel devices-panel-compact">
+              <div class="devices-toolbar">
+                <div class="device-tabs" role="tablist" aria-label="Filtrar dispositivos">
+                  <button class="active" type="button" role="tab" aria-selected="true" tabindex="0" data-device-tab="active">Ativos <span id="deviceActiveCount">0</span></button>
+                  <button type="button" role="tab" aria-selected="false" tabindex="-1" data-device-tab="history">Histórico <span id="deviceHistoryCount">0</span></button>
+                </div>
+                <div id="deviceHistoryTools" class="devices-history-tools" hidden>
+                  <button class="link-button devices-history-clear" type="button"
+                    data-clear-revoked-history title="Remover os registros do histórico do portal. As revogações e a auditoria técnica são preservadas.">Limpar histórico</button>
+                </div>
+                <div class="devices-toolbar-meta">
+                  <span id="deviceStatusSummary" class="devices-summary-count" aria-live="polite">Consultando dispositivos…</span>
+                  <button class="link-button devices-refresh" type="button" data-refresh-devices>Atualizar</button>
+                </div>
+              </div>
+              <div class="devices-history-confirm" id="deviceHistoryClearConfirm" role="group"
+                aria-label="Confirmar exclusão do histórico de computadores" hidden>
+                <strong>Limpar histórico de computadores revogados?</strong>
+                <p><span data-history-clear-count>0</span> registros serão excluídos do Histórico deste workspace no servidor,
+                   sem possibilidade de restauração pela interface. As revogações e a auditoria técnica serão preservadas.</p>
+                <p class="device-history-error" data-history-clear-error role="alert" hidden></p>
+                <div class="devices-history-confirm-actions">
+                  <button class="btn btn-secondary small" type="button" data-cancel-history-clear>Cancelar</button>
+                  <button class="btn btn-danger small" type="button" data-confirm-history-clear>Limpar histórico</button>
+                </div>
+              </div>
+              <div class="device-list" id="deviceList" role="tabpanel" aria-live="polite">
+                <div class="empty-state"><strong>Nenhum dispositivo ativo</strong>Conecte um novo dispositivo para começar.</div>
+              </div>
+              <div class="pairing-panel pairing-inline" id="deviceAuthorizationPanel" tabindex="-1" aria-live="polite" hidden>
+                <div class="pairing-inline-head"><strong>Confirmação de acesso direto</strong><span id="deviceAuthorizationExpiry">Código único válido por 10 minutos</span></div>
+                <p>Na máquina selecionada, execute <code>hara-commander authorize</code> e informe este código quando solicitado. O código é one-time e vinculado ao dispositivo.</p>
+                <div class="pairing-token"><code id="deviceAuthorizationToken">—</code><button class="btn btn-secondary small" type="button" data-copy-device-authorization>Copiar código</button></div>
+              </div>
+            </article>
+          </div>
+
+          <div class="devices-section-panel" data-device-section-panel="connect" role="tabpanel" hidden>
+            <div class="device-onboarding">
+              <article class="panel device-install-card device-onboarding-flow">
+                <div class="panel-head">
+                  <div><span>COMECE AQUI</span><h2>Conecte seu computador</h2></div>
+                  <span class="status-pill"><i></i> Pronto para instalar</span>
+                </div>
+                <p>Instale, copie seu código e pronto.</p>
+
+                <div class="onboarding-step onboarding-step-stack onboarding-platform-policy">
+                  <span class="onboarding-step-no">01</span>
+                  <div><b>Escolha o sistema</b><small>Escolha onde você quer usar o Commander.</small></div>
+                  <div class="onboarding-choice-row">
+                    <div>
+                      <small class="choice-label">Sistema</small>
+                      <div class="os-picker" role="tablist" aria-label="Sistema operacional">
+                        <button class="active" type="button" role="tab" aria-selected="true" data-os-choice="linux">Linux</button>
+                        <button type="button" role="tab" aria-selected="false" data-os-choice="windows">Windows</button>
+                      </div>
+                    </div>
+
+                  </div>
+                  <details class="devices-setup-advanced">
+                    <summary>Configurações avançadas · Direct</summary>
+                  <div class="onboarding-choice-row">
+                    <div>
+                      <small class="choice-label">Transporte</small>
+                      <div class="os-picker" role="radiogroup" aria-label="Modo de conexão do Commander">
+                        <button class="active" type="button" role="radio" aria-checked="true" data-transport-choice="cloud">Cloud (padrão)</button>
+                        <button type="button" role="radio" aria-checked="false" data-transport-choice="direct">Direct (avançado)</button>
+                      </div>
+                      <small class="install-note" id="transportModeNote">Cloud: o Gateway comercial encaminha comandos; nenhuma chave da OpenAI Platform é necessária. O Direct usa OpenAI Secure MCP Tunnel privado, e a execução permanece local.</small>
+                    </div>
+                  </div>
+                  </details>
+                  <small class="install-note">Padrão: Cloud com confirmação por ação. No Linux, o Commander reconecta após reinício; o modo Direct é opcional.</small>
+                </div>
+
+                <div class="onboarding-step">
+                  <span class="onboarding-step-no">02</span>
+                  <div><b>Seu código de conexão</b><small>Cole este código quando o instalador pedir. Válido por 10 minutos.</small></div>
+                  <button class="btn btn-primary" type="button" data-create-pairing>Gerar código</button>
+                </div>
+
+                <div class="pairing-panel pairing-inline" id="pairingPanel" tabindex="-1" aria-live="polite" hidden>
+                  <div class="pairing-inline-head"><strong>Código temporário</strong><span id="pairingExpiry">10 minutos</span></div>
+                  <div class="pairing-token"><code id="pairingToken">—</code><button class="btn btn-secondary small" type="button" data-copy-pairing>Copiar código</button></div>
+                </div>
+
+                <div class="onboarding-step onboarding-step-stack">
+                  <span class="onboarding-step-no">03</span>
+                  <div><b>Instale no seu computador</b><small>Copie no seu computador e siga as instruções. <a class="devices-repo-link" href="https://github.com/tiagoharalabs/hara-site/tree/hara-commander-commercial-v0.3.43-signed-v2/apps/commander/release-bundles/commercial-0.3.43-v2" target="_blank" rel="noopener noreferrer">Ver a distribuição assinada no GitHub ↗</a></small></div>
+                  <div class="install-pane" data-os-panel="linux">
+                    <div class="install-command"><code data-install-linux-code>(tmp=$(mktemp) && trap 'rm -f $tmp' EXIT && curl -fsS --proto '=https' --tlsv1.2 --location --max-redirs 0 https://commander.haralabs.com.br/install/linux.sh -o $tmp && HARA_COMMANDER_APPROVAL_MODE=ASK_EVERY_ACTION HARA_COMMANDER_TRANSPORT_MODE=OUTBOUND_RELAY HARA_COMMANDER_TUNNEL_AUTOSTART=OFF HARA_COMMANDER_URL=https://commander.haralabs.com.br bash $tmp)</code><button class="btn btn-secondary small" type="button" data-copy-linux>Copiar instalador Linux</button></div>
+                    <small class="install-note" data-cloud-onboarding-note>Para conectar o ChatGPT depois do pareamento, abra <b>Comandos e integrações → MCP remoto</b> e autentique pelo HARA Identity.</small><small class="install-note" data-direct-onboarding-note hidden>Modo Direct: após parear, abra <b>Comandos e integrações → Direct</b> para configurar e autorizar o túnel OpenAI por 6 horas. Requer credenciais próprias da OpenAI Platform.</small>
+                    <small class="install-note devices-token-reminder">Quando aparecer <b>Pairing token</b>, cole o código do passo 02 e pressione Enter. Depois, abra <b>Comandos e integrações</b> para iniciar ou parar as próximas sessões.</small>
+                  </div>
+                  <div class="install-pane" data-os-panel="windows" hidden>
+                    <div class="install-command"><code data-install-windows-code>$haraPrevUrl=$env:HARA_COMMANDER_URL; $haraPrevApproval=$env:HARA_COMMANDER_APPROVAL_MODE; $haraInstaller=Join-Path $env:TEMP ('hara-commander-install-'+[guid]::NewGuid().ToString('N')+'.ps1'); try { $env:HARA_COMMANDER_URL='https://commander.haralabs.com.br'; $env:HARA_COMMANDER_APPROVAL_MODE='ASK_EVERY_ACTION'; Invoke-WebRequest -Uri https://commander.haralabs.com.br/install/windows.ps1 -OutFile $haraInstaller -UseBasicParsing -MaximumRedirection 0 -ErrorAction Stop; & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $haraInstaller; if ($LASTEXITCODE -ne 0) { throw ('HARA_COMMANDER_INSTALL_EXIT_'+$LASTEXITCODE) } } finally { Remove-Item -LiteralPath $haraInstaller -Force -ErrorAction SilentlyContinue; $env:HARA_COMMANDER_URL=$haraPrevUrl; $env:HARA_COMMANDER_APPROVAL_MODE=$haraPrevApproval }</code><button class="btn btn-secondary small" type="button" data-copy-windows>Copiar instalador Windows</button></div>
+                    <small class="install-note devices-token-reminder">O PowerShell solicitará <b>Pairing token</b> em campo protegido. Cole o código do passo 02. Para sessões futuras, use a aba <b>Comandos e integrações</b>.</small>
+                  </div>
+                </div>
+
+                <div class="onboarding-finish onboarding-ready">
+                  <div><b>Concluído</b><small>Seu computador aparecerá em <b>Dispositivos</b> quando estiver conectado.</small></div>
+                </div>
+              </article>
+            </div>
+          </div>
+
+          <div class="devices-section-panel" data-device-section-panel="commands" role="tabpanel" hidden>
+            <article class="panel devices-command-guide">
+              <p class="devices-guide-intro">Após o pareamento, copie o comando desejado para o terminal do computador.</p>
+
+              <div class="devices-command-grid">
+                <section class="devices-command-group" aria-labelledby="devices-linux-commands">
+                  <div class="devices-command-group-head"><span class="devices-command-os">LIN</span><div><h3 id="devices-linux-commands">Linux</h3><small>Terminal local</small></div></div>
+                  <div class="devices-command-row"><div><b>Iniciar</b><small>Conecta e abre a sessão de autorização.</small></div><div class="devices-command-copy"><code>hara-commander start</code><button type="button" class="btn btn-secondary small" data-copy-guide-command>Copiar</button></div></div>
+                  <div class="devices-command-row"><div><b>Verificar status</b><small>Confere sessão e estado do Agent.</small></div><div class="devices-command-copy"><code>hara-commander status</code><button type="button" class="btn btn-secondary small" data-copy-guide-command>Copiar</button></div></div>
+                  <div class="devices-command-row"><div><b>Parar</b><small>Desconecta e encerra a autorização.</small></div><div class="devices-command-copy"><code>hara-commander stop</code><button type="button" class="btn btn-secondary small" data-copy-guide-command>Copiar</button></div></div>
+                  <div class="devices-command-row"><div><b>Diagnóstico</b><small>Verifica a instalação e conectividade.</small></div><div class="devices-command-copy"><code>hara-commander doctor</code><button type="button" class="btn btn-secondary small" data-copy-guide-command>Copiar</button></div></div>
+                </section>
+
+                <section class="devices-command-group" aria-labelledby="devices-windows-commands">
+                  <div class="devices-command-group-head"><span class="devices-command-os">WIN</span><div><h3 id="devices-windows-commands">Windows</h3><small>PowerShell local · beta</small></div></div>
+                  <div class="devices-command-row"><div><b>Iniciar</b><small>Conecta e abre a sessão no Windows.</small></div><div class="devices-command-copy"><code tabindex="0" title="Use as setas horizontais para percorrer o comando PowerShell completo">$agent=Join-Path $env:LOCALAPPDATA 'HARA Commander\hara-commander-agent.ps1'; &amp; powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $agent start</code><button type="button" class="btn btn-secondary small" data-copy-guide-command>Copiar</button></div></div>
+                  <div class="devices-command-row"><div><b>Verificar status</b><small>Confere se a sessão local está ativa.</small></div><div class="devices-command-copy"><code tabindex="0" title="Use as setas horizontais para percorrer o comando PowerShell completo">$agent=Join-Path $env:LOCALAPPDATA 'HARA Commander\hara-commander-agent.ps1'; &amp; powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $agent status</code><button type="button" class="btn btn-secondary small" data-copy-guide-command>Copiar</button></div></div>
+                  <div class="devices-command-row"><div><b>Parar</b><small>Encerra a sessão e desliga a tarefa do Agent.</small></div><div class="devices-command-copy"><code tabindex="0" title="Use as setas horizontais para percorrer o comando PowerShell completo">$agent=Join-Path $env:LOCALAPPDATA 'HARA Commander\hara-commander-agent.ps1'; &amp; powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $agent stop</code><button type="button" class="btn btn-secondary small" data-copy-guide-command>Copiar</button></div></div>
+                  <p class="devices-command-note">A versão Windows está em beta: operações sensíveis ainda exigem homologação. O Agent não inicia sozinho após o login.</p>
+                </section>
+
+                <section class="devices-command-group devices-command-group-wide" aria-labelledby="devices-mcp-commands">
+                  <div class="devices-command-group-head"><span class="devices-command-os">MCP</span><div><h3 id="devices-mcp-commands">Integração com clientes MCP</h3><small>Local ou remoto, conforme a capacidade do cliente</small></div></div>
+                  <div class="devices-command-row"><div><b>MCP local · Linux</b><small>STDIO para IDEs e clientes MCP no próprio computador.</small></div><div class="devices-command-copy"><code>hara-commander mcp</code><button type="button" class="btn btn-secondary small" data-copy-guide-command>Copiar</button></div></div>
+                  <div class="devices-command-row"><div><b>MCP remoto · ChatGPT e clientes compatíveis</b><small>Use a URL HTTPS no cliente com suporte a OAuth. Entre pelo HARA Identity.</small></div><div class="devices-command-copy"><code>https://commander.haralabs.com.br/api/mcp?profile=simple</code><button type="button" class="btn btn-secondary small" data-copy-guide-command>Copiar URL</button></div></div>
+                  <p class="devices-command-note">No Windows, use o MCP remoto HTTPS; o modo local STDIO ainda não está disponível no Agent comercial Windows.</p>
+                </section>
+              </div>
+
+              <p class="devices-sync-note"><b>Sincronização:</b> automática enquanto o Agent estiver conectado. Para ver a presença atual, volte a <b>Dispositivos → Atualizar</b>. Não existe comando manual de sincronização.</p>
+
+              <details class="devices-direct-guide" open>
+                <summary>Direct · túnel OpenAI privado (Linux avançado)</summary>
+                <p>Opcional. Configure a identidade do túnel, autorize pelo portal por 6 horas e execute somente quando precisar. Não é necessário para o MCP comercial Cloud.</p>
+                <div class="devices-direct-commands">
+                  <div class="devices-command-copy"><code>hara-commander tunnel configure</code><button type="button" class="btn btn-secondary small" data-copy-guide-command>Copiar</button></div>
+                  <div class="devices-command-copy"><code>hara-commander authorize</code><button type="button" class="btn btn-secondary small" data-copy-guide-command>Copiar</button></div>
+                  <div class="devices-command-copy"><code>hara-commander tunnel start</code><button type="button" class="btn btn-secondary small" data-copy-tunnel-start>Copiar iniciar</button></div>
+                  <div class="devices-command-copy"><code>hara-commander tunnel stop</code><button type="button" class="btn btn-secondary small" data-copy-guide-command>Copiar parar</button></div>
+                </div>
+              </details>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="view app-view" data-view="usage" aria-label="Uso">
+      <div class="app-shell">
+        <aside class="sidebar" data-sidebar></aside>
+        <div class="workspace-main">
+          <div class="quota-hero">
+            <div>
+              <span>Transações do período de apuração</span>
+              <strong><span id="usageConsumed">—</span> <em id="usageLimit"></em></strong>
+              <!-- O contador mensal nao deve usar a barra de franquia do plano. -->
+              <small id="usageRemaining">Carregando transações do período</small>
+            </div>
+            <div class="quota-meta" aria-label="Período do plano">
+              <span><small>Período</small><b id="usagePeriod">—</b></span>
+            </div>
+          </div>
+
+          <div class="summary-grid usage-product-grid" aria-label="Resumo do uso">
+            <article class="summary-card usage-history-card">
+              <span>Transações no período</span>
+              <strong id="usageCardTransactions">—</strong>
+              <small id="usageCardTransactionsDetail">Apuração mensal em UTC</small>
+            </article>
+            <article class="summary-card">
+              <span>Situação da cobrança</span>
+              <strong id="usageCardCapacity">—</strong>
+              <small id="usageCardCapacityDetail">Carregando capacidade</small>
+            </article>
+            <article class="summary-card">
+              <span>Plano atual</span>
+              <strong id="usageCardPlan">—</strong>
+              <small id="usageCardPlanDetail">Carregando plano</small>
+            </article>
+            <article class="summary-card">
+              <span>Renovação / validade</span>
+              <strong id="usageCardPeriod">—</strong>
+              <small id="usageCardPeriodDetail">Vencimento conforme assinatura</small>
+            </article>
+          </div>
+
+          <details class="activity-privacy-note" id="usageInternalHistory" hidden>
+            <summary>Diagnóstico interno · histórico acumulado</summary>
+            <p>Execuções registradas desde o início: <strong id="usageInternalLifetime">—</strong>.
+              Visível apenas ao proprietário Founder. Dados preservados para auditoria.</p>
+          </details>
+
+          <p class="activity-privacy-note"><b>O que este contador mede:</b> execuções governadas do Commander atribuídas à conta/plano. A apuração pública usa o mês UTC atual, não uma janela móvel. Ele não representa requests HTTP da infraestrutura e não inclui heartbeat, polling do Agent, health checks, carregamento do portal ou outras requisições da Cloudflare. O Commander na nuvem mantém apenas o mínimo necessário para conta, plano, presença e operação da ponte MCP; diagnósticos técnicos e histórico detalhado permanecem no Agent local.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="view app-view" data-view="plans" aria-label="Plano e cobrança">
+      <div class="app-shell">
+        <aside class="sidebar" data-sidebar></aside>
+        <div class="workspace-main">
+          <div class="plan-grid">
+            <article class="plan-card featured">
+              <span class="recommended">PLANO ATUAL</span><span class="plan-label">FREE</span><h2>Free</h2><p>Para instalar, conectar seus computadores e usar o Commander sem cobrança.</p>
+              <strong>10.000 <small>chamadas / mês</small></strong>
+              <ul><li>10.000 chamadas renovadas todo mês</li><li>1 workspace</li><li>Comprovantes auditáveis</li><li>Execução read-only governada</li><li>OAuth / OIDC</li></ul>
+              <button class="btn btn-primary btn-block" type="button" disabled aria-disabled="true">Plano atual</button>
+            </article>
+            <article class="plan-card">
+              <span class="plan-label">PRO</span><h2>Pro</h2><p>Para uso recorrente sem limite mensal de chamadas.</p>
+              <strong data-billing-price-label="STANDARD">R$ 80 <small>/ mês</small></strong>
+              <ul><li>Chamadas ilimitadas</li><li>Workspace corporativo</li><li>Mutação e execução de processos governadas</li><li>OAuth / OIDC</li><li>Auditoria e comprovantes</li></ul>
+              <button class="btn btn-secondary btn-block" type="button" data-billing-plan="STANDARD" disabled aria-disabled="true">Em preparação</button>
+              <button class="btn btn-secondary btn-block beta-access-cta" data-beta-access type="button">Solicitar acesso beta</button>
+            </article>
+          </div>
+          <div class="billing-readiness" id="billingReadiness" aria-live="polite">
+            <span data-billing-ready="provider">Cobrança</span>
+            <span data-billing-ready="catalog">Catálogo Standard</span>
+            <span data-billing-ready="price">Preço Standard</span>
+            <span data-billing-ready="checkout">Checkout</span>
+          </div>
+          <p class="plan-disclaimer" id="billingPlanStatus">Verificando disponibilidade comercial…</p>
+          <div class="billing-management">
+            <button class="btn btn-secondary" type="button" data-billing-portal hidden>Gerenciar cobrança</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="view app-view" data-view="connections" aria-labelledby="connections-title">
+      <div class="app-shell">
+        <aside class="sidebar" data-sidebar></aside>
+        <div class="workspace-main">
+          <header class="workspace-head">
+            <div><h1 id="connections-title">Conexões</h1><p>Use o Commander localmente para máxima velocidade ou remotamente para acessar o computador de qualquer lugar.</p></div>
+          </header>
+
+          <div class="connection-readiness" aria-label="Como conectar">
+            <span><b>01</b><small>Instale o Commander</small></span>
+            <i aria-hidden="true"></i>
+            <span><b>02</b><small>Autorize este computador</small></span>
+            <i aria-hidden="true"></i>
+            <span><b>03</b><small>Escolha Local ou Remoto</small></span>
+          </div>
+
+          <div class="connection-list" id="connectionList">
+            <article class="connection-card">
+              <div class="connection-icon" aria-hidden="true">PC</div>
+              <div class="connection-copy">
+                <div class="connection-title"><h2>MCP Local</h2><span class="integration-badge">RECOMENDADO</span></div>
+                <p>Para clientes MCP rodando no mesmo computador. A chamada vai direto para o Agent local.</p>
+                <ul class="connection-features"><li>0 relay por operação</li><li>24 comandos simples</li><li>Menor latência</li></ul>
+                <span class="status-line"><i></i> Comando: hara-commander mcp</span>
+              </div>
+              <button class="btn btn-secondary" type="button" data-copy-local-mcp>Copiar comando</button>
+            </article>
+            <article class="connection-card">
+              <div class="connection-icon" aria-hidden="true">↗</div>
+              <div class="connection-copy">
+                <div class="connection-title"><h2>MCP Remoto</h2><span class="integration-badge neutral">QUALQUER CLIENTE</span></div>
+                <p>Para ChatGPT, Claude, Codex, Cursor, VS Code ou seu próprio cliente em outra máquina.</p>
+                <ul class="connection-features"><li>OAuth/OIDC</li><li>24 comandos simples</li><li>Acesso de qualquer lugar</li></ul>
+                <span class="status-line"><i></i> commander.haralabs.com.br/api/mcp?profile=simple</span>
+              </div>
+              <button class="btn btn-secondary" type="button" data-copy-simple-mcp>Copiar URL MCP</button>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="view app-view" data-view="security" aria-label="Configurações">
+      <div class="app-shell">
+        <aside class="sidebar" data-sidebar></aside>
+        <div class="workspace-main">
+          <div class="settings-grid">
+            <article class="panel settings-card full-panel">
+              <div class="panel-head"><div><span>CONEXÃO</span><h2>Use no cliente que preferir</h2></div></div>
+              <p class="settings-card-subtitle">Conecte o Commander ao cliente MCP ideal para seu ambiente.</p>
+              <div class="settings-connection-list">
+                <div>
+                  <span class="where-badge">LOCAL</span>
+                  <p><b>MCP local</b><small>Mais rápido e sem relay por operação. Ideal quando o cliente MCP roda nesta máquina.</small></p>
+                  <button class="btn btn-secondary small" type="button" data-copy-local-mcp>Copiar comando</button>
+                </div>
+                <div>
+                  <span class="where-badge">MCP</span>
+                  <p><b>MCP remoto</b><small>ChatGPT, Claude, Cursor, VS Code, Codex ou qualquer cliente MCP compatível.</small></p>
+                  <button class="btn btn-secondary small" type="button" data-copy-simple-mcp>Copiar endpoint</button>
+                </div>
+              </div>
+            </article>
+
+            <article class="panel settings-card">
+              <div class="panel-head"><div><span>Conta</span><h2>Identidade</h2></div><span class="status-pill"><i></i> Ativo</span></div>
+              <p class="settings-card-subtitle">Informações da sua conta e do workspace atual.</p>
+              <dl><div><dt>Identidade</dt><dd data-security-subject>—</dd></div><div><dt>Workspace</dt><dd data-security-tenant>—</dd></div><div><dt>Perfil</dt><dd data-security-role>—</dd></div><div><dt>Vínculo</dt><dd>HARA Identity</dd></div></dl>
+            </article>
+
+            <article class="panel settings-card">
+              <div class="panel-head"><div><span>Privacidade</span><h2>Conteúdo do cliente</h2></div></div>
+              <p class="settings-card-subtitle">Informações sobre o tratamento dos dados do Commander.</p>
+              <ul class="settings-check-list">
+                <li>Sem histórico persistente de comandos em texto puro</li>
+                <li>Payload/resultados redigidos após a execução</li>
+                <li>Receipts locais com metadados e hashes</li>
+              </ul>
+            </article>
+
+            <article class="panel settings-card">
+              <div class="panel-head"><div><span>Sessão</span><h2>Acesso atual</h2></div></div>
+              <p class="settings-card-subtitle">Sua sessão atual no Commander.</p>
+              <div class="session"><i class="ok"></i><div><b>Sessão web ativa</b><small>Autenticada pelo HARA Identity</small></div><span>Agora</span></div>
+            </article>
+
+            <article class="panel settings-card">
+              <div class="panel-head"><div><span>Serviço</span><h2>Status do Commander</h2></div><span class="status-pill service-health" id="serviceHealthPill"><i></i> Verificando</span></div>
+              <p class="settings-card-subtitle">Acompanhe a disponibilidade do serviço.</p>
+              <p class="settings-help-copy" id="serviceHealthDetail">Consultando a disponibilidade do serviço.</p>
+              <button class="link-button" type="button" data-refresh-service-health>Atualizar status</button>
+            </article>
+
+
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="view app-view" data-view="help" aria-labelledby="help-title">
+      <div class="app-shell">
+        <aside class="sidebar" data-sidebar></aside>
+        <div class="workspace-main help-workspace-main">
+          <div class="help-content">
+            <header class="workspace-head help-heading">
+              <div><span class="help-kicker">CENTRAL DE AJUDA</span><h1 id="help-title">Como podemos ajudar?</h1>
+                <p>Suporte e diagnóstico para seu HARA Commander.</p></div>
+            </header>
+            <article class="panel settings-card help-card">
+              <div class="panel-head"><div><span>SUPORTE</span><h2>Precisa de ajuda com o Commander?</h2></div></div>
+              <p class="settings-help-copy">Acesse nossa central de suporte ou envie um diagnóstico sanitizado da sua máquina local. Comandos, conteúdos, resultados e tokens não são compartilhados no relatório.</p>
+              <div class="settings-actions">
+                <a class="btn btn-primary" href="https://www.haralabs.com.br/support/" target="_blank" rel="noopener noreferrer">Abrir central de suporte</a>
+                <button class="btn btn-secondary" type="button" data-submit-local-support>Enviar diagnóstico</button>
+              </div>
+              <p class="settings-help-copy help-feedback" id="supportReportStatus" role="status" aria-live="polite">Nenhum diagnóstico enviado nesta sessão.</p>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <template id="sidebarTemplate">
+    <nav class="side-nav side-nav-simple" aria-label="HARA Commander">
+      <button type="button" data-app-go="devices">
+        <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        <span>Computadores</span>
+      </button>
+      <button type="button" data-app-go="usage">
+        <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="m7 15 3-4 3 2 4-6"/></svg>
+        <span>Uso</span>
+      </button>
+      <button type="button" data-app-go="plans">
+        <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16v11H4z"/><path d="M7 11h4M16 14h1"/></svg>
+        <span>Plano e cobrança</span>
+      </button>
+      <button type="button" data-app-go="security">
+        <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21h-4v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3.1 14H3v-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.5V3h4v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1h.1v4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>
+        <span>Configurações</span>
+      </button>
+      <button type="button" class="sidebar-help-action" data-app-go="help">
+        <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.7 9a2.6 2.6 0 0 1 4.9 1.2c0 1.7-2.6 2-2.6 4"/><circle cx="12" cy="17.3" r=".7" fill="currentColor" stroke="none"/></svg>
+        <span>Ajuda</span>
+      </button>
+    </nav>
+  </template>
+
+  <script src="./app.js?v=20261023-revoke-click-r15"></script>
+  <script src="./recovery-alerts.js?v=20261024-recovery-inbox-r1"></script>
+</body>
+</html>

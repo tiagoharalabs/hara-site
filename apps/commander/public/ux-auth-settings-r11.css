@@ -1,0 +1,311 @@
+/* H.A.R.A. Commander — R11 login and settings polish, 2026-10-23.
+   Scope: login and settings UI only. Neutral copy, soft gold highlights,
+   no inner divider rules. Supports dark/light mode and responsive widths. */
+
+/* Login: remove the redundant cautionary presentation while keeping real errors. */
+.auth-view[data-view="login"] .auth-wrap {
+  position: relative;
+  isolation: isolate;
+  padding-block: clamp(30px,5vh,58px);
+}
+html[data-theme="dark"] .auth-view[data-view="login"] {
+  background:
+    radial-gradient(ellipse at 82% 76%, rgba(237,168,49,.095), transparent 39%),
+    radial-gradient(ellipse at 15% 15%, rgba(30,129,183,.17), transparent 36%),
+    linear-gradient(138deg,#03131f 2%,#051b2b 63%,#092534 100%);
+}
+.auth-view[data-view="login"] .auth-card {
+  padding: 36px 40px 31px;
+  border-radius: 20px;
+  border: 1px solid rgba(52,129,171,.23);
+  box-shadow: 0 16px 48px rgba(3,18,30,.19);
+}
+html[data-theme="dark"] .auth-view[data-view="login"] .auth-card {
+  background: linear-gradient(145deg,rgba(7,32,47,.98),rgba(5,28,43,.96));
+  border-color: rgba(65,137,176,.28);
+  box-shadow: 0 20px 56px rgba(0,0,0,.22), 0 0 45px rgba(36,124,172,.065);
+}
+.auth-view[data-view="login"] .auth-brand {
+  margin-bottom: 27px;
+  gap: 12px;
+}
+.auth-view[data-view="login"] .auth-brand img {
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
+}
+.auth-view[data-view="login"] .auth-brand b {font-size: 14px;}
+.auth-view[data-view="login"] .auth-brand small {font-size: 11px;line-height: 1.4;}
+.auth-view[data-view="login"] .eyebrow {
+  display: block;
+  color: #d29c26;
+  letter-spacing: .17em;
+  font-size: 10.5px;
+  font-weight: 850;
+}
+html[data-theme="dark"] .auth-view[data-view="login"] .eyebrow {color:#f0b943;}
+.auth-view[data-view="login"] .auth-card h1 {
+  font-size: clamp(26px,2.6vw,31px);
+  letter-spacing: -.03em;
+  line-height: 1.17;
+  margin: 12px 0 12px;
+}
+.auth-view[data-view="login"] .auth-card > p:not(.auth-legal):not(.auth-switch) {
+  font-size: 13px;
+  line-height: 1.57;
+}
+.auth-view[data-view="login"] .identity-gateway {
+  margin-top: 23px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 17px;
+  border-radius: 12px;
+  border: 1px solid rgba(54,134,180,.18);
+  background: rgba(38,126,180,.07);
+}
+html[data-theme="dark"] .auth-view[data-view="login"] .identity-gateway {
+  background: rgba(20,74,105,.31);
+  border-color: rgba(42,119,164,.25);
+}
+.auth-view[data-view="login"] .identity-gateway-icon {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  color: #168eac;
+  background: rgba(29,172,203,.08);
+}
+html[data-theme="dark"] .auth-view[data-view="login"] .identity-gateway-icon {
+  color: #36c3e9;
+  background: rgba(17,141,177,.13);
+}
+.auth-view[data-view="login"] .identity-gateway-icon svg {width: 24px;height: 24px;}
+.auth-view[data-view="login"] .identity-gateway-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 4px;
+}
+.auth-view[data-view="login"] .identity-gateway-copy strong {
+  font-size: 13.5px;
+  line-height: 1.35;
+}
+.auth-view[data-view="login"] .identity-gateway-copy > span {
+  color: #71899a;
+  font-size: 12px;
+  line-height: 1.45;
+}
+html[data-theme="dark"] .auth-view[data-view="login"] .identity-gateway-copy > span {color:#91b4c9;}
+.auth-view[data-view="login"] .auth-form {gap: 12px;margin-top: 20px;}
+.auth-view[data-view="login"] .auth-form .btn {
+  min-height: 49px;
+  border-radius: 11px;
+  padding: 13px 16px;
+  font-size: 13px;
+  font-weight: 800;
+}
+.auth-view[data-view="login"] .auth-form .btn-primary {
+  border-color: #eab343;
+  background: linear-gradient(180deg,#ffcb59 0%,#f3b43a 100%);
+  color: #082136;
+  box-shadow: 0 5px 16px rgba(235,173,51,.20), 0 0 22px rgba(245,184,56,.105);
+}
+.auth-view[data-view="login"] .auth-form .btn-primary:hover,
+.auth-view[data-view="login"] .auth-form .btn-primary:focus-visible {
+  background: linear-gradient(180deg,#ffd774 0%,#f5bc49 100%);
+  box-shadow: 0 5px 19px rgba(235,173,51,.29), 0 0 24px rgba(245,184,56,.20);
+}
+.auth-view[data-view="login"] .auth-form .btn-secondary {
+  border-color: rgba(61,150,198,.30);
+  background: rgba(28,115,161,.07);
+}
+html[data-theme="dark"] .auth-view[data-view="login"] .auth-form .btn-secondary {
+  background:rgba(12,52,76,.52);
+  color:#e1f0f7;
+}
+.auth-view[data-view="login"] .auth-switch {
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 22px!important;
+}
+.auth-view[data-view="login"] .auth-switch button {font-size:inherit;font-weight:750;}
+.auth-view[data-view="login"] .auth-legal {
+  font-size: 10.5px!important;
+  margin-top: 14px!important;
+}
+@media(max-width: 580px) {
+  .auth-view[data-view="login"] .auth-card {padding: 28px 23px;}
+  .auth-view[data-view="login"] .auth-wrap {padding-inline: 16px;}
+}
+
+/* Settings: replace repeated horizontal separators with soft grouping. */
+.app-view[data-view="security"] .settings-card {
+  overflow: visible;
+}
+.app-view[data-view="security"] .settings-card .panel-head {
+  border: 0!important;
+  padding-bottom: 0;
+}
+.app-view[data-view="security"] .settings-card .panel-head h2 {
+  font-size: 19px;
+  margin-top: 5px;
+}
+.app-view[data-view="security"] .settings-card-subtitle {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #69879a;
+  margin: 6px 0 0;
+}
+html[data-theme="dark"] .app-view[data-view="security"] .settings-card-subtitle {color:#96b3c2;}
+.app-view[data-view="security"] .settings-connection-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+.app-view[data-view="security"] .settings-connection-list > div {
+  border: 0!important;
+  border-radius: 12px;
+  grid-template-columns: 50px minmax(0,1fr) auto;
+  align-items: center;
+  gap: 13px;
+  padding: 15px 17px;
+  background: rgba(35,117,158,.065);
+  min-width: 0;
+}
+html[data-theme="dark"] .app-view[data-view="security"] .settings-connection-list > div {
+  background: rgba(24,89,128,.23);
+}
+.app-view[data-view="security"] .settings-connection-list p {
+  display: grid;
+  gap: 4px;
+}
+.app-view[data-view="security"] .settings-connection-list b {font-size: 13.5px;line-height: 1.4;}
+.app-view[data-view="security"] .settings-connection-list small {
+  font-size: 12px;
+  line-height: 1.5;
+}
+.app-view[data-view="security"] .settings-connection-list .where-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  font-size: 10px;
+  letter-spacing: .02em;
+}
+html[data-theme="dark"] .app-view[data-view="security"] .where-badge {
+  background: rgba(212,237,249,.95);
+  color:#174962;
+}
+.app-view[data-view="security"] .settings-connection-list .btn {
+  min-height: 36px;
+  white-space: nowrap;
+}
+.app-view[data-view="security"] .settings-card dl {
+  margin: 16px 0 0;
+  padding: 8px 9px;
+  gap: 0;
+  border: 0;
+  border-radius: 12px;
+  background: rgba(35,117,158,.045);
+}
+html[data-theme="dark"] .app-view[data-view="security"] .settings-card dl {
+  background: rgba(24,89,128,.19);
+}
+.app-view[data-view="security"] .settings-card dl > div {
+  border: 0!important;
+  padding: 9px 10px;
+  gap: 12px;
+  border-radius: 7px;
+  min-width: 0;
+}
+.app-view[data-view="security"] .settings-card dl dt {font-size: 12.5px;flex:0 0 auto;}
+.app-view[data-view="security"] .settings-card dl dd {
+  font-size: 12.5px;
+  overflow-wrap: anywhere;
+  text-align: right;
+  min-width: 0;
+}
+.app-view[data-view="security"] .settings-check-list {
+  margin-top: 18px;
+  gap: 14px;
+}
+.app-view[data-view="security"] .settings-check-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  font-size: 12.7px;
+  line-height: 1.55;
+}
+.app-view[data-view="security"] .settings-check-list li::before {
+  content: "✓";
+  margin: 0;
+  display: inline-grid;
+  flex: 0 0 18px;
+  place-items: center;
+  color: #10a881;
+  font-size: 15px;
+}
+html[data-theme="dark"] .app-view[data-view="security"] .settings-check-list li::before {color:#25d5a0;}
+.app-view[data-view="security"] .session {
+  border: 0!important;
+  border-radius: 11px;
+  margin-top: 16px;
+  padding: 15px;
+  background: rgba(35,117,158,.06);
+  grid-template-columns: 8px minmax(0,1fr) auto;
+}
+html[data-theme="dark"] .app-view[data-view="security"] .session {background:rgba(24,89,128,.20);}
+.app-view[data-view="security"] .session i {width:8px;height:8px;}
+.app-view[data-view="security"] .session b {font-size: 13px;}
+.app-view[data-view="security"] .session small,
+.app-view[data-view="security"] .session > span {font-size: 11.8px;}
+.app-view[data-view="security"] .settings-card #serviceHealthDetail {
+  padding: 13px 15px;
+  margin: 16px 0 12px;
+  border-radius: 11px;
+  background: rgba(35,117,158,.06);
+}
+html[data-theme="dark"] .app-view[data-view="security"] .settings-card #serviceHealthDetail {
+  background: rgba(24,89,128,.20);
+}
+.app-view[data-view="security"] .settings-card .link-button {min-height:30px;}
+@media(max-width: 850px) {
+  .app-view[data-view="security"] .settings-connection-list > div {
+    grid-template-columns: 44px minmax(0,1fr);
+  }
+  .app-view[data-view="security"] .settings-connection-list > div .btn {
+    grid-column: 2;
+    justify-self: start;
+  }
+}
+@media(max-width: 520px) {
+  .app-view[data-view="security"] .settings-card {padding: 19px 16px;}
+  .app-view[data-view="security"] .settings-card dl > div {
+    display:grid;
+    gap: 3px;
+  }
+  .app-view[data-view="security"] .settings-card dl dd {text-align:left;}
+}
+
+
+/* Dark mode: keep identity metadata and connection explanations readable. */
+html[data-theme="dark"] .app-view[data-view="security"] .settings-connection-list b {
+  color: #e5f1f8;
+}
+html[data-theme="dark"] .app-view[data-view="security"] .settings-connection-list small {
+  color: #aac6d7;
+}
+html[data-theme="dark"] .app-view[data-view="security"] .settings-card dl dt {
+  color: #9cbacc;
+}
+html[data-theme="dark"] .app-view[data-view="security"] .settings-card dl dd {
+  color: #cee4f0;
+}
+html[data-theme="dark"] .app-view[data-view="security"] .settings-check-list li {
+  color: #bed9e8;
+}
+html[data-theme="dark"] .app-view[data-view="security"] #serviceHealthDetail {
+  color: #b5d0df;
+}

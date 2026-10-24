@@ -1,0 +1,377 @@
+/* HARA Commander R7: restore layout and text legibility across
+   Computers > Add, Usage, and Settings only. Based on user screenshots.
+   Existing MCP, pairing, auth, installers and data are untouched. */
+
+/* 1. ADD: use horizontal space for the actual step flow. */
+@media (min-width: 1051px) {
+  .app-view[data-view="devices"] [data-device-section-panel="connect"] .onboarding-platform-policy {
+    grid-template-columns: 38px minmax(240px, .58fr) minmax(275px, 1fr);
+    gap: 14px;
+    align-items: center;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="connect"] .onboarding-platform-policy > .onboarding-step-no {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="connect"] .onboarding-platform-policy > div:nth-child(2) {
+    grid-column: 2;
+    grid-row: 1;
+    min-width: 0;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="connect"] .onboarding-platform-policy > .onboarding-choice-row {
+    grid-column: 3;
+    grid-row: 1;
+    display:block;
+    width:100%;
+    min-width:0;
+    margin:0;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="connect"] .onboarding-platform-policy > .devices-setup-advanced,
+  .app-view[data-view="devices"] [data-device-section-panel="connect"] .onboarding-platform-policy > .install-note {
+    grid-column: 2 / -1;
+    width:100%;
+    min-width:0;
+  }
+}
+.app-view[data-view="devices"] [data-device-section-panel="connect"] .onboarding-finish.onboarding-ready {
+  grid-template-columns: minmax(0, 1fr);
+  padding-left: 48px;
+  margin-top: 7px;
+  border-top: 1px solid var(--line);
+}
+.app-view[data-view="devices"] [data-device-section-panel="connect"] .onboarding-finish.onboarding-ready > div {
+  grid-column: 1 / -1;
+  min-width:0;
+  display:flex;
+  flex-wrap:wrap;
+  align-items:baseline;
+  gap: 7px 12px;
+}
+.app-view[data-view="devices"] [data-device-section-panel="connect"] .onboarding-finish.onboarding-ready b {
+  font-size: 13px;
+  line-height: 1.4;
+}
+.app-view[data-view="devices"] [data-device-section-panel="connect"] .onboarding-finish.onboarding-ready small {
+  display:block;
+  margin:0;
+  min-width:0;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.app-view[data-view="devices"] [data-device-section-panel="connect"] .onboarding-step-stack > .install-pane {
+  grid-column: 2 / -1;
+  width:100%;
+  max-width:none;
+  min-width:0;
+}
+.app-view[data-view="devices"] [data-device-section-panel="connect"] .install-pane > .install-note {
+  display:block;
+  width:100%;
+  max-width:none;
+  min-width:0;
+  margin:8px 0 0;
+  font-size:12px;
+  line-height:1.48;
+  white-space:normal;
+}
+.app-view[data-view="devices"] [data-device-section-panel="connect"] .install-pane .install-command {
+  width:100%;
+  min-width:0;
+}
+.app-view[data-view="devices"] [data-device-section-panel="connect"] .install-pane .install-command code {
+  min-width:0;
+  overflow-x:auto;
+  font-size:12px;
+}
+.app-view[data-view="devices"] [data-device-section-panel="connect"] .onboarding-step b {
+  font-size:13px;
+}
+.app-view[data-view="devices"] [data-device-section-panel="connect"] .onboarding-step small,
+.app-view[data-view="devices"] [data-device-section-panel="connect"] .onboarding-platform-policy > .install-note {
+  font-size:12px;
+  line-height:1.45;
+}
+.app-view[data-view="devices"] [data-device-section-panel="connect"] .choice-label {
+  font-size:11px;
+}
+.app-view[data-view="devices"] [data-device-section-panel="connect"] .os-picker button {
+  font-size:11px;
+  padding:9px 15px;
+}
+.app-view[data-view="devices"] [data-device-section-panel="connect"] .devices-setup-advanced > summary {
+  font-size:12px;
+}
+@media (max-width: 1050px) {
+  .app-view[data-view="devices"] [data-device-section-panel="connect"] .onboarding-finish.onboarding-ready {
+    padding-left:48px;
+  }
+}
+@media (max-width: 760px) {
+  .app-view[data-view="devices"] [data-device-section-panel="connect"] .onboarding-finish.onboarding-ready {padding-left:0;}
+}
+
+/* 2. USAGE: center the whole summary, not merely an individual card. */
+.app-view[data-view="usage"] .workspace-main {
+  display:flex;
+  flex-direction:column;
+  justify-content:safe center;
+  align-items:stretch;
+  width:100%;
+  max-width:1280px;
+  margin-inline:auto;
+  min-height:calc(100vh - 74px);
+  min-height:calc(100dvh - 74px);
+  padding-top:28px;
+  padding-bottom:32px;
+}
+.app-view[data-view="usage"] .quota-hero,
+.app-view[data-view="usage"] .usage-product-grid,
+.app-view[data-view="usage"] .activity-privacy-note {
+  width:100%;
+  min-width:0;
+}
+.app-view[data-view="usage"] .quota-hero {
+  align-items:center;
+}
+.app-view[data-view="usage"] .quota-hero > div:first-child {
+  min-width:0;
+  flex:1 1 auto;
+}
+.app-view[data-view="usage"] .quota-hero > div:first-child > span,
+.app-view[data-view="usage"] .quota-hero > div:first-child > small {
+  font-size:12px;
+  line-height:1.45;
+}
+.app-view[data-view="usage"] .quota-meta {
+  flex:0 1 300px;
+  min-width:200px;
+  grid-template-columns:minmax(0,1fr);
+}
+.app-view[data-view="usage"] .quota-meta small {font-size:11px;}
+.app-view[data-view="usage"] .quota-meta b {font-size:13px;}
+.app-view[data-view="usage"] .usage-product-grid .summary-card span {font-size:12px;}
+.app-view[data-view="usage"] .usage-product-grid .summary-card small {
+  font-size:11.5px;
+  line-height:1.5;
+}
+.app-view[data-view="usage"] .usage-product-grid .summary-card strong {overflow-wrap:anywhere;}
+.app-view[data-view="usage"] .activity-privacy-note {
+  margin-top:18px;
+  font-size:11.5px;
+  line-height:1.55;
+}
+@media (max-width: 1100px), (max-height: 720px) {
+  .app-view[data-view="usage"] .workspace-main {
+    justify-content:flex-start;
+  }
+}
+@media (max-width: 760px) {
+  .app-view[data-view="usage"] .workspace-main {
+    min-height:0;
+    padding-top:20px;
+  }
+  .app-view[data-view="usage"] .quota-meta {flex:1 1 auto;min-width:0;}
+}
+
+/* 3. SETTINGS: the legacy 8-10px type is too small for a product dashboard. */
+.app-view[data-view="security"] .workspace-main {
+  padding-top:26px;
+  padding-bottom:34px;
+  max-width:1260px;
+  width:100%;
+  margin-inline:auto;
+}
+.app-view[data-view="security"] .settings-grid {
+  gap:18px;
+  align-items:stretch;
+}
+.app-view[data-view="security"] .settings-card {
+  min-width:0;
+  padding:22px 24px;
+}
+.app-view[data-view="security"] .settings-card .panel-head h2 {
+  font-size:19px;
+  line-height:1.3;
+}
+.app-view[data-view="security"] .settings-card .panel-head span:not(.status-pill) {
+  font-size:11px;
+}
+.app-view[data-view="security"] .settings-connection-list > div {
+  grid-template-columns: 70px minmax(0,1fr) auto;
+  gap:14px;
+  padding:16px 0;
+}
+.app-view[data-view="security"] .settings-connection-list p {gap:5px;min-width:0;}
+.app-view[data-view="security"] .settings-connection-list b {
+  font-size:14px;
+  line-height:1.3;
+}
+.app-view[data-view="security"] .settings-connection-list small {
+  font-size:12.5px;
+  line-height:1.5;
+}
+.app-view[data-view="security"] .where-badge {font-size:10.5px;}
+.app-view[data-view="security"] .settings-card dl {gap:12px;}
+.app-view[data-view="security"] .settings-card dl div {padding-top:11px;}
+.app-view[data-view="security"] .settings-card dt {
+  font-size:12px;
+  line-height:1.4;
+}
+.app-view[data-view="security"] .settings-card dd {
+  font-size:13px;
+  line-height:1.4;
+  overflow-wrap:anywhere;
+  text-align:right;
+}
+.app-view[data-view="security"] .settings-check-list {gap:13px;}
+.app-view[data-view="security"] .settings-check-list li {
+  font-size:12.5px;
+  line-height:1.5;
+}
+.app-view[data-view="security"] .session {padding:16px 0;}
+.app-view[data-view="security"] .session b {font-size:13.5px;}
+.app-view[data-view="security"] .session small,
+.app-view[data-view="security"] .session > span {font-size:11.5px;}
+.app-view[data-view="security"] .settings-help-copy {
+  font-size:12.5px;
+  line-height:1.55;
+}
+.app-view[data-view="security"] .settings-card .btn.small {
+  font-size:12px;
+  padding:9px 13px;
+}
+.app-view[data-view="security"] .settings-card .link-button {
+  font-size:12.5px;
+}
+@media (max-width: 800px) {
+  .app-view[data-view="security"] .settings-grid {grid-template-columns:minmax(0,1fr);}
+  .app-view[data-view="security"] .settings-connection-list > div {
+    grid-template-columns: 60px minmax(0,1fr);
+  }
+  .app-view[data-view="security"] .settings-connection-list > div > .btn {
+    grid-column:2;
+    justify-self:start;
+  }
+}
+
+
+/* Original .onboarding-step b { display:block } also affected emphasis INSIDE
+   instructional sentences, inserting unwanted line breaks after each bold
+   phrase. Restrict inline emphasis to its semantic text flow. */
+.app-view[data-view="devices"] [data-device-section-panel="connect"] .install-pane .install-note b,
+.app-view[data-view="devices"] [data-device-section-panel="connect"] .devices-token-reminder b {
+  display:inline;
+  margin:0;
+  font-size:inherit;
+  line-height:inherit;
+}
+
+
+/* R8 — onboarding finish: inline emphasis must not inherit the title's
+   display:block rule. Keeps "Concluído — Seu computador aparecerá em
+   Dispositivos quando estiver conectado." as one fluent desktop line. */
+.app-view[data-view="devices"] [data-device-section-panel="connect"] .onboarding-finish.onboarding-ready > div > small b {
+  display:inline;
+  font-size:inherit;
+  line-height:inherit;
+  vertical-align:baseline;
+}
+@media (min-width: 1051px) {
+  .app-view[data-view="devices"] [data-device-section-panel="connect"] .onboarding-finish.onboarding-ready > div {
+    display:flex;
+    flex-wrap:nowrap;
+    justify-content:flex-start;
+    align-items:baseline;
+    gap:12px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="connect"] .onboarding-finish.onboarding-ready > div > b {
+    flex:0 0 auto;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="connect"] .onboarding-finish.onboarding-ready > div > small {
+    flex:0 1 auto;
+    width:auto;
+    max-width:none;
+    white-space:nowrap;
+  }
+}
+@media (max-width: 1050px) {
+  .app-view[data-view="devices"] [data-device-section-panel="connect"] .onboarding-finish.onboarding-ready > div > small {
+    white-space:normal;
+    max-width:100%;
+  }
+}
+
+/* R14 — devices without decorative horizontal dividers; confirmation stays visible. */
+[data-view="devices"] .devices-panel-compact .empty-state {
+  border-top: 0;
+}
+[data-view="devices"] .devices-section-tabs {
+  border-bottom: 0;
+}
+[data-view="devices"] .device-overflow-actions,
+html[data-theme="dark"] [data-view="devices"] .device-overflow-actions {
+  border-top: 0;
+  padding-top: 0;
+}
+[data-view="devices"] .device-revoke-confirm {
+  scroll-margin-block: 94px;
+  outline-offset: 3px;
+}
+[data-view="devices"] .device-revoke-confirm:focus-visible {
+  outline: 2px solid var(--gold);
+}
+
+/* R13 — explicit device-revoke confirmation and real server-side history deletion. */
+[data-view="devices"] .devices-history-tools {
+  display:flex; align-items:center; flex-wrap:wrap; gap:8px 14px; margin-left:12px;
+}
+[data-view="devices"] .devices-history-tools[hidden],
+[data-view="devices"] .devices-history-tools button[hidden],
+[data-view="devices"] .devices-history-confirm[hidden] { display:none!important; }
+[data-view="devices"] .devices-history-tools .link-button {
+  font-size:12px; line-height:1.4; font-weight:700; min-height:32px;
+}
+[data-view="devices"] .devices-history-tools .devices-history-clear {color:#d68a66}
+[data-view="devices"] .devices-history-confirm,
+[data-view="devices"] .device-revoke-confirm {
+  display:grid; gap:10px; padding:14px 16px; border:1px solid #bf7757;
+  background:rgba(192,107,73,.10); border-radius:10px;
+  color:var(--ink); max-width:100%;
+}
+[data-view="devices"] .devices-history-confirm {
+  margin:12px 0 8px;
+}
+[data-view="devices"] .device-revoke-confirm strong,
+[data-view="devices"] .devices-history-confirm strong {
+  font-size:14px; font-weight:750; line-height:1.35;
+}
+[data-view="devices"] .device-revoke-confirm p,
+[data-view="devices"] .devices-history-confirm p {
+  font-size:12.5px; line-height:1.55; margin:0; color:var(--muted);
+}
+[data-view="devices"] .device-revoke-error,
+[data-view="devices"] .devices-history-confirm .device-history-error {
+  color:#e67f71 !important; font-weight:650;
+}
+[data-view="devices"] .devices-history-confirm .device-history-error[hidden] {
+  display:none !important;
+}
+[data-view="devices"] .device-revoke-confirm-actions,
+[data-view="devices"] .devices-history-confirm-actions {
+  display:flex; flex-wrap:wrap; gap:10px;
+}
+[data-view="devices"] .device-revoke-confirm-actions button,
+[data-view="devices"] .devices-history-confirm-actions button {
+  min-height:34px; font-size:12.5px;
+}
+[data-view="devices"] .device-revoke-confirm-actions .btn-danger {
+  background:#a93535; color:white; border:1px solid #e57171;
+}
+html[data-theme="dark"] [data-view="devices"] .device-revoke-confirm,
+html[data-theme="dark"] [data-view="devices"] .devices-history-confirm {
+  border-color:rgba(235,131,102,.45); background:rgba(122,37,39,.18);
+}
+@media (max-width:940px){
+  [data-view="devices"] .devices-history-tools {width:100%; margin-left:0}
+  [data-view="devices"] .devices-history-confirm {margin-top:14px}
+}

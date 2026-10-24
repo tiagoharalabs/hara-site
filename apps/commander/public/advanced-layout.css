@@ -1,0 +1,758 @@
+/* H.A.R.A. Commander — Computers > Advanced wide layout R1 (2026-10-22).
+   Scope: ONLY the command reference tab. Device inventory and onboarding stay centered.
+   No runtime/Agent or command-string changes. */
+.app-view[data-view="devices"] [data-device-section-panel="commands"] {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  margin-inline: 0;
+}
+
+/* The tab is the only Computers view that needs the full workspace.
+   :has() is supported in the Brave/Chromium browser used for this product. */
+@supports selector(:has(*)) {
+  .app-view[data-view="devices"] .workspace-main:has(> [data-device-section-panel="commands"]:not([hidden])) {
+    padding-inline: clamp(16px, 2vw, 36px);
+    align-items: stretch;
+  }
+  .app-view[data-view="devices"] .workspace-main:has(> [data-device-section-panel="commands"]:not([hidden])) > .devices-section-tabs {
+    width: 100%;
+    max-width: none;
+    margin-inline: 0;
+  }
+}
+
+.app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-guide {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  padding: clamp(18px, 2.2vw, 30px);
+}
+
+.app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-grid {
+  min-width: 0;
+  width: 100%;
+  gap: clamp(14px, 1.5vw, 24px);
+}
+
+/* A wider Windows card keeps PowerShell commands readable without expanding
+   the page or compressing the Linux controls. */
+@media (min-width: 1201px) {
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-grid {
+    grid-template-columns: minmax(290px, 0.80fr) minmax(500px, 1.55fr);
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group-wide {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 1200px) {
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group-wide {
+    grid-column: auto;
+  }
+}
+
+.app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group {
+  min-width: 0;
+}
+.app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group[aria-labelledby="devices-windows-commands"] .devices-command-copy {
+  min-width: 0;
+  overflow: hidden;
+}
+/* Scroll INSIDE the code pane; the Copy button stays fully visible.
+   white-space:nowrap affects layout only: the exact PowerShell text is intact. */
+.app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group[aria-labelledby="devices-windows-commands"] .devices-command-copy code {
+  white-space: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overflow-wrap: normal;
+  word-break: normal;
+  min-width: 0;
+  max-width: 100%;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--sky) transparent;
+}
+.app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group[aria-labelledby="devices-windows-commands"] .devices-command-copy .btn {
+  flex: 0 0 auto;
+}
+.app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group[aria-labelledby="devices-windows-commands"] .devices-command-copy code:focus-visible {
+  outline: 2px solid var(--sky);
+  outline-offset: -2px;
+}
+
+@media (min-width: 871px) {
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group[aria-labelledby="devices-windows-commands"] .devices-command-row {
+    grid-template-columns: minmax(125px, .23fr) minmax(0, 1fr);
+    gap: clamp(12px, 1.2vw, 20px);
+  }
+}
+@media (max-width: 870px) {
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group[aria-labelledby="devices-windows-commands"] .devices-command-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* R2 — keep the lower safety margin visible at 100% zoom on short desktop
+   viewports. At 90% the CSS viewport is taller, so the approved R1 spacing
+   remains unchanged. Never hide/clip the last command or change clipboard text. */
+@media (min-width: 1100px) and (max-height: 880px) {
+  @supports selector(:has(*)) {
+    .app-view[data-view="devices"] .workspace-main:has(> [data-device-section-panel="commands"]:not([hidden])) {
+      justify-content: flex-start;
+      padding-top: clamp(12px, 1.8vh, 18px);
+      padding-bottom: max(62px, env(safe-area-inset-bottom, 0px) + 44px);
+      overflow: visible;
+    }
+    .app-view[data-view="devices"] .workspace-main:has(> [data-device-section-panel="commands"]:not([hidden])) > .devices-section-tabs {
+      margin-bottom: 12px;
+    }
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] {
+    overflow: visible;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-guide {
+    padding: 14px 20px 16px;
+    margin-bottom: 22px;
+    overflow: visible;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-guide-intro {
+    margin: 2px 0 9px;
+    line-height: 1.45;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-grid {
+    gap: 14px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group {
+    padding: 11px 16px 10px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group-head {
+    padding-bottom: 7px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-row {
+    padding: 6px 0;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-copy code {
+    padding-block: 2px;
+    line-height: 1.4;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-copy .btn {
+    padding-block: 7px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-note {
+    padding-top: 6px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-sync-note {
+    padding: 8px 0;
+    margin: 5px 0 0;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-direct-guide {
+    padding-top: 8px;
+  }
+}
+
+/* R3 — an actual in-flow end-of-page clearance, not just more padding on an
+   ancestor. On GNOME with a bottom dock, 100% zoom can leave the last block
+   behind the dock until the user scrolls. The spacer enlarges scrollHeight
+   after the FINAL Advanced element so that the bottom can be fully revealed.
+   Scoped exclusively to the visible Advanced panel. */
+.app-view[data-view="devices"] [data-device-section-panel="commands"]:not([hidden])::after {
+  content: "";
+  display: block;
+  width: 100%;
+  height: clamp(112px, 18vh, 180px);
+  pointer-events: none;
+  flex: none;
+}
+/* Do not let a fixed height, clipping or scroll anchoring on the command panel
+   swallow the spacer. The viewport's natural vertical scroll remains usable. */
+.app-view[data-view="devices"] [data-device-section-panel="commands"]:not([hidden]) {
+  height: auto;
+  min-height: 0;
+  overflow: visible;
+}
+
+
+/* R4 (2026-10-22) — compact, one-screen desktop command reference.
+   Restore the user's usable vertical space; don't hide descriptions, change
+   command strings, reduce click targets on touch devices, or clip PowerShell.
+   Applies only while Advanced is visible, only on wide/short desktops. */
+@media (min-width: 1201px) and (max-height: 1000px) {
+  @supports selector(:has(*)) {
+    .app-view[data-view="devices"] .workspace-main:has(> [data-device-section-panel="commands"]:not([hidden])) {
+      padding-top: 8px;
+      padding-bottom: max(16px, env(safe-area-inset-bottom, 0px) + 10px);
+    }
+    .app-view[data-view="devices"] .workspace-main:has(> [data-device-section-panel="commands"]:not([hidden])) > .devices-section-tabs {
+      margin-bottom: 6px;
+    }
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-guide {
+    padding: 10px 14px 12px;
+    margin-bottom: 0;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-guide-intro {
+    margin: 0 0 7px;
+    font-size: 12.5px;
+    line-height: 1.3;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-grid {
+    column-gap: 12px;
+    row-gap: 8px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group {
+    padding: 8px 12px 7px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group-head {
+    padding-bottom: 4px;
+    gap: 8px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-os {
+    width: 30px;
+    height: 30px;
+    font-size: 10px;
+    border-radius: 7px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group-head h3 {
+    font-size: 17px;
+    line-height: 1.2;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group-head small {
+    margin-top: 1px;
+    font-size: 11.5px;
+    line-height: 1.25;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-row {
+    padding: 3px 0;
+    gap: 8px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-row > div:first-child {
+    gap: 1px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-row b {
+    font-size: 13.5px;
+    line-height: 1.2;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-row small {
+    font-size: 12px;
+    line-height: 1.25;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-copy {
+    gap: 7px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-copy code {
+    padding-block: 0;
+    font-size: 12.5px;
+    line-height: 1.3;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-copy .btn {
+    padding: 6px 10px;
+    font-size: 12px;
+    line-height: 1.2;
+    min-height: 28px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group[aria-labelledby="devices-windows-commands"] .devices-command-row {
+    grid-template-columns: minmax(160px, .29fr) minmax(0, 1fr);
+    gap: 8px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-note {
+    padding-top: 4px;
+    font-size: 12px;
+    line-height: 1.3;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-sync-note {
+    margin: 4px 0 0;
+    padding: 4px 0;
+    font-size: 12px;
+    line-height: 1.35;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-direct-guide {
+    padding-top: 6px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-direct-guide > summary {
+    font-size: 12px;
+    line-height: 1.4;
+  }
+  /* R3 used an artificial 112-180px tail, which created the very scrolling
+     the user reports. Keep only a modest touch-safe end clearance. */
+  .app-view[data-view="devices"] [data-device-section-panel="commands"]:not([hidden])::after {
+    height: 16px;
+  }
+}
+
+/* Narrower and short viewports may still scroll through stacked OS cards.
+   Never clip an opened section; avoid the oversized R3 trailing dead space. */
+@media (max-width: 1200px) and (max-height: 1000px) {
+  .app-view[data-view="devices"] [data-device-section-panel="commands"]:not([hidden])::after {
+    height: 24px;
+  }
+}
+
+
+/* R4 laptop width refinement: give Linux the width needed for readable CLI
+   commands. Windows retains its own horizontal PowerShell viewport and Copy. */
+@media (min-width: 1201px) and (max-width: 1490px) and (max-height: 1000px) {
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-grid {
+    grid-template-columns: minmax(360px, .98fr) minmax(500px, 1.3fr);
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group-wide {
+    grid-column: 1 / -1;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group[aria-labelledby="devices-linux-commands"] .devices-command-row {
+    grid-template-columns: minmax(125px, .3fr) minmax(0, 1fr);
+    gap: 8px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group[aria-labelledby="devices-linux-commands"] .devices-command-copy code {
+    white-space: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overflow-wrap: normal;
+    scrollbar-width: thin;
+  }
+}
+
+
+/* Extra-short laptop browser windows: reclaim whitespace, not text, so the
+   full collapsed Direct row is visible without opening a second scroll area. */
+@media (min-width: 1201px) and (max-height: 760px) {
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-guide {
+    padding: 8px 12px 9px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-guide-intro {
+    margin-bottom: 5px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-grid {
+    row-gap: 6px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group {
+    padding: 6px 10px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-row {
+    padding: 2px 0;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-sync-note {
+    margin-top: 2px;
+    padding: 2px 0;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-direct-guide {
+    padding-top: 4px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"]:not([hidden])::after {
+    height: 12px;
+  }
+}
+
+
+/* R5 — Balanced density, 2026-10-22.
+   A wider two-column Direct expander returns vertical room to the readable
+   Linux, Windows and MCP command cards. Preserve 1:1 clipboard command text.
+   Only Computers > Advanced; no other tabs, views, or mobile styling. */
+@media (min-width: 1201px) {
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-direct-guide[open] {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: clamp(14px, 2vw, 26px);
+    row-gap: 7px;
+    align-items: center;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-direct-guide[open] > summary,
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-direct-guide[open] > p {
+    grid-column: 1 / -1;
+    min-width: 0;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-direct-guide[open] > p {
+    margin: 0;
+    line-height: 1.4;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-direct-guide[open] > .devices-command-copy {
+    margin: 0;
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    gap: 9px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-direct-guide[open] > .devices-command-copy code {
+    white-space: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overflow-wrap: normal;
+    scrollbar-width: thin;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-direct-guide[open] > .devices-command-copy .btn {
+    flex: none;
+  }
+}
+@media (min-width: 1201px) and (min-height: 761px) and (max-height: 1000px) {
+  @supports selector(:has(*)) {
+    .app-view[data-view="devices"] .workspace-main:has(> [data-device-section-panel="commands"]:not([hidden])) {
+      padding-top: 10px;
+      padding-bottom: max(14px, env(safe-area-inset-bottom, 0px) + 10px);
+    }
+    .app-view[data-view="devices"] .workspace-main:has(> [data-device-section-panel="commands"]:not([hidden])) > .devices-section-tabs {
+      margin-bottom: 8px;
+    }
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-guide {
+    padding: 10px 15px 12px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-guide-intro {
+    margin: 0 0 8px;
+    font-size: 13px;
+    line-height: 1.4;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-grid {
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1.25fr);
+    column-gap: 14px;
+    row-gap: 10px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group {
+    padding: 10px 14px 10px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group-head {
+    padding-bottom: 6px;
+    gap: 9px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-os {
+    width: 32px;
+    height: 32px;
+    font-size: 11px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group-head h3 {
+    font-size: 17.5px;
+    line-height: 1.25;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group-head small {
+    margin-top: 2px;
+    font-size: 12px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-row {
+    padding: 4px 0;
+    gap: 9px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-row > div:first-child {
+    gap: 2px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-row b {
+    font-size: 14px;
+    line-height: 1.3;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-row small {
+    font-size: 12.25px;
+    line-height: 1.35;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-copy {
+    gap: 10px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-copy code {
+    font-size: 13px;
+    line-height: 1.35;
+    padding-block: 2px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-copy .btn {
+    min-height: 32px;
+    padding: 7px 10px;
+    font-size: 12.5px;
+    line-height: 1.25;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group[aria-labelledby="devices-windows-commands"] .devices-command-row {
+    gap: 12px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-note {
+    padding-top: 5px;
+    font-size: 12.2px;
+    line-height: 1.35;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-sync-note {
+    margin: 5px 0 0;
+    padding: 4px 0;
+    font-size: 12.5px;
+    line-height: 1.4;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-direct-guide {
+    padding-top: 7px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-direct-guide > summary {
+    font-size: 13px;
+    line-height: 1.4;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-direct-guide[open] > p {
+    font-size: 12.5px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"]:not([hidden])::after {
+    height: 16px;
+  }
+}
+/* Mid-height notebook screens gain the two-column Direct layout without
+   forcing cramped body text; natural scrolling remains on narrow viewports. */
+
+/* R5: Firefox and Chromium may wrap <details> children in a UA-generated
+   details-content box. Grid the explicit inner wrapper instead. */
+@media (min-width: 1201px) {
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-direct-guide[open] {
+    display: block;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-direct-commands {
+    display: grid;
+    width: 100%;
+    min-width: 0;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px 20px;
+    margin-top: 9px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-direct-commands > .devices-command-copy {
+    margin: 0;
+    max-width: none;
+    width: 100%;
+    min-width: 0;
+    gap: 9px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-direct-commands > .devices-command-copy code {
+    white-space: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overflow-wrap: normal;
+    scrollbar-width: thin;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-direct-commands > .devices-command-copy .btn {
+    flex: 0 0 auto;
+  }
+}
+@media (max-width: 1200px) {
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-direct-commands {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 9px;
+    margin-top: 10px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-direct-commands > .devices-command-copy {
+    min-width: 0;
+    max-width: 780px;
+    margin: 0;
+  }
+}
+
+
+/* R5 height-aware variant: keep the same readable font sizes but reclaim
+   padding on short (notebook) desktop viewports when Direct is expanded. */
+@media (min-width: 1201px) and (min-height: 761px) and (max-height: 850px) {
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-guide {
+    padding: 9px 13px 10px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-guide-intro {
+    margin-bottom: 6px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-grid {
+    column-gap: 12px;
+    row-gap: 7px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group {
+    padding: 7px 12px 7px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group-head {
+    padding-bottom: 4px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-os {
+    width: 30px;
+    height: 30px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group-head h3 {
+    font-size: 17px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-row {
+    padding: 2px 0;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-copy code {
+    padding-block: 0;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-copy .btn {
+    padding: 6px 10px;
+    min-height: 30px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-note {
+    padding-top: 3px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-sync-note {
+    margin-top: 2px;
+    padding: 2px 0;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-direct-guide {
+    padding-top: 4px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-direct-commands {
+    margin-top: 5px;
+    row-gap: 5px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"]:not([hidden])::after {
+    height: 10px;
+  }
+}
+
+
+/* R6 — honor the original copywriting and use the actual card width.
+   At wide desktop sizes Linux explanations are single-line instead of
+   squeezing into a 145px label column, and command/copy sit to their right.
+   Windows distributes three commands through the card height.
+   MCP commands gain breathing room. Direct remains the approved two columns.
+   No command text, copy handlers, application JS or external layouts change. */
+@media (min-width: 1500px) and (max-height: 1050px) {
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-grid {
+    grid-template-columns: minmax(0, 1.04fr) minmax(0, 1.22fr);
+    column-gap: 12px;
+    row-gap: 11px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group[aria-labelledby="devices-linux-commands"] .devices-command-row {
+    grid-template-columns: minmax(265px, 1.08fr) minmax(220px, .88fr);
+    gap: 9px;
+    min-height: 55px;
+    padding-block: 5px;
+    align-items: center;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group[aria-labelledby="devices-linux-commands"] .devices-command-row > div:first-child {
+    gap: 3px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group[aria-labelledby="devices-linux-commands"] .devices-command-row small {
+    white-space: nowrap;
+    overflow-wrap: normal;
+    word-break: normal;
+    font-size: 12.5px;
+    line-height: 1.4;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group[aria-labelledby="devices-linux-commands"] .devices-command-copy {
+    gap: 9px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group[aria-labelledby="devices-linux-commands"] .devices-command-copy code {
+    white-space: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overflow-wrap: normal;
+    scrollbar-width: thin;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group[aria-labelledby="devices-windows-commands"] {
+    display: flex;
+    flex-direction: column;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group[aria-labelledby="devices-windows-commands"] .devices-command-row {
+    grid-template-columns: minmax(230px, .44fr) minmax(0, 1fr);
+    flex: 1 1 0;
+    min-height: 65px;
+    gap: 12px;
+    padding-block: 7px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group[aria-labelledby="devices-windows-commands"] .devices-command-row > div:first-child {
+    gap: 4px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group[aria-labelledby="devices-windows-commands"] .devices-command-note {
+    margin-top: auto;
+    padding-top: 8px;
+    line-height: 1.4;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group[aria-labelledby="devices-mcp-commands"] {
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group[aria-labelledby="devices-mcp-commands"] .devices-command-row {
+    grid-template-columns: minmax(325px, .34fr) minmax(0, 1fr);
+    min-height: 52px;
+    gap: 14px;
+    padding-block: 10px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group[aria-labelledby="devices-mcp-commands"] .devices-command-row > div:first-child {
+    gap: 4px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group[aria-labelledby="devices-mcp-commands"] .devices-command-row small {
+    line-height: 1.4;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group[aria-labelledby="devices-mcp-commands"] .devices-command-note {
+    padding-top: 9px;
+    line-height: 1.4;
+  }
+}
+@media (min-width: 1500px) and (max-height: 850px) {
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group[aria-labelledby="devices-linux-commands"] .devices-command-row {
+    min-height: 49px;
+    padding-block: 4px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group[aria-labelledby="devices-windows-commands"] .devices-command-row {
+    min-height: 58px;
+    padding-block: 5px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group[aria-labelledby="devices-mcp-commands"] .devices-command-row {
+    min-height: 43px;
+    padding-block: 7px;
+  }
+}
+/* At notebook widths the Linux description gets its own full-width row;
+   no tiny type, clipping, ellipsis, or narrowed copy target. */
+@media (min-width: 1201px) and (max-width: 1499px) {
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group[aria-labelledby="devices-linux-commands"] .devices-command-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+    padding-block: 7px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group[aria-labelledby="devices-linux-commands"] .devices-command-row small {
+    white-space: normal;
+    overflow-wrap: normal;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group[aria-labelledby="devices-linux-commands"] .devices-command-copy code {
+    white-space: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overflow-wrap: normal;
+  }
+}
+
+
+/* R9 — show Direct on entry and give the command groups a relaxed rhythm.
+   The HTML carries <details open>; this stylesheet only affects the
+   Computers > Advanced panel, with natural scrolling on short viewports. */
+@media (min-width: 1201px) and (min-height: 760px) {
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-guide {
+    padding: 12px 18px 14px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-guide-intro {
+    margin-bottom: 10px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-grid {
+    column-gap: 16px;
+    row-gap: 15px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group {
+    padding: 11px 16px 10px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group-head {
+    padding-bottom: 7px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-sync-note {
+    margin-top: 8px;
+    padding-block: 5px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-direct-guide {
+    padding-top: 10px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-direct-guide > summary {
+    padding-block: 1px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-direct-commands {
+    margin-top: 10px;
+    row-gap: 10px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"]:not([hidden])::after {
+    height: 16px;
+  }
+}
+/* Laptop browser height: keep a comfortable gap without hiding the last row.
+   A shorter viewport scrolls rather than squeezing copy or buttons. */
+@media (min-width: 1201px) and (max-height: 759px) {
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-grid {
+    row-gap: 9px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-command-group {
+    padding-block: 9px;
+  }
+  .app-view[data-view="devices"] [data-device-section-panel="commands"] .devices-direct-guide {
+    padding-top: 8px;
+  }
+}
