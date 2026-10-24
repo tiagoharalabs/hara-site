@@ -1,3 +1,4 @@
+import {recordOfflineRecoveryBatch} from './recovery-scan-batch.mjs';
 import {boundedRecoveryMap,claimRecoveryDeviceLease,releaseRecoveryDeviceLease} from './recovery-scan-leases.mjs';
 // H.A.R.A. Commander recovery inbox: source-only, default OFF.
 // PERSISTED is a durable D1 receipt; PORTAL_ACKNOWLEDGED is a human action.
@@ -294,6 +295,15 @@ export async function listOfflineRecoveryCandidates(env,nowMs=Date.now(),{limit=
   return rows.results||[];
 }
 async function recordOfflineCandidates(env,rows,nowMs,{leased=false}={}) {
+  if(leased&&env.COMMANDER_RECOVERY_SCAN_BATCHED==='true'){
+    return recordOfflineRecoveryBatch(env,rows,nowMs,async device=>{
+      const incident=await incidentForHeartbeat(device),anchor=device.last_seen_at_utc;
+      const at=new Date(Date.parse(anchor)+STALE_AFTER_MS).toISOString();
+      return {device_id:device.device_id,tenant_id:device.tenant_id,anchor,incident_id:incident,at_utc:at,
+        event_id:"HARA-REC-"+(await sha(JSON.stringify([device.tenant_id,device.device_id,incident,1,1]))).slice(0,48),
+        fingerprint:await sha(JSON.stringify([incident,1,1,"DEGRADED",at,"HEARTBEAT_STALE","SERVER",anchor,null,null,null]))};
+    });
+  }
   let recorded=0,held=0;
   const started=performance.now(),clock=()=>nowMs+Math.floor(performance.now()-started);
   const concurrency=leased?Number(env.COMMANDER_RECOVERY_SCAN_CONCURRENCY||1):1;

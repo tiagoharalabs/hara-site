@@ -69,7 +69,8 @@ export async function enqueueRecoveryWork(env,{nowMs=Date.now(),maxDevices=20000
 }
 export async function consumeRecoveryWork(batch,env,{nowMs=Date.now(),fetchImpl=fetch,timeoutMs=5000}={}){
  const messages=Array.isArray(batch?.messages)?batch.messages:[];
- const retry=()=>{for(const message of messages)message.retry({delaySeconds:60});};
+ const delaySeconds=env?.COMMANDER_RECOVERY_QUEUE_RETRY_SECONDS==='15'?15:60;
+ const retry=()=>{for(const message of messages)message.retry({delaySeconds});};
  if(!enabled(env)){retry();return {state:'DISABLED'};}
  if(!bound(env)){retry();return {state:'HOLD_RECOVERY_QUEUE_BINDING'};}
  // One 96-device job stays below the paid D1 per-invocation query budget even
@@ -81,10 +82,10 @@ export async function consumeRecoveryWork(batch,env,{nowMs=Date.now(),fetchImpl=
   const result=body.kind==='SCAN'?await detectOfflineRecoveryDevices(env,body.device_ids,nowMs):
    await dispatchRecoveryDeliveries(env,{eventIds:body.event_ids,nowMs,fetchImpl,timeoutMs,exclusiveDeviceLeases:true});
   if(result.state?.startsWith('HOLD_')||(result.held&&result.exhausted<result.held)){
-   message.retry({delaySeconds:60});return {state:'RETRY',result};
+   message.retry({delaySeconds});return {state:'RETRY',result};
   }
   message.ack();return {state:'ACKNOWLEDGED',result};
  }catch{
-  message.retry({delaySeconds:60});return {state:'RETRY'};
+  message.retry({delaySeconds});return {state:'RETRY'};
  }
 }
