@@ -25,6 +25,10 @@ def runtime_parity_map(app=None):
     app=Path(app) if app else Path(__file__).resolve().parents[1]
     paths={'commercial_linux':'release-candidates/commercial-0.3.56-source/agent/linux.py',
            'commercial_windows':'release-candidates/commercial-0.3.56-source/agent/windows.ps1',
+           'commercial_linux_driver':'release-candidates/commercial-0.3.56-source/agent/event_v2_dev.py',
+           'commercial_linux_wire':'release-candidates/commercial-0.3.56-source/agent/event_v2_wire.py',
+           'commercial_windows_driver':'release-candidates/commercial-0.3.56-source/agent/event_v2_dev.ps1',
+           'commercial_windows_wire':'release-candidates/commercial-0.3.56-source/agent/event_v2_wire.ps1',
            'event_linux_loop':'experimental/event_v2_agent_loop.py',
            'event_linux_adapter':'experimental/event_v2_customer_agent.py',
            'event_windows_adapter':'experimental/event_v2_windows_agent.ps1',
@@ -49,14 +53,27 @@ def runtime_parity_map(app=None):
         'commercial_event_v2_parity':False,'missing_inputs':missing,
         'inputs':{key:{k:v for k,v in item.items() if k!='text'} for key,item in sources.items()},
         'commercial_0356':{
+          'wake_transport':'EVENT_V2_DEV only when explicitly enabled',
+          'durable_execution_transport':'OUTBOUND_RELAY authenticated claim/complete; existing journal/quota/receipt contract is unchanged',
           'linux':{'entry':'main -> run_supervised_relay','transport':'OUTBOUND_RELAY',
                    'version':constant('commercial_linux','AGENT_VERSION'),
                    'idle_poll_s':constant('commercial_linux','CALL_POLL_IDLE_SECONDS'),
                    'heartbeat_s':constant('commercial_linux','HEARTBEAT_SECONDS'),
-                   'websocket_wiring':'UNWIRED'},
+                   'websocket_wiring':'DEV_SOURCE_WIRED_DEFAULT_OFF' if all(
+                       key in sources for key in ('commercial_linux_driver','commercial_linux_wire'))
+                       and 'def _event_v2_heartbeat_worker(' in sources.get('commercial_linux',{}).get('text','') else 'UNWIRED',
+                   'dev_entry':'same .56 RelaySupervisor -> isolated Event V2 heartbeat + same journaled executor',
+                   'dev_flag':'HARA_COMMANDER_EVENT_V2_DEV_ENABLED=true + exact DEV QA origin',
+                   'dev_idle_claim_poll_s':None,'dev_probe_s':60,'dev_http_heartbeat_s':None},
           'windows':{'entry':'Start-WindowsRelaySupervisor -> heartbeat/executor/alerts',
                      'transport':'OUTBOUND_RELAY','idle_poll_s':win_constant('CallPollIdleSeconds'),
-                     'heartbeat_s':win_constant('HeartbeatSeconds'),'websocket_wiring':'UNWIRED'}},
+                     'heartbeat_s':win_constant('HeartbeatSeconds'),
+                     'websocket_wiring':'DEV_SOURCE_WIRED_DEFAULT_OFF' if all(
+                         key in sources for key in ('commercial_windows_driver','commercial_windows_wire'))
+                         and 'function Start-WindowsEventV2Heartbeat(' in sources.get('commercial_windows',{}).get('text','') else 'UNWIRED',
+                     'dev_flag':'boolean event_v2_dev_enabled=true + environment DEV + exact QA origin',
+                     'dev_entry':'same .56 native Job Objects, private SID-scoped wake event and durable journal',
+                     'dev_idle_claim_poll_s':None,'dev_probe_s':60,'dev_http_heartbeat_s':None}},
         'experimental_event_v2':{
           'linux':'event_v2_agent_loop -> event_v2_customer_agent -> public/agent/linux.py execution functions',
           'windows':'event_v2_windows_agent -> installed stable Agent functions; separate executable',
@@ -64,10 +81,11 @@ def runtime_parity_map(app=None):
           'authority':'Wake call_id is a hint; authenticated durable claim and correlated receipt fence effects.',
           'fallback':'Durable V1 claim/complete remains shared; failed Upgrade does not silently install or switch candidate transport.'},
         'worker_do':{'entry':'GET /api/device/channel -> openDeviceEventChannel -> tenant/device DeviceChannel',
-                     'required':'DEVICE_EVENT_V2_ENABLED + DEVICE_CHANNEL binding + authenticated enrollment; existing PROD allowlist unchanged',
+                     'required':'Existing DEVICE_EVENT_V2_ENABLED + DEVICE_CHANNEL + enrollment; commercial protocol additionally requires exact DEV and DEVICE_EVENT_V2_COMMERCIAL_0356_DEV_ENABLED=true. This is not enabled by a source map.',
                      'presence':'connect/close/alarm fences and live enrollment checks remain in device-channel.mjs',
-                     'recovery_event_v2':'Recovery detector/outbox integration for Event V2 is not proven by OUTBOUND or Queue tests.'},
-        'p0_322':'Commercial enrollment journals/guardian, orphan reconciliation, Queue/DLQ and outbox are preserved; experimental transport does not inherit them by version label.',
+                     'recovery_event_v2':'DEV source uses independent hibernation probe timestamps and <=120s alarm, canonical SERVER persistence, lifecycle fences and same-incident RECOVERED. Native alarm/capacity/SLO acceptance remains HOLD.'},
+        'p0_322':'Commercial journals/guardian, orphan reconciliation, Queue/DLQ and outbox are preserved. Source QA is not native #322 recovery/SLO acceptance.',
+        'release_packaging':'HOLD: adjacent DEV helpers must be hashed and admitted in a new private source/release review; the original parity package and public installers are unchanged.',
         'native_windows':'VALK_240_PENDING','hosted_gate':'HOSTED_20K_HOLD','execute_allowed':False}
 
 def integer(value):
@@ -118,6 +136,106 @@ def build_plan(*,stages=(500,2000,20000),proposed=None,metering=None,reconnect_l
                 'Native owner pauses affected DEV delivery using the existing canonical controls.',
                 'Use the bound approved version/preimage; retain outboxes and receipt rows.'],
                 'automatic_execution':False}}
+
+def build_budget_alternatives(*, proposed=None, metering=None, reconnect_limit_per_s=None):
+    """Two review scopes. Neither raises the smaller native QA lease/caps.
+
+    Queue bounds include all warmup scans and 12 operations/job. Two events
+    is a paired transport exercise, not the four-state #322 fault envelope.
+    """
+    import copy
+    full = build_plan(proposed=proposed, metering=metering,
+                      reconnect_limit_per_s=reconnect_limit_per_s)
+    reduced = copy.deepcopy(full)
+    for row in reduced['stages']:
+        row['events'] = 20000 if row['devices'] == 20000 else 0
+        row['delivery_jobs'] = (row['events'] + 9) // 10
+        row['queue_ops_upper'] = 12 * (row['scan_jobs'] + row['delivery_jobs'])
+    reduced['totals'] = {key: sum(row[key] for row in reduced['stages'])
+                         for key in reduced['stages'][0]}
+    for name, plan in [('full', full), ('reduced', reduced)]:
+        events = plan['totals']['events']
+        for kind in ('reads', 'writes'):
+            plan['totals']['d1_' + kind] = None if metering is None else (
+                22500 * metering[kind + '_per_device']
+                + events * metering[kind + '_per_event']
+                + metering['status_polls'] * metering[kind + '_per_status'])
+        exceeded = []
+        unknown = []
+        for counter, total in [('events', events), ('queue_ops', plan['totals']['queue_ops_upper']),
+                               ('d1_reads', plan['totals']['d1_reads']),
+                               ('d1_writes', plan['totals']['d1_writes'])]:
+            if total is None:
+                unknown.append('UNBOUND_' + counter.upper())
+            elif total > plan['proposed'][counter]:
+                exceeded.append('PROPOSED_' + counter.upper() + '_EXCEEDED')
+        if reconnect_limit_per_s is None:
+            unknown.append('UNBOUND_RECONNECT_RATE')
+        plan.update(cohort_mode='DISJOINT' if name == 'full' else 'NESTED_REUSED',
+                    unique_devices=22500 if name == 'full' else 20000,
+                    device_observations=22500, connection_target=20000,
+                    recovery_selected_devices=22500 if name == 'full' else 10000,
+                    recovery_events_per_device=2, requires_new_budget=bool(exceeded),
+                    requires_native_admission=True,
+                    full_20k_recovery_target=name == 'full',
+                    full_20k_recovery_homologated=False,
+                    metering_basis='UNBOUND' if metering is None else 'MODEL_FROM_SUPPLIED_UNIT_BOUNDS',
+                    state='HOLD_PLAN_BUDGET' if exceeded else 'HOLD_UNBOUND_LIMITS' if unknown else 'PLAN_REVIEW_READY',
+                    reasons=exceeded + unknown)
+        # #322 can emit STALLED, RECOVERING, RECOVERED and DEGRADED. If all
+        # four are generated, the paired-event proposal MUST be re-budgeted.
+        upper_events = 4 * plan['recovery_selected_devices']
+        upper_queue = 12 * (plan['totals']['scan_jobs'] + (upper_events + 9) // 10)
+        plan['p0_322_four_state_envelope'] = {
+            'events': upper_events, 'queue_ops_upper': upper_queue,
+            'fits_proposed_events_and_queue': upper_events <= plan['proposed']['events']
+                and upper_queue <= plan['proposed']['queue_ops'],
+            'scope': 'Four state source recovery campaign requires its own explicit envelope.'}
+        combined_events = 6 * plan['recovery_selected_devices']
+        combined_queue = 12 * (plan['totals']['scan_jobs'] + (combined_events + 9) // 10)
+        plan['p0_322_combined_envelope'] = {
+            'states_per_device_upper': 6, 'events': combined_events,
+            'queue_ops_upper': combined_queue,
+            'fits_proposed_events_and_queue': combined_events <= plan['proposed']['events']
+                and combined_queue <= plan['proposed']['queue_ops'],
+            'scope': 'Agent four-state envelope plus independent SERVER DEGRADED/RECOVERED pair; budget both origins, not just one.'}
+        plan['unit_rate_exposure'] = {
+            'claim': 'PARTIAL_MODEL_BEFORE_ACCOUNT_ALLOWANCES_AND_ROUNDING',
+            'queue_usd_equivalent': plan['totals']['queue_ops_upper'] * 0.40 / 1000000,
+            'd1_usd_equivalent': None if metering is None else (
+                plan['totals']['d1_reads'] * 0.001 + plan['totals']['d1_writes']) / 1000000,
+            'total_usd': None,
+            'excluded': ['Workers request/CPU, DO requests/duration/storage, sink, taxes, allocation and rounding.']}
+    return {
+        'schema': 'hara.commander.r163.event-v2-budget-alternatives.v1',
+        'proposed': dict(full['proposed']), 'alternatives': {'full': full, 'reduced': reduced},
+        'approval_status': 'NOT_APPROVED', 'hosted_gate': 'HOSTED_20K_HOLD',
+        'execute_allowed': False,
+        'native_budget_gaps': {
+            'do_alarm_ops': True, 'do_storage_and_duration': True,
+            'd1_alarm_lifecycle_reads': True,
+            'detail': 'The current QA ledger caps D1/Queue/events/active time, not independent DO alarm/storage/duration. Include a lifecycle D1 lookup per alarm (healthy alarms have no D1 write). Owner must admit cumulative bounds and stop enforcement before enabling this DEV path.'},
+        'pricing_reference': {
+            'observed_on': '2026-10-25', 'account_allocation_verified': False,
+            'usd_per_million': {'d1_reads': 0.001, 'd1_writes': 1.0,
+                               'queue_ops': 0.40, 'do_requests': 0.15, 'do_gb_seconds': 12.50},
+            'sources': ['https://developers.cloudflare.com/d1/platform/pricing/',
+                        'https://developers.cloudflare.com/queues/platform/pricing/',
+                        'https://developers.cloudflare.com/durable-objects/platform/pricing/'],
+            'caveat': 'Published marginal unit rates, not an invoice or a cap approval. Account allowances, billing units and rounding must be resolved by owner.'},
+        'measurements': {key: None for key in (
+            'd1_reads', 'd1_writes', 'do_websocket_ops', 'do_alarm_ops',
+            'do_connection_duration_ms', 'latency_p95_ms', 'latency_p99_ms',
+            'last_detection_s', 'last_recovery_s')},
+        'cost': {key: None for key in ('d1_usd', 'queue_usd', 'do_websocket_usd',
+                                     'do_alarm_usd', 'do_connection_duration_usd', 'total_usd')},
+        'remaining_bindings': [
+            'Native Services QA budget/lease: previous 500 events / 4000 Queue caps are unchanged.',
+            'Owner-approved throughput/concurrency, cumulative D1 unit bounds and stop controls.',
+            'DO WebSocket message/connection/alarm/duration metering and applicable account pricing.',
+            'Source .56 acceptance, Valk Windows #240 and independent Event V2 stale detector.',
+            'p95/p99 and SLO 180s/300s must be measured; reconnect model is not hosted acceptance.']}
+
 
 def evaluate_observation(plan,previous,current):
     """A completed stage checkpoint; in-flight reservations are not receipts.
@@ -200,11 +318,16 @@ def main():
     parser.add_argument('--proposed');parser.add_argument('--metering')
     parser.add_argument('--reconnect-limit-per-s',type=float)
     parser.add_argument('--observation');parser.add_argument('--previous')
+    parser.add_argument('--budget-alternatives', action='store_true')
     args=parser.parse_args()
     plan=build_plan(proposed=read_json(args.proposed) if args.proposed else None,
                     metering=read_json(args.metering) if args.metering else None,
                     reconnect_limit_per_s=args.reconnect_limit_per_s)
     output={'plan':plan,'runtime_map':runtime_parity_map()}
+    if args.budget_alternatives:
+        output['budget_alternatives']=build_budget_alternatives(
+            proposed=plan['proposed'], metering=plan['metering'],
+            reconnect_limit_per_s=args.reconnect_limit_per_s)
     if args.observation:output['observation']=evaluate_observation(plan,read_json(args.previous) if args.previous else None,read_json(args.observation))
     print(json.dumps(output,indent=2,sort_keys=True,allow_nan=False))
     return 0
