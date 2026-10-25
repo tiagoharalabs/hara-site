@@ -24,10 +24,20 @@ export async function budgeted(env,{reads,writes},fn){
  if(![reads,writes].every(n=>Number.isSafeInteger(n)&&n>=16))throw Error('HOLD_BUDGET_RESERVATION');
  const db=env.PRODUCT_DB,now=Date.now();
  // Bookkeeping uses a PK lookup; its own read/write bounds are included below.
- const reserved=await db.prepare(`UPDATE r163_qa_budget SET reserved_read=reserved_read+?,reserved_write=reserved_write+?
+ let reserved;
+ try {reserved=await db.prepare(`UPDATE r163_qa_budget SET reserved_read=reserved_read+?,reserved_write=reserved_write+?
   WHERE id=1 AND state='ACTIVE' AND deadline_ms>? AND rows_read+reserved_read+?<=?
   AND rows_written+reserved_write+?<=? RETURNING *`)
-  .bind(reads,writes,now,reads,CAPS.reads,writes,CAPS.writes).first();
+  .bind(reads,writes,now,reads,CAPS.reads,writes,CAPS.writes).all();
+  if(!validD1Meter(reserved))throw Error('HOLD_RESERVATION_IO_UNKNOWN');
+  reserved=reserved.results?.[0];}
+ catch(error){
+  // A response can be lost after the reservation committed. Never release
+  // an unknown reservation or allow the work to start on that uncertainty.
+  try {await db.prepare("UPDATE r163_qa_budget SET state='STOPPED',anomaly=COALESCE(anomaly,?) WHERE id=1")
+    .bind('HOLD_RESERVATION_IO_UNKNOWN').run();}catch{}
+  throw error;
+ }
  if(!reserved)throw Error('HOLD_CAMPAIGN_BUDGET_OR_DEADLINE');
  // Conservative PK bookkeeping allowance includes reservation, settlement and
  // metering/status overhead. Query metadata below is provider-measured.
@@ -43,7 +53,7 @@ export async function budgeted(env,{reads,writes},fn){
   }catch(error){anomaly=error.message;throw error;}
  };
  const record=r=>{
-  if(!r?.meta||![r.meta.rows_read,r.meta.rows_written].every(n=>Number.isSafeInteger(n)&&n>=0))
+  if(!validD1Meter(r))
    throw Error('HOLD_MISSING_D1_METER');
   read+=r.meta.rows_read;write+=r.meta.rows_written;
   if(read>reads||write>writes)throw Error('HOLD_D1_RESERVATION_ANOMALY');
@@ -73,21 +83,32 @@ export async function budgeted(env,{reads,writes},fn){
  }}:undefined;
  try{
   checkpoint();result=await fn({...env,PRODUCT_DB:metered,RECOVERY_DELIVERY_QUEUE:queue});
-  // A callback may catch a query failure. That cannot rehabilitate its stopped
-  // accounting session or report success with incomplete native evidence.
-  if(anomaly)throw Error(anomaly);
+  if(anomaly)throw Error(anomaly); // a swallowed meter failure cannot succeed
   checkpoint();
  }
  catch(error){anomaly??=error.message;throw error;}
  finally{
   // An unhandled crash retains the entire reservation. An observed anomaly
   // permanently stops new work; no automatic budget renewal is possible.
-  await db.prepare(`UPDATE r163_qa_budget SET reserved_read=reserved_read-?,reserved_write=reserved_write-?,
+  try {const settled=await db.prepare(`UPDATE r163_qa_budget SET reserved_read=reserved_read-?,reserved_write=reserved_write-?,
    rows_read=rows_read+?,rows_written=rows_written+?,invocations=invocations+1,
    state=CASE WHEN ? IS NULL THEN state ELSE 'STOPPED' END,anomaly=COALESCE(?,anomaly) WHERE id=1`)
-   .bind(reads,writes,read,write,anomaly,anomaly).run();
+   .bind(anomaly?0:reads,anomaly?0:writes,read,write,anomaly,anomaly).run();
+   if(!validD1Meter(settled))throw Error('HOLD_SETTLEMENT_IO_UNKNOWN');}
+  catch(error){
+   // The decrement may have committed before its response was lost. Restore
+   // the attempted release conservatively; an ambiguous failed decrement may
+   // over-hold, but can never fund more work or counterfeit measured spend.
+   try {await db.prepare("UPDATE r163_qa_budget SET reserved_read=reserved_read+?,reserved_write=reserved_write+?,state='STOPPED',anomaly=COALESCE(anomaly,?) WHERE id=1")
+     .bind(anomaly?0:reads,anomaly?0:writes,'HOLD_SETTLEMENT_IO_UNKNOWN').run();}catch{}
+   throw error;
+  }
  }
  return result;
+}
+function validD1Meter(result){
+ return result?.success!==false&&result?.meta&&
+  ['rows_read','rows_written'].every(k=>Number.isSafeInteger(result.meta[k])&&result.meta[k]>=0);
 }
 export async function startRecoveryBudget(db,now=Date.now()){
  // The admitted cap is ACTIVE load time, accumulated across pauses. Counters
@@ -110,24 +131,38 @@ export async function readRecoveryQaStatus(env){
  const db=env.PRODUCT_DB,reads=1024,writes=4;
  // Status polling consumes D1 too. Reserve it globally even while PAUSED or
  // after the load deadline; a read never reactivates or replenishes a campaign.
- const held=await db.prepare(`UPDATE r163_qa_budget SET reserved_read=reserved_read+?,reserved_write=reserved_write+?
+ let held;
+ try {held=await db.prepare(`UPDATE r163_qa_budget SET reserved_read=reserved_read+?,reserved_write=reserved_write+?
   WHERE id=1 AND rows_read+reserved_read+?<=? AND rows_written+reserved_write+?<=? RETURNING id`)
-  .bind(reads,writes,reads,CAPS.reads,writes,CAPS.writes).first();
+  .bind(reads,writes,reads,CAPS.reads,writes,CAPS.writes).all();
+  if(!validD1Meter(held))throw Error('HOLD_STATUS_RESERVATION_UNKNOWN');
+  held=held.results?.[0];}
+ catch(error){
+  try{await db.prepare("UPDATE r163_qa_budget SET state='STOPPED',anomaly=COALESCE(anomaly,?) WHERE id=1")
+    .bind('HOLD_STATUS_RESERVATION_UNKNOWN').run();}catch{}
+  throw error;
+ }
  if(!held)throw Error('HOLD_STATUS_BUDGET');
  let read=4,anomaly=null,jobs,dlq;
  try{
   const query=async sql=>{
    const r=await db.prepare(sql).bind().all();
-   if(!r?.meta||!Number.isSafeInteger(r.meta.rows_read)||r.meta.rows_written!==0)throw Error('HOLD_STATUS_D1_METER');
+   if(!validD1Meter(r)||r.meta.rows_written!==0)throw Error('HOLD_STATUS_D1_METER');
    read+=r.meta.rows_read;if(read>reads)throw Error('HOLD_STATUS_RESERVATION');return r.results||[];
   };
   jobs=await query('SELECT * FROM r163_qa_jobs ORDER BY message_id LIMIT 300');
   dlq=await query('SELECT * FROM r163_qa_dlq ORDER BY observed_ms LIMIT 100');
  }catch(error){anomaly=error.message;throw error;}
  finally{
-  await db.prepare(`UPDATE r163_qa_budget SET reserved_read=reserved_read-?,reserved_write=reserved_write-?,
+  try {const settled=await db.prepare(`UPDATE r163_qa_budget SET reserved_read=reserved_read-?,reserved_write=reserved_write-?,
    rows_read=rows_read+?,rows_written=rows_written+?,state=CASE WHEN ? IS NULL THEN state ELSE 'STOPPED' END,
-   anomaly=COALESCE(?,anomaly) WHERE id=1`).bind(reads,writes,read,writes,anomaly,anomaly).run();
+   anomaly=COALESCE(?,anomaly) WHERE id=1`).bind(anomaly?0:reads,anomaly?0:writes,read,writes,anomaly,anomaly).run();
+   if(!validD1Meter(settled))throw Error('HOLD_STATUS_SETTLEMENT_UNKNOWN');}
+  catch(error){
+   try{await db.prepare("UPDATE r163_qa_budget SET reserved_read=reserved_read+?,reserved_write=reserved_write+?,state='STOPPED',anomaly=COALESCE(anomaly,?) WHERE id=1")
+     .bind(anomaly?0:reads,anomaly?0:writes,'HOLD_STATUS_SETTLEMENT_UNKNOWN').run();}catch{}
+   throw error;
+  }
  }
  const budget=await db.prepare('SELECT * FROM r163_qa_budget WHERE id=1').bind().first();
  budget.active_ms_effective=budget.active_ms_used-budget.historical_padding_ms;

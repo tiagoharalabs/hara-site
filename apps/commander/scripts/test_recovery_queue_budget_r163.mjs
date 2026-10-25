@@ -7,8 +7,8 @@ function fixture(t,{reads=0,writes=0,deadline=Date.now()+60000,state='ACTIVE',ac
  db.prepare('INSERT INTO r163_qa_budget(id,state,start_ms,deadline_ms,rows_read,rows_written) VALUES(1,?,1,?,?,?)').run(state,deadline,reads,writes);
  db.prepare('UPDATE r163_qa_budget SET active_ms_used=?').run(activeUsed);db.exec('CREATE TABLE work(id INTEGER PRIMARY KEY)');const hooks={};
  const raw={prepare:sql=>({bind:(...args)=>({first:async()=>db.prepare(sql).get(...args)??null,
-  all:async()=>{const r=db.prepare(sql).all(...args);await hooks.after?.();return {results:r,meta:{rows_read:r.length,rows_written:sql.startsWith('UPDATE')?1:0}};},
-  run:async()=>{const r=db.prepare(sql).run(...args);await hooks.after?.();return {meta:{rows_read:1,rows_written:r.changes}};}})})};
+  all:async()=>{const r=db.prepare(sql).all(...args);await hooks.after?.(sql);return {results:r,meta:{rows_read:r.length,rows_written:sql.startsWith('UPDATE')?1:0}};},
+  run:async()=>{const r=db.prepare(sql).run(...args);await hooks.after?.(sql);return {meta:{rows_read:1,rows_written:r.changes}};}})})};
  let sent=0;const env={ENVIRONMENT:'DEV',R163_QA_ISOLATED:'true',PRODUCT_DB:raw,RECOVERY_DELIVERY_QUEUE:{sendBatch:async e=>{sent+=e.length;}}};
  return {db,env,hooks,sent:()=>sent,row:()=>({...db.prepare('SELECT * FROM r163_qa_budget').get()})};
 }
@@ -128,7 +128,7 @@ for(const field of ['rows_read','rows_written'])test('negative native meter stop
 });
 test('expired reservation prevents the next D1 effect after an awaited operation',async t=>{
  const f=fixture(t,{deadline:2000}),nativeNow=Date.now;let now=1000;Date.now=()=>now;t.after(()=>{Date.now=nativeNow;});
- f.hooks.after=()=>{now=2000;};
+ f.hooks.after=sql=>{if(sql.startsWith('INSERT INTO work'))now=2000;};
  await assert.rejects(()=>budgeted(f.env,{reads:32,writes:32},async e=>{
   await e.PRODUCT_DB.prepare('INSERT INTO work VALUES(?)').bind(1).run();
   await e.PRODUCT_DB.prepare('INSERT INTO work VALUES(?)').bind(2).run();
@@ -138,7 +138,7 @@ test('expired reservation prevents the next D1 effect after an awaited operation
 });
 test('clock rollback invalidates the active reservation before another effect',async t=>{
  const f=fixture(t,{deadline:2000}),nativeNow=Date.now;let now=1000;Date.now=()=>now;t.after(()=>{Date.now=nativeNow;});
- f.hooks.after=()=>{now=999;};
+ f.hooks.after=sql=>{if(sql.startsWith('INSERT INTO work'))now=999;};
  await assert.rejects(()=>budgeted(f.env,{reads:32,writes:32},async e=>{
   await e.PRODUCT_DB.prepare('INSERT INTO work VALUES(?)').bind(1).run();
   await e.PRODUCT_DB.prepare('INSERT INTO work VALUES(?)').bind(2).run();
