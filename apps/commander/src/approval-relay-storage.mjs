@@ -19,6 +19,12 @@ export async function settleCallUsage(env,row,result=null) {
   let usage={mode,state:mode,units:mode==="UNMETERED"?0:units,
     period_key:row.usage_period_key || null,budget_id:row.usage_budget_id || null,cloud_quota_transaction:false};
   if (mode==="CLOUD_QUOTA" && units>0) {
+    // A lost Agent result is not a proven no-effect denial. Passing null to
+    // settleDeviceCall releases quota, so leave an uncertain reserve untouched.
+    if (row.error_code==="CALL_OUTCOME_UNCERTAIN" ||
+        (metadata.state==="UNKNOWN" && metadata.mutation_performed===null)) {
+      throw new Error("CALL_EXECUTION_OUTCOME_UNKNOWN");
+    }
     const receipt=row.state==="COMPLETED"&&metadata.state==="PASS"
       ? metadata.bridge_receipt_sha256 : null;
     if (row.state==="EXPIRED" && row.claimed_at_utc && !metadata.bridge_receipt_sha256) {
