@@ -20,6 +20,7 @@ HARNESSES = tuple('apps/commander/scripts/' + name for name in (
     'test_event_v2_commercial_windows_0356_r163.ps1',
     'test_event_v2_commercial_windows_heartbeat_r163.ps1',
     'test_commercial_056_windows_recovery.ps1',
+    'test_commercial_056_windows_journal_orphans.ps1',
     'test_commercial_056_windows_supervisor.ps1',
     'test_commercial_056_windows_job_native.ps1'))
 PROVENANCE = (CANDIDATE + '/draft-source-policy.json', CANDIDATE + '/origin.json')

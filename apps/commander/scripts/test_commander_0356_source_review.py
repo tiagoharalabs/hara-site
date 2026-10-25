@@ -30,6 +30,7 @@ HARNESSES = tuple(f"apps/commander/scripts/{name}" for name in (
     "test_event_v2_commercial_windows_0356_r163.ps1",
     "test_event_v2_commercial_windows_heartbeat_r163.ps1",
     "test_commercial_056_windows_recovery.ps1",
+    "test_commercial_056_windows_journal_orphans.ps1",
     "test_commercial_056_windows_supervisor.ps1",
     "test_commercial_056_windows_job_native.ps1",
 ))
@@ -203,7 +204,7 @@ class SourceReviewTests(unittest.TestCase):
         self.assertEqual(index["source_commit"], self.head)
 
     def test_missing_adjacent_helper_or_harness_fails_without_partial_archive(self):
-        for relative in (AGENTS[3], AGENTS[4], HARNESSES[-1], PROVENANCE[-1]):
+        for relative in (AGENTS[3], AGENTS[4], HARNESSES[3], HARNESSES[-1], PROVENANCE[-1]):
             with self.subTest(missing=relative):
                 path = self.repo / relative
                 prior = path.read_bytes()
