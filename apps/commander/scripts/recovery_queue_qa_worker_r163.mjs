@@ -5,6 +5,7 @@ import {DeviceChannel as CoreDeviceChannel} from '../src/device-channel.mjs';
 import {wrapQaEntry,wrapQaDeviceChannel} from './recovery_resource_qa_r163.mjs';
 import {enqueueRecoveryWork,consumeRecoveryWork} from '../src/recovery-fanout.mjs';
 import {acceptR163Dlq} from './recovery_queue_dlq_r163.mjs';
+import {readQaWssStatus} from '../src/wss-live-witness-r163.mjs';
 import {budgeted,CAPS,startRecoveryBudget,pauseRecoveryBudget,readRecoveryQaStatus} from './recovery_queue_budget_r163.mjs';
 const QUEUE='hara-commander-r163-recovery-dev-20261024';
 const DLQ='hara-commander-r163-recovery-dlq-dev-20261024';
@@ -26,6 +27,7 @@ const legacyQaWorker={
     if(path==='/__qa/status'&&request.method==='GET'){
      return json(await readRecoveryQaStatus(env));
     }
+    if(path==='/__qa/wss-status'&&request.method==='POST')return json(await readQaWssStatus(request,env));
     if(path==='/__qa/start'&&request.method==='POST'){
      const row=await startRecoveryBudget(env.PRODUCT_DB);return json({state:row.state,deadline_ms:row.deadline_ms});
     }

@@ -1,6 +1,7 @@
 import { DurableObject } from "cloudflare:workers";
 import { canonicalChannelTelemetry, telemetryRollupQuery } from "./device-telemetry.mjs";
 import { observeEventV2ChannelLoss, observeEventV2ChannelRecovery } from './recovery-alerts.mjs';
+import {captureQaWssStatus} from './wss-live-witness-r163.mjs';
 
 const CHANNEL_SCHEMA = "hara.commander-device-channel.v2";
 const EVENT_SCHEMA = "hara.commander-device-event.v2";
@@ -299,6 +300,8 @@ export class DeviceChannel extends DurableObject {
           superseded: false,
           event_v2_contract: commercialContract,
           connected_at_ms: Date.now(),
+          ...(this.env.ENVIRONMENT==='DEV'&&this.env.R163_QA_ISOLATED==='true'
+            &&this.env.R163_QA_WSS_WITNESS_ENABLED==='true'?{connection_id:crypto.randomUUID()}:{}),
         });
         this.ctx.acceptWebSocket(server, [
           "tenant:" + tenantId,
@@ -420,6 +423,10 @@ export class DeviceChannel extends DurableObject {
       }
 
       if (url.pathname === "/status" && request.method === "GET") {
+        if(request.headers.get('x-hara-wss-witness-nonce')!==null){
+          return json(await captureQaWssStatus(request,this.env,this.ctx,
+            binding=>this.commercialDevice(binding)));
+        }
         return json({
           schema: CHANNEL_SCHEMA,
           connected: currentSockets(this.ctx).length,
