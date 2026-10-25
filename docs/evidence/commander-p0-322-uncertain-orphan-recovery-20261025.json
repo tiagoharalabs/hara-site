@@ -1,0 +1,68 @@
+{
+  "schema": "hara.commander.p0-322.uncertain-orphan-recovery.v1",
+  "evidence_date_utc": "2026-10-25",
+  "issue": 322,
+  "related_issue": 163,
+  "scope": "SOURCE_ONLY_LOCAL_SERVICES",
+  "branch": "local/commander-beta-0356-review-20261023",
+  "base_head": "ff48e3dfbf9c114d8414ea41b0ce684597b262e0",
+  "defect": "reconcile_relay_calls filtered out phase UNCERTAIN with no completion_json and delivery_state NONE; restart left reserved budget and never enqueued INDETERMINATE.",
+  "isolated_pre_fix_reproduction": {
+    "phase": "UNCERTAIN",
+    "delivery_state": "NONE",
+    "completion_present": false,
+    "summary_uncertain": 0,
+    "budget_state": "RESERVED",
+    "real_customer_effects": false
+  },
+  "correction": "Include (phase='UNCERTAIN' AND delivery_state='NONE') in bounded journal scan; on recovery enqueue INDETERMINATE without effect replay or releasing uncertain budget; ACKED orphan does not redeliver.",
+  "changed_source_sha256": "e169b2f4ceb02f3df311148184d1bbaec6775f71cbb8e31648ba2d0a85ade583",
+  "changed_test_sha256": "d5db232e2e673fcd05577df16668e9d68e6ec3d5f3bd9941343cddf6aeff36ed",
+  "local_tests": [
+    {
+      "path": "apps/commander/scripts/test_commercial_056_budget_reconciliation.py",
+      "normal_pass": 12,
+      "optimized_pass": 12
+    },
+    {
+      "path": "apps/commander/scripts/test_commercial_056_call_completion.py",
+      "normal_pass": 5,
+      "optimized_pass": 5
+    },
+    {
+      "path": "apps/commander/scripts/test_commercial_056_relay_supervisor.py",
+      "normal_pass": 18,
+      "optimized_pass": 18
+    },
+    {
+      "path": "apps/commander/scripts/test_commercial_056_linux.py",
+      "normal_pass": 15,
+      "optimized_pass": 15
+    }
+  ],
+  "total": {
+    "normal_pass": 50,
+    "optimized_pass": 50,
+    "failures": 0,
+    "diff_check": "PASS"
+  },
+  "post_fix_orphan_assertions": [
+    "reconciled_uncertain=1",
+    "completion.state=FAILED",
+    "completion.result.state=INDETERMINATE",
+    "no_tool_replay",
+    "budget_remains_RESERVED",
+    "delivery_ACKNOWLEDGED_once",
+    "completion_scrubbed_after_ACK"
+  ],
+  "boundaries": {
+    "runtime_mutation": false,
+    "prod_deploy": false,
+    "commercial_delivery_enabled": false,
+    "windows_native_acceptance": false,
+    "release_signed": false,
+    "twenty_thousand_hosted_proven": false,
+    "p0_gate_closed": false
+  },
+  "status": "SOURCE_FIX_AND_LOCAL_REGRESSION_PASS_RELEASE_HOLD"
+}

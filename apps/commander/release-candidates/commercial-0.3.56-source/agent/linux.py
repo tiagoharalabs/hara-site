@@ -3188,7 +3188,7 @@ def reconcile_relay_calls(config=None,limit=64):
     # Called only after the previous executor has been reaped. No tool is ever
     # invoked here. A crash across the effect/checkpoint boundary stays uncertain.
     with _ops_connect() as conn:
-        rows=[dict(r) for r in conn.execute("SELECT * FROM relay_call_journal WHERE phase IN ('PREPARING','RESERVED','EXECUTING') OR completion_json IS NOT NULL OR (phase='EXECUTED' AND delivery_state='NONE') ORDER BY updated_at_utc LIMIT ?",(int(limit),))]
+        rows=[dict(r) for r in conn.execute("SELECT * FROM relay_call_journal WHERE phase IN ('PREPARING','RESERVED','EXECUTING') OR completion_json IS NOT NULL OR (phase='UNCERTAIN' AND delivery_state='NONE') OR (phase='EXECUTED' AND delivery_state='NONE') ORDER BY updated_at_utc LIMIT ?",(int(limit),))]
     summary={'committed':0,'released':0,'uncertain':0,'delivered':0}
     for row in rows:
         request=row['request_id'];phase=row['phase']

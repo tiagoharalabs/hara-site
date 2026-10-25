@@ -207,6 +207,39 @@ class RelayBudgetReconciliationTests(unittest.TestCase):
         self.refuse_replay(restarted, call)
         self.assertFalse(Path(call['payload']['path']).exists())
 
+    def test_uncertain_orphan_without_completion_recovers_without_replay(self):
+        # Reproduce crash after UNCERTAIN but before durable completion.
+        call = self.call('uncertain-orphan')
+        self.agent.relay_call_begin(call)
+        self.agent.local_budget_reserve(self.config, call)
+        self.agent.relay_call_phase(call, 'UNCERTAIN')
+        self.assertEqual(self.journal(call), {
+            'phase': 'UNCERTAIN', 'delivery_state': 'NONE', 'completion_json': None,
+        })
+        restarted = self.import_agent()
+        with patch.object(restarted, 'execute_tool', wraps=restarted.execute_tool) as tool:
+            summary = restarted.reconcile_relay_calls()
+            self.assertEqual(summary['uncertain'], 1)
+            pending = self.journal(call, restarted)
+            self.assertEqual(pending['phase'], 'UNCERTAIN')
+            self.assertEqual(pending['delivery_state'], 'PENDING')
+            completion = json.loads(pending['completion_json'])
+            self.assertEqual(completion['state'], 'FAILED')
+            self.assertEqual(completion['result']['state'], 'INDETERMINATE')
+            self.assertIsNone(completion['result']['mutation_performed'])
+            self.assertEqual(completion['error_code'], 'CALL_OUTCOME_UNCERTAIN')
+            restarted.reconcile_relay_calls(self.config)
+            restarted.reconcile_relay_calls(self.config)
+            tool.assert_not_called()
+        self.assertEqual(self.journal(call, restarted), {
+            'phase': 'UNCERTAIN', 'delivery_state': 'ACKNOWLEDGED',
+            'completion_json': None,
+        })
+        self.assertEqual(restarted.synthetic_network.call_count, 1)
+        self.assertEqual(self.debit(call, restarted), ('RESERVED', 2))
+        self.assertEqual(self.counts(restarted), (0, 2))
+        self.refuse_replay(restarted, call)
+
     def test_changed_payload_under_recorded_identity_is_rejected(self):
         call = self.call('identity-conflict')
         self.agent.relay_call_begin(call)
