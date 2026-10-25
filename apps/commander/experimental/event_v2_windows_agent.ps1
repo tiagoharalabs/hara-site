@@ -20,8 +20,10 @@ $ExecutionAuthority = "HARA_COMMANDER_AGENT"
 $TransportMode = "EVENT_V2"
 $MaxDrainCalls = 8
 $StableConnectionSeconds = 60
-$ReconnectBaseSeconds = 10
-$ReconnectMaxSeconds = 15
+$ReconnectBaseSeconds = 60
+$ReconnectMaxSeconds = 120
+$ReconnectMinimumSeconds = 1
+$ReconnectStartupSpreadSeconds = 120
 $DurableLivenessSeconds = 21600
 $DurableLivenessJitterSeconds = 900
 $TransientLedgerRetentionHours = 24
@@ -435,12 +437,22 @@ function New-LocalShutdownPipe {
   )
 }
 
-function Get-ReconnectDelaySeconds([int]$Attempt) {
-  if ($Attempt -lt 0) { throw "WINDOWS_EVENT_V2_RECONNECT_ATTEMPT_INVALID" }
-  $cap = [Math]::Min($ReconnectMaxSeconds, $ReconnectBaseSeconds * [Math]::Pow(2,[Math]::Min($Attempt,20)))
+function Get-EventV2RandomUnit {
   $rng=[Security.Cryptography.RandomNumberGenerator]::Create();$bytes=New-Object byte[] 4
   try {$rng.GetBytes($bytes)}finally{$rng.Dispose()}
-  return ([BitConverter]::ToUInt32($bytes,0)/4294967296.0)*$cap
+  return [BitConverter]::ToUInt32($bytes,0)/4294967296.0
+}
+function Get-ReconnectDelaySeconds($Attempt) {
+  if ($Attempt -isnot [int] -or $Attempt -lt 0) { throw "WINDOWS_EVENT_V2_RECONNECT_ATTEMPT_INVALID" }
+  $cap = [Math]::Min([double]$ReconnectMaxSeconds, [double]$ReconnectBaseSeconds * [Math]::Pow(2,[Math]::Min($Attempt,31)))
+  $unit=Get-EventV2RandomUnit
+  if(($unit -isnot [double] -and $unit -isnot [int]) -or [double]::IsNaN($unit) -or [double]::IsInfinity($unit) -or $unit -lt 0 -or $unit -ge 1){throw 'WINDOWS_EVENT_V2_RECONNECT_RANDOM_INVALID'}
+  return $ReconnectMinimumSeconds+$unit*($cap-$ReconnectMinimumSeconds)
+}
+function Get-EventV2StartupDelaySeconds {
+  $unit=Get-EventV2RandomUnit
+  if(($unit -isnot [double] -and $unit -isnot [int]) -or [double]::IsNaN($unit) -or [double]::IsInfinity($unit) -or $unit -lt 0 -or $unit -ge 1){throw 'WINDOWS_EVENT_V2_RECONNECT_RANDOM_INVALID'}
+  return $unit*$ReconnectStartupSpreadSeconds
 }
 
 function Invoke-ConnectedSession($Cfg,[string]$Token) {
@@ -513,8 +525,9 @@ function Invoke-ConnectedSession($Cfg,[string]$Token) {
 
 function Invoke-AgentSelfTest {
   if ($MaxDrainCalls -ne 8) { throw "WINDOWS_EVENT_V2_DRAIN_BOUND_INVALID" }
-  if ($ReconnectBaseSeconds -ne 10) { throw "WINDOWS_EVENT_V2_RECONNECT_BASE_INVALID" }
-  if ($ReconnectMaxSeconds -ne 15) { throw "WINDOWS_EVENT_V2_RECONNECT_MAX_INVALID" }
+  if ($ReconnectBaseSeconds -ne 60) { throw "WINDOWS_EVENT_V2_RECONNECT_BASE_INVALID" }
+  if ($ReconnectMaxSeconds -ne 120) { throw "WINDOWS_EVENT_V2_RECONNECT_MAX_INVALID" }
+  if ($ReconnectMinimumSeconds -ne 1 -or $ReconnectStartupSpreadSeconds -ne 120) { throw "WINDOWS_EVENT_V2_RECONNECT_SPREAD_INVALID" }
   if ($DurableLivenessSeconds -ne 21600) { throw "WINDOWS_EVENT_V2_LIVENESS_INVALID" }
   if ($DurableLivenessJitterSeconds -ne 900) { throw "WINDOWS_EVENT_V2_LIVENESS_JITTER_INVALID" }
   if ($TransientLedgerRetentionHours -ne 24) { throw "WINDOWS_EVENT_V2_LEDGER_RETENTION_INVALID" }
@@ -575,16 +588,18 @@ if ($SelfTest -or ($args -contains "--self-test")) {
   exit 0
 }
 
+function Start-EventV2ReconnectLoop {
 $attempt = 0
+Start-Sleep -Milliseconds ([int][Math]::Ceiling((Get-EventV2StartupDelaySeconds)*1000))
 while ($true) {
-  $started = [DateTime]::UtcNow
+  $started = Get-EventV2Monotonic
   try {
     $cfg = Get-EventV2Config
     $token = Get-DeviceToken $cfg
     Invoke-ConnectedSession $cfg $token
-    $connectedSeconds = ([DateTime]::UtcNow - $started).TotalSeconds
+    $connectedSeconds = (Get-EventV2Monotonic)-$started
   } catch {
-    $connectedSeconds = ([DateTime]::UtcNow - $started).TotalSeconds
+    $connectedSeconds = (Get-EventV2Monotonic)-$started
     $code = Get-SafeErrorCode $_
     if ($code -eq "WINDOWS_EVENT_V2_LOCAL_SHUTDOWN_REQUESTED") {
       $script:ShutdownRequested = $true
@@ -599,8 +614,9 @@ while ($true) {
   if ($script:ShutdownRequested) { break }
 
   if ($connectedSeconds -ge $StableConnectionSeconds) { $attempt = 0 }
-  else { $attempt = [Math]::Min($attempt + 1,31) }
-
   $delay = Get-ReconnectDelaySeconds $attempt
+  $attempt = [Math]::Min($attempt + 1,31)
   Start-Sleep -Milliseconds ([int][Math]::Ceiling($delay * 1000))
 }
+}
+Start-EventV2ReconnectLoop

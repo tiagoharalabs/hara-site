@@ -237,6 +237,8 @@ def run_forever(
     # One startup baseline, followed only by successful LIVENESS sends. Keep
     # it outside the reconnect loop even when the initial Upgrade fails.
     liveness_state = {"last_liveness_at": monotonic()}
+    # A process/fleet restart also needs spreading, before the first Upgrade.
+    sleep(policy.startup_delay(random_unit()))
 
     while True:
         started = monotonic()
@@ -263,10 +265,8 @@ def run_forever(
         had_session = True
         if connected_seconds >= STABLE_CONNECTION_SECONDS:
             attempt = 0
-        else:
-            attempt = min(attempt + 1, 31)
-
         delay = policy.delay(attempt, random_unit())
+        attempt = min(attempt + 1, 31)
         sleep(delay)
 
 

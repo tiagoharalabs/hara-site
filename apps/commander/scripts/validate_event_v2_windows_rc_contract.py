@@ -144,8 +144,10 @@ def main() -> int:
         "$OperationalAuthority = \"HARA_COMMANDER\"",
         "$TransportMode = \"EVENT_V2\"",
         "$MaxDrainCalls = 8",
-        "$ReconnectBaseSeconds = 10",
-        "$ReconnectMaxSeconds = 15",
+        "$ReconnectBaseSeconds = 60",
+        "$ReconnectMaxSeconds = 120",
+        "$ReconnectMinimumSeconds = 1",
+        "$ReconnectStartupSpreadSeconds = 120",
         "$DurableLivenessSeconds = 21600",
         "$DurableLivenessJitterSeconds = 900",
         "Get-DurableLivenessSeconds",
@@ -289,8 +291,8 @@ def main() -> int:
     print("COMMANDER_WINDOWS_SERVICES_PROXY=FALSE")
     print("COMMANDER_WINDOWS_EVENT_V2_TRANSPORT_SOURCE=READY_UNPROVEN")
     print("COMMANDER_WINDOWS_EVENT_V2_AGENT_ADAPTER=SOURCE_READY")
-    print("COMMANDER_WINDOWS_EVENT_V2_RECONNECT_BASE_SECONDS=10")
-    print("COMMANDER_WINDOWS_EVENT_V2_RECONNECT_MAX_SECONDS=15")
+    print("COMMANDER_WINDOWS_EVENT_V2_RECONNECT_BASE_SECONDS=60")
+    print("COMMANDER_WINDOWS_EVENT_V2_RECONNECT_MAX_SECONDS=120")
     print("COMMANDER_WINDOWS_EVENT_V2_TRANSIENT_RPC_SOURCE=READY_UNPROVEN")
     print("COMMANDER_WINDOWS_EVENT_V2_LOCAL_IDEMPOTENCY_LEDGER=SOURCE_READY_UNPROVEN")
     print("COMMANDER_WINDOWS_EVENT_V2_TRANSIENT_LEARNING=METADATA_ONLY")

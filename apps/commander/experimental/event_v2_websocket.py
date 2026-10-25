@@ -20,6 +20,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import math
 import os
 import socket
 import ssl
@@ -39,8 +40,11 @@ MAX_EVENT_BYTES = MAX_TRANSIENT_RESULT_BYTES
 KEEPALIVE_IDLE_SECONDS = 60.0
 PONG_TIMEOUT_SECONDS = 20.0
 _PENDING_PONG = weakref.WeakKeyDictionary()
-RECONNECT_BASE_SECONDS = 10.0
-RECONNECT_MAX_SECONDS = 15.0
+_UPGRADE_REMAINDER = weakref.WeakKeyDictionary()
+# Client-side spreading, not an admitted provider throughput ceiling. Keep the
+# worst retry below the 300s recovery SLO; hosted acceptance remains separate.
+RECONNECT_BASE_SECONDS = 60.0
+RECONNECT_MAX_SECONDS = 120.0
 MAX_CONTROL_PAYLOAD_BYTES = 125
 EVENT_SCHEMA = "hara.commander-device-event.v2"
 DURABLE_LIVENESS_SECONDS = 6 * 60 * 60
@@ -160,14 +164,30 @@ class ServerFrame:
 class ReconnectPolicy:
     base_seconds: float = RECONNECT_BASE_SECONDS
     max_seconds: float = RECONNECT_MAX_SECONDS
+    minimum_seconds: float = 1.0
+    startup_seconds: float = 120.0
+
+    def __post_init__(self):
+        values=(self.base_seconds,self.max_seconds,self.minimum_seconds,self.startup_seconds)
+        if (any(type(x) not in (int,float) or not math.isfinite(x) for x in values)
+            or not 0 < self.minimum_seconds <= self.base_seconds <= self.max_seconds
+            or not 0 <= self.startup_seconds <= self.max_seconds):
+            raise fail("EVENT_V2_RECONNECT_POLICY_INVALID")
+
+    @staticmethod
+    def _entropy(random_unit):
+        if type(random_unit) not in (int,float) or not math.isfinite(random_unit) or not 0 <= random_unit < 1:
+            raise fail("EVENT_V2_RECONNECT_RANDOM_INVALID")
+        return random_unit
+
+    def startup_delay(self, random_unit: float) -> float:
+        return self._entropy(random_unit) * self.startup_seconds
 
     def delay(self, attempt: int, random_unit: float) -> float:
-        if attempt < 0:
+        if type(attempt) is not int or attempt < 0:
             raise fail("EVENT_V2_RECONNECT_ATTEMPT_INVALID")
-        if not 0.0 <= random_unit < 1.0:
-            raise fail("EVENT_V2_RECONNECT_RANDOM_INVALID")
-        cap = min(self.max_seconds, self.base_seconds * (2 ** attempt))
-        return random_unit * cap
+        cap = min(self.max_seconds, self.base_seconds * (2 ** min(attempt,31)))
+        return self.minimum_seconds + self._entropy(random_unit) * (cap-self.minimum_seconds)
 
 
 def decode_server_frame(raw: bytes, max_bytes: int = MAX_EVENT_BYTES) -> ServerFrame:
@@ -211,7 +231,14 @@ def read_exact(stream: BinaryIO, count: int, deadline: float | None = None) -> b
             remaining=deadline-time.monotonic()
             if remaining<=0:raise fail("EVENT_V2_PONG_TIMEOUT")
             stream.settimeout(min(remaining,stream.gettimeout() or remaining))
-        data = stream.read(count - len(chunks))
+        buffered = _UPGRADE_REMAINDER.get(stream,b"")
+        if buffered:
+            wanted=count-len(chunks)
+            data=buffered[:wanted]
+            if len(buffered)>wanted:_UPGRADE_REMAINDER[stream]=buffered[wanted:]
+            else:_UPGRADE_REMAINDER.pop(stream,None)
+        else:
+            data = stream.read(count - len(chunks))
         if deadline is not None and time.monotonic()>=deadline:
             raise fail("EVENT_V2_PONG_TIMEOUT")
         if not data:
@@ -242,35 +269,45 @@ def recv_server_frame(sock: socket.socket, max_bytes: int = MAX_EVENT_BYTES, dea
 
 
 def open_event_socket(base_url: str, token: str, timeout: float = 25.0) -> ssl.SSLSocket:
+    if type(timeout) not in (int,float) or not math.isfinite(timeout) or timeout<=0:
+        raise fail("EVENT_V2_HANDSHAKE_TIMEOUT_INVALID")
+    deadline=time.monotonic()+timeout
+    def remaining():
+        value=deadline-time.monotonic()
+        if value<=0:raise fail("EVENT_V2_HANDSHAKE_TIMEOUT")
+        return value
     host, port, path = event_endpoint(base_url)
     key = websocket_key()
     raw_request = build_handshake_request(host, port, path, token, key)
 
-    plain = socket.create_connection((host, port), timeout=timeout)
+    plain = socket.create_connection((host, port), timeout=remaining())
     try:
         context = ssl.create_default_context()
+        plain.settimeout(remaining())
         tls = context.wrap_socket(plain, server_hostname=host)
     except Exception:
         plain.close()
         raise fail("EVENT_V2_TLS_FAILED")
 
     try:
-        tls.settimeout(timeout)
+        tls.settimeout(remaining())
         tls.sendall(raw_request)
         response = bytearray()
         while b"\r\n\r\n" not in response:
             if len(response) >= MAX_HEADER_BYTES:
                 raise fail("EVENT_V2_HANDSHAKE_TOO_LARGE")
+            tls.settimeout(remaining())
             chunk = tls.recv(2048)
+            remaining()
             if not chunk:
                 raise fail("EVENT_V2_SOCKET_CLOSED")
             response.extend(chunk)
         header, remainder = bytes(response).split(b"\r\n\r\n", 1)
-        if remainder:
-            # The first server event must be read through the frame reader so
-            # transport state is never silently discarded.
-            raise fail("EVENT_V2_EARLY_FRAME_UNSUPPORTED")
+        # A valid server may coalesce 101 with complete or partial frames.
+        # Preserve every byte for the normal bounded frame reader, in order.
         parse_handshake_response(header + b"\r\n\r\n", key)
+        if remainder:_UPGRADE_REMAINDER[tls]=remainder
+        tls.settimeout(timeout)
         return tls
     except Exception:
         tls.close()

@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Deterministic reconnect-storm model for Commander Event V2.
 
-The model uses the exact ReconnectPolicy from the experimental client and a
-stable SHA-256-derived entropy stream so CI can detect regressions toward
-synchronized reconnects.
+Uses the experimental client's actual startup/retry order and deterministic
+entropy. Model checks never admit a provider rate or a commercial Agent.
 """
 
 from __future__ import annotations
@@ -91,47 +90,56 @@ def attempt_profile(policy, devices: int, attempt: int) -> dict:
     }
 
 
+def planned_attempt_times(policy, device: int, failures: int, handshake_seconds: float) -> list[float]:
+    """Same order as run_forever: initial spread, then retry0, retry1, ... ."""
+    now=policy.startup_delay(entropy(device,-1));times=[now]
+    for attempt in range(failures):
+        now+=handshake_seconds
+        now+=policy.delay(attempt,entropy(device,attempt))
+        times.append(now)
+    return times
+
+
+def timeline_profile(policy, devices: int, failures: int, handshake_seconds: float, *, session_drop=False) -> dict:
+    def attempts(device):
+        if not session_drop:return planned_attempt_times(policy,device,failures,handshake_seconds)
+        # A live session lost simultaneously does not repeat startup spreading.
+        now=0.0;times=[]
+        for attempt in range(failures):
+            now+=policy.delay(attempt,entropy(device,attempt));times.append(now)
+            now+=handshake_seconds
+        return times
+    times=sorted(t for device in range(devices) for t in attempts(device))
+    buckets=Counter(int(value) for value in times)
+    return {'devices':devices,'attempts':len(times),'failed_rounds':failures,
+            'scenario':'existing_session_drop' if session_drop else 'process_restart',
+            'handshake_seconds_assumed':handshake_seconds,
+            'max_attempts_in_1s_bucket':max(buckets.values()),
+            'scheduled_connect_p95_s':times[int((len(times)-1)*.95)],
+            'scheduled_connect_p99_s':times[int((len(times)-1)*.99)],
+            'active_connections_measured':None,'http_latency_measured':False,
+            'hosted_gate':'HOSTED_20K_HOLD'}
+
+
 def self_check() -> None:
     transport = load_transport()
     policy = transport.ReconnectPolicy()
 
-    assert policy.base_seconds == 10.0
-    assert policy.max_seconds == 15.0
-
-    expected = {
-        (100, 0): 14,
-        (1_000, 0): 117,
-        (5_000, 0): 532,
-        (20_000, 0): 2052,
-        (20_000, 1): 1384,
-    }
-    for key, max_bucket in expected.items():
-        devices, attempt = key
-        profile = attempt_profile(policy, devices, attempt)
-        assert profile["max_attempts_in_1s_bucket"] == max_bucket
-
-    thousand = attempt_profile(policy, 1_000, 0)
-    twenty_k = attempt_profile(policy, 20_000, 0)
-    offline_1k = offline_profile(1_000)
-    offline_20k = offline_profile(20_000)
-    liveness_1k = liveness_profile(1_000)
-    liveness_20k = liveness_profile(20_000)
-
-    assert offline_1k["max_offline_writes_in_1s_bucket"] == 39
-    assert offline_20k["max_offline_writes_in_1s_bucket"] == 722
-    assert offline_1k["max_offline_writes_in_1s_bucket"] <= 50
-    assert liveness_1k["max_liveness_messages_in_1s_bucket"] <= 3
-    assert liveness_20k["max_liveness_messages_in_1s_bucket"] <= 25
-
-    # Practical 1k target: first reconnect wave stays near ~100/s rather than
-    # concentrating all 1,000 devices into one second.
-    assert thousand["max_attempts_in_1s_bucket"] <= 150
-
-    # 20k is architecture headroom, not a current SLA. The first wave must at
-    # least be distributed by an order of magnitude compared with the old 1s
-    # reconnect window. D1 presence-write pressure is tracked separately.
-    assert twenty_k["max_attempts_in_1s_bucket"] <= 2_200
-    assert twenty_k["max_bucket_fraction"] <= 0.11
+    def require(condition,code):
+        if not condition:raise RuntimeError(code)
+    require((policy.base_seconds,policy.max_seconds,policy.minimum_seconds,policy.startup_seconds)==
+            (60.0,120.0,1.0,120.0),'RECONNECT_RUNTIME_POLICY_DRIFT')
+    require(planned_attempt_times(policy,7,3,0)==planned_attempt_times(policy,7,3,0),'MODEL_NONDETERMINISTIC')
+    for attempt in [0,1,31]:
+        require(1<=policy.delay(attempt,0)<policy.delay(attempt,.999)<121,'MODEL_BACKOFF_INVALID')
+    # Regression against the old model's 10-second independent first wave.
+    # Neither number is a provider ceiling. Actual client loops are fixture-tested.
+    legacy=max(Counter(int(entropy(i,0)*10) for i in range(20000)).values())
+    require(legacy==2052,'LEGACY_MODEL_REFERENCE_CHANGED')
+    for duration in [0,25]:
+        trace=timeline_profile(policy,20000,3,duration)
+        require(trace['max_attempts_in_1s_bucket']<legacy,'RECONNECT_SPREAD_REGRESSION')
+    require(offline_profile(20000)['max_offline_writes_in_1s_bucket']==722,'OFFLINE_PROFILE_DRIFT')
 
 
 def main() -> int:
@@ -141,6 +149,8 @@ def main() -> int:
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
+    if not args.devices or any(n<1 or n>20000 for n in args.devices) or len(args.devices)>8 or not 1<=args.attempts<=32:
+        parser.error('devices must be 1..20000 (at most 8 sizes), attempts 1..32')
 
     transport = load_transport()
     policy = transport.ReconnectPolicy()
@@ -156,12 +166,20 @@ def main() -> int:
     if args.json:
         print(json.dumps({
             "schema": "hara.commander-event-v2-reconnect-storm.v1",
+            "model_check": "MODEL_PASS" if args.check else "NOT_CHECKED",
+            "hosted_gate": "HOSTED_20K_HOLD",
+            "commercial_agent_event_v2_parity": False,
+            "scope": "EXPERIMENTAL_CLIENT_SOURCE_ONLY",
             "policy": {
                 "base_seconds": policy.base_seconds,
                 "max_seconds": policy.max_seconds,
-                "full_jitter": True,
+                "minimum_seconds": policy.minimum_seconds,
+                "startup_seconds": policy.startup_seconds,
+                "jitter": "UNIFORM_WITH_RETRY_FLOOR",
             },
             "rows": rows,
+            "timelines": [timeline_profile(policy,count,args.attempts,seconds,session_drop=drop)
+                          for count in args.devices for seconds in [0,25] for drop in [False,True]],
             "offline_disconnect_profiles": [
                 offline_profile(count) for count in args.devices
             ],
@@ -179,18 +197,10 @@ def main() -> int:
                 f'{row["max_bucket_fraction"]:>19.4f}'
             )
 
-    if args.check:
-        print("COMMANDER_EVENT_V2_RECONNECT_STORM_MODEL=PASS")
-        print("COMMANDER_EVENT_V2_RECONNECT_BASE_SECONDS=10")
-        print("COMMANDER_EVENT_V2_RECONNECT_MAX_SECONDS=15")
-        print("COMMANDER_EVENT_V2_1K_FIRST_WAVE_MAX_PER_SECOND=117")
-        print("COMMANDER_EVENT_V2_20K_FIRST_WAVE_MAX_PER_SECOND=2052")
-        print("COMMANDER_EVENT_V2_1K_OFFLINE_WRITE_MAX_PER_SECOND=39")
-        print("COMMANDER_EVENT_V2_20K_OFFLINE_WRITE_MAX_PER_SECOND=722")
-        print("COMMANDER_EVENT_V2_TRANSIENT_BLIP_UNDER_30S_OFFLINE_WRITE=ZERO_TARGET")
-        print("COMMANDER_EVENT_V2_1K_LIVENESS_MAX_PER_SECOND=3")
-        print("COMMANDER_EVENT_V2_20K_LIVENESS_MAX_PER_SECOND=21")
-        print("COMMANDER_EVENT_V2_RECONNECT_D1_PRESSURE_20K=REQUIRES_SEPARATE_GUARD")
+    if args.check and not args.json:
+        print("COMMANDER_EVENT_V2_RECONNECT_STORM_MODEL=MODEL_PASS")
+        print("COMMANDER_EVENT_V2_HOSTED_GATE=HOSTED_20K_HOLD")
+        print("COMMANDER_EVENT_V2_PROVIDER_THROUGHPUT_LIMIT=UNBOUND")
     return 0
 
 

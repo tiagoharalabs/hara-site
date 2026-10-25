@@ -150,12 +150,13 @@ def main() -> int:
 
     # Full-jitter reconnect policy is deterministic under injected entropy.
     policy = client.ReconnectPolicy()
-    assert policy.delay(0, 0.0) == 0.0
-    assert policy.delay(0, 0.5) == 5.0
-    assert policy.delay(1, 0.5) == 7.5
-    assert policy.delay(5, 0.5) == 7.5
-    assert policy.delay(6, 0.5) == 7.5
-    assert 14.9 < policy.delay(20, 0.999) < 15.0
+    assert policy.delay(0, 0.0) == 1.0
+    assert policy.delay(0, 0.5) == 30.5
+    assert policy.delay(1, 0.5) == 60.5
+    assert policy.delay(5, 0.5) == 60.5
+    assert policy.delay(6, 0.5) == 60.5
+    assert 119 < policy.delay(20, 0.999) < 120.0
+    assert policy.startup_delay(0.5) == 60.0
     expect_code(
         lambda: policy.delay(-1, 0.5),
         "EVENT_V2_RECONNECT_ATTEMPT_INVALID",
@@ -293,9 +294,9 @@ def main() -> int:
     print("COMMANDER_EVENT_V2_CLIENT_MASKING=PASS")
     print("COMMANDER_EVENT_V2_SERVER_FRAME_BOUNDS=PASS")
     print("COMMANDER_EVENT_V2_CLIENT_SECRET_ECHO=ABSENT")
-    print("COMMANDER_EVENT_V2_RECONNECT_FULL_JITTER=PASS")
-    print("COMMANDER_EVENT_V2_RECONNECT_BASE_SECONDS=10")
-    print("COMMANDER_EVENT_V2_RECONNECT_MAX_SECONDS=15")
+    print("COMMANDER_EVENT_V2_RECONNECT_JITTER=UNIFORM_WITH_RETRY_FLOOR")
+    print("COMMANDER_EVENT_V2_RECONNECT_BASE_SECONDS=60")
+    print("COMMANDER_EVENT_V2_RECONNECT_MAX_SECONDS=120")
     print("COMMANDER_EVENT_V2_PROTOCOL_KEEPALIVE_IDLE_SECONDS=60")
     print("COMMANDER_EVENT_V2_APPLICATION_HEARTBEAT_ON_IDLE=ABSENT")
     print("COMMANDER_EVENT_V2_WAKE_EVENT_FIELDS=BOUNDED")
