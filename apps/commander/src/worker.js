@@ -589,6 +589,11 @@ function eventV2Enabled(env) {
   return String(env.DEVICE_EVENT_V2_ENABLED || "").trim().toLowerCase() === "true";
 }
 
+function commercialEventV2DevEnabled(env) {
+  return env.ENVIRONMENT === 'DEV'
+    && env.DEVICE_EVENT_V2_COMMERCIAL_0356_DEV_ENABLED === 'true';
+}
+
 function transientRpcEnabled(env) {
   return env.ENVIRONMENT === "DEV"
     && eventV2Enabled(env)
@@ -603,6 +608,12 @@ async function openDeviceEventChannel(env, request) {
   }
 
   const device = await resolveDeviceCredential(env, request);
+  const commercialContract = request.headers.get('x-hara-event-v2-contract');
+  if (commercialContract !== null
+      && (commercialContract !== 'commercial-0.3.56-durable-dev.v1'
+          || !commercialEventV2DevEnabled(env))) {
+    throw new Error('DEVICE_EVENT_V2_COMMERCIAL_DEV_NOT_ADMITTED');
+  }
   // Production Event V2 is explicitly limited to enrolled Founder-fleet
   // device IDs. Credentials remain tenant/device-bound; arbitrary customer
   // devices and wildcard allowlists remain denied.
@@ -626,6 +637,7 @@ async function openDeviceEventChannel(env, request) {
   headers.set("x-hara-channel-authenticated", "1");
   headers.set("x-hara-tenant-id", device.tenant_id);
   headers.set("x-hara-device-id", device.device_id);
+  if (commercialContract) headers.set('x-hara-event-v2-contract', commercialContract);
 
   return stub.fetch(new Request("https://device-channel/connect", {
     method: "GET",
@@ -771,6 +783,19 @@ async function dispatchTransientDeviceCall(env, body) {
   }
   if (String(device.tunnel_mode || "") !== "EVENT_V2") {
     throw new Error("DEVICE_TRANSIENT_REQUIRES_EVENT_V2");
+  }
+
+  // The .56 commercial guardian owns execution/journal/quota through durable
+  // claim/complete only. Negotiate before reserving transient quota; the DO
+  // repeats this fence if reconnect changes the channel after this await.
+  const channel = env.DEVICE_CHANNEL.getByName(deviceChannelName(context.tenant_id, deviceId));
+  const channelResponse = await channel.fetch(new Request('https://device-channel/status', {
+    headers: {'x-hara-channel-authenticated': '1'},
+  }));
+  if (!channelResponse.ok) throw new Error('DEVICE_CHANNEL_STATUS_UNAVAILABLE');
+  const channelStatus = await channelResponse.json();
+  if (channelStatus.event_v2_contract != null) {
+    throw new Error('DEVICE_TRANSIENT_NOT_ADMITTED');
   }
 
   let quota = null;

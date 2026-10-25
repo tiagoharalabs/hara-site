@@ -101,8 +101,14 @@ async function sha(input) {
 async function incidentForHeartbeat(device) {
   return "offline-"+(await sha(JSON.stringify([device.tenant_id,device.device_id,device.last_seen_at_utc]))).slice(0,40);
 }
-async function persist(env,device,event,origin="AGENT",anchor=null,nowMs=Date.now(),lease=null) {
+async function persist(env,device,event,origin="AGENT",anchor=null,nowMs=Date.now(),lease=null,serverTransport='OUTBOUND_RELAY') {
   requireEnabled(env); validIdentity(device);
+  if (serverTransport !== 'OUTBOUND_RELAY'
+      && (serverTransport !== 'EVENT_V2' || origin !== 'SERVER'
+          || env.ENVIRONMENT !== 'DEV'
+          || env.DEVICE_EVENT_V2_COMMERCIAL_0356_DEV_ENABLED !== 'true')) {
+    deny('RECOVERY_EVENT_V2_NOT_ADMITTED');
+  }
   if (!recoveryDeviceEnabled(env,device)) deny("RECOVERY_ALERTS_DEVICE_NOT_ADMITTED");
   const now=new Date(nowMs).toISOString();
   const fingerprint=await sha(JSON.stringify([event.incident_id,event.generation,event.sequence,
@@ -118,7 +124,7 @@ async function persist(env,device,event,origin="AGENT",anchor=null,nowMs=Date.no
     "client_event_id,worker,detector,error_code,event_at_utc,heartbeat_anchor_at_utc,payload_sha256,persisted_at_utc) "+
     "SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,? FROM commander_devices d "+
     "WHERE d.device_id=? AND d.tenant_id=? AND d.state='ACTIVE' AND d.revoked_at_utc IS NULL "+
-    "AND (?='AGENT' OR (d.approval_mode='PERSISTENT_TRUSTED' AND d.tunnel_mode='OUTBOUND_RELAY')) "+
+    "AND (?='AGENT' OR (d.approval_mode='PERSISTENT_TRUSTED' AND d.tunnel_mode=?)) "+
     "AND (?!='SERVER' OR ?!='DEGRADED' OR d.last_seen_at_utc=?) "+
     // The very first transition must be 1. Subsequent transitions are
     // contiguous within the same incident generation, atomically with INSERT.
@@ -133,7 +139,7 @@ async function persist(env,device,event,origin="AGENT",anchor=null,nowMs=Date.no
   ).bind(eventId,device.tenant_id,device.device_id,event.incident_id,event.generation,
     event.sequence,event.state,origin,event.client_event_id||null,
     event.worker||null,event.detector||null,event.error_code,event.at_utc,anchor,fingerprint,now,
-    device.device_id,device.tenant_id,origin,origin,event.state,anchor,
+    device.device_id,device.tenant_id,origin,serverTransport,origin,event.state,anchor,
     event.incident_id,event.generation,event.sequence-1,
     event.incident_id,event.generation,event.generation,event.sequence,
     ...(lease?[lease.lease_token,nowMs]:[])).run();
@@ -190,7 +196,62 @@ export async function readRecoveryEventBody(request,maxBytes=MAX_EVENT_BODY) {
   return obj;
 }
 export async function ingestRecoveryEvent(env,device,body,nowMs=Date.now()) {
-  return persist(env,device,normalizeIncomingEvent(body,nowMs),"AGENT",null,nowMs);
+  const event = normalizeIncomingEvent(body,nowMs);
+  if (env.ENVIRONMENT === 'DEV' && event.incident_id.startsWith('event-v2-')) deny('RECOVERY_EVENT_SERVER_NAMESPACE');
+  return persist(env,device,event,"AGENT",null,nowMs);
+}
+
+function requireEventV2Recovery(env, device) {
+  requireEnabled(env);
+  if (env.ENVIRONMENT !== 'DEV' || env.DEVICE_EVENT_V2_COMMERCIAL_0356_DEV_ENABLED !== 'true') {
+    deny('RECOVERY_EVENT_V2_NOT_ADMITTED');
+  }
+  validIdentity(device);
+  return device.approval_mode === 'PERSISTENT_TRUSTED' && device.tunnel_mode === 'EVENT_V2';
+}
+
+// Only the authenticated, serialized DeviceChannel detector supplies these
+// server observations. Neither endpoint nor an Agent payload can claim them.
+export async function observeEventV2ChannelLoss(env, device, observation) {
+  if (!requireEventV2Recovery(env, device)) return null;
+  const {probe_anchor_ms, at_ms, error_code} = observation || {};
+  if (!Number.isSafeInteger(probe_anchor_ms) || probe_anchor_ms < 0
+      || !Number.isSafeInteger(at_ms) || at_ms < probe_anchor_ms || at_ms > Date.now()
+      || !['EVENT_V2_PROBE_STALE', 'EVENT_V2_CHANNEL_CLOSED'].includes(error_code)) {
+    deny('RECOVERY_EVENT_V2_OBSERVATION_INVALID');
+  }
+  const incident_id = 'event-v2-' + (await sha(JSON.stringify([
+    device.tenant_id, device.device_id, probe_anchor_ms]))).slice(0,40);
+  // D1 may commit before the DO pointer write fails. Reuse the canonical
+  // first event preimage; a later alarm is a retry, not a new fingerprint.
+  const first = await env.PRODUCT_DB.prepare(
+    "SELECT heartbeat_anchor_at_utc,event_at_utc,error_code FROM commander_device_recovery_events "+
+    "WHERE tenant_id=? AND device_id=? AND incident_id=? AND generation=1 AND sequence=1 AND origin='SERVER'"
+  ).bind(device.tenant_id,device.device_id,incident_id).first();
+  const eventAt = first?.event_at_utc || new Date(at_ms).toISOString();
+  const heartbeatAnchor = first?.heartbeat_anchor_at_utc || device.last_seen_at_utc;
+  const incident = {incident_id, generation:1, probe_anchor_ms, at_ms,
+                    heartbeat_anchor_at_utc:heartbeatAnchor};
+  incident.at_ms = Date.parse(eventAt);
+  const receipt = await persist(env, device, {incident_id, generation:1, sequence:1,
+    state:'DEGRADED', at_utc:eventAt, error_code:first?.error_code || error_code},
+    'SERVER', heartbeatAnchor, Date.now(), null, 'EVENT_V2');
+  return {...incident, receipt};
+}
+
+export async function observeEventV2ChannelRecovery(env, device, incident, nowMs=Date.now()) {
+  if (!requireEventV2Recovery(env, device)) return null;
+  if (!incident || !/^event-v2-[0-9a-f]{40}$/.test(incident.incident_id)
+      || incident.generation !== 1 || !Number.isSafeInteger(nowMs) || nowMs < incident.at_ms) {
+    deny('RECOVERY_EVENT_V2_OBSERVATION_INVALID');
+  }
+  const prior = await env.PRODUCT_DB.prepare(
+    "SELECT event_at_utc FROM commander_device_recovery_events "+
+    "WHERE tenant_id=? AND device_id=? AND incident_id=? AND generation=1 AND sequence=2 AND origin='SERVER'"
+  ).bind(device.tenant_id,device.device_id,incident.incident_id).first();
+  return persist(env, device, {incident_id:incident.incident_id, generation:1, sequence:2,
+    state:'RECOVERED', at_utc:prior?.event_at_utc || new Date(nowMs).toISOString(), error_code:'EVENT_V2_CHANNEL_RECOVERED'},
+    'SERVER', incident.heartbeat_anchor_at_utc, nowMs, null, 'EVENT_V2');
 }
 function requirePortalAdmin(session) {
   if (!session) deny("AUTH_REQUIRED");

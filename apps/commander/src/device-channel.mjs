@@ -1,5 +1,6 @@
 import { DurableObject } from "cloudflare:workers";
 import { canonicalChannelTelemetry, telemetryRollupQuery } from "./device-telemetry.mjs";
+import { observeEventV2ChannelLoss, observeEventV2ChannelRecovery } from './recovery-alerts.mjs';
 
 const CHANNEL_SCHEMA = "hara.commander-device-channel.v2";
 const EVENT_SCHEMA = "hara.commander-device-event.v2";
@@ -14,6 +15,9 @@ const TRANSIENT_RPC_TIMEOUT_MS = 45 * 1000;
 const MAX_TRANSIENT_INFLIGHT = 1;
 const PROBE_REQUEST = 'HARA_EVENT_V2_PROBE_V1';
 const PROBE_RESPONSE = 'HARA_EVENT_V2_PROBE_ACK_V1';
+const COMMERCIAL_CONTRACT = 'commercial-0.3.56-durable-dev.v1';
+const COMMERCIAL_STALE_MS = 120000;
+const COMMERCIAL_INCIDENT_KEY = 'commercial_recovery_incident';
 
 function currentSockets(ctx) {
   return ctx.getWebSockets().filter(socket => {
@@ -105,7 +109,7 @@ async function markDisconnected(env, attachment) {
   const tenantId = cleanIdentifier(attachment.tenant_id, 180);
   const deviceId = cleanIdentifier(attachment.device_id, 180);
   const seenAt = nowIso();
-  await env.PRODUCT_DB.prepare(
+  const result = await env.PRODUCT_DB.prepare(
     `UPDATE commander_devices
         SET tunnel_mode = 'EVENT_V2_OFFLINE', last_seen_at_utc = ?
       WHERE tenant_id = ?
@@ -114,6 +118,7 @@ async function markDisconnected(env, attachment) {
         AND state = 'ACTIVE'
         AND revoked_at_utc IS NULL`
   ).bind(seenAt, tenantId, deviceId).run();
+  return {seen_at_utc:seenAt, changed:Boolean(result.meta?.changes)};
 }
 
 
@@ -133,6 +138,11 @@ async function scheduleDisconnected(ctx, attachment) {
     tenant_id: tenantId,
     device_id: deviceId,
     scheduled_at_ms: dueAtMs,
+    ...(attachment.event_v2_contract === COMMERCIAL_CONTRACT ? {
+      event_v2_contract: COMMERCIAL_CONTRACT,
+      connected_at_ms: attachment.connected_at_ms,
+      probe_anchor_ms: attachment.probe_anchor_ms,
+    } : {}),
   });
   await ctx.storage.setAlarm(dueAtMs);
 }
@@ -249,6 +259,18 @@ export class DeviceChannel extends DurableObject {
 
         const tenantId = cleanIdentifier(request.headers.get("x-hara-tenant-id"), 180);
         const deviceId = cleanIdentifier(request.headers.get("x-hara-device-id"), 180);
+        const commercialContract = request.headers.get('x-hara-event-v2-contract');
+        if (commercialContract !== null
+            && (commercialContract !== 'commercial-0.3.56-durable-dev.v1'
+                || this.env.ENVIRONMENT !== 'DEV'
+                || this.env.DEVICE_EVENT_V2_COMMERCIAL_0356_DEV_ENABLED !== 'true')) {
+          throw new Error('CHANNEL_CONTRACT_NOT_ADMITTED');
+        }
+        if (commercialContract !== null
+            && (typeof this.ctx.getWebSocketAutoResponseTimestamp !== 'function'
+                || this.env.COMMANDER_RECOVERY_ALERTS_ENABLED !== 'true')) {
+          throw new Error('CHANNEL_COMMERCIAL_DETECTOR_REQUIRED');
+        }
 
         return await this.withPresence(async()=>{
         await clearPendingOffline(this.ctx);
@@ -275,11 +297,14 @@ export class DeviceChannel extends DurableObject {
           tenant_id: tenantId,
           device_id: deviceId,
           superseded: false,
+          event_v2_contract: commercialContract,
+          connected_at_ms: Date.now(),
         });
         this.ctx.acceptWebSocket(server, [
           "tenant:" + tenantId,
           "device:" + deviceId,
         ]);
+        if (commercialContract) await this.ctx.storage.setAlarm(Date.now() + COMMERCIAL_STALE_MS);
 
         return new Response(null, { status: 101, webSocket: client });
         });
@@ -352,6 +377,7 @@ export class DeviceChannel extends DurableObject {
         const sockets = currentSockets(this.ctx);
         if (sockets.length < 1) throw new Error("CHANNEL_TRANSIENT_OFFLINE");
         const attachment=sockets[0].deserializeAttachment();
+        if (attachment.event_v2_contract != null) throw new Error('CHANNEL_TRANSIENT_NOT_ADMITTED');
         const active=await this.env.PRODUCT_DB.prepare(
           "SELECT 1 AS active FROM commander_devices WHERE tenant_id=? AND device_id=? "+
           "AND state='ACTIVE' AND revoked_at_utc IS NULL AND tunnel_mode='EVENT_V2'"
@@ -397,6 +423,7 @@ export class DeviceChannel extends DurableObject {
         return json({
           schema: CHANNEL_SCHEMA,
           connected: currentSockets(this.ctx).length,
+          event_v2_contract: currentSockets(this.ctx)[0]?.deserializeAttachment()?.event_v2_contract ?? null,
         });
       }
 
@@ -511,7 +538,13 @@ export class DeviceChannel extends DurableObject {
     // Short network blips are coalesced in the per-device DO instead of
     // amplifying into an immediate OFFLINE -> ONLINE D1 write pair.
     try {
-      await this.withPresence(()=>scheduleDisconnected(this.ctx, socket.deserializeAttachment()));
+      await this.withPresence(()=>{
+        const attachment = socket.deserializeAttachment();
+        if (attachment?.event_v2_contract === COMMERCIAL_CONTRACT) {
+          attachment.probe_anchor_ms = this.commercialProbeAnchor(socket);
+        }
+        return scheduleDisconnected(this.ctx, attachment);
+      });
     } catch (_error) {
       // Presence will fail stale after the bounded Event V2 liveness window.
     }
@@ -526,6 +559,12 @@ export class DeviceChannel extends DurableObject {
   async alarm() {
     return this.withPresence(async()=>{
     const pending = await this.ctx.storage.get(PENDING_OFFLINE_KEY);
+    const commercial = currentSockets(this.ctx).find(socket =>
+      socket.deserializeAttachment()?.event_v2_contract === COMMERCIAL_CONTRACT);
+    if (commercial && this.commercialDetectorEnabled()) {
+      await this.observeCommercialChannel(commercial);
+      return;
+    }
     if (!pending) return;
 
     const reconnected = currentSockets(this.ctx).length > 0;
@@ -535,9 +574,144 @@ export class DeviceChannel extends DurableObject {
     }
 
     // Let an uncaught failure retry under the Durable Objects alarm contract.
+    if (pending.event_v2_contract === COMMERCIAL_CONTRACT && this.commercialDetectorEnabled()) {
+      await this.recordCommercialLoss(pending, 'EVENT_V2_CHANNEL_CLOSED');
+    }
     await markDisconnected(this.env, pending);
     await this.ctx.storage.delete(PENDING_OFFLINE_KEY);
     });
+  }
+
+  commercialDetectorEnabled() {
+    return this.env.ENVIRONMENT === 'DEV'
+      && this.env.DEVICE_EVENT_V2_COMMERCIAL_0356_DEV_ENABLED === 'true'
+      && this.env.COMMANDER_RECOVERY_ALERTS_ENABLED === 'true';
+  }
+
+  commercialProbeAnchor(socket) {
+    const connected = socket.deserializeAttachment()?.connected_at_ms;
+    const timestamp = this.ctx.getWebSocketAutoResponseTimestamp(socket);
+    const probe = timestamp === null ? connected : Number(timestamp);
+    if (!Number.isSafeInteger(connected) || !Number.isSafeInteger(probe)
+        || connected < 0 || probe < 0 || Math.max(connected, probe) > Date.now()) {
+      throw new Error('CHANNEL_PROBE_TIMESTAMP_INVALID');
+    }
+    return Math.max(connected, probe);
+  }
+
+  async commercialDevice(attachment) {
+    return this.env.PRODUCT_DB.prepare(
+      'SELECT device_id,tenant_id,state,revoked_at_utc,approval_mode,tunnel_mode,last_seen_at_utc '+
+      'FROM commander_devices WHERE tenant_id=? AND device_id=?'
+    ).bind(attachment.tenant_id,attachment.device_id).first();
+  }
+
+  commercialLive(device) {
+    return device?.state === 'ACTIVE' && !device.revoked_at_utc && device.tunnel_mode === 'EVENT_V2';
+  }
+
+  endCommercialAuthorization(socket, attachment) {
+    socket.serializeAttachment({...attachment, superseded:true});
+    socket.close(4003, 'CHANNEL_AUTHORIZATION_ENDED');
+  }
+
+  async recoverCommercialChannel(socket, attachment, device, incident, anchor) {
+    let recovered;
+    try { recovered = await observeEventV2ChannelRecovery(this.env, device, incident); }
+    catch (error) {
+      if (!['DEVICE_AUTH_INVALID','RECOVERY_EVENT_STALE_OR_OUT_OF_ORDER'].includes(error?.message)) throw error;
+      if (this.commercialLive(await this.commercialDevice(attachment))) throw error;
+      this.endCommercialAuthorization(socket, attachment);
+      return;
+    }
+    // A successful INSERT or replay is historical persistence, not a lease to
+    // override a manual stop committed while that write was awaiting I/O.
+    if (!this.commercialLive(await this.commercialDevice(attachment))) {
+      this.endCommercialAuthorization(socket, attachment);
+      return;
+    }
+    if (recovered) await this.ctx.storage.delete(COMMERCIAL_INCIDENT_KEY);
+    await this.ctx.storage.setAlarm(anchor + COMMERCIAL_STALE_MS);
+  }
+
+  async recordCommercialLoss(attachment, code) {
+    let incident = await this.ctx.storage.get(COMMERCIAL_INCIDENT_KEY);
+    if (incident) return incident;
+    const device = await this.commercialDevice(attachment);
+    if (!device || device.state !== 'ACTIVE' || device.revoked_at_utc
+        || device.tunnel_mode !== 'EVENT_V2' || device.approval_mode !== 'PERSISTENT_TRUSTED') return null;
+    const anchor = attachment.probe_anchor_ms ?? attachment.connected_at_ms;
+    try {
+      incident = await observeEventV2ChannelLoss(this.env, device, {
+        probe_anchor_ms: anchor,
+        at_ms: code === 'EVENT_V2_PROBE_STALE' ? anchor + COMMERCIAL_STALE_MS : attachment.scheduled_at_ms,
+        error_code: code,
+      });
+    } catch (error) {
+      if (!['DEVICE_AUTH_INVALID','RECOVERY_EVENT_STALE_OR_OUT_OF_ORDER'].includes(error?.message)) throw error;
+      const current = await this.commercialDevice(attachment);
+      if (current?.state === 'ACTIVE' && !current.revoked_at_utc && current.tunnel_mode === 'EVENT_V2') throw error;
+      return null; // a live lifecycle change is a stop, not an incident/retry loop
+    }
+    if (incident) await this.ctx.storage.put(COMMERCIAL_INCIDENT_KEY, incident);
+    return incident;
+  }
+
+  async observeCommercialChannel(socket) {
+    const attachment = socket.deserializeAttachment();
+    const anchor = this.commercialProbeAnchor(socket);
+    // Even a fresh transport probe cannot extend a revoked enrollment or a
+    // manual stop when the best-effort invalidation RPC was lost.
+    if (!this.commercialLive(await this.commercialDevice(attachment))) {
+      this.endCommercialAuthorization(socket, attachment);
+      return;
+    }
+    let incident = await this.ctx.storage.get(COMMERCIAL_INCIDENT_KEY);
+    if (!incident && Date.now() - anchor < COMMERCIAL_STALE_MS) {
+      // Native auto-response timestamps, not OPEN/PING/PID, prove traffic.
+      // A healthy alarm reads lifecycle only; it performs no D1 writes.
+      await this.ctx.storage.setAlarm(anchor + COMMERCIAL_STALE_MS);
+      return;
+    }
+    if (!incident) incident = await this.recordCommercialLoss({...attachment, probe_anchor_ms:anchor}, 'EVENT_V2_PROBE_STALE');
+    const device = await this.commercialDevice(attachment);
+    if (!this.commercialLive(device)) {
+      this.endCommercialAuthorization(socket, attachment);
+      return;
+    }
+    // Auto-responses can arrive while D1 persistence is awaiting I/O. Recheck
+    // after that boundary before changing presence or closing a healthy peer.
+    const latest = this.commercialProbeAnchor(socket);
+    const probe = this.ctx.getWebSocketAutoResponseTimestamp(socket);
+    if (incident && probe !== null && Number(probe) >= attachment.connected_at_ms
+        && latest > incident.probe_anchor_ms && Date.now() - latest < COMMERCIAL_STALE_MS) {
+      await this.recoverCommercialChannel(socket, attachment, device, incident, latest);
+      return;
+    }
+    if (Date.now() - latest < COMMERCIAL_STALE_MS) {
+      await this.ctx.storage.setAlarm(latest + COMMERCIAL_STALE_MS);
+      return;
+    }
+    const transition = await markDisconnected(this.env, attachment);
+    const afterWrite = this.commercialProbeAnchor(socket);
+    if (transition?.changed && afterWrite > latest && Date.now() - afterWrite < COMMERCIAL_STALE_MS) {
+      // Only undo our automatic presence transition. The canonical manual
+      // stop uses OUTBOUND_RELAY_OFFLINE, which this CAS cannot overwrite,
+      // even when it shares the exact timestamp with our write.
+      const restored = await this.env.PRODUCT_DB.prepare(
+        "UPDATE commander_devices SET tunnel_mode='EVENT_V2' WHERE tenant_id=? AND device_id=? "+
+        "AND state='ACTIVE' AND revoked_at_utc IS NULL AND tunnel_mode='EVENT_V2_OFFLINE' AND last_seen_at_utc=?"
+      ).bind(attachment.tenant_id,attachment.device_id,transition.seen_at_utc).run();
+      if (restored.meta?.changes) {
+        const current = await this.commercialDevice(attachment);
+        if (incident && current?.state === 'ACTIVE' && !current.revoked_at_utc && current.tunnel_mode === 'EVENT_V2') {
+          await this.recoverCommercialChannel(socket, attachment, current, incident, afterWrite);
+          return;
+        }
+      }
+    }
+    socket.serializeAttachment({...attachment, superseded:true});
+    socket.close(4002, 'CHANNEL_PROBE_STALE');
   }
 
   webSocketError(socket, _error) {
