@@ -308,6 +308,23 @@ class SourceReviewTests(unittest.TestCase):
         self.assertEqual(index["source_tree"], self.tree)
         self.assertEqual(payloads["source/" + AGENTS[1]], self.files[AGENTS[1]])
 
+    def test_replace_refs_cannot_substitute_bytes_for_exact_pinned_commit(self):
+        # Replacement refs are navigation/repair overlays, not the original
+        # commit's content identity. Only this owned fixture creates one.
+        replacement_bytes = self.files[AGENTS[1]] + b"\n# SYNTHETIC_REPLACEMENT_NOT_IN_PINNED_COMMIT\n"
+        self.write(AGENTS[1], replacement_bytes)
+        self.commit("fixture replacement content")
+        replacement = self.git("rev-parse", "HEAD").decode().strip()
+        self.git("replace", self.head, replacement)
+        self.build(ref=self.head)
+        index, payloads = self.inspect_archive()
+        self.assertEqual(index["source_commit"], self.head)
+        self.assertEqual(index["source_tree"], self.tree,
+                         "replacement tree must not be attributed to the original commit SHA")
+        self.assertEqual(payloads["source/" + AGENTS[1]], self.files[AGENTS[1]],
+                         "Git replacement bytes must not enter the source review")
+        self.assertEqual(payloads["valk/windows-agent-0.3.56-eventv2-review.txt"], self.files[AGENTS[1]])
+
     def test_provenance_claims_cannot_fabricate_signing_pin_admission_or_installability(self):
         self.build()
         index, payloads = self.inspect_archive()

@@ -31,7 +31,8 @@ ALIASES = {
 
 
 def _git(repo, *args):
-    env = dict(os.environ, GIT_PAGER='cat', PAGER='cat', GIT_TERMINAL_PROMPT='0')
+    env = dict(os.environ, GIT_PAGER='cat', PAGER='cat', GIT_TERMINAL_PROMPT='0',
+               GIT_NO_REPLACE_OBJECTS='1')
     # Do not inherit an alternate index/worktree from the caller.
     for name in ('GIT_DIR', 'GIT_WORK_TREE', 'GIT_INDEX_FILE', 'GIT_COMMON_DIR'):
         env.pop(name, None)
