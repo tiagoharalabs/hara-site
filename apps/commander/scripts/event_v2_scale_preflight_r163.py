@@ -194,11 +194,21 @@ def build_budget_alternatives(*, proposed=None, metering=None, reconnect_limit_p
         combined_events = 6 * plan['recovery_selected_devices']
         combined_queue = 12 * (plan['totals']['scan_jobs'] + (combined_events + 9) // 10)
         plan['p0_322_combined_envelope'] = {
+            'guardian_workers_per_device': 1,
             'states_per_device_upper': 6, 'events': combined_events,
             'queue_ops_upper': combined_queue,
             'fits_proposed_events_and_queue': combined_events <= plan['proposed']['events']
                 and combined_queue <= plan['proposed']['queue_ops'],
-            'scope': 'Agent four-state envelope plus independent SERVER DEGRADED/RECOVERED pair; budget both origins, not just one.'}
+            'scope': 'One selected guardian worker, at most one emission per state, plus one SERVER pair. Additional transitions require STOP/re-budget; this is not an unlimited-incident bound.'}
+        both_events = 10 * plan['recovery_selected_devices']
+        both_queue = 12 * (plan['totals']['scan_jobs'] + (both_events + 9) // 10)
+        plan['p0_322_both_guardians_envelope'] = {
+            'guardian_workers_per_device': 2, 'state_emissions_per_worker': 4,
+            'server_pairs_per_device': 1, 'states_per_device_upper': 10,
+            'events': both_events, 'queue_ops_upper': both_queue,
+            'fits_proposed_events_and_queue': both_events <= plan['proposed']['events']
+                and both_queue <= plan['proposed']['queue_ops'],
+            'scope': 'heartbeat and executor each emit up to four selected states, plus one SERVER pair. Further cycles/transitions stop and require explicit re-budget.'}
         plan['unit_rate_exposure'] = {
             'claim': 'PARTIAL_MODEL_BEFORE_ACCOUNT_ALLOWANCES_AND_ROUNDING',
             'queue_usd_equivalent': plan['totals']['queue_ops_upper'] * 0.40 / 1000000,

@@ -51,6 +51,23 @@ class BudgetEnvelope(unittest.TestCase):
         self.assertTrue(result['native_budget_gaps']['do_alarm_ops'])
         self.assertTrue(result['native_budget_gaps']['do_storage_and_duration'])
 
+    def test_two_guardian_workers_have_a_separate_explicit_bounded_fault_scope(self):
+        result = MODULE.build_budget_alternatives()
+        for key, events, ops in [('full', 225000, 272832), ('reduced', 100000, 122832)]:
+            with self.subTest(scope=key):
+                item = result['alternatives'][key]
+                single = item['p0_322_combined_envelope']
+                self.assertEqual(single['guardian_workers_per_device'], 1)
+                both = item['p0_322_both_guardians_envelope']
+                self.assertEqual(both['guardian_workers_per_device'], 2)
+                self.assertEqual(both['states_per_device_upper'], 10)
+                self.assertEqual(both['events'], events)
+                self.assertEqual(both['queue_ops_upper'], ops)
+                self.assertFalse(both['fits_proposed_events_and_queue'])
+                self.assertEqual(both['state_emissions_per_worker'], 4)
+                self.assertEqual(both['server_pairs_per_device'], 1)
+                self.assertFalse(item['execute_allowed'])
+
 
 if __name__ == '__main__':
     unittest.main()
