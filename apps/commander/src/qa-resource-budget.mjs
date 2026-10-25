@@ -130,7 +130,7 @@ export class ResourceBudget {
       const debit=this.#db.prepare(
         'UPDATE r163_qa_resource_budget SET charged_upper_json=json_set(charged_upper_json,'+edits+'),'+
         "provider_baseline_json=CASE WHEN provider_baseline_json='{}' THEN provider_json ELSE provider_baseline_json END,"+
-        'provider_highwater_json=provider_json,revision=revision+1 WHERE id=1 AND EXISTS('+ 
+        'provider_highwater_json=provider_json,revision=revision+1 WHERE id=1 AND EXISTS('+
         'SELECT 1 FROM r163_qa_resource_operations WHERE operation_id=? AND nonce=? AND debited=0)'
       ).bind(...OPERATION_DIMENSIONS.map(k=>upper[k]),operationId,nonce);
       const stamp=this.#db.prepare('UPDATE r163_qa_resource_operations SET debited=1 WHERE operation_id=? AND nonce=?')
