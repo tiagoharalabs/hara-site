@@ -2567,7 +2567,7 @@ function Send-WindowsRelayCompletion($Cfg,[string]$Token,[string]$RequestId,$Bod
 
 function Repair-WindowsRelayJournal($Cfg=$null,[string]$Token=$null,[int]$Limit=64) {
   Initialize-WindowsRelayStore
-  $rows=@(Invoke-LocalDbQuery "SELECT * FROM windows_relay_calls WHERE phase IN ('PREPARING','RESERVED','EXECUTING') OR completion_json IS NOT NULL ORDER BY updated_at_utc LIMIT ?" @($Limit))
+  $rows=@(Invoke-LocalDbQuery "SELECT * FROM windows_relay_calls WHERE phase IN ('PREPARING','RESERVED','EXECUTING') OR completion_json IS NOT NULL OR (phase IN ('UNCERTAIN','FAILED','EXECUTED') AND delivery_state='NONE') ORDER BY updated_at_utc LIMIT ?" @($Limit))
   foreach($row in $rows){
     $call=[pscustomobject]@{call_id=[string]$row.call_id;request_id=[string]$row.request_id}
     if(@('PREPARING','RESERVED','EXECUTING') -ccontains [string]$row.phase){
@@ -2579,6 +2579,12 @@ function Repair-WindowsRelayJournal($Cfg=$null,[string]$Token=$null,[int]$Limit=
         $result=@{state=if($uncertain){'INDETERMINATE'}else{'DENIED'};runtime_authority_from_chatgpt=$false;mutation_performed=if($uncertain){$null}else{$false};result=@{};blocker=@{code=$code}}
         Set-WindowsRelayCompletion $call 'FAILED' $result $code
       }
+    } elseif([string]$row.delivery_state -ceq 'NONE' -and -not $row.completion_json -and @('UNCERTAIN','FAILED','EXECUTED') -ccontains [string]$row.phase){
+      # A crash can commit a terminal phase before its completion. The lost
+      # result cannot prove PASS or no effect; retain the phase and receipt.
+      $result=@{state='INDETERMINATE';runtime_authority_from_chatgpt=$false;mutation_performed=$null;result=@{};blocker=@{code='CALL_OUTCOME_UNCERTAIN'}}
+      if($row.receipt_sha256){$result.bridge_receipt_sha256=[string]$row.receipt_sha256}
+      Set-WindowsRelayCompletion $call 'FAILED' $result 'CALL_OUTCOME_UNCERTAIN'
     }
     if($Cfg){
       $pending=@(Invoke-LocalDbQuery 'SELECT completion_json FROM windows_relay_calls WHERE request_id=?' @([string]$row.request_id))

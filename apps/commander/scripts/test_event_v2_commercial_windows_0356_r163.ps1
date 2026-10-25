@@ -55,7 +55,6 @@ $unchanged=@{
  'New-WindowsRelayClaim'='c8e42a1c5ce1dd1c474a5a6cae658549106ec1ddb7461bbafdf95292a792323e'
  'Set-WindowsRelayPhase'='4b5c6154fceb9cd5fad388210a43391b84c0fb113670262427408b21dcf2b2ae'
  'Set-WindowsRelayCompletion'='642a3aa6fb5f4e3a7d3a9e97722c1407cdd194d8e20107fa246d33ec91ef9b95'
- 'Repair-WindowsRelayJournal'='28affbd1fed9cd0ea6f2f4ec2a12399598285a88560542235cc94527c6e265ba'
  'Invoke-WindowsRelayCall'='8de449cff0cc5688b7ef6b3daf725d7bd018130ba70751350363cbc6430f09f2'
  'Stop-WindowsRelayProcess'='ba68e131a2338f73b83633c78d742d142a2ff0215bc5b355c5de9ed33b8bf6af'
  'Stop-WindowsRelayChild'='d7774bba1c42253b86ccb39691d8b620b1b0bc4d057b2509709692d3acdf1d7b'
@@ -64,6 +63,9 @@ $unchanged=@{
 foreach($name in $unchanged.Keys){
  Check ($functions.ContainsKey($name) -and (Text-Sha256 $functions[$name].Extent.Text) -ceq $unchanged[$name]) ('P02_BASELINE_UNCHANGED_'+$name)
 }
+# Authorized journal orphan delta: the other P02 definitions stay pinned above.
+# Executable crash/restart/receipt/quota cases live in the adjacent orphan harness.
+Check ((Text-Sha256 $functions['Repair-WindowsRelayJournal'].Extent.Text) -ceq 'c81acc04f79292ec3ac043ecf0b19e18a50109ede9401777bb432cd50e47334b') 'REVIEWED_WINDOWS_JOURNAL_ORPHAN_FIX'
 $required=@('Test-WindowsEventV2Dev','New-WindowsEventV2WakeSignal','New-WindowsEventV2DrainGate','Wait-WindowsEventV2Work','Set-WindowsEventV2ClaimResult')
 $missing=@($required | Where-Object {-not $functions.ContainsKey($_)})
 if($missing.Count){
