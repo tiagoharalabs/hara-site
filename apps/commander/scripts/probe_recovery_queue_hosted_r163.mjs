@@ -7,6 +7,8 @@ import {createHash,randomBytes} from 'node:crypto';
 import {promisify} from 'node:util';
 import {execFile} from 'node:child_process';
 import {CAPS,withinBudget} from './recovery_queue_budget_r163.mjs';
+const sloOnly=process.argv[4]==='--slo-only';
+if(process.argv[4]&&!sloOnly)throw Error('UNKNOWN_CAMPAIGN_MODE');
 const execute=promisify(execFile),hash=x=>createHash('sha256').update(x).digest('hex');
 const NODE='/home/sartorius/.nvm/versions/node/v24.15.0/bin/node';
 const WRANGLER='/srv/hara/repos/local-git-gateway/worktrees/hara-site/commander-product-current/node_modules/wrangler/bin/wrangler.js';
@@ -33,6 +35,12 @@ let number=0,active=false,queueFault=false,previousDevices=0,sharedAnchors=null;
 const evidence={schema:'hara.commander.r163.hosted-queue-campaign.v1',state:'RUNNING',source_commit:state.source_commit,
  worker:WORKER,d1:DBID,queue:QUEUE,dlq:DLQ,caps:CAPS,commercial:false,prod_modified:false,
  native_queue:true,hosted_20k:false,hosted_20k_gate:'HOLD_ADDITIONAL_BUDGET',stages:[],native_queries:[],receipts:[]};
+if(sloOnly){
+ const previous=JSON.parse(fs.readFileSync(path.join(output,'campaign-evidence-attempt4.json'),'utf8'));
+ assert.equal(previous.stages.length,3);assert.ok(previous.stages.every(s=>s.state==='PASS_HOSTED_DELIVERY'));
+ evidence.stages=previous.stages;evidence.receipts=previous.receipts;evidence.delivery_source_commit=previous.source_commit;
+ assert.equal(new Set(evidence.receipts.map(r=>r.server_id)).size,150);
+}
 const checkpoint=()=>fs.writeFileSync(path.join(output,'campaign-evidence.json'),JSON.stringify(evidence,null,2)+'\n',{mode:0o600});
 async function cli(args,input){
  const options={cwd:output,env:nativeEnv,timeout:60000,maxBuffer:8*1024*1024};
@@ -154,7 +162,14 @@ try{
  await debit({events:50});
  await map(state.devices.slice(0,50),d=>deviceRequest(d,'/api/device/heartbeat',{device_id:d.id,agent_version:'0.3.54',architecture:'x86_64',approval_mode:'PERSISTENT_TRUSTED'},200));
  sharedAnchors=await query('SELECT device_id,last_seen_at_utc FROM commander_devices WHERE tenant_id='+literal(state.tenant),{maxReads:150});assert.equal(sharedAnchors.length,50);
- for(const [c,n] of [[1,50],[2,50],[4,50]]){await stage(c,n);if(c===1){await control('fault',{});queueFault=true;}}
+ if(!sloOnly){
+  for(const [c,n] of [[1,50],[2,50],[4,50]]){await stage(c,n);if(c===1){await control('fault',{});queueFault=true;}}
+  // The outage clock begins after the delivery ramp, not before minutes of
+  // independent receipt verification. All timestamps still come from real
+  // authenticated heartbeats; none are backdated or scaled.
+  await map(state.devices.slice(0,50),d=>deviceRequest(d,'/api/device/heartbeat',{device_id:d.id,agent_version:'0.3.54',architecture:'x86_64',approval_mode:'PERSISTENT_TRUSTED'},200));
+  sharedAnchors=await query('SELECT device_id,last_seen_at_utc FROM commander_devices WHERE tenant_id='+literal(state.tenant),{maxReads:150});
+ }
  const last=Math.max(...sharedAnchors.map(r=>Date.parse(r.last_seen_at_utc)));
  await waitUntil(async()=>{await check();return Date.now()>=last+121000;},last+125000,{intervalMs:5000});
  const before=(await check()).jobs.filter(j=>j.kind==='SCAN').map(j=>j.message_id),scanStart=Date.now(),plan=await control('produce',{});let observed;

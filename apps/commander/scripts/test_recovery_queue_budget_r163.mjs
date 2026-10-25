@@ -107,3 +107,12 @@ test('active load timer pauses without replenishing its 30-minute allowance',asy
  await pauseRecoveryBudget(f.env.PRODUCT_DB,9240000);assert.equal(f.row().active_ms_used,CAPS.active_ms);
  await assert.rejects(()=>startRecoveryBudget(f.env.PRODUCT_DB,9240001),/HOLD_CAMPAIGN_NOT_RESUMABLE/);
 });
+test('verified historical padding is distinct from gross usage and cannot replenish consumed active time',async t=>{
+ const {startRecoveryBudget,pauseRecoveryBudget}=await import('./recovery_queue_budget_r163.mjs');const f=fixture(t,{state:'PAUSED',activeUsed:1800000});
+ f.db.exec('UPDATE r163_qa_budget SET historical_padding_ms=212610');
+ const a=await startRecoveryBudget(f.env.PRODUCT_DB,1000);assert.equal(a.deadline_ms,213610);
+ await pauseRecoveryBudget(f.env.PRODUCT_DB,213610);assert.equal(f.row().active_ms_used,2012610);
+ assert.equal(f.row().active_ms_used-f.row().historical_padding_ms,CAPS.active_ms);
+ await assert.rejects(()=>startRecoveryBudget(f.env.PRODUCT_DB,213611),/HOLD_CAMPAIGN_NOT_RESUMABLE/);
+ assert.throws(()=>f.db.exec('UPDATE r163_qa_budget SET historical_padding_ms=212611'),/CHECK constraint failed/);
+});

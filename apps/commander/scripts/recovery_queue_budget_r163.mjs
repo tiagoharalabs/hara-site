@@ -5,6 +5,7 @@ export const BUDGET_SCHEMA=`CREATE TABLE IF NOT EXISTS r163_qa_budget(
  id INTEGER PRIMARY KEY CHECK(id=1),state TEXT NOT NULL,start_ms INTEGER NOT NULL,
  deadline_ms INTEGER NOT NULL,rows_read INTEGER NOT NULL,rows_written INTEGER NOT NULL,
  active_ms_used INTEGER NOT NULL DEFAULT 0,active_since_ms INTEGER NOT NULL DEFAULT 0,
+ historical_padding_ms INTEGER NOT NULL DEFAULT 0 CHECK(historical_padding_ms BETWEEN 0 AND 212610),
  reserved_read INTEGER NOT NULL DEFAULT 0,reserved_write INTEGER NOT NULL DEFAULT 0,
  queue_ops_upper INTEGER NOT NULL DEFAULT 0,events_reserved INTEGER NOT NULL DEFAULT 0,
  invocations INTEGER NOT NULL DEFAULT 0,anomaly TEXT);
@@ -74,16 +75,16 @@ export async function startRecoveryBudget(db,now=Date.now()){
  // and consumed time never reset. STOPPED remains terminal; no client sets time.
  const row=await db.prepare(`UPDATE r163_qa_budget SET state='ACTIVE',
   start_ms=CASE WHEN start_ms=0 THEN ? ELSE start_ms END,
-  deadline_ms=?+?-active_ms_used,active_since_ms=?
-  WHERE id=1 AND state='PAUSED' AND active_ms_used<?
+  deadline_ms=?+?-active_ms_used+historical_padding_ms,active_since_ms=?
+  WHERE id=1 AND state='PAUSED' AND active_ms_used-historical_padding_ms<?
    AND rows_read+reserved_read<? AND rows_written+reserved_write<? AND queue_ops_upper<? AND events_reserved<=?
   RETURNING *`).bind(now,now,CAPS.active_ms,now,CAPS.active_ms,CAPS.reads,CAPS.writes,CAPS.queue,CAPS.events).first();
  if(!row)throw Error('HOLD_CAMPAIGN_NOT_RESUMABLE');return row;
 }
 export async function pauseRecoveryBudget(db,now=Date.now()){
- await db.prepare(`UPDATE r163_qa_budget SET active_ms_used=MIN(?,active_ms_used+MAX(0,?-active_since_ms)),
+ await db.prepare(`UPDATE r163_qa_budget SET active_ms_used=active_ms_used+MAX(0,?-active_since_ms),
   active_since_ms=0,state=CASE WHEN state='STOPPED' THEN state ELSE 'PAUSED' END
-  WHERE id=1 AND active_since_ms>0`).bind(CAPS.active_ms,now).run();
+  WHERE id=1 AND active_since_ms>0`).bind(now).run();
 }
 export async function readRecoveryQaStatus(env){
  if(env.ENVIRONMENT!=='DEV'||env.R163_QA_ISOLATED!=='true')throw Error('HOLD_QA_ISOLATION');
@@ -110,5 +111,6 @@ export async function readRecoveryQaStatus(env){
    anomaly=COALESCE(?,anomaly) WHERE id=1`).bind(reads,writes,read,writes,anomaly,anomaly).run();
  }
  const budget=await db.prepare('SELECT * FROM r163_qa_budget WHERE id=1').bind().first();
+ budget.active_ms_effective=budget.active_ms_used-budget.historical_padding_ms;
  return {schema:'hara.commander.r163.queue-campaign.v1',budget,caps:CAPS,jobs,dlq,server_ms:Date.now(),commercial:false};
 }
