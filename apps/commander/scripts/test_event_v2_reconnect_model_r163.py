@@ -58,6 +58,8 @@ class ModelTests(unittest.TestCase):
             '--devices','500','--attempts','2','--json','--check'],capture_output=True,text=True)
         self.assertEqual(p.returncode,0,p.stderr)
         value=json.loads(p.stdout)
+        self.assertEqual(value['schema'],'hara.commander-event-v2-reconnect-storm.v2')
+        self.assertIs(value['policy']['full_jitter'],False)
         self.assertEqual(value['model_check'],'MODEL_PASS')
         self.assertEqual(value['hosted_gate'],'HOSTED_20K_HOLD')
         self.assertFalse(value['commercial_agent_event_v2_parity'])

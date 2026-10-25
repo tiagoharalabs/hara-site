@@ -165,7 +165,7 @@ def main() -> int:
 
     if args.json:
         print(json.dumps({
-            "schema": "hara.commander-event-v2-reconnect-storm.v1",
+            "schema": "hara.commander-event-v2-reconnect-storm.v2",
             "model_check": "MODEL_PASS" if args.check else "NOT_CHECKED",
             "hosted_gate": "HOSTED_20K_HOLD",
             "commercial_agent_event_v2_parity": False,
@@ -175,6 +175,7 @@ def main() -> int:
                 "max_seconds": policy.max_seconds,
                 "minimum_seconds": policy.minimum_seconds,
                 "startup_seconds": policy.startup_seconds,
+                "full_jitter": False,
                 "jitter": "UNIFORM_WITH_RETRY_FLOOR",
             },
             "rows": rows,
