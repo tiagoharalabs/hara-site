@@ -2745,10 +2745,49 @@ public sealed class HaraRelayProcess : IDisposable {
 '@
 }
 
-function Start-WindowsRelayProcess([string]$Role,$Cfg,$Abandoned,[string]$AgentPath) {
+function Test-WindowsEventV2Dev($Cfg) {
+  $flag=$Cfg.event_v2_dev_enabled
+  if($null -eq $flag){return $false}
+  if($flag -isnot [bool]){throw 'EVENT_V2_DEV_FLAG_INVALID'}
+  if(-not $flag){return $false}
+  if([string]$Cfg.environment -cne 'DEV' -or [string]$Cfg.base_url -cne 'https://hara-commander-r163-canary-20261024.tiago-sartori.workers.dev' -or ($Cfg.transport_mode -and [string]$Cfg.transport_mode -cne 'OUTBOUND_RELAY')){throw 'EVENT_V2_DEV_SCOPE_INVALID'}
+  return $true
+}
+function New-WindowsEventV2WakeSignal($Cfg) {
+  if([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT -or -not (Test-WindowsEventV2Dev $Cfg)){throw 'EVENT_V2_NATIVE_WINDOWS_REQUIRED'}
+  $sid=[Security.Principal.WindowsIdentity]::GetCurrent().User
+  $security=New-Object Security.AccessControl.EventWaitHandleSecurity
+  $security.SetAccessRuleProtection($true,$false)
+  $rule=New-Object Security.AccessControl.EventWaitHandleAccessRule -ArgumentList $sid,([Security.AccessControl.EventWaitHandleRights]::FullControl),([Security.AccessControl.AccessControlType]::Allow)
+  $security.AddAccessRule($rule)
+  $name='Local\HaraEventV2-'+(Get-EnrollmentContext $Cfg)+'-'+$PID+'-'+[guid]::NewGuid().ToString('N')
+  $created=$false
+  $handle=[Threading.EventWaitHandle]::new($false,[Threading.EventResetMode]::AutoReset,$name,[ref]$created,$security)
+  if(-not $created){$handle.Dispose();throw 'EVENT_V2_WAKE_ALREADY_EXISTS'}
+  return @{name=$name;handle=$handle}
+}
+function New-WindowsEventV2DrainGate($Signal) {
+  return @{signal=$Signal;remaining=8}
+}
+function Wait-WindowsEventV2Work($Gate) {
+  if($Gate.remaining -gt 0){return $true}
+  if(-not $Gate.signal.WaitOne(500)){return $false}
+  $Gate.remaining=8;return $true
+}
+function Set-WindowsEventV2ClaimResult($Gate,[bool]$HasCall) {
+  if(-not $HasCall){$Gate.remaining=0;return}
+  $Gate.remaining=[Math]::Max(0,$Gate.remaining-1)
+  if($Gate.remaining -eq 0){[void]$Gate.signal.Set();Start-Sleep -Milliseconds 100}
+}
+function Start-WindowsEventV2Heartbeat($Cfg,[string]$Token,$Signal) {
+  . (Join-Path $PSScriptRoot 'event_v2_dev.ps1')
+  Invoke-CommercialEventV2Heartbeat $Cfg $Token $Signal
+}
+
+function Start-WindowsRelayProcess([string]$Role,$Cfg,$Abandoned,[string]$AgentPath,[string]$WakeName=$null) {
   Initialize-WindowsRelayProcessType
   $nonce=[guid]::NewGuid().ToString('N')+[guid]::NewGuid().ToString('N')
-  $handshake=@{schema='hara.commander.relay-worker-handshake.v1';nonce=$nonce;abandoned=@($Abandoned)} | ConvertTo-Json -Depth 6 -Compress
+  $handshake=@{schema='hara.commander.relay-worker-handshake.v1';nonce=$nonce;abandoned=@($Abandoned);event_v2_wake_name=$WakeName} | ConvertTo-Json -Depth 6 -Compress
   $parentStart=(Get-Process -Id $PID).StartTime.ToUniversalTime().ToString('o')
   return New-Object HaraRelayProcess -ArgumentList (Join-Path $PSHOME 'powershell.exe'),([IO.Path]::GetFullPath($AgentPath)),$Role,([string]$PID),$parentStart,(Get-EnrollmentContext $Cfg),$nonce,$handshake
 }
@@ -2805,7 +2844,8 @@ function Stop-WindowsRelayChild($State,[string]$Role) {
 }
 function Start-WindowsRelayChild($State,$Cfg,[string]$Role,[double]$Now) {
   $seeds=if($Role -ceq 'executor'){@($State.abandoned.Values)}else{@()}
-  $process=Start-WindowsRelayProcess $Role $Cfg $seeds $State.agentPath
+  $wakeName=if($State.eventV2Wake){[string]$State.eventV2Wake.name}else{$null}
+  $process=Start-WindowsRelayProcess $Role $Cfg $seeds $State.agentPath $wakeName
   $State.children[$Role]=@{process=$process;deadline=$Now+35.0;ready=$false;networkBackoff=$false;call=$null;fenced=$false}
 }
 function Restart-WindowsRelayChild($State,$Cfg,[string]$Role,[double]$Now) {
@@ -2880,6 +2920,7 @@ function Read-WindowsRelayConfig {
   [void](Get-EnrollmentContext $cfg)
   if(-not $cfg.architecture){throw 'DEVICE_CONFIG_INVALID'}
   if($cfg.transport_mode -and [string]$cfg.transport_mode -cne 'OUTBOUND_RELAY'){throw 'WINDOWS_RELAY_TRANSPORT_REQUIRED'}
+  [void](Test-WindowsEventV2Dev $cfg)
   return $cfg
 }
 function Test-WindowsRelayWorkerContext([int]$ParentId,[string]$ParentStart,[string]$ExpectedContext) {
@@ -2925,16 +2966,27 @@ function Start-WindowsRelayWorker([string[]]$WorkerArgs) {
   $failures=0;$lastRepair=0.0;$burst=0
   $hotUntil=(Get-WindowsRelayNow)+$CallPollStartupHotSeconds
   $approvalLimit=$ApprovalTimeoutSeconds
+  $eventV2=Test-WindowsEventV2Dev $cfg
+  $wakeSignal=$null;$wakeGate=$null
+  if($eventV2){
+    $prefix='Local\HaraEventV2-'+$WorkerArgs[4]+'-'+$parentId+'-'
+    $name=[string]$hello.event_v2_wake_name
+    if(-not $name.StartsWith($prefix,[StringComparison]::Ordinal) -or $name.Substring($prefix.Length) -cnotmatch '^[0-9a-f]{32}$'){throw 'EVENT_V2_WAKE_BINDING_INVALID'}
+    $wakeSignal=[Threading.EventWaitHandle]::OpenExisting($name)
+    if($WorkerArgs[1] -ceq 'executor'){$wakeGate=New-WindowsEventV2DrainGate $wakeSignal}
+  } elseif($hello.event_v2_wake_name){throw 'EVENT_V2_WAKE_NOT_ADMITTED'}
   try {
     while($true){
       $cfg=Test-WindowsRelayWorkerContext $parentId $WorkerArgs[3] $WorkerArgs[4]
       if(-not $cfg){return}
+      if((Test-WindowsEventV2Dev $cfg) -ne $eventV2){throw 'TRANSPORT_CHANGED_RESTART_REQUIRED'}
       $deviceToken=$null
       $delay=2.0;$completed=$false
       try {
         $deviceToken=Get-PlainText (ConvertTo-SecureString ([string]$cfg.encrypted_device_token))
         if([string]::IsNullOrWhiteSpace($deviceToken)){throw 'DEVICE_CONFIG_INVALID'}
         if($WorkerArgs[1] -ceq 'heartbeat'){
+          if($eventV2){Start-WindowsEventV2Heartbeat $cfg $deviceToken $wakeSignal;return}
           Write-WindowsRelayProgress 'HEARTBEAT_ATTEMPT'
           $reply=Send-Json "$($cfg.base_url)/api/device/heartbeat" $deviceToken @{
             device_id=[string]$cfg.device_id;architecture=[string]$cfg.architecture;agent_version=$AgentVersion;approval_mode=(Get-ApprovalMode $cfg)
@@ -2957,9 +3009,11 @@ function Start-WindowsRelayWorker([string[]]$WorkerArgs) {
             try {Repair-WindowsRelayJournal $cfg $deviceToken 1}catch{if((Get-SafeErrorCode $_) -cin @('HTTP_401','HTTP_403')){throw}}
             $lastRepair=Get-WindowsRelayNow
           }
+          if($wakeGate -and -not (Wait-WindowsEventV2Work $wakeGate)){Write-WindowsRelayProgress 'READY' @{delay=0};continue}
           Write-WindowsRelayProgress 'BUSY'
           try {$call=Send-Json "$($cfg.base_url)/api/device/calls/next" $deviceToken @{} 25}
           catch {if($_.Exception.Response -and [int]$_.Exception.Response.StatusCode -eq 204){$call=$null}else{throw}}
+          if($wakeGate){Set-WindowsEventV2ClaimResult $wakeGate ([bool]($call -and $call.call_id))}
           if($call -and $call.call_id){
             $hotUntil=(Get-WindowsRelayNow)+$CallPollHotWindowSeconds
             $script:WindowsRelayDeadline=Get-WindowsRelayDeadline $call
@@ -2969,12 +3023,13 @@ function Start-WindowsRelayWorker([string[]]$WorkerArgs) {
             finally {$script:WindowsRelayDeadline=$null;$script:ApprovalTimeoutSeconds=$approvalLimit}
           }
           if($completed){$burst++}else{$burst=0}
-          $delay=Get-WindowsRelayPollSleep $completed $burst ((Get-WindowsRelayNow) -lt $hotUntil)
+          $delay=if($wakeGate){0.0}else{Get-WindowsRelayPollSleep $completed $burst ((Get-WindowsRelayNow) -lt $hotUntil)}
           $failures=0
         }
       } catch {
         $code=Get-SafeErrorCode $_
         if($code -cin @('HTTP_401','HTTP_403','DEVICE_AUTH_INVALID')){Write-WindowsRelayProgress 'REVOKED' @{code=$code};return}
+        if($wakeGate){[void]$wakeSignal.Set()}
         $failures=[Math]::Min(6,$failures+1)
         $delay=[Math]::Min(60.0,$(if($code -ceq 'HTTP_429'){30.0}else{2.0})*[Math]::Pow(2,$failures-1))
         if($WorkerArgs[1] -ceq 'heartbeat'){Write-WindowsRelayProgress 'HEARTBEAT_RETRY' @{delay=$delay;code=$code}}
@@ -2983,6 +3038,7 @@ function Start-WindowsRelayWorker([string[]]$WorkerArgs) {
       Start-Sleep -Milliseconds ([int]($delay*1000))
     }
   } finally {
+    if($wakeSignal){$wakeSignal.Dispose()}
     foreach($session in @($script:ManagedWindowsSessions.Values)){try{$session.Dispose()}catch{}}
   }
 }
@@ -2992,9 +3048,12 @@ function Start-WindowsRelaySupervisor($Cfg,[string]$AgentPath) {
   $state.recoveryCfg=$Cfg;$state.alertsEnabled=$true
   $state.attempts.alerts=@();$state.restartCounts.alerts=0
   Initialize-WindowsRecoveryOutbox $Cfg | Out-Null
+  $eventV2=Test-WindowsEventV2Dev $Cfg
+  if($eventV2){$state.eventV2Wake=New-WindowsEventV2WakeSignal $Cfg}
   try {
     while($true){
       $current=Read-WindowsRelayConfig
+      if((Test-WindowsEventV2Dev $current) -ne $eventV2){throw 'TRANSPORT_CHANGED_RESTART_REQUIRED'}
       if((Get-EnrollmentContext $current) -cne $context){throw 'ENROLLMENT_CHANGED_RESTART_REQUIRED'}
       if((Get-ApprovalMode $current) -cne (Get-ApprovalMode $Cfg)){
         foreach($role in @($state.children.Keys)){
@@ -3008,6 +3067,7 @@ function Start-WindowsRelaySupervisor($Cfg,[string]$AgentPath) {
     }
   } finally {
     foreach($role in @($state.children.Keys)){[void](Stop-WindowsRelayChild $state $role)}
+    if($state.eventV2Wake){$state.eventV2Wake.handle.Dispose()}
   }
 }
 
