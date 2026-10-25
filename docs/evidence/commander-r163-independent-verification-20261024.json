@@ -1,0 +1,185 @@
+{
+  "agent_install": false,
+  "branch": "local/commander-beta-0356-review-20261023",
+  "commercial_delivery_enabled": false,
+  "gates": {
+    "cloudflare_20k_load": "HOLD_ADDITIONAL_BUDGET",
+    "hosted_50_device_slo": "PASS_PREVIOUS_QA",
+    "native_20k_websocket": "HOLD",
+    "native_windows_11": "HOLD_VALK",
+    "production_cutover": "DENY",
+    "signed_release": "HOLD",
+    "source_local_20k": "PASS"
+  },
+  "issue": 163,
+  "prod_mutation": false,
+  "qa_cloudflare_mutation": false,
+  "reconnect_risk": {
+    "class": "MODEL_ONLY_NOT_NATIVE_WEBSOCKET_GATE",
+    "devices": 20000,
+    "first_wave_peak_attempts_per_second": 2052,
+    "offline_presence_write_peak_per_second": 722
+  },
+  "reproduce": [
+    "node --test apps/commander/scripts/test_recovery_queue_budget_r163.mjs apps/commander/scripts/test_recovery_queue_dlq_r163.mjs apps/commander/scripts/test_recovery_scan_batch_r163.mjs apps/commander/scripts/test_recovery_scan_concurrency_r163.mjs",
+    "node --test apps/commander/scripts/test_event_v2_reliability_r163.mjs apps/commander/scripts/test_recovery_fanout_r163.mjs apps/commander/scripts/test_recovery_delivery_r163.mjs apps/commander/scripts/test_recovery_transport_r163.mjs",
+    "python3 -I -B apps/commander/scripts/commander_event_v2_reconnect_storm_model.py --check --devices 20000 --attempts 3",
+    "node apps/commander/scripts/probe_recovery_scan_scale_r163.mjs NEW_EMPTY_OUTPUT_JSON"
+  ],
+  "runtime_20k_claim": false,
+  "scan": {
+    "all_cross_tenant": 0,
+    "all_duplicate_events": 0,
+    "devices": 20000,
+    "fault_cases": [
+      {
+        "concurrency": 4,
+        "cross_tenant": 0,
+        "devices": 20000,
+        "duplicate_events": 0,
+        "fault": "stale-preimage",
+        "from_121s_anchor": 123.791761193,
+        "hosted_slo_pass": false,
+        "jobs": 218,
+        "queries": 1138,
+        "retries": 0,
+        "scope": "LOCAL_SQLITE_ONLY",
+        "simulated_lease_expiry": true,
+        "unique_events": 20000,
+        "wall_ms": 2791.7611930000003
+      },
+      {
+        "concurrency": 4,
+        "cross_tenant": 0,
+        "devices": 20000,
+        "duplicate_events": 0,
+        "fault": "successor-token",
+        "from_121s_anchor": 123.721823138,
+        "hosted_slo_pass": false,
+        "jobs": 218,
+        "queries": 1153,
+        "retries": 4,
+        "scope": "LOCAL_SQLITE_ONLY",
+        "simulated_lease_expiry": true,
+        "unique_events": 20000,
+        "wall_ms": 2721.8231379999997
+      },
+      {
+        "concurrency": 4,
+        "cross_tenant": 0,
+        "devices": 20000,
+        "duplicate_events": 0,
+        "fault": "crash-after-lease",
+        "from_121s_anchor": 123.64410557000001,
+        "hosted_slo_pass": false,
+        "jobs": 218,
+        "queries": 1135,
+        "retries": 1,
+        "scope": "LOCAL_SQLITE_ONLY",
+        "simulated_lease_expiry": true,
+        "unique_events": 20000,
+        "wall_ms": 2644.1055700000015
+      },
+      {
+        "concurrency": 4,
+        "cross_tenant": 0,
+        "devices": 20000,
+        "duplicate_events": 0,
+        "fault": "lost-commit-response",
+        "from_121s_anchor": 123.92760142899999,
+        "hosted_slo_pass": false,
+        "jobs": 218,
+        "queries": 1133,
+        "retries": 1,
+        "scope": "LOCAL_SQLITE_ONLY",
+        "simulated_lease_expiry": true,
+        "unique_events": 20000,
+        "wall_ms": 2927.6014289999985
+      }
+    ],
+    "normal_ramp": [
+      {
+        "concurrency": 1,
+        "cross_tenant": 0,
+        "devices": 20000,
+        "duplicate_events": 0,
+        "fault": null,
+        "from_121s_anchor": 124.558597684,
+        "hosted_slo_pass": false,
+        "jobs": 218,
+        "local_processing_under_45s": true,
+        "queries": 1133,
+        "retries": 0,
+        "scope": "LOCAL_SQLITE_ONLY",
+        "simulated_lease_expiry": false,
+        "unique_events": 20000,
+        "wall_ms": 3558.5976840000003
+      },
+      {
+        "concurrency": 2,
+        "cross_tenant": 0,
+        "devices": 20000,
+        "duplicate_events": 0,
+        "fault": null,
+        "from_121s_anchor": 123.889032887,
+        "hosted_slo_pass": false,
+        "jobs": 218,
+        "local_processing_under_45s": true,
+        "queries": 1133,
+        "retries": 0,
+        "scope": "LOCAL_SQLITE_ONLY",
+        "simulated_lease_expiry": false,
+        "unique_events": 20000,
+        "wall_ms": 2889.0328870000003
+      },
+      {
+        "concurrency": 4,
+        "cross_tenant": 0,
+        "devices": 20000,
+        "duplicate_events": 0,
+        "fault": null,
+        "from_121s_anchor": 123.817564101,
+        "hosted_slo_pass": false,
+        "jobs": 218,
+        "local_processing_under_45s": true,
+        "queries": 1133,
+        "retries": 0,
+        "scope": "LOCAL_SQLITE_ONLY",
+        "simulated_lease_expiry": false,
+        "unique_events": 20000,
+        "wall_ms": 2817.564100999999
+      }
+    ],
+    "reported_hosted_slo_pass": false,
+    "scenarios": 7,
+    "sha256": "83dd6d4938700abdc2a11b18a087bfcefe6c10dce3fd1e26574067947c249281",
+    "source_sha256": {
+      "recovery-alerts.mjs": "5a980b253ed922d2315cbc259761e75b993b9d958a4b828aec62d15238a1ebb5",
+      "recovery-fanout.mjs": "879167cef131bbb8d467c81c5748799db5638104179e5c1f1e6e4b5869e93dbb",
+      "recovery-scan-batch.mjs": "4eb2af5ebbcffda3f3ee3f7d6baa572ce43451d8b8b1a4afb7d70c564531f641",
+      "recovery-scan-leases.mjs": "182cfafe3fe695f9854f00fe42090889d443f518c1a9ee391cd817d87f6b520a"
+    }
+  },
+  "schema": "hara.commander.r163.independent-verification.v1",
+  "scope": "SOURCE_ONLY_LOCAL_SERVICES",
+  "source_commit": "0d4efa2fc9fff807fd7b2c05efe77a54830f391c",
+  "tests": [
+    {
+      "failed": 0,
+      "log_sha256": "3060517e3a85b08e2dadeaa8408732ff267eccbd6431d76692e6afbe8babb5ae",
+      "name": "queue-budget-dlq-scan-batch-concurrency",
+      "passed": 51
+    },
+    {
+      "failed": 0,
+      "log_sha256": "3557d2032e1ed193d5f71fbb8d9f57b2fc1f3182aeb3841c9a6c8694aacbb56a",
+      "name": "event-v2-fanout-delivery-transport",
+      "passed": 96
+    },
+    {
+      "log_sha256": "b5bebd28c4818b56b2357ca7d37d6c40b59e3501c02654cfd4d9c14e8db5c2d5",
+      "name": "reconnect-storm-model",
+      "passed": true
+    }
+  ]
+}
