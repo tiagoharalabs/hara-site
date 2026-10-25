@@ -5362,6 +5362,10 @@ async function completeDeviceCall(env, request, body) {
         AND device_id = ?
         AND state = 'EXECUTING'
         AND expires_at_utc > ?
+        AND EXISTS (SELECT 1 FROM commander_devices d
+          WHERE d.device_id=commander_device_calls.device_id
+            AND d.tenant_id=commander_device_calls.tenant_id
+            AND d.state='ACTIVE' AND d.revoked_at_utc IS NULL)
       RETURNING call_id, request_id, tool_id, state, completed_at_utc`
   ).bind(
     state, completedAt, resultJson, errorCode, descriptor, callId, device.tenant_id, device.device_id,
@@ -5370,6 +5374,12 @@ async function completeDeviceCall(env, request, body) {
 
   const row = (update.results || [])[0];
   if (!row) {
+    // Credential resolution and this write cross async boundaries. As with
+    // claims, a stale ACTIVE snapshot cannot admit a terminal result.
+    const live=await env.PRODUCT_DB.prepare(
+      "SELECT state,revoked_at_utc FROM commander_devices WHERE device_id=? AND tenant_id=?"
+    ).bind(device.device_id,device.tenant_id).first();
+    if (!live || live.state!=='ACTIVE' || live.revoked_at_utc) throw new Error("DEVICE_AUTH_INVALID");
     const existing = await env.PRODUCT_DB.prepare(
       `SELECT ${CALL_ROW_FIELDS} FROM commander_device_calls
         WHERE call_id = ? AND tenant_id = ? AND device_id = ? LIMIT 1`

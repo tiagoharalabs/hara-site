@@ -44,7 +44,11 @@ vm.runInContext(workerSource.slice(projectionStart,projectionEnd)+
 const project=(tool,result)=>plain(projectionRuntime.project(tool,result));
 function fixture(overrides={},quotaFault=null){
   const db=new DatabaseSync(":memory:");
-  db.exec(`CREATE TABLE commander_device_calls (
+  db.exec(`CREATE TABLE commander_devices (
+    device_id TEXT PRIMARY KEY,tenant_id TEXT NOT NULL,state TEXT NOT NULL,revoked_at_utc TEXT
+  );
+  INSERT INTO commander_devices VALUES('DEVICE-A','TENANT-A','ACTIVE',NULL);
+  CREATE TABLE commander_device_calls (
     call_id TEXT PRIMARY KEY,request_id TEXT,tenant_id TEXT,subject_id TEXT,
     device_id TEXT,tool_id TEXT,state TEXT,created_at_utc TEXT,expires_at_utc TEXT,
     claimed_at_utc TEXT,completed_at_utc TEXT,payload_json TEXT,result_json TEXT,
@@ -261,6 +265,13 @@ for (const key of ["schema","call_id","request_id","tool_id","call_state"]) {
     assert.equal(f.sql.filter((x)=>/SET result_json/.test(x.statement)).length,0);
   },{result_json:"HARA_REDACTED_SHA256:"+"c".repeat(64),call_result_metadata_json:JSON.stringify(correct)});
 }
+await check("revoked-completion-cannot-settle-or-change-an-executing-call",async (f)=>{
+  await f.env.PRODUCT_DB.prepare("UPDATE commander_devices SET state=\'REVOKED\',revoked_at_utc=? WHERE device_id=?")
+    .bind("2026-10-12T18:00:02.000Z","DEVICE-A").run();
+  await assert.rejects(()=>f.complete(),/DEVICE_AUTH_INVALID/);
+  assert.equal(f.quotaCalls.length,0);assert.equal(f.state(),"RESERVED");
+  assert.equal(f.row().state,"EXECUTING");assert.equal(f.row().result_json,null);
+},{state:"EXECUTING",completed_at_utc:null,result_json:null,call_result_metadata_json:null});
 await check("concurrent-completions-settle-the-fresh-terminal-row",async (f)=>{
   const results=await Promise.allSettled([f.complete(),f.complete()]);
   for (const result of results) {
