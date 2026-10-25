@@ -116,3 +116,44 @@ test('verified historical padding is distinct from gross usage and cannot replen
  await assert.rejects(()=>startRecoveryBudget(f.env.PRODUCT_DB,213611),/HOLD_CAMPAIGN_NOT_RESUMABLE/);
  assert.throws(()=>f.db.exec('UPDATE r163_qa_budget SET historical_padding_ms=212611'),/CHECK constraint failed/);
 });
+
+for(const field of ['rows_read','rows_written'])test('negative native meter stops without crediting budget: '+field,async t=>{
+ const f=fixture(t),raw=f.env.PRODUCT_DB;
+ f.env.PRODUCT_DB={prepare:sql=>{const p=raw.prepare(sql);return {bind:(...args)=>{
+  const q=p.bind(...args);if(sql==='SELECT 42')q.all=async()=>({results:[{answer:42}],meta:{rows_read:1,rows_written:0,[field]:-100}});
+  return q;
+ }};}};
+ await assert.rejects(()=>budgeted(f.env,{reads:32,writes:32},e=>e.PRODUCT_DB.prepare('SELECT 42').bind().all()),/HOLD_MISSING_D1_METER/);
+ assert.equal(f.row().state,'STOPPED');assert.ok(f.row().rows_read>=0);assert.ok(f.row().rows_written>=0);
+});
+test('expired reservation prevents the next D1 effect after an awaited operation',async t=>{
+ const f=fixture(t,{deadline:2000}),nativeNow=Date.now;let now=1000;Date.now=()=>now;t.after(()=>{Date.now=nativeNow;});
+ f.hooks.after=()=>{now=2000;};
+ await assert.rejects(()=>budgeted(f.env,{reads:32,writes:32},async e=>{
+  await e.PRODUCT_DB.prepare('INSERT INTO work VALUES(?)').bind(1).run();
+  await e.PRODUCT_DB.prepare('INSERT INTO work VALUES(?)').bind(2).run();
+ }),/HOLD_CAMPAIGN_BUDGET_OR_DEADLINE/);
+ assert.equal(f.db.prepare('SELECT COUNT(*) AS n FROM work').get().n,1);
+ assert.equal(f.row().state,'STOPPED');
+});
+test('clock rollback invalidates the active reservation before another effect',async t=>{
+ const f=fixture(t,{deadline:2000}),nativeNow=Date.now;let now=1000;Date.now=()=>now;t.after(()=>{Date.now=nativeNow;});
+ f.hooks.after=()=>{now=999;};
+ await assert.rejects(()=>budgeted(f.env,{reads:32,writes:32},async e=>{
+  await e.PRODUCT_DB.prepare('INSERT INTO work VALUES(?)').bind(1).run();
+  await e.PRODUCT_DB.prepare('INSERT INTO work VALUES(?)').bind(2).run();
+ }),/HOLD_CAMPAIGN_CLOCK_ROLLBACK/);
+ assert.equal(f.db.prepare('SELECT COUNT(*) AS n FROM work').get().n,1);
+ assert.equal(f.row().state,'STOPPED');
+});
+test('caught native meter failure cannot turn a stopped job into success',async t=>{
+ const f=fixture(t),raw=f.env.PRODUCT_DB;
+ f.env.PRODUCT_DB={prepare:sql=>{const p=raw.prepare(sql);return {bind:(...args)=>{
+  const q=p.bind(...args);if(sql==='SELECT 42')q.all=async()=>({results:[]});return q;
+ }};}};
+ await assert.rejects(()=>budgeted(f.env,{reads:32,writes:32},async e=>{
+  try{await e.PRODUCT_DB.prepare('SELECT 42').bind().all();}catch{}
+  return {ok:true};
+ }),/HOLD_MISSING_D1_METER/);
+ assert.equal(f.row().state,'STOPPED');
+});

@@ -31,9 +31,19 @@ export async function budgeted(env,{reads,writes},fn){
  if(!reserved)throw Error('HOLD_CAMPAIGN_BUDGET_OR_DEADLINE');
  // Conservative PK bookkeeping allowance includes reservation, settlement and
  // metering/status overhead. Query metadata below is provider-measured.
- let read=8,write=4,anomaly=null,result;
+ let read=8,write=4,anomaly=null,result,lastMs=now;
+ const checkpoint=()=>{
+  if(anomaly)throw Error(anomaly);
+  try{
+   const current=Date.now();
+   if(!Number.isSafeInteger(current)||current<lastMs)throw Error('HOLD_CAMPAIGN_CLOCK_ROLLBACK');
+   lastMs=current;
+   if(!Number.isSafeInteger(reserved.deadline_ms)||current>=reserved.deadline_ms)
+    throw Error('HOLD_CAMPAIGN_BUDGET_OR_DEADLINE');
+  }catch(error){anomaly=error.message;throw error;}
+ };
  const record=r=>{
-  if(!r?.meta||!Number.isSafeInteger(r.meta.rows_read)||!Number.isSafeInteger(r.meta.rows_written))
+  if(!r?.meta||![r.meta.rows_read,r.meta.rows_written].every(n=>Number.isSafeInteger(n)&&n>=0))
    throw Error('HOLD_MISSING_D1_METER');
   read+=r.meta.rows_read;write+=r.meta.rows_written;
   if(read>reads||write>writes)throw Error('HOLD_D1_RESERVATION_ANOMALY');
@@ -43,7 +53,8 @@ export async function budgeted(env,{reads,writes},fn){
   const statement=db.prepare(sql).bind(...args);
   const query=async method=>{
    if(anomaly)throw Error('HOLD_CAMPAIGN_STOPPED');
-   try{return record(await statement[method]());}catch(error){anomaly=error.message;throw error;}
+   try{checkpoint();const result=record(await statement[method]());checkpoint();return result;}
+   catch(error){anomaly=error.message;throw error;}
   };
   return {all:()=>query('all'),run:()=>query('run'),first:async()=>(await query('all')).results?.[0]??null};
  }})};
@@ -56,9 +67,17 @@ export async function budgeted(env,{reads,writes},fn){
   const r=await metered.prepare(`UPDATE r163_qa_budget SET queue_ops_upper=queue_ops_upper+?
    WHERE id=1 AND state='ACTIVE' AND queue_ops_upper+?<=? RETURNING queue_ops_upper`).bind(n,n,CAPS.queue).first();
   if(!r)throw Error('HOLD_QUEUE_BUDGET');
+  checkpoint();
   await originalQueue.sendBatch(entries);
+  checkpoint();
  }}:undefined;
- try{result=await fn({...env,PRODUCT_DB:metered,RECOVERY_DELIVERY_QUEUE:queue});}
+ try{
+  checkpoint();result=await fn({...env,PRODUCT_DB:metered,RECOVERY_DELIVERY_QUEUE:queue});
+  // A callback may catch a query failure. That cannot rehabilitate its stopped
+  // accounting session or report success with incomplete native evidence.
+  if(anomaly)throw Error(anomaly);
+  checkpoint();
+ }
  catch(error){anomaly??=error.message;throw error;}
  finally{
   // An unhandled crash retains the entire reservation. An observed anomaly

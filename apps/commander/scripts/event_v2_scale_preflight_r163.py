@@ -8,6 +8,7 @@ Caller-supplied counters are observations, never an admission or authority.
 import argparse
 import ast
 import hashlib
+import importlib.util
 import json
 import math
 import re
@@ -19,6 +20,15 @@ METER_FIELDS={'reads_per_device','writes_per_device','reads_per_event','writes_p
               'status_polls','reads_per_status','writes_per_status'}
 LIMITS={'last_detection_s':180,'last_recovery_s':300,'latency_p95_ms':6000,'latency_p99_ms':12000}
 ANOMALIES=('tenant_leaks','duplicate_effects','missing_receipts','retry_anomalies','dlq_unexpected')
+
+def native_meter_module():
+    # Load the adjacent offline validator under python -I without changing
+    # sys.path or resolving an unrelated installed package with the same name.
+    path=Path(__file__).with_name('event_v2_native_meter_r163.py')
+    spec=importlib.util.spec_from_file_location('r163_native_meter',path)
+    module=importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 def runtime_parity_map(app=None):
     """Source facts, not runtime authority or a commercial transport admission."""
@@ -261,6 +271,14 @@ def evaluate_observation(plan,previous,current):
     if set(caps)!=set(PROPOSED) or any(not integer(v) for v in caps.values()):reject('PROPOSAL_INVALID')
     current=current if isinstance(current,dict) else {}
     previous=previous if isinstance(previous,dict) else ({} if previous is None else {'invalid':True})
+    native_result=None
+    if isinstance(plan,dict) and ('native_meter_policy' in plan or 'native_meter_capture' in current):
+        native_result=native_meter_module().evaluate_native_meter(
+            plan.get('native_meter_policy'),current.get('native_meter_capture'),
+            previous.get('native_meter_checkpoint') if previous else None)
+        for code in native_result['reasons']:reject(code)
+        if previous and 'native_meter_checkpoint' not in previous:
+            reject('NATIVE_PREVIOUS_CHECKPOINT_MISSING')
     counters=current.get('counters');old=previous.get('counters',{})
     for key in PROPOSED:
         value=counters.get(key) if isinstance(counters,dict) else None
@@ -314,8 +332,11 @@ def evaluate_observation(plan,previous,current):
         or len(receipts)!=count-before):reject('NEW_EVENT_RECEIPT_COUNT_MISMATCH')
     result={'state':'STOP' if reasons else 'CONTINUE_REVIEW_ONLY','reasons':reasons,
             'rollback_requested':bool(reasons),'execute_allowed':False,'hosted_gate':'HOSTED_20K_HOLD'}
+    if native_result is not None:result['native_meter']=native_result
     if not reasons:
         result['next_checkpoint']={**current,'receipt_history':history}
+        if native_result is not None:
+            result['next_checkpoint']['native_meter_checkpoint']=native_result['next_checkpoint']
     return result
 
 def read_json(path):
@@ -329,17 +350,29 @@ def main():
     parser.add_argument('--reconnect-limit-per-s',type=float)
     parser.add_argument('--observation');parser.add_argument('--previous')
     parser.add_argument('--budget-alternatives', action='store_true')
+    parser.add_argument('--native-meter-policy',help='Pinned offline GraphQL export policy; never execution admission')
+    parser.add_argument('--native-meter',help='Raw provider capture for that policy, entirely offline')
     args=parser.parse_args()
     plan=build_plan(proposed=read_json(args.proposed) if args.proposed else None,
                     metering=read_json(args.metering) if args.metering else None,
                     reconnect_limit_per_s=args.reconnect_limit_per_s)
     output={'plan':plan,'runtime_map':runtime_parity_map()}
+    if args.native_meter_policy:
+        plan['native_meter_policy']=native_meter_module().read_json(args.native_meter_policy)
+    if args.native_meter:
+        output['native_meter']=native_meter_module().evaluate_native_meter(
+            plan.get('native_meter_policy'),native_meter_module().read_json(args.native_meter),
+            read_json(args.previous).get('native_meter_checkpoint') if args.previous else None)
     if args.budget_alternatives:
         output['budget_alternatives']=build_budget_alternatives(
             proposed=plan['proposed'], metering=plan['metering'],
             reconnect_limit_per_s=args.reconnect_limit_per_s)
-    if args.observation:output['observation']=evaluate_observation(plan,read_json(args.previous) if args.previous else None,read_json(args.observation))
+    if args.observation:
+        current=read_json(args.observation)
+        if args.native_meter:current['native_meter_capture']=native_meter_module().read_json(args.native_meter)
+        output['observation']=evaluate_observation(plan,read_json(args.previous) if args.previous else None,current)
     print(json.dumps(output,indent=2,sort_keys=True,allow_nan=False))
-    return 0
+    return 2 if output.get('native_meter',{}).get('state')=='STOP' or (
+        args.native_meter_policy and output.get('observation',{}).get('state')=='STOP') else 0
 
 if __name__=='__main__':raise SystemExit(main())
