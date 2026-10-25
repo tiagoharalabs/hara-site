@@ -131,7 +131,7 @@ async function stage(concurrency,n){
  await new Promise(r=>setTimeout(r,1500));assert.equal((await check()).jobs.length,replayJobCount,'CONFIRMED_NOTIFICATION_REQUEUED');
  if(sharedAnchors){step.state='PASS_HOSTED_DELIVERY';step.finished_at=new Date().toISOString();checkpoint();console.log(JSON.stringify({stage:concurrency,state:step.state,events:n,budget:evidence.budget}));return;}
  const lastHeartbeat=Math.max(...rows.map(r=>Date.parse(r.last_seen_at_utc)));
- await waitUntil(async()=>{await check();return Date.now()>=lastHeartbeat+121000;},lastHeartbeat+125000,{intervalMs:5000});
+ await waitUntil(async()=>{await check();return Date.now()>=lastHeartbeat+121000;},lastHeartbeat+170000,{intervalMs:5000});
  const scanStart=Date.now(),before=(await check()).jobs.filter(j=>j.kind==='SCAN').map(j=>j.message_id);
  step.scan_enqueue=await control('produce',{});
  let finalStatus;
@@ -171,7 +171,7 @@ try{
   sharedAnchors=await query('SELECT device_id,last_seen_at_utc FROM commander_devices WHERE tenant_id='+literal(state.tenant),{maxReads:150});
  }
  const last=Math.max(...sharedAnchors.map(r=>Date.parse(r.last_seen_at_utc)));
- await waitUntil(async()=>{await check();return Date.now()>=last+121000;},last+125000,{intervalMs:5000});
+ await waitUntil(async()=>{await check();return Date.now()>=last+121000;},last+170000,{intervalMs:5000});
  const before=(await check()).jobs.filter(j=>j.kind==='SCAN').map(j=>j.message_id),scanStart=Date.now(),plan=await control('produce',{});let observed;
  await waitUntil(async()=>{const s=await check(),jobs=s.jobs.filter(j=>j.kind==='SCAN'&&!before.includes(j.message_id));
   if(jobs.length===plan.jobs&&jobs.every(j=>j.outcome==='ACKNOWLEDGED')){observed=s;return true;}return false;},last+178000);

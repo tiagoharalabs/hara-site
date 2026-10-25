@@ -1,0 +1,392 @@
+{
+  "schema": "hara.commander.r163.queue-dev-closeout.v1",
+  "state": "PASS_HOSTED_DEV_QUEUE_DLQ_SLO",
+  "base_commit": "4031041593a4495b480289f47e072e545d0ab85f",
+  "branch": "local/commander-beta-0356-review-20261023",
+  "delivery_source_commit": "9fd68cc53e1836d5381a7a90a86de3d3acfef7c0",
+  "slo_worker_source_commit": "2ad179df9b4a499bce91532d5a34e02416cd177d",
+  "native_evidence_sha256": "e85a76d5ac984de05746656013638b186c32b12bd2ae6539f2cc623da3ecd8af",
+  "native_readback_sha256": "f8e502b0ef17a16c4151bad6d2e9c219ac1c01c3a81ee30a52a1a4e17fee99ac",
+  "source_sha256": {
+    "recovery-alerts.mjs": "5a980b253ed922d2315cbc259761e75b993b9d958a4b828aec62d15238a1ebb5",
+    "recovery-delivery.mjs": "41996cc4159cb0a895a873c5d6a4065a36a8c5e039eb8a783b6ef270c93ab527",
+    "recovery-fanout.mjs": "879167cef131bbb8d467c81c5748799db5638104179e5c1f1e6e4b5869e93dbb",
+    "recovery-scan-leases.mjs": "182cfafe3fe695f9854f00fe42090889d443f518c1a9ee391cd817d87f6b520a",
+    "recovery-scan-batch.mjs": "4eb2af5ebbcffda3f3ee3f7d6baa572ce43451d8b8b1a4afb7d70c564531f641"
+  },
+  "native_resources": {
+    "worker": "hara-commander-r163-canary-20261024",
+    "d1_id": "e769835e-0748-4f41-b868-c7c76b627fe9",
+    "recipient_worker": "hara-commander-r163-sink-20261024",
+    "recipient_d1_id": "1705c446-7ad4-4149-a8d5-baded898376f",
+    "producer_binding": "RECOVERY_DELIVERY_QUEUE",
+    "queues": [
+      {
+        "queue_id": "7558ee0b0e2c4a01983dfff048c84657",
+        "queue_name": "hara-commander-r163-recovery-dev-20261024",
+        "settings": {
+          "delivery_delay": 0,
+          "delivery_paused": true,
+          "message_retention_period": 3600
+        },
+        "consumers": [
+          {
+            "script": "hara-commander-r163-canary-20261024",
+            "dead_letter_queue": "hara-commander-r163-recovery-dlq-dev-20261024",
+            "settings": {
+              "batch_size": 1,
+              "max_retries": 2,
+              "max_wait_time_ms": 5000,
+              "max_concurrency": 4,
+              "retry_delay": 0
+            },
+            "consumer_id": "26f647f921c749668f4e9531b4eacb87",
+            "type": "worker"
+          }
+        ],
+        "producers": [
+          {
+            "script": "hara-commander-r163-canary-20261024",
+            "type": "worker"
+          }
+        ],
+        "readback_sha256": "c3f2d9719ace9677ac29e9e8a4edc39aedc988a4688c5a89ad187f8b9ecedfd2"
+      },
+      {
+        "queue_id": "0174d57997fd42789d9779af14e044b4",
+        "queue_name": "hara-commander-r163-recovery-dlq-dev-20261024",
+        "settings": {
+          "delivery_delay": 0,
+          "delivery_paused": true,
+          "message_retention_period": 86400
+        },
+        "consumers": [
+          {
+            "script": "hara-commander-r163-canary-20261024",
+            "settings": {
+              "batch_size": 1,
+              "max_retries": 2,
+              "max_wait_time_ms": 5000,
+              "max_concurrency": 1,
+              "retry_delay": 0
+            },
+            "consumer_id": "bf446cd3eb8f47ce87cee1d88011f769",
+            "type": "worker"
+          }
+        ],
+        "producers": [],
+        "readback_sha256": "4527f237af8a453a6ed90c563a843dc4478450658a768add5380284d7870d638"
+      }
+    ]
+  },
+  "hosted": {
+    "delivery_ramp": [
+      {
+        "max_concurrency": 1,
+        "events": 50,
+        "delivery_wall_ms": 41303,
+        "state": "PASS_HOSTED_DELIVERY"
+      },
+      {
+        "max_concurrency": 2,
+        "events": 50,
+        "delivery_wall_ms": 33556,
+        "state": "PASS_HOSTED_DELIVERY"
+      },
+      {
+        "max_concurrency": 4,
+        "events": 50,
+        "delivery_wall_ms": 41738,
+        "state": "PASS_HOSTED_DELIVERY"
+      }
+    ],
+    "independent_recipient_receipts": 150,
+    "unique_recipient_events": 150,
+    "actual_new_event_rows": 200,
+    "actual_heartbeat_absence_events": 50,
+    "delivery_is_human_notification": false,
+    "detection": {
+      "devices": 50,
+      "concurrency": 4,
+      "intervals_scaled": false,
+      "max_persisted_delay_s": 155.234,
+      "readback_upper_delay_s": 158.337,
+      "processing_upper_ms": 20449
+    },
+    "dlq": {
+      "state": "PASS_NATIVE_DLQ_READBACK",
+      "fault_attempts": 3,
+      "source_message_id": "adb9c650fe6b385cb2507241e776a2f2",
+      "receipt": {
+        "message_id": "f5b1b77d304dc86f9dab6584e29354a6",
+        "queue_name": "hara-commander-r163-recovery-dlq-dev-20261024",
+        "body_sha256": "bd757411f1aef5b1a7e4e81e0802f67930ae44cfa69d8a34eb1c59aa82a6ea38",
+        "observed_ms": 1792888057247
+      }
+    },
+    "raw_prior_controller_errors_preserved": true,
+    "idle_wait": {
+      "real_seconds_min": 121,
+      "campaign_requests_during_idle": 0,
+      "queues_paused": true,
+      "budget_paused": true
+    }
+  },
+  "budget": {
+    "queue_operations_upper_reserved": 456,
+    "queue_cap": 4000,
+    "d1_rows_read_upper": 37925,
+    "d1_read_cap": 250000,
+    "d1_rows_written_upper": 8371,
+    "d1_write_cap": 10000,
+    "events_reserved_upper": 400,
+    "event_cap": 500,
+    "active_ms_upper": 1760315,
+    "active_cap_ms": 1800000,
+    "state": "PAUSED",
+    "outstanding_reservations": 0,
+    "actual_invoice_claimed": false,
+    "gross_time_ms": 1972925,
+    "historical_unspent_padding_ms": 212610,
+    "native_historical_upper_proof_sha256": "3d1fec4cec89e7178417f624b745c1e5d01e3d8f414c584c5f808e3874420b6a",
+    "time_reservation_audit_sha256": "6dbe769498ddf4177a9594e85ef6519846f69753c790d8764a0809c016c7b35f",
+    "operational_counters_reset": false
+  },
+  "local_20k": {
+    "state": "PASS_LOCAL_SCALE_AND_FAULTS",
+    "sqlite": "FULL_WAL",
+    "normal": [
+      {
+        "concurrency": 1,
+        "devices": 20000,
+        "jobs": 218,
+        "queries": 1133,
+        "wall_ms": 8831.174982,
+        "from_121s_anchor": 129.831174982,
+        "retries": 0,
+        "fault": null,
+        "simulated_lease_expiry": false,
+        "hosted_slo_pass": false,
+        "unique_events": 20000,
+        "duplicate_events": 0,
+        "cross_tenant": 0,
+        "scope": "LOCAL_SQLITE_ONLY",
+        "local_processing_under_45s": true
+      },
+      {
+        "concurrency": 2,
+        "devices": 20000,
+        "jobs": 218,
+        "queries": 1133,
+        "wall_ms": 8345.984934,
+        "from_121s_anchor": 129.345984934,
+        "retries": 0,
+        "fault": null,
+        "simulated_lease_expiry": false,
+        "hosted_slo_pass": false,
+        "unique_events": 20000,
+        "duplicate_events": 0,
+        "cross_tenant": 0,
+        "scope": "LOCAL_SQLITE_ONLY",
+        "local_processing_under_45s": true
+      },
+      {
+        "concurrency": 4,
+        "devices": 20000,
+        "jobs": 218,
+        "queries": 1133,
+        "wall_ms": 10282.901691000003,
+        "from_121s_anchor": 131.282901691,
+        "retries": 0,
+        "fault": null,
+        "simulated_lease_expiry": false,
+        "hosted_slo_pass": false,
+        "unique_events": 20000,
+        "duplicate_events": 0,
+        "cross_tenant": 0,
+        "scope": "LOCAL_SQLITE_ONLY",
+        "local_processing_under_45s": true
+      }
+    ],
+    "jitless": [
+      {
+        "concurrency": 1,
+        "devices": 20000,
+        "jobs": 218,
+        "queries": 1133,
+        "wall_ms": 8792.049676,
+        "from_121s_anchor": 129.792049676,
+        "retries": 0,
+        "fault": null,
+        "simulated_lease_expiry": false,
+        "hosted_slo_pass": false,
+        "unique_events": 20000,
+        "duplicate_events": 0,
+        "cross_tenant": 0,
+        "scope": "LOCAL_SQLITE_ONLY",
+        "local_processing_under_45s": true
+      },
+      {
+        "concurrency": 2,
+        "devices": 20000,
+        "jobs": 218,
+        "queries": 1133,
+        "wall_ms": 8696.08149,
+        "from_121s_anchor": 129.69608149,
+        "retries": 0,
+        "fault": null,
+        "simulated_lease_expiry": false,
+        "hosted_slo_pass": false,
+        "unique_events": 20000,
+        "duplicate_events": 0,
+        "cross_tenant": 0,
+        "scope": "LOCAL_SQLITE_ONLY",
+        "local_processing_under_45s": true
+      },
+      {
+        "concurrency": 4,
+        "devices": 20000,
+        "jobs": 218,
+        "queries": 1133,
+        "wall_ms": 10422.029829,
+        "from_121s_anchor": 131.422029829,
+        "retries": 0,
+        "fault": null,
+        "simulated_lease_expiry": false,
+        "hosted_slo_pass": false,
+        "unique_events": 20000,
+        "duplicate_events": 0,
+        "cross_tenant": 0,
+        "scope": "LOCAL_SQLITE_ONLY",
+        "local_processing_under_45s": true
+      }
+    ],
+    "faults": [
+      {
+        "concurrency": 4,
+        "devices": 20000,
+        "jobs": 218,
+        "queries": 1138,
+        "wall_ms": 7821.532562000004,
+        "from_121s_anchor": 128.82153256200002,
+        "retries": 0,
+        "fault": "stale-preimage",
+        "simulated_lease_expiry": true,
+        "hosted_slo_pass": false,
+        "unique_events": 20000,
+        "duplicate_events": 0,
+        "cross_tenant": 0,
+        "scope": "LOCAL_SQLITE_ONLY"
+      },
+      {
+        "concurrency": 4,
+        "devices": 20000,
+        "jobs": 218,
+        "queries": 1153,
+        "wall_ms": 8190.227252000004,
+        "from_121s_anchor": 129.190227252,
+        "retries": 4,
+        "fault": "successor-token",
+        "simulated_lease_expiry": true,
+        "hosted_slo_pass": false,
+        "unique_events": 20000,
+        "duplicate_events": 0,
+        "cross_tenant": 0,
+        "scope": "LOCAL_SQLITE_ONLY"
+      },
+      {
+        "concurrency": 4,
+        "devices": 20000,
+        "jobs": 218,
+        "queries": 1135,
+        "wall_ms": 7582.525044999995,
+        "from_121s_anchor": 128.58252504499998,
+        "retries": 1,
+        "fault": "crash-after-lease",
+        "simulated_lease_expiry": true,
+        "hosted_slo_pass": false,
+        "unique_events": 20000,
+        "duplicate_events": 0,
+        "cross_tenant": 0,
+        "scope": "LOCAL_SQLITE_ONLY"
+      },
+      {
+        "concurrency": 4,
+        "devices": 20000,
+        "jobs": 218,
+        "queries": 1133,
+        "wall_ms": 9939.675005999998,
+        "from_121s_anchor": 130.939675006,
+        "retries": 1,
+        "fault": "lost-commit-response",
+        "simulated_lease_expiry": true,
+        "hosted_slo_pass": false,
+        "unique_events": 20000,
+        "duplicate_events": 0,
+        "cross_tenant": 0,
+        "scope": "LOCAL_SQLITE_ONLY"
+      }
+    ],
+    "normal_sha256": "7fd8a642fc530a92c57d6d290075254895d28886413c5ad29f960125802ec64e",
+    "jitless_sha256": "550093034baa87976e4a90a12b767e09eb1ec71df220536c2592feff22dea195",
+    "hosted_20k_pass": false
+  },
+  "qa": {
+    "node_suites": 54,
+    "node_suites_pass": 54,
+    "targeted_normal": 162,
+    "targeted_jitless": 162,
+    "python_agent_normal": 26,
+    "python_agent_optimized": 26,
+    "native_windows_qualification_claimed": false
+  },
+  "compatibility": {
+    "prod_worker_deployments_unchanged": true,
+    "prod_deployment_list_sha256": "4a62c221759c3702b8284cdf1526638bb9b7a9279f997acbb36d9d34f64a345f",
+    "shared_dev_deployments_unchanged": true,
+    "shared_dev_deployment_list_sha256": "b3d83bd6f20cd9654138515e407ba41e62165d83bbffdc291ed0a6016cbb85b0",
+    "prod_d1_modified": false,
+    "agent_installed": false,
+    "commercial_transport_enabled": false,
+    "valk_work_modified": false,
+    "concurrency_8_tested": false,
+    "concurrency_4_delivery_improvement_claimed": false
+  },
+  "rollback": {
+    "scope": "DEDICATED_QA_ONLY",
+    "worker_preimage_version": "2046ca2e-3f0e-4754-b057-ba22a1a7acb3",
+    "pre_config_sha256": "6e229e7f5745f1d481e857d66ceb338aa579c30e4f491d26c00e4f1f36a4cccc",
+    "current_safety": "BOTH_QUEUES_PAUSED_BUDGET_PAUSED_AUTOMATIC_CRON_FALSE",
+    "owner_procedure": [
+      "Keep both exact QA queues paused and stop the campaign budget.",
+      "Disable the QA minute trigger before restoring the earlier unmetered Worker.",
+      "Remove only the two canary Worker consumers; preserve both Queue resources and all D1 rows.",
+      "Restore the pinned canary version through Wrangler rollback after owner preflight.",
+      "Keep additive 0038/0039 and QA receipts/outboxes; no drop, deletion or Agent downgrade."
+    ],
+    "runtime_rollback_executed": false,
+    "source_rollback": "Revert the selected local commits; never reset or force-push other worktrees."
+  },
+  "hosted_20k_proposal": {
+    "state": "HOLD_ADDITIONAL_BUDGET",
+    "executed": false,
+    "local_measured_scan_jobs": 218,
+    "delivery_jobs_model": 2000,
+    "queue_ops_min_no_retry_model": 6654,
+    "requested_envelope_not_authorized": {
+      "events": 20000,
+      "queue_operations": 30000,
+      "d1_rows_written": 1500000,
+      "d1_rows_read": 5000000,
+      "active_load_minutes": 360
+    },
+    "dispatch_drain_seconds_linear_plan_only": 16695.2,
+    "planning_note": "At 4, 50 deliveries measured 41.738s. Linear drain estimate is planning only, not hosted capacity or SLO PASS; D1 contention and Queue autoscaling require measured staged gates. No justification to test concurrency 8.",
+    "staged_owner_plan": [
+      500,
+      2000,
+      20000
+    ],
+    "production_cutover_authorized": false
+  }
+}
