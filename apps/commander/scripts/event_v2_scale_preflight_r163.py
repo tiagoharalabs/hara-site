@@ -352,11 +352,25 @@ def main():
     parser.add_argument('--budget-alternatives', action='store_true')
     parser.add_argument('--native-meter-policy',help='Pinned offline GraphQL export policy; never execution admission')
     parser.add_argument('--native-meter',help='Raw provider capture for that policy, entirely offline')
+    parser.add_argument('--hosted-evidence-plan',help='Offline bindings; cannot approve a campaign')
+    parser.add_argument('--hosted-evidence',help='Independent live WSS, receipts and post-close readback for review')
+    parser.add_argument('--hosted-evidence-now-ms',type=int)
     args=parser.parse_args()
+    hosted_args=(args.hosted_evidence_plan,args.hosted_evidence,args.hosted_evidence_now_ms)
+    if any(value is not None for value in hosted_args) and any(value is None for value in hosted_args):
+        parser.error('all three hosted-evidence review arguments are required')
     plan=build_plan(proposed=read_json(args.proposed) if args.proposed else None,
                     metering=read_json(args.metering) if args.metering else None,
                     reconnect_limit_per_s=args.reconnect_limit_per_s)
     output={'plan':plan,'runtime_map':runtime_parity_map()}
+    if args.hosted_evidence:
+        path=Path(__file__).with_name('event_v2_hosted_evidence_r163.py')
+        spec=importlib.util.spec_from_file_location('r163_hosted_evidence',path)
+        module=importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        output['hosted_evidence']=module.validate_hosted_evidence(
+            module.read_json(args.hosted_evidence_plan),module.read_json(args.hosted_evidence),
+            args.hosted_evidence_now_ms)
     if args.native_meter_policy:
         plan['native_meter_policy']=native_meter_module().read_json(args.native_meter_policy)
     if args.native_meter:
@@ -372,7 +386,7 @@ def main():
         if args.native_meter:current['native_meter_capture']=native_meter_module().read_json(args.native_meter)
         output['observation']=evaluate_observation(plan,read_json(args.previous) if args.previous else None,current)
     print(json.dumps(output,indent=2,sort_keys=True,allow_nan=False))
-    return 2 if output.get('native_meter',{}).get('state')=='STOP' or (
+    return 2 if output.get('hosted_evidence',{}).get('state')=='HOLD' or output.get('native_meter',{}).get('state')=='STOP' or (
         args.native_meter_policy and output.get('observation',{}).get('state')=='STOP') else 0
 
 if __name__=='__main__':raise SystemExit(main())
