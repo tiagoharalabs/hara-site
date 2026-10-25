@@ -5,6 +5,7 @@ import ast
 import gzip
 import hashlib
 import io
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -29,6 +30,9 @@ ALIASES = {
     'valk/event-v2-dev-0.3.56-review.txt': AGENTS[3],
     'valk/event-v2-wire-0.3.56-review.txt': AGENTS[5],
 }
+INSTALLERS = tuple(CANDIDATE + '/install/' + name for name in ('linux.sh', 'windows.ps1'))
+PUBLIC_JWK = 'scripts/fixtures/commercial_v2_043_signature/release-signing-public.jwk'
+PUBLIC_JWK_SHA256 = '4e68608fa891f1b7a1e89c75936a089daeab0ba862a764f9bb31eca849cdfb9b'
 
 
 def _git(repo, *args):
@@ -53,7 +57,42 @@ def _resolved(repo, ref):
     return head
 
 
-def build_review(repo, output, ref='HEAD', expected_head=None):
+def _candidate_files(files, head):
+    # Execute our existing builder, never code from the repository being read.
+    path = Path(__file__).with_name('build_release_manifest.py')
+    spec = importlib.util.spec_from_file_location('review_manifest_builder', path)
+    builder = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(builder)
+    blobs = {rel: files['source/' + CANDIDATE + '/' + rel] for rel in builder.FILES}
+    manifest, sums = builder.render(blobs)
+    builder.validate_trust_anchors(blobs)
+    key = files['source/' + PUBLIC_JWK]
+    if hashlib.sha256(key).hexdigest() != PUBLIC_JWK_SHA256:
+        raise ValueError('PUBLIC_TRUST_ANCHOR_NOT_PINNED')
+    policy = {'schema': 'hara.commander-commercial-source-review.v1',
+              'status': 'SOURCE_ADAPTATION_PROPOSED', 'version': '0.3.56',
+              'artifacts': {rel: {
+                  'classification': 'commercial-candidate', 'source_commit': head,
+                  'source_path': CANDIDATE + '/' + rel,
+                  'review_reference': 'git:' + head + ':' + CANDIDATE + '/' + rel,
+                  'sha256': hashlib.sha256(raw).hexdigest()}
+                  for rel, raw in blobs.items()}}
+    state = {'state': 'UNSIGNED_DRAFT_REQUIRES_ADMISSION', 'version': '0.3.56',
+             'source_commit': head, 'artifact_count': 4,
+             'manifest_sha256': hashlib.sha256(manifest.encode()).hexdigest(),
+             'installable': False, 'native_acceptance': False,
+             'signature': None, 'independent_pin': None, 'admission_receipt': None,
+             'event_v2_runtime': 'OFF_REQUIRES_SEPARATE_OWNER_DECISION'}
+    for rel, raw in blobs.items():
+        files['candidate/' + rel] = raw
+    files['candidate/release/agent-manifest.json'] = manifest.encode('utf-8')
+    files['candidate/release/SHA256SUMS'] = sums.encode('ascii')
+    files['candidate/release/release-signing-public.jwk'] = key
+    for name, value in (('source-policy.proposed.json', policy), ('candidate.json', state)):
+        files['candidate/' + name] = (json.dumps(value, sort_keys=True, indent=2) + '\n').encode()
+
+
+def build_review(repo, output, ref='HEAD', expected_head=None, *, include_release_candidate=False):
     repo, output = Path(repo), Path(output).absolute()
     if output.exists() or output.is_symlink():
         raise FileExistsError('SOURCE_REVIEW_OUTPUT_EXISTS')
@@ -66,7 +105,8 @@ def build_review(repo, output, ref='HEAD', expected_head=None):
         raise ValueError('SOURCE_REVIEW_HEAD_MISMATCH')
     tree = _git(repo, 'rev-parse', head + '^{tree}').decode().strip()
     files = {}
-    for relative in AGENTS + HARNESSES + PROVENANCE:
+    extra = INSTALLERS + (PUBLIC_JWK,) if include_release_candidate else ()
+    for relative in AGENTS + HARNESSES + PROVENANCE + extra:
         entry = _git(repo, 'ls-tree', head, '--', relative).decode().strip()
         if not entry:
             raise ValueError('SOURCE_REVIEW_MISSING_SOURCE:' + relative)
@@ -88,6 +128,8 @@ def build_review(repo, output, ref='HEAD', expected_head=None):
         raise ValueError('SOURCE_REVIEW_VERSION_MISMATCH')
     for alias, relative in ALIASES.items():
         files[alias] = files['source/' + relative]  # bytes, without decoding
+    if include_release_candidate:
+        _candidate_files(files, head)
     if _resolved(repo, ref) != head:
         raise ValueError('SOURCE_REVIEW_REF_CHANGED')
     index = {
@@ -143,8 +185,11 @@ def main():
     parser.add_argument('--output', required=True)
     parser.add_argument('--ref', default='HEAD')
     parser.add_argument('--expected-head')
+    parser.add_argument('--with-release-candidate', action='store_true',
+                        help='include four coherent unsigned artifacts for review; never admits installation')
     args = parser.parse_args()
-    print(json.dumps(build_review(args.repo, args.output, args.ref, args.expected_head), sort_keys=True))
+    print(json.dumps(build_review(args.repo, args.output, args.ref, args.expected_head,
+                                 include_release_candidate=args.with_release_candidate), sort_keys=True))
 
 
 if __name__ == '__main__':

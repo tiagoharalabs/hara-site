@@ -92,6 +92,27 @@ def render(blobs: dict[str, bytes] | None = None) -> tuple[str, str]:
     return manifest_text, sums_text
 
 
+def validate_trust_anchors(blobs: dict[str, bytes]) -> None:
+    """Check the existing pinned v2 public key in both installer sources."""
+    for rel, names in (
+        (FILES[2], ("RELEASE_SIGNING_KID", "RELEASE_SIGNING_N", "RELEASE_SIGNING_E")),
+        (FILES[3], (r"\$ReleaseSigningKid", r"\$ReleaseSigningN", r"\$ReleaseSigningE")),
+    ):
+        values = []
+        for name in names:
+            found = re.findall(r'^' + name + r'\s*=\s*"([^"\r\n]+)"\s*$', blobs[rel].decode(), re.M)
+            if len(found) != 1:
+                raise ValueError("INSTALLER_TRUST_ANCHOR:" + rel)
+            values.append(found[0])
+        kid, n, e = values
+        modulus = base64.urlsafe_b64decode(n + "=" * (-len(n) % 4))
+        exponent = base64.urlsafe_b64decode(e + "=" * (-len(e) % 4))
+        if kid != "commander-release-v2" or len(modulus) != 384 or e != "AQAB" or \
+           hashlib.sha256(modulus + b":" + exponent).hexdigest() != \
+           "e235a64f0e89490a597cdb0a6c20cc1c7bf68f6ea5f5e88c6f80a48cf11b601b":
+            raise ValueError("INSTALLER_TRUST_ANCHOR:" + rel)
+
+
 def build_candidate(source: Path, output: Path, policy: dict, *, draft: bool = False) -> dict:
     """Snapshot/copy all four admitted source bytes together; never sign or bump."""
     required_status = "SOURCE_ADAPTATION_PROPOSED" if draft else "SOURCE_ADAPTION_REVIEWED"
@@ -114,23 +135,7 @@ def build_candidate(source: Path, output: Path, policy: dict, *, draft: bool = F
            not re.fullmatch(r"[0-9a-f]{40}", row.get("source_commit", "")) or \
            row.get("sha256") != hashlib.sha256(blob).hexdigest():
             raise ValueError("SOURCE_PROVENANCE_OR_DIGEST:" + rel)
-    for rel, names in (
-        (FILES[2], ("RELEASE_SIGNING_KID", "RELEASE_SIGNING_N", "RELEASE_SIGNING_E")),
-        (FILES[3], (r"\$ReleaseSigningKid", r"\$ReleaseSigningN", r"\$ReleaseSigningE")),
-    ):
-        values = []
-        for name in names:
-            found = re.findall(r'^' + name + r'\s*=\s*"([^"\r\n]+)"\s*$', blobs[rel].decode(), re.M)
-            if len(found) != 1:
-                raise ValueError("INSTALLER_TRUST_ANCHOR:" + rel)
-            values.append(found[0])
-        kid, n, e = values
-        modulus = base64.urlsafe_b64decode(n + "=" * (-len(n) % 4))
-        exponent = base64.urlsafe_b64decode(e + "=" * (-len(e) % 4))
-        if kid != "commander-release-v2" or len(modulus) != 384 or e != "AQAB" or \
-           hashlib.sha256(modulus + b":" + exponent).hexdigest() != \
-           "e235a64f0e89490a597cdb0a6c20cc1c7bf68f6ea5f5e88c6f80a48cf11b601b":
-            raise ValueError("INSTALLER_TRUST_ANCHOR:" + rel)
+    validate_trust_anchors(blobs)
     manifest, sums = render(blobs)
     if output.exists() or output.is_symlink() or \
        output.parent.resolve() != output.parent.absolute():
