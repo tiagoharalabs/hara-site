@@ -46,7 +46,7 @@ async function control(name,body){
 }
 async function check(){
  const s=await control('status');assert.ok(withinBudget(s.budget),'CAMPAIGN_BUDGET_STOP_'+JSON.stringify(s.budget));
- if(s.jobs.some(j=>!['ACKNOWLEDGED','STARTED','EXPECTED_FAULT_RETRY'].includes(j.outcome)))throw Error('ANOMALOUS_QUEUE_JOB');
+ if(s.jobs.some(j=>!['ACKNOWLEDGED','STARTED','EXPECTED_FAULT_RETRY','RETRY'].includes(j.outcome)||j.attempts>3))throw Error('ANOMALOUS_QUEUE_JOB');
  evidence.budget=s.budget;return s;
 }
 async function debit({reads=0,writes=0,events=0}){
@@ -92,6 +92,10 @@ async function stage(concurrency,n){
  const events=devices.map((d,i)=>({device:d,event:{schema:'hara.commander.recovery-alert.proposal.v1',event_id:hash(state.campaign+'|event|'+concurrency+'|'+i).slice(0,32),
   client_incident_key:hash(state.campaign+'|incident|'+concurrency+'|'+i).slice(0,32),transition_seq:1,worker:'executor',state:'STALLED',
   observed_at_utc:new Date().toISOString(),detector:'LINUX_PROCESS_GUARDIAN'}}));
+ // A resumed attempt reuses the exact persisted envelope rather than changing
+ // its timestamp under the same idempotency key. Preserve every earlier failure.
+ const existing=await query('SELECT client_event_id,event_at_utc,event_state,sequence FROM commander_device_recovery_events WHERE tenant_id='+literal(state.tenant)+' AND client_event_id IN ('+events.map(x=>literal(x.event.event_id)).join(',')+')',{maxReads:n*5});
+ for(const x of events){const old=existing.find(r=>r.client_event_id===x.event.event_id);if(old){assert.equal(old.event_state,x.event.state);assert.equal(old.sequence,1);x.event.observed_at_utc=old.event_at_utc;}}
  await map(events,async x=>{const ack=await deviceRequest(x.device,'/api/device/recovery-events',x.event,202);assert.equal(ack.ack,'PERSISTED');x.server_id=ack.event_id;});
  const repeated=await deviceRequest(events[0].device,'/api/device/recovery-events',events[0].event,202);assert.equal(repeated.duplicate,true);
  await deviceRequest(events[0].device,'/api/device/recovery-events',{...events[0].event,state:'RECOVERED'},409);
@@ -138,6 +142,9 @@ async function stage(concurrency,n){
 }
 try{
  assert.equal((await control('start',{})).state,'ACTIVE');active=true;
+ evidence.recipient_preflight=await control('recipient-preflight',{});
+ assert.equal(evidence.recipient_preflight.read_status,404);assert.equal(evidence.recipient_preflight.write_status,400);
+ for(const q of [DLQ,QUEUE])await cli(['queues','resume-delivery',q]);
  const unauthorized=await fetch(ORIGIN+'/__qa/produce',{method:'POST'});assert.equal(unauthorized.status,401);
  const unauthenticated=await fetch(ORIGIN+'/api/device/recovery-events',{method:'POST',headers:{'content-type':'application/json'},body:'{}'});assert.equal(unauthenticated.status,401);
  for(const [c,n] of [[1,25],[2,50],[4,50]])await stage(c,n);
@@ -152,5 +159,6 @@ try{
  evidence.state='FAIL_STOPPED';evidence.error={type:error.constructor.name,message:String(error.message).slice(0,600)};checkpoint();
  console.error(JSON.stringify({state:evidence.state,error:evidence.error,output}));process.exitCode=1;
 }finally{
+ for(const q of [QUEUE,DLQ])try{await cli(['queues','pause-delivery',q]);}catch{}
  try{await control('stop',{});}catch{}
 }

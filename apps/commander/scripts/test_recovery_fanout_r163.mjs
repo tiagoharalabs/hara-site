@@ -307,3 +307,14 @@ test('expired crash attempt cannot persist over a successor lease token',async t
  assert.equal(f.db.prepare('SELECT count(*) AS n FROM commander_device_recovery_events').get().n,0);
  assert.equal(f.db.prepare('SELECT lease_token FROM recovery_device_leases').get().lease_token,'SUCCESSOR');
 });
+test('exhausted delivery remains unacknowledged on every redelivery until native DLQ',async t=>{
+ const f=fixture(t);f.env.COMMANDER_RECOVERY_DELIVERY_ENABLED='true';f.addDevice(1,{seen:-1000});f.addEvent(1);
+ f.stage(eventId(1),{state:'EXHAUSTED',attempts:8});
+ for(let i=0;i<3;i++){const r=await f.consume(delivery([eventId(1)]));assert.equal(r.calls.ack,0);assert.equal(r.calls.retry.length,1);}
+ assert.equal(f.metrics.fetches.length,0);
+});
+test('pending predecessor/due-time cannot acknowledge an unfinished delivery job',async t=>{
+ const f=fixture(t);f.env.COMMANDER_RECOVERY_DELIVERY_ENABLED='true';f.addDevice(1,{seen:-1000});f.addEvent(1);
+ f.stage(eventId(1),{state:'RETRY',attempts:1,next:NOW+60000});
+ const r=await f.consume(delivery([eventId(1)]));assert.equal(r.calls.ack,0);assert.equal(r.calls.retry.length,1);assert.equal(f.metrics.fetches.length,0);
+});

@@ -38,6 +38,16 @@ export default {
       WHERE id=1 RETURNING *`).bind(b.reads+4,b.writes+4,b.events,b.reads+4,CAPS.reads,b.writes+4,CAPS.writes,b.events,CAPS.events).first();
      return json({budget:row});
     }
+    if(path==='/__qa/recipient-preflight'&&request.method==='POST')return json(await budgeted(env,{reads:32,writes:32},async e=>{
+     const origin='https://hara-commander-r163-sink-20261024.tiago-sartori.workers.dev';
+     if(typeof e.R163_QA_RECIPIENT?.fetch!=='function')throw Error('HOLD_QA_RECIPIENT_BINDING');
+     let public_status=null;try{const r=await fetch(origin+'/health');public_status=r.status;await r.body?.cancel();}catch{}
+     const r=await e.R163_QA_RECIPIENT.fetch(origin+'/receipt/'+('0'.repeat(32)),{headers:{authorization:'Bearer '+e.R163_QA_READ}});
+     const read_status=r.status;await r.body?.cancel();
+     const w=await e.R163_QA_RECIPIENT.fetch(origin+'/notify',{method:'POST',headers:{authorization:'Bearer '+e.R163_QA_WRITE,'content-type':'application/json'},body:'{}'});
+     const write_status=w.status;await w.body?.cancel();
+     return {public_status,read_status,write_status,recipient:'hara-commander-r163-sink-20261024'};
+    }));
     if(path==='/__qa/produce'&&request.method==='POST')return json(await produce(env));
     if(path==='/__qa/fault'&&request.method==='POST')return json(await budgeted(env,{reads:32,writes:32},async e=>{
      await e.RECOVERY_DELIVERY_QUEUE.sendBatch([{body:{schema:'hara.commander.recovery-work.v1',kind:'SCAN',device_ids:['R163-QA-DLQ-FAULT']}}]);
@@ -78,7 +88,10 @@ export default {
     .bind(message.id,body?.kind||'INVALID',JSON.stringify(body)).run();
    let result;
    if(fault){message.retry({delaySeconds:5});result={state:'EXPECTED_FAULT_RETRY'};}
-   else result=await consumeRecoveryWork(batch,e);
+   else result=await consumeRecoveryWork(batch,e,{fetchImpl:async(url,init)=>{
+    if(new URL(url).origin!=='https://hara-commander-r163-sink-20261024.tiago-sartori.workers.dev'||typeof e.R163_QA_RECIPIENT?.fetch!=='function')throw Error('HOLD_QA_RECIPIENT_BINDING');
+    return e.R163_QA_RECIPIENT.fetch(url,init);
+   }});
    await e.PRODUCT_DB.prepare('UPDATE r163_qa_jobs SET outcome=?,completed_ms=? WHERE message_id=?')
     .bind(result.state,Date.now(),message.id).run();
    console.log(JSON.stringify({schema:'hara.commander.r163.queue-job.v1',id:message.id,kind:body?.kind,

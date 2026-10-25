@@ -81,7 +81,7 @@ export async function consumeRecoveryWork(batch,env,{nowMs=Date.now(),fetchImpl=
  try{
   const result=body.kind==='SCAN'?await detectOfflineRecoveryDevices(env,body.device_ids,nowMs):
    await dispatchRecoveryDeliveries(env,{eventIds:body.event_ids,nowMs,fetchImpl,timeoutMs,exclusiveDeviceLeases:true});
-  if(result.state?.startsWith('HOLD_')||(result.held&&result.exhausted<result.held)){
+  if(result.state?.startsWith('HOLD_')||result.held||result.pending||result.exhausted){
    message.retry({delaySeconds});return {state:'RETRY',result};
   }
   message.ack();return {state:'ACKNOWLEDGED',result};

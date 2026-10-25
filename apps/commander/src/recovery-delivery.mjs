@@ -200,6 +200,15 @@ export async function dispatchRecoveryDeliveries(env,{fetchImpl=fetch,nowMs=Date
    if(state==='EXHAUSTED')summary.exhausted++;
   }
  }
- if(summary.held)summary.state='PARTIAL';
+ if(exclusiveDeviceLeases&&eventIds){
+  const current=await env.PRODUCT_DB.prepare(`SELECT o.state FROM recovery_delivery_outbox o
+   JOIN commander_device_recovery_events r ON r.event_id=o.event_id AND r.tenant_id=o.tenant_id
+   JOIN commander_devices d ON d.device_id=r.device_id AND d.tenant_id=r.tenant_id
+   WHERE d.state='ACTIVE' AND d.revoked_at_utc IS NULL AND o.binding_id IN (${targets.map(()=>'?').join(',')})
+    AND o.event_id IN (${eventIds.map(()=>'?').join(',')})`).bind(...targets.map(t=>t.id),...eventIds).all();
+  summary.pending=(current.results||[]).filter(r=>['PENDING','RETRY','INFLIGHT'].includes(r.state)).length;
+  summary.exhausted=Math.max(summary.exhausted,(current.results||[]).filter(r=>r.state==='EXHAUSTED').length);
+ }
+ if(summary.held||summary.pending||summary.exhausted)summary.state='PARTIAL';
  return summary;
 }

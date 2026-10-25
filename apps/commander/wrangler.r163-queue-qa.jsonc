@@ -56,5 +56,11 @@
         "max_retries": 2
       }
     ]
-  }
+  },
+  "services": [
+    {
+      "binding": "R163_QA_RECIPIENT",
+      "service": "hara-commander-r163-sink-20261024"
+    }
+  ]
 }
