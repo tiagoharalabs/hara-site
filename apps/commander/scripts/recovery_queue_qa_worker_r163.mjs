@@ -1,6 +1,8 @@
 // Entry point ONLY for hara-commander-r163-canary-20261024. No public/product
 // configuration imports this laboratory control plane or its synthetic faults.
 import worker from '../src/worker.js';
+import {DeviceChannel as CoreDeviceChannel} from '../src/device-channel.mjs';
+import {wrapQaEntry,wrapQaDeviceChannel} from './recovery_resource_qa_r163.mjs';
 import {enqueueRecoveryWork,consumeRecoveryWork} from '../src/recovery-fanout.mjs';
 import {acceptR163Dlq} from './recovery_queue_dlq_r163.mjs';
 import {budgeted,CAPS,startRecoveryBudget,pauseRecoveryBudget,readRecoveryQaStatus} from './recovery_queue_budget_r163.mjs';
@@ -14,7 +16,7 @@ async function auth(request,env){
  return Array.from(new Uint8Array(digest),x=>x.toString(16).padStart(2,'0')).join('')===env.R163_QA_CONTROL_SHA256;
 }
 const produce=(env,scan=true)=>budgeted(env,{reads:15000,writes:64},e=>enqueueRecoveryWork(e,{maxDevices:500,maxEvents:500,scan}));
-export default {
+const legacyQaWorker={
  async fetch(request,env,ctx){
   if(!isolated(env))return json({code:'HOLD_QA_ISOLATION'},503);
   const path=new URL(request.url).pathname;
@@ -101,3 +103,7 @@ export default {
   });
  }
 };
+
+// Only this dedicated QA entry exports the cumulative metering boundary.
+export class DeviceChannel extends wrapQaDeviceChannel(CoreDeviceChannel) {}
+export default wrapQaEntry(legacyQaWorker,worker);
