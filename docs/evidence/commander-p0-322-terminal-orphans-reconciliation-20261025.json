@@ -1,0 +1,102 @@
+{
+  "branch": "local/commander-beta-0356-review-20261023",
+  "failures_after_fix": 0,
+  "issues": [
+    322,
+    163
+  ],
+  "observed_at_utc": "2026-10-25T02:26:58.109940+00:00",
+  "parent_commit": "bbb8e289c646f45c0ea867558158dd8fb9eb4ec2",
+  "patch": {
+    "delivery": "authenticated completion dispatched only if config supplied, state ACKNOWLEDGED only after correlated ACK",
+    "executed_orphan": "commit reserved debit exactly once and persist FAILED/INDETERMINATE, no replay",
+    "failed_orphan": "release reserved debit and persist FAILED/INDETERMINATE, no replay",
+    "lost_result": "never fabricate PASS or action success",
+    "source_sha256": "e6f82e059d693b818a676df75c3f9ee73c706ba7a42609b85c59832d0c977ce4",
+    "test_sha256": "09ec7b49bab705b06a4a1918c936e06e152dd9e089591dcf5cd491378010d45b",
+    "uncertain_orphan": "previously corrected; preserved"
+  },
+  "red_before_fix": [
+    {
+      "completion_json": "NULL",
+      "delivery_state": "NONE",
+      "failure": "released=0 instead of 1",
+      "phase": "FAILED"
+    },
+    {
+      "completion_json": "NULL",
+      "delivery_state": "NONE",
+      "failure": "no queued completion, delivery_state remained NONE",
+      "phase": "EXECUTED"
+    }
+  ],
+  "remaining_gates": [
+    "native fault injection/recovery 180s detection and 300s recovery",
+    "Windows 11 PS 5.1 native acceptance owner #240",
+    "hosted WebSocket 20k reconnect storm and D1/Queue budget admission #163"
+  ],
+  "safety": {
+    "agent_installed": false,
+    "cloudflare_20k_test": false,
+    "commercial_delivery_enabled": false,
+    "prod_cutover": false,
+    "production_mutated": false,
+    "release_signed": false,
+    "windows_native_acceptance": false
+  },
+  "schema": "hara.commander.p0-322.terminal-orphan-reconciliation.v1",
+  "scope": "OFFLINE_REAL_SQLITE_DISPOSABLE_ONLY",
+  "state": "SOURCE_LOCAL_PASS_RELEASE_HOLD",
+  "test_matrix": [
+    {
+      "log_sha256": "fdd7d5b90fb0f533d74db03dfff75c9635ad4fcae0e8aa0e92e778f038b5daf3",
+      "mode": "normal",
+      "passed": 14,
+      "suite": "budget_reconciliation"
+    },
+    {
+      "log_sha256": "4aa6004eb5c60a8fe2573fcb85ea3d108cbb468b400b32d70361763be6140473",
+      "mode": "normal",
+      "passed": 5,
+      "suite": "call_completion"
+    },
+    {
+      "log_sha256": "eef5c419370b4b807b5404fbf8c65bb572c5a3b8bcfba3d6999d482fb315a6a6",
+      "mode": "normal",
+      "passed": 18,
+      "suite": "relay_supervisor"
+    },
+    {
+      "log_sha256": "60c3d4e18d02c117da9855f3a875dbe4cdcda7f707acdf573afdb58c4fb5c9db",
+      "mode": "normal",
+      "passed": 15,
+      "suite": "linux"
+    },
+    {
+      "log_sha256": "a5f1b03fedc6ef2934f68264a54ad36559771fab219de69e04c76e76c1eadd52",
+      "mode": "opt",
+      "passed": 14,
+      "suite": "budget_reconciliation"
+    },
+    {
+      "log_sha256": "5fb01124b81efb3b4c22be561584db1bd1fbdccf9919564c13aacd0080eede87",
+      "mode": "opt",
+      "passed": 5,
+      "suite": "call_completion"
+    },
+    {
+      "log_sha256": "41bd4abcf4e2ede76276836f5b53d5ed3dacccd94923aac71c23be56b91093b3",
+      "mode": "opt",
+      "passed": 18,
+      "suite": "relay_supervisor"
+    },
+    {
+      "log_sha256": "870b1f0fa103b49bc53b91ce96731682f6d5182e933ea097eaad35eb76047352",
+      "mode": "opt",
+      "passed": 15,
+      "suite": "linux"
+    }
+  ],
+  "total_normal_pass": 52,
+  "total_opt_pass": 52
+}

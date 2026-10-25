@@ -3184,11 +3184,20 @@ def _relay_deliver(config,request_id,body,call=None):
                      (utcnow(),request_id));conn.commit()
 
 
+def _relay_record_indeterminate(row):
+    # A durable phase without its completion cannot reconstruct the tool's
+    # result. Surface the uncertainty; never replay an effect or invent PASS.
+    body={'state':'INDETERMINATE','runtime_authority_from_chatgpt':False,
+          'mutation_performed':None,'result':{},'blocker':{'code':'CALL_OUTCOME_UNCERTAIN'}}
+    _relay_completion({'call_id':row['call_id'],'request_id':row['request_id']},
+                      'FAILED',body,'CALL_OUTCOME_UNCERTAIN')
+
+
 def reconcile_relay_calls(config=None,limit=64):
     # Called only after the previous executor has been reaped. No tool is ever
     # invoked here. A crash across the effect/checkpoint boundary stays uncertain.
     with _ops_connect() as conn:
-        rows=[dict(r) for r in conn.execute("SELECT * FROM relay_call_journal WHERE phase IN ('PREPARING','RESERVED','EXECUTING') OR completion_json IS NOT NULL OR (phase='UNCERTAIN' AND delivery_state='NONE') OR (phase='EXECUTED' AND delivery_state='NONE') ORDER BY updated_at_utc LIMIT ?",(int(limit),))]
+        rows=[dict(r) for r in conn.execute("SELECT * FROM relay_call_journal WHERE phase IN ('PREPARING','RESERVED','EXECUTING') OR completion_json IS NOT NULL OR (phase IN ('UNCERTAIN','FAILED','EXECUTED') AND delivery_state='NONE') ORDER BY updated_at_utc LIMIT ?",(int(limit),))]
     summary={'committed':0,'released':0,'uncertain':0,'delivered':0}
     for row in rows:
         request=row['request_id'];phase=row['phase']
@@ -3197,6 +3206,10 @@ def reconcile_relay_calls(config=None,limit=64):
         if phase=='EXECUTED':
             if debit and debit['state']=='RESERVED':
                 local_budget_commit(request);summary['committed']+=1
+            if not row['completion_json'] and row['delivery_state']=='NONE':
+                # Effect is confirmed, quota stays spent; result is missing.
+                summary['uncertain']+=1
+                _relay_record_indeterminate(row)
         elif phase in {'PREPARING','RESERVED','FAILED'}:
             if debit and debit['state']=='RESERVED':
                 local_budget_release(request);summary['released']+=1
@@ -3205,7 +3218,12 @@ def reconcile_relay_calls(config=None,limit=64):
                 with _ops_connect() as conn:
                     conn.execute("UPDATE relay_call_journal SET phase='FAILED',updated_at_utc=? WHERE request_id=?",
                                  (utcnow(),request));conn.commit()
-                if not row['completion_json']:
+            if not row['completion_json']:
+                if phase=='FAILED':
+                    # Original error/result was lost; do not fabricate a denial.
+                    summary['uncertain']+=1
+                    _relay_record_indeterminate(row)
+                else:
                     body={'state':'DENIED','runtime_authority_from_chatgpt':False,
                           'mutation_performed':False,'result':{},'blocker':{'code':'DEVICE_CALL_TIMEOUT'}}
                     _relay_completion({'call_id':row['call_id'],'request_id':request},'FAILED',body,'DEVICE_CALL_TIMEOUT')
@@ -3215,9 +3233,7 @@ def reconcile_relay_calls(config=None,limit=64):
                 conn.execute("UPDATE relay_call_journal SET phase='UNCERTAIN',updated_at_utc=? WHERE request_id=?",
                              (utcnow(),request));conn.commit()
             if not row['completion_json']:
-                body={'state':'INDETERMINATE','runtime_authority_from_chatgpt':False,
-                      'mutation_performed':None,'result':{},'blocker':{'code':'CALL_OUTCOME_UNCERTAIN'}}
-                _relay_completion({'call_id':row['call_id'],'request_id':request},'FAILED',body,'CALL_OUTCOME_UNCERTAIN')
+                _relay_record_indeterminate(row)
         if config:
             with _ops_connect() as conn:
                 pending=conn.execute('SELECT completion_json FROM relay_call_journal WHERE request_id=?',(request,)).fetchone()
