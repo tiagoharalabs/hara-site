@@ -84,7 +84,7 @@ try{
  const ingestMs=performance.now()-started;
  let httpCalls=0,delivered=0,ticks=0;
  const fetchImpl=(url,init)=>{httpCalls++;const req=new Request(url,init);
-  assert.equal(new URL(req.url).origin,origin);assert.equal(req.redirect,'error');return receiver.fetch(req,sinkEnv);};
+  assert.equal(new URL(req.url).origin,origin);assert.equal(req.redirect,'manual');return receiver.fetch(req,sinkEnv);};
  const deliveryStart=performance.now();
  const deliveryPlan=fanout?await enqueueRecoveryWork(env,{nowMs:now}):null;
  const deliveryJobs=jobs.splice(0);

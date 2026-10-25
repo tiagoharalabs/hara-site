@@ -19,11 +19,11 @@ function valid(body){
   ids.length<=(scan?96:10)&&new Set(ids).size===ids.length&&ids.every(id=>typeof id==='string'&&
    (scan?/^[A-Za-z0-9][A-Za-z0-9_-]{0,179}$/:/^HARA-REC-[0-9a-f]{48}$/).test(id));
 }
-export async function enqueueRecoveryWork(env,{nowMs=Date.now(),maxDevices=20000,maxEvents=20000}={}){
+export async function enqueueRecoveryWork(env,{nowMs=Date.now(),maxDevices=20000,maxEvents=20000,scan=true}={}){
  const result={state:'DISABLED',scan_devices:0,delivery_events:0,jobs:0,batches:0};
  if(!enabled(env))return result;
  if(!bound(env))return {...result,state:'HOLD_RECOVERY_QUEUE_BINDING'};
- if(!Number.isSafeInteger(nowMs)||nowMs<0||[maxDevices,maxEvents].some(n=>!Number.isSafeInteger(n)||n<1||n>20000)){
+ if(typeof scan!=='boolean'||!Number.isSafeInteger(nowMs)||nowMs<0||[maxDevices,maxEvents].some(n=>!Number.isSafeInteger(n)||n<1||n>20000)){
   throw Error('RECOVERY_FANOUT_BUDGET_INVALID');
  }
  result.state='COMPLETE';let pending=[],pendingBytes=2;
@@ -40,7 +40,7 @@ export async function enqueueRecoveryWork(env,{nowMs=Date.now(),maxDevices=20000
   pending.push(entry);pendingBytes+=bytes;
  };
  let after=null;const partitions=Array.from({length:16},()=>[]);
- while(result.scan_devices<maxDevices){
+ while(scan&&result.scan_devices<maxDevices){
   const limit=Math.min(500,maxDevices-result.scan_devices);
   const rows=await listOfflineRecoveryCandidates(env,nowMs,{limit,after});
   for(const row of rows){

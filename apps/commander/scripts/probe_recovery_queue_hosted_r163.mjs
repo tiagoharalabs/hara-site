@@ -29,7 +29,7 @@ assert.equal(cfg.queues.producers[0].binding,'RECOVERY_DELIVERY_QUEUE');assert.e
 const consumer=cfg.queues.consumers[0];assert.equal(consumer.queue,QUEUE);assert.equal(consumer.dead_letter_queue,DLQ);
 assert.equal(consumer.max_retries,2);assert.equal(consumer.max_batch_size,1);assert.equal(consumer.max_batch_timeout,5);
 const nativeEnv={...process.env,WRANGLER_SEND_METRICS:'false',WRANGLER_LOG:'log'};
-let number=0,active=false,queueFault=false,previousDevices=0;
+let number=0,active=false,queueFault=false,previousDevices=0,sharedAnchors=null;
 const evidence={schema:'hara.commander.r163.hosted-queue-campaign.v1',state:'RUNNING',source_commit:state.source_commit,
  worker:WORKER,d1:DBID,queue:QUEUE,dlq:DLQ,caps:CAPS,commercial:false,prod_modified:false,
  native_queue:true,hosted_20k:false,hosted_20k_gate:'HOLD_ADDITIONAL_BUDGET',stages:[],native_queries:[],receipts:[]};
@@ -80,14 +80,14 @@ async function stage(concurrency,n){
  const deployed=await cli(['deploy','--config',configPath]);
  fs.writeFileSync(path.join(output,'deploy-'+concurrency+'-attempt-'+(state.attempt||1)+'.txt'),deployed,{flag:'wx',mode:0o600});
  assert.ok(deployed.includes(WORKER)&&deployed.includes('Version ID:'));
- const step={concurrency,devices:n,synthetic_events_reserved:n*2+previousDevices,deployment_sha256:hash(deployed),started_at:new Date().toISOString()};
+ const step={concurrency,devices:n,synthetic_events_reserved:sharedAnchors?n:n*2+previousDevices,deployment_sha256:hash(deployed),started_at:new Date().toISOString()};
  evidence.stages.push(step);checkpoint();
  // Recovery of previous heartbeat anchors contributes previously active enrollments as real server
  // events. Reserve those as well, never silently exclude them from the ceiling.
  await debit({events:step.synthetic_events_reserved});
  const devices=state.devices.slice(0,n);
- await map(devices,d=>deviceRequest(d,'/api/device/heartbeat',{device_id:d.id,agent_version:'0.3.54',architecture:'x86_64',approval_mode:'PERSISTENT_TRUSTED'},200));
- const rows=await query('SELECT device_id,last_seen_at_utc FROM commander_devices WHERE tenant_id='+literal(state.tenant)+' AND device_id IN ('+devices.map(d=>literal(d.id)).join(',')+')',{maxReads:n*3});
+ if(!sharedAnchors)await map(devices,d=>deviceRequest(d,'/api/device/heartbeat',{device_id:d.id,agent_version:'0.3.54',architecture:'x86_64',approval_mode:'PERSISTENT_TRUSTED'},200));
+ const rows=sharedAnchors||await query('SELECT device_id,last_seen_at_utc FROM commander_devices WHERE tenant_id='+literal(state.tenant)+' AND device_id IN ('+devices.map(d=>literal(d.id)).join(',')+')',{maxReads:n*3});
  assert.equal(rows.length,n);step.heartbeat_anchors=rows;
  const events=devices.map((d,i)=>({device:d,event:{schema:'hara.commander.recovery-alert.proposal.v1',event_id:hash(state.campaign+'|event|'+concurrency+'|'+i).slice(0,32),
   client_incident_key:hash(state.campaign+'|incident|'+concurrency+'|'+i).slice(0,32),transition_seq:1,worker:'executor',state:'STALLED',
@@ -100,7 +100,7 @@ async function stage(concurrency,n){
  const repeated=await deviceRequest(events[0].device,'/api/device/recovery-events',events[0].event,202);assert.equal(repeated.duplicate,true);
  await deviceRequest(events[0].device,'/api/device/recovery-events',{...events[0].event,state:'RECOVERED'},409);
  await deviceRequest(events[0].device,'/api/device/recovery-events',{...events[0].event,transition_seq:3},409);
- const deliveryStart=Date.now();step.delivery_enqueue=await control('produce',{});
+ const deliveryStart=Date.now();step.delivery_enqueue=await control('produce-delivery',{});
  const ids=events.map(e=>literal(e.server_id)).join(',');let delivered;
  delivered=await waitUntil(async()=>{
   await check();const r=await query("SELECT o.*,r.client_event_id,r.portal_ack_at_utc FROM recovery_delivery_outbox o JOIN commander_device_recovery_events r ON r.event_id=o.event_id WHERE o.event_id IN ("+ids+")",{maxReads:n*5});
@@ -119,8 +119,9 @@ async function stage(concurrency,n){
   evidence.receipts.push({server_id:x.server_id,client_id:x.event.event_id,receipt_sha256:row.receipt_sha256,receipt_ref:row.receipt_ref});
  }
  const sinkRows=await query('SELECT event_id,fingerprint,receipt_ref FROM qa_delivery_receipts WHERE event_id IN ('+events.map(e=>literal(e.event.event_id)).join(',')+')',{sink:true,maxReads:n*3});assert.equal(sinkRows.length,n);
- const replayJobCount=(await check()).jobs.length;await control('produce',{});
+ const replayJobCount=(await check()).jobs.length;await control('produce-delivery',{});
  await new Promise(r=>setTimeout(r,1500));assert.equal((await check()).jobs.length,replayJobCount,'CONFIRMED_NOTIFICATION_REQUEUED');
+ if(sharedAnchors){step.state='PASS_HOSTED_DELIVERY';step.finished_at=new Date().toISOString();checkpoint();console.log(JSON.stringify({stage:concurrency,state:step.state,events:n,budget:evidence.budget}));return;}
  const lastHeartbeat=Math.max(...rows.map(r=>Date.parse(r.last_seen_at_utc)));
  await waitUntil(async()=>{await check();return Date.now()>=lastHeartbeat+121000;},lastHeartbeat+125000,{intervalMs:5000});
  const scanStart=Date.now(),before=(await check()).jobs.filter(j=>j.kind==='SCAN').map(j=>j.message_id);
@@ -147,8 +148,26 @@ try{
  for(const q of [DLQ,QUEUE])await cli(['queues','resume-delivery',q]);
  const unauthorized=await fetch(ORIGIN+'/__qa/produce',{method:'POST'});assert.equal(unauthorized.status,401);
  const unauthenticated=await fetch(ORIGIN+'/api/device/recovery-events',{method:'POST',headers:{'content-type':'application/json'},body:'{}'});assert.equal(unauthenticated.status,401);
- for(const [c,n] of [[1,25],[2,50],[4,50]])await stage(c,n);
- await control('fault',{});queueFault=true;
+ // One real heartbeat campaign keeps ramp measurements inside the remaining
+ // active window. Delivery passes 50 events at 1, then 50 at 2, then 50 at 4.
+ // Detection runs at 4 only after the same 50 actual heartbeats age 121 seconds.
+ await debit({events:50});
+ await map(state.devices.slice(0,50),d=>deviceRequest(d,'/api/device/heartbeat',{device_id:d.id,agent_version:'0.3.54',architecture:'x86_64',approval_mode:'PERSISTENT_TRUSTED'},200));
+ sharedAnchors=await query('SELECT device_id,last_seen_at_utc FROM commander_devices WHERE tenant_id='+literal(state.tenant),{maxReads:150});assert.equal(sharedAnchors.length,50);
+ for(const [c,n] of [[1,50],[2,50],[4,50]]){await stage(c,n);if(c===1){await control('fault',{});queueFault=true;}}
+ const last=Math.max(...sharedAnchors.map(r=>Date.parse(r.last_seen_at_utc)));
+ await waitUntil(async()=>{await check();return Date.now()>=last+121000;},last+125000,{intervalMs:5000});
+ const before=(await check()).jobs.filter(j=>j.kind==='SCAN').map(j=>j.message_id),scanStart=Date.now(),plan=await control('produce',{});let observed;
+ await waitUntil(async()=>{const s=await check(),jobs=s.jobs.filter(j=>j.kind==='SCAN'&&!before.includes(j.message_id));
+  if(jobs.length===plan.jobs&&jobs.every(j=>j.outcome==='ACKNOWLEDGED')){observed=s;return true;}return false;},last+178000);
+ const detections=await query("SELECT device_id,heartbeat_anchor_at_utc,persisted_at_utc,event_id FROM commander_device_recovery_events WHERE tenant_id="+literal(state.tenant)+" AND origin='SERVER' AND event_state='DEGRADED' AND heartbeat_anchor_at_utc IN ("+sharedAnchors.map(r=>literal(r.last_seen_at_utc)).join(',')+")",{maxReads:500});
+ assert.equal(detections.length,50);assert.equal(new Set(detections.map(r=>r.device_id)).size,50);
+ const times=detections.map(r=>(Date.parse(r.persisted_at_utc)-Date.parse(r.heartbeat_anchor_at_utc))/1000).sort((a,b)=>a-b);
+ evidence.detection={devices:50,concurrency:4,actual_heartbeat_anchors:sharedAnchors,rows:detections,intervals_scaled:false,
+  max_persisted_delay_s:times.at(-1),p95_s:times[46],p99_s:times[48],
+  readback_upper_delay_s:(observed.server_ms-Math.min(...sharedAnchors.map(r=>Date.parse(r.last_seen_at_utc))))/1000,
+  processing_upper_ms:observed.server_ms-scanStart};
+ assert.ok(evidence.detection.readback_upper_delay_s<=180);assert.ok(evidence.detection.processing_upper_ms<45000);checkpoint();
  const fault=await waitUntil(async()=>{const s=await check();return s.jobs.find(j=>j.detail?.includes('R163-QA-DLQ-FAULT')&&j.attempts===3);},Date.now()+90000);
  const expectedBody={schema:'hara.commander.recovery-work.v1',kind:'SCAN',device_ids:['R163-QA-DLQ-FAULT']};
  const receipt=await waitUntil(async()=>{const s=await check();return s.dlq.find(r=>r.body_sha256===hash(JSON.stringify(expectedBody))&&r.queue_name===DLQ);},Date.now()+90000);

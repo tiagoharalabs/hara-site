@@ -79,7 +79,7 @@ function validateReceipt(receipt,target,event,hash,reference=null){
 async function deliver(env,target,event,fetchImpl,signal,attempt){
  const hash=await sha(stable(event));
  const read=()=>fetchImpl(target.origin+target.readPath+encodeURIComponent(event.event_id),{
-  method:'GET',headers:{authorization:'Bearer '+env[target.readSecret],accept:'application/json'},redirect:'error',signal});
+  method:'GET',headers:{authorization:'Bearer '+env[target.readSecret],accept:'application/json'},redirect:'manual',signal});
  // An ambiguous prior POST is reconciled before re-posting the same key.
  // The admitted receiver must provide durable idempotent POST + scoped readback.
  if(attempt>1){
@@ -89,7 +89,7 @@ async function deliver(env,target,event,fetchImpl,signal,attempt){
  }
  const response=await fetchImpl(target.origin+target.writePath,{
   method:'POST',headers:{authorization:'Bearer '+env[target.writeSecret],'content-type':'application/json',
-   accept:'application/json','idempotency-key':event.event_id},body:stable(event),redirect:'error',signal});
+   accept:'application/json','idempotency-key':event.event_id},body:stable(event),redirect:'manual',signal});
  const accepted=await readJson(response);
  const qa=target.kind==='QA_RECIPIENT_V1';
  if(accepted.schema!==(qa?'hara.commander.review163.recipient-accepted.v1':'hara.commander.recovery-recipient.v1')||

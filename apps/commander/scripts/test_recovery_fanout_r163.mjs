@@ -72,7 +72,7 @@ function fixture(t){
  });
  const fetchImpl=async(url,init)=>{
   const request=new Request(url,init);metrics.fetches.push({url,method:request.method});
-  assert.equal(new URL(url).origin,ORIGIN);assert.equal(request.redirect,'error');
+  assert.equal(new URL(url).origin,ORIGIN);assert.equal(request.redirect,'manual');
   if(request.method==='POST'){
    assert.equal(request.headers.get('authorization'),'Bearer '+env.SYNTHETIC_WRITE);
    const event=await request.json(),fingerprint=hash(stable(event));
@@ -317,4 +317,9 @@ test('pending predecessor/due-time cannot acknowledge an unfinished delivery job
  const f=fixture(t);f.env.COMMANDER_RECOVERY_DELIVERY_ENABLED='true';f.addDevice(1,{seen:-1000});f.addEvent(1);
  f.stage(eventId(1),{state:'RETRY',attempts:1,next:NOW+60000});
  const r=await f.consume(delivery([eventId(1)]));assert.equal(r.calls.ack,0);assert.equal(r.calls.retry.length,1);assert.equal(f.metrics.fetches.length,0);
+});
+test('delivery-only ramp cannot start the offline detector or expand its budget',async t=>{
+ const f=fixture(t);f.addDevice(1);await f.produce({scan:false});
+ assert.equal(f.jobs().filter(j=>j.kind==='SCAN').length,0);
+ assert.equal(f.db.prepare('SELECT count(*) AS n FROM commander_device_recovery_events').get().n,0);
 });

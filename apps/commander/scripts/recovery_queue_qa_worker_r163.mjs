@@ -3,7 +3,7 @@
 import worker from '../src/worker.js';
 import {enqueueRecoveryWork,consumeRecoveryWork} from '../src/recovery-fanout.mjs';
 import {acceptR163Dlq} from './recovery_queue_dlq_r163.mjs';
-import {budgeted,CAPS,startRecoveryBudget,readRecoveryQaStatus} from './recovery_queue_budget_r163.mjs';
+import {budgeted,CAPS,startRecoveryBudget,pauseRecoveryBudget,readRecoveryQaStatus} from './recovery_queue_budget_r163.mjs';
 const QUEUE='hara-commander-r163-recovery-dev-20261024';
 const DLQ='hara-commander-r163-recovery-dlq-dev-20261024';
 const json=(o,status=200)=>Response.json(o,{status,headers:{'cache-control':'no-store'}});
@@ -13,7 +13,7 @@ async function auth(request,env){
  const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(token.startsWith('Bearer ')?token.slice(7):''));
  return Array.from(new Uint8Array(digest),x=>x.toString(16).padStart(2,'0')).join('')===env.R163_QA_CONTROL_SHA256;
 }
-const produce=env=>budgeted(env,{reads:15000,writes:64},e=>enqueueRecoveryWork(e,{maxDevices:500,maxEvents:500}));
+const produce=(env,scan=true)=>budgeted(env,{reads:15000,writes:64},e=>enqueueRecoveryWork(e,{maxDevices:500,maxEvents:500,scan}));
 export default {
  async fetch(request,env,ctx){
   if(!isolated(env))return json({code:'HOLD_QA_ISOLATION'},503);
@@ -28,7 +28,7 @@ export default {
      const row=await startRecoveryBudget(env.PRODUCT_DB);return json({state:row.state,deadline_ms:row.deadline_ms});
     }
     if(path==='/__qa/stop'&&request.method==='POST'){
-     await env.PRODUCT_DB.prepare("UPDATE r163_qa_budget SET state='PAUSED' WHERE id=1").run();return json({state:'PAUSED'});
+     await pauseRecoveryBudget(env.PRODUCT_DB);return json({state:'PAUSED'});
     }
     if(path==='/__qa/debit'&&request.method==='POST'){
      const b=await request.json();
@@ -46,9 +46,11 @@ export default {
      const read_status=r.status;await r.body?.cancel();
      const w=await e.R163_QA_RECIPIENT.fetch(origin+'/notify',{method:'POST',headers:{authorization:'Bearer '+e.R163_QA_WRITE,'content-type':'application/json'},body:'{}'});
      const write_status=w.status;await w.body?.cancel();
-     return {public_status,read_status,write_status,recipient:'hara-commander-r163-sink-20261024'};
+     let error_redirect;try{const q=await e.R163_QA_RECIPIENT.fetch(origin+'/health',{redirect:'error'});error_redirect=q.status;await q.body?.cancel();}catch(err){error_redirect=err.constructor.name;}
+     return {public_status,read_status,write_status,error_redirect,recipient:'hara-commander-r163-sink-20261024'};
     }));
     if(path==='/__qa/produce'&&request.method==='POST')return json(await produce(env));
+    if(path==='/__qa/produce-delivery'&&request.method==='POST')return json(await produce(env,false));
     if(path==='/__qa/fault'&&request.method==='POST')return json(await budgeted(env,{reads:32,writes:32},async e=>{
      await e.RECOVERY_DELIVERY_QUEUE.sendBatch([{body:{schema:'hara.commander.recovery-work.v1',kind:'SCAN',device_ids:['R163-QA-DLQ-FAULT']}}]);
      return {queued:true};

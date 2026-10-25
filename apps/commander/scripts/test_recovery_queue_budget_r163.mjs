@@ -2,10 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
 import {budgeted,BUDGET_SCHEMA,CAPS,withinBudget} from './recovery_queue_budget_r163.mjs';
-function fixture(t,{reads=0,writes=0,deadline=Date.now()+60000,state='ACTIVE'}={}){
+function fixture(t,{reads=0,writes=0,deadline=Date.now()+60000,state='ACTIVE',activeUsed=0}={}){
  const db=new DatabaseSync(':memory:');t.after(()=>db.close());db.exec(BUDGET_SCHEMA);
  db.prepare('INSERT INTO r163_qa_budget(id,state,start_ms,deadline_ms,rows_read,rows_written) VALUES(1,?,1,?,?,?)').run(state,deadline,reads,writes);
- db.exec('CREATE TABLE work(id INTEGER PRIMARY KEY)');const hooks={};
+ db.prepare('UPDATE r163_qa_budget SET active_ms_used=?').run(activeUsed);db.exec('CREATE TABLE work(id INTEGER PRIMARY KEY)');const hooks={};
  const raw={prepare:sql=>({bind:(...args)=>({first:async()=>db.prepare(sql).get(...args)??null,
   all:async()=>{const r=db.prepare(sql).all(...args);await hooks.after?.();return {results:r,meta:{rows_read:r.length,rows_written:sql.startsWith('UPDATE')?1:0}};},
   run:async()=>{const r=db.prepare(sql).run(...args);await hooks.after?.();return {meta:{rows_read:1,rows_written:r.changes}};}})})};
@@ -19,7 +19,7 @@ test('provider metadata accounted, queue upper reservation and no client reset',
   await e.RECOVERY_DELIVERY_QUEUE.sendBatch([{body:{}}]);
  });
  assert.equal(f.sent(),1);assert.equal(f.row().queue_ops_upper,12);
- assert.equal(f.row().rows_written,10);assert.equal(f.row().reserved_write,0);
+ assert.equal(f.row().rows_written,6);assert.equal(f.row().reserved_write,0);
 });
 for(const fields of [{reads:CAPS.reads-16},{writes:CAPS.writes-16},{deadline:Date.now()-1},{state:'STOPPED'}])
 test('ceiling/deadline blocks before task '+JSON.stringify(fields),async t=>{
@@ -71,13 +71,13 @@ test('versioned config is restricted to the exact dedicated QA resources',async(
  assert.equal(c.queues.consumers[1].dead_letter_queue,undefined);
  assert.equal(c.vars.DEVICE_EVENT_V2_ENABLED,'false');
 });
-test('resume retains original deadline, counters and reserved event budget',async t=>{
+test('resume retains consumed active time, counters and reserved event budget',async t=>{
  const {startRecoveryBudget}=await import('./recovery_queue_budget_r163.mjs');
  const f=fixture(t,{state:'PAUSED',writes:123});f.db.exec('UPDATE r163_qa_budget SET events_reserved=50');
  const before=f.row();const row=await startRecoveryBudget(f.env.PRODUCT_DB,Date.now());
- assert.equal(row.state,'ACTIVE');assert.equal(row.deadline_ms,before.deadline_ms);assert.equal(row.rows_written,123);assert.equal(row.events_reserved,50);
+ assert.equal(row.state,'ACTIVE');assert.equal(row.start_ms,before.start_ms);assert.ok(row.deadline_ms<=Date.now()+CAPS.active_ms);assert.equal(row.active_ms_used,before.active_ms_used);assert.equal(row.rows_written,123);assert.equal(row.events_reserved,50);
 });
-for(const fields of [{state:'STOPPED'},{state:'PAUSED',deadline:Date.now()-1},{state:'PAUSED',writes:CAPS.writes}])
+for(const fields of [{state:'STOPPED'},{state:'PAUSED',deadline:Date.now()-1,activeUsed:CAPS.active_ms},{state:'PAUSED',writes:CAPS.writes}])
 test('expired/anomalous/spent campaign cannot resume '+JSON.stringify(fields),async t=>{
  const {startRecoveryBudget}=await import('./recovery_queue_budget_r163.mjs');const f=fixture(t,fields);
  await assert.rejects(()=>startRecoveryBudget(f.env.PRODUCT_DB),/HOLD_CAMPAIGN_NOT_RESUMABLE/);
@@ -98,4 +98,12 @@ test('paused status reads are metered without activating or renewing a budget',a
 test('status refuses reads when its reservation would exceed a cap',async t=>{
  const {readRecoveryQaStatus}=await import('./recovery_queue_budget_r163.mjs');const f=fixture(t,{reads:CAPS.reads-100});
  await assert.rejects(()=>readRecoveryQaStatus(f.env),/HOLD_STATUS_BUDGET/);
+});
+test('active load timer pauses without replenishing its 30-minute allowance',async t=>{
+ const {startRecoveryBudget,pauseRecoveryBudget}=await import('./recovery_queue_budget_r163.mjs');const f=fixture(t,{state:'PAUSED',activeUsed:1500000});
+ const a=await startRecoveryBudget(f.env.PRODUCT_DB,1000);assert.equal(a.deadline_ms,301000);
+ await pauseRecoveryBudget(f.env.PRODUCT_DB,61000);assert.equal(f.row().active_ms_used,1560000);
+ const b=await startRecoveryBudget(f.env.PRODUCT_DB,9000000);assert.equal(b.deadline_ms,9240000);
+ await pauseRecoveryBudget(f.env.PRODUCT_DB,9240000);assert.equal(f.row().active_ms_used,CAPS.active_ms);
+ await assert.rejects(()=>startRecoveryBudget(f.env.PRODUCT_DB,9240001),/HOLD_CAMPAIGN_NOT_RESUMABLE/);
 });

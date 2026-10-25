@@ -51,7 +51,7 @@ async function fixture(t){
  const calls=[];
  const fetchImpl=async(url,init)=>{
   const request=new Request(url,init);assert.equal(new URL(request.url).origin,ORIGIN);
-  assert.equal(request.redirect,'error');
+  assert.equal(request.redirect,'manual');
   calls.push({method:request.method,body:request.method==='POST'?await request.clone().json():null});
   return qaReceiver.fetch(request,sinkEnv);
  };

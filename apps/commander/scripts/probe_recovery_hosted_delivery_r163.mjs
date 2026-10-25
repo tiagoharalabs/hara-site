@@ -84,7 +84,7 @@ async function main(){
  }
  const unauthenticated=await readReceipt(agent.events[0].event,false);assert.equal(unauthenticated.status,401);await unauthenticated.body?.cancel();
  const scopedFetch=async(url,init)=>{
-  const u=new URL(url);assert.equal(u.origin,origin);assert.equal(init.redirect,'error');
+  const u=new URL(url);assert.equal(u.origin,origin);assert.equal(init.redirect,'manual');
   if(init.method==='POST')assert.ok(agent.events.some(x=>x.event.event_id===JSON.parse(init.body).event_id));
   else assert.ok(agent.events.some(x=>u.pathname==='/receipt/'+x.event.event_id));
   return fetch(url,init);

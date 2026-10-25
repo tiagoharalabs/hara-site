@@ -63,7 +63,7 @@ async function fixture(t,{tenantB=false,ingest=true}={}){
  const recipient=async(url,init)=>{
   const request=new Request(url,init);
   assert.equal(request.url.startsWith(ORIGIN+'/'),true,'no other destination is admitted');
-  assert.equal(request.redirect,'error','redirects must never carry recipient credentials');
+  assert.equal(request.redirect,'manual','redirects must never carry recipient credentials');
   assert.ok(request.signal instanceof AbortSignal);
   calls.push({method:request.method,url:request.url,
    authorization:request.headers.get('authorization'),body:request.method==='POST'?await request.clone().json():null});
@@ -242,7 +242,7 @@ test('commercial receipt adapter carries only persisted metadata and binds the r
  const requests=[];let readback=null;
  const fetchImpl=async(url,init)=>{
   const request=new Request(url,init);
-  assert.equal(request.redirect,'error');
+  assert.equal(request.redirect,'manual');
   requests.push(request.method);
   if(request.method==='POST'){
    const body=await request.json();

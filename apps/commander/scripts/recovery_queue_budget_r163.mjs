@@ -4,6 +4,7 @@ export const CAPS={queue:4000,reads:250000,writes:10000,active_ms:1800000,events
 export const BUDGET_SCHEMA=`CREATE TABLE IF NOT EXISTS r163_qa_budget(
  id INTEGER PRIMARY KEY CHECK(id=1),state TEXT NOT NULL,start_ms INTEGER NOT NULL,
  deadline_ms INTEGER NOT NULL,rows_read INTEGER NOT NULL,rows_written INTEGER NOT NULL,
+ active_ms_used INTEGER NOT NULL DEFAULT 0,active_since_ms INTEGER NOT NULL DEFAULT 0,
  reserved_read INTEGER NOT NULL DEFAULT 0,reserved_write INTEGER NOT NULL DEFAULT 0,
  queue_ops_upper INTEGER NOT NULL DEFAULT 0,events_reserved INTEGER NOT NULL DEFAULT 0,
  invocations INTEGER NOT NULL DEFAULT 0,anomaly TEXT);
@@ -29,7 +30,7 @@ export async function budgeted(env,{reads,writes},fn){
  if(!reserved)throw Error('HOLD_CAMPAIGN_BUDGET_OR_DEADLINE');
  // Conservative PK bookkeeping allowance includes reservation, settlement and
  // metering/status overhead. Query metadata below is provider-measured.
- let read=8,write=8,anomaly=null,result;
+ let read=8,write=4,anomaly=null,result;
  const record=r=>{
   if(!r?.meta||!Number.isSafeInteger(r.meta.rows_read)||!Number.isSafeInteger(r.meta.rows_written))
    throw Error('HOLD_MISSING_D1_METER');
@@ -69,15 +70,20 @@ export async function budgeted(env,{reads,writes},fn){
  return result;
 }
 export async function startRecoveryBudget(db,now=Date.now()){
- // Resume a paused attempt in the same window. Never renew a deadline, reset
- // counters/reservations, or reactivate an anomalous/expired campaign.
+ // The admitted cap is ACTIVE load time, accumulated across pauses. Counters
+ // and consumed time never reset. STOPPED remains terminal; no client sets time.
  const row=await db.prepare(`UPDATE r163_qa_budget SET state='ACTIVE',
   start_ms=CASE WHEN start_ms=0 THEN ? ELSE start_ms END,
-  deadline_ms=CASE WHEN start_ms=0 THEN ? ELSE deadline_ms END
-  WHERE id=1 AND state='PAUSED' AND (start_ms=0 OR deadline_ms>?)
+  deadline_ms=?+?-active_ms_used,active_since_ms=?
+  WHERE id=1 AND state='PAUSED' AND active_ms_used<?
    AND rows_read+reserved_read<? AND rows_written+reserved_write<? AND queue_ops_upper<? AND events_reserved<=?
-  RETURNING *`).bind(now,now+CAPS.active_ms,now,CAPS.reads,CAPS.writes,CAPS.queue,CAPS.events).first();
+  RETURNING *`).bind(now,now,CAPS.active_ms,now,CAPS.active_ms,CAPS.reads,CAPS.writes,CAPS.queue,CAPS.events).first();
  if(!row)throw Error('HOLD_CAMPAIGN_NOT_RESUMABLE');return row;
+}
+export async function pauseRecoveryBudget(db,now=Date.now()){
+ await db.prepare(`UPDATE r163_qa_budget SET active_ms_used=MIN(?,active_ms_used+MAX(0,?-active_since_ms)),
+  active_since_ms=0,state=CASE WHEN state='STOPPED' THEN state ELSE 'PAUSED' END
+  WHERE id=1 AND active_since_ms>0`).bind(CAPS.active_ms,now).run();
 }
 export async function readRecoveryQaStatus(env){
  if(env.ENVIRONMENT!=='DEV'||env.R163_QA_ISOLATED!=='true')throw Error('HOLD_QA_ISOLATION');
