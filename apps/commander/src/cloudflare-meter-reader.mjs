@@ -21,10 +21,12 @@ function typeName(type){
   for(let depth=0;type&&depth<8;depth++,type=type.ofType)if(type.name)return type.name;
   return null;
 }
+// Match the bounded typeName traversal, including [Group!]! wrappers.
+const TYPE_REF=Array.from({length:7}).reduce(body=>'name kind ofType { '+body+' }','name kind');
 const SCHEMA_QUERY=`query R163ReadMetricSchema { __schema { types { name kind
- fields { name args { name type { name kind ofType { name kind ofType { name kind } } } }
- type { name kind ofType { name kind ofType { name kind } } } }
+ fields { name args { name type { ${TYPE_REF} } } type { ${TYPE_REF} } }
  inputFields { name } } } }`;
+
 
 export class CloudflareMeterReader {
   #token;#resources;#profile;#pin;#fetch;#now;

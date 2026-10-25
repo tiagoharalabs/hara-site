@@ -87,3 +87,18 @@ test('missing native resources and future or reversed windows fail before provid
  const {client,io}=await reader(boundary(),{resources:{account_id:resources.account_id}});
  await assert.rejects(()=>client.capture(window),/HOLD_/);assert.equal(io.calls.length,0);
 });
+
+test('non-null lists of non-null groups are discoverable without truncating provider type references',async()=>{
+ const wrapped=structuredClone(schema);
+ for(const field of wrapped.types[0].fields)field.type={kind:'NON_NULL',ofType:{kind:'LIST',ofType:{kind:'NON_NULL',ofType:{name:'UsageGroup',kind:'OBJECT'}}}};
+ const io=boundary(),original=io.fetch;
+ io.fetch=async(url,init)=>{
+  const request=JSON.parse(init.body);
+  if(request.query.includes('__schema')){
+   assert.ok((request.query.match(/ofType/g)||[]).length>=8,'bounded discovery must include sufficient nested type references');
+   return Response.json({data:{__schema:wrapped}});
+  }
+  return original(url,init);
+ };
+ const {client}=await reader(io);assert.equal((await client.capture(window)).native_admission,false);
+});
