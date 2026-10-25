@@ -2402,6 +2402,7 @@ def load_config():
         raise RuntimeError("OPENAI_TUNNEL_AUTOSTART_INVALID")
     data["HARA_COMMANDER_TUNNEL_AUTOSTART"]=autostart
     _enrollment_context(data)
+    event_v2_dev_enabled(data)
     data["HARA_COMMANDER_URL"]=data["HARA_COMMANDER_URL"].rstrip("/")
     return data
 def set_approval_mode(value):
@@ -2435,9 +2436,34 @@ def set_transport_mode(value):
     subprocess.run(["systemctl","--user","restart","hara-commander-agent.service"],check=False)
     print("AGENT_RESTART_REQUESTED=TRUE")
 
+def event_v2_dev_enabled(config):
+    flag=config.get('HARA_COMMANDER_EVENT_V2_DEV_ENABLED','false')
+    if type(flag) is not str or flag not in {'true','false'}:
+        raise ValueError('EVENT_V2_DEV_FLAG_INVALID')
+    if flag=='false':return False
+    if (config.get('HARA_COMMANDER_ENVIRONMENT')!='DEV'
+        or config.get('HARA_COMMANDER_URL')!='https://hara-commander-r163-canary-20261024.tiago-sartori.workers.dev'
+        or str(config.get('HARA_COMMANDER_TRANSPORT_MODE') or 'OUTBOUND_RELAY').upper()!='OUTBOUND_RELAY'):
+        raise ValueError('EVENT_V2_DEV_SCOPE_INVALID')
+    return True
+
+def event_v2_dev_module():
+    import importlib.util
+    path=Path(__file__).with_name('event_v2_dev.py')
+    spec=importlib.util.spec_from_file_location('hara_commercial_0356_event_v2_dev',path)
+    if spec is None or spec.loader is None:raise RuntimeError('EVENT_V2_DEV_MODULE_REQUIRED')
+    module=importlib.util.module_from_spec(spec)
+    sys.modules[spec.name]=module;spec.loader.exec_module(module)
+    return module
+
 def transport_mode(config=None):
-    if config is None: config=load_config()
-    return str(config.get("HARA_COMMANDER_TRANSPORT_MODE") or "OUTBOUND_RELAY").upper()
+    if config is None:config=load_config()
+    mode=str(config.get('HARA_COMMANDER_TRANSPORT_MODE') or 'OUTBOUND_RELAY').upper()
+    if mode not in TRANSPORT_MODES:raise ValueError('DEVICE_TRANSPORT_MODE_INVALID')
+    return 'EVENT_V2' if event_v2_dev_enabled(config) else mode
+
+def _event_v2_heartbeat_worker(config,channel):
+    event_v2_dev_module().heartbeat_worker(sys.modules[__name__],config)
 
 def effective_approval_mode(config=None):
     if config is None:
@@ -3408,6 +3434,7 @@ def _relay_executor_worker(config,channel):
     _relay_progress('READY')
     last_lease=0.0;last_reconciliation=0.0;backoff=0.0
     poll_hot_until=time.monotonic()+CALL_POLL_STARTUP_HOT_SECONDS
+    gate=event_v2_dev_module().WakeGate(config['_event_v2_wake_signal']) if event_v2_dev_enabled(config) else None
     while True:
         _relay_progress('BUSY')
         try:
@@ -3426,9 +3453,12 @@ def _relay_executor_worker(config,channel):
                     if code in {'HTTP_401','HTTP_403'}:
                         _relay_progress('REVOKED',code=code);return
                     _relay_progress('ERROR',code=code)
+            if gate and not gate.wait():
+                _relay_progress('READY',delay=0);continue
             _relay_progress('BUSY')
             call=post_json(config['HARA_COMMANDER_URL']+'/api/device/calls/next',
                            config['HARA_DEVICE_TOKEN'],{},timeout=25)
+            if gate:gate.after_claim(bool(call))
             if call:
                 poll_hot_until=time.monotonic()+CALL_POLL_HOT_WINDOW_SECONDS
                 _RELAY_CALL_DEADLINE=relay_call_deadline(call)
@@ -3443,8 +3473,9 @@ def _relay_executor_worker(config,channel):
             if code in {'HTTP_401','HTTP_403'}:
                 _relay_progress('REVOKED',code=code);return
             backoff=min(60.0,30.0 if backoff==0 else backoff*2) if code=='HTTP_429' else 2.0
+            if gate:gate.notify()
             _relay_progress('ERROR',code=code)
-        delay=backoff or float(CALL_POLL_HOT_SECONDS if time.monotonic()<poll_hot_until else CALL_POLL_IDLE_SECONDS)
+        delay=backoff or (0.0 if gate else float(CALL_POLL_HOT_SECONDS if time.monotonic()<poll_hot_until else CALL_POLL_IDLE_SECONDS))
         _relay_progress('READY',delay=delay)
         time.sleep(delay)
 
@@ -3589,11 +3620,14 @@ def _relay_alert_worker(config, channel):
 class RelaySupervisor:
     def __init__(self,config,*,heartbeat_target=None,executor_target=None,alert_target=None,report=None,settings=None,recovery_outbox=None):
         import multiprocessing
-        if transport_mode(config)!='OUTBOUND_RELAY':raise ValueError('RELAY_TRANSPORT_REQUIRED')
+        if transport_mode(config) not in {'OUTBOUND_RELAY','EVENT_V2'}:raise ValueError('RELAY_TRANSPORT_REQUIRED')
         self.config=dict(config)
         start_method=(settings or {}).get('start_method') or ('fork' if heartbeat_target or executor_target else 'spawn')
         self.context=multiprocessing.get_context(start_method)
-        self.targets={'heartbeat':heartbeat_target or _relay_heartbeat_worker,
+        event_v2=event_v2_dev_enabled(config)
+        self.wake_signal=self.context.BoundedSemaphore(1) if event_v2 else None
+        if event_v2:self.wake_signal.acquire()
+        self.targets={'heartbeat':heartbeat_target or (_event_v2_heartbeat_worker if event_v2 else _relay_heartbeat_worker),
                       'executor':executor_target or _relay_executor_worker}
         self.recovery_outbox=recovery_outbox
         self.state_root=DATA_DIR
@@ -3642,6 +3676,7 @@ class RelaySupervisor:
         receive,send=self.context.Pipe(duplex=False)
         config=dict(self.config)
         config['_relay_state_root']=str(self.state_root)
+        if self.wake_signal is not None:config['_event_v2_wake_signal']=self.wake_signal
         if kind=='executor':config['_relay_abandoned_calls']=list(self.abandoned.values())
         process=self.context.Process(target=_relay_worker_entry,
                     args=(self.targets[kind],config,send),daemon=True)
@@ -3779,7 +3814,7 @@ def run_supervised_relay(config):
         while True:
             current=load_config()
             if _enrollment_context(current)!=startup:raise ValueError('ENROLLMENT_CHANGED_RESTART_REQUIRED')
-            if transport_mode(current)!='OUTBOUND_RELAY':raise ValueError('TRANSPORT_CHANGED_RESTART_REQUIRED')
+            if transport_mode(current)!=transport_mode(guardian.config):raise ValueError('TRANSPORT_CHANGED_RESTART_REQUIRED')
             authorized=effective_approval_mode(current)=='PERSISTENT_TRUSTED' or operator_session_active()
             if effective_approval_mode(current)!=effective_approval_mode(guardian.config):
                 guardian.close();guardian.config=dict(current)
