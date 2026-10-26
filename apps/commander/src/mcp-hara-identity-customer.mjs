@@ -141,7 +141,7 @@ export function haraIdentityCustomerMcpProtectedResourceMetadata(request, env) {
     resource: haraIdentityCustomerMcpResource(request, env),
     authorization_servers: [normalizeIssuer(env.AUTH_ISSUER).replace(/\/$/, "")],
     bearer_methods_supported: ["header"],
-    scopes_supported: ["openid", "email"],
+    scopes_supported: ["openid", "email", "offline_access"],
   };
 }
 
@@ -158,6 +158,37 @@ export function haraIdentityCustomerMcpUnauthorized(request) {
           'Bearer realm="H.A.R.A. Commander", error="invalid_token", resource_metadata="' + metadata + '"',
       },
     },
+  );
+}
+
+const INVALID_BEARER_CODES = new Set([
+  "HARA_IDENTITY_MCP_BEARER_MISSING",
+  "HARA_IDENTITY_MCP_CLIENT_BINDING_MISSING",
+  "HARA_IDENTITY_MCP_CLIENT_BINDING_CONFLICT",
+  "HARA_IDENTITY_MCP_INTROSPECTION_INACTIVE",
+  "HARA_IDENTITY_MCP_INTROSPECTION_ISSUER_MISMATCH",
+  "HARA_IDENTITY_MCP_DCR_PROJECT_AUD_MISMATCH",
+  "HARA_IDENTITY_MCP_INTROSPECTION_AUD_MISMATCH",
+  "HARA_IDENTITY_MCP_CLIENT_AUD_MISMATCH",
+  "HARA_IDENTITY_MCP_SCOPE_MISSING",
+  "HARA_IDENTITY_MCP_TOKEN_EXPIRED",
+  "HARA_IDENTITY_MCP_TOKEN_IAT_INVALID",
+  "HARA_IDENTITY_MCP_SUBJECT_INVALID",
+  "HARA_IDENTITY_MCP_SUBJECT_MISMATCH",
+  "OIDC_USERINFO_AUTH_DENIED",
+]);
+
+// A provider outage is not proof that the user's bearer was revoked.
+// Only known credential denials trigger ChatGPT's OAuth reauthorization UI.
+// Unknown failures remain fail-closed as 503 and never execute tools.
+export function haraIdentityCustomerMcpAuthFailureResponse(request, error) {
+  const code = typeof error?.message === "string" ? error.message : "";
+  if (INVALID_BEARER_CODES.has(code) || code.startsWith("OIDC_ACCESS_TOKEN_")) {
+    return haraIdentityCustomerMcpUnauthorized(request);
+  }
+  return Response.json(
+    { error: "temporarily_unavailable", error_description: "Authentication verification unavailable" },
+    { status: 503, headers: { "cache-control": "no-store", "retry-after": "5" } },
   );
 }
 

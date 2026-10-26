@@ -26,6 +26,7 @@ import {
   haraIdentityCustomerMcpEnabled,
   haraIdentityCustomerMcpProtectedResourceMetadata,
   haraIdentityCustomerMcpUnauthorized,
+  haraIdentityCustomerMcpAuthFailureResponse,
   verifyHaraIdentityCustomerMcpBearer,
 } from "./mcp-hara-identity-customer.mjs";
 import { handleCustomerMcpRequest } from "./customer-mcp.mjs";
@@ -5623,8 +5624,8 @@ export default {
         let identity;
         try {
           identity = await verifyHaraIdentityCustomerMcpBearer(request, env);
-        } catch (_error) {
-          return haraIdentityCustomerMcpUnauthorized(request);
+        } catch (error) {
+          return haraIdentityCustomerMcpAuthFailureResponse(request, error);
         }
 
         const profile=String(url.searchParams.get("profile") || "full").trim().toLowerCase();

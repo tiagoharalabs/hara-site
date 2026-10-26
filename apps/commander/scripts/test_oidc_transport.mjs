@@ -4,6 +4,7 @@ import { exchangeAuthorizationCode, oidcUserInfo } from "../src/oidc.js";
 const originalFetch = globalThis.fetch;
 const calls = [];
 let forcedRedirectUrl = "";
+let forcedUserInfoStatus = 0;
 
 globalThis.fetch = async (url, init = {}) => {
   calls.push({ url: String(url), init });
@@ -17,6 +18,7 @@ globalThis.fetch = async (url, init = {}) => {
     return Response.json({ id_token: "header.payload.signature", access_token: "access" });
   }
   if (String(url).endsWith("/userinfo")) {
+    if (forcedUserInfoStatus) return Response.json({ error: "synthetic" }, { status: forcedUserInfoStatus });
     return Response.json({ sub: "subject-1", email: "user@example.test" });
   }
   throw new Error("UNEXPECTED_FETCH");
@@ -94,6 +96,11 @@ try {
     /OIDC_USERINFO_REDIRECT_DENIED/,
   );
   forcedRedirectUrl = "";
+  forcedUserInfoStatus = 401;
+  await assert.rejects(oidcUserInfo({ metadata, accessToken: "expired" }), /OIDC_USERINFO_AUTH_DENIED/);
+  forcedUserInfoStatus = 503;
+  await assert.rejects(oidcUserInfo({ metadata, accessToken: "valid" }), /OIDC_USERINFO_FAILED/);
+  forcedUserInfoStatus = 0;
 } finally {
   globalThis.fetch = originalFetch;
 }

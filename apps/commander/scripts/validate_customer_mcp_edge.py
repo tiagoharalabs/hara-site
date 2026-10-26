@@ -43,7 +43,7 @@ def main() -> int:
     assert "idempotentHint = true" in module
     assert "openWorldHint: true" in module
     assert 'securitySchemes: SECURITY_SCHEMES' in module
-    assert '{ type: "oauth2", scopes: ["openid"] }' in module
+    assert '{ type: "oauth2", scopes: ["openid", "offline_access"] }' in module
 
     for forbidden in (
         "shell.run",

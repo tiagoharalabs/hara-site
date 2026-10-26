@@ -250,7 +250,7 @@ assert.equal(denied.result?.isError,true);
 assert.match(denied.result?.content?.[0]?.text || "",/POLICY_DENIED/);
 
 for (const tool of tools) {
-  assert.deepEqual(tool._meta?.securitySchemes,[{type:"oauth2",scopes:["openid"]}]);
+  assert.deepEqual(tool._meta?.securitySchemes,[{type:"oauth2",scopes:["openid","offline_access"]}]);
 }
 
 const mutating=new Set([

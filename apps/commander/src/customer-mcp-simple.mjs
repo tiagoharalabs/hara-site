@@ -41,7 +41,7 @@ export const CUSTOMER_MCP_SIMPLE_TOOLS = Object.freeze([
 ]);
 
 const SECURITY_SCHEMES = Object.freeze([
-  { type: "oauth2", scopes: ["openid"] },
+  { type: "oauth2", scopes: ["openid", "offline_access"] },
 ]);
 
 function publicToolResult(value) {

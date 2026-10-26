@@ -4,6 +4,7 @@ import {
   haraIdentityCustomerMcpEnabled,
   haraIdentityCustomerMcpProtectedResourceMetadata,
   haraIdentityCustomerMcpUnauthorized,
+  haraIdentityCustomerMcpAuthFailureResponse,
   validateOpaqueIntrospection,
   verifyHaraIdentityCustomerMcpBearer,
 } from "../src/mcp-hara-identity-customer.mjs";
@@ -32,7 +33,7 @@ const metadata = haraIdentityCustomerMcpProtectedResourceMetadata(request, env);
 assert.equal(metadata.resource, "https://commander.haralabs.com.br/api/mcp");
 assert.deepEqual(metadata.authorization_servers, ["https://auth.haralabs.com.br"]);
 assert.deepEqual(metadata.bearer_methods_supported, ["header"]);
-assert.deepEqual(metadata.scopes_supported, ["openid", "email"]);
+assert.deepEqual(metadata.scopes_supported, ["openid", "email", "offline_access"]);
 
 const unauthorized = haraIdentityCustomerMcpUnauthorized(
   new Request("https://commander.haralabs.com.br/api/mcp"),
@@ -42,6 +43,34 @@ assert.match(
   unauthorized.headers.get("www-authenticate") || "",
   /resource_metadata="https:\/\/commander\.haralabs\.com\.br\/\.well-known\/oauth-protected-resource\/api\/mcp"/,
 );
+
+const authRequest = new Request("https://commander.haralabs.com.br/api/mcp");
+for (const code of [
+  "HARA_IDENTITY_MCP_BEARER_MISSING",
+  "HARA_IDENTITY_MCP_TOKEN_EXPIRED",
+  "HARA_IDENTITY_MCP_INTROSPECTION_INACTIVE",
+  "OIDC_ACCESS_TOKEN_SIGNATURE_INVALID",
+  "OIDC_USERINFO_AUTH_DENIED",
+]) {
+  const denied = haraIdentityCustomerMcpAuthFailureResponse(authRequest, new Error(code));
+  assert.equal(denied.status, 401, code);
+  assert.match(denied.headers.get("www-authenticate") || "", /resource_metadata=/);
+}
+for (const code of [
+  "OIDC_DISCOVERY_FAILED",
+  "OIDC_JWKS_FAILED",
+  "OIDC_INTROSPECTION_FAILED",
+  "OIDC_USERINFO_FAILED",
+  "HARA_IDENTITY_MCP_DCR_PROJECT_AUD_MISSING",
+  "UNKNOWN_AUTH_BACKEND_ERROR",
+]) {
+  const unavailable = haraIdentityCustomerMcpAuthFailureResponse(authRequest, new Error(code));
+  assert.equal(unavailable.status, 503, code);
+  assert.equal(unavailable.headers.get("www-authenticate"), null);
+  assert.equal(unavailable.headers.get("retry-after"), "5");
+  assert.equal((await unavailable.json()).error, "temporarily_unavailable");
+}
+console.log("COMMANDER_MCP_AUTH_REAUTH_ONLY_FOR_INVALID_BEARER=PASS");
 
 await assert.rejects(
   () => verifyHaraIdentityCustomerMcpBearer(

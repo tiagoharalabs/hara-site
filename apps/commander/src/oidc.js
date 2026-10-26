@@ -155,6 +155,7 @@ export async function oidcUserInfo({ metadata, accessToken }) {
     throw new Error("OIDC_USERINFO_REDIRECT_DENIED");
   }
   const payload = await response.json().catch(() => ({}));
+  if (response.status === 401 || response.status === 403) throw new Error("OIDC_USERINFO_AUTH_DENIED");
   if (!response.ok || !payload.sub) throw new Error("OIDC_USERINFO_FAILED");
   return payload;
 }
