@@ -16,13 +16,13 @@ The complete native result is in [native-linux-evidence.json](native-linux-evide
 
 ## Private distribution and bounded access
 
-Eight pinned release files were verified over private HTTPS. The temporary server exposes only those files, has an external two-hour process limit, and drops privileges after loading them. Its QA certificate is added only to each installer process's CA bundle; system trust is unchanged.
+Eight pinned release files were verified over private HTTPS. The temporary server exposed only those files, had an external two-hour process limit, and dropped privileges after loading them. Its QA certificate is added only to each installer process's CA bundle; system trust is unchanged.
 
-The first two guest downloads timed out before any installation. Native diagnosis found UFW plus the separate QA input guard. A finite exception allows only the Ubuntu QA address to the host's private release port; the forward isolation rules remain unchanged. UFW access for the fleet is restricted to its local subnet. A cleanup timer was registered before the temporary rules were added. Rule removal and server shutdown must be recorded at rollout closeout.
+The first two guest downloads timed out before any installation. Native diagnosis found UFW plus the separate QA input guard. A finite exception allows only the Ubuntu QA address to the host's private release port; the forward isolation rules remain unchanged. UFW access for the fleet is restricted to its local subnet. A cleanup timer was registered before the temporary rules were added. At 2026-10-27T22:49:56Z the server and cleanup timer were stopped, the listener was absent, both temporary UFW rules and the temporary nft exception were removed, and the original QA guard rules were restored. UFW remained active. State: `PASS_PRIVATE_DISTRIBUTION_CLOSED`; the readback is included in the fleet closeout below.
 
-## Fleet and release state at this checkpoint
+## Fleet continuation and release state
 
-All nine fleet hosts answered authorized SSH after the requested wake operations. Native inventory found legacy active V2 units on Sentinelas A/B/C/D and pinned 0.3.54 ExecStart paths on Observer/Storage; installing only the default Agent path would not update those running processes. Fleet migration is a separate continuation and is not claimed as completed here.
+All nine fleet hosts completed the private 0.3.56 update: Sentinelas A/B/C/D, Nucleo-A, Ninja-Blue, Observer ARM64, Storage and Services. Each has native runtime verification, a fresh start and heartbeat, `device.info` reporting 0.3.56, and a real `id -u` execution with exit0 through the principal Commander. Existing enrollment and `PERSISTENT_TRUSTED` policy were preserved. Legacy V2/pinned ExecStart paths and CLI links were migrated with retained preimages. The initial Nucleo CLI conflict, the initial Storage observation race, the independently verified restorations and the later successful attempts remain separately recorded. See [the fleet closeout](fleet-rollout/README.md) and [sanitized evidence](fleet-rollout/fleet-rollout-summary.json).
 
 Windows QA installation remains pending an actual login to the existing QA account. The VM has no signed-in user; SYSTEM is not used as a substitute for the user's execution-policy and protected-state validation. The provisioner did not retain the QA password.
 

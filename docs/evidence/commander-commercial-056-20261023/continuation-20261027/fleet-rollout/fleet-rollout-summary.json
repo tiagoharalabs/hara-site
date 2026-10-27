@@ -1,0 +1,1126 @@
+{
+  "candidate_version": "0.3.56",
+  "commander_device_info_pass_count": 9,
+  "commander_id_u_pass_count": 9,
+  "generated_at_utc": "2026-10-27T22:53:49.882253+00:00",
+  "generator_sha256": "09b22ed40e22976c95ad888e9555790ffa4503ab49242a4aa39c7deec0d4263a",
+  "git_verified_checkpoints": [
+    {
+      "branch": "local/commander-beta-0356-review-20261023",
+      "commit": "2ddaa951985fe2421ee18becfb34ca9704be31f5",
+      "destination": "Storage origin",
+      "evidence": {
+        "bytes": 1765,
+        "retained_source_name": "first-push-receipt.json",
+        "sha256": "30bbddafd5167e794f7c1465ab7b4ce72388e719d8febcaf043501350091d50f"
+      }
+    },
+    {
+      "branch": "local/commander-beta-0356-review-20261023",
+      "commit": "2ddaa951985fe2421ee18becfb34ca9704be31f5",
+      "destination": "GitHub",
+      "evidence": {
+        "bytes": 1765,
+        "retained_source_name": "first-push-receipt.json",
+        "sha256": "30bbddafd5167e794f7c1465ab7b4ce72388e719d8febcaf043501350091d50f"
+      }
+    }
+  ],
+  "helper_startup_race_fix": {
+    "native_tests": [
+      {
+        "contract_sha256": "14ac36b4b37d35b7d0f44a35d8ced936e3d803bd8d9cb185a0c97f4cf21c9c66",
+        "evidence": {
+          "bytes": 10395,
+          "retained_source_name": "startup-fix-native-tests-contracts.json",
+          "sha256": "6118239def3dc6a5d29bc4b953226ab31459bc65ce012d58908e2b958b034570"
+        },
+        "exit": 0,
+        "host": "storage",
+        "inventory_exit": 0,
+        "skips_reported": false,
+        "state": "PASS",
+        "tests": 8
+      },
+      {
+        "contract_sha256": "4c41e3adf03a406152e1b158c088b174f4ec93a80f02ca6b1a4f3e9fb4c49743",
+        "evidence": {
+          "bytes": 10395,
+          "retained_source_name": "startup-fix-native-tests-contracts.json",
+          "sha256": "6118239def3dc6a5d29bc4b953226ab31459bc65ce012d58908e2b958b034570"
+        },
+        "exit": 0,
+        "host": "sentinela-b",
+        "inventory_exit": 0,
+        "skips_reported": false,
+        "state": "PASS",
+        "tests": 8
+      }
+    ],
+    "prior_helper_sha256": "80f726cbf2340406917c3864e3ec440af73459ea826580736f747c891b674866",
+    "reviewed_source_files": {
+      "fleet_update_private_0356.py": {
+        "bytes": 27542,
+        "sha256": "6be7676332d1085433620935c972e605bec3dc3994228d5404a74e5dcddcccc8"
+      },
+      "test_fleet_update_private_0356_startup.py": {
+        "bytes": 7638,
+        "sha256": "ecb5bb8ee7e20e8f2697f7209f1b411dcba75b693f15f8eaac2ba0bcaa2c08ac"
+      }
+    },
+    "scope": "Post-start ACTIVE_AGENT_CMDLINE observation retry only, <=5s and bounded by existing deadline; inventory and path/hash validation remain strict.",
+    "state": "PASS_NATIVE_TESTS_BOTH_HOSTS"
+  },
+  "hosts": [
+    {
+      "commander_e2e": {
+        "agent_python_version": "3.10.12",
+        "agent_version": "0.3.56",
+        "approval_mode": "PERSISTENT_TRUSTED",
+        "architecture": "x86_64",
+        "evidence": {
+          "bytes": 969,
+          "retained_source_name": "sentinela-a-commander-e2e.json",
+          "sha256": "d046c8d628510df067a87477c31fcf54c13f7ec1f632191950a851f5526f5b6b"
+        },
+        "function": "device.info",
+        "process_exit_code": 0,
+        "receipt_sha256": "991c01394f1007df4fbd0a101044993937f9a556523de9432a71cc37955eecc6",
+        "selection_basis": "MOST_RECENT_RETAINED_CAPTURE_FILE_MTIME_NOT_TOOL_EVENT_TIME",
+        "state": "PASS",
+        "transport": "OUTBOUND_RELAY"
+      },
+      "host": "sentinela-a",
+      "native": {
+        "attempts": [
+          {
+            "configuration_preserved": null,
+            "error_code": null,
+            "event_v2": "OFF",
+            "evidence": {
+              "bytes": 1896,
+              "retained_source_name": "sentinela-a-migration-launch.json",
+              "sha256": "3f73b370d870b7d94f376cd34af31923e405715fde8d59c6059c5ff916484761"
+            },
+            "finished_at": null,
+            "fresh_heartbeat": true,
+            "native_state": "HOLD",
+            "one_active_standard_v2_stopped": false,
+            "rollback_error_code": null,
+            "rollback_state": null,
+            "runtime": {
+              "agent_sha256": "ad92b9100b9b4599fc73815a5ba44ffb665ce5c1d0973c03923f1d8d45b1d03d",
+              "agent_version": "0.3.56",
+              "last_successful_heartbeat_at_utc": "2026-10-27T22:39:15.532385+00:00",
+              "pid": 25329,
+              "started_at_utc": "2026-10-27T22:39:14.362725+00:00"
+            },
+            "standard_enabled": null,
+            "started_at": "2026-10-27T22:39:12.285421+00:00",
+            "state": "IN_PROGRESS",
+            "updater_exit": 0,
+            "v2_enabled": null
+          },
+          {
+            "configuration_preserved": true,
+            "error_code": null,
+            "event_v2": "OFF",
+            "evidence": {
+              "bytes": 1828,
+              "retained_source_name": "sentinela-a-migration-result.json",
+              "sha256": "a64823af3628cdb9d2c47b6c55c23d045a79acbf0801bac74dd6fe612d2db618"
+            },
+            "finished_at": "2026-10-27T22:39:18.630402+00:00",
+            "fresh_heartbeat": true,
+            "native_state": "PASS_PRIVATE_0356_RUNTIME_MIGRATION",
+            "one_active_standard_v2_stopped": true,
+            "rollback_error_code": null,
+            "rollback_state": null,
+            "runtime": {
+              "agent_sha256": "ad92b9100b9b4599fc73815a5ba44ffb665ce5c1d0973c03923f1d8d45b1d03d",
+              "agent_version": "0.3.56",
+              "last_successful_heartbeat_at_utc": "2026-10-27T22:39:15.532385+00:00",
+              "pid": 25329,
+              "started_at_utc": "2026-10-27T22:39:14.362725+00:00"
+            },
+            "standard_enabled": "enabled",
+            "started_at": "2026-10-27T22:39:12.285421+00:00",
+            "state": "PASS",
+            "updater_exit": 0,
+            "v2_enabled": "disabled"
+          }
+        ],
+        "latest": {
+          "configuration_preserved": true,
+          "error_code": null,
+          "event_v2": "OFF",
+          "evidence": {
+            "bytes": 1828,
+            "retained_source_name": "sentinela-a-migration-result.json",
+            "sha256": "a64823af3628cdb9d2c47b6c55c23d045a79acbf0801bac74dd6fe612d2db618"
+          },
+          "finished_at": "2026-10-27T22:39:18.630402+00:00",
+          "fresh_heartbeat": true,
+          "native_state": "PASS_PRIVATE_0356_RUNTIME_MIGRATION",
+          "one_active_standard_v2_stopped": true,
+          "rollback_error_code": null,
+          "rollback_state": null,
+          "runtime": {
+            "agent_sha256": "ad92b9100b9b4599fc73815a5ba44ffb665ce5c1d0973c03923f1d8d45b1d03d",
+            "agent_version": "0.3.56",
+            "last_successful_heartbeat_at_utc": "2026-10-27T22:39:15.532385+00:00",
+            "pid": 25329,
+            "started_at_utc": "2026-10-27T22:39:14.362725+00:00"
+          },
+          "standard_enabled": "enabled",
+          "started_at": "2026-10-27T22:39:12.285421+00:00",
+          "state": "PASS",
+          "updater_exit": 0,
+          "v2_enabled": "disabled"
+        },
+        "method": "FINITE_MIGRATION_HELPER",
+        "state": "PASS"
+      },
+      "process_execution_e2e": {
+        "authorization_mode": "PERSISTENT_TRUSTED",
+        "authorization_source": "DEVICE_ENROLLMENT_POLICY",
+        "command": "id -u",
+        "evidence": {
+          "bytes": 1162,
+          "retained_source_name": "sentinela-a-process-e2e.json",
+          "sha256": "5b243044f32ef968bda80ebf9598d0291360718fdcd2cd19a76857be4dc59f1a"
+        },
+        "function": "process.run",
+        "process_exit_code": 0,
+        "receipt_sha256": "43032a919fccb54a14456f0d27f45f2a1c701dc174df30b879fa6edd18c38883",
+        "returned_uid": 1000,
+        "state": "PASS"
+      }
+    },
+    {
+      "commander_e2e": {
+        "agent_python_version": "3.10.12",
+        "agent_version": "0.3.56",
+        "approval_mode": "PERSISTENT_TRUSTED",
+        "architecture": "x86_64",
+        "evidence": {
+          "bytes": 969,
+          "retained_source_name": "sentinela-b-commander-e2e.json",
+          "sha256": "e4c21fe60ad394bb9d060cbb40e344ae8012724d4ed3c9979227ab4cba168113"
+        },
+        "function": "device.info",
+        "process_exit_code": 0,
+        "receipt_sha256": "953f5452a57d58ab0f8b776d5eba513845b7f1e74b99605b006a0901aacc55ee",
+        "selection_basis": "MOST_RECENT_RETAINED_CAPTURE_FILE_MTIME_NOT_TOOL_EVENT_TIME",
+        "state": "PASS",
+        "transport": "OUTBOUND_RELAY"
+      },
+      "host": "sentinela-b",
+      "native": {
+        "attempts": [
+          {
+            "configuration_preserved": true,
+            "error_code": null,
+            "event_v2": "OFF",
+            "evidence": {
+              "bytes": 2847,
+              "retained_source_name": "sentinela-b-migration-launch.json",
+              "sha256": "6821fa02624956315d89878c079c154a33810ea2bf644adaa7cbf9e6c4255d1a"
+            },
+            "finished_at": "2026-10-27T22:47:35.494756+00:00",
+            "fresh_heartbeat": true,
+            "native_state": "PASS_PRIVATE_0356_RUNTIME_MIGRATION",
+            "one_active_standard_v2_stopped": true,
+            "rollback_error_code": null,
+            "rollback_state": null,
+            "runtime": {
+              "agent_sha256": "ad92b9100b9b4599fc73815a5ba44ffb665ce5c1d0973c03923f1d8d45b1d03d",
+              "agent_version": "0.3.56",
+              "last_successful_heartbeat_at_utc": "2026-10-27T22:47:33.058565+00:00",
+              "pid": 961331,
+              "started_at_utc": "2026-10-27T22:47:32.347692+00:00"
+            },
+            "standard_enabled": "enabled",
+            "started_at": "2026-10-27T22:47:29.884074+00:00",
+            "state": "PASS",
+            "updater_exit": 0,
+            "v2_enabled": "disabled"
+          }
+        ],
+        "latest": {
+          "configuration_preserved": true,
+          "error_code": null,
+          "event_v2": "OFF",
+          "evidence": {
+            "bytes": 2847,
+            "retained_source_name": "sentinela-b-migration-launch.json",
+            "sha256": "6821fa02624956315d89878c079c154a33810ea2bf644adaa7cbf9e6c4255d1a"
+          },
+          "finished_at": "2026-10-27T22:47:35.494756+00:00",
+          "fresh_heartbeat": true,
+          "native_state": "PASS_PRIVATE_0356_RUNTIME_MIGRATION",
+          "one_active_standard_v2_stopped": true,
+          "rollback_error_code": null,
+          "rollback_state": null,
+          "runtime": {
+            "agent_sha256": "ad92b9100b9b4599fc73815a5ba44ffb665ce5c1d0973c03923f1d8d45b1d03d",
+            "agent_version": "0.3.56",
+            "last_successful_heartbeat_at_utc": "2026-10-27T22:47:33.058565+00:00",
+            "pid": 961331,
+            "started_at_utc": "2026-10-27T22:47:32.347692+00:00"
+          },
+          "standard_enabled": "enabled",
+          "started_at": "2026-10-27T22:47:29.884074+00:00",
+          "state": "PASS",
+          "updater_exit": 0,
+          "v2_enabled": "disabled"
+        },
+        "method": "FINITE_MIGRATION_HELPER",
+        "state": "PASS"
+      },
+      "process_execution_e2e": {
+        "authorization_mode": "PERSISTENT_TRUSTED",
+        "authorization_source": "DEVICE_ENROLLMENT_POLICY",
+        "command": "id -u",
+        "evidence": {
+          "bytes": 1163,
+          "retained_source_name": "sentinela-b-process-e2e.json",
+          "sha256": "9a6071fe4e003ee6393d068da9b6276821a3100b30c3399ebd40d3ed8665db5f"
+        },
+        "function": "process.run",
+        "process_exit_code": 0,
+        "receipt_sha256": "41927b5f75f744a88cfb37cd27a868b4b03ea824723b687d8d423eb77c671a84",
+        "returned_uid": 1002,
+        "state": "PASS"
+      }
+    },
+    {
+      "commander_e2e": {
+        "agent_python_version": "3.10.12",
+        "agent_version": "0.3.56",
+        "approval_mode": "PERSISTENT_TRUSTED",
+        "architecture": "x86_64",
+        "evidence": {
+          "bytes": 969,
+          "retained_source_name": "sentinela-c-commander-e2e.json",
+          "sha256": "5e3bb587994a97c1ca3c2e7b0efbf43af7be2a8a7e8d8bc4b820aa4cbfa2f425"
+        },
+        "function": "device.info",
+        "process_exit_code": 0,
+        "receipt_sha256": "a27a8ca5e00a5b26bd9aa006e9dd464e31b33cb097ecc4a22c786cd9894fca73",
+        "selection_basis": "MOST_RECENT_RETAINED_CAPTURE_FILE_MTIME_NOT_TOOL_EVENT_TIME",
+        "state": "PASS",
+        "transport": "OUTBOUND_RELAY"
+      },
+      "host": "sentinela-c",
+      "native": {
+        "attempts": [
+          {
+            "configuration_preserved": true,
+            "error_code": null,
+            "event_v2": "OFF",
+            "evidence": {
+              "bytes": 2843,
+              "retained_source_name": "sentinela-c-migration-launch.json",
+              "sha256": "4e03d6ad2f04a87ec5146f783a47ece86c24c6ec48f414c548b1eded85692ddc"
+            },
+            "finished_at": "2026-10-27T22:37:40.426254+00:00",
+            "fresh_heartbeat": true,
+            "native_state": "PASS_PRIVATE_0356_RUNTIME_MIGRATION",
+            "one_active_standard_v2_stopped": true,
+            "rollback_error_code": null,
+            "rollback_state": null,
+            "runtime": {
+              "agent_sha256": "ad92b9100b9b4599fc73815a5ba44ffb665ce5c1d0973c03923f1d8d45b1d03d",
+              "agent_version": "0.3.56",
+              "last_successful_heartbeat_at_utc": "2026-10-27T22:37:37.690363+00:00",
+              "pid": 35982,
+              "started_at_utc": "2026-10-27T22:37:37.290002+00:00"
+            },
+            "standard_enabled": "enabled",
+            "started_at": "2026-10-27T22:37:35.605789+00:00",
+            "state": "PASS",
+            "updater_exit": 0,
+            "v2_enabled": "disabled"
+          }
+        ],
+        "latest": {
+          "configuration_preserved": true,
+          "error_code": null,
+          "event_v2": "OFF",
+          "evidence": {
+            "bytes": 2843,
+            "retained_source_name": "sentinela-c-migration-launch.json",
+            "sha256": "4e03d6ad2f04a87ec5146f783a47ece86c24c6ec48f414c548b1eded85692ddc"
+          },
+          "finished_at": "2026-10-27T22:37:40.426254+00:00",
+          "fresh_heartbeat": true,
+          "native_state": "PASS_PRIVATE_0356_RUNTIME_MIGRATION",
+          "one_active_standard_v2_stopped": true,
+          "rollback_error_code": null,
+          "rollback_state": null,
+          "runtime": {
+            "agent_sha256": "ad92b9100b9b4599fc73815a5ba44ffb665ce5c1d0973c03923f1d8d45b1d03d",
+            "agent_version": "0.3.56",
+            "last_successful_heartbeat_at_utc": "2026-10-27T22:37:37.690363+00:00",
+            "pid": 35982,
+            "started_at_utc": "2026-10-27T22:37:37.290002+00:00"
+          },
+          "standard_enabled": "enabled",
+          "started_at": "2026-10-27T22:37:35.605789+00:00",
+          "state": "PASS",
+          "updater_exit": 0,
+          "v2_enabled": "disabled"
+        },
+        "method": "FINITE_MIGRATION_HELPER",
+        "state": "PASS"
+      },
+      "process_execution_e2e": {
+        "authorization_mode": "PERSISTENT_TRUSTED",
+        "authorization_source": "DEVICE_ENROLLMENT_POLICY",
+        "command": "id -u",
+        "evidence": {
+          "bytes": 1162,
+          "retained_source_name": "sentinela-c-process-e2e.json",
+          "sha256": "d8eae11576f748bf3bb947044b99c8465c954a3cee961bf359c470a8b599faab"
+        },
+        "function": "process.run",
+        "process_exit_code": 0,
+        "receipt_sha256": "a981ef7a06633b54f0149e13b75220e1cb368b4c190c469361a7e589c7808e46",
+        "returned_uid": 1000,
+        "state": "PASS"
+      }
+    },
+    {
+      "commander_e2e": {
+        "agent_python_version": "3.12.3",
+        "agent_version": "0.3.56",
+        "approval_mode": "PERSISTENT_TRUSTED",
+        "architecture": "x86_64",
+        "evidence": {
+          "bytes": 963,
+          "retained_source_name": "sentinela-d-commander-e2e.json",
+          "sha256": "d1b62ed2db3e1e505f05debe7bf4c2763234b9165134dfc8164967901e171903"
+        },
+        "function": "device.info",
+        "process_exit_code": 0,
+        "receipt_sha256": "0df41b951f700a4922649e27fa93e661081d822f0fa79af139873afe575b8bcd",
+        "selection_basis": "MOST_RECENT_RETAINED_CAPTURE_FILE_MTIME_NOT_TOOL_EVENT_TIME",
+        "state": "PASS",
+        "transport": "OUTBOUND_RELAY"
+      },
+      "host": "sentinela-d",
+      "native": {
+        "attempts": [
+          {
+            "configuration_preserved": null,
+            "error_code": null,
+            "event_v2": "OFF",
+            "evidence": {
+              "bytes": 1490,
+              "retained_source_name": "sentinela-d-migration-launch.json",
+              "sha256": "2c3fcd15187c1c98412ccbe4f4973f0f0e713d27ff37fb6a3b21b7147b8d375d"
+            },
+            "finished_at": null,
+            "fresh_heartbeat": false,
+            "native_state": "HOLD",
+            "one_active_standard_v2_stopped": false,
+            "rollback_error_code": null,
+            "rollback_state": null,
+            "runtime": {
+              "agent_sha256": null,
+              "agent_version": null,
+              "last_successful_heartbeat_at_utc": null,
+              "pid": null,
+              "started_at_utc": null
+            },
+            "standard_enabled": null,
+            "started_at": "2026-10-27T22:38:23.849936+00:00",
+            "state": "IN_PROGRESS",
+            "updater_exit": 0,
+            "v2_enabled": null
+          },
+          {
+            "configuration_preserved": true,
+            "error_code": null,
+            "event_v2": "OFF",
+            "evidence": {
+              "bytes": 1860,
+              "retained_source_name": "sentinela-d-migration-result.json",
+              "sha256": "bfc7425696e1dbf6f9aefe64ca257e0a1f5fd84b83b748ecba9251939b941549"
+            },
+            "finished_at": "2026-10-27T22:38:29.302176+00:00",
+            "fresh_heartbeat": true,
+            "native_state": "PASS_PRIVATE_0356_RUNTIME_MIGRATION",
+            "one_active_standard_v2_stopped": true,
+            "rollback_error_code": null,
+            "rollback_state": null,
+            "runtime": {
+              "agent_sha256": "ad92b9100b9b4599fc73815a5ba44ffb665ce5c1d0973c03923f1d8d45b1d03d",
+              "agent_version": "0.3.56",
+              "last_successful_heartbeat_at_utc": "2026-10-27T22:38:26.867918+00:00",
+              "pid": 74194,
+              "started_at_utc": "2026-10-27T22:38:26.207923+00:00"
+            },
+            "standard_enabled": "enabled",
+            "started_at": "2026-10-27T22:38:23.849936+00:00",
+            "state": "PASS",
+            "updater_exit": 0,
+            "v2_enabled": "disabled"
+          }
+        ],
+        "latest": {
+          "configuration_preserved": true,
+          "error_code": null,
+          "event_v2": "OFF",
+          "evidence": {
+            "bytes": 1860,
+            "retained_source_name": "sentinela-d-migration-result.json",
+            "sha256": "bfc7425696e1dbf6f9aefe64ca257e0a1f5fd84b83b748ecba9251939b941549"
+          },
+          "finished_at": "2026-10-27T22:38:29.302176+00:00",
+          "fresh_heartbeat": true,
+          "native_state": "PASS_PRIVATE_0356_RUNTIME_MIGRATION",
+          "one_active_standard_v2_stopped": true,
+          "rollback_error_code": null,
+          "rollback_state": null,
+          "runtime": {
+            "agent_sha256": "ad92b9100b9b4599fc73815a5ba44ffb665ce5c1d0973c03923f1d8d45b1d03d",
+            "agent_version": "0.3.56",
+            "last_successful_heartbeat_at_utc": "2026-10-27T22:38:26.867918+00:00",
+            "pid": 74194,
+            "started_at_utc": "2026-10-27T22:38:26.207923+00:00"
+          },
+          "standard_enabled": "enabled",
+          "started_at": "2026-10-27T22:38:23.849936+00:00",
+          "state": "PASS",
+          "updater_exit": 0,
+          "v2_enabled": "disabled"
+        },
+        "method": "FINITE_MIGRATION_HELPER",
+        "state": "PASS"
+      },
+      "process_execution_e2e": {
+        "authorization_mode": "PERSISTENT_TRUSTED",
+        "authorization_source": "DEVICE_ENROLLMENT_POLICY",
+        "command": "id -u",
+        "evidence": {
+          "bytes": 1162,
+          "retained_source_name": "sentinela-d-process-e2e.json",
+          "sha256": "f9845ae2215bdda0c190b87cf2c625aabe8c9cee9a0f30c6806276aa4ed387e1"
+        },
+        "function": "process.run",
+        "process_exit_code": 0,
+        "receipt_sha256": "ee8d1eec636339d3be7b94c0f98b618aec9f250da77348d923beba8a425e38b6",
+        "returned_uid": 1000,
+        "state": "PASS"
+      }
+    },
+    {
+      "commander_e2e": {
+        "agent_python_version": "3.12.3",
+        "agent_version": "0.3.56",
+        "approval_mode": "PERSISTENT_TRUSTED",
+        "architecture": "x86_64",
+        "evidence": {
+          "bytes": 962,
+          "retained_source_name": "nucleo-commander-e2e.json",
+          "sha256": "5d1c1eca9f97576c74838c07ee4ff6ddc376e645745547204e2bc2e8728622a0"
+        },
+        "function": "device.info",
+        "process_exit_code": 0,
+        "receipt_sha256": "d78cd24f5f2592b03368969cb475299f4bcaa8a899df9ddcd8ad83d72e7be0da",
+        "selection_basis": "MOST_RECENT_RETAINED_CAPTURE_FILE_MTIME_NOT_TOOL_EVENT_TIME",
+        "state": "PASS",
+        "transport": "OUTBOUND_RELAY"
+      },
+      "host": "nucleo-a",
+      "native": {
+        "attempts": [
+          {
+            "agent_sha256": "ad92b9100b9b4599fc73815a5ba44ffb665ce5c1d0973c03923f1d8d45b1d03d",
+            "agent_version": "0.3.56",
+            "configuration_preserved": true,
+            "evidence": {
+              "bytes": 2532,
+              "retained_source_name": "nucleo-update-after-cli-migration.json",
+              "sha256": "0fd50621917688ea87cb063c3a9d78b209ec48e7cb331708424e786b0abecd10"
+            },
+            "fresh_heartbeat": true,
+            "last_successful_heartbeat_at_utc": "2026-10-27T22:29:32.574000+00:00",
+            "observed_at": "2026-10-27T22:29:32.770814+00:00",
+            "pid": 577275,
+            "rollback_matches_preimage": true,
+            "rollback_sha256": "ea42a392a6d350bb6e7e522cca5498ee823d2c41587855d0d3d1ecc41a954da2",
+            "standard_enabled": "enabled",
+            "started_at_utc": "2026-10-27T22:29:31.675972+00:00",
+            "state": "PASS",
+            "unit_file_preserved": true,
+            "updater_exit": 0
+          }
+        ],
+        "latest": {
+          "agent_sha256": "ad92b9100b9b4599fc73815a5ba44ffb665ce5c1d0973c03923f1d8d45b1d03d",
+          "agent_version": "0.3.56",
+          "configuration_preserved": true,
+          "evidence": {
+            "bytes": 2532,
+            "retained_source_name": "nucleo-update-after-cli-migration.json",
+            "sha256": "0fd50621917688ea87cb063c3a9d78b209ec48e7cb331708424e786b0abecd10"
+          },
+          "fresh_heartbeat": true,
+          "last_successful_heartbeat_at_utc": "2026-10-27T22:29:32.574000+00:00",
+          "observed_at": "2026-10-27T22:29:32.770814+00:00",
+          "pid": 577275,
+          "rollback_matches_preimage": true,
+          "rollback_sha256": "ea42a392a6d350bb6e7e522cca5498ee823d2c41587855d0d3d1ecc41a954da2",
+          "standard_enabled": "enabled",
+          "started_at_utc": "2026-10-27T22:29:31.675972+00:00",
+          "state": "PASS",
+          "unit_file_preserved": true,
+          "updater_exit": 0
+        },
+        "method": "OFFICIAL_UPDATER_WITH_REVIEWED_CLI_MIGRATION",
+        "state": "PASS"
+      },
+      "process_execution_e2e": {
+        "authorization_mode": "PERSISTENT_TRUSTED",
+        "authorization_source": "DEVICE_ENROLLMENT_POLICY",
+        "command": "id -u",
+        "evidence": {
+          "bytes": 1160,
+          "retained_source_name": "nucleo-process-e2e.json",
+          "sha256": "16b1a9c6ed830f1cd6ea5b256e6d75590f30d20b4dc33c35a9fafcd276f29747"
+        },
+        "function": "process.run",
+        "process_exit_code": 0,
+        "receipt_sha256": "3d6af0b0b05e1ab5b756160691c4ff159bb0927a29702e1595429237341d284b",
+        "returned_uid": 1000,
+        "state": "PASS"
+      }
+    },
+    {
+      "commander_e2e": {
+        "agent_python_version": "3.14.8",
+        "agent_version": "0.3.56",
+        "approval_mode": "PERSISTENT_TRUSTED",
+        "architecture": "x86_64",
+        "evidence": {
+          "bytes": 969,
+          "retained_source_name": "ninja-commander-e2e.json",
+          "sha256": "a68826597bdb8f68158f60339bc75daa21602925d8a1555662dab21c91f0f76f"
+        },
+        "function": "device.info",
+        "process_exit_code": 0,
+        "receipt_sha256": "7e562689467fe5c431e86adeb2a5766270372e9761c8dc6d2842ce084c9f3284",
+        "selection_basis": "MOST_RECENT_RETAINED_CAPTURE_FILE_MTIME_NOT_TOOL_EVENT_TIME",
+        "state": "PASS",
+        "transport": "OUTBOUND_RELAY"
+      },
+      "host": "ninja-blue",
+      "native": {
+        "attempts": [
+          {
+            "agent_sha256": "ad92b9100b9b4599fc73815a5ba44ffb665ce5c1d0973c03923f1d8d45b1d03d",
+            "agent_version": "0.3.56",
+            "configuration_preserved": true,
+            "evidence": {
+              "bytes": 2795,
+              "retained_source_name": "ninja-native-update-completed.json",
+              "sha256": "a486a5719f3979bc6e75b1b845a3c807fa14622b6ab336d0e8178a1eae1b8407"
+            },
+            "fresh_heartbeat": true,
+            "last_successful_heartbeat_at_utc": "2026-10-27T22:31:45.965481+00:00",
+            "observed_at": "2026-10-27T22:31:46.624939+00:00",
+            "pid": 42667,
+            "rollback_matches_preimage": true,
+            "rollback_sha256": "e1f44e4695266717c6585f8d0de1e664d99123e36e75b152e136a4428f7b2730",
+            "standard_enabled": "enabled",
+            "started_at_utc": "2026-10-27T22:31:45.479938+00:00",
+            "state": "PASS",
+            "unit_file_preserved": true,
+            "updater_exit": 0
+          }
+        ],
+        "latest": {
+          "agent_sha256": "ad92b9100b9b4599fc73815a5ba44ffb665ce5c1d0973c03923f1d8d45b1d03d",
+          "agent_version": "0.3.56",
+          "configuration_preserved": true,
+          "evidence": {
+            "bytes": 2795,
+            "retained_source_name": "ninja-native-update-completed.json",
+            "sha256": "a486a5719f3979bc6e75b1b845a3c807fa14622b6ab336d0e8178a1eae1b8407"
+          },
+          "fresh_heartbeat": true,
+          "last_successful_heartbeat_at_utc": "2026-10-27T22:31:45.965481+00:00",
+          "observed_at": "2026-10-27T22:31:46.624939+00:00",
+          "pid": 42667,
+          "rollback_matches_preimage": true,
+          "rollback_sha256": "e1f44e4695266717c6585f8d0de1e664d99123e36e75b152e136a4428f7b2730",
+          "standard_enabled": "enabled",
+          "started_at_utc": "2026-10-27T22:31:45.479938+00:00",
+          "state": "PASS",
+          "unit_file_preserved": true,
+          "updater_exit": 0
+        },
+        "method": "OFFICIAL_UPDATER_WITH_REVIEWED_CLI_MIGRATION",
+        "state": "PASS"
+      },
+      "process_execution_e2e": {
+        "authorization_mode": "PERSISTENT_TRUSTED",
+        "authorization_source": "DEVICE_ENROLLMENT_POLICY",
+        "command": "id -u",
+        "evidence": {
+          "bytes": 1161,
+          "retained_source_name": "ninja-blue-process-e2e.json",
+          "sha256": "4efcb10fcbb514ffd12ba0a241c9101f515f4ce043d9b13acb1d11bc72f7fb62"
+        },
+        "function": "process.run",
+        "process_exit_code": 0,
+        "receipt_sha256": "d661445ba185759c5db064bbece4bbee6bb8a61fa316b7f90a590be7f476b5ac",
+        "returned_uid": 1000,
+        "state": "PASS"
+      }
+    },
+    {
+      "commander_e2e": {
+        "agent_python_version": "3.10.12",
+        "agent_version": "0.3.56",
+        "approval_mode": "PERSISTENT_TRUSTED",
+        "architecture": "aarch64",
+        "evidence": {
+          "bytes": 956,
+          "retained_source_name": "observer-commander-e2e.json",
+          "sha256": "21e602648f645e812642bb40f50a61be707d53062f9e76e86fb0953469d1edbf"
+        },
+        "function": "device.info",
+        "process_exit_code": 0,
+        "receipt_sha256": "43c0bff6d96eb988a0209adefac17293ba3937a4698449020bb59f7e12b88e31",
+        "selection_basis": "MOST_RECENT_RETAINED_CAPTURE_FILE_MTIME_NOT_TOOL_EVENT_TIME",
+        "state": "PASS",
+        "transport": "OUTBOUND_RELAY"
+      },
+      "host": "observer",
+      "native": {
+        "attempts": [
+          {
+            "configuration_preserved": true,
+            "error_code": null,
+            "event_v2": "OFF",
+            "evidence": {
+              "bytes": 1811,
+              "retained_source_name": "observer-migration-result.json",
+              "sha256": "16f7da55087f45a4e3ab680369512e2ae96b37678c204dba655a0455ee2f2877"
+            },
+            "finished_at": "2026-10-27T22:40:07.724619+00:00",
+            "fresh_heartbeat": true,
+            "native_state": "PASS_PRIVATE_0356_RUNTIME_MIGRATION",
+            "one_active_standard_v2_stopped": true,
+            "rollback_error_code": null,
+            "rollback_state": null,
+            "runtime": {
+              "agent_sha256": "ad92b9100b9b4599fc73815a5ba44ffb665ce5c1d0973c03923f1d8d45b1d03d",
+              "agent_version": "0.3.56",
+              "last_successful_heartbeat_at_utc": "2026-10-27T22:40:05.196714+00:00",
+              "pid": 1014125,
+              "started_at_utc": "2026-10-27T22:40:04.664169+00:00"
+            },
+            "standard_enabled": "enabled",
+            "started_at": "2026-10-27T22:40:00.624402+00:00",
+            "state": "PASS",
+            "updater_exit": 0,
+            "v2_enabled": "not-found"
+          }
+        ],
+        "latest": {
+          "configuration_preserved": true,
+          "error_code": null,
+          "event_v2": "OFF",
+          "evidence": {
+            "bytes": 1811,
+            "retained_source_name": "observer-migration-result.json",
+            "sha256": "16f7da55087f45a4e3ab680369512e2ae96b37678c204dba655a0455ee2f2877"
+          },
+          "finished_at": "2026-10-27T22:40:07.724619+00:00",
+          "fresh_heartbeat": true,
+          "native_state": "PASS_PRIVATE_0356_RUNTIME_MIGRATION",
+          "one_active_standard_v2_stopped": true,
+          "rollback_error_code": null,
+          "rollback_state": null,
+          "runtime": {
+            "agent_sha256": "ad92b9100b9b4599fc73815a5ba44ffb665ce5c1d0973c03923f1d8d45b1d03d",
+            "agent_version": "0.3.56",
+            "last_successful_heartbeat_at_utc": "2026-10-27T22:40:05.196714+00:00",
+            "pid": 1014125,
+            "started_at_utc": "2026-10-27T22:40:04.664169+00:00"
+          },
+          "standard_enabled": "enabled",
+          "started_at": "2026-10-27T22:40:00.624402+00:00",
+          "state": "PASS",
+          "updater_exit": 0,
+          "v2_enabled": "not-found"
+        },
+        "method": "FINITE_MIGRATION_HELPER",
+        "state": "PASS"
+      },
+      "process_execution_e2e": {
+        "authorization_mode": "PERSISTENT_TRUSTED",
+        "authorization_source": "DEVICE_ENROLLMENT_POLICY",
+        "command": "id -u",
+        "evidence": {
+          "bytes": 1161,
+          "retained_source_name": "observer-process-e2e.json",
+          "sha256": "e6004fd4fed75e63cb34be0ced99434fbcc463c793ce9db5749f9871b8f99952"
+        },
+        "function": "process.run",
+        "process_exit_code": 0,
+        "receipt_sha256": "58f32569e3ea4251b8c96ac868a67fab5df2df05e605ffc2decbce775b3de24a",
+        "returned_uid": 1001,
+        "state": "PASS"
+      }
+    },
+    {
+      "commander_e2e": {
+        "agent_python_version": "3.14.8",
+        "agent_version": "0.3.56",
+        "approval_mode": "PERSISTENT_TRUSTED",
+        "architecture": "x86_64",
+        "evidence": {
+          "bytes": 960,
+          "retained_source_name": "storage-commander-e2e.json",
+          "sha256": "35faf356d6ade89c196a4ef40bbfbb440e12af09e125f801a50a7a01f6877a20"
+        },
+        "function": "device.info",
+        "process_exit_code": 0,
+        "receipt_sha256": "f512afeeb5fdd70242bb23815a9283dafaf77e602e545657efd7ec9c927a943d",
+        "selection_basis": "MOST_RECENT_RETAINED_CAPTURE_FILE_MTIME_NOT_TOOL_EVENT_TIME",
+        "state": "PASS",
+        "transport": "OUTBOUND_RELAY"
+      },
+      "host": "storage",
+      "native": {
+        "attempts": [
+          {
+            "configuration_preserved": null,
+            "error_code": "ACTIVE_AGENT_CMDLINE",
+            "event_v2": "OFF",
+            "evidence": {
+              "bytes": 1860,
+              "retained_source_name": "storage-migration-launch.json",
+              "sha256": "eea3dfdad83b3e47018d00f8f910cf3b329f40fc220c664adf32c6b485af1ecb"
+            },
+            "finished_at": "2026-10-27T22:41:20.776115+00:00",
+            "fresh_heartbeat": false,
+            "native_state": "HOLD",
+            "one_active_standard_v2_stopped": false,
+            "rollback_error_code": "ACTIVE_AGENT_CMDLINE",
+            "rollback_state": "HOLD",
+            "runtime": {
+              "agent_sha256": null,
+              "agent_version": null,
+              "last_successful_heartbeat_at_utc": null,
+              "pid": null,
+              "started_at_utc": null
+            },
+            "standard_enabled": null,
+            "started_at": "2026-10-27T22:41:17.810310+00:00",
+            "state": "HOLD",
+            "updater_exit": 0,
+            "v2_enabled": null
+          },
+          {
+            "configuration_preserved": true,
+            "error_code": null,
+            "event_v2": "OFF",
+            "evidence": {
+              "bytes": 3238,
+              "retained_source_name": "storage-migration-retry.json",
+              "sha256": "c25f445c66acf00520cde60a232741f85f2be29ce06740b0419054e8a4e0d8fe"
+            },
+            "finished_at": "2026-10-27T22:47:02.041745+00:00",
+            "fresh_heartbeat": true,
+            "native_state": "PASS_PRIVATE_0356_RUNTIME_MIGRATION",
+            "one_active_standard_v2_stopped": true,
+            "rollback_error_code": null,
+            "rollback_state": null,
+            "runtime": {
+              "agent_sha256": "ad92b9100b9b4599fc73815a5ba44ffb665ce5c1d0973c03923f1d8d45b1d03d",
+              "agent_version": "0.3.56",
+              "last_successful_heartbeat_at_utc": "2026-10-27T22:46:59.008230+00:00",
+              "pid": 2832360,
+              "started_at_utc": "2026-10-27T22:46:57.831539+00:00"
+            },
+            "standard_enabled": "enabled",
+            "started_at": "2026-10-27T22:46:55.250056+00:00",
+            "state": "PASS",
+            "updater_exit": 0,
+            "v2_enabled": "disabled"
+          }
+        ],
+        "latest": {
+          "configuration_preserved": true,
+          "error_code": null,
+          "event_v2": "OFF",
+          "evidence": {
+            "bytes": 3238,
+            "retained_source_name": "storage-migration-retry.json",
+            "sha256": "c25f445c66acf00520cde60a232741f85f2be29ce06740b0419054e8a4e0d8fe"
+          },
+          "finished_at": "2026-10-27T22:47:02.041745+00:00",
+          "fresh_heartbeat": true,
+          "native_state": "PASS_PRIVATE_0356_RUNTIME_MIGRATION",
+          "one_active_standard_v2_stopped": true,
+          "rollback_error_code": null,
+          "rollback_state": null,
+          "runtime": {
+            "agent_sha256": "ad92b9100b9b4599fc73815a5ba44ffb665ce5c1d0973c03923f1d8d45b1d03d",
+            "agent_version": "0.3.56",
+            "last_successful_heartbeat_at_utc": "2026-10-27T22:46:59.008230+00:00",
+            "pid": 2832360,
+            "started_at_utc": "2026-10-27T22:46:57.831539+00:00"
+          },
+          "standard_enabled": "enabled",
+          "started_at": "2026-10-27T22:46:55.250056+00:00",
+          "state": "PASS",
+          "updater_exit": 0,
+          "v2_enabled": "disabled"
+        },
+        "method": "FINITE_MIGRATION_HELPER",
+        "state": "PASS"
+      },
+      "process_execution_e2e": {
+        "authorization_mode": "PERSISTENT_TRUSTED",
+        "authorization_source": "DEVICE_ENROLLMENT_POLICY",
+        "command": "id -u",
+        "evidence": {
+          "bytes": 1160,
+          "retained_source_name": "storage-process-e2e.json",
+          "sha256": "baefdcb97ae9c602ef5e8f192fe166bec583cfe4f938876b6e01af58959275f4"
+        },
+        "function": "process.run",
+        "process_exit_code": 0,
+        "receipt_sha256": "f6741db64be8ca6e2a3618a27261a4baa672e7d5126b570954e1ff65f97127a6",
+        "returned_uid": 1000,
+        "state": "PASS"
+      }
+    },
+    {
+      "commander_e2e": {
+        "agent_python_version": "3.12.3",
+        "agent_version": "0.3.56",
+        "approval_mode": "PERSISTENT_TRUSTED",
+        "architecture": "x86_64",
+        "evidence": {
+          "bytes": 957,
+          "retained_source_name": "services-commander-e2e.json",
+          "sha256": "ffa502f710f6ea75b7ce61a8e7a28ceb2a88599f5b7a1c08c3ede6b7ca5a713e"
+        },
+        "function": "device.info",
+        "process_exit_code": 0,
+        "receipt_sha256": "098d6c265df01a0d2ebe94f8df096e494d6461b8a3dcd8f22a1b4c63779776ca",
+        "selection_basis": "MOST_RECENT_RETAINED_CAPTURE_FILE_MTIME_NOT_TOOL_EVENT_TIME",
+        "state": "PASS",
+        "transport": "OUTBOUND_RELAY"
+      },
+      "host": "services",
+      "native": {
+        "attempts": [
+          {
+            "agent_sha256": "ad92b9100b9b4599fc73815a5ba44ffb665ce5c1d0973c03923f1d8d45b1d03d",
+            "agent_version": "0.3.56",
+            "configuration_preserved": true,
+            "evidence": {
+              "bytes": 2794,
+              "retained_source_name": "services-native-update.json",
+              "sha256": "ebb0d31781e7042bb5ce01496f43643eed4e2abbf7f07566d9cce4227919833f"
+            },
+            "fresh_heartbeat": true,
+            "last_successful_heartbeat_at_utc": "2026-10-27T22:43:13.943354+00:00",
+            "observed_at": "2026-10-27T22:43:14.617879+00:00",
+            "pid": 3949487,
+            "rollback_matches_preimage": true,
+            "rollback_sha256": "e1f44e4695266717c6585f8d0de1e664d99123e36e75b152e136a4428f7b2730",
+            "standard_enabled": "enabled",
+            "started_at_utc": "2026-10-27T22:43:13.417173+00:00",
+            "state": "PASS",
+            "unit_file_preserved": true,
+            "updater_exit": 0
+          }
+        ],
+        "latest": {
+          "agent_sha256": "ad92b9100b9b4599fc73815a5ba44ffb665ce5c1d0973c03923f1d8d45b1d03d",
+          "agent_version": "0.3.56",
+          "configuration_preserved": true,
+          "evidence": {
+            "bytes": 2794,
+            "retained_source_name": "services-native-update.json",
+            "sha256": "ebb0d31781e7042bb5ce01496f43643eed4e2abbf7f07566d9cce4227919833f"
+          },
+          "fresh_heartbeat": true,
+          "last_successful_heartbeat_at_utc": "2026-10-27T22:43:13.943354+00:00",
+          "observed_at": "2026-10-27T22:43:14.617879+00:00",
+          "pid": 3949487,
+          "rollback_matches_preimage": true,
+          "rollback_sha256": "e1f44e4695266717c6585f8d0de1e664d99123e36e75b152e136a4428f7b2730",
+          "standard_enabled": "enabled",
+          "started_at_utc": "2026-10-27T22:43:13.417173+00:00",
+          "state": "PASS",
+          "unit_file_preserved": true,
+          "updater_exit": 0
+        },
+        "method": "OFFICIAL_UPDATER_WITH_REVIEWED_CLI_MIGRATION",
+        "state": "PASS"
+      },
+      "process_execution_e2e": {
+        "authorization_mode": "PERSISTENT_TRUSTED",
+        "authorization_source": "DEVICE_ENROLLMENT_POLICY",
+        "command": "id -u",
+        "evidence": {
+          "bytes": 1161,
+          "retained_source_name": "services-process-e2e.json",
+          "sha256": "75a5053be4019db8850f74f547fe2dfa25736fadddfdcfcbd33a0d4407c3b3d7"
+        },
+        "function": "process.run",
+        "process_exit_code": 0,
+        "receipt_sha256": "cdc67303a079c4ec3ecb54283a7ac8ecc42bbe64f6bd814fbc377457e83fe783",
+        "returned_uid": 1000,
+        "state": "PASS"
+      }
+    }
+  ],
+  "input_errors": [],
+  "limits": [
+    "Windows native installation/acceptance is not established by these Linux records.",
+    "Ubuntu QA historical heartbeat is not fresh remote liveness.",
+    "The prior R2 STOP is preserved; R10 diagnostic tests are not a restore PASS.",
+    "Product recovery/resilience gates and ChatGPT OAuth refresh require their own evidence.",
+    "No public release, Store submission, security-audit closure or Event V2 enablement is claimed."
+  ],
+  "linux_agent_sha256": "ad92b9100b9b4599fc73815a5ba44ffb665ce5c1d0973c03923f1d8d45b1d03d",
+  "native_pass_count": 9,
+  "nucleo_cli_conflict_and_file_rollback": {
+    "agent_config_unit_hashes_restored": true,
+    "cause": "LEGACY_CLI_SYMLINK_CONFLICT",
+    "evidence": {
+      "bytes": 1985,
+      "retained_source_name": "nucleo-update-launch.json",
+      "sha256": "b8da4af6ae3ef72bb926eabfb07d1c36997ef981d4ea32b7b36d6b36c60a159e"
+    },
+    "first_update_exit": 7,
+    "restored_agent_sha256": "ea42a392a6d350bb6e7e522cca5498ee823d2c41587855d0d3d1ecc41a954da2",
+    "runtime_version_after_failure": "0.3.54",
+    "scope": "File rollback after installer CLI conflict; not a crash/reboot/recovery campaign.",
+    "service_after_failure": "active",
+    "state": "PASS_OBSERVED_FILE_COMPENSATION"
+  },
+  "nucleo_process_execution_e2e": {
+    "authorization_mode": "PERSISTENT_TRUSTED",
+    "authorization_source": "DEVICE_ENROLLMENT_POLICY",
+    "command": "id -u",
+    "evidence": {
+      "bytes": 1160,
+      "retained_source_name": "nucleo-process-e2e.json",
+      "sha256": "16b1a9c6ed830f1cd6ea5b256e6d75590f30d20b4dc33c35a9fafcd276f29747"
+    },
+    "function": "process.run",
+    "process_exit_code": 0,
+    "receipt_sha256": "3d6af0b0b05e1ab5b756160691c4ff159bb0927a29702e1595429237341d284b",
+    "returned_uid": 1000,
+    "state": "PASS"
+  },
+  "physical_hosts_expected": 9,
+  "private_distribution_closeout": {
+    "at_utc": "2026-10-27T22:49:56.830051+00:00",
+    "command_exits": {
+      "firewall_cleanup": 0,
+      "server_stop": 0,
+      "timer_stop": 0
+    },
+    "evidence": {
+      "bytes": 1263,
+      "retained_source_name": "private-distribution-closeout.json",
+      "sha256": "5784d978d75bda1dd5d677c759eb9d10fec475c6d8e0a5ffa1de0fb9d3175570"
+    },
+    "listener_absent": true,
+    "qa_guard_original_rules_restored": true,
+    "state": "PASS_PRIVATE_DISTRIBUTION_CLOSED",
+    "temporary_nft_rule_absent": true,
+    "temporary_ufw_rules_absent": true,
+    "ufw_active": true
+  },
+  "private_signature": {
+    "evidence": {
+      "bytes": 1318,
+      "retained_source_name": "private-signature-verification.json",
+      "sha256": "b8dd99e81ed7cd24791495c756379cb358452870301c7de47a295bb15df0bb30"
+    },
+    "kid": "commander-release-v2",
+    "manifest_sha256": "fd8fef20c54fd805d8837a665334ac5c075289545b5d66b7fbaac1954a16f56a",
+    "public_jwk_sha256": "4e68608fa891f1b7a1e89c75936a089daeab0ba862a764f9bb31eca849cdfb9b",
+    "rsa_bits_observed": 3072,
+    "signature_sha256": "b76fff632e0f7771acc49c9f10f2085b2789133dc5d242a7e3fcb89652e37743",
+    "state": "PASS_VERIFIED_PRIVATE_SIGNATURE"
+  },
+  "public_release": "NO_GO_NOT_ESTABLISHED_BY_THIS_ROLLOUT",
+  "rollout_state": "PASS_ALL_NINE_NATIVE_AND_E2E",
+  "sanitization": "Explicit field selection only; no raw command output, device token, configuration bytes, private keys or session data copied.",
+  "schema": "hara.commander.private-fleet-rollout-evidence.v1",
+  "scope": "Observed private Linux rollout; no public launch approval.",
+  "storage_first_attempt_restoration": {
+    "baseline_evidence": {
+      "bytes": 20999,
+      "retained_source_name": "fleet-contracts-ready.json",
+      "sha256": "085330602fe54ab4c2570b8fbc1c4fc04fc0ac171ef9a9b0cbe7746b0d04b663"
+    },
+    "checks": {
+      "agent": true,
+      "cli_restored": true,
+      "config": true,
+      "dropin_absent": true,
+      "old_runtime_active": true,
+      "old_runtime_fresh_heartbeat": true,
+      "unit": true
+    },
+    "evidence": {
+      "bytes": 2068,
+      "retained_source_name": "storage-after-held-migration.json",
+      "sha256": "9feaa12560858b5d1ee7132c7111dfdf694ce11f43aaf959d6ef70ee2567a029"
+    },
+    "interpretation": "Observed helper startup-readback race; updater exit was 0. No .56 product defect established.",
+    "runtime_version": "0.3.54",
+    "state": "PASS_READBACK_RESTORATION"
+  },
+  "ubuntu_qa_vm": {
+    "baseline_version": "0.3.53",
+    "cold_checkpoint_sha256": "148b00ac38386bfb06157f55fbd396561191cff94badbe825a20d07813155e7b",
+    "cold_restore_state": "PASS_COLD_RESTORE_AND_BASELINE_BOOT",
+    "evidence": {
+      "bytes": 14550,
+      "retained_source_name": "native-linux-evidence.json",
+      "sha256": "4616316fc24bc0364410daef9b548c6fd05233496543c5944eb5684d74b968cc"
+    },
+    "fresh_heartbeat": false,
+    "installed_agent_sha256": "ad92b9100b9b4599fc73815a5ba44ffb665ce5c1d0973c03923f1d8d45b1d03d",
+    "last_successful_heartbeat_at_utc": "2026-10-13T08:22:50.226546+00:00",
+    "native_start_exit": 0,
+    "old_r2_campaign_reopened": false,
+    "remote_operation": "NOT_PROVEN_BY_THIS_RECORD",
+    "runtime_agent_version": "0.3.56",
+    "started_at_utc": "2026-10-27T22:16:59.950807+00:00",
+    "update_exit": 0,
+    "update_pass": true,
+    "updater_preserved_manual_stop": true
+  },
+  "windows_qa_user_context": {
+    "console_user_present": false,
+    "evidence": {
+      "bytes": 1577,
+      "retained_source_name": "windows-login-final-readback.json",
+      "sha256": "424136fc76c4992253f29854b698eaf41d1bef459a3e927b90205fedbffc1d2c"
+    },
+    "installation_acceptance": "NOT_PROVEN_BY_THIS_READBACK",
+    "qa_profiles_loaded": 0,
+    "qa_profiles_observed": 1,
+    "state": "HOLD_NO_SIGNED_IN_QA_CONTEXT"
+  }
+}
