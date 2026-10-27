@@ -1,0 +1,443 @@
+{
+  "cold_restore": {
+    "action": "checkpoint_restore_boot",
+    "baseline_version": "0.3.53",
+    "checkpoint": {
+      "ctime_ns": 1793138758592851200,
+      "dev": 66307,
+      "gid": 0,
+      "ino": 2892318,
+      "mode": 33152,
+      "mtime_ns": 1793138728274360300,
+      "nlink": 1,
+      "path": "/var/lib/hara-qa/restore-linux-056-preparation-20261027/original-linux-commander-0356-cold-checkpoint-20261027/baseline.qcow2",
+      "sha256": "148b00ac38386bfb06157f55fbd396561191cff94badbe825a20d07813155e7b",
+      "size": 6662258688,
+      "uid": 0
+    },
+    "checkpoint_dir": "/var/lib/hara-qa/restore-linux-056-preparation-20261027/original-linux-commander-0356-cold-checkpoint-20261027",
+    "clone_operations": 0,
+    "cold_free_bytes": 687509491712,
+    "cold_image_check": {
+      "check": {
+        "allocated-clusters": 101633,
+        "check-errors": 0,
+        "filename": "/proc/self/fd/4/root.qcow2",
+        "format": "qcow2",
+        "fragmented-clusters": 2000,
+        "image-end-offset": 6662258688,
+        "total-clusters": 196608
+      },
+      "info": {
+        "actual-size": 6643404800,
+        "cluster-size": 65536,
+        "dirty-flag": false,
+        "filename": "/proc/self/fd/4/root.qcow2",
+        "format": "qcow2",
+        "format-specific": {
+          "data": {
+            "compat": "1.1",
+            "compression-type": "zlib",
+            "corrupt": false,
+            "extended-l2": false,
+            "lazy-refcounts": false,
+            "refcount-bits": 16
+          },
+          "type": "qcow2"
+        },
+        "virtual-size": 12884901888
+      }
+    },
+    "cold_source": {
+      "ctime_ns": 1793138729653337000,
+      "dev": 66307,
+      "gid": 109,
+      "ino": 2898587,
+      "mode": 33184,
+      "mtime_ns": 1793138728274360300,
+      "nlink": 1,
+      "sha256": "148b00ac38386bfb06157f55fbd396561191cff94badbe825a20d07813155e7b",
+      "size": 6662258688,
+      "uid": 64055
+    },
+    "disk": "/var/lib/libvirt/images/hara-review/linux/root.qcow2",
+    "finished_at": "2026-10-27T22:06:55.839974+00:00",
+    "forced_shutdowns": 0,
+    "guest_after": {
+      "account": {
+        "home": "/home/commanderqa",
+        "name": "commanderqa",
+        "uid": 2000
+      },
+      "files": {
+        "/home/commanderqa/.config/hara-commander/device.env": {
+          "gid": 2000,
+          "mode": 384,
+          "sha256": "a9ef1718628959756ab5b160511d88d78574f079dcbc5bea0767ab7f16067755",
+          "size": 373,
+          "uid": 2000
+        },
+        "/home/commanderqa/.config/systemd/user/hara-commander-agent.service": {
+          "gid": 2000,
+          "mode": 384,
+          "sha256": "cbbe5136041ce4a2900477ec73ae42f88c0c6bbe7b2c0a88f7a15802670d460b",
+          "size": 417,
+          "uid": 2000
+        },
+        "/home/commanderqa/.local/share/hara-commander/hara-commander-agent": {
+          "gid": 2000,
+          "mode": 448,
+          "sha256": "db91714140b63684917e46d6a327778183a5829dbf2b298098b31da4d463985e",
+          "size": 220422,
+          "uid": 2000
+        }
+      },
+      "machine_id": "27acff5ddd62442699e84f73400bc8b2",
+      "runtime_status_is_historical_not_liveness": true,
+      "runtime_status_selected": {
+        "agent_version": "0.3.53"
+      }
+    },
+    "guest_before": {
+      "account": {
+        "home": "/home/commanderqa",
+        "name": "commanderqa",
+        "uid": 2000
+      },
+      "files": {
+        "/home/commanderqa/.config/hara-commander/device.env": {
+          "gid": 2000,
+          "mode": 384,
+          "sha256": "a9ef1718628959756ab5b160511d88d78574f079dcbc5bea0767ab7f16067755",
+          "size": 373,
+          "uid": 2000
+        },
+        "/home/commanderqa/.config/systemd/user/hara-commander-agent.service": {
+          "gid": 2000,
+          "mode": 384,
+          "sha256": "cbbe5136041ce4a2900477ec73ae42f88c0c6bbe7b2c0a88f7a15802670d460b",
+          "size": 417,
+          "uid": 2000
+        },
+        "/home/commanderqa/.local/share/hara-commander/hara-commander-agent": {
+          "gid": 2000,
+          "mode": 448,
+          "sha256": "db91714140b63684917e46d6a327778183a5829dbf2b298098b31da4d463985e",
+          "size": 220422,
+          "uid": 2000
+        }
+      },
+      "machine_id": "27acff5ddd62442699e84f73400bc8b2",
+      "runtime_status_is_historical_not_liveness": true,
+      "runtime_status_selected": {
+        "agent_version": "0.3.53"
+      }
+    },
+    "guest_readback_exit": 0,
+    "guest_readback_pids": [
+      3760,
+      705
+    ],
+    "guest_readbacks": [
+      {
+        "native_status": {
+          "exitcode": 0,
+          "exited": true
+        },
+        "observation": {
+          "account": {
+            "home": "/home/commanderqa",
+            "name": "commanderqa",
+            "uid": 2000
+          },
+          "files": {
+            "/home/commanderqa/.config/hara-commander/device.env": {
+              "gid": 2000,
+              "mode": 384,
+              "sha256": "a9ef1718628959756ab5b160511d88d78574f079dcbc5bea0767ab7f16067755",
+              "size": 373,
+              "uid": 2000
+            },
+            "/home/commanderqa/.config/systemd/user/hara-commander-agent.service": {
+              "gid": 2000,
+              "mode": 384,
+              "sha256": "cbbe5136041ce4a2900477ec73ae42f88c0c6bbe7b2c0a88f7a15802670d460b",
+              "size": 417,
+              "uid": 2000
+            },
+            "/home/commanderqa/.local/share/hara-commander/hara-commander-agent": {
+              "gid": 2000,
+              "mode": 448,
+              "sha256": "db91714140b63684917e46d6a327778183a5829dbf2b298098b31da4d463985e",
+              "size": 220422,
+              "uid": 2000
+            }
+          },
+          "machine_id": "27acff5ddd62442699e84f73400bc8b2",
+          "runtime_status_is_historical_not_liveness": true,
+          "runtime_status_selected": {
+            "agent_version": "0.3.53"
+          }
+        },
+        "observed_at": "2026-10-27T22:05:24.199413+00:00",
+        "pid": 3760,
+        "stdout_sha256": "9c1cf946e44dd7f9d2398c1d8c97d474e8a3ad2527316876e637d32944612a2d"
+      },
+      {
+        "native_status": {
+          "exitcode": 0,
+          "exited": true
+        },
+        "observation": {
+          "account": {
+            "home": "/home/commanderqa",
+            "name": "commanderqa",
+            "uid": 2000
+          },
+          "files": {
+            "/home/commanderqa/.config/hara-commander/device.env": {
+              "gid": 2000,
+              "mode": 384,
+              "sha256": "a9ef1718628959756ab5b160511d88d78574f079dcbc5bea0767ab7f16067755",
+              "size": 373,
+              "uid": 2000
+            },
+            "/home/commanderqa/.config/systemd/user/hara-commander-agent.service": {
+              "gid": 2000,
+              "mode": 384,
+              "sha256": "cbbe5136041ce4a2900477ec73ae42f88c0c6bbe7b2c0a88f7a15802670d460b",
+              "size": 417,
+              "uid": 2000
+            },
+            "/home/commanderqa/.local/share/hara-commander/hara-commander-agent": {
+              "gid": 2000,
+              "mode": 448,
+              "sha256": "db91714140b63684917e46d6a327778183a5829dbf2b298098b31da4d463985e",
+              "size": 220422,
+              "uid": 2000
+            }
+          },
+          "machine_id": "27acff5ddd62442699e84f73400bc8b2",
+          "runtime_status_is_historical_not_liveness": true,
+          "runtime_status_selected": {
+            "agent_version": "0.3.53"
+          }
+        },
+        "observed_at": "2026-10-27T22:06:55.177625+00:00",
+        "pid": 705,
+        "stdout_sha256": "9c1cf946e44dd7f9d2398c1d8c97d474e8a3ad2527316876e637d32944612a2d"
+      }
+    ],
+    "initial_disk_observation": {
+      "ctime_ns": 1793138706463726600,
+      "dev": 66307,
+      "gid": 109,
+      "ino": 2898587,
+      "mode": 33184,
+      "mtime_ns": 1793138706463726600,
+      "nlink": 1,
+      "size": 6662258688,
+      "uid": 64055
+    },
+    "initial_free_bytes": 687509524480,
+    "installation_performed": false,
+    "libvirt_directory_tree_observed": {
+      "/": {
+        "dev": 66307,
+        "gid": 0,
+        "ino": 2,
+        "mode": 493,
+        "uid": 0
+      },
+      "/var": {
+        "dev": 66307,
+        "gid": 0,
+        "ino": 2883585,
+        "mode": 493,
+        "uid": 0
+      },
+      "/var/lib": {
+        "dev": 66307,
+        "gid": 0,
+        "ino": 2883837,
+        "mode": 493,
+        "uid": 0
+      },
+      "/var/lib/libvirt": {
+        "dev": 66307,
+        "gid": 0,
+        "ino": 2899650,
+        "mode": 493,
+        "uid": 0
+      },
+      "/var/lib/libvirt/images": {
+        "dev": 66307,
+        "gid": 0,
+        "ino": 2899652,
+        "mode": 457,
+        "uid": 0
+      },
+      "/var/lib/libvirt/images/hara-review": {
+        "dev": 66307,
+        "gid": 109,
+        "ino": 2892409,
+        "mode": 504,
+        "uid": 1002
+      },
+      "/var/lib/libvirt/images/hara-review/linux": {
+        "dev": 66307,
+        "gid": 109,
+        "ino": 2892416,
+        "mode": 504,
+        "uid": 1002
+      }
+    },
+    "old_campaign_reopened": false,
+    "other_domains_after": {
+      "hara-review-linux-restoretest-20261024": {
+        "id": "-",
+        "state": "shut off",
+        "uuid": "9ee73ce0-80a9-4b20-93e3-026b6294d660",
+        "xml_sha256": "6af5bffbadb465d8d5fbb91ac7d25efb22dc3747945d0d9f415bfdce709f18c4"
+      },
+      "hara-review-win11": {
+        "id": "1",
+        "state": "running",
+        "uuid": "7fb8e9ba-57c5-4457-8aaa-465b568a4c62",
+        "xml_sha256": "b31ec81501f7343bed47ec7afb4ca102e3dece8599323c9d207e0cd5fcc0427f"
+      },
+      "hara-review-win11-restoretest-20261024": {
+        "id": "-",
+        "state": "shut off",
+        "uuid": "154e2853-3d1d-4d23-a43d-706f76ad7939",
+        "xml_sha256": "e59b9a94b89ad5d6adbfb360cb9b09027103fbfc73fc61c229ea3438b906543f"
+      }
+    },
+    "other_domains_before": {
+      "hara-review-linux-restoretest-20261024": {
+        "id": "-",
+        "state": "shut off",
+        "uuid": "9ee73ce0-80a9-4b20-93e3-026b6294d660",
+        "xml_sha256": "6af5bffbadb465d8d5fbb91ac7d25efb22dc3747945d0d9f415bfdce709f18c4"
+      },
+      "hara-review-win11": {
+        "id": "1",
+        "state": "running",
+        "uuid": "7fb8e9ba-57c5-4457-8aaa-465b568a4c62",
+        "xml_sha256": "b31ec81501f7343bed47ec7afb4ca102e3dece8599323c9d207e0cd5fcc0427f"
+      },
+      "hara-review-win11-restoretest-20261024": {
+        "id": "-",
+        "state": "shut off",
+        "uuid": "154e2853-3d1d-4d23-a43d-706f76ad7939",
+        "xml_sha256": "e59b9a94b89ad5d6adbfb360cb9b09027103fbfc73fc61c229ea3438b906543f"
+      }
+    },
+    "required_free_bytes": 22134259712,
+    "restored_before_boot": {
+      "ctime_ns": 1793138794678245400,
+      "dev": 66307,
+      "gid": 109,
+      "ino": 2898572,
+      "mode": 33184,
+      "mtime_ns": 1793138728274360300,
+      "nlink": 1,
+      "sha256": "148b00ac38386bfb06157f55fbd396561191cff94badbe825a20d07813155e7b",
+      "size": 6662258688,
+      "uid": 64055
+    },
+    "restored_file_committed": true,
+    "restored_image_check": {
+      "check": {
+        "allocated-clusters": 101633,
+        "check-errors": 0,
+        "filename": "/proc/self/fd/5/restored-ready.qcow2",
+        "format": "qcow2",
+        "fragmented-clusters": 2000,
+        "image-end-offset": 6662258688,
+        "total-clusters": 196608
+      },
+      "info": {
+        "actual-size": 6591987712,
+        "cluster-size": 65536,
+        "dirty-flag": false,
+        "filename": "/proc/self/fd/5/restored-ready.qcow2",
+        "format": "qcow2",
+        "format-specific": {
+          "data": {
+            "compat": "1.1",
+            "compression-type": "zlib",
+            "corrupt": false,
+            "extended-l2": false,
+            "lazy-refcounts": false,
+            "refcount-bits": 16
+          },
+          "type": "qcow2"
+        },
+        "virtual-size": 12884901888
+      }
+    },
+    "schema": "hara.qa.original-linux.cold-recovery.v1",
+    "scope_assumes_trusted_host_and_libvirt": true,
+    "started_at": "2026-10-27T22:05:24.010516+00:00",
+    "state": "PASS_COLD_RESTORE_AND_BASELINE_BOOT",
+    "uuid": "d7a27a4a-41c3-4c14-a84e-187443566a3c",
+    "xattr_sha256": {},
+    "xml_after_sha256": "42d0bc537a0dd796ae26c99ed8bc689ed95a44b5dc6e57c60cb7319a2d5fbff3",
+    "xml_mutations": 0
+  },
+  "update": {
+    "user_runtime": {
+      "rc": 0,
+      "err": ""
+    },
+    "download": {
+      "rc": 0,
+      "out": "",
+      "err": ""
+    },
+    "update": {
+      "rc": 0,
+      "out": "HARA_COMMANDER_AGENT_INTEGRITY=PASS\nHARA_COMMANDER_CLI=/home/commanderqa/.local/bin/hara-commander\nHARA_COMMANDER_AGENT_UPDATE_RUNTIME_ATTESTATION=SKIPPED_MANUAL_STOP\nHARA_COMMANDER_AGENT_UPDATE_SERVICE_WAS_ACTIVE=FALSE\nHARA_COMMANDER_AGENT_UPDATE=PASS\nHARA_COMMANDER_AGENT_UPDATE_ROLLBACK_READY=TRUE\nHARA_COMMANDER_DEVICE_ENROLLED=TRUE\nHARA_COMMANDER_AGENT_ACTIVE=FALSE\nHARA_COMMANDER_AGENT_ENABLED=FALSE\nHARA_COMMANDER_AGENT_VERSION=0.3.56\nHARA_COMMANDER_APPROVAL_MODE=ASK_EVERY_ACTION\nDEVICE_ID=HARA-DEVICE-962202bc-274a-486b-9794-b73d9f3a5889\nHARA_COMMANDER_SESSION=INACTIVE\nHARA_COMMANDER_AGENT_SERVICE_ACTIVE=FALSE\nHARA_COMMANDER_AGENT_AUTOSTART=OFF\nSECRET_MATERIAL_EXPOSED=FALSE\nDEVICE_TOKEN_EXPOSED=FALSE\n",
+      "err": ""
+    }
+  },
+  "native_start": {
+    "files": {
+      "agent": {
+        "sha256": "ad92b9100b9b4599fc73815a5ba44ffb665ce5c1d0973c03923f1d8d45b1d03d",
+        "bytes": 265620,
+        "uid": 2000
+      },
+      "config": {
+        "sha256": "a9ef1718628959756ab5b160511d88d78574f079dcbc5bea0767ab7f16067755",
+        "bytes": 373,
+        "uid": 2000
+      },
+      "unit": {
+        "sha256": "cbbe5136041ce4a2900477ec73ae42f88c0c6bbe7b2c0a88f7a15802670d460b",
+        "bytes": 417,
+        "uid": 2000
+      },
+      "rollback": {
+        "sha256": "db91714140b63684917e46d6a327778183a5829dbf2b298098b31da4d463985e",
+        "bytes": 220422,
+        "uid": 2000
+      }
+    },
+    "start": {
+      "rc": 0,
+      "err": ""
+    },
+    "service": "MainPID=1072\nExecMainStartTimestamp=Tue 2026-10-27 22:16:59 UTC\nActiveState=active\nSubState=running\nUnitFileState=disabled\n",
+    "runtime": {
+      "agent_version": "0.3.56",
+      "last_runtime_error_at_utc": null,
+      "last_runtime_error_code": null,
+      "last_successful_heartbeat_at_utc": "2026-10-13T08:22:50.226546+00:00",
+      "schema": "hara.commander-agent-runtime-status.v1",
+      "started_at_utc": "2026-10-27T22:16:59.950807+00:00",
+      "updated_at_utc": "2026-10-27T22:16:59.951052+00:00"
+    }
+  }
+}

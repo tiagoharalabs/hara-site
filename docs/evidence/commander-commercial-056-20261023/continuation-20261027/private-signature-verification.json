@@ -1,0 +1,36 @@
+{
+  "artifacts": {
+    "agent/linux.py": {
+      "bytes": 265620,
+      "sha256": "ad92b9100b9b4599fc73815a5ba44ffb665ce5c1d0973c03923f1d8d45b1d03d"
+    },
+    "agent/windows.ps1": {
+      "bytes": 172687,
+      "sha256": "a44e2f7c7ce75cf2cff0e60886fce60bd999b9e4cea22e5baa24619d9ee27620"
+    },
+    "install/linux.sh": {
+      "bytes": 42191,
+      "sha256": "a63542827372f73f5b0f48bf924fb847156c9d7f6f1adb371d73f78effade93f"
+    },
+    "install/windows.ps1": {
+      "bytes": 27845,
+      "sha256": "2219d2cf657ccb52471ae5c5e6544877946b24621185b0303e0d1e1c6ad1a401"
+    }
+  },
+  "installation_performed": false,
+  "intended_event_v2": "OFF",
+  "kid": "commander-release-v2",
+  "manifest_sha256": "fd8fef20c54fd805d8837a665334ac5c075289545b5d66b7fbaac1954a16f56a",
+  "native_acceptance": false,
+  "private_key_exported": false,
+  "production_mutated": false,
+  "public_jwk_sha256": "4e68608fa891f1b7a1e89c75936a089daeab0ba862a764f9bb31eca849cdfb9b",
+  "release_approval": false,
+  "rsa_bits_observed": 3072,
+  "runtime_activation_verified": false,
+  "schema": "hara.commander-private-qa-signature-check.v1",
+  "signature_sha256": "b76fff632e0f7771acc49c9f10f2085b2789133dc5d242a7e3fcb89652e37743",
+  "signature_verified": true,
+  "status": "PRIVATE_QA_SIGNATURE_AND_FOUR_ARTIFACTS_VERIFIED",
+  "version": "0.3.56"
+}
