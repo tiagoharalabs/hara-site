@@ -1,0 +1,294 @@
+{
+  "schema": "hara.commander.windows-activeqa-native-evidence.v1",
+  "state": "PASS_NATIVE_COMPONENTS_NOT_RELEASE_APPROVAL",
+  "scope": "Real Windows component acceptance in the existing interactive standard CommanderQA account; no installation or cloud pairing.",
+  "candidate_version": "0.3.56",
+  "agent_sha256": "a44e2f7c7ce75cf2cff0e60886fce60bd999b9e4cea22e5baa24619d9ee27620",
+  "agent_bytes": 172687,
+  "started_utc": "2026-10-27T23:58:08.0672321Z",
+  "finished_utc": "2026-10-27T23:59:11.0578639Z",
+  "target": {
+    "hypervisor": "qemu:///system",
+    "vm_name": "hara-review-win11-restoretest-20261024",
+    "account": "CommanderQA",
+    "os": "Microsoft Windows 11 Pro",
+    "profile_loaded": true,
+    "account_is_admin": false,
+    "qa_agent_present_before": false,
+    "qa_config_present_before": false,
+    "identity_evidence": {
+      "retained_source_name": "windows-active-qa-identity-readonly-final.json",
+      "bytes": 4637,
+      "sha256": "20f784931d475102b6a25d405b69b7ef3e14ec86b652237db92e3771228c1f7e"
+    }
+  },
+  "current_lab_inventory": {
+    "vm_count": 2,
+    "vms": [
+      {
+        "name": "hara-review-linux",
+        "active": true
+      },
+      {
+        "name": "hara-review-win11-restoretest-20261024",
+        "active": true
+      }
+    ],
+    "evidence": {
+      "retained_source_name": "windows-domain-independent-after-stage.json",
+      "bytes": 4505,
+      "sha256": "e80566edf60dd349effac932fd9bcf1e7d69431a1e890192ec0f336261009605"
+    }
+  },
+  "stage": {
+    "state": "PASS_PUBLIC_STAGE_VERIFIED",
+    "native_exit_code": 0,
+    "files": [
+      {
+        "name": "agent-windows-0.3.56.ps1",
+        "size": 172687,
+        "sha256": "a44e2f7c7ce75cf2cff0e60886fce60bd999b9e4cea22e5baa24619d9ee27620",
+        "acl": "PASS",
+        "parser_error_count": 0
+      },
+      {
+        "name": "bootstrap_windows_commanderqa_native_components.ps1",
+        "size": 10075,
+        "sha256": "fa8f5b6eba9e187404077f6ea9f00701a843d5aaaa6adb97b1ec6393c5678885",
+        "acl": "PASS",
+        "parser_error_count": 0
+      },
+      {
+        "name": "public-manifest.json",
+        "size": 888,
+        "sha256": "ad577ac90a47bc22275367e699f6ce9eb75a1575a91e98a1196edf039ec816c0",
+        "acl": "PASS",
+        "parser_error_count": 0
+      },
+      {
+        "name": "run_windows_commanderqa_native_components.ps1",
+        "size": 10241,
+        "sha256": "912ba13f77ca5e72128af1c1f79e8fec7e0b92454f0a82dd1d01e9ca53f65cb6",
+        "acl": "PASS",
+        "parser_error_count": 0
+      },
+      {
+        "name": "test_commercial_056_windows_job_native.ps1",
+        "size": 6037,
+        "sha256": "e4210dc8346456d928ecbf645a963a6e8710aeca4f30a69d643e7c3c9c56f710",
+        "acl": "PASS",
+        "parser_error_count": 0
+      },
+      {
+        "name": "test_windows_commanderqa_user_context_native.ps1",
+        "size": 11390,
+        "sha256": "4a7a9c42b198caba5143ccd7928b2b8d7b03696126e3f6374a0f540bd9e03cfd",
+        "acl": "PASS",
+        "parser_error_count": 0
+      }
+    ],
+    "evidence": {
+      "retained_source_name": "windows-activeqa-public-stage-readback-1.json",
+      "bytes": 14065,
+      "sha256": "1370e241a9a1b9a5b7bc984deed27cb856e73db8f5ac90e649e4ad5731310fbe"
+    }
+  },
+  "native_capture": {
+    "state": "COMPLETED_CAPTURED",
+    "exit_code": 0,
+    "exited": true,
+    "out_truncated": false,
+    "err_truncated": false,
+    "stdout_bytes": 16247,
+    "stdout_sha256": "4c6bc79bd8daafe69da56e6515e2f7261a9a83b69564a27ca3dc280a257f4e9c",
+    "stderr_bytes": 0,
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cases": [
+    {
+      "name": "agent-version",
+      "state": "PASS_VERSION_EXIT_ZERO",
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 1.32,
+      "stdout_bytes": 8,
+      "stdout_sha256": "725148357c1f1f47dae966b7db56c58e79f3426817b0eab1098b0b3839cb80d5",
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "agent-self-test",
+      "state": "PASS_SELF_TEST_EXIT_ZERO",
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 5.519,
+      "stdout_bytes": 400,
+      "stdout_sha256": "76758562a12f0287915a91fd13b75eed111979279ad170513e5c2f04d4c26499",
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "job-native",
+      "state": "PASS",
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 6.036,
+      "stdout_bytes": 729,
+      "stdout_sha256": "756b5f1f7464173cf22f56c312ae1e509ed089144ee59eae44aa0a1034372d74",
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "checks": 6,
+      "cases": [
+        "ASSIGNED_JOB_HANDSHAKE_AND_DESCENDANT_RUNNING",
+        "TERMINATE_JOB_CONFIRMS_ZERO_ACTIVE_PROCESSES",
+        "WORKER_AND_DESCENDANT_REAPED",
+        "ABRUPT_GUARDIAN_FIXTURE_STARTED",
+        "GUARDIAN_ABRUPT_EXIT_CONFIRMED",
+        "KILL_ON_JOB_CLOSE_PREVENTS_ORPHAN_TREE"
+      ],
+      "ps_version": "5.1.26100.9711",
+      "execution_policy": "RemoteSigned",
+      "source_sha256": "a44e2f7c7ce75cf2cff0e60886fce60bd999b9e4cea22e5baa24619d9ee27620"
+    },
+    {
+      "name": "user-context-native",
+      "state": "PASS",
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 15.577,
+      "stdout_bytes": 1860,
+      "stdout_sha256": "d68254291e8e7feda8f288adc0e910d9c8f5bf458543ec4b343ce43c984eca6d",
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "checks": 13,
+      "cases": [
+        "WINDOWS_POWERSHELL_51",
+        "NO_BYPASS_POLICY",
+        "EXPECTED_QA_IDENTITY",
+        "UNELEVATED_TOKEN",
+        "INTERACTIVE_SESSION_AND_LOADED_PROFILE",
+        "EXACT_AGENT_ARTIFACT",
+        "TEMP_DIRECTORY_OWNER_ONLY_DACL",
+        "DPAPI_CHILD_STARTED",
+        "DPAPI_CHILD_DECRYPTED_PARENT_PAYLOAD",
+        "DPAPI_PARENT_DECRYPTED_CHILD_PAYLOAD",
+        "TASK_REGISTERED_LIMITED_INTERACTIVE_ON_DEMAND",
+        "TASK_REAL_EXECUTION_EXIT_ZERO",
+        "TASK_REAL_USER_CONTEXT"
+      ],
+      "ps_version": "5.1.26100.9711",
+      "execution_policy": "RemoteSigned",
+      "source_sha256": "a44e2f7c7ce75cf2cff0e60886fce60bd999b9e4cea22e5baa24619d9ee27620",
+      "cleanup": {
+        "child_exited": true,
+        "directory_absent": true,
+        "task_absent": true
+      },
+      "dpapi_child_exit_code": 0,
+      "prior_user_dpapi_tested": false
+    }
+  ],
+  "policy": {
+    "prior_current_user": "Undefined",
+    "applied_current_user": "RemoteSigned",
+    "effective_after_apply": "RemoteSigned",
+    "restored_current_user": "Undefined",
+    "policy_changed": true,
+    "policy_restored": true
+  },
+  "cleanup": {
+    "bootstrap_task_absent": true,
+    "runner_children_exited": true,
+    "user_fixture": {
+      "child_exited": true,
+      "directory_absent": true,
+      "task_absent": true
+    }
+  },
+  "global_product_task": {
+    "administrative_before": {
+      "state": "Disabled",
+      "xml_sha256": "1afc226ed51490342dfb2be28f7b7a4fd2c25122c9f11c8b69b2bb48e3e3f8b9"
+    },
+    "administrative_after": {
+      "state": "Disabled",
+      "xml_sha256": "1afc226ed51490342dfb2be28f7b7a4fd2c25122c9f11c8b69b2bb48e3e3f8b9"
+    },
+    "unchanged": true,
+    "visibility_limit": "Standard-user task enumeration did not expose the original task. Preservation is established by the SYSTEM bootstrap XML/state readbacks, not by that limited enumeration."
+  },
+  "native_evidence": {
+    "retained_source_name": "windows-activeqa-native-result.json",
+    "bytes": 20995,
+    "sha256": "bcbfad6ab3c6bcb37f850a6b616d7f2c8d87b613bcf9ed034ad37a616e800737"
+  },
+  "prior_results_kept_separate": {
+    "old_windows_checkpoint": {
+      "state": "HOLD",
+      "failure_class": "COPY_TIMEOUT_240_SECONDS",
+      "materialized_restore_test": false,
+      "installation_performed": false,
+      "original_files_replaced": false,
+      "original_boot_verified": true,
+      "other_domains_unchanged_at_checkpoint_closeout": true,
+      "evidence": {
+        "retained_source_name": "windows-cold-checkpoint-readback-2.json",
+        "bytes": 21615,
+        "sha256": "ffc74ca223ab104e4f363278c8776e56918cf109f86f5b79e132245886288af3"
+      }
+    },
+    "old_target_stage": {
+      "state": "HOLD_NO_DOMAIN_OLD_BINDING",
+      "outcome": "Pinned original domain was absent; stage stopped before guest staging. Later active-target execution used a separate explicit binding.",
+      "evidence": {
+        "retained_source_name": "windows-public-stage-readback.json",
+        "bytes": 5209,
+        "sha256": "4da65c3b499d87c279125b0fe09e4621e4e3b30a3d96edd4bf37fca97644466e"
+      }
+    },
+    "domain_change": {
+      "observed": true,
+      "cause_or_actor_established": false,
+      "old_original_domain_not_in_later_inventory": true,
+      "existing_active_windows_target_revalidated": true,
+      "evidence": {
+        "retained_source_name": "windows-domain-independent-after-stage.json",
+        "bytes": 4505,
+        "sha256": "e80566edf60dd349effac932fd9bcf1e7d69431a1e890192ec0f336261009605"
+      }
+    }
+  },
+  "product_installation": "NOT_PERFORMED",
+  "cloud_pairing": "NOT_PERFORMED",
+  "public_release": "NO_GO_NOT_GRANTED_BY_COMPONENT_TESTS",
+  "limits": [
+    "The 13 user-context checks include guards and artifact identity; they are not 13 separate DPAPI scenarios.",
+    "DPAPI uses new synthetic data in the existing current account; no migration of another account or historical encrypted data is proved.",
+    "ACL proof is the actual owner-only DACL, without a hostile cross-account access test.",
+    "Task Scheduler proof covers a temporary limited interactive task, not the product installer/task lifecycle or reboot rollback.",
+    "The cold checkpoint HOLD and old-target identity failure remain unchanged.",
+    "Independent post-run readback confirms the selected cleanup and policy fields; no installation or pairing is claimed.",
+    "Linux VM acceptance is a separate result; this report covers Windows only."
+  ],
+  "sanitization": "Selected factual fields only. No credentials, device tokens, raw commands, full configuration, raw stdout/stderr or private filesystem paths are copied.",
+  "independent_post_run_closeout": {
+    "state": "PASS_INDEPENDENT_NATIVE_CLOSEOUT",
+    "at_utc": "2026-10-28T00:04:38.8683283Z",
+    "policy_current_user": "Undefined",
+    "original_task_unchanged": true,
+    "original_task_hash": "1afc226ed51490342dfb2be28f7b7a4fd2c25122c9f11c8b69b2bb48e3e3f8b9",
+    "original_task_state": "Disabled",
+    "temporary_tasks": 0,
+    "fixture_processes": 0,
+    "fixture_directories": 0,
+    "installed": false,
+    "paired": false,
+    "qa_console_account": "CommanderQA",
+    "native_exit_code": 0,
+    "evidence": {
+      "retained_source_name": "windows-closeout-and-linux-persistent-mode-result.json",
+      "bytes": 7285,
+      "sha256": "f9d1c9ed8dc9fad46be2fb3b42333d9bac14703b83fdefbaec0c87d7511720cf"
+    }
+  }
+}

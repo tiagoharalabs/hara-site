@@ -1,0 +1,398 @@
+{
+  "schema": "hara.commander.active-linux-qa-local-mcp-evidence.v1",
+  "generated_at_utc": "2026-10-28T00:18:35.579059+00:00",
+  "state": "PASS_NATIVE_LINUX_LOCAL_MCP_AND_PERSISTENT_MODE",
+  "scope": "Installed artifact, CLI self-test, actual local stdio MCP calls and persistent mode under the existing Ubuntu QA account; official service restart, fresh Agent-reported heartbeat, network health and principal MCP selection checks.",
+  "account": {
+    "name": "commanderqa",
+    "uid": 2000
+  },
+  "artifact": {
+    "version": "0.3.56",
+    "sha256": "ad92b9100b9b4599fc73815a5ba44ffb665ce5c1d0973c03923f1d8d45b1d03d",
+    "bytes": 265620,
+    "owner_uid": 2000,
+    "mode": "0700"
+  },
+  "service": {
+    "active": true,
+    "substate": "running",
+    "pid": 3428,
+    "start_timestamp_as_reported": "Wed 2026-10-28 00:13:27 UTC",
+    "autostart_enabled": false,
+    "runtime_fields_in_initial_metadata_available": false,
+    "official_restart": {
+      "state": "PASS",
+      "method": "systemctl --user restart",
+      "exit_code": 0,
+      "stderr_empty": true,
+      "account_uid": 2000,
+      "prior_pid": 1072,
+      "new_pid": 3428,
+      "new_process_confirmed": true
+    }
+  },
+  "basic_checks": {
+    "version_exit": 0,
+    "observed_version": "0.3.56",
+    "self_test_exit": 0,
+    "self_test_reported_markers": {
+      "COMMANDER_LOCAL_MCP_TOOL_COUNT": "24",
+      "COMMANDER_LOCAL_MCP_RELAY_CALLS_PER_LOCAL_TOOL": "0",
+      "COMMANDER_LOCAL_MCP_PROCESS_ONE_SHOT_DEFAULT": "PASS",
+      "COMMANDER_LOCAL_MCP_DOWNSTREAM_BOUNDS": "PASS",
+      "COMMANDER_LOCAL_MCP_OPERATIONAL_ERRORS": "PASS",
+      "COMMANDER_LOCAL_MCP_LONG_PROCESS_AUTOROUTE": "PASS",
+      "COMMANDER_PROCESS_EXIT_CODE_PROPAGATION": "PASS",
+      "COMMANDER_LINUX_OPERATOR_SESSION_GATE": "PASS",
+      "COMMANDER_LOCAL_MUTATION_APPROVAL": "PASS",
+      "COMMANDER_PERSISTENT_TRUSTED_NO_SESSION": "PASS",
+      "COMMANDER_PERSISTENT_TRUSTED_LOCAL_MCP_ONLINE": "PASS",
+      "COMMANDER_LINUX_CONSOLE_SANITIZATION": "PASS",
+      "COMMANDER_LINUX_FIVE_TOOL_BRIDGE": "PASS",
+      "COMMANDER_ARBITRARY_FUNCTION": "DENIED"
+    },
+    "support_exit": 0
+  },
+  "persistent_authorization": {
+    "state": "PASS_OFFICIAL_CLI_PERSISTENT_MODE",
+    "official_cli_action": "approval-mode always",
+    "prior_mode": "ASK_EVERY_ACTION",
+    "new_mode": "PERSISTENT_TRUSTED",
+    "config_owner_uid": 2000,
+    "config_mode": "0600",
+    "checks": {
+      "official_cli_result": true,
+      "cli_exit_zero": true,
+      "stdout_mode_matches": true,
+      "stderr_empty": true,
+      "prior_mode": true,
+      "new_mode": true,
+      "other_config_lines_preserved": true,
+      "config_owner_preserved": true,
+      "config_permissions_0600": true,
+      "preimage_recorded": true,
+      "prior_hash_matches_metadata": true,
+      "config_hash_changed": true,
+      "no_secret_material_exposed": true
+    },
+    "private_configuration_contents_exported": false,
+    "post_restart_readback": {
+      "agent_version": "0.3.56",
+      "approval_mode": "PERSISTENT_TRUSTED",
+      "operator_session_active": false,
+      "mode_observed_without_operator_session": true,
+      "observation_scope": "Agent support report after official service restart; this observation is separate from the earlier local process RPC."
+    }
+  },
+  "local_mcp_catalog": {
+    "protocol_version": "2025-06-18",
+    "server_name": "H.A.R.A. Commander Local",
+    "server_version": "0.3.56",
+    "tool_count": 24,
+    "tool_names": [
+      "list_devices",
+      "get_config",
+      "get_usage_stats",
+      "get_activity",
+      "ping",
+      "get_device_info",
+      "read_file",
+      "read_multiple_files",
+      "write_file",
+      "edit_block",
+      "create_directory",
+      "list_directory",
+      "move_file",
+      "copy_file",
+      "delete_file",
+      "search",
+      "get_file_info",
+      "list_processes",
+      "start_process",
+      "read_process_output",
+      "interact_with_process",
+      "kill_process",
+      "list_sessions",
+      "get_recent_tool_calls"
+    ],
+    "jsonrpc_errors": 0,
+    "catalog_count_does_not_mean_all_tools_executed": true
+  },
+  "native_local_mcp_calls": {
+    "state": "PASS_THREE_ACTUAL_LOCAL_RPC_CALLS",
+    "transport": "LOCAL_STDIO",
+    "operational_authority": "HARA_COMMANDER_LOCAL",
+    "fixture_total_duration_seconds": 0.265,
+    "fixture_duration_scope": "Local MCP server startup, three RPCs and shutdown as measured by the native fixture; not cloud/request latency.",
+    "mcp_exit": 0,
+    "timed_out": false,
+    "stderr_bytes": 0,
+    "calls": [
+      {
+        "id": 2,
+        "tool": "get_config",
+        "state": "PASS_VALIDATED_CONFIG",
+        "agent_version": "0.3.56",
+        "approval_mode": "PERSISTENT_TRUSTED",
+        "transport": "LOCAL_STDIO",
+        "product_transport_mode": "OUTBOUND_RELAY",
+        "tool_count": 24
+      },
+      {
+        "id": 3,
+        "tool": "get_device_info",
+        "state": "PASS",
+        "function": "device.info",
+        "agent_version": "0.3.56",
+        "approval_mode": "PERSISTENT_TRUSTED",
+        "platform": "LINUX",
+        "architecture": "x86_64",
+        "python_version": "3.12.3",
+        "process_exit_code": 0,
+        "receipt_sha256": "9fbeb57de129b0fe926e06b9df42a5ab6441f9951b1d3ccacf2196f7c611d9ca"
+      },
+      {
+        "id": 4,
+        "tool": "start_process",
+        "state": "PASS",
+        "function": "process.run",
+        "returned_uid": 2000,
+        "process_exit_code": 0,
+        "authorization_mode": "PERSISTENT_TRUSTED",
+        "authorization_source": "DEVICE_ENROLLMENT_POLICY",
+        "receipt_sha256": "b11d8b6f94447c65bd18175463d1dca566d0eeb553b1027cebd5a28092b436d0",
+        "nonce_sha256": "6ae1a18872b431cf69337b1dc85569353f310d46f9f5c6f47e49a9c0e187be88",
+        "payload_sha256": "6ae1a18872b431cf69337b1dc85569353f310d46f9f5c6f47e49a9c0e187be88",
+        "command_sha256": "f6e13225b6a26bebe637438f4901061b4388860191c558b0f893da651c0641fb",
+        "checks": {
+          "nonce_correlated": true,
+          "uid_expected": true,
+          "payload_hash_correlated": true,
+          "command_hash_correlated": true,
+          "native_exit_zero": true,
+          "native_exited": true,
+          "not_timed_out": true,
+          "not_output_truncated": true,
+          "one_shot_not_retained": true,
+          "persistent_trust": true,
+          "enrollment_policy": true,
+          "approval_approved": true
+        }
+      }
+    ]
+  },
+  "cloud_connectivity": {
+    "configured_environment": "DEVELOPMENT",
+    "configured_product_transport": "OUTBOUND_RELAY",
+    "cloud_mcp_e2e_proven": false,
+    "fresh_successful_heartbeat_reported_after_restart": true,
+    "last_successful_heartbeat_at_utc_as_reported": "2026-10-28T00:13:28.640788+00:00",
+    "heartbeat_classification": "FRESH_AFTER_OFFICIAL_SERVICE_RESTART",
+    "heartbeat_proof_scope": "Native Agent support readback; no separate cloud-side heartbeat receipt is included.",
+    "pre_restart_historical_heartbeat_at_utc": "2026-10-13T08:22:50.226546+00:00",
+    "last_runtime_error_code": null,
+    "last_runtime_error_at_utc": null,
+    "https_health_checks": [
+      {
+        "environment": "DEVELOPMENT",
+        "exit_code": 0,
+        "http_status": 200,
+        "health_ok": true,
+        "service": "hara-commander",
+        "reported_version": null
+      },
+      {
+        "environment": "PRINCIPAL",
+        "exit_code": 0,
+        "http_status": 200,
+        "health_ok": true,
+        "service": "hara-commander",
+        "reported_version": null
+      }
+    ],
+    "principal_cloud_mcp": {
+      "state": "HOLD_DEVICE_SELECTION",
+      "lookup_count": 2,
+      "lookups": [
+        {
+          "selection_method": "VM_NAME",
+          "state": "NOT_FOUND",
+          "blocker_code": "DEVICE_NOT_FOUND",
+          "blocker_category": "DEVICE_SELECTION",
+          "retryable": false,
+          "exists": false,
+          "mutation_performed": false,
+          "tool_reported_error": true,
+          "secondary_error_code": "INVALID_ARGUMENT"
+        },
+        {
+          "selection_method": "EXACT_REGISTERED_DEVICE_ID",
+          "state": "NOT_FOUND",
+          "blocker_code": "DEVICE_NOT_FOUND",
+          "blocker_category": "DEVICE_SELECTION",
+          "retryable": false,
+          "exists": false,
+          "mutation_performed": false,
+          "tool_reported_error": true,
+          "secondary_error_code": "INVALID_ARGUMENT"
+        }
+      ],
+      "inventory_count": 9,
+      "target_absent_from_available_inventory": true,
+      "guest_process_dispatched_by_failed_lookups": false,
+      "root_cause_determined": false,
+      "agent_process_failure_inferred": false,
+      "scope": "The current principal MCP account/registry scope does not select this VM by name or recorded device ID. Underlying account/registration/environment cause is not established."
+    },
+    "endpoint_and_credentials_exported": false
+  },
+  "restore_acceptance": "NOT_ASSESSED_BY_THIS_RECORD",
+  "public_release_approval": false,
+  "limitations": [
+    "The three actual MCP calls used local stdio; the outer orchestration receipt does not establish Cloud MCP E2E for the Ubuntu guest.",
+    "A fresh successful heartbeat is reported by the Agent after restart. It replaces the historical pre-restart 2026-10-13 heartbeat as current Agent liveness evidence; no independent server-side receipt is included.",
+    "Both HTTPS health endpoints returned 200/ok. This proves reachability and reported endpoint health, not authenticated end-to-end tool delivery.",
+    "Principal MCP selection by VM name and recorded device ID returned DEVICE_NOT_FOUND, and the available inventory listed nine other devices. No Linux guest process was dispatched by those failed lookups; the underlying cause is not established.",
+    "Runtime fields in the initial metadata capture were null; the subsequent support readback provides the fresh heartbeat and persistent-mode observation.",
+    "Only get_config, get_device_info and start_process were exercised as actual local RPC calls; 24 names were catalogued.",
+    "The persistent mode was observed with operator_session_active=false after restart. The record does not claim an additional post-restart process RPC.",
+    "Autostart remains disabled in the service readback.",
+    "This record does not confer restore acceptance, Windows acceptance, fault-recovery acceptance or public launch approval."
+  ],
+  "fixture": {
+    "retained_source_name": "test_linux_qa_mcp_native_0356.py",
+    "bytes": 3670,
+    "sha256": "8a668425ade929b88779e5fbbb4f0bceeabcf6ba566badd9f158b0c8345cfd75",
+    "mocked": false
+  },
+  "source_evidence": {
+    "linux-active-qa-native-metadata.json": {
+      "transport_receipt_sha256": "41acfed0ffc46de29a2506487a9a6d7b05f8c5fd3139d1e1d00ba820aa583d06",
+      "transport_role": "Orchestrator access to native QA execution; this receipt is not Cloud MCP E2E from the Ubuntu guest.",
+      "checks": {
+        "tool_pass": true,
+        "outer_exit_zero": true,
+        "native_wrapper_exit_zero": true,
+        "no_wrapper_timeout": true,
+        "no_wrapper_output_truncation": true,
+        "wrapper_exited": true
+      },
+      "evidence": {
+        "retained_source_name": "linux-active-qa-native-metadata.json",
+        "bytes": 6303,
+        "sha256": "5751954e9dd5df2072a66d23d11fde16c742ee2c13b9e04193f46e723de30a1c"
+      }
+    },
+    "linux-active-qa-native-basics-result.json": {
+      "transport_receipt_sha256": "9e06d491566d8120323eb179fbde08498a891379103ba4c4e5b10c6da987fbdf",
+      "transport_role": "Orchestrator access to native QA execution; this receipt is not Cloud MCP E2E from the Ubuntu guest.",
+      "checks": {
+        "tool_pass": true,
+        "outer_exit_zero": true,
+        "native_wrapper_exit_zero": true,
+        "no_wrapper_timeout": true,
+        "no_wrapper_output_truncation": true,
+        "wrapper_exited": true
+      },
+      "evidence": {
+        "retained_source_name": "linux-active-qa-native-basics-result.json",
+        "bytes": 7697,
+        "sha256": "b085b13acfd54ea6f54f57f0348d68083225370d5531fa9a92d96060e0b1ec3a"
+      }
+    },
+    "windows-closeout-and-linux-persistent-mode-result.json": {
+      "transport_receipt_sha256": "c052220c9927787710fc91211ad2418d76e16d008908c9639575e5c08530a2ae",
+      "transport_role": "Orchestrator access to native QA execution; this receipt is not Cloud MCP E2E from the Ubuntu guest.",
+      "checks": {
+        "tool_pass": true,
+        "outer_exit_zero": true,
+        "native_wrapper_exit_zero": true,
+        "no_wrapper_timeout": true,
+        "no_wrapper_output_truncation": true,
+        "wrapper_exited": true
+      },
+      "evidence": {
+        "retained_source_name": "windows-closeout-and-linux-persistent-mode-result.json",
+        "bytes": 7285,
+        "sha256": "f9d1c9ed8dc9fad46be2fb3b42333d9bac14703b83fdefbaec0c87d7511720cf"
+      }
+    },
+    "linux-qa-local-mcp-catalog-result.json": {
+      "transport_receipt_sha256": "10fa4080093dc409d1346aa2ac699313d1d59609ecc1845291e4132a3b8a4259",
+      "transport_role": "Orchestrator access to native QA execution; this receipt is not Cloud MCP E2E from the Ubuntu guest.",
+      "checks": {
+        "tool_pass": true,
+        "outer_exit_zero": true,
+        "native_wrapper_exit_zero": true,
+        "no_wrapper_timeout": true,
+        "no_wrapper_output_truncation": true,
+        "wrapper_exited": true
+      },
+      "evidence": {
+        "retained_source_name": "linux-qa-local-mcp-catalog-result.json",
+        "bytes": 14163,
+        "sha256": "368ec00ee3c2fce58ec134b639e5433361940d25d8c9da257c92eddde937d3a0"
+      }
+    },
+    "linux-qa-local-mcp-native-calls-result.json": {
+      "transport_receipt_sha256": "81281302307ea89be1cd2060bb557e0d128db9fd4ed34a299080f7c8f7f94f3c",
+      "transport_role": "Orchestrator access to native QA execution; this receipt is not Cloud MCP E2E from the Ubuntu guest.",
+      "checks": {
+        "tool_pass": true,
+        "outer_exit_zero": true,
+        "native_wrapper_exit_zero": true,
+        "no_wrapper_timeout": true,
+        "no_wrapper_output_truncation": true,
+        "wrapper_exited": true
+      },
+      "evidence": {
+        "retained_source_name": "linux-qa-local-mcp-native-calls-result.json",
+        "bytes": 14915,
+        "sha256": "61850ca95547618d59b8924c50fa64d4e04efa5c92f6d3b26272a46d9fb12c33"
+      }
+    },
+    "linux-qa-policy-service-network-result.json": {
+      "transport_receipt_sha256": "8f3600c6c88d21c48810c57d533dbc9e601354ff99bcc63c6785b4f8e8d4b265",
+      "transport_role": "Orchestrator access to native QA execution; this receipt is not Cloud MCP E2E from the Ubuntu guest.",
+      "checks": {
+        "tool_pass": true,
+        "outer_exit_zero": true,
+        "native_wrapper_exit_zero": true,
+        "no_wrapper_timeout": true,
+        "no_wrapper_output_truncation": true,
+        "wrapper_exited": true
+      },
+      "evidence": {
+        "retained_source_name": "linux-qa-policy-service-network-result.json",
+        "bytes": 8167,
+        "sha256": "efd1a4ef9cdc72ff416552a6069fe3d2852a1b3f87420400c43c20b12ad6e7c1"
+      }
+    },
+    "linux-qa-principal-mcp-device-lookup.json": {
+      "evidence": {
+        "retained_source_name": "linux-qa-principal-mcp-device-lookup.json",
+        "bytes": 662,
+        "sha256": "2059c1bc424e0f2ad62acd4a5429ae0a86dffdcc5a1d91c58b1806777a2dc326"
+      },
+      "scope": "Principal MCP device selection only; no process was dispatched to the guest by this lookup."
+    },
+    "linux-qa-principal-mcp-exact-device-lookup.json": {
+      "evidence": {
+        "retained_source_name": "linux-qa-principal-mcp-exact-device-lookup.json",
+        "bytes": 724,
+        "sha256": "e63bc8a8cfd18071cdda1b3da94adb3593f4ef78598b3f042c059249edab8d35"
+      },
+      "scope": "Principal MCP device selection only; no process was dispatched to the guest by this lookup."
+    },
+    "devices-after-linux-qa-fresh-heartbeat.json": {
+      "evidence": {
+        "retained_source_name": "devices-after-linux-qa-fresh-heartbeat.json",
+        "bytes": 4963,
+        "sha256": "4acfbfcc8f283acce8458cf571d4124789550bf0d541035608ce6454a0e1aca4"
+      },
+      "scope": "Principal MCP inventory in the available account scope; only count and absence checks exported."
+    }
+  },
+  "sanitization": "Explicit field selection; no private configuration contents, configuration-file hashes, credentials, raw commands/outputs, device IDs, endpoint URL or session material exported."
+}
