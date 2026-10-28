@@ -1,0 +1,5 @@
+# H.A.R.A. Commander public static-asset hygiene
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+.DS_Store

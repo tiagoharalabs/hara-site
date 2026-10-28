@@ -1171,7 +1171,7 @@
   }
 
   function requestHistoryClear() {
-    if (deviceTab !== "history" || historyClearPending || !["OWNER","ADMIN"].includes(currentRole)) return;
+    if (deviceTab !== "history" || historyClearPending || !sessionAuthenticated) return;
     historyClearConfirmation = true;
     historyClearFailureMessage = "";
     if (devicesCache) renderDevices(devicesCache);
@@ -1187,7 +1187,7 @@
 
   async function confirmHistoryClear(trigger = null) {
     if (deviceTab !== "history" || !historyClearConfirmation || historyClearPending || !devicesCache
-        || !["OWNER","ADMIN"].includes(currentRole)) return;
+        || !sessionAuthenticated) return;
     const expectedCount = (devicesCache.devices || []).filter(device => device.state === "REVOKED").length;
     if (!expectedCount) return;
     const generation = portalSessionGeneration;
@@ -1308,7 +1308,7 @@
     const visibleDevices = deviceTab === "history" ? revokedDevices : activeDevices;
     const historyTools = document.getElementById("deviceHistoryTools");
     if (historyTools) historyTools.hidden = deviceTab !== "history";
-    const canClearHistory = ["OWNER","ADMIN"].includes(currentRole);
+    const canClearHistory = sessionAuthenticated;
     const historyClear = document.querySelector("[data-clear-revoked-history]");
     if (historyClear) {
       historyClear.hidden = deviceTab !== "history" || !canClearHistory || revokedDevices.length === 0;
@@ -1870,15 +1870,21 @@
     syncInstallCommands();
   }
 
+  function installOrigin() {
+    const origin = window.location.origin;
+    return ["https://commander.haralabs.com.br", "https://hara-commander-dev-v2.tiago-sartori.workers.dev"].includes(origin)
+      ? origin : "https://commander.haralabs.com.br";
+  }
+
   function installCommandLinux() {
-    return "(tmp=$(mktemp) && trap 'rm -f $tmp' EXIT && curl -fsS --proto '=https' --tlsv1.2 --location --max-redirs 0 https://commander.haralabs.com.br/install/linux.sh -o $tmp && HARA_COMMANDER_APPROVAL_MODE=ASK_EVERY_ACTION"
+    return "(tmp=$(mktemp) && trap 'rm -f $tmp' EXIT && curl -fsS --proto '=https' --tlsv1.2 --location --max-redirs 0 " + installOrigin() + "/install/linux.sh -o $tmp && HARA_COMMANDER_APPROVAL_MODE=ASK_EVERY_ACTION"
       + " HARA_COMMANDER_TRANSPORT_MODE=" + installTransportMode
       + " HARA_COMMANDER_TUNNEL_AUTOSTART=OFF"
-      + " HARA_COMMANDER_URL=https://commander.haralabs.com.br bash $tmp)";
+      + " HARA_COMMANDER_URL=" + installOrigin() + " bash $tmp)";
   }
 
   function installCommandWindows() {
-    return "$haraPrevUrl=$env:HARA_COMMANDER_URL; $haraPrevApproval=$env:HARA_COMMANDER_APPROVAL_MODE; $haraInstaller=Join-Path $env:TEMP ('hara-commander-install-'+[guid]::NewGuid().ToString('N')+'.ps1'); try { $env:HARA_COMMANDER_URL='https://commander.haralabs.com.br'; $env:HARA_COMMANDER_APPROVAL_MODE='ASK_EVERY_ACTION'; Invoke-WebRequest -Uri https://commander.haralabs.com.br/install/windows.ps1 -OutFile $haraInstaller -UseBasicParsing -MaximumRedirection 0 -ErrorAction Stop; & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $haraInstaller; if ($LASTEXITCODE -ne 0) { throw ('HARA_COMMANDER_INSTALL_EXIT_'+$LASTEXITCODE) } } finally { Remove-Item -LiteralPath $haraInstaller -Force -ErrorAction SilentlyContinue; $env:HARA_COMMANDER_URL=$haraPrevUrl; $env:HARA_COMMANDER_APPROVAL_MODE=$haraPrevApproval }";
+    return "$haraPrevUrl=$env:HARA_COMMANDER_URL; $haraPrevApproval=$env:HARA_COMMANDER_APPROVAL_MODE; $haraInstaller=Join-Path $env:TEMP ('hara-commander-install-'+[guid]::NewGuid().ToString('N')+'.ps1'); try { $env:HARA_COMMANDER_URL='" + installOrigin() + "'; $env:HARA_COMMANDER_APPROVAL_MODE='ASK_EVERY_ACTION'; Invoke-WebRequest -Uri " + installOrigin() + "/install/windows.ps1 -OutFile $haraInstaller -UseBasicParsing -MaximumRedirection 0 -ErrorAction Stop; & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $haraInstaller; if ($LASTEXITCODE -ne 0) { throw ('HARA_COMMANDER_INSTALL_EXIT_'+$LASTEXITCODE) } } finally { Remove-Item -LiteralPath $haraInstaller -Force -ErrorAction SilentlyContinue; $env:HARA_COMMANDER_URL=$haraPrevUrl; $env:HARA_COMMANDER_APPROVAL_MODE=$haraPrevApproval }";
   }
 
   function syncInstallCommands() {
