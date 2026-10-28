@@ -1,0 +1,34 @@
+{
+  "README.md": {
+    "bytes": 8676,
+    "sha256": "c046fe2e58742bacc88cf440e9a7a99f59973671e0509aaef64d3bee3a2d4cf6"
+  },
+  "build_linux_candidate.py": {
+    "bytes": 13118,
+    "sha256": "95e4398397757882f10d385e2e7a979e3d48381725830b2d52bbddb65da46acd"
+  },
+  "commander_connect.py": {
+    "bytes": 23476,
+    "sha256": "a696a233e81b1b89b536fd4097af7b571762c953e54266cba49349308db74c1d"
+  },
+  "linux.source-only-candidate.sh": {
+    "bytes": 72524,
+    "sha256": "f9489f8c4647644c72ef507bd7a6dc50a11306b0e9f7858e6e424e696e4bb272"
+  },
+  "linux.source-only.patch": {
+    "bytes": 36098,
+    "sha256": "48b7480baf9f27d9bcebdbe3c17d9ccbc62bab3b439c16814b9e8710351f054f"
+  },
+  "test_connect_flow.py": {
+    "bytes": 10991,
+    "sha256": "966fc699ab10b06b7a19dd1de3e78578b8ffb05313b531f4cbb98987f6b97d08"
+  },
+  "test_embedded_connect.py": {
+    "bytes": 5199,
+    "sha256": "26fa649e5f897b7216daf9bbc1c32035c7bf30972d300acf2c658b3d15ae57a3"
+  },
+  "test_pair_existing_rollback.py": {
+    "bytes": 4308,
+    "sha256": "b1e9890e41304266a97f50c3ddd27882473cd88a46a719b848b01f4d11bb9e50"
+  }
+}

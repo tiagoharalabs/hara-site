@@ -1,0 +1,45 @@
+{
+  "at_utc": "2026-10-28T16:47:50.134255+00:00",
+  "config_present": true,
+  "agent_present": true,
+  "state": "OBSERVED",
+  "device": {
+    "HARA_COMMANDER_URL": "https://hara-commander-dev-v2.tiago-sartori.workers.dev",
+    "HARA_DEVICE_ID": "HARA-DEVICE-962202bc-274a-486b-9794-b73d9f3a5889",
+    "HARA_COMMANDER_APPROVAL_MODE": "PERSISTENT_TRUSTED",
+    "HARA_COMMANDER_TRANSPORT_MODE": "OUTBOUND_RELAY"
+  },
+  "credential_present": true,
+  "agent_sha256": "ad92b9100b9b4599fc73815a5ba44ffb665ce5c1d0973c03923f1d8d45b1d03d",
+  "agent_version": "0.3.56",
+  "runtime": {
+    "agent_version": "0.3.56",
+    "started_at_utc": "2026-10-28T00:13:28.150467+00:00",
+    "last_successful_heartbeat_at_utc": "2026-10-28T16:47:06.954776+00:00",
+    "last_runtime_error_code": null,
+    "updated_at_utc": "2026-10-28T16:47:06.955153+00:00"
+  },
+  "credential_validation": {
+    "http_status": 200,
+    "ok": true
+  },
+  "release_readback": [
+    {
+      "path": "/release/agent-manifest.json",
+      "http_status": 403
+    },
+    {
+      "path": "/release/agent-manifest.sig.json",
+      "http_status": 403
+    },
+    {
+      "path": "/releases/0.3.56/release/agent-manifest.json",
+      "http_status": 403
+    },
+    {
+      "path": "/releases/0.3.56/release/agent-manifest.sig.json",
+      "http_status": 403
+    }
+  ],
+  "service_state": "active"
+}

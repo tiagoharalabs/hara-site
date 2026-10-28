@@ -1,0 +1,21 @@
+{
+  "at_utc": "2026-10-28T16:58:23.252021+00:00",
+  "platform": "linux",
+  "exit": 2,
+  "controller_sha256": "a696a233e81b1b89b536fd4097af7b571762c953e54266cba49349308db74c1d",
+  "report": {
+    "agent_version": "0.3.56",
+    "commander_url": "https://hara-commander-dev-v2.tiago-sartori.workers.dev",
+    "error_code": "AUTO_DOWNGRADE_REFUSED",
+    "initial_pairing_validated": true,
+    "initial_state": "PAIRED",
+    "pairing_validated": true,
+    "phase": "CHECK_UPDATE",
+    "state": "PAIRING_VALID_UPDATE_HOLD",
+    "token_exposed": false
+  },
+  "stderr_bytes": 66,
+  "config_preserved": true,
+  "agent_preserved": true,
+  "old_cli_preserved": true
+}

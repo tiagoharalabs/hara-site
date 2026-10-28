@@ -1,0 +1,153 @@
+{
+  "started_utc": "2026-10-28T17:33:27.9096260Z",
+  "state": "OBSERVED",
+  "parsed_files": [
+    "Preserved-Pairing.ps1",
+    "Test-PreservedPairing.ps1",
+    "windows.source-only-candidate.ps1"
+  ],
+  "candidate_executed": false,
+  "exit": 2,
+  "stderr_bytes": 0,
+  "report": {
+    "schema": "hara.commander.preserved-pairing-fixtures.v1",
+    "state": "FAIL",
+    "case_count": 14,
+    "failed_count": 3,
+    "real_network_calls": 0,
+    "real_enrollment_calls": 0,
+    "real_task_mutations": 0,
+    "production_paths_touched": false,
+    "cases": [
+      {
+        "name": "unpaired_existing_agent_pairs_without_root_deletion",
+        "state": "PASS"
+      },
+      {
+        "name": "unpaired_startup_failure_restores_agent_and_absent_config_task",
+        "state": "FAIL",
+        "code": "FIXTURE_OLD_RUNTIME_NOT_RESTORED",
+        "restore_failure": {
+          "file_kind": "AGENT",
+          "code": "PAIRING_DACL_RESTORE_MISMATCH",
+          "exception_type": "System.Management.Automation.RuntimeException",
+          "hresult": -2146233087,
+          "inner_exception_type": null,
+          "inner_hresult": null,
+          "script_line": 16,
+          "script_name": "Connect-Commander.ps1",
+          "backup_hash_matches": true,
+          "target_hash_matches": true,
+          "acl_comparison": {
+            "owner_matches": true,
+            "group_matches": true,
+            "access_sddl_matches": false,
+            "protection_matches": true,
+            "dacl_bytes_match": true,
+            "auto_inherited_flag_matches": false,
+            "auto_inherit_required_flag_matches": true
+          }
+        }
+      },
+      {
+        "name": "rejected_old_binding_reenroll_preserves_task_definition",
+        "state": "PASS"
+      },
+      {
+        "name": "rejected_binding_startup_failure_restores_exact_old_credential",
+        "state": "FAIL",
+        "code": "REENROLL_ROLLBACK_INVALID",
+        "restore_failure": {
+          "file_kind": "CONFIG",
+          "code": "PAIRING_DACL_RESTORE_MISMATCH",
+          "exception_type": "System.Management.Automation.RuntimeException",
+          "hresult": -2146233087,
+          "inner_exception_type": null,
+          "inner_hresult": null,
+          "script_line": 16,
+          "script_name": "Connect-Commander.ps1",
+          "backup_hash_matches": true,
+          "target_hash_matches": true,
+          "acl_comparison": {
+            "owner_matches": true,
+            "group_matches": true,
+            "access_sddl_matches": false,
+            "protection_matches": true,
+            "dacl_bytes_match": true,
+            "auto_inherited_flag_matches": false,
+            "auto_inherit_required_flag_matches": true
+          }
+        },
+        "task_state": "Ready"
+      },
+      {
+        "name": "reenroll_preserves_manual_stop_until_connect_requests_start",
+        "state": "PASS"
+      },
+      {
+        "name": "valid_old_credential_never_prompts_or_resets",
+        "state": "PASS"
+      },
+      {
+        "name": "network_error_never_becomes_credential_rejection",
+        "state": "PASS"
+      },
+      {
+        "name": "payload_failure_holds_before_code_prompt",
+        "state": "PASS"
+      },
+      {
+        "name": "cancelled_code_preserves_existing_agent",
+        "state": "PASS"
+      },
+      {
+        "name": "cached_agent_change_revokes_new_device_without_local_commit",
+        "state": "PASS"
+      },
+      {
+        "name": "new_credential_must_authenticate_before_local_commit",
+        "state": "PASS"
+      },
+      {
+        "name": "external_task_change_is_preserved_and_pairing_is_held",
+        "state": "PASS"
+      },
+      {
+        "name": "rollback_failure_retains_private_preimages",
+        "state": "PASS"
+      },
+      {
+        "name": "pending_revoke_retains_private_dpapi_new_credential",
+        "state": "FAIL",
+        "code": "FIXTURE_OLD_AGENT_NOT_RESTORED",
+        "restore_failure": {
+          "file_kind": "CONFIG",
+          "code": "PAIRING_DACL_RESTORE_MISMATCH",
+          "exception_type": "System.Management.Automation.RuntimeException",
+          "hresult": -2146233087,
+          "inner_exception_type": null,
+          "inner_hresult": null,
+          "script_line": 16,
+          "script_name": "Connect-Commander.ps1",
+          "backup_hash_matches": true,
+          "target_hash_matches": true,
+          "acl_comparison": {
+            "owner_matches": true,
+            "group_matches": true,
+            "access_sddl_matches": false,
+            "protection_matches": true,
+            "dacl_bytes_match": true,
+            "auto_inherited_flag_matches": false,
+            "auto_inherit_required_flag_matches": true
+          }
+        },
+        "task_state": "Ready"
+      }
+    ]
+  },
+  "config_preserved": true,
+  "agent_preserved": true,
+  "policy_preserved": true,
+  "finished_utc": "2026-10-28T17:33:35.4838114Z",
+  "diagnostic_task_exit": 0
+}

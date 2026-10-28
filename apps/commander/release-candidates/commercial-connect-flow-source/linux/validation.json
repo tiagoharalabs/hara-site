@@ -1,0 +1,73 @@
+{
+  "at_utc": "2026-10-28T17:00:24.531290+00:00",
+  "state": "SYNTHETIC_LOCAL_TESTS_PASS",
+  "controller_test_count": 14,
+  "rollback_test_count": 3,
+  "embedding_test_count": 7,
+  "native_tests": "ROOT_REPORTED_CONTROLLER_CHECK_ONLY; INSTALLER_CANDIDATE_NOT_RUN",
+  "public_deployment": false,
+  "frozen_controller_unchanged": true,
+  "installer_default_action": "connect",
+  "cases": [
+    {
+      "command": [
+        "python3",
+        "commander-qa-continuation/product-source/connect-flow-20261028/linux/test_connect_flow.py"
+      ],
+      "exit_code": 0,
+      "output": "Validando a conexao e a versao assinada do Commander...\nValidando a conexao e a versao assinada do Commander...\nAbra https://commander.synthetic.invalid/auth/login, entre na sua conta e gere um codigo de pareamento.\nDigite somente esse codigo quando o instalador solicitar. A senha fica no site.\nValidando a conexao e a versao assinada do Commander...\nValidando a conexao e a versao assinada do Commander...\nValidando a conexao e a versao assinada do Commander...\nAbra https://commander.synthetic.invalid/auth/login, entre na sua conta e gere um codigo de pareamento.\nDigite somente esse codigo quando o instalador solicitar. A senha fica no site.\nValidando a conexao e a versao assinada do Commander...\nValidando a conexao e a versao assinada do Commander...\nMaquina ja pareada; o vinculo existente sera preservado.\nValidando a conexao e a versao assinada do Commander...\nMaquina ja pareada; o vinculo existente sera preservado.\nValidando a conexao e a versao assinada do Commander...\nValidando a conexao e a versao assinada do Commander...\nValidando a conexao e a versao assinada do Commander...\ntest_agent_corruption_before_any_install_or_token (__main__.ConnectTests.test_agent_corruption_before_any_install_or_token) ... ok\ntest_ambiguous_401_does_not_reenroll (__main__.ConnectTests.test_ambiguous_401_does_not_reenroll) ... ok\ntest_cross_origin_qa_override_refused (__main__.ConnectTests.test_cross_origin_qa_override_refused) ... ok\ntest_failed_post_pair_update_retains_pairing_confirmed (__main__.ConnectTests.test_failed_post_pair_update_retains_pairing_confirmed) ... ok\ntest_immutable_manifest_difference_rejected (__main__.ConnectTests.test_immutable_manifest_difference_rejected) ... ok\ntest_installed_unpaired_old_installer_refuses_before_token (__main__.ConnectTests.test_installed_unpaired_old_installer_refuses_before_token) ... ok\ntest_installed_unpaired_uses_pair_existing_then_update (__main__.ConnectTests.test_installed_unpaired_uses_pair_existing_then_update) ... ok\ntest_network_failure_never_prompts_or_fetches_release (__main__.ConnectTests.test_network_failure_never_prompts_or_fetches_release) ... ok\ntest_older_channel_is_hold_and_preserves_valid_pairing (__main__.ConnectTests.test_older_channel_is_hold_and_preserves_valid_pairing) ... ok\ntest_paired_current_preserves_credential_and_skips_installer (__main__.ConnectTests.test_paired_current_preserves_credential_and_skips_installer) ... ok\ntest_paired_older_updates_without_pairing (__main__.ConnectTests.test_paired_older_updates_without_pairing) ... ok\ntest_signed_metadata_does_not_allow_mismatched_old_agent (__main__.ConnectTests.test_signed_metadata_does_not_allow_mismatched_old_agent) ... ok\ntest_tty_path_existence_is_not_authority_to_prompt (__main__.ConnectTests.test_tty_path_existence_is_not_authority_to_prompt) ... ok\ntest_unknown_signature_key_rejected (__main__.ConnectTests.test_unknown_signature_key_rejected) ... ok\n\n----------------------------------------------------------------------\nRan 14 tests in 0.171s\n\nOK\n"
+    },
+    {
+      "command": [
+        "python3",
+        "commander-qa-continuation/product-source/connect-flow-20261028/linux/test_pair_existing_rollback.py"
+      ],
+      "exit_code": 0,
+      "output": "test_failed_attach_removes_only_new_config (__main__.RollbackTests.test_failed_attach_removes_only_new_config) ... ok\ntest_failed_reenroll_restores_previous_config (__main__.RollbackTests.test_failed_reenroll_restores_previous_config) ... ok\ntest_unavailable_revoke_retains_private_recovery (__main__.RollbackTests.test_unavailable_revoke_retains_private_recovery) ... ok\n\n----------------------------------------------------------------------\nRan 3 tests in 0.374s\n\nOK\n"
+    },
+    {
+      "command": [
+        "python3",
+        "commander-qa-continuation/product-source/connect-flow-20261028/linux/test_embedded_connect.py"
+      ],
+      "exit_code": 0,
+      "output": "test_candidate_bash_syntax (__main__.EmbeddedConnectTests.test_candidate_bash_syntax) ... ok\ntest_connect_alias_normalizes_shell_action_without_forwarding_it (__main__.EmbeddedConnectTests.test_connect_alias_normalizes_shell_action_without_forwarding_it) ... ok\ntest_controller_child_actions_are_explicit_no_default_recursion (__main__.EmbeddedConnectTests.test_controller_child_actions_are_explicit_no_default_recursion) ... ok\ntest_default_action_dispatches_connect_with_explicit_python_argv (__main__.EmbeddedConnectTests.test_default_action_dispatches_connect_with_explicit_python_argv) ... ok\ntest_exact_frozen_controller_bytes_embedded_once (__main__.EmbeddedConnectTests.test_exact_frozen_controller_bytes_embedded_once) ... ok\ntest_explicit_install_keeps_existing_enrollment_guard_no_connect (__main__.EmbeddedConnectTests.test_explicit_install_keeps_existing_enrollment_guard_no_connect) ... ok\ntest_explicit_update_keeps_unpaired_guard_no_connect (__main__.EmbeddedConnectTests.test_explicit_update_keeps_unpaired_guard_no_connect) ... ok\n\n----------------------------------------------------------------------\nRan 7 tests in 0.469s\n\nOK\n"
+    },
+    {
+      "command": [
+        "bash",
+        "-n",
+        "commander-qa-continuation/product-source/connect-flow-20261028/linux/linux.source-only-candidate.sh"
+      ],
+      "exit_code": 0,
+      "output": ""
+    }
+  ],
+  "native_controller_check": {
+    "performed_by": "root_operator",
+    "local_date": "2026-10-28",
+    "local_time": "13:58",
+    "timezone": "America/Sao_Paulo",
+    "controller_sha256": "a696a233e81b1b89b536fd4097af7b571762c953e54266cba49349308db74c1d",
+    "authenticated_heartbeat_http": 200,
+    "environment": "development",
+    "installed_version": "0.3.56",
+    "stable_channel_version": "0.3.54",
+    "state": "PAIRING_VALID_UPDATE_HOLD",
+    "error_code": "AUTO_DOWNGRADE_REFUSED",
+    "configuration_unchanged": true,
+    "agent_unchanged": true,
+    "original_cli_symlink_unchanged": true,
+    "new_token_requested": false,
+    "downgrade_performed": false,
+    "qa_helper_path": "/home/commanderqa/.local/share/hara-commander-connect-qa",
+    "qa_command": "hara-commander-connect",
+    "desktop_launcher_installed": true,
+    "application_menu_launcher_installed": true,
+    "native_installer_candidate": "NOT_RUN"
+  },
+  "generator_layouts": [
+    "local_product_source",
+    "repository_release_candidates_sibling"
+  ]
+}

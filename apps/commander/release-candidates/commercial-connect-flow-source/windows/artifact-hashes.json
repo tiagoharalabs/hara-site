@@ -1,0 +1,51 @@
+{
+  "schema": "hara.commander.connect-source-files.v1",
+  "state": "SOURCE_CANDIDATES_NOT_PUBLIC_RELEASE",
+  "files": [
+    {
+      "path": "Connect-Commander.ps1",
+      "bytes": 27001,
+      "sha256": "2c2233afa8f9eba4544ca735198922dc9424657fe40108c30445339734fb04da"
+    },
+    {
+      "path": "Preserved-Pairing.ps1",
+      "bytes": 19325,
+      "sha256": "9b024e3f648d9d78b36ed92f6f534f01b5158749dc81e775fd7274d33271ef5e"
+    },
+    {
+      "path": "README.md",
+      "bytes": 10224,
+      "sha256": "d8c5215cc591613f50e2f22d6fee4209ad69c76469874b8788d97c985beb527e"
+    },
+    {
+      "path": "Test-ConnectController.ps1",
+      "bytes": 18138,
+      "sha256": "94bbf4e9b18504503e3e64402098619a0336df6e71b25a506e98f0939d197168"
+    },
+    {
+      "path": "Test-PreservedPairing.ps1",
+      "bytes": 25612,
+      "sha256": "e164f25ddf5cd549c1da70f568334e6d4c5a5e4499bbab952f6e2be3d67ecfb7"
+    },
+    {
+      "path": "build_windows_candidate.py",
+      "bytes": 7735,
+      "sha256": "6fb329485352ded72d4cab23abe836273c00f431470d4565485e03b72e735ebc"
+    },
+    {
+      "path": "source-candidate-report.json",
+      "bytes": 934,
+      "sha256": "79a46e5bee2639ee0918efbd362678b1219fa2f6d6444f70b96638d9d717f284"
+    },
+    {
+      "path": "validation-status.json",
+      "bytes": 5992,
+      "sha256": "ffc0b98318f27851486bc8ab6b5f22423952aa76633a6713fe5c2ca4f25f0604"
+    },
+    {
+      "path": "windows.source-only-candidate.ps1",
+      "bytes": 76549,
+      "sha256": "68f0a76958e14f8f2830b6eb68d748bbad41e662b27b381dbf3a69e78bca03fd"
+    }
+  ]
+}

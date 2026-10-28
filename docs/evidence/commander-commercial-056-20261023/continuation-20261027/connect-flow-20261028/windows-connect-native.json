@@ -1,0 +1,32 @@
+{
+  "started_utc": "2026-10-28T17:10:23.5910766Z",
+  "platform": "windows",
+  "state": "OBSERVED",
+  "exit": 3,
+  "stderr_bytes": 0,
+  "report": {
+    "schema": "hara.commander.connect-result.v1",
+    "started_utc": "2026-10-28T17:10:24.8869634Z",
+    "state": "CONNECTED_UPDATE_HOLD",
+    "stage": "VERIFY_LATEST_RELEASE",
+    "binding": "VALID",
+    "connected": true,
+    "update": "HOLD",
+    "paired_this_run": false,
+    "credential_reset": false,
+    "device_token_exposed": false,
+    "commander_url": "https://commander.haralabs.com.br",
+    "installed_version": "0.3.56",
+    "device_id": "HARA-DEVICE-a544f7b1-3ee1-49f7-aa55-f559376d5d12",
+    "last_successful_heartbeat_at_utc": "2026-10-28T17:10:16.2401362Z",
+    "update_error_code": "RELEASE_SIGNATURE_INVALID",
+    "enrollment_preserved": true,
+    "finished_utc": "2026-10-28T17:10:31.0109779Z"
+  },
+  "config_preserved": true,
+  "agent_preserved": true,
+  "policy_preserved": true,
+  "controller_sha256": "2c2233afa8f9eba4544ca735198922dc9424657fe40108c30445339734fb04da",
+  "finished_utc": "2026-10-28T17:10:31.1827953Z",
+  "diagnostic_task_exit": 0
+}

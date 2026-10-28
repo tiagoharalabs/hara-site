@@ -1,0 +1,34 @@
+{
+  "at_utc": "2026-10-28T16:45:59.1422663Z",
+  "state": "OBSERVED",
+  "config_present": true,
+  "agent_present": true,
+  "device": {
+    "device_id": "HARA-DEVICE-a544f7b1-3ee1-49f7-aa55-f559376d5d12",
+    "encrypted_credential_present": true,
+    "base_url": "https://commander.haralabs.com.br",
+    "agent_version": "0.3.56",
+    "approval_mode": "PERSISTENT_TRUSTED"
+  },
+  "agent_sha256": "a44e2f7c7ce75cf2cff0e60886fce60bd999b9e4cea22e5baa24619d9ee27620",
+  "runtime": {
+    "state": "",
+    "agent_version": "0.3.56",
+    "last_successful_heartbeat_at_utc": "2026-10-28T16:45:08.3525381Z"
+  },
+  "product_task": {
+    "state": "Running",
+    "principal": "CommanderQA",
+    "present": true
+  },
+  "launcher": {
+    "action": "install",
+    "finished_utc": "2026-10-28T16:37:07.9150431Z",
+    "paired": true,
+    "error_code": null,
+    "started_utc": "2026-10-28T16:02:59.2598125Z",
+    "state": "PASS_INSTALLED_AND_ONLINE",
+    "installed": true
+  },
+  "diagnostic_task_exit": 0
+}

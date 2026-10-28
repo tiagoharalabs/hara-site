@@ -1,0 +1,25 @@
+{
+  "at_utc": "2026-10-28T16:50:44.885176+00:00",
+  "results": [
+    {
+      "origin": "https://commander.haralabs.com.br",
+      "user_agent": "HARA-Commander-Connect/1",
+      "status": 200,
+      "content_type": "application/json",
+      "server": "cloudflare",
+      "agent_version": "0.3.41",
+      "code": null,
+      "sha256": "7e42f25404e414b74b375ccb47b7ed8ba7d8c572dc45db994d89012207f08f7c"
+    },
+    {
+      "origin": "https://hara-commander-dev-v2.tiago-sartori.workers.dev",
+      "user_agent": "HARA-Commander-Connect/1",
+      "status": 200,
+      "content_type": "application/json",
+      "server": "cloudflare",
+      "agent_version": "0.3.54",
+      "code": null,
+      "sha256": "e1c7c23de1b4313093e2d8c52be1ec52f6419f72d5ef59d675c7e5a279b1a13d"
+    }
+  ]
+}

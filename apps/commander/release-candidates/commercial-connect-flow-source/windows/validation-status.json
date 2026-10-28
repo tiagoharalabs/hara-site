@@ -1,0 +1,117 @@
+{
+  "schema": "hara.commander.windows-connect-validation.v1",
+  "source_state": "SOURCE_CANDIDATE_NOT_SIGNED_OR_PUBLICLY_DEPLOYED",
+  "operator_reported_native_checks": {
+    "controller_fixtures": {
+      "state": "PASS",
+      "case_count": 23,
+      "finished_utc": "2026-10-28T17:09:09Z",
+      "exit_code": 0,
+      "stderr_bytes": 0,
+      "real_product_configuration_unchanged": true,
+      "real_agent_unchanged": true,
+      "current_user_execution_policy_unchanged": true,
+      "controller_sha256": "2c2233afa8f9eba4544ca735198922dc9424657fe40108c30445339734fb04da",
+      "harness_sha256": "94bbf4e9b18504503e3e64402098619a0336df6e71b25a506e98f0939d197168"
+    },
+    "transaction_fixtures": {
+      "state": "PASS",
+      "case_count": 14,
+      "helper_sha256": "9b024e3f648d9d78b36ed92f6f534f01b5158749dc81e775fd7274d33271ef5e",
+      "harness_sha256": "e164f25ddf5cd549c1da70f568334e6d4c5a5e4499bbab952f6e2be3d67ecfb7",
+      "prior_completed_attempts": [
+        {
+          "started_utc": "2026-10-28T17:18:28Z",
+          "finished_utc": "2026-10-28T17:18:35Z",
+          "passed_count": 12,
+          "failed_count": 2,
+          "exit_code": 2,
+          "stderr_bytes": 0,
+          "helper_sha256": "8d6db3c11134026859ec669444dc3512694cf81993b31c8fb8538b3348aaa5c9",
+          "harness_sha256": "a09a56b6cc24813456fcd132c3a46a5b6d77a0efad43b3d6d84f607be08b4f3f"
+        },
+        {
+          "started_utc": "2026-10-28T17:24:33Z",
+          "finished_utc": "2026-10-28T17:24:41Z",
+          "passed_count": 12,
+          "failed_count": 2,
+          "exit_code": 2,
+          "stderr_bytes": 0,
+          "diagnostic": "CONFIG Restore-PPFile Set-Acl PrivilegeNotHeldException; backup and target hashes already matched; original task remained Ready",
+          "harness_sha256": "23890cdc6b093a023c1c78c64b4e60a4cc7139e5cbc0cac76df81bbc204ec3cc"
+        },
+        {
+          "started_utc": "2026-10-28T17:29:42Z",
+          "finished_utc": "2026-10-28T17:29:50Z",
+          "passed_count": 11,
+          "failed_count": 3,
+          "diagnostic": "DACL-only restore removed privilege failure; stronger rollback assertions exposed an access-SDDL metadata mismatch",
+          "helper_sha256": "a10a41eb1d072cbe2e68731e246d6e5ae48e14f2124983c36701ef93492bc4ff",
+          "harness_sha256": "d19039c56d96aaa6c87685395cf37ed70db06a8bee32c72864cf57f94a54c7bc"
+        },
+        {
+          "started_utc": "2026-10-28T17:33:27Z",
+          "finished_utc": "2026-10-28T17:33:35Z",
+          "passed_count": 11,
+          "failed_count": 3,
+          "diagnostic": "Owner, group, protection and raw DACL bytes matched; only AUTO_INHERITED descriptor bit0x400 differed; AUTO_INHERIT_REQUIRED0x100 matched",
+          "helper_sha256": "a10a41eb1d072cbe2e68731e246d6e5ae48e14f2124983c36701ef93492bc4ff",
+          "harness_sha256": "8d396dff568e557a34aef93bd63a3acfffbfbef5c1847e0c18cb5c32bc02636c"
+        }
+      ],
+      "real_product_unchanged_during_prior_attempts": true,
+      "passed_count": 14,
+      "failed_count": 0,
+      "started_utc": "2026-10-28T17:37:14.436Z",
+      "finished_utc": "2026-10-28T17:37:24.389Z",
+      "exit_code": 0,
+      "stderr_bytes": 0,
+      "real_product_configuration_unchanged": true,
+      "real_agent_unchanged": true,
+      "current_user_execution_policy_unchanged": true
+    },
+    "generated_candidate_parser": {
+      "state": "PASS",
+      "sha256": "68f0a76958e14f8f2830b6eb68d748bbad41e662b27b381dbf3a69e78bca03fd",
+      "helper_sha256": "9b024e3f648d9d78b36ed92f6f534f01b5158749dc81e775fd7274d33271ef5e",
+      "harness_sha256": "e164f25ddf5cd549c1da70f568334e6d4c5a5e4499bbab952f6e2be3d67ecfb7",
+      "previous_pass_sha256": "84b1cba0782ac7aab76b3ac007e86424297bd57f67768534cdf37d86344dc3cc"
+    },
+    "actual_production_connect": {
+      "state": "PASS",
+      "application_state": "CONNECTED_UPDATE_HOLD",
+      "binding": "VALID",
+      "finished_utc": "2026-10-28T17:10:31Z",
+      "last_successful_heartbeat_at_utc": "2026-10-28T17:10:16Z",
+      "real_product_configuration_unchanged": true,
+      "real_agent_unchanged": true,
+      "current_user_execution_policy_unchanged": true,
+      "controller_sha256": "2c2233afa8f9eba4544ca735198922dc9424657fe40108c30445339734fb04da"
+    }
+  },
+  "fixed_fixture_failure": {
+    "issue": "RSA.Create().KeySize assignment failed with a read-only-property exception on native Windows",
+    "fix": "Construct ephemeral RSACng(2048) and read back KeySize; production verification key unchanged",
+    "original_failure_retained_in_operator_evidence": true
+  },
+  "candidate_live_pairing": "NOT_RUN_REAL_ACCOUNT_PAIR_EXISTING_OR_REENROLL",
+  "candidate_newer_signed_upgrade": "NOT_RUN",
+  "public_distribution_fixed": false,
+  "fixed_transaction_fixture_invocation_failure": {
+    "issue": "Join-Path parameter default received empty PSScriptRoot before any fixture cases ran",
+    "fix": "Empty defaults resolved after binding through PSScriptRoot or MyInvocation.MyCommand.Path; explicit source arguments recommended",
+    "original_harness_sha256": "2b05bbae237bc73047328a6c077921ffd06f91fd8ef144e98927a4094309b16a",
+    "fixed_harness_sha256": "a09a56b6cc24813456fcd132c3a46a5b6d77a0efad43b3d6d84f607be08b4f3f",
+    "real_product_configuration_agent_and_policy_unchanged": true
+  },
+  "native_dacl_rollback_fix": {
+    "problem": "Full security descriptor reapplied through Set-Acl raised PrivilegeNotHeldException in ordinary user context",
+    "fix": "Fresh FileSecurity with AccessControlSections.Access only, File.SetAccessControl; owner/group/protection exact, raw DACL ACE bytes/order exact, every descriptor flag exact except observed AUTO_INHERITED0x400 normalization",
+    "privilege_escalation": false,
+    "existing_rollback_assertions_strengthened": true,
+    "allowed_metadata_flag_difference_hex": "0x0400",
+    "auto_inherit_required_0x0100_must_match": true,
+    "final_native_state": "PASS",
+    "inherited_ace_flags_and_access_rights_unchanged": true
+  }
+}

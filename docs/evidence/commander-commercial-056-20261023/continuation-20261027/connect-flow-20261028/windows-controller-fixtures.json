@@ -1,0 +1,116 @@
+{
+  "started_utc": "2026-10-28T17:09:07.4606659Z",
+  "platform": "windows",
+  "state": "OBSERVED",
+  "exit": 0,
+  "stderr_bytes": 0,
+  "report": {
+    "schema": "hara.commander.connect-fixtures.v1",
+    "state": "PASS",
+    "case_count": 23,
+    "failed_count": 0,
+    "real_enrollment_calls": 0,
+    "real_task_mutations": 0,
+    "production_files_modified": false,
+    "cases": [
+      {
+        "name": "valid_current_no_prompt_no_update",
+        "state": "PASS"
+      },
+      {
+        "name": "valid_older_updates_same_binding",
+        "state": "PASS"
+      },
+      {
+        "name": "older_release_channel_never_downgrades",
+        "state": "PASS"
+      },
+      {
+        "name": "untrusted_release_preserves_valid_connection",
+        "state": "PASS"
+      },
+      {
+        "name": "local_same_version_hash_mismatch_is_hold",
+        "state": "PASS"
+      },
+      {
+        "name": "partial_installed_state_never_prompts",
+        "state": "PASS"
+      },
+      {
+        "name": "network_auth_failure_never_reenrolls",
+        "state": "PASS"
+      },
+      {
+        "name": "clean_unpaired_selects_install_after_release",
+        "state": "PASS"
+      },
+      {
+        "name": "installed_unpaired_selects_transactional_pair_existing",
+        "state": "PASS"
+      },
+      {
+        "name": "legacy_installer_cannot_delete_unpaired_artifacts",
+        "state": "PASS"
+      },
+      {
+        "name": "explicit_rejection_requires_signed_reenroll_capability",
+        "state": "PASS"
+      },
+      {
+        "name": "explicit_rejection_reenrolls_only_after_verified_release",
+        "state": "PASS"
+      },
+      {
+        "name": "update_failure_confirms_recovered_connection",
+        "state": "PASS"
+      },
+      {
+        "name": "update_failure_cannot_claim_unconfirmed_connection",
+        "state": "PASS"
+      },
+      {
+        "name": "unexpected_credential_change_is_not_success",
+        "state": "PASS"
+      },
+      {
+        "name": "real_heartbeat_uses_actual_installed_version",
+        "state": "PASS"
+      },
+      {
+        "name": "wrong_device_id_is_ambiguous_not_rejected",
+        "state": "PASS"
+      },
+      {
+        "name": "only_explicit_401_auth_invalid_is_rejected",
+        "state": "PASS"
+      },
+      {
+        "name": "real_rsa_manifest_signature_passes",
+        "state": "PASS"
+      },
+      {
+        "name": "real_rsa_manifest_tampering_fails",
+        "state": "PASS"
+      },
+      {
+        "name": "signed_discovery_immutable_and_payload_chain_passes",
+        "state": "PASS"
+      },
+      {
+        "name": "different_valid_signed_immutable_manifest_is_held",
+        "state": "PASS"
+      },
+      {
+        "name": "signed_manifest_with_wrong_agent_bytes_is_held",
+        "state": "PASS"
+      }
+    ]
+  },
+  "config_preserved": true,
+  "agent_preserved": true,
+  "policy_preserved": true,
+  "controller_sha256": "2c2233afa8f9eba4544ca735198922dc9424657fe40108c30445339734fb04da",
+  "finished_utc": "2026-10-28T17:09:09.8397740Z",
+  "diagnostic_task_exit": 0
+}

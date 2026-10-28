@@ -1,0 +1,105 @@
+{
+  "started_utc": "2026-10-28T17:24:33.9303602Z",
+  "state": "OBSERVED",
+  "exit": 2,
+  "stderr_bytes": 0,
+  "report": {
+    "schema": "hara.commander.preserved-pairing-fixtures.v1",
+    "state": "FAIL",
+    "case_count": 14,
+    "failed_count": 2,
+    "real_network_calls": 0,
+    "real_enrollment_calls": 0,
+    "real_task_mutations": 0,
+    "production_paths_touched": false,
+    "cases": [
+      {
+        "name": "unpaired_existing_agent_pairs_without_root_deletion",
+        "state": "PASS"
+      },
+      {
+        "name": "unpaired_startup_failure_restores_agent_and_absent_config_task",
+        "state": "PASS"
+      },
+      {
+        "name": "rejected_old_binding_reenroll_preserves_task_definition",
+        "state": "PASS"
+      },
+      {
+        "name": "rejected_binding_startup_failure_restores_exact_old_credential",
+        "state": "FAIL",
+        "code": "REENROLL_ROLLBACK_INVALID",
+        "restore_failure": {
+          "file_kind": "CONFIG",
+          "exception_type": "System.Security.AccessControl.PrivilegeNotHeldException",
+          "hresult": -2147024891,
+          "inner_exception_type": null,
+          "inner_hresult": null,
+          "script_line": 28,
+          "script_name": "Preserved-Pairing.ps1",
+          "backup_hash_matches": true,
+          "target_hash_matches": true
+        },
+        "task_state": "Ready"
+      },
+      {
+        "name": "reenroll_preserves_manual_stop_until_connect_requests_start",
+        "state": "PASS"
+      },
+      {
+        "name": "valid_old_credential_never_prompts_or_resets",
+        "state": "PASS"
+      },
+      {
+        "name": "network_error_never_becomes_credential_rejection",
+        "state": "PASS"
+      },
+      {
+        "name": "payload_failure_holds_before_code_prompt",
+        "state": "PASS"
+      },
+      {
+        "name": "cancelled_code_preserves_existing_agent",
+        "state": "PASS"
+      },
+      {
+        "name": "cached_agent_change_revokes_new_device_without_local_commit",
+        "state": "PASS"
+      },
+      {
+        "name": "new_credential_must_authenticate_before_local_commit",
+        "state": "PASS"
+      },
+      {
+        "name": "external_task_change_is_preserved_and_pairing_is_held",
+        "state": "PASS"
+      },
+      {
+        "name": "rollback_failure_retains_private_preimages",
+        "state": "PASS"
+      },
+      {
+        "name": "pending_revoke_retains_private_dpapi_new_credential",
+        "state": "FAIL",
+        "code": "FIXTURE_OLD_AGENT_NOT_RESTORED",
+        "restore_failure": {
+          "file_kind": "CONFIG",
+          "exception_type": "System.Security.AccessControl.PrivilegeNotHeldException",
+          "hresult": -2147024891,
+          "inner_exception_type": null,
+          "inner_hresult": null,
+          "script_line": 28,
+          "script_name": "Preserved-Pairing.ps1",
+          "backup_hash_matches": true,
+          "target_hash_matches": true
+        },
+        "task_state": "Ready"
+      }
+    ]
+  },
+  "config_preserved": true,
+  "agent_preserved": true,
+  "policy_preserved": true,
+  "finished_utc": "2026-10-28T17:24:41.0579614Z",
+  "diagnostic_task_exit": 0
+}
