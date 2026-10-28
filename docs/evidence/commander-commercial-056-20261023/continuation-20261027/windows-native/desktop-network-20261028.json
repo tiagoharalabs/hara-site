@@ -1,0 +1,99 @@
+{
+  "scope": "Windows QA: rede, atalho existente e arquivos no Desktop",
+  "target": {
+    "vm": "hara-review-win11-restoretest-20261024",
+    "uuid": "154e2853-3d1d-4d23-a43d-706f76ad7939",
+    "account": "CommanderQA"
+  },
+  "network": {
+    "interfaces_before": 0,
+    "interface": {
+      "model": "e1000e",
+      "network": "hara-review-egress",
+      "applied_to": [
+        "live",
+        "persistent"
+      ]
+    },
+    "guard_modified": false,
+    "guest_ipv4": "192.168.252.113",
+    "https": [
+      {
+        "url": "https://commander.haralabs.com.br/api/health",
+        "http": "200",
+        "exit": 0
+      },
+      {
+        "url": "https://commander.haralabs.com.br/auth/login",
+        "http": "302",
+        "exit": 0
+      },
+      {
+        "url": "https://auth.haralabs.com.br/",
+        "http": "308",
+        "exit": 0
+      }
+    ],
+    "guest_probe_exit": 0
+  },
+  "shortcut": {
+    "host": "Nucleo-A",
+    "title": "VM Win11 Sent B",
+    "previous_target": "hara-review-win11",
+    "current_target": "hara-review-win11-restoretest-20261024",
+    "existing_shortcut_reused": true,
+    "backup_preserved": true,
+    "private_ssh_spice_access_preserved": true
+  },
+  "desktop": {
+    "state": "DESKTOP_FILES_VERIFIED",
+    "folder": "C:\\Users\\CommanderQA\\Desktop\\HARA Commander 0.3.56 QA",
+    "owner": "HARA_WIN11\\CommanderQA",
+    "acl_protected": true,
+    "files": [
+      {
+        "sha256": "2219d2cf657ccb52471ae5c5e6544877946b24621185b0303e0d1e1c6ad1a401",
+        "name": "instalar-commander-0.3.56.ps1",
+        "bytes": 27845
+      },
+      {
+        "sha256": "edb9fea571be6f15df45a5d4fd47609fca178f8aa4d0070e4c2081e0a1406224",
+        "name": "LEIA-ME.txt",
+        "bytes": 1080
+      },
+      {
+        "sha256": "24ff25570c1359f28509abde372b9bbf690e7a913d64e3d7abc135fda0c72be4",
+        "name": "RESULTADO-DOS-TESTES.txt",
+        "bytes": 934
+      },
+      {
+        "sha256": "b0e2767f1b6e633929ded56e6f6f15084cd409cba548cb99860603f796f6e4b1",
+        "name": "ACESSO-QA.txt",
+        "bytes": 483
+      },
+      {
+        "sha256": "a44e2f7c7ce75cf2cff0e60886fce60bd999b9e4cea22e5baa24619d9ee27620",
+        "name": "agent-windows-0.3.56.ps1",
+        "bytes": 172687
+      }
+    ],
+    "checksum_file": "SHA256SUMS.txt",
+    "file_hashes_verified": true
+  },
+  "limits": {
+    "browser_ui_verified": false,
+    "identity_login_verified": false,
+    "installed": false,
+    "paired": false,
+    "password_changed": false,
+    "password_obtained": false,
+    "release_approval": "NOT_GRANTED_BY_THIS_RECORD"
+  },
+  "source_sha256": {
+    "qa-desktop-current-domain-network-inventory.json": "6b69f2b456b2db0895500f94a1e52c6f3b47dd09df021d715af5e1da9d2bbcb4",
+    "qa-windows-internet-interface-attached.json": "c207d63a30263a5e0d1d9c82628236f1f0b749bc8423ca35e72535d9a44aee64",
+    "qa-windows-network-https-result.json": "2e3a2f090094f4ca0bfa796bb445bcc1ab39020b98344411f5837ec717a695d3",
+    "qa-nucleo-existing-windows-shortcut-fixed.json": "70f9707b83a66b8de5e0bc721d743d203ebdf280e6b5556aa4468dbd5d9a4ee9",
+    "qa-desktop-delivery-run-2.json": "b69621b4150f81f97d8cba2d72a511968d002fe2649d9a320655d64cc2f60705"
+  }
+}
