@@ -1,7 +1,7 @@
 {
   "alg": "RS256",
-  "kid": "commander-release-v1",
-  "manifest_sha256": "7e42f25404e414b74b375ccb47b7ed8ba7d8c572dc45db994d89012207f08f7c",
+  "kid": "commander-release-v2",
+  "manifest_sha256": "768653488979f5cebdd889d414c890cb1548fcff8387d4d6783419771a06bbdc",
   "schema": "hara.commander-release-signature.v1",
-  "signature": "Od6sdQfMC8ZAhYLoh6k4uMDM3mXnuh6DILV0tR_T_I2Jphc9SgygitBMyIb-r13b4nvo1Ik--bUvvYa1rek6vJ1aZC7qvvNYfOxRxr4MCEG7-N9DbPIoi9W4hPE1evw67WW97TU8EwuoS7lH3UxwjJ-unov2pW4SjMFU8U9IlrUGJPn56ZATiAleFrFGXMVzJn5x7m2epaSiRLZ4h3C9iqAiQE8kWEMG21QPogOHa9PiCnouKe3wDljjggPtlu3LMPumYcU5S-LnrnmQNFnKltJbaq5bA3bpAVks0Ko7E9cC-GK9eXyyMguBETPWuo0IEOdU_1nKxtPh2Vo05KuG0w"
+  "signature": "f7QQNQPcnrtX9CtMzUsCsWGtw6EPVJWr64GZxCy35z2fF663jM5SAIBHbrRlY9z9INURkvl09Gzcs9iH3K09yOCBogBMZKt1NBev3qOgdA91R-qHOy4EHGx_gNHfZwlEJQ0AKGriEpvgOcnHYw6Mqhhd8T8FTcyadjHP6emgbIRfzroDkeZ3fgCaCV89-yBYYHhIme4iGg-yQu-OIgQqrbULpk64sH0b6hx1KPHpo-awfVrIxlZH3E3sazCbRYBi8_5gTM_LLtqn672GQFbv60eHSgHvJ-zVchZdJfzbp7sCp8ri3-j0YCP1bkLQETUlF2bdOlF-a_-dGaKDFlzPapQY5a8hvz6HYLia5IqoOD-UWlzw0K7PgW1vJlQFH3Q8Z1tDsfISp2loVwbkeRdDVs5-wIsepOP670Z0K93oUD12F54Z3V7DYAIkFr0N0HUST1luwB90TQqdRAzJjJk3-JOaq-KgRpEVCnzYEBnaxQiKYwG0VkYKg5LsMvOSJlEB"
 }

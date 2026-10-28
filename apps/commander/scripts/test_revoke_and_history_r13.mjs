@@ -46,12 +46,28 @@ function makeDB(total,{failBatch=false}={}) {
     },
   };
 }
-let context=vm.createContext({Number,Error,String,crypto:globalThis.crypto,
+let context=vm.createContext({__name:(fn)=>fn, nowIso4:()=>"2026-10-23T18:00:00Z", Number,Error,String,crypto:globalThis.crypto,
   nowIso:()=> "2026-10-23T18:00:00Z"});
 vm.runInContext(section,context,{timeout:3500});
 const session={tenant_id:"tenant-A",subject_id:"admin-A",role:"OWNER"};
-await assert.rejects(()=>context.clearPortalDeviceHistory({PRODUCT_DB:makeDB(1)}, {...session,role:"MEMBER"},{expected_count:1}),/DEVICE_HISTORY_CLEAR_FORBIDDEN/);
-ok(true,"MEMBER_CANNOT_PURGE_HISTORY");
+for (const role of ["OWNER", "ADMIN", "MEMBER", "VIEWER", "REVIEWER", "USER"]) {
+  const roleSession = {...session, role, subject_id: "actor-" + role};
+  const cleared = await context.clearPortalDeviceHistory(
+    {PRODUCT_DB:makeDB(1)}, roleSession,
+    {expected_count:1, tenant_id:"tenant-B", subject_id:"spoofed-owner", role:"OWNER"});
+  eq({state:cleared.state, count:cleared.deleted_count}, {state:"CLEARED", count:1},
+    role + "_CAN_CLEAR_OWN_ACCOUNT_HISTORY");
+  const roleBatch = dbEvents.filter(x=>x.action==="batch").at(-1);
+  eq(roleBatch.statements[0].args,["tenant-A","tenant-A",1],role + "_CANNOT_TARGET_OTHER_TENANT");
+  eq(roleBatch.statements[1].args.slice(1,3),["tenant-A", "actor-" + role],
+    role + "_AUDIT_USES_AUTHENTICATED_ACTOR");
+}
+for (const invalid of [null, {}, {...session, tenant_id:""}, {...session, subject_id:""}]) {
+  const eventsBefore = dbEvents.length;
+  await assert.rejects(()=>context.clearPortalDeviceHistory({PRODUCT_DB:makeDB(1)},invalid,
+    {expected_count:1,tenant_id:"tenant-A",subject_id:"admin-A"}),/AUTH_REQUIRED/);
+  eq(dbEvents.length,eventsBefore,"MISSING_SESSION_SCOPE_REJECTED_BEFORE_DB");
+}
 await assert.rejects(()=>context.clearPortalDeviceHistory({PRODUCT_DB:makeDB(1)},session,{expected_count:"1"}),/DEVICE_HISTORY_CLEAR_COUNT_INVALID/);
 ok(true,"COUNT_MUST_BE_INTEGER");
 await assert.rejects(()=>context.clearPortalDeviceHistory({PRODUCT_DB:makeDB(2)},session,{expected_count:1}),/DEVICE_HISTORY_CHANGED/);
@@ -102,9 +118,39 @@ eq(JSON.parse(paths[0].opts.body),{expected_count:2},"CLEAR_EXPECTED_COUNT_SENT"
 eq(browser.devicesCache.devices.map(d=>d.device_id),[activeId],"CLEAR_REMOVES_HISTORY_FROM_CACHE");
 ok(messages.some(m=>m.includes("Histórico limpo")),"SERVER_CONFIRMED_CLEAR_TOAST");
 eq(devs[0].state,"ACTIVE","ACTIVE_DEVICE_UNTOUCHED");
-paths=[]; browser.historyClearConfirmation=true;browser.currentRole="MEMBER";
+for (const role of ["OWNER", "ADMIN", "MEMBER", "VIEWER", "REVIEWER", "USER"]) {
+  paths=[]; messages=[];
+  browser.devicesCache={devices:devs};browser.historyClearConfirmation=false;
+  browser.currentRole=role;
+  browser.document={querySelector:()=>({focus(){}})};
+  browser.requestHistoryClear();
+  ok(browser.historyClearConfirmation,role + "_CAN_OPEN_CLEAR_CONFIRMATION");
+  await browser.confirmHistoryClear({isConnected:true});
+  eq(paths.map(x=>x.p),["/api/portal/devices/history/clear","/api/portal/devices"],
+    role + "_CLIENT_CLEARS_AND_READS_BACK");
+  eq(browser.devicesCache.devices.map(d=>d.device_id),[activeId],role + "_ACTIVE_DEVICE_RETAINED");
+}
+paths=[];browser.sessionAuthenticated=false;browser.historyClearConfirmation=false;
+browser.devicesCache={devices:devs};
+browser.requestHistoryClear();
+ok(!browser.historyClearConfirmation,"SIGNED_OUT_CANNOT_OPEN_CLEAR_CONFIRMATION");
+browser.historyClearConfirmation=true;
 await browser.confirmHistoryClear({isConnected:true});
-eq(paths.length,0,"MEMBER_CLIENT_WILL_NOT_CLEAR");
+eq(paths.length,0,"SIGNED_OUT_CLIENT_CANNOT_CLEAR");
+browser.sessionAuthenticated=true;
+
+// Execute the actual visibility rule for all roles, not a duplicate test policy.
+const visibilitySource=segment(js,'    const canClearHistory =','    const clearConfirmation =');
+for (const role of ["OWNER", "ADMIN", "MEMBER", "VIEWER", "REVIEWER", "USER"]) {
+  for (const authenticated of [true,false]) {
+    const control={hidden:true,disabled:false};
+    const visibility=vm.createContext({currentRole:role,sessionAuthenticated:authenticated,
+      deviceTab:"history",revokedDevices:[devs[1]],historyClearPending:false,
+      document:{querySelector:()=>control}});
+    vm.runInContext(visibilitySource,visibility);
+    eq(control.hidden,!authenticated,role + "_HISTORY_BUTTON_FOLLOWS_SESSION");
+  }
+}
 browser.currentRole="OWNER"; browser.devicesCache={devices:devs};browser.historyClearConfirmation=true;
 failClearStatus=409;paths=[];messages=[];
 await browser.confirmHistoryClear({isConnected:true});

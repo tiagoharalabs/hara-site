@@ -3145,8 +3145,10 @@ async function clearPortalDeviceHistory(env, session, body = {}) {
   // This is a real server-side deletion of the separate portal history rows.
   // Never delete commander_devices: revoked credentials, receipts, quota, and
   // operational audit have referential and security retention obligations.
-  if (!["OWNER", "ADMIN"].includes(String(session?.role || "").toUpperCase())) {
-    throw new Error("DEVICE_HISTORY_CLEAR_FORBIDDEN");
+  // History cleanup is self-service for every authenticated account member.
+  // The route resolves the session; tenant and actor must never come from body.
+  if (!session?.tenant_id || !session?.subject_id) {
+    throw new Error("AUTH_REQUIRED");
   }
   const expectedCount = body?.expected_count;
   if (!Number.isSafeInteger(expectedCount) || expectedCount < 1 || expectedCount > 100000) {

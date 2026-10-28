@@ -372,7 +372,7 @@
 
                 <div class="onboarding-step onboarding-step-stack">
                   <span class="onboarding-step-no">03</span>
-                  <div><b>Instale no seu computador</b><small>Copie no seu computador e siga as instruções. <a class="devices-repo-link" href="https://github.com/tiagoharalabs/hara-site/tree/hara-commander-commercial-v0.3.43-signed-v2/apps/commander/release-bundles/commercial-0.3.43-v2" target="_blank" rel="noopener noreferrer">Ver a distribuição assinada no GitHub ↗</a></small></div>
+                  <div><b>Instale no seu computador</b><small>Copie no seu computador e siga as instruções. <a class="devices-repo-link" href="/release/agent-manifest.json" target="_blank" rel="noopener noreferrer">Ver a versão desta distribuição ↗</a></small></div>
                   <div class="install-pane" data-os-panel="linux">
                     <div class="install-command"><code data-install-linux-code>(tmp=$(mktemp) && trap 'rm -f $tmp' EXIT && curl -fsS --proto '=https' --tlsv1.2 --location --max-redirs 0 https://commander.haralabs.com.br/install/linux.sh -o $tmp && HARA_COMMANDER_APPROVAL_MODE=ASK_EVERY_ACTION HARA_COMMANDER_TRANSPORT_MODE=OUTBOUND_RELAY HARA_COMMANDER_TUNNEL_AUTOSTART=OFF HARA_COMMANDER_URL=https://commander.haralabs.com.br bash $tmp)</code><button class="btn btn-secondary small" type="button" data-copy-linux>Copiar instalador Linux</button></div>
                     <small class="install-note" data-cloud-onboarding-note>Para conectar o ChatGPT depois do pareamento, abra <b>Comandos e integrações → MCP remoto</b> e autentique pelo HARA Identity.</small><small class="install-note" data-direct-onboarding-note hidden>Modo Direct: após parear, abra <b>Comandos e integrações → Direct</b> para configurar e autorizar o túnel OpenAI por 6 horas. Requer credenciais próprias da OpenAI Platform.</small>
@@ -401,6 +401,7 @@
                   <div class="devices-command-row"><div><b>Iniciar</b><small>Conecta e abre a sessão de autorização.</small></div><div class="devices-command-copy"><code>hara-commander start</code><button type="button" class="btn btn-secondary small" data-copy-guide-command>Copiar</button></div></div>
                   <div class="devices-command-row"><div><b>Verificar status</b><small>Confere sessão e estado do Agent.</small></div><div class="devices-command-copy"><code>hara-commander status</code><button type="button" class="btn btn-secondary small" data-copy-guide-command>Copiar</button></div></div>
                   <div class="devices-command-row"><div><b>Parar</b><small>Desconecta e encerra a autorização.</small></div><div class="devices-command-copy"><code>hara-commander stop</code><button type="button" class="btn btn-secondary small" data-copy-guide-command>Copiar</button></div></div>
+                  <div class="devices-command-row"><div><b>Parear novamente</b><small>Após revogar o acesso, gere um código novo neste site e informe no terminal. Disponível a partir da versão 0.3.60; não precisa reinstalar.</small></div><div class="devices-command-copy"><code>hara commander pair</code><button type="button" class="btn btn-secondary small" data-copy-guide-command>Copiar</button></div></div>
                   <div class="devices-command-row"><div><b>Diagnóstico</b><small>Verifica a instalação e conectividade.</small></div><div class="devices-command-copy"><code>hara-commander doctor</code><button type="button" class="btn btn-secondary small" data-copy-guide-command>Copiar</button></div></div>
                 </section>
 
@@ -409,6 +410,7 @@
                   <div class="devices-command-row"><div><b>Iniciar</b><small>Conecta e abre a sessão no Windows.</small></div><div class="devices-command-copy"><code tabindex="0" title="Use as setas horizontais para percorrer o comando PowerShell completo">$agent=Join-Path $env:LOCALAPPDATA 'HARA Commander\hara-commander-agent.ps1'; &amp; powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $agent start</code><button type="button" class="btn btn-secondary small" data-copy-guide-command>Copiar</button></div></div>
                   <div class="devices-command-row"><div><b>Verificar status</b><small>Confere se a sessão local está ativa.</small></div><div class="devices-command-copy"><code tabindex="0" title="Use as setas horizontais para percorrer o comando PowerShell completo">$agent=Join-Path $env:LOCALAPPDATA 'HARA Commander\hara-commander-agent.ps1'; &amp; powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $agent status</code><button type="button" class="btn btn-secondary small" data-copy-guide-command>Copiar</button></div></div>
                   <div class="devices-command-row"><div><b>Parar</b><small>Encerra a sessão e desliga a tarefa do Agent.</small></div><div class="devices-command-copy"><code tabindex="0" title="Use as setas horizontais para percorrer o comando PowerShell completo">$agent=Join-Path $env:LOCALAPPDATA 'HARA Commander\hara-commander-agent.ps1'; &amp; powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $agent stop</code><button type="button" class="btn btn-secondary small" data-copy-guide-command>Copiar</button></div></div>
+                  <div class="devices-command-row"><div><b>Parear novamente</b><small>Após revogar o acesso, gere um código novo neste site e informe no terminal. Disponível a partir da versão 0.3.60; não precisa reinstalar.</small></div><div class="devices-command-copy"><code>hara commander pair</code><button type="button" class="btn btn-secondary small" data-copy-guide-command>Copiar</button></div></div>
                   <p class="devices-command-note">A versão Windows está em beta: operações sensíveis ainda exigem homologação. O Agent não inicia sozinho após o login.</p>
                 </section>
 
@@ -671,7 +673,7 @@
     </nav>
   </template>
 
-  <script src="./app.js?v=20261023-revoke-click-r15"></script>
+  <script src="./app.js?v=20261028-commander-0360-r16"></script>
   <script src="./recovery-alerts.js?v=20261024-recovery-inbox-r1"></script>
 </body>
 </html>
