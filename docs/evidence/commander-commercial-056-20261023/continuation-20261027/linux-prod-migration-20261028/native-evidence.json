@@ -1,0 +1,44 @@
+{
+  "schema": "hara.commander.linux-prod-migration-evidence.v1",
+  "authorization": "User explicitly requested production binding of Linux QA installation",
+  "source_sha256": "ff7cd29ec71be9b76e4cf75622b1dfc43156c897fd258d34f1bfd9c89adb2c51",
+  "vm": {
+    "name": "hara-review-linux",
+    "uuid": "d7a27a4a-41c3-4c14-a84e-187443566a3c",
+    "host": "sentinela-b",
+    "account": "commanderqa",
+    "uid": 2000
+  },
+  "records": {
+    "migration-prepared": {
+      "receipt": "382dbc9d06f05c89c060a0911c83762bf286724c6325db21807d6aea30ecbb3f",
+      "run_id": "HARA-PROC-dc9707a8e1e94fefa312ff054a996dc5",
+      "exit_code": 0,
+      "output": "{\"exitcode\": 0, \"exited\": true}\r\n{\"state\": \"READY_FOR_PROD_PAIRING\", \"source\": \"https://hara-commander-dev-v2.tiago-sartori.workers.dev\", \"target\": \"https://commander.haralabs.com.br\", \"version\": \"0.3.59\", \"agent_sha256\": \"df8b2d09c5447f8d405200538a841e669a8f165e9043701d6c8efcbfe5a34d38\", \"service\": \"active\", \"journal\": {\"journal_present\": true, \"states\": []}, \"old_config_sha256\": \"e97da19b31c4ed4cca1361a5b8e69a72c22bd8a919ecf957bcfba49e3d4b84e3\", \"config_keys\": [\"HARA_COMMANDER_APPROVAL_MODE\", \"HARA_COMMANDER_TRANSPORT_MODE\", \"HARA_COMMANDER_TUNNEL_AUTOSTART\", \"HARA_COMMANDER_URL\", \"HARA_DEVICE_ARCH\", \"HARA_DEVICE_ID\", \"HARA_DEVICE_TOKEN\"], \"production_enrollment_performed\": false, \"observed_at_utc\": \"2026-10-28T20:28:52.351321+00:00\", \"credential_exposed\": false}\r\n\r\n\r"
+    },
+    "migration-committed": {
+      "receipt": "85a500571c64ab228fb849912151c11c4db1a758ebb91320ef3b21210c7a7b19",
+      "run_id": "HARA-PROC-e625e63b6256499987bc1859417dd3dc",
+      "exit_code": 0,
+      "output": "{\"exitcode\": 2, \"exited\": true}\r\n{\"state\": \"HOLD\", \"error_code\": \"SERVER_RESPONSE\", \"rollback\": {\"config_restored\": true, \"runtime_restored\": true}, \"observed_at_utc\": \"2026-10-28T20:29:53.626123+00:00\", \"credential_exposed\": false}\r\n\r\n\r"
+    },
+    "migration-r2-prepared": {
+      "receipt": "d643a75731eea1d80e3654a62cdb7eb119dc17657679a1731a97b1dc0fdc025b",
+      "run_id": "HARA-PROC-dae0c1ae89fd4969802689e5bc102db4",
+      "exit_code": 0,
+      "output": "{\"exitcode\": 0, \"exited\": true}\r\n{\"state\": \"READY_FOR_PROD_PAIRING\", \"source\": \"https://hara-commander-dev-v2.tiago-sartori.workers.dev\", \"target\": \"https://commander.haralabs.com.br\", \"version\": \"0.3.59\", \"agent_sha256\": \"df8b2d09c5447f8d405200538a841e669a8f165e9043701d6c8efcbfe5a34d38\", \"service\": \"active\", \"journal\": {\"journal_present\": true, \"states\": []}, \"old_config_sha256\": \"e97da19b31c4ed4cca1361a5b8e69a72c22bd8a919ecf957bcfba49e3d4b84e3\", \"config_keys\": [\"HARA_COMMANDER_APPROVAL_MODE\", \"HARA_COMMANDER_TRANSPORT_MODE\", \"HARA_COMMANDER_TUNNEL_AUTOSTART\", \"HARA_COMMANDER_URL\", \"HARA_DEVICE_ARCH\", \"HARA_DEVICE_ID\", \"HARA_DEVICE_TOKEN\"], \"production_enrollment_performed\": false, \"observed_at_utc\": \"2026-10-28T20:31:31.762011+00:00\", \"credential_exposed\": false}\r\n\r\n\r"
+    },
+    "migration-r2-committed": {
+      "receipt": "bd381224e8f63921a26b32948fe59909d04c29a401b275c350697288e5c959a9",
+      "run_id": "HARA-PROC-ca416bbac1da4c13bc65fd5de57011f2",
+      "exit_code": 0,
+      "output": "{\"exitcode\": 0, \"exited\": true}\r\n{\"state\": \"PROD_CONNECTED\", \"origin\": \"https://commander.haralabs.com.br\", \"device_id\": \"HARA-DEVICE-f71629a0-de92-48e0-aa2b-f70c2c82dc6b\", \"previous_device_id\": \"HARA-DEVICE-962202bc-274a-486b-9794-b73d9f3a5889\", \"version\": \"0.3.59\", \"agent_sha256\": \"df8b2d09c5447f8d405200538a841e669a8f165e9043701d6c8efcbfe5a34d38\", \"runtime\": {\"agent_version\": \"0.3.59\", \"started_at_utc\": \"2026-10-28T20:32:09.169300+00:00\", \"last_successful_heartbeat_at_utc\": \"2026-10-28T20:32:09.637794+00:00\", \"last_runtime_error_code\": null}, \"approval_mode\": \"PERSISTENT_TRUSTED\", \"authenticated_heartbeat_http\": 200, \"old_history_preserved\": true, \"enrollment_scopes_distinct\": true, \"dev_revoke\": \"PENDING_PORTAL_VERIFICATION\", \"public_release_promoted\": false, \"observed_at_utc\": \"2026-10-28T20:32:10.174430+00:00\", \"credential_exposed\": false}\r\n\r\n\r"
+    },
+    "migration-finalized": {
+      "receipt": "0c90530118bd88cf522e922fb011549432890c70d36d51f2d80027f0b847e149",
+      "run_id": "HARA-PROC-d7999478e807462d9c8a2f5f58f0dc36",
+      "exit_code": 0,
+      "output": "{\"exitcode\": 0, \"exited\": true}\r\n{\"state\": \"PASS_LINUX_PRODUCTION_MIGRATION\", \"origin\": \"https://commander.haralabs.com.br\", \"device_id\": \"HARA-DEVICE-f71629a0-de92-48e0-aa2b-f70c2c82dc6b\", \"version\": \"0.3.59\", \"old_dev_enrollment_revoked\": true, \"old_history_preserved\": true, \"public_release_promoted\": false, \"observed_at_utc\": \"2026-10-28T20:32:48.165902+00:00\", \"credential_exposed\": false}\r\n\r\n\r"
+    }
+  }
+}
