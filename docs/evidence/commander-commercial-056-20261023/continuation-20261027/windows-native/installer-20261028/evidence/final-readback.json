@@ -1,0 +1,173 @@
+{
+  "qa_finish_desktop_final": {
+    "process_exit_code": 0,
+    "output_truncated": false,
+    "timed_out": false,
+    "native": {
+      "state": "WINDOWS_DESKTOP_INSTALL_READY_AWAITING_IDENTITY",
+      "at_utc": "2026-10-28T02:50:18.0435657Z",
+      "folder": "C:\\Users\\CommanderQA\\Desktop\\HARA Commander 0.3.56 QA",
+      "shortcuts": [
+        {
+          "sha256": "c066de02f064a2c138098f89e9a1ae29c320fe295fef0269b92965aa503ed207",
+          "name": "Instalar HARA Commander",
+          "target": "Instalar-Commander.cmd"
+        },
+        {
+          "sha256": "6ddd9d4540343dc9495a2acc1f70d51c5566fefd29cdac089c0e1b6d8b1eabe0",
+          "name": "Verificar HARA Commander",
+          "target": "Verificar-Commander.cmd"
+        }
+      ],
+      "files": [
+        {
+          "sha256": "298052235e7eff95cd1785292c7fa3d2e22d1fa224ade2927eef68396ac6a492",
+          "name": "ACESSO-IDENTITY.txt",
+          "bytes": 630
+        },
+        {
+          "sha256": "b0e2767f1b6e633929ded56e6f6f15084cd409cba548cb99860603f796f6e4b1",
+          "name": "ACESSO-QA.txt",
+          "bytes": 483
+        },
+        {
+          "sha256": "a44e2f7c7ce75cf2cff0e60886fce60bd999b9e4cea22e5baa24619d9ee27620",
+          "name": "agent-windows-0.3.56.ps1",
+          "bytes": 172687
+        },
+        {
+          "sha256": "b70b1a6571844e6bed5edbddb2e47240ad7133a4ba1e881997872b0a36398dfc",
+          "name": "Instalar-Commander.cmd",
+          "bytes": 1977
+        },
+        {
+          "sha256": "2219d2cf657ccb52471ae5c5e6544877946b24621185b0303e0d1e1c6ad1a401",
+          "name": "instalar-commander-0.3.56.ps1",
+          "bytes": 27845
+        },
+        {
+          "sha256": "4e1c1aa8981a67b0dd8a1b14c6841875b940f4150c6dfcf017a6ed73d38ee72c",
+          "name": "Instalar-ou-verificar-Commander.ps1",
+          "bytes": 19659
+        },
+        {
+          "sha256": "3b72e553d79f8a8986f1302d226b56b9c6db65cf27540c060a62d28ba2fab495",
+          "name": "LEIA-ME.txt",
+          "bytes": 1260
+        },
+        {
+          "sha256": "f8f95525a9ac5b38e592553de2b3462978ec81d0463fd416af8360ab9b5bd42c",
+          "name": "RESULTADO-DOS-TESTES.txt",
+          "bytes": 938
+        },
+        {
+          "sha256": "b15e32fb04d4779f0e0d9ab4a3c9f663021ddd15c227e0bab7c10ac780dc993c",
+          "name": "Verificar-Commander.cmd",
+          "bytes": 1981
+        }
+      ],
+      "preflight_console": "Verificar instalacao HARA Commander\r\n\r\nCommander: preflight...\n{\"schema\":\"hara.commander-device-preflight.v1\",\"platform\":\"WINDOWS\",\"architecture\":\"x64\",\"commander_url\":\"https://commander.haralabs.com.br\",\"commander_health\":true,\"release_manifest\":true,\"release_signature\":true,\"stable_agent_version\":\"0.3.56\",\"persistence\":\"on-demand-scheduled-task\",\"persistence_ready\":true,\"mutation_performed\":false}\r\nPre-verificacao concluida. Nenhum enrollment ou tarefa foi alterado.\nResultado: C:\\Users\\CommanderQA\\AppData\\Local\\HARA Commander QA\\run-20261028T023915663Z-c70caf30bba0467ba38398bd24e08f4f\\result.json\n\r\nPressione uma tecla para fechar esta janela.\r\n",
+      "current_user_policy": "Undefined",
+      "product_task_absent": true,
+      "installed": false,
+      "paired": false,
+      "tls_cleanup_state": "Ready",
+      "tls_cleanup_principal": "SISTEMA",
+      "tls_cleanup_next_run_utc": "2026-10-28T03:09:00.0000000Z"
+    }
+  },
+  "qa_task_slot_final": {
+    "process_exit_code": 0,
+    "output_truncated": false,
+    "timed_out": false,
+    "native": {
+      "state": "INSTALL_TASK_SLOT_READY",
+      "at_utc": "2026-10-28T02:42:30.0067785Z",
+      "old_task_archived": true,
+      "old_task_was_disabled": true,
+      "old_xml_sha256": "1afc226ed51490342dfb2be28f7b7a4fd2c25122c9f11c8b69b2bb48e3e3f8b9",
+      "old_sddl_sha256": "bbc9e144732fd841400abf0e1e876aeac450394b04556daa10210454b7f63691",
+      "global_task_absent": true,
+      "account": "CommanderQA",
+      "identity_account": "openai-reviewer@haralabs.com.br",
+      "installed": false,
+      "paired": false,
+      "next_required": "LEGITIMATE_REVIEWER_PAIRING_TOKEN"
+    }
+  },
+  "qa_r4_result_1": {
+    "process_exit_code": 0,
+    "output_truncated": false,
+    "timed_out": false,
+    "native": {
+      "started_utc": "2026-10-28T02:39:14.5602572Z",
+      "state": "PASS_NATIVE_PREFLIGHT",
+      "exit_code": 0,
+      "stderr_bytes": 0,
+      "wrapper": {
+        "schema": "hara.commander.qa-windows-launcher.v1",
+        "action": "preflight",
+        "started_utc": "2026-10-28T02:39:15.5292577Z",
+        "state": "PASS_PREFLIGHT",
+        "stage": "PREFLIGHT_COMPLETE",
+        "installed": false,
+        "paired": false,
+        "prior_current_user_policy": "Undefined",
+        "policy_restored": true,
+        "certificate_preexisting": false,
+        "certificate_added": false,
+        "certificate_removed": false,
+        "plaintext_secret_written": false,
+        "user_sid": "S-1-5-21-1207901905-1500652706-889822281-1005",
+        "path_component": "C:\\",
+        "progress_utc": "2026-10-28T02:39:18.5080870Z",
+        "config_check_path": "C:\\ProgramData\\HARA-QA\\windows-install-0356-20261028\\config\\install-config.json",
+        "installer_sha256": "2219d2cf657ccb52471ae5c5e6544877946b24621185b0303e0d1e1c6ad1a401",
+        "release_url": "https://192.168.10.23:18443/releases/0.3.56",
+        "preflight_exit_code": 0,
+        "preflight_stderr_bytes": 0,
+        "final_current_user_policy": "Undefined",
+        "finished_utc": "2026-10-28T02:39:18.5284751Z"
+      },
+      "finished_utc": "2026-10-28T02:39:18.7060741Z",
+      "independent": {
+        "global_state": "Disabled",
+        "product_config_present": false,
+        "global_xml_sha256": "1afc226ed51490342dfb2be28f7b7a4fd2c25122c9f11c8b69b2bb48e3e3f8b9"
+      }
+    }
+  },
+  "qa_admin_tls_1": {
+    "process_exit_code": 0,
+    "output_truncated": false,
+    "timed_out": false,
+    "native": {
+      "state": "ADMIN_QA_TLS_READY",
+      "store": "LocalMachine\\Root",
+      "certificate_preexisting": false,
+      "thumbprint": "21BE34B21FFE487483DCAE52406804F8AB15F410",
+      "der_sha256": "919ef57067af12ae157a742a871edaa7bb03f661d437accc4639c0d71a207933",
+      "automatic_cleanup_task": "HARA-QA056-TemporaryTLS-Cleanup-20261028",
+      "cleanup_deadline_utc": "2026-10-28T03:09:00Z",
+      "installer_identity": "CommanderQA",
+      "product_task_changed": false
+    }
+  },
+  "qa_windows_private_release_started": {
+    "process_exit_code": 0,
+    "output_truncated": false,
+    "timed_out": false,
+    "native": {
+      "at_utc": "2026-10-28T02:08:57.072256+00:00",
+      "state": "WINDOWS_QA_DISTRIBUTION_STARTED",
+      "service": "active",
+      "source_ip": "192.168.252.113",
+      "release_url": "https://192.168.10.23:18443/releases/0.3.56",
+      "runtime_max_s": 3600,
+      "automatic_firewall_cleanup": true,
+      "nft_handles": [
+        17
+      ]
+    }
+  }
+}

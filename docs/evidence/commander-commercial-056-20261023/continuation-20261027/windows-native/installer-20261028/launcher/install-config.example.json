@@ -1,0 +1,11 @@
+{
+  "schema": "hara.commander.qa-windows-install-config.v1",
+  "target_user_sid": "S-1-5-21-1207901905-1500652706-889822281-1005",
+  "base_url": "https://commander.haralabs.com.br",
+  "release_url": "",
+  "installer_sha256": "2219d2cf657ccb52471ae5c5e6544877946b24621185b0303e0d1e1c6ad1a401",
+  "tls_certificate_file": "",
+  "tls_certificate_sha256": "",
+  "task_slot_clearance": "PENDING",
+  "task_slot_verified_utc": ""
+}
