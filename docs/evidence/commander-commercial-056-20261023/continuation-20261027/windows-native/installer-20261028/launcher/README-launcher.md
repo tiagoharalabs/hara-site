@@ -42,6 +42,27 @@ fresh pairing token, then actual installation, enrollment and product lifecycle
 checks. The existing account password was not recovered or changed. These
 results do not approve public release.
 
+## Added QA payload check after the public hash failure
+
+The launcher now follows the real official manifest/signature preflight with a
+raw-byte download from the same configured release URL. Before invoking any
+pairing/install prompt, both `preflight` and fresh `install` require the Windows
+Agent to be exactly **172,687 bytes**, SHA-256
+`a44e2f7c7ce75cf2cff0e60886fce60bd999b9e4cea22e5baa24619d9ee27620`, and
+declared version `0.3.56`. The result records `agent_payload_verified`, observed
+bytes/hash/version, and cache cleanup. The temporary payload is created in the
+owner-only QA run directory and removed in `finally`, including after a mismatch.
+No pairing token is read or consumed by this check.
+
+This is a **QA wrapper backstop**, not a repair of the public distribution. The
+signed official installer and manifest remain unchanged. The official installer
+still performs its own later verified download; this campaign therefore uses
+the root operator's pinned, immutable private asset server. The previously
+recorded R4 preflight did not contain this payload check and must not be cited as
+native acceptance of the new guard. The updated wrapper needs native parser and
+payload-preflight readback before that new result is claimed. An already valid
+installed Agent retains its existing local-pin/start path without a remote fetch.
+
 ## Desktop files
 
 Place these together with the already delivered installer:

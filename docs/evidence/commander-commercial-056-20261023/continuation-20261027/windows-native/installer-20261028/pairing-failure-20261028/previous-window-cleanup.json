@@ -1,0 +1,50 @@
+{
+  "windows": {
+    "process_exit_code": 0,
+    "native": {
+      "at_utc": "2026-10-28T04:00:38.1325696Z",
+      "preexisting": false,
+      "matching_certificates": 0,
+      "cleanup": {
+        "at_utc": "2026-10-28T03:09:00.5860951Z",
+        "state": "PASS_ADMIN_QA_TLS_CLOSED",
+        "removed": true,
+        "expected_store_state": "ABSENT",
+        "store_verified": true
+      },
+      "task_present": true,
+      "task_state": "Ready",
+      "task_result": 0
+    }
+  },
+  "distribution": {
+    "process_exit_code": 0,
+    "native": {
+      "process_exit_code": 0,
+      "status": {
+        "at_utc": "2026-10-28T04:00:53.129185+00:00",
+        "service": "failed",
+        "nft_handles": [],
+        "listener": false
+      },
+      "cleanup": {
+        "at_utc": "2026-10-28T03:08:57.584465+00:00",
+        "errors": [],
+        "nft_handles_removed": [
+          17
+        ],
+        "nft_rule_absent": true,
+        "state": "WINDOWS_QA_DISTRIBUTION_CLOSED",
+        "ufw_delete_rc": 0,
+        "ufw_rule_absent": true
+      }
+    }
+  },
+  "identity_console": {
+    "url": "https://auth.haralabs.com.br/ui/console",
+    "http_status": 200,
+    "product": "ZITADEL",
+    "reviewer": "openai-reviewer@haralabs.com.br",
+    "password_changed": false
+  }
+}

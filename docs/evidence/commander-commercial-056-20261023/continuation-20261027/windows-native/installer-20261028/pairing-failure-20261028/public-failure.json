@@ -1,0 +1,319 @@
+{
+  "pair_fail_public_snapshot": {
+    "exit_code": 0,
+    "output_truncated": false,
+    "timed_out": false,
+    "native": {
+      "at_utc": "2026-10-28T04:16:21.349065+00:00",
+      "results": [
+        {
+          "file": "public-install-windows.ps1",
+          "url": "https://commander.haralabs.com.br/install/windows.ps1",
+          "status": 200,
+          "bytes": 23604,
+          "sha256": "6ba5c29e6d3a604750331d7699455ad609b4b0a8e191c03ad10503f7a5161c3c",
+          "headers": {
+            "Date": "Wed, 28 Oct 2026 04:16:21 GMT",
+            "Content-Length": "23604",
+            "CF-Cache-Status": "HIT",
+            "Cache-Control": "public, max-age=0, must-revalidate",
+            "ETag": "\"1151eb3a8392e0c2623c9010075e98e7\""
+          },
+          "installer_head": [
+            "param([string]$Action = \"install\")",
+            "$ErrorActionPreference = \"Stop\"",
+            "$Action = $Action.TrimStart(\"-\").ToLowerInvariant()",
+            "",
+            "$BaseUrl = if ($env:HARA_COMMANDER_URL) { $env:HARA_COMMANDER_URL.TrimEnd(\"/\") } else { \"https://commander.haralabs.com.br\" }",
+            "$ReleaseSigningKid = \"commander-release-v1\"",
+            "$ReleaseSigningN = \"pydKPlIuz-00dO2sGHCTY1Z968YbjZ_-r7qWSKRhFCyCfJfaaL53XWS-jaXxWFzhqEryeqFxuUvL-8OdCKxtG_Lo7Ac6FWS_k2EFrgQmdCPja9N78MMQd7gC8Hu68BhyqkoNa2NMpg610NWcYwTQjAz9bcyKcoc8uV5G-iX3aXSRAJYe0BKi4H9xfARD5TWE3N3DuMrNZybabsnfk-88xR5AFcXZ58WhvMuUvRp7_26cYhuHd4RLyPKNUI7WK9if8aa48UMqF49KQ64NSQHhOVfnZjjmiwfKtWOBsO_DstVYyLnVtfttmeaTZGgwuHd37XOsz0Q267CKHUORYyvTJw\"",
+            "$ReleaseSigningE = \"AQAB\"",
+            "$ApprovalModeRaw = if ($env:HARA_COMMANDER_APPROVAL_MODE) { ([string]$env:HARA_COMMANDER_APPROVAL_MODE).Trim().ToUpperInvariant() } else { \"ASK_EVERY_ACTION\" }",
+            "$ApprovalMode = switch ($ApprovalModeRaw) {",
+            "  \"ASK\" { \"ASK_EVERY_ACTION\" }",
+            "  \"ASK_EVERY_ACTION\" { \"ASK_EVERY_ACTION\" }",
+            "  \"SESSION\" { \"SESSION_TRUSTED\" }",
+            "  \"SESSION_TRUSTED\" { \"SESSION_TRUSTED\" }",
+            "  \"AUTO\" { \"PERSISTENT_TRUSTED\" }",
+            "  \"ALWAYS\" { \"PERSISTENT_TRUSTED\" }",
+            "  \"PERSISTENT\" { \"PERSISTENT_TRUSTED\" }",
+            "  \"PERSISTENT_TRUSTED\" { \"PERSISTENT_TRUSTED\" }",
+            "  default { throw \"DEVICE_APPROVAL_MODE_INVALID\" }",
+            "}",
+            "$Root = Join-Path $env:LOCALAPPDATA \"HARA Commander\"",
+            "$Agent = Join-Path $Root \"hara-commander-agent.ps1\""
+          ],
+          "installer_hash_section": [
+            "    $rsa.Dispose()",
+            "  }",
+            "}",
+            "",
+            "function Get-AgentReleaseMetadata {",
+            "  $manifestPath=Join-Path $env:TEMP (\"hara-commander-manifest-\"+[guid]::NewGuid().ToString(\"N\")+\".json\")",
+            "  $signaturePath=Join-Path $env:TEMP (\"hara-commander-manifest-\"+[guid]::NewGuid().ToString(\"N\")+\".sig.json\")",
+            "  try {",
+            "    Invoke-WebRequest -Uri \"$BaseUrl/release/agent-manifest.json\" -OutFile $manifestPath -UseBasicParsing -TimeoutSec 30 -MaximumRedirection 0",
+            "    Invoke-WebRequest -Uri \"$BaseUrl/release/agent-manifest.sig.json\" -OutFile $signaturePath -UseBasicParsing -TimeoutSec 30 -MaximumRedirection 0",
+            "    $manifestBytes=[IO.File]::ReadAllBytes($manifestPath)",
+            "    $signature=Get-Content -Raw -LiteralPath $signaturePath | ConvertFrom-Json",
+            "    Assert-ReleaseManifestSignature $manifestBytes $signature",
+            "    $manifest=[Text.Encoding]::UTF8.GetString($manifestBytes) | ConvertFrom-Json",
+            "    if (-not $manifest -or [string]$manifest.schema -ne \"hara.commander-agent-release.v1\") { throw \"AGENT_RELEASE_MANIFEST_INVALID\" }",
+            "    $entry = @($manifest.files | Where-Object { [string]$_.path -eq \"agent/windows.ps1\" } | Select-Object -First 1)",
+            "    if (-not $entry -or -not $entry.sha256 -or -not $manifest.agent_version) { throw \"AGENT_RELEASE_MANIFEST_INVALID\" }",
+            "    return [PSCustomObject]@{ Version=[string]$manifest.agent_version; Sha256=([string]$entry.sha256).ToLowerInvariant() }",
+            "  } finally {",
+            "    Remove-Item -Force -LiteralPath $manifestPath,$signaturePath -ErrorAction SilentlyContinue",
+            "  }",
+            "}",
+            "",
+            "function Assert-AgentIntegrity {",
+            "  param([string]$Path)",
+            "  $meta = Get-AgentReleaseMetadata",
+            "  $actual = (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()",
+            "  if ($actual -ne $meta.Sha256) { throw \"AGENT_SHA256_MISMATCH\" }",
+            "  $match = Select-String -LiteralPath $Path -Pattern '^\\$AgentVersion = \"([^\"]+)\"$' | Select-Object -First 1",
+            "  if (-not $match -or -not $match.Matches.Count) { throw \"AGENT_VERSION_NOT_FOUND\" }",
+            "  $version = $match.Matches[0].Groups[1].Value",
+            "  if ([string]$version -ne [string]$meta.Version) { throw \"AGENT_VERSION_MANIFEST_MISMATCH\" }",
+            "  Write-Host \"HARA_COMMANDER_AGENT_INTEGRITY=PASS\"",
+            "}",
+            ""
+          ]
+        },
+        {
+          "file": "public-agent-manifest.json",
+          "url": "https://commander.haralabs.com.br/release/agent-manifest.json",
+          "status": 200,
+          "bytes": 765,
+          "sha256": "7e42f25404e414b74b375ccb47b7ed8ba7d8c572dc45db994d89012207f08f7c",
+          "headers": {
+            "Date": "Wed, 28 Oct 2026 04:16:21 GMT",
+            "Content-Type": "application/json",
+            "Content-Length": "765",
+            "CF-Cache-Status": "HIT",
+            "Cache-Control": "public, max-age=0, must-revalidate",
+            "ETag": "\"a3374c083638a799a3522665746a8e1c\""
+          },
+          "manifest": {
+            "agent_version": "0.3.41",
+            "channel": "stable",
+            "files": [
+              {
+                "bytes": 163048,
+                "path": "agent/linux.py",
+                "sha256": "e1f44e4695266717c6585f8d0de1e664d99123e36e75b152e136a4428f7b2730"
+              },
+              {
+                "bytes": 56752,
+                "path": "agent/windows.ps1",
+                "sha256": "52bb1b3c537c31a357becc38c494ea8494bf310fc3e694d59b1a578509a56d44"
+              },
+              {
+                "bytes": 28595,
+                "path": "install/linux.sh",
+                "sha256": "99b25c7671326b983ff1fa670ce0044f9a89674dcd1b2d78cf8ab4a6cccb828b"
+              },
+              {
+                "bytes": 22321,
+                "path": "install/windows.ps1",
+                "sha256": "475d7afe4440fc760adfcb333e1922d5a9eb3d7bb49ca571c4c5741519bdc240"
+              }
+            ],
+            "product": "H.A.R.A. Commander",
+            "schema": "hara.commander-agent-release.v1"
+          }
+        },
+        {
+          "file": "public-agent-manifest.sig.json",
+          "url": "https://commander.haralabs.com.br/release/agent-manifest.sig.json",
+          "status": 200,
+          "bytes": 555,
+          "sha256": "b755f0fd5ebf81be4c8e5cb38522684f66829e069be2ed6303eb0b7bccc26bd1",
+          "headers": {
+            "Date": "Wed, 28 Oct 2026 04:16:21 GMT",
+            "Content-Type": "application/json",
+            "Content-Length": "555",
+            "CF-Cache-Status": "HIT",
+            "Cache-Control": "public, max-age=0, must-revalidate",
+            "ETag": "\"394d507b46c08022d9d0d54dd0c6183f\""
+          }
+        }
+      ]
+    }
+  },
+  "pair_fail_public_agent_retry": {
+    "exit_code": 0,
+    "output_truncated": false,
+    "timed_out": false,
+    "native": {
+      "status": 200,
+      "bytes": 98717,
+      "sha256": "817325667ea552136efa10d807148fa4dc6d035aca24046c884f444a4fb61ebc",
+      "version": "0.3.52",
+      "headers": {
+        "Content-Length": "98717",
+        "CF-Cache-Status": "HIT",
+        "Cache-Control": "public, max-age=0, must-revalidate",
+        "ETag": "\"a9930e9ea5d9498cbe7d7d5b2d463766\""
+      }
+    }
+  },
+  "pair_fail_signed_public_gate": {
+    "exit_code": 0,
+    "output_truncated": false,
+    "timed_out": false,
+    "native": {
+      "exit": 2,
+      "result": {
+        "checks": [
+          {
+            "actual_bytes": 220422,
+            "declared_bytes": 163048,
+            "digest_equal": false,
+            "path": "agent/linux.py",
+            "state": "HASH_OR_SIZE_MISMATCH"
+          },
+          {
+            "actual_bytes": 98717,
+            "declared_bytes": 56752,
+            "digest_equal": false,
+            "path": "agent/windows.ps1",
+            "state": "HASH_OR_SIZE_MISMATCH"
+          },
+          {
+            "actual_bytes": 36564,
+            "declared_bytes": 28595,
+            "digest_equal": false,
+            "path": "install/linux.sh",
+            "state": "HASH_OR_SIZE_MISMATCH"
+          },
+          {
+            "actual_bytes": 23604,
+            "declared_bytes": 22321,
+            "digest_equal": false,
+            "path": "install/windows.ps1",
+            "state": "HASH_OR_SIZE_MISMATCH"
+          }
+        ],
+        "historical_trusted_signature_commit": "08500d5",
+        "manifest_signature": "PASS_PINNED_KEY",
+        "manifest_version": "0.3.41",
+        "read_only": true,
+        "schema": "hara.commander.launch-public-artifact-gate.v1",
+        "site": "https://commander.haralabs.com.br",
+        "state": "BLOCKED"
+      },
+      "stderr": ""
+    }
+  },
+  "pair_fail_native_probe_final": {
+    "exit_code": 0,
+    "output_truncated": false,
+    "timed_out": false,
+    "native": {
+      "probe": {
+        "at_utc": "2026-10-28T04:23:57.5637192Z",
+        "state": "PUBLIC_AGENT_MANIFEST_MISMATCH_CONFIRMED",
+        "read_only_product": true,
+        "enrollment_attempted": false,
+        "user": "HARA_WIN11\\CommanderQA",
+        "sid": "S-1-5-21-1207901905-1500652706-889822281-1005",
+        "product_directory_present": false,
+        "product_config_present": false,
+        "product_agent_present": false,
+        "current_user_policy": "RemoteSigned",
+        "downloads": [
+          {
+            "name": "manifest.json",
+            "path": "/release/agent-manifest.json",
+            "status": 200,
+            "bytes": 765,
+            "sha256": "7e42f25404e414b74b375ccb47b7ed8ba7d8c572dc45db994d89012207f08f7c",
+            "etag": "\"a3374c083638a799a3522665746a8e1c\"",
+            "cache": "HIT"
+          },
+          {
+            "name": "manifest.sig.json",
+            "path": "/release/agent-manifest.sig.json",
+            "status": 200,
+            "bytes": 555,
+            "sha256": "b755f0fd5ebf81be4c8e5cb38522684f66829e069be2ed6303eb0b7bccc26bd1",
+            "etag": "\"394d507b46c08022d9d0d54dd0c6183f\"",
+            "cache": "HIT"
+          },
+          {
+            "name": "agent.ps1",
+            "path": "/agent/windows.ps1",
+            "status": 200,
+            "bytes": 98717,
+            "sha256": "817325667ea552136efa10d807148fa4dc6d035aca24046c884f444a4fb61ebc",
+            "etag": "\"a9930e9ea5d9498cbe7d7d5b2d463766\"",
+            "cache": "HIT"
+          },
+          {
+            "name": "installer.ps1",
+            "path": "/install/windows.ps1",
+            "status": 200,
+            "bytes": 23604,
+            "sha256": "6ba5c29e6d3a604750331d7699455ad609b4b0a8e191c03ad10503f7a5161c3c",
+            "etag": "\"1151eb3a8392e0c2623c9010075e98e7\"",
+            "cache": "HIT"
+          }
+        ],
+        "manifest_version": "0.3.41",
+        "agent_version": "0.3.52",
+        "expected_bytes": 56752,
+        "expected_sha256": "52bb1b3c537c31a357becc38c494ea8494bf310fc3e694d59b1a578509a56d44",
+        "agent_integrity_matches": false,
+        "finished_utc": "2026-10-28T04:23:58.3740632Z"
+      },
+      "system_before": {
+        "at_utc": "2026-10-28T04:23:56.3112394Z",
+        "console_user": "HARA_WIN11\\CommanderQA",
+        "product_task_present": false,
+        "product_task_state": "",
+        "product_task_user": ""
+      },
+      "probe_task_result": 0,
+      "probe_task_absent": true
+    }
+  },
+  "pair_fail_r2_distribution_started": {
+    "exit_code": 0,
+    "output_truncated": false,
+    "timed_out": false,
+    "native": {
+      "exit": 0,
+      "result": {
+        "at_utc": "2026-10-28T04:29:15.035772+00:00",
+        "state": "WINDOWS_QA_DISTRIBUTION_STARTED",
+        "service": "active",
+        "source_ip": "192.168.252.113",
+        "release_url": "https://192.168.10.23:18443/releases/0.3.56",
+        "runtime_max_s": 3600,
+        "automatic_firewall_cleanup": true,
+        "nft_handles": [
+          18
+        ]
+      },
+      "stderr": ""
+    }
+  },
+  "pair_fail_r2_tls_final": {
+    "exit_code": 0,
+    "output_truncated": false,
+    "timed_out": false,
+    "native": {
+      "state": "ADMIN_QA_TLS_READY",
+      "store": "LocalMachine\\Root",
+      "certificate_preexisting": false,
+      "thumbprint": "21BE34B21FFE487483DCAE52406804F8AB15F410",
+      "der_sha256": "919ef57067af12ae157a742a871edaa7bb03f661d437accc4639c0d71a207933",
+      "automatic_cleanup_task": "HARA-QA056-TemporaryTLS-Cleanup-R2-20261028",
+      "cleanup_deadline_utc": "2026-10-28T05:30:15.035772+00:00",
+      "installer_identity": "CommanderQA",
+      "product_task_changed": false
+    }
+  }
+}

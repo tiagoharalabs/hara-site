@@ -7,7 +7,7 @@ echo.
 "%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -Command ^
  "$ErrorActionPreference='Stop';$env:HARA_QA_WRAPPER_FINISHED='';$changed=$false;$old=$null;$code=2;" ^
  "try {$id=[Security.Principal.WindowsIdentity]::GetCurrent();if($id.User.Value -cne 'S-1-5-21-1207901905-1500652706-889822281-1005' -or $env:USERPROFILE -cne 'C:\Users\CommanderQA'){throw 'COMMANDERQA_REQUIRED'};" ^
- "$p=Join-Path $env:HARA_QA_LAUNCHER_DIR 'Instalar-ou-verificar-Commander.ps1';if((Get-FileHash -LiteralPath $p -Algorithm SHA256).Hash.ToLowerInvariant() -cne '4e1c1aa8981a67b0dd8a1b14c6841875b940f4150c6dfcf017a6ed73d38ee72c'){throw 'LAUNCHER_HASH_MISMATCH'};" ^
+ "$p=Join-Path $env:HARA_QA_LAUNCHER_DIR 'Instalar-ou-verificar-Commander.ps1';if((Get-FileHash -LiteralPath $p -Algorithm SHA256).Hash.ToLowerInvariant() -cne 'b68b42fa4abdde397827d6898fe18a493274c84f9cf9aa566b5deab764c787e2'){throw 'LAUNCHER_HASH_MISMATCH'};" ^
  "$old=[string](Get-ExecutionPolicy -Scope CurrentUser);if(@('Undefined','Restricted','RemoteSigned') -cnotcontains $old -or [string](Get-ExecutionPolicy -Scope Process) -cne 'Undefined'){throw 'EXECUTION_POLICY_REVIEW_REQUIRED'};" ^
  "Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force;$changed=$true;if([string](Get-ExecutionPolicy) -cne 'RemoteSigned'){throw 'EFFECTIVE_POLICY_REFUSED'};" ^
  "& $p -Action 'preflight' -PriorExecutionPolicy $old;$code=$LASTEXITCODE}" ^

@@ -7,6 +7,7 @@ $ProgressPreference='SilentlyContinue'
 $expectedSid='S-1-5-21-1207901905-1500652706-889822281-1005'
 $installerSha='2219d2cf657ccb52471ae5c5e6544877946b24621185b0303e0d1e1c6ad1a401'
 $agentSha='a44e2f7c7ce75cf2cff0e60886fce60bd999b9e4cea22e5baa24619d9ee27620'
+$agentBytes=172687
 $adminRoot='C:\ProgramData\HARA-QA\windows-install-0356-20261028'
 $configPath=Join-Path $adminRoot 'config\install-config.json'
 $taskName='HARA Commander Agent'
@@ -17,8 +18,9 @@ $runtimePath=Join-Path $agentRoot 'runtime-status.json'
 $installer=Join-Path $PSScriptRoot 'instalar-commander-0.3.56.ps1'
 $powerShellExe=Join-Path $PSHOME 'powershell.exe'
 $runRoot=$null;$store=$null;$temporaryCertificate=$null;$keepPolicy=$false
+$qaPayloadCache=$null;$qaPayloadOwned=$false
 $oldUrl=$env:HARA_COMMANDER_URL;$oldRelease=$env:HARA_COMMANDER_RELEASE_URL;$oldApproval=$env:HARA_COMMANDER_APPROVAL_MODE
-$r=[ordered]@{schema='hara.commander.qa-windows-launcher.v1';action=$Action;started_utc=[DateTime]::UtcNow.ToString('o');state='PENDING';stage='IDENTITY';installed=$false;paired=$false;prior_current_user_policy=$PriorExecutionPolicy;policy_restored=$false;certificate_preexisting=$false;certificate_added=$false;certificate_removed=$false;plaintext_secret_written=$false}
+$r=[ordered]@{schema='hara.commander.qa-windows-launcher.v1';action=$Action;started_utc=[DateTime]::UtcNow.ToString('o');state='PENDING';stage='IDENTITY';installed=$false;paired=$false;agent_payload_verified=$false;prior_current_user_policy=$PriorExecutionPolicy;policy_restored=$false;certificate_preexisting=$false;certificate_added=$false;certificate_removed=$false;plaintext_secret_written=$false}
 function Need([bool]$Ok,[string]$Code){if(-not $Ok){throw $Code}}
 function Sha([string]$Path){(Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()}
 function Progress-Checkpoint([string]$Stage,[bool]$BestEffort=$false){
@@ -201,7 +203,27 @@ try {
       Progress-Checkpoint 'TLS_TRUST_ADDED'
     }else{Progress-Checkpoint 'TLS_TRUST_ALREADY_PRESENT'}
   }
-  if(-not $existing){Progress-Checkpoint 'PREFLIGHT_BEGIN';Child-Installer 'preflight' $false;Progress-Checkpoint 'PREFLIGHT_COMPLETE'}
+  if(-not $existing){
+    Progress-Checkpoint 'PREFLIGHT_BEGIN';Child-Installer 'preflight' $false
+    # The unchanged official preflight verifies the manifest signature first.
+    # This QA backstop then checks real bytes before any pairing prompt/enrollment.
+    # The official installer retains its own independent verified download.
+    $qaPayloadCache=Join-Path $runRoot 'agent-payload-0.3.56.ps1'
+    $qaPayloadReservation=New-Object IO.FileStream($qaPayloadCache,[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::None)
+    $qaPayloadReservation.Dispose();$qaPayloadOwned=$true
+    Progress-Checkpoint 'AGENT_PAYLOAD_DOWNLOAD_BEGIN'
+    Invoke-WebRequest -Uri ($r.release_url+'/agent/windows.ps1') -OutFile $qaPayloadCache -UseBasicParsing -TimeoutSec 30 -MaximumRedirection 0
+    $r.agent_payload_bytes=(Get-Item -LiteralPath $qaPayloadCache).Length
+    $r.agent_payload_sha256=Sha $qaPayloadCache
+    Need ($r.agent_payload_bytes -eq $agentBytes) 'QA_AGENT_PAYLOAD_SIZE_MISMATCH'
+    Need ($r.agent_payload_sha256 -ceq $agentSha) 'QA_AGENT_PAYLOAD_SHA256_MISMATCH'
+    $qaPayloadVersion=@(Select-String -LiteralPath $qaPayloadCache -Pattern '^\$AgentVersion = "([^"]+)"$' -CaseSensitive)
+    Need ($qaPayloadVersion.Count -eq 1) 'QA_AGENT_PAYLOAD_VERSION_NOT_UNIQUE'
+    $r.agent_payload_version=[string]$qaPayloadVersion[0].Matches[0].Groups[1].Value
+    Need ($r.agent_payload_version -ceq '0.3.56') 'QA_AGENT_PAYLOAD_VERSION_MISMATCH'
+    $r.agent_payload_verified=$true
+    Progress-Checkpoint 'AGENT_PAYLOAD_VERIFIED';Progress-Checkpoint 'PREFLIGHT_COMPLETE'
+  }
   if($Action -eq 'preflight'){$r.state='PASS_PREFLIGHT';Write-Host 'Pre-verificacao concluida. Nenhum enrollment ou tarefa foi alterado.'}
   else {
     if($existing){
@@ -243,6 +265,13 @@ try {
   $r.error_type=$_.Exception.GetType().FullName
   Write-Host ('Nao foi concluido. Etapa: '+$r.stage+'. Codigo: '+$r.error_code) -ForegroundColor Yellow
 } finally {
+  if($qaPayloadOwned){
+    try{
+      if(Test-Path -LiteralPath $qaPayloadCache){Remove-Item -LiteralPath $qaPayloadCache -Force -ErrorAction Stop}
+      $r.agent_payload_cache_removed=(-not (Test-Path -LiteralPath $qaPayloadCache))
+      Need $r.agent_payload_cache_removed 'QA_AGENT_PAYLOAD_CACHE_CLEANUP_FAILED'
+    }catch{$r.state='HOLD_CLEANUP';$r.payload_cleanup_error='QA_AGENT_PAYLOAD_CACHE_CLEANUP_FAILED'}
+  }
   if($store){
     try{
       if(-not $r.certificate_preexisting -and $r.certificate_import_attempted){

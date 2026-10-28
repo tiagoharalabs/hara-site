@@ -1,0 +1,67 @@
+{
+  "pair_fail_r5_refreshed": {
+    "exit_code": 0,
+    "native": {
+      "state": "R5_LAUNCHERS_VERIFIED"
+    }
+  },
+  "pair_fail_r5_result_final": {
+    "exit_code": 0,
+    "native": {
+      "started_utc": "2026-10-28T04:32:08.7893069Z",
+      "state": "PASS_NATIVE_PREFLIGHT",
+      "exit_code": 0,
+      "stderr_bytes": 0,
+      "wrapper": {
+        "schema": "hara.commander.qa-windows-launcher.v1",
+        "action": "preflight",
+        "started_utc": "2026-10-28T04:32:09.8043687Z",
+        "state": "PASS_PREFLIGHT",
+        "stage": "PREFLIGHT_COMPLETE",
+        "installed": false,
+        "paired": false,
+        "agent_payload_verified": true,
+        "prior_current_user_policy": "RemoteSigned",
+        "policy_restored": true,
+        "certificate_preexisting": false,
+        "certificate_added": false,
+        "certificate_removed": false,
+        "plaintext_secret_written": false,
+        "user_sid": "S-1-5-21-1207901905-1500652706-889822281-1005",
+        "path_component": "C:\\",
+        "progress_utc": "2026-10-28T04:32:12.9272943Z",
+        "config_check_path": "C:\\ProgramData\\HARA-QA\\windows-install-0356-20261028\\config\\install-config.json",
+        "installer_sha256": "2219d2cf657ccb52471ae5c5e6544877946b24621185b0303e0d1e1c6ad1a401",
+        "release_url": "https://192.168.10.23:18443/releases/0.3.56",
+        "preflight_exit_code": 0,
+        "preflight_stderr_bytes": 0,
+        "agent_payload_bytes": 172687,
+        "agent_payload_sha256": "a44e2f7c7ce75cf2cff0e60886fce60bd999b9e4cea22e5baa24619d9ee27620",
+        "agent_payload_version": "0.3.56",
+        "agent_payload_cache_removed": true,
+        "final_current_user_policy": "RemoteSigned",
+        "finished_utc": "2026-10-28T04:32:12.9674201Z"
+      },
+      "finished_utc": "2026-10-28T04:32:13.2118427Z",
+      "independent": {
+        "global_state": "",
+        "global_task_absent": true,
+        "product_config_present": false
+      }
+    }
+  },
+  "pair_fail_launch_corrected_final": {
+    "exit_code": 0,
+    "native": {
+      "state": "QA_INSTALLER_INTERACTIVE_STARTED",
+      "at_utc": "2026-10-28T04:35:16.2327182Z",
+      "task": "HARA-QA056-Interactive-Install-R5-20261028",
+      "user": "CommanderQA",
+      "logon": "Interactive",
+      "runlevel": "Limited",
+      "full_payload_preflight": "PASS",
+      "awaits": "FRESH_REVIEWER_PAIRING_INPUT",
+      "public_distribution": "BLOCKED_MIXED_VERSIONS"
+    }
+  }
+}
