@@ -1,0 +1,52 @@
+{
+  "schema": "hara.commander.qa-paused.v1",
+  "at_utc": "2026-10-28T05:05:02.1303743Z",
+  "user_requested_pause": true,
+  "cleanup_observation": {
+    "windows": {
+      "at_utc": "2026-10-28T05:03:22.3604848Z",
+      "interactive_task_state": "Ready",
+      "temporary_certificate_count": 0,
+      "cleanup_receipt": {
+        "at_utc": "2026-10-28T05:02:56.1066430Z",
+        "state": "PASS_ADMIN_QA_TLS_CLOSED",
+        "removed": true,
+        "expected_store_state": "ABSENT",
+        "store_verified": true
+      },
+      "product_task_present": false,
+      "qa_config_present": false,
+      "old_installer_process_present": true
+    },
+    "distribution": {
+      "at_utc": "2026-10-28T05:03:27.312173+00:00",
+      "service": "inactive",
+      "nft_handles": [],
+      "listener": false
+    },
+    "user_request": "Pause testing until next session"
+  },
+  "final_installer_observation": {
+    "at_utc": "2026-10-28T05:05:02.1303743Z",
+    "state": "PAUSED_BY_USER",
+    "known_install_processes": [],
+    "interactive_task_state": "Ready",
+    "installed": false,
+    "paired": false
+  },
+  "resume": {
+    "portal": "https://commander.haralabs.com.br/",
+    "identity": "openai-reviewer@haralabs.com.br",
+    "host": "sentinela-b",
+    "linux_domain": "hara-review-linux",
+    "windows_domain": "hara-review-win11-restoretest-20261024",
+    "order": [
+      "Ubuntu via portal with reviewer QA",
+      "Windows 11 via portal with reviewer QA"
+    ],
+    "public_release": "NO_GO",
+    "public_installation_blocker": "Signed manifest 0.3.41 does not match public Agent and installers; public command remains inconsistent",
+    "private_QA_distribution": "R2 stopped; firewall rules removed; temporary LocalMachine Root certificate removed; must explicitly prepare a new bounded window if QA private route is reused",
+    "pairing_status": "Windows QA remains uninstalled and unpaired; no active known installer processes"
+  }
+}

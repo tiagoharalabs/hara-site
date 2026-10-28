@@ -1,0 +1,93 @@
+{
+  "launch": {
+    "release_cleanup_deadline_utc": "2026-10-28T18:54:45.911810+00:00",
+    "maximum_window_seconds": 5400,
+    "task": "HARA-QA056-Interactive-Install-R6-20261028",
+    "identity": "CommanderQA",
+    "state": "SUPERVISED_INSTALLER_STARTED"
+  },
+  "observation": {
+    "at_utc": "2026-10-28T16:03:33.4086548Z",
+    "supervisor": {
+      "started_utc": "2026-10-28T16:02:57.5323485Z",
+      "state": "INSTALLER_RUNNING",
+      "window_until_utc": "2026-10-28T17:32:57.7362591Z",
+      "child_pid": 2164
+    },
+    "task_state": "Running",
+    "processes": [
+      {
+        "parent": 8788,
+        "pid": 2164,
+        "name": "cmd.exe",
+        "owner_sid": "S-1-5-21-1207901905-1500652706-889822281-1005",
+        "created_utc": "2026-10-28T16:02:57.9239990Z"
+      },
+      {
+        "parent": 2164,
+        "pid": 3024,
+        "name": "conhost.exe",
+        "owner_sid": "S-1-5-21-1207901905-1500652706-889822281-1005",
+        "created_utc": "2026-10-28T16:02:57.9474470Z"
+      },
+      {
+        "parent": 2164,
+        "pid": 3128,
+        "name": "powershell.exe",
+        "owner_sid": "S-1-5-21-1207901905-1500652706-889822281-1005",
+        "created_utc": "2026-10-28T16:02:58.4066620Z"
+      },
+      {
+        "parent": 3128,
+        "pid": 6088,
+        "name": "powershell.exe",
+        "owner_sid": "S-1-5-21-1207901905-1500652706-889822281-1005",
+        "created_utc": "2026-10-28T16:03:04.2441340Z"
+      }
+    ],
+    "product_task_present": false,
+    "qa_config_present": false
+  },
+  "desktop": {
+    "observation": {
+      "at_utc": "2026-10-28T16:06:21.0135622Z",
+      "preflight_utc": "2026-10-28T15:56:50.5050238Z",
+      "preflight": "PASS_NATIVE_PREFLIGHT",
+      "expired_window_guard": "PASS_NATIVE_EXPIRED_GUARD",
+      "agent_version": "0.3.56",
+      "agent_bytes": 172687,
+      "agent_sha256": "a44e2f7c7ce75cf2cff0e60886fce60bd999b9e4cea22e5baa24619d9ee27620",
+      "qa_config_present": false,
+      "product_task_present": false,
+      "public_installer": "UNRESOLVED_MANIFEST_ASSET_MISMATCH",
+      "public_release": "NO_GO"
+    },
+    "files": [
+      {
+        "sha256": "6a4088282c6da3dc0cfd8da2704fbca1e03f52f14ed1baf6ab4e594fe962e6ad",
+        "name": "Instalar-Commander.cmd"
+      },
+      {
+        "sha256": "a797a0da86ab2f0a6dd7b2e8dcb470d0897a1833eeb7a98ba21581fe5730a6ea",
+        "name": "Verificar-Commander.cmd"
+      },
+      {
+        "sha256": "c0b384d05c7fa45b636bf73a18dd2f4f8e55e001578783162de632c4fab818a1",
+        "name": "Instalar-ou-verificar-Commander.ps1"
+      },
+      {
+        "sha256": "2219d2cf657ccb52471ae5c5e6544877946b24621185b0303e0d1e1c6ad1a401",
+        "name": "instalar-commander-0.3.56.ps1"
+      },
+      {
+        "sha256": "b8cf3ff27f5803443cbf024e9b3e1b091d5d283b9cc6782460f308b1d10a5dec",
+        "name": "LEIA-ME.txt"
+      },
+      {
+        "sha256": "71b56e4b4771b3a8c762c9f097725dafde8e5bbc48756cc7264583ad431e83a0",
+        "name": "RESULTADO-DOS-TESTES.txt"
+      }
+    ],
+    "state": "R6_DESKTOP_GUIDANCE_UPDATED"
+  }
+}

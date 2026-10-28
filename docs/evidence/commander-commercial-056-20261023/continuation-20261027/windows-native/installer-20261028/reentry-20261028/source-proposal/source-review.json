@@ -1,0 +1,14 @@
+{
+  "state": "SOURCE_ONLY_CANDIDATE_GENERATED",
+  "canonical_source_sha256": "2219d2cf657ccb52471ae5c5e6544877946b24621185b0303e0d1e1c6ad1a401",
+  "canonical_source_unchanged": true,
+  "candidate_sha256": "0d7eff7f92dd9f12a82b0bd74121cfc287fb953543cbbc665760f63e22b33b24",
+  "candidate_bytes": 29190,
+  "enrollment_dpapi_task_rollback_tail_unchanged": true,
+  "signature_manifest_integrity_functions_unchanged": true,
+  "native_regression": "NOT_RUN",
+  "signed_bundle_modified": false,
+  "public_distribution_changed": false,
+  "release_approved": false,
+  "limit": "Detects mismatched payload before token prompt; original independent download after enrollment remains, so a later asset mutation can still require rollback."
+}

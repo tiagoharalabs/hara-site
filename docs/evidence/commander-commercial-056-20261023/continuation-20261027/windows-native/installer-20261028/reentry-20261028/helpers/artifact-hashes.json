@@ -1,0 +1,14 @@
+{
+  "Instalar-ou-verificar-Commander.ps1": {
+    "bytes": 25000,
+    "sha256": "c0b384d05c7fa45b636bf73a18dd2f4f8e55e001578783162de632c4fab818a1"
+  },
+  "Instalar-Commander.cmd": {
+    "bytes": 1977,
+    "sha256": "6a4088282c6da3dc0cfd8da2704fbca1e03f52f14ed1baf6ab4e594fe962e6ad"
+  },
+  "Verificar-Commander.cmd": {
+    "bytes": 1981,
+    "sha256": "a797a0da86ab2f0a6dd7b2e8dcb470d0897a1833eeb7a98ba21581fe5730a6ea"
+  }
+}

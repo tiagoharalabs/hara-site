@@ -1,0 +1,334 @@
+{
+  "schema": "hara.commander.qa-reentry.v1",
+  "refresh": {
+    "backup_verified": true,
+    "parser_errors": 0,
+    "signed_installer_unchanged": true,
+    "state": "R6_LAUNCHERS_VERIFIED"
+  },
+  "expired": {
+    "started_utc": "2026-10-28T15:55:33.8400024Z",
+    "state": "PASS_NATIVE_EXPIRED_GUARD",
+    "case": "expired",
+    "config_sha256_before": "410f36556909b8526e3e335962afe9652da09fdcef7722557d242b4b434593ed",
+    "exit_code": 2,
+    "stderr_bytes": 0,
+    "config_sha256_after": "410f36556909b8526e3e335962afe9652da09fdcef7722557d242b4b434593ed",
+    "wrapper": {
+      "schema": "hara.commander.qa-windows-launcher.v1",
+      "action": "preflight",
+      "started_utc": "2026-10-28T15:55:35.0664917Z",
+      "state": "HOLD",
+      "stage": "QA_RELEASE_WINDOW",
+      "installed": false,
+      "paired": false,
+      "agent_payload_verified": false,
+      "prior_current_user_policy": "RemoteSigned",
+      "policy_restored": true,
+      "certificate_preexisting": false,
+      "certificate_added": false,
+      "certificate_removed": false,
+      "plaintext_secret_written": false,
+      "user_sid": "S-1-5-21-1207901905-1500652706-889822281-1005",
+      "path_component": "C:\\",
+      "progress_utc": "2026-10-28T15:55:36.3090421Z",
+      "config_check_path": "C:\\ProgramData\\HARA-QA\\windows-install-0356-20261028\\config\\install-config.json",
+      "installer_sha256": "2219d2cf657ccb52471ae5c5e6544877946b24621185b0303e0d1e1c6ad1a401",
+      "release_url": "https://192.168.10.23:18443/releases/0.3.56",
+      "qa_release_window_checked": true,
+      "qa_release_window_deadline_utc": "2026-10-28T05:30:15.0357720Z",
+      "failure_stage": "QA_RELEASE_WINDOW",
+      "error_code": "QA_RELEASE_WINDOW_EXPIRED",
+      "error_type": "System.Management.Automation.RuntimeException",
+      "final_current_user_policy": "RemoteSigned",
+      "finished_utc": "2026-10-28T15:55:36.4151719Z"
+    },
+    "finished_utc": "2026-10-28T15:55:36.5976638Z",
+    "independent": {
+      "product_agent_present": false,
+      "task_last_result": 0,
+      "global_task_absent": true,
+      "source_pins_verified": true,
+      "global_state": "",
+      "product_config_present": false
+    }
+  },
+  "current": {
+    "started_utc": "2026-10-28T15:56:45.8217124Z",
+    "state": "PASS_NATIVE_PREFLIGHT",
+    "case": "current",
+    "config_sha256_before": "67c0bfef088794f1de89635ee1531f436c64902df5230f31ff0275257db8fbea",
+    "exit_code": 0,
+    "stderr_bytes": 0,
+    "config_sha256_after": "67c0bfef088794f1de89635ee1531f436c64902df5230f31ff0275257db8fbea",
+    "wrapper": {
+      "schema": "hara.commander.qa-windows-launcher.v1",
+      "action": "preflight",
+      "started_utc": "2026-10-28T15:56:46.9505377Z",
+      "state": "PASS_PREFLIGHT",
+      "stage": "PREFLIGHT_COMPLETE",
+      "installed": false,
+      "paired": false,
+      "agent_payload_verified": true,
+      "prior_current_user_policy": "RemoteSigned",
+      "policy_restored": true,
+      "certificate_preexisting": false,
+      "certificate_added": false,
+      "certificate_removed": false,
+      "plaintext_secret_written": false,
+      "user_sid": "S-1-5-21-1207901905-1500652706-889822281-1005",
+      "path_component": "C:\\",
+      "progress_utc": "2026-10-28T15:56:50.2953331Z",
+      "config_check_path": "C:\\ProgramData\\HARA-QA\\windows-install-0356-20261028\\config\\install-config.json",
+      "installer_sha256": "2219d2cf657ccb52471ae5c5e6544877946b24621185b0303e0d1e1c6ad1a401",
+      "release_url": "https://192.168.10.23:18443/releases/0.3.56",
+      "qa_release_window_checked": true,
+      "qa_release_window_deadline_utc": "2026-10-28T18:54:45.9118100Z",
+      "qa_release_reachable": true,
+      "qa_release_http_status": 200,
+      "preflight_exit_code": 0,
+      "preflight_stderr_bytes": 0,
+      "agent_payload_bytes": 172687,
+      "agent_payload_sha256": "a44e2f7c7ce75cf2cff0e60886fce60bd999b9e4cea22e5baa24619d9ee27620",
+      "agent_payload_version": "0.3.56",
+      "agent_payload_cache_removed": true,
+      "final_current_user_policy": "RemoteSigned",
+      "finished_utc": "2026-10-28T15:56:50.3384510Z"
+    },
+    "finished_utc": "2026-10-28T15:56:50.5050238Z",
+    "independent": {
+      "product_agent_present": false,
+      "task_last_result": 0,
+      "global_task_absent": true,
+      "source_pins_verified": true,
+      "global_state": "",
+      "product_config_present": false
+    }
+  },
+  "distribution": {
+    "at_utc": "2026-10-28T15:53:46.099263+00:00",
+    "state": "WINDOWS_QA_DISTRIBUTION_STARTED",
+    "service": "active",
+    "source_ip": "192.168.252.113",
+    "release_url": "https://192.168.10.23:18443/releases/0.3.56",
+    "runtime_max_s": 10800,
+    "automatic_firewall_cleanup": true,
+    "nft_handles": [
+      19
+    ]
+  },
+  "temporary_tls": {
+    "state": "ADMIN_QA_TLS_READY",
+    "store": "LocalMachine\\Root",
+    "certificate_preexisting": false,
+    "thumbprint": "91455FF01AE18E0F3721E3D56B5382A1F4145129",
+    "der_sha256": "893aeec40a123d5fd74fd312fa1ed90e4c9881e10a562cdc126026c3d848f29e",
+    "automatic_cleanup_task": "HARA-QA056-TemporaryTLS-Cleanup-R3-20261028",
+    "cleanup_deadline_utc": "2026-10-28T18:54:45.911810+00:00",
+    "installer_identity": "CommanderQA",
+    "product_task_changed": false
+  },
+  "ubuntu": {
+    "at_utc": "2026-10-28T15:48:46.294345+00:00",
+    "account": {
+      "name": "commanderqa",
+      "uid": 2000
+    },
+    "installed": true,
+    "agent_sha256": "ad92b9100b9b4599fc73815a5ba44ffb665ce5c1d0973c03923f1d8d45b1d03d",
+    "config": {
+      "HARA_COMMANDER_URL": "https://hara-commander-dev-v2.tiago-sartori.workers.dev",
+      "HARA_DEVICE_ID": "HARA-DEVICE-962202bc-274a-486b-9794-b73d9f3a5889",
+      "HARA_COMMANDER_APPROVAL_MODE": "PERSISTENT_TRUSTED"
+    },
+    "runtime": {
+      "agent_version": "0.3.56",
+      "state": null,
+      "updated_at_utc": "2026-10-28T15:48:11.675492+00:00",
+      "last_heartbeat_at_utc": null,
+      "device_id": null,
+      "transport": null
+    }
+  },
+  "public_readback": {
+    "at_utc": "2026-10-28T15:57:04.246988+00:00",
+    "origin": "https://commander.haralabs.com.br",
+    "files": [
+      {
+        "path": "release/agent-manifest.json",
+        "status": 200,
+        "bytes": 765,
+        "sha256": "7e42f25404e414b74b375ccb47b7ed8ba7d8c572dc45db994d89012207f08f7c",
+        "manifest": {
+          "agent_version": "0.3.41",
+          "channel": "stable",
+          "files": [
+            {
+              "bytes": 163048,
+              "path": "agent/linux.py",
+              "sha256": "e1f44e4695266717c6585f8d0de1e664d99123e36e75b152e136a4428f7b2730"
+            },
+            {
+              "bytes": 56752,
+              "path": "agent/windows.ps1",
+              "sha256": "52bb1b3c537c31a357becc38c494ea8494bf310fc3e694d59b1a578509a56d44"
+            },
+            {
+              "bytes": 28595,
+              "path": "install/linux.sh",
+              "sha256": "99b25c7671326b983ff1fa670ce0044f9a89674dcd1b2d78cf8ab4a6cccb828b"
+            },
+            {
+              "bytes": 22321,
+              "path": "install/windows.ps1",
+              "sha256": "475d7afe4440fc760adfcb333e1922d5a9eb3d7bb49ca571c4c5741519bdc240"
+            }
+          ],
+          "product": "H.A.R.A. Commander",
+          "schema": "hara.commander-agent-release.v1"
+        }
+      },
+      {
+        "path": "release/agent-manifest.sig.json",
+        "status": 200,
+        "bytes": 555,
+        "sha256": "b755f0fd5ebf81be4c8e5cb38522684f66829e069be2ed6303eb0b7bccc26bd1"
+      },
+      {
+        "path": "agent/windows.ps1",
+        "status": 200,
+        "bytes": 98717,
+        "sha256": "817325667ea552136efa10d807148fa4dc6d035aca24046c884f444a4fb61ebc",
+        "version": "0.3.52"
+      },
+      {
+        "path": "install/windows.ps1",
+        "status": 200,
+        "bytes": 23604,
+        "sha256": "6ba5c29e6d3a604750331d7699455ad609b4b0a8e191c03ad10503f7a5161c3c"
+      },
+      {
+        "path": "agent/linux.py",
+        "status": 200,
+        "bytes": 220422,
+        "sha256": "1572d70e60fb299edb262a8a817bd7aa1740a4c2dda3635d50beb2f3476ffe3b"
+      },
+      {
+        "path": "install/linux.sh",
+        "status": 200,
+        "bytes": 36564,
+        "sha256": "447fde76bdcee326dff70600f56b4b3be6cb9d2299e9265523b5d6e6baf88de1"
+      }
+    ]
+  },
+  "latest_prior_user_attempt": {
+    "task_state": "Ready",
+    "last_result": 0,
+    "diagnostic": {
+      "runs": [
+        {
+          "run": "run-20261028T051812908Z-cfe4153a1f8e48a1beaf6e4b4186a39a",
+          "file": "result.json",
+          "started_utc": "2026-10-28T05:18:12.7791592Z",
+          "state": "HOLD",
+          "stage": "PREFLIGHT_BEGIN",
+          "error_code": "NATIVE_OPERATION_FAILED",
+          "agent_payload_verified": false,
+          "installed": false,
+          "paired": false
+        },
+        {
+          "run": "run-20261028T051812908Z-cfe4153a1f8e48a1beaf6e4b4186a39a",
+          "file": "progress.json",
+          "started_utc": "2026-10-28T05:18:12.7791592Z",
+          "state": "PENDING",
+          "stage": "PREFLIGHT_BEGIN",
+          "error_code": null,
+          "agent_payload_verified": false,
+          "installed": false,
+          "paired": false
+        },
+        {
+          "run": "run-20261028T043517671Z-b58332ccfa0e4e8eb1bea7c0206e52f2",
+          "file": "progress.json",
+          "started_utc": "2026-10-28T04:35:17.5437523Z",
+          "state": "PENDING",
+          "stage": "PREFLIGHT_COMPLETE",
+          "error_code": null,
+          "agent_payload_verified": true,
+          "installed": false,
+          "paired": false
+        },
+        {
+          "run": "run-20261028T043209927Z-63d7408db0f24ee9afe02898ef3a11db",
+          "file": "result.json",
+          "started_utc": "2026-10-28T04:32:09.8043687Z",
+          "state": "PASS_PREFLIGHT",
+          "stage": "PREFLIGHT_COMPLETE",
+          "error_code": null,
+          "agent_payload_verified": true,
+          "installed": false,
+          "paired": false
+        },
+        {
+          "run": "run-20261028T043209927Z-63d7408db0f24ee9afe02898ef3a11db",
+          "file": "progress.json",
+          "started_utc": "2026-10-28T04:32:09.8043687Z",
+          "state": "PENDING",
+          "stage": "PREFLIGHT_COMPLETE",
+          "error_code": null,
+          "agent_payload_verified": true,
+          "installed": false,
+          "paired": false
+        },
+        {
+          "run": "run-20261028T041500081Z-b828e42e3e2b48ad81143d31f1617840",
+          "file": "result.json",
+          "started_utc": "2026-10-28T04:14:59.9349767Z",
+          "state": "HOLD",
+          "stage": "PREFLIGHT_BEGIN",
+          "error_code": "NATIVE_OPERATION_FAILED",
+          "agent_payload_verified": null,
+          "installed": false,
+          "paired": false
+        },
+        {
+          "run": "run-20261028T041500081Z-b828e42e3e2b48ad81143d31f1617840",
+          "file": "progress.json",
+          "started_utc": "2026-10-28T04:14:59.9349767Z",
+          "state": "PENDING",
+          "stage": "PREFLIGHT_BEGIN",
+          "error_code": null,
+          "agent_payload_verified": null,
+          "installed": false,
+          "paired": false
+        },
+        {
+          "run": "run-20261028T041256434Z-9c5d22f20ee74795a2c12d5764b9aeae",
+          "file": "result.json",
+          "started_utc": "2026-10-28T04:12:56.3020157Z",
+          "state": "HOLD",
+          "stage": "PREFLIGHT_BEGIN",
+          "error_code": "NATIVE_OPERATION_FAILED",
+          "agent_payload_verified": null,
+          "installed": false,
+          "paired": false
+        },
+        {
+          "run": "run-20261028T041256434Z-9c5d22f20ee74795a2c12d5764b9aeae",
+          "file": "progress.json",
+          "started_utc": "2026-10-28T04:12:56.3020157Z",
+          "state": "PENDING",
+          "stage": "PREFLIGHT_BEGIN",
+          "error_code": null,
+          "agent_payload_verified": null,
+          "installed": false,
+          "paired": false
+        }
+      ],
+      "at_utc": "2026-10-28T05:23:46.3107140Z"
+    },
+    "product_task_present": false,
+    "qa_config_present": false
+  }
+}

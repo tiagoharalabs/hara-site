@@ -1,0 +1,59 @@
+--- a/public/install/windows.ps1
++++ b/public/install/windows.ps1
+@@ -169,6 +169,30 @@
+   Write-Host "HARA_COMMANDER_AGENT_SELF_TEST=PASS"
+ }
+ 
++function Assert-InstallPayloadPreflight {
++  # Verify actual signed Agent bytes before asking for or consuming a pairing
++  # token. Installation still performs its independent post-enrollment check.
++  $path=Join-Path $env:TEMP ("hara-commander-install-preflight-"+[guid]::NewGuid().ToString("N")+".ps1")
++  $owned=$false
++  try {
++    $reservation=New-Object IO.FileStream($path,[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::None)
++    $owned=$true
++    $reservation.Dispose()
++    Invoke-WebRequest -Uri "$(Get-ReleaseBaseUrl)/agent/windows.ps1" -OutFile $path -UseBasicParsing -TimeoutSec 30 -MaximumRedirection 0
++    Assert-AgentIntegrity $path
++    $tokens=$null; $errors=$null
++    [System.Management.Automation.Language.Parser]::ParseFile($path,[ref]$tokens,[ref]$errors) | Out-Null
++    if ($errors.Count -ne 0) { throw "AGENT_INSTALL_SYNTAX_INVALID" }
++    Assert-AgentSelfTest $path
++  } finally {
++    if ($owned -and (Test-Path -LiteralPath $path)) {
++      Remove-Item -LiteralPath $path -Force -ErrorAction Stop
++      if (Test-Path -LiteralPath $path) { throw "AGENT_PREFLIGHT_CLEANUP_FAILED" }
++    }
++  }
++  Write-Host "HARA_COMMANDER_INSTALL_PAYLOAD_PREFLIGHT=PASS"
++}
++
+ function Get-DeviceToken {
+   param($Cfg)
+   if (-not $Cfg -or -not $Cfg.encrypted_device_token) { throw "DEVICE_TOKEN_UNAVAILABLE" }
+@@ -207,6 +231,7 @@
+   $health = Invoke-RestMethod -Uri "$BaseUrl/api/health" -Method Get -Headers @{ Accept="application/json" } -TimeoutSec 15 -MaximumRedirection 0
+   if (-not $health.ok -or [string]$health.service -ne "hara-commander") { throw "COMMANDER_HEALTH_INVALID" }
+   $release = Get-AgentReleaseMetadata
++  Assert-InstallPayloadPreflight
+   $scheduledTaskReady = [bool](Get-Command Register-ScheduledTask -ErrorAction SilentlyContinue)
+   $powershellReady = [bool](Get-Command powershell.exe -ErrorAction SilentlyContinue)
+   $report = [ordered]@{
+@@ -217,6 +242,9 @@
+     commander_health = $true
+     release_manifest = $true
+     release_signature = $true
++    agent_payload = $true
++    agent_payload_syntax = $true
++    agent_payload_self_test = $true
+     stable_agent_version = [string]$release.Version
+     persistence = "on-demand-scheduled-task"
+     persistence_ready = ($scheduledTaskReady -and $powershellReady)
+@@ -396,6 +424,7 @@
+ if (Test-Path -LiteralPath $Config -PathType Leaf) { throw "DEVICE_ALREADY_ENROLLED: use status, update, or uninstall." }
+ # Hold an obsolete public manifest before asking for a pairing token.
+ Assert-AgentVersionFloor -IncomingVersion ([string](Get-AgentReleaseMetadata).Version)
++Assert-InstallPayloadPreflight
+ 
+ Write-Host "HARA Commander - Windows device pairing"
+ $SecurePairing = Read-Host "Pairing token" -AsSecureString
