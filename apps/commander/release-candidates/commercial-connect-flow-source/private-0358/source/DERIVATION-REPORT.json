@@ -1,0 +1,26 @@
+{
+  "schema": "hara.commander.windows-0358-derivation.v1",
+  "state": "SOURCE_ONLY_NOT_YET_SIGNED_OR_NATIVE_VALIDATED",
+  "version": "0.3.58",
+  "original_agent_sha256": "a44e2f7c7ce75cf2cff0e60886fce60bd999b9e4cea22e5baa24619d9ee27620",
+  "original_installer_sha256": "68f0a76958e14f8f2830b6eb68d748bbad41e662b27b381dbf3a69e78bca03fd",
+  "controller_sha256": "2c2233afa8f9eba4544ca735198922dc9424657fe40108c30445339734fb04da",
+  "pairing_helper_sha256": "9b024e3f648d9d78b36ed92f6f534f01b5158749dc81e775fd7274d33271ef5e",
+  "embedded_controller_unchanged": true,
+  "embedded_pairing_helper_unchanged": true,
+  "version_literal_substitutions": {
+    "agent": 1,
+    "installer": 5
+  },
+  "frozen_artifacts_changed": false,
+  "outputs": {
+    "windows-agent.ps1": {
+      "sha256": "bcc6538243573ce35f8ad54cb40bbe9d87c194913a54fc81241e94f5b7018f1d",
+      "bytes": 173192
+    },
+    "windows.source-only-candidate.ps1": {
+      "sha256": "27c856bb2b8ce8a100d8b258c8de544d99eb076ae8a0c6494110b17574ccfbc2",
+      "bytes": 77495
+    }
+  }
+}

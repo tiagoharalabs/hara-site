@@ -1,0 +1,22 @@
+{
+  "schema": "hara.commander.windows-0359-derivation.v1",
+  "state": "SOURCE_ONLY_NATIVE_REGRESSION_PENDING",
+  "version": "0.3.59",
+  "original_agent_sha256": "bcc6538243573ce35f8ad54cb40bbe9d87c194913a54fc81241e94f5b7018f1d",
+  "original_installer_sha256": "27c856bb2b8ce8a100d8b258c8de544d99eb076ae8a0c6494110b17574ccfbc2",
+  "consumer_validation_unchanged": true,
+  "consumer_region_sha256": "210a3d5436c5ae5c10648448699a4ec0e6c37d900e4353b833c8f822bd0d502c",
+  "frozen_artifacts_changed": false,
+  "installer_nonversion_bytes_unchanged": true,
+  "agent_change": "Explicit object[] producer seeds; empty-state handshake remains an empty array across parameter binding.",
+  "outputs": {
+    "windows-agent.ps1": {
+      "sha256": "d3a4173829186e2488c2b686f5ac3ecca62c896387f55dcdfdbcdd155253ae24",
+      "bytes": 173345
+    },
+    "windows.source-only-candidate.ps1": {
+      "sha256": "2f734ab8066b46cb82fc4fc9fb25244472bc829c16043cfe5f2771ae4e6d04b4",
+      "bytes": 77495
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "checks": {
+    "after_missing_executor_refused": true,
+    "before_missing_executor_admitted": true,
+    "exact_old_and_new_function_bundles": true,
+    "native_parser_required": true,
+    "native_regression_cases": 10,
+    "overall_auth_block_remains_hold": true,
+    "post_update_stable_worker_seconds": 40,
+    "preexisting_auth_block_not_cleared": true,
+    "producer_fix_preserves_real_empty_array": true,
+    "running_update_new_version": "0.3.59",
+    "running_update_old_version": "0.3.58",
+    "signed_updater_never_killed_by_observer": true,
+    "strict_claim_consumer_unchanged": true
+  },
+  "files": {
+    "Invoke-Private0359RunningUpdate.ps1": {
+      "bytes": 33992,
+      "sha256": "f9f9399f7d05d4971c43ffee58e21a7b9ee10cf0e5a6f4a5919f16551e803b80"
+    },
+    "Test-EmptyRelayClaims0359.ps1": {
+      "bytes": 13695,
+      "sha256": "c7b30c09eeac21894bac4733be8c1d2d0d333e4f8f67b17e81809de65cdc7e93"
+    },
+    "native_claims_regression_driver.py": {
+      "bytes": 5925,
+      "sha256": "0a01a6ca3c29e054d558607bca3d6f33764145af5d352f5b9498e2a9b23f73eb"
+    },
+    "native_running_update_driver.py": {
+      "bytes": 6496,
+      "sha256": "f78e06c8cb167308fdde575d4041d81781372ff02af6cff0c20b838f34a5e6a7"
+    }
+  },
+  "native_runtime_pass_claimed": false,
+  "product_payloads_mutated": false,
+  "remote_actions_performed": false,
+  "schema": "hara.commander.windows-private-0359-local-review.v1",
+  "state": "LOCAL_REVIEW_NATIVE_EXECUTION_PENDING"
+}

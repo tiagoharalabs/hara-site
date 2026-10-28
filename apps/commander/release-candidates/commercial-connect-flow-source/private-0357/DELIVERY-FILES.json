@@ -1,0 +1,70 @@
+{
+  "schema": "hara.commander.private-0357-curated-git-delivery.v1",
+  "state": "CURATED_ALLOWLIST_LINUX_UPGRADE_PASS_WINDOWS_HOLD_CLEANUP_PENDING",
+  "source_destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0357",
+  "evidence_destination": "docs/evidence/commander-commercial-056-20261023/continuation-20261027/connect-flow-20261028/private-0357",
+  "source_files": [
+    "DELIVERY-CHECKPOINT.md",
+    "DELIVERY-FILES.json",
+    "build_private_0357.py",
+    "sign_private_commander_0357_v2.py",
+    "README.md",
+    "SIGNER-SOURCE-REVIEW.json",
+    "BUILD-REPORT.json",
+    "SIGNATURE-REPORT.json",
+    "SIGNATURE-READBACK.json",
+    "release/agent-manifest.json",
+    "release/agent-manifest.sig.json",
+    "release/release-signing-public.jwk",
+    "release/SHA256SUMS",
+    "distribution/serve_connect_qa_0357.py",
+    "distribution/connect_qa_release_control.py",
+    "distribution/SOURCE-REVIEW.json",
+    "distribution/README.md",
+    "native-windows/Invoke-Private0357Upgrade.ps1",
+    "native-windows/native_upgrade_driver.py",
+    "native-windows/artifact-hashes.json",
+    "native-windows/README.md",
+    "native-linux/native_private_0357_upgrade.py",
+    "native-linux/README.md",
+    "native-windows/native_recovery_diagnostic.py",
+    "native-windows/Inspect-Private0357Startup.ps1",
+    "native-windows/native_startup_diagnostic_driver.py",
+    "native-linux/native_upgrade_driver.py",
+    "native-linux/native_selftest_diagnostic.py",
+    "native-linux/native_private_0357_upgrade_r2.py",
+    "native-linux/native_upgrade_driver_r2.py"
+  ],
+  "additional_evidence_to_admit_after_collection_and_sanitization": [
+    "Windows native .57 driver parse receipt",
+    "Windows bounded startup diagnostic receipt",
+    "Windows further recovery/upgrade receipt if attempted",
+    "Private .57 distribution start and native HTTPS readiness receipts",
+    "Private .57 distribution stop and firewall/listener cleanup receipt",
+    "Temporary QA certificate cleanup receipt if performed",
+    "Final native driver source review with frozen source hashes"
+  ],
+  "exclusions": [
+    "release-metadata-transfer.json and other transfer bundles",
+    "__pycache__, *.pyc and tool caches",
+    "Private signing keys and private TLS keys",
+    "config.before.private and any device credential preimage",
+    "Raw installer stdout/stderr and private error logs",
+    "Pairing codes, device credentials, cookies and session material",
+    "Unreviewed or intermediate native driver revisions"
+  ],
+  "delivery_notes": [
+    "The builder and original preparation README were already delivered in b4711138; include only intentional diffs.",
+    "Root owns remote collection, final frozen hashes, exact destination filenames and Git staging.",
+    "Do not stage this directory recursively; use the explicit allowlist and inspect added paths.",
+    "This allowlist does not itself record a successful installation or public promotion.",
+    "The five named native receipts exist; Linux attempt2 passed. Windows attempt1 and its original runtime recovery remain HOLD. Future receipts are pending until collected."
+  ],
+  "sanitized_evidence_files": [
+    "evidence/windows-upgrade-attempt-1.json",
+    "evidence/windows-original-recovery-attempt-1.json",
+    "evidence/linux-upgrade-attempt-1.json",
+    "evidence/linux-selftest-diagnostic-1.json",
+    "evidence/linux-upgrade-attempt-2.json"
+  ]
+}

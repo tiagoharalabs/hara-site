@@ -1,0 +1,10 @@
+{
+  "at_utc": "2026-10-28T18:50:54.774714+00:00",
+  "unit": "hara-windows-qa-0356-20261028-r3",
+  "stop_exit": 0,
+  "service": "inactive",
+  "listener_absent": true,
+  "ufw_rule_absent": true,
+  "nft_rule_absent": true,
+  "state": "OLD_0356_DISTRIBUTION_CLOSED"
+}

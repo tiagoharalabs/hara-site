@@ -41,11 +41,19 @@ acceptance, no installation and no production mutation.
 ## Signing boundary
 
 The prior `sign_private_commander_0356_v2.py` pins remain unchanged. That signer
-must reject the new artifact hashes. A separate 0.3.57 signer must pin the exact
-four output hashes and exact manifest bytes returned by this build, retain the
-same trusted v2 public key, and produce a new private output directory. The build
-report is evidence to review and pin; it is not a caller-controlled replacement
-for signature verification or release admission.
+must reject the new artifact hashes. The new
+`sign_private_commander_0357_v2.py` pins the exact four output hashes and exact
+manifest bytes from the build reported by the root operator on physical
+Sentinela B. It retains the same trusted v2 public key and produces a new private
+output directory. The build report is evidence to review and pin; it is not a
+caller-controlled replacement for signature verification or release admission.
+
+The pinned manifest SHA-256 is
+`d1a9361f5edec6c926d6febc7990e9b0c00df28f5131c6ffe1146ebe348554d0`.
+`SIGNER-SOURCE-REVIEW.json` records the exact source provenance. Only the module
+docstring version, release version, manifest hash and four artifact pins changed
+from the original signer; the remaining Python AST was compared and is unchanged.
+Preparing this script did not read a private key or execute signing.
 
 The existing signing implementation validates private-key ownership and mode,
 rejects symlinks, disables dumps before reading key bytes, checks public-key

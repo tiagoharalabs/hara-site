@@ -1,0 +1,91 @@
+{
+  "schema": "hara.commander.windows-private-0357-upgrade.v1",
+  "started_utc": "2026-10-28T18:05:37.5275028Z",
+  "state": "HOLD",
+  "stage": "SIGNED_UPDATE_RUNNING",
+  "device_id": "HARA-DEVICE-a544f7b1-3ee1-49f7-aa55-f559376d5d12",
+  "credential_origin": "https://commander.haralabs.com.br",
+  "artifact_release_base": "https://192.168.10.23:18444/releases/0.3.57",
+  "artifact_source": "EXPLICIT_PRIVATE_SIGNED_RELEASE",
+  "expected_agent_sha256": "3552947e632ba16eb0a1384b8e6b0d3a84d507bbe156ff1bb4db360c212895b7",
+  "expected_installer_sha256": "cc6234d0d51e853d9b1a897d496038ceba8b9164d318a70d98f62a7bae3c07ff",
+  "expected_manifest_sha256": "d1a9361f5edec6c926d6febc7990e9b0c00df28f5131c6ffe1146ebe348554d0",
+  "public_distribution_changed": false,
+  "pairing_permitted": false,
+  "device_token_exposed": false,
+  "optional_rollback_performed": false,
+  "private_log_directory": "C:\\Users\\CommanderQA\\AppData\\Local\\Temp\\hara-commander-connect-68760d2f41fb498cbcfad0ebd165b7fc",
+  "progress_utc": "2026-10-28T18:06:01.6923384Z",
+  "before": {
+    "version": "0.3.56",
+    "agent_sha256": "a44e2f7c7ce75cf2cff0e60886fce60bd999b9e4cea22e5baa24619d9ee27620",
+    "approval_mode": "PERSISTENT_TRUSTED",
+    "runtime": {
+      "version": "0.3.56",
+      "started_utc": "2026-10-28T16:36:56.8889999Z",
+      "heartbeat_utc": "2026-10-28T18:05:38.8859802Z",
+      "device_id": null,
+      "event_evidence": {
+        "state": "NOT_OBSERVED",
+        "fields": {}
+      }
+    },
+    "task_state": "Running",
+    "current_user_policy": "RemoteSigned"
+  },
+  "child": {
+    "pid": 8432,
+    "started_utc": "2026-10-28T18:05:45.8842122Z",
+    "action": "update",
+    "noninteractive": true,
+    "exit_code": 1,
+    "elapsed_seconds": 16,
+    "long_running": false,
+    "stdout_bytes": 136,
+    "stderr_bytes": 421
+  },
+  "controller": {
+    "state": "HOLD",
+    "stage": "UPDATE_SIGNED_AGENT",
+    "binding": "VALID",
+    "connected": false,
+    "update": "HOLD",
+    "update_error_code": "SIGNED_UPDATE_PROCESS_FAILED",
+    "recovery_error_code": "READONLY_RUNTIME_TASK_NOT_RUNNING",
+    "installed_version": "0.3.56",
+    "target_version": "0.3.57",
+    "last_successful_heartbeat_at_utc": "2026-10-28T18:05:38.8859802Z"
+  },
+  "error_code": "EXPECTED_CONNECTED_UPGRADE_NOT_COMPLETED",
+  "error_type": "System.Management.Automation.RuntimeException",
+  "failure_observation": {
+    "state": "UNCONFIRMED",
+    "observed_utc": "2026-10-28T18:06:13.7172704Z",
+    "device_matches": true,
+    "config_bytes_preserved": true,
+    "approval_mode_preserved": true,
+    "agent_version": "0.3.56",
+    "agent_sha256": "a44e2f7c7ce75cf2cff0e60886fce60bd999b9e4cea22e5baa24619d9ee27620",
+    "task_running": false,
+    "task_definition_preserved": true,
+    "policy_preserved": true,
+    "commander_environment_preserved": true,
+    "runtime": {
+      "version": "0.3.56",
+      "started_utc": "2026-10-28T16:36:56.8889999Z",
+      "heartbeat_utc": "2026-10-28T18:05:38.8859802Z",
+      "device_id": null,
+      "event_evidence": {
+        "state": "NOT_OBSERVED",
+        "fields": {}
+      }
+    },
+    "authenticated_binding": true,
+    "runtime_recent": true
+  },
+  "update_invocations": 1,
+  "pairing_actions_blocked": 0,
+  "signed_private_release_verified": true,
+  "finished_utc": "2026-10-28T18:06:16.3367049Z",
+  "diagnostic_task_exit": 2
+}

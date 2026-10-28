@@ -1,0 +1,15 @@
+{
+  "at_utc": "2026-10-28T19:11:18.7838638Z",
+  "cleanup_task_last_result": 0,
+  "cleanup": {
+    "at_utc": "2026-10-28T19:10:33.8015922Z",
+    "state": "PASS_ADMIN_QA_TLS_CLOSED",
+    "removed": true,
+    "expected_store_state": "ABSENT",
+    "store_verified": true
+  },
+  "task_unregistered": false,
+  "certificate_present": false,
+  "state": "TEMPORARY_TLS_CLOSED_VERIFIED",
+  "product_task_state": "Running"
+}

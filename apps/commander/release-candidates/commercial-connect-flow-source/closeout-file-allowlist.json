@@ -1,0 +1,887 @@
+{
+  "schema": "hara.commander.closeout-allowlist.v1",
+  "checkpoint": "2026-10-28 private .57/.58/.59 final QA closeout",
+  "native_status": "Both QA VMs installed .59; Linux update PASS; Windows running-update core PASS and overall HOLD_RECOVERY_OUTBOX_AUTH; functional principal-MCP command pending; public NO-GO",
+  "notes": [
+    "Explicit reviewed source and sanitized evidence paths only; earlier signed sources and all historical failure receipts preserved.",
+    "The generator automatically includes this exact caller-pinned allowlist.",
+    "Actual .58/.59 signature files match the signing receipts. .59 native update/regression, distribution closure, renewed trust closure, and completed cleanup-task removal receipts are included.",
+    "Windows core update PASS is distinct from its overall HOLD_RECOVERY_OUTBOX_AUTH. Its prior blocked-auth and pending events were not cleared or acknowledged by QA.",
+    "Fresh principal-MCP inventory and public-catalog observations are included. No public release or new pairing acceptance is claimed.",
+    "Sanitized evidence is mirrored under source and docs checkpoints so relative links resolve in both locations.",
+    "Only public JWKs are admitted. Raw credentials, private keys, config preimages, raw logs, transfer bundles and caches are excluded."
+  ],
+  "files": [
+    {
+      "source": "CLOSEOUT-20261028.md",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/CLOSEOUT-20261028.md",
+      "sha256": "3ae6ba8af8ef622ccc54988518cd9e1ce3b94e9489deef9816a7c1a217d68c2a",
+      "bytes": 11273
+    },
+    {
+      "source": "build_closeout_bundle.py",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/build_closeout_bundle.py",
+      "sha256": "669bbaa945207d846df0b88b0547a5df72db864a075ad08700116bbdbae4d7bc",
+      "bytes": 8487
+    },
+    {
+      "source": "private-0357/BUILD-REPORT.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0357/BUILD-REPORT.json",
+      "sha256": "3de2038f7d3c8258eda9a5a2d141015930dedea17b1fb6b2aa71997b5f19ae9b",
+      "bytes": 2147
+    },
+    {
+      "source": "private-0357/DELIVERY-CHECKPOINT.md",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0357/DELIVERY-CHECKPOINT.md",
+      "sha256": "4cae5c6f469f4ca62dace036bc198b37f394c255d33e46a4fae1657cd3255271",
+      "bytes": 10012
+    },
+    {
+      "source": "private-0357/DELIVERY-FILES.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0357/DELIVERY-FILES.json",
+      "sha256": "3a3720431e1ababb8b199660b54c5f12513be7f76e6afc1bd4a94a897b6d1c3a",
+      "bytes": 3429
+    },
+    {
+      "source": "private-0357/README.md",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0357/README.md",
+      "sha256": "bc70405c987b3ce0e7d58796676d35c0309b18fc72b53255afcff17aecc46cd2",
+      "bytes": 5463
+    },
+    {
+      "source": "private-0357/SIGNATURE-READBACK.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0357/SIGNATURE-READBACK.json",
+      "sha256": "4baa1e0658a07ae65ed2729258ed50362c4d47458ac7743504896dce17004a36",
+      "bytes": 1317
+    },
+    {
+      "source": "private-0357/SIGNATURE-REPORT.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0357/SIGNATURE-REPORT.json",
+      "sha256": "4baa1e0658a07ae65ed2729258ed50362c4d47458ac7743504896dce17004a36",
+      "bytes": 1317
+    },
+    {
+      "source": "private-0357/SIGNER-SOURCE-REVIEW.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0357/SIGNER-SOURCE-REVIEW.json",
+      "sha256": "5c81946221250038c532cb9373646f3267729bac8ffa3aead30a5d9a6841346b",
+      "bytes": 1222
+    },
+    {
+      "source": "private-0357/build_private_0357.py",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0357/build_private_0357.py",
+      "sha256": "b2ca295a6f45a8996a91e0af858bd7f5a1404183ff68fc19e1b6d746a625318c",
+      "bytes": 10608
+    },
+    {
+      "source": "private-0357/distribution/README.md",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0357/distribution/README.md",
+      "sha256": "3028a08fc447a68d5cbde2836118d16c206929f4809aa953a022150fe74dc9d0",
+      "bytes": 3801
+    },
+    {
+      "source": "private-0357/distribution/SOURCE-REVIEW.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0357/distribution/SOURCE-REVIEW.json",
+      "sha256": "adae1ff777c938d2e43ce20bd0deb9ef1de004ca0e213323ab2a8ac90ca37d63",
+      "bytes": 1187
+    },
+    {
+      "source": "private-0357/distribution/connect_qa_release_control.py",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0357/distribution/connect_qa_release_control.py",
+      "sha256": "edf93f8398840a3904e9295f14f91aa9b1c62b2fd8bae80265cd3cdc5671262b",
+      "bytes": 10766
+    },
+    {
+      "source": "private-0357/distribution/serve_connect_qa_0357.py",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0357/distribution/serve_connect_qa_0357.py",
+      "sha256": "067f154bc0feed86ccbaf55683ac5317156c7fd7571d947e66f87c02640a49ba",
+      "bytes": 9474
+    },
+    {
+      "source": "private-0357/evidence/distribution-cleanup.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0357/evidence/distribution-cleanup.json",
+      "sha256": "d507fea485635e42d2bf0457b375a20257330a1f3ce788b402a037583490a76e",
+      "bytes": 308
+    },
+    {
+      "source": "private-0357/evidence/linux-selftest-diagnostic-1.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0357/evidence/linux-selftest-diagnostic-1.json",
+      "sha256": "7990d54472f1cc293fa68396cbc0c3313073b3a451f3ee21341f0833a3e4c75d",
+      "bytes": 797
+    },
+    {
+      "source": "private-0357/evidence/linux-upgrade-attempt-1.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0357/evidence/linux-upgrade-attempt-1.json",
+      "sha256": "c794ff80a1029a92dac58493c32542df426065e5260f21c30a7bd615349c5384",
+      "bytes": 6778
+    },
+    {
+      "source": "private-0357/evidence/linux-upgrade-attempt-2.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0357/evidence/linux-upgrade-attempt-2.json",
+      "sha256": "af258ef3dc81318de18aa03db3e2421e2c084c950439e08e33a3e21f27faf9f1",
+      "bytes": 6740
+    },
+    {
+      "source": "private-0357/evidence/windows-original-recovery-attempt-1.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0357/evidence/windows-original-recovery-attempt-1.json",
+      "sha256": "c4f8e22797a4bcb257fde2961ad4433016d60f119c530070f6f436ce1febbf89",
+      "bytes": 1080
+    },
+    {
+      "source": "private-0357/evidence/windows-startup-diagnostic-1.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0357/evidence/windows-startup-diagnostic-1.json",
+      "sha256": "e6dfe477b247a897ac4820f1413b2a260a992e49bd79e8cbd85ad212ed3a699a",
+      "bytes": 6033
+    },
+    {
+      "source": "private-0357/evidence/windows-upgrade-attempt-1.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0357/evidence/windows-upgrade-attempt-1.json",
+      "sha256": "cb106e59e31a0b90569e77c979239e90303d5e323fb2bab3e7ca070ae22eb2e9",
+      "bytes": 3344
+    },
+    {
+      "source": "private-0357/native-linux/README.md",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0357/native-linux/README.md",
+      "sha256": "40ad86e55b0976ebc6fb08ca529ce2196177b892b70a4c8380c80514846f3a3d",
+      "bytes": 5395
+    },
+    {
+      "source": "private-0357/native-linux/native_private_0357_upgrade.py",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0357/native-linux/native_private_0357_upgrade.py",
+      "sha256": "16f3842d700bdacec399135e27ad79cee9d7da328085121e7ddd344c3d2bcc1e",
+      "bytes": 33451
+    },
+    {
+      "source": "private-0357/native-linux/native_private_0357_upgrade_r2.py",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0357/native-linux/native_private_0357_upgrade_r2.py",
+      "sha256": "b0489bc0d6bda22406c6f36633d94c6a798b65a212cd13bb20b48c30c04a775e",
+      "bytes": 34082
+    },
+    {
+      "source": "private-0357/native-linux/native_selftest_diagnostic.py",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0357/native-linux/native_selftest_diagnostic.py",
+      "sha256": "8ad43bf7632a78e428c6e360be0d8218a40fac64586a79516db2b3582b147d49",
+      "bytes": 10574
+    },
+    {
+      "source": "private-0357/native-linux/native_upgrade_driver.py",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0357/native-linux/native_upgrade_driver.py",
+      "sha256": "daefdeccdc7d8cb53dfbcec1d8453db29bf41e3aa9008dc1e9adc2e284ac611d",
+      "bytes": 7305
+    },
+    {
+      "source": "private-0357/native-linux/native_upgrade_driver_r2.py",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0357/native-linux/native_upgrade_driver_r2.py",
+      "sha256": "eba181692651b604d0a94856d89192a1e60f4583f87d0027037e80d3ac02f275",
+      "bytes": 7490
+    },
+    {
+      "source": "private-0357/native-windows/Inspect-Private0357Startup.ps1",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0357/native-windows/Inspect-Private0357Startup.ps1",
+      "sha256": "90ab726bd8fd37a7f3275ee507a64d40f97f6588f3653e08ebfe3cde53492df4",
+      "bytes": 17436
+    },
+    {
+      "source": "private-0357/native-windows/Invoke-Private0357Upgrade.ps1",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0357/native-windows/Invoke-Private0357Upgrade.ps1",
+      "sha256": "fa0f7c579a00b0b1fbd5c45452d2024fe685c6f7b1fffe78ab8f202d50fe0516",
+      "bytes": 19661
+    },
+    {
+      "source": "private-0357/native-windows/README.md",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0357/native-windows/README.md",
+      "sha256": "7fef7cad1fe4e6c98870faef5b26a556e61dcbf18902fa80358dce0989926753",
+      "bytes": 3726
+    },
+    {
+      "source": "private-0357/native-windows/artifact-hashes.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0357/native-windows/artifact-hashes.json",
+      "sha256": "76eb6846ffaff2d15df7fe58c6f4f966f91b985d03003c9a87e8dbeb84ef393d",
+      "bytes": 457
+    },
+    {
+      "source": "private-0357/native-windows/native_recovery_diagnostic.py",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0357/native-windows/native_recovery_diagnostic.py",
+      "sha256": "3031e0996c8fc6ae8b4a8530fe2a7e779dbe7c8edb69f8be90a0316a4d70ed9c",
+      "bytes": 7322
+    },
+    {
+      "source": "private-0357/native-windows/native_startup_diagnostic_driver.py",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0357/native-windows/native_startup_diagnostic_driver.py",
+      "sha256": "d96aa37e782e86604a97b1fb5272a6f516e4b7362acebe9ec0f1d4fdf58f11db",
+      "bytes": 6639
+    },
+    {
+      "source": "private-0357/native-windows/native_upgrade_driver.py",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0357/native-windows/native_upgrade_driver.py",
+      "sha256": "1c127f6a3f06a4f4c3c9f76908301d0176c01fef42e39b72413f5bc4bcb6400f",
+      "bytes": 5716
+    },
+    {
+      "source": "private-0357/release/SHA256SUMS",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0357/release/SHA256SUMS",
+      "sha256": "c32206a9f0cf604de58cf9cb7afe04da82ca52941a725d6cf6fa7c592d26e4da",
+      "bytes": 334
+    },
+    {
+      "source": "private-0357/release/agent-manifest.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0357/release/agent-manifest.json",
+      "sha256": "d1a9361f5edec6c926d6febc7990e9b0c00df28f5131c6ffe1146ebe348554d0",
+      "bytes": 766
+    },
+    {
+      "source": "private-0357/release/agent-manifest.sig.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0357/release/agent-manifest.sig.json",
+      "sha256": "5637d5861c49c170af55a8d86f8051df78785c39f4a17b06a41b5c8ed25ddef7",
+      "bytes": 725
+    },
+    {
+      "source": "private-0357/release/release-signing-public.jwk",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0357/release/release-signing-public.jwk",
+      "sha256": "4e68608fa891f1b7a1e89c75936a089daeab0ba862a764f9bb31eca849cdfb9b",
+      "bytes": 624
+    },
+    {
+      "source": "private-0357/sign_private_commander_0357_v2.py",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0357/sign_private_commander_0357_v2.py",
+      "sha256": "f4f5e2d56140445e3a124b96fce47fe6d4eb783e16ea592e5168469088668137",
+      "bytes": 16097
+    },
+    {
+      "source": "private-0358/BUILD-REPORT.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0358/BUILD-REPORT.json",
+      "sha256": "a3fe79f70b0d877248203c5fcff924d27edd81c2f98ef5abe5e45f55478c83af",
+      "bytes": 2184
+    },
+    {
+      "source": "private-0358/BUILDER-SOURCE-REVIEW.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0358/BUILDER-SOURCE-REVIEW.json",
+      "sha256": "cffd6b29f19ca269a7f83e84318fb577bbbf90eab2c657be62d63a37f220b836",
+      "bytes": 572
+    },
+    {
+      "source": "private-0358/README.md",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0358/README.md",
+      "sha256": "ca4acb8f67f9f36f6ccdd102874b438114c42130ac34eb5df5960d6d5a4b9ffa",
+      "bytes": 3382
+    },
+    {
+      "source": "private-0358/SIGNATURE-READBACK.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0358/SIGNATURE-READBACK.json",
+      "sha256": "47c513c34d9d50f87c59a5e60bb4704579531d3c3daaafb7ec0aeececa64aff0",
+      "bytes": 1317
+    },
+    {
+      "source": "private-0358/SIGNATURE-REPORT.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0358/SIGNATURE-REPORT.json",
+      "sha256": "47c513c34d9d50f87c59a5e60bb4704579531d3c3daaafb7ec0aeececa64aff0",
+      "bytes": 1317
+    },
+    {
+      "source": "private-0358/SIGNER-SOURCE-REVIEW.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0358/SIGNER-SOURCE-REVIEW.json",
+      "sha256": "e893645fd68b5286e9deeb1be260e8e7785a81b4c124035d7e9cf94556d9d21f",
+      "bytes": 1229
+    },
+    {
+      "source": "private-0358/build_private_0358.py",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0358/build_private_0358.py",
+      "sha256": "6e5ee5839070f8af9451638df4e28424a4e210c4cf9369f2a2874fa145e317c6",
+      "bytes": 12178
+    },
+    {
+      "source": "private-0358/distribution/SOURCE-REVIEW.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0358/distribution/SOURCE-REVIEW.json",
+      "sha256": "3c5029dfac1c5ac6d40e8fbcc17fab46b43f3519ef26d8f629ad442f3c162037",
+      "bytes": 1263
+    },
+    {
+      "source": "private-0358/distribution/connect_qa_release_control.py",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0358/distribution/connect_qa_release_control.py",
+      "sha256": "74b36e2b85ff827b9c10cb5aa9bb9ee41e1dd8a60d95eb95ba4e0745d177fc6e",
+      "bytes": 10766
+    },
+    {
+      "source": "private-0358/distribution/serve_connect_qa_0358.py",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0358/distribution/serve_connect_qa_0358.py",
+      "sha256": "2473223e3c671d2bc4b8b84f9ec7c65c9b20df57c0fdcd7eb1076155b981def0",
+      "bytes": 9474
+    },
+    {
+      "source": "private-0358/evidence/distribution-cleanup.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0358/evidence/distribution-cleanup.json",
+      "sha256": "23ddcdf9742d54b7dd26d1821c0b672fbb54fe2cbbd9d75f8c48acdfe936877c",
+      "bytes": 308
+    },
+    {
+      "source": "private-0358/evidence/linux-upgrade-native.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0358/evidence/linux-upgrade-native.json",
+      "sha256": "be6c291e17afd5a60e109c8e6f4e8a2e63ed4cae757636edd0e8079727293794",
+      "bytes": 5976
+    },
+    {
+      "source": "private-0358/evidence/previous-0356-distribution-cleanup.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0358/evidence/previous-0356-distribution-cleanup.json",
+      "sha256": "10016565889348d17e7565187acf40df8995e9045a1d9def6e0139c71b78ad31",
+      "bytes": 264
+    },
+    {
+      "source": "private-0358/evidence/windows-temporary-trust-closed.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0358/evidence/windows-temporary-trust-closed.json",
+      "sha256": "d02466592b211a9a3ac9600f72ded7a4f9ec15cda317be3f836da4abbf32a5b2",
+      "bytes": 185
+    },
+    {
+      "source": "private-0358/evidence/windows-upgrade-native.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0358/evidence/windows-upgrade-native.json",
+      "sha256": "843383fbc3c15c518e4b565c3b1260105431aa2210aa889a23aaf30b51266202",
+      "bytes": 3088
+    },
+    {
+      "source": "private-0358/evidence/windows-workers-diagnostic.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0358/evidence/windows-workers-diagnostic.json",
+      "sha256": "8edadc7355515678505d64999be204d40c598c8d6491521b5a70a7647847553f",
+      "bytes": 6311
+    },
+    {
+      "source": "private-0358/native-linux/README.md",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0358/native-linux/README.md",
+      "sha256": "2aec0a91822634163fdab006db65f1638979d4ec16e808cfabfef443372694e4",
+      "bytes": 1709
+    },
+    {
+      "source": "private-0358/native-linux/native_private_0358_upgrade.py",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0358/native-linux/native_private_0358_upgrade.py",
+      "sha256": "a8d8ba295eabc73892f96ec2c35de3fe121fdb829d81716ba761aa639bc1817c",
+      "bytes": 34207
+    },
+    {
+      "source": "private-0358/native-linux/native_upgrade_driver.py",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0358/native-linux/native_upgrade_driver.py",
+      "sha256": "a81ded5c9e417f78c45f00717375cc21854a6228e6f4a9a24a283250f50ec716",
+      "bytes": 7473
+    },
+    {
+      "source": "private-0358/native-windows/Inspect-Private0358Workers.ps1",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0358/native-windows/Inspect-Private0358Workers.ps1",
+      "sha256": "e1e85955be171ce9883f1e9be89ab25720065e3adf3649cb6a38c6293ddfc285",
+      "bytes": 7832
+    },
+    {
+      "source": "private-0358/native-windows/Invoke-Private0358Recovery.ps1",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0358/native-windows/Invoke-Private0358Recovery.ps1",
+      "sha256": "a06f95f316b5f7f69a33fc2ad85db6731452fbbf5ee99592fd6d38320095e58c",
+      "bytes": 31365
+    },
+    {
+      "source": "private-0358/native-windows/Invoke-Private0358RunningUpdate.ps1",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0358/native-windows/Invoke-Private0358RunningUpdate.ps1",
+      "sha256": "1afa08b8d75a4ed04d043e1b7cdfc7a9d8577f0a68c0b83ad6ebd73cb26e6589",
+      "bytes": 32009
+    },
+    {
+      "source": "private-0358/native-windows/README.md",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0358/native-windows/README.md",
+      "sha256": "12c5791f7b86f74a6321e3a34525d974049fb58cf7b27a51bd855b519d4c1c4f",
+      "bytes": 4219
+    },
+    {
+      "source": "private-0358/native-windows/Recovery-Checks.ps1",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0358/native-windows/Recovery-Checks.ps1",
+      "sha256": "1b91089fb6ef8b044e5d872899c6f60313a1c6105da7fe7647b68dc3cc2b8da1",
+      "bytes": 8474
+    },
+    {
+      "source": "private-0358/native-windows/native_running_update_driver.py",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0358/native-windows/native_running_update_driver.py",
+      "sha256": "e0dd35d229e558b4bfc6aa6b2e8318599230141c74dda9ce66d284b54ee3cd44",
+      "bytes": 6442
+    },
+    {
+      "source": "private-0358/native-windows/native_upgrade_driver.py",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0358/native-windows/native_upgrade_driver.py",
+      "sha256": "969d7791cf81abc720fd7481676a354a08d9dc3089dbaf412951532465bd3049",
+      "bytes": 6334
+    },
+    {
+      "source": "private-0358/native-windows/native_workers_diagnostic_driver.py",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0358/native-windows/native_workers_diagnostic_driver.py",
+      "sha256": "7314dbf00489212ab8cf2216a8832b7f2df66dd4ad624ba6714096de97f29a65",
+      "bytes": 5935
+    },
+    {
+      "source": "private-0358/release/SHA256SUMS",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0358/release/SHA256SUMS",
+      "sha256": "2c7d47beef7e8b1117e09981f6e942d87b6cdc9561b7c95a9a2b5c9210426b7c",
+      "bytes": 334
+    },
+    {
+      "source": "private-0358/release/agent-manifest.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0358/release/agent-manifest.json",
+      "sha256": "0c48cf879e5a8e564bb6554299c940a6414da64baf3477861450c6ee18be88dd",
+      "bytes": 766
+    },
+    {
+      "source": "private-0358/release/agent-manifest.sig.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0358/release/agent-manifest.sig.json",
+      "sha256": "5735e88c87c27fdad7660751ef40e0689554c1c27c7adcc09385c0b417a6769e",
+      "bytes": 725
+    },
+    {
+      "source": "private-0358/release/release-signing-public.jwk",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0358/release/release-signing-public.jwk",
+      "sha256": "4e68608fa891f1b7a1e89c75936a089daeab0ba862a764f9bb31eca849cdfb9b",
+      "bytes": 624
+    },
+    {
+      "source": "private-0358/sign_private_commander_0358_v2.py",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0358/sign_private_commander_0358_v2.py",
+      "sha256": "5d8b7182046f2de8767ef974d19e3f6fa9077d93d7932a67749016a80b09e47c",
+      "bytes": 16097
+    },
+    {
+      "source": "private-0358/source/DERIVATION-REPORT.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0358/source/DERIVATION-REPORT.json",
+      "sha256": "b92b94ce6bd7450152416d323818109338533f129641b01f1e1c36b69cab825f",
+      "bytes": 1038
+    },
+    {
+      "source": "private-0358/source/derive_windows_0358.py",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0358/source/derive_windows_0358.py",
+      "sha256": "aec564c7b48eae176f2c6ae466de72638c22494407d50e7bfedcd6a15f619329",
+      "bytes": 7156
+    },
+    {
+      "source": "private-0358/source/windows-agent.patch",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0358/source/windows-agent.patch",
+      "sha256": "847a0337a305e3cae4ba46fd961bd27723b8fa7b39ec21493dbcaeea9545d417",
+      "bytes": 1210
+    },
+    {
+      "source": "private-0358/source/windows-agent.ps1",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0358/source/windows-agent.ps1",
+      "sha256": "bcc6538243573ce35f8ad54cb40bbe9d87c194913a54fc81241e94f5b7018f1d",
+      "bytes": 173192
+    },
+    {
+      "source": "private-0358/source/windows-installer.patch",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0358/source/windows-installer.patch",
+      "sha256": "aa3463a8a81c6f020a7ff866a8c52d34474ffe401c02deaf77b5126f8235187f",
+      "bytes": 8052
+    },
+    {
+      "source": "private-0358/source/windows.source-only-candidate.ps1",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0358/source/windows.source-only-candidate.ps1",
+      "sha256": "27c856bb2b8ce8a100d8b258c8de544d99eb076ae8a0c6494110b17574ccfbc2",
+      "bytes": 77495
+    },
+    {
+      "source": "private-0359/BUILD-REPORT.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0359/BUILD-REPORT.json",
+      "sha256": "1671a5fd91fc1f4f2d19f3f7f454031fefeaded5d072099bd33dd88447a0a896",
+      "bytes": 2184
+    },
+    {
+      "source": "private-0359/BUILDER-SOURCE-REVIEW.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0359/BUILDER-SOURCE-REVIEW.json",
+      "sha256": "917895f43ce7f52809e64a7e5e924b21e9e7453cae7af5d84a5f4c475b1dfb7f",
+      "bytes": 358
+    },
+    {
+      "source": "private-0359/README.md",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0359/README.md",
+      "sha256": "43b2e5db2a893f5da9cabb0fb32f69db0f5e35f58c8ebb12fc1465512ccb4121",
+      "bytes": 4354
+    },
+    {
+      "source": "private-0359/SIGNATURE-READBACK.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0359/SIGNATURE-READBACK.json",
+      "sha256": "15eb5783ed23bd84bbd3ecae948a0a9615c070d4560e3dead9800ffbd6c26573",
+      "bytes": 1317
+    },
+    {
+      "source": "private-0359/SIGNATURE-REPORT.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0359/SIGNATURE-REPORT.json",
+      "sha256": "15eb5783ed23bd84bbd3ecae948a0a9615c070d4560e3dead9800ffbd6c26573",
+      "bytes": 1317
+    },
+    {
+      "source": "private-0359/SIGNER-SOURCE-REVIEW.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0359/SIGNER-SOURCE-REVIEW.json",
+      "sha256": "1289ef822c0e63cb72ad006f8ddfc0e97b04c9e9b1165f9763128d281ffb79bd",
+      "bytes": 1229
+    },
+    {
+      "source": "private-0359/build_private_0359.py",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0359/build_private_0359.py",
+      "sha256": "850848dc03b4d69ef7cd119728c3b3e7501a19b9e159a23e2944042eab2d3bd4",
+      "bytes": 12203
+    },
+    {
+      "source": "private-0359/distribution/SOURCE-REVIEW.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0359/distribution/SOURCE-REVIEW.json",
+      "sha256": "8682d0b375a931256611d26f78d5a1ab49c49f2d1465b0d10369f750dedde2b7",
+      "bytes": 1242
+    },
+    {
+      "source": "private-0359/distribution/connect_qa_release_control.py",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0359/distribution/connect_qa_release_control.py",
+      "sha256": "42965e8269ca4268750c24b892a4f17717b59c34811eedd1ee7abb0cc3009f8a",
+      "bytes": 10766
+    },
+    {
+      "source": "private-0359/distribution/serve_connect_qa_0359.py",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0359/distribution/serve_connect_qa_0359.py",
+      "sha256": "f958a1894d52cbc7ef780a0d04a8c154afae2f32c969157e603b4687b84c1216",
+      "bytes": 9474
+    },
+    {
+      "source": "private-0359/evidence/distribution-cleanup.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0359/evidence/distribution-cleanup.json",
+      "sha256": "cb87019e95f7546556b8dcc9808d14565be44a2a6e2169d98331bbaf9a019b47",
+      "bytes": 308
+    },
+    {
+      "source": "private-0359/evidence/distribution-start.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0359/evidence/distribution-start.json",
+      "sha256": "c9c8cbbb81264626cb535d529431829f4febab1fc3cbfd38ae050e3204adfa28",
+      "bytes": 605
+    },
+    {
+      "source": "private-0359/evidence/linux-upgrade-native.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0359/evidence/linux-upgrade-native.json",
+      "sha256": "3a8922c41c9c0fad3461b740dda2f90fb6b7d9f55bae6a2fac91733d702630ac",
+      "bytes": 5976
+    },
+    {
+      "source": "private-0359/evidence/principal-mcp-inventory.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0359/evidence/principal-mcp-inventory.json",
+      "sha256": "afed10179ca944e87542af6f3afe3894ad04fe0d9ab5a04017ded97492bae785",
+      "bytes": 2839
+    },
+    {
+      "source": "private-0359/evidence/public-catalog-observation.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0359/evidence/public-catalog-observation.json",
+      "sha256": "739f50776538812bded2179294175fe602cf239f042c352fcbcf381c307d52e3",
+      "bytes": 1789
+    },
+    {
+      "source": "private-0359/evidence/windows-native-claims-regression.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0359/evidence/windows-native-claims-regression.json",
+      "sha256": "6087e9f333602120d58326b122441bf95cfb161e4a293627824b41dd161ef134",
+      "bytes": 1386
+    },
+    {
+      "source": "private-0359/evidence/windows-running-update-native.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0359/evidence/windows-running-update-native.json",
+      "sha256": "49a2b5f6223022241e51ba28e805e1ddc8b2b361059a66cfa92314be7f316430",
+      "bytes": 5502
+    },
+    {
+      "source": "private-0359/evidence/windows-temporary-trust-closed.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0359/evidence/windows-temporary-trust-closed.json",
+      "sha256": "40f991f199eec88b27fc9df87f998be348eedac68ba80efb5eccbed6b01aa179",
+      "bytes": 414
+    },
+    {
+      "source": "private-0359/evidence/windows-temporary-trust-start.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0359/evidence/windows-temporary-trust-start.json",
+      "sha256": "ec523ef70435b78aef9c2b7f58641101145e3c657695a3fb13c6bcbc97ecb8b1",
+      "bytes": 443
+    },
+    {
+      "source": "private-0359/evidence/windows-temporary-trust-tasks-removed.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0359/evidence/windows-temporary-trust-tasks-removed.json",
+      "sha256": "717c69f336bc3537c85ba87eccb03df0cad40398fd737b21d26283c40c82a904",
+      "bytes": 305
+    },
+    {
+      "source": "private-0359/native-linux/README.md",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0359/native-linux/README.md",
+      "sha256": "a9c1ec9d3e183cbd87b704c0c5fac09359cd15036abf97f43cf37e14ca43ab6d",
+      "bytes": 1850
+    },
+    {
+      "source": "private-0359/native-linux/native_private_0359_upgrade.py",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0359/native-linux/native_private_0359_upgrade.py",
+      "sha256": "086a5b4177d4f1553f6fa6ab5058fb46ac725e9cef9851407971bcda97c8e221",
+      "bytes": 34207
+    },
+    {
+      "source": "private-0359/native-linux/native_upgrade_driver.py",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0359/native-linux/native_upgrade_driver.py",
+      "sha256": "54e611b6efd257efd8c94fec2629440e3803a6f9f79c1c92d39a556852d41afd",
+      "bytes": 7473
+    },
+    {
+      "source": "private-0359/native-windows/Invoke-Private0359RunningUpdate.ps1",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0359/native-windows/Invoke-Private0359RunningUpdate.ps1",
+      "sha256": "f9f9399f7d05d4971c43ffee58e21a7b9ee10cf0e5a6f4a5919f16551e803b80",
+      "bytes": 33992
+    },
+    {
+      "source": "private-0359/native-windows/LOCAL-REVIEW.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0359/native-windows/LOCAL-REVIEW.json",
+      "sha256": "84602c30d29aecadcc1be1aa00f7856ab16edfbb4797fa812d5a1eb362ee7a94",
+      "bytes": 1472
+    },
+    {
+      "source": "private-0359/native-windows/Setup-Private0359TLS.ps1",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0359/native-windows/Setup-Private0359TLS.ps1",
+      "sha256": "47a3bc54f7eceae7c8ec5e037d2a65d11c93358f8c89d2d22641ce5a144a201b",
+      "bytes": 5979
+    },
+    {
+      "source": "private-0359/native-windows/Test-EmptyRelayClaims0359.ps1",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0359/native-windows/Test-EmptyRelayClaims0359.ps1",
+      "sha256": "c7b30c09eeac21894bac4733be8c1d2d0d333e4f8f67b17e81809de65cdc7e93",
+      "bytes": 13695
+    },
+    {
+      "source": "private-0359/native-windows/claims-regression-body.ps1",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0359/native-windows/claims-regression-body.ps1",
+      "sha256": "0b15039ef3ef3a9b7cc2e8aac1076bce105fd1de349ff926f7e95741c782b0bf",
+      "bytes": 7645
+    },
+    {
+      "source": "private-0359/native-windows/derive_native_running_driver.py",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0359/native-windows/derive_native_running_driver.py",
+      "sha256": "dc9090d99002bc7f6c4a0df7205a7d900df91ee6efcda1964d7bbf53534ef9be",
+      "bytes": 8714
+    },
+    {
+      "source": "private-0359/native-windows/native_claims_regression_driver.py",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0359/native-windows/native_claims_regression_driver.py",
+      "sha256": "0a01a6ca3c29e054d558607bca3d6f33764145af5d352f5b9498e2a9b23f73eb",
+      "bytes": 5925
+    },
+    {
+      "source": "private-0359/native-windows/native_running_update_driver.py",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0359/native-windows/native_running_update_driver.py",
+      "sha256": "f78e06c8cb167308fdde575d4041d81781372ff02af6cff0c20b838f34a5e6a7",
+      "bytes": 6496
+    },
+    {
+      "source": "private-0359/native-windows/native_tls_driver.py",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0359/native-windows/native_tls_driver.py",
+      "sha256": "3aaec74cebfd218127e9e6c25be53f813389bb1fa4b1faf1def15b3264cfed69",
+      "bytes": 826
+    },
+    {
+      "source": "private-0359/native-windows/running-update-driver.patch",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0359/native-windows/running-update-driver.patch",
+      "sha256": "d2ab0a67f313662ed0a66bfee1c53a6553aeccd753aa2665ee84dd91fc404e8b",
+      "bytes": 18430
+    },
+    {
+      "source": "private-0359/release/SHA256SUMS",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0359/release/SHA256SUMS",
+      "sha256": "979be7a5a54b9fc61a2347d8b783b098f3b96e3b75973e55ae80079a0f864e66",
+      "bytes": 334
+    },
+    {
+      "source": "private-0359/release/agent-manifest.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0359/release/agent-manifest.json",
+      "sha256": "efe39839596883875358cfc27cd7ec62c0d38acc3c03708df56034a82d35d7b4",
+      "bytes": 766
+    },
+    {
+      "source": "private-0359/release/agent-manifest.sig.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0359/release/agent-manifest.sig.json",
+      "sha256": "888f8674ae48e511eac9b4cc8ec1858110576af6970a6e6a7db19b585ef15ba3",
+      "bytes": 725
+    },
+    {
+      "source": "private-0359/release/release-signing-public.jwk",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0359/release/release-signing-public.jwk",
+      "sha256": "4e68608fa891f1b7a1e89c75936a089daeab0ba862a764f9bb31eca849cdfb9b",
+      "bytes": 624
+    },
+    {
+      "source": "private-0359/sign_private_commander_0359_v2.py",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0359/sign_private_commander_0359_v2.py",
+      "sha256": "11c666b82a6369b48b82270dc57e763f1fbc0b6e6418d72d6e8b7e44e1425674",
+      "bytes": 16097
+    },
+    {
+      "source": "private-0359/source/DERIVATION-REPORT.json",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0359/source/DERIVATION-REPORT.json",
+      "sha256": "e4d5ad1b39c10312737fa220633504ed74fae37af3d525b2091e96230bd3b26c",
+      "bytes": 991
+    },
+    {
+      "source": "private-0359/source/derive_windows_0359.py",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0359/source/derive_windows_0359.py",
+      "sha256": "d67a61e8f544a00544f4fec9a98f9a50f5ddf95a95c8e2bb13effa41259432e9",
+      "bytes": 3229
+    },
+    {
+      "source": "private-0359/source/windows-agent.patch",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0359/source/windows-agent.patch",
+      "sha256": "a2a345ecbff12d94b88dacdd46cdbc0ccb04d7d991234cf79fd6bab3405dc4a2",
+      "bytes": 1064
+    },
+    {
+      "source": "private-0359/source/windows-agent.ps1",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0359/source/windows-agent.ps1",
+      "sha256": "d3a4173829186e2488c2b686f5ac3ecca62c896387f55dcdfdbcdd155253ae24",
+      "bytes": 173345
+    },
+    {
+      "source": "private-0359/source/windows-installer.patch",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0359/source/windows-installer.patch",
+      "sha256": "33d8d04350a00b7ab8a6b83ada4c24cdc00f0779edda249a57bd4b0eeb15f322",
+      "bytes": 4227
+    },
+    {
+      "source": "private-0359/source/windows.source-only-candidate.ps1",
+      "destination": "apps/commander/release-candidates/commercial-connect-flow-source/private-0359/source/windows.source-only-candidate.ps1",
+      "sha256": "2f734ab8066b46cb82fc4fc9fb25244472bc829c16043cfe5f2771ae4e6d04b4",
+      "bytes": 77495
+    },
+    {
+      "source": "CLOSEOUT-20261028.md",
+      "destination": "docs/evidence/commander-commercial-056-20261023/continuation-20261027/connect-flow-20261028/CLOSEOUT-20261028.md",
+      "sha256": "3ae6ba8af8ef622ccc54988518cd9e1ce3b94e9489deef9816a7c1a217d68c2a",
+      "bytes": 11273
+    },
+    {
+      "source": "private-0357/evidence/distribution-cleanup.json",
+      "destination": "docs/evidence/commander-commercial-056-20261023/continuation-20261027/connect-flow-20261028/private-0357/evidence/distribution-cleanup.json",
+      "sha256": "d507fea485635e42d2bf0457b375a20257330a1f3ce788b402a037583490a76e",
+      "bytes": 308
+    },
+    {
+      "source": "private-0357/evidence/linux-selftest-diagnostic-1.json",
+      "destination": "docs/evidence/commander-commercial-056-20261023/continuation-20261027/connect-flow-20261028/private-0357/evidence/linux-selftest-diagnostic-1.json",
+      "sha256": "7990d54472f1cc293fa68396cbc0c3313073b3a451f3ee21341f0833a3e4c75d",
+      "bytes": 797
+    },
+    {
+      "source": "private-0357/evidence/linux-upgrade-attempt-1.json",
+      "destination": "docs/evidence/commander-commercial-056-20261023/continuation-20261027/connect-flow-20261028/private-0357/evidence/linux-upgrade-attempt-1.json",
+      "sha256": "c794ff80a1029a92dac58493c32542df426065e5260f21c30a7bd615349c5384",
+      "bytes": 6778
+    },
+    {
+      "source": "private-0357/evidence/linux-upgrade-attempt-2.json",
+      "destination": "docs/evidence/commander-commercial-056-20261023/continuation-20261027/connect-flow-20261028/private-0357/evidence/linux-upgrade-attempt-2.json",
+      "sha256": "af258ef3dc81318de18aa03db3e2421e2c084c950439e08e33a3e21f27faf9f1",
+      "bytes": 6740
+    },
+    {
+      "source": "private-0357/evidence/windows-original-recovery-attempt-1.json",
+      "destination": "docs/evidence/commander-commercial-056-20261023/continuation-20261027/connect-flow-20261028/private-0357/evidence/windows-original-recovery-attempt-1.json",
+      "sha256": "c4f8e22797a4bcb257fde2961ad4433016d60f119c530070f6f436ce1febbf89",
+      "bytes": 1080
+    },
+    {
+      "source": "private-0357/evidence/windows-startup-diagnostic-1.json",
+      "destination": "docs/evidence/commander-commercial-056-20261023/continuation-20261027/connect-flow-20261028/private-0357/evidence/windows-startup-diagnostic-1.json",
+      "sha256": "e6dfe477b247a897ac4820f1413b2a260a992e49bd79e8cbd85ad212ed3a699a",
+      "bytes": 6033
+    },
+    {
+      "source": "private-0357/evidence/windows-upgrade-attempt-1.json",
+      "destination": "docs/evidence/commander-commercial-056-20261023/continuation-20261027/connect-flow-20261028/private-0357/evidence/windows-upgrade-attempt-1.json",
+      "sha256": "cb106e59e31a0b90569e77c979239e90303d5e323fb2bab3e7ca070ae22eb2e9",
+      "bytes": 3344
+    },
+    {
+      "source": "private-0358/evidence/distribution-cleanup.json",
+      "destination": "docs/evidence/commander-commercial-056-20261023/continuation-20261027/connect-flow-20261028/private-0358/evidence/distribution-cleanup.json",
+      "sha256": "23ddcdf9742d54b7dd26d1821c0b672fbb54fe2cbbd9d75f8c48acdfe936877c",
+      "bytes": 308
+    },
+    {
+      "source": "private-0358/evidence/linux-upgrade-native.json",
+      "destination": "docs/evidence/commander-commercial-056-20261023/continuation-20261027/connect-flow-20261028/private-0358/evidence/linux-upgrade-native.json",
+      "sha256": "be6c291e17afd5a60e109c8e6f4e8a2e63ed4cae757636edd0e8079727293794",
+      "bytes": 5976
+    },
+    {
+      "source": "private-0358/evidence/previous-0356-distribution-cleanup.json",
+      "destination": "docs/evidence/commander-commercial-056-20261023/continuation-20261027/connect-flow-20261028/private-0358/evidence/previous-0356-distribution-cleanup.json",
+      "sha256": "10016565889348d17e7565187acf40df8995e9045a1d9def6e0139c71b78ad31",
+      "bytes": 264
+    },
+    {
+      "source": "private-0358/evidence/windows-temporary-trust-closed.json",
+      "destination": "docs/evidence/commander-commercial-056-20261023/continuation-20261027/connect-flow-20261028/private-0358/evidence/windows-temporary-trust-closed.json",
+      "sha256": "d02466592b211a9a3ac9600f72ded7a4f9ec15cda317be3f836da4abbf32a5b2",
+      "bytes": 185
+    },
+    {
+      "source": "private-0358/evidence/windows-upgrade-native.json",
+      "destination": "docs/evidence/commander-commercial-056-20261023/continuation-20261027/connect-flow-20261028/private-0358/evidence/windows-upgrade-native.json",
+      "sha256": "843383fbc3c15c518e4b565c3b1260105431aa2210aa889a23aaf30b51266202",
+      "bytes": 3088
+    },
+    {
+      "source": "private-0358/evidence/windows-workers-diagnostic.json",
+      "destination": "docs/evidence/commander-commercial-056-20261023/continuation-20261027/connect-flow-20261028/private-0358/evidence/windows-workers-diagnostic.json",
+      "sha256": "8edadc7355515678505d64999be204d40c598c8d6491521b5a70a7647847553f",
+      "bytes": 6311
+    },
+    {
+      "source": "private-0359/evidence/distribution-cleanup.json",
+      "destination": "docs/evidence/commander-commercial-056-20261023/continuation-20261027/connect-flow-20261028/private-0359/evidence/distribution-cleanup.json",
+      "sha256": "cb87019e95f7546556b8dcc9808d14565be44a2a6e2169d98331bbaf9a019b47",
+      "bytes": 308
+    },
+    {
+      "source": "private-0359/evidence/distribution-start.json",
+      "destination": "docs/evidence/commander-commercial-056-20261023/continuation-20261027/connect-flow-20261028/private-0359/evidence/distribution-start.json",
+      "sha256": "c9c8cbbb81264626cb535d529431829f4febab1fc3cbfd38ae050e3204adfa28",
+      "bytes": 605
+    },
+    {
+      "source": "private-0359/evidence/linux-upgrade-native.json",
+      "destination": "docs/evidence/commander-commercial-056-20261023/continuation-20261027/connect-flow-20261028/private-0359/evidence/linux-upgrade-native.json",
+      "sha256": "3a8922c41c9c0fad3461b740dda2f90fb6b7d9f55bae6a2fac91733d702630ac",
+      "bytes": 5976
+    },
+    {
+      "source": "private-0359/evidence/principal-mcp-inventory.json",
+      "destination": "docs/evidence/commander-commercial-056-20261023/continuation-20261027/connect-flow-20261028/private-0359/evidence/principal-mcp-inventory.json",
+      "sha256": "afed10179ca944e87542af6f3afe3894ad04fe0d9ab5a04017ded97492bae785",
+      "bytes": 2839
+    },
+    {
+      "source": "private-0359/evidence/public-catalog-observation.json",
+      "destination": "docs/evidence/commander-commercial-056-20261023/continuation-20261027/connect-flow-20261028/private-0359/evidence/public-catalog-observation.json",
+      "sha256": "739f50776538812bded2179294175fe602cf239f042c352fcbcf381c307d52e3",
+      "bytes": 1789
+    },
+    {
+      "source": "private-0359/evidence/windows-native-claims-regression.json",
+      "destination": "docs/evidence/commander-commercial-056-20261023/continuation-20261027/connect-flow-20261028/private-0359/evidence/windows-native-claims-regression.json",
+      "sha256": "6087e9f333602120d58326b122441bf95cfb161e4a293627824b41dd161ef134",
+      "bytes": 1386
+    },
+    {
+      "source": "private-0359/evidence/windows-running-update-native.json",
+      "destination": "docs/evidence/commander-commercial-056-20261023/continuation-20261027/connect-flow-20261028/private-0359/evidence/windows-running-update-native.json",
+      "sha256": "49a2b5f6223022241e51ba28e805e1ddc8b2b361059a66cfa92314be7f316430",
+      "bytes": 5502
+    },
+    {
+      "source": "private-0359/evidence/windows-temporary-trust-closed.json",
+      "destination": "docs/evidence/commander-commercial-056-20261023/continuation-20261027/connect-flow-20261028/private-0359/evidence/windows-temporary-trust-closed.json",
+      "sha256": "40f991f199eec88b27fc9df87f998be348eedac68ba80efb5eccbed6b01aa179",
+      "bytes": 414
+    },
+    {
+      "source": "private-0359/evidence/windows-temporary-trust-start.json",
+      "destination": "docs/evidence/commander-commercial-056-20261023/continuation-20261027/connect-flow-20261028/private-0359/evidence/windows-temporary-trust-start.json",
+      "sha256": "ec523ef70435b78aef9c2b7f58641101145e3c657695a3fb13c6bcbc97ecb8b1",
+      "bytes": 443
+    },
+    {
+      "source": "private-0359/evidence/windows-temporary-trust-tasks-removed.json",
+      "destination": "docs/evidence/commander-commercial-056-20261023/continuation-20261027/connect-flow-20261028/private-0359/evidence/windows-temporary-trust-tasks-removed.json",
+      "sha256": "717c69f336bc3537c85ba87eccb03df0cad40398fd737b21d26283c40c82a904",
+      "bytes": 305
+    }
+  ],
+  "observed_through_utc": "2026-10-28T19:13:39.994467+00:00"
+}

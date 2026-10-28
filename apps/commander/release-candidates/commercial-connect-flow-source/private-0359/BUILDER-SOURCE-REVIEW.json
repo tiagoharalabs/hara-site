@@ -1,0 +1,9 @@
+{
+  "builder_sha256": "850848dc03b4d69ef7cd119728c3b3e7501a19b9e159a23e2944042eab2d3bd4",
+  "frozen_embedded_controllers_unchanged": true,
+  "linux_agent_native_input_required": true,
+  "linux_installer_transform_pin_verified": true,
+  "native_full_build_performed": false,
+  "state": "BUILDER_SOURCE_ADMISSION_CHECKS_PASS",
+  "windows_inputs_exact": true
+}

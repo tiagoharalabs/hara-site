@@ -1,0 +1,13 @@
+{
+  "at_utc": "2026-10-28T18:33:20.253008+00:00",
+  "state": "CONNECT_QA_DISTRIBUTION_CLOSED",
+  "nft_handles_removed": [],
+  "nft_rule_absent": true,
+  "ufw_delete_codes": {
+    "192.168.252.113": null,
+    "192.168.252.130": null
+  },
+  "ufw_rule_absent": true,
+  "listener_absent": true,
+  "errors": []
+}

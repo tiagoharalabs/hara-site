@@ -1,0 +1,199 @@
+{
+  "after": {
+    "agent_preserved": true,
+    "config_preserved": true,
+    "policy_preserved": true,
+    "processes": [],
+    "runtime": {
+      "agent_version": "0.3.56",
+      "last_runtime_error_at_utc": "",
+      "last_successful_heartbeat_at_utc": "2026-10-28T18:05:38.8859802Z",
+      "metadata": {
+        "access": [
+          {
+            "inheritance": "None",
+            "inherited": true,
+            "propagation": "None",
+            "rights": "FullControl",
+            "sid": "S-1-5-21-1207901905-1500652706-889822281-1005",
+            "type": "Allow"
+          }
+        ],
+        "attributes": "Archive",
+        "bytes": 303,
+        "directory": false,
+        "group_sid": "S-1-5-21-1207901905-1500652706-889822281-513",
+        "last_write_utc": "2026-10-28T18:05:38.8973148Z",
+        "owner_sid": "S-1-5-21-1207901905-1500652706-889822281-1005",
+        "present": true,
+        "protected": false,
+        "zone_id": null
+      },
+      "started_at_utc": "2026-10-28T16:36:56.8889999Z",
+      "updated_at_utc": "2026-10-28T18:05:38.8883484Z"
+    },
+    "task": {
+      "last_result": 1,
+      "last_run_utc": "2026-10-28T18:11:54.0000000Z",
+      "missed_runs": 0,
+      "state": "Ready"
+    },
+    "task_definition_preserved": true
+  },
+  "before": {
+    "agent": {
+      "access": [
+        {
+          "inheritance": "None",
+          "inherited": true,
+          "propagation": "None",
+          "rights": "FullControl",
+          "sid": "S-1-5-21-1207901905-1500652706-889822281-1005",
+          "type": "Allow"
+        }
+      ],
+      "attributes": "Archive",
+      "bytes": 172687,
+      "directory": false,
+      "group_sid": "S-1-5-21-1207901905-1500652706-889822281-513",
+      "last_write_utc": "2026-10-28T16:36:46.4711625Z",
+      "owner_sid": "S-1-5-21-1207901905-1500652706-889822281-1005",
+      "present": true,
+      "protected": false,
+      "zone_id": null
+    },
+    "authenticated_binding": true,
+    "config": {
+      "access": [
+        {
+          "inheritance": "None",
+          "inherited": false,
+          "propagation": "None",
+          "rights": "FullControl",
+          "sid": "S-1-5-21-1207901905-1500652706-889822281-1005",
+          "type": "Allow"
+        }
+      ],
+      "attributes": "Archive",
+      "bytes": 993,
+      "directory": false,
+      "group_sid": "S-1-5-21-1207901905-1500652706-889822281-513",
+      "last_write_utc": "2026-10-28T16:36:45.1624330Z",
+      "owner_sid": "S-1-5-21-1207901905-1500652706-889822281-1005",
+      "present": true,
+      "protected": true,
+      "zone_id": null
+    },
+    "processes": [],
+    "product_root": {
+      "access": [
+        {
+          "inheritance": "ContainerInherit, ObjectInherit",
+          "inherited": false,
+          "propagation": "None",
+          "rights": "FullControl",
+          "sid": "S-1-5-21-1207901905-1500652706-889822281-1005",
+          "type": "Allow"
+        }
+      ],
+      "attributes": "Directory",
+      "directory": true,
+      "group_sid": "S-1-5-21-1207901905-1500652706-889822281-513",
+      "last_write_utc": "2026-10-28T18:05:55.8425695Z",
+      "owner_sid": "S-1-5-21-1207901905-1500652706-889822281-1005",
+      "present": true,
+      "protected": true
+    },
+    "runtime": {
+      "agent_version": "0.3.56",
+      "last_runtime_error_at_utc": "",
+      "last_successful_heartbeat_at_utc": "2026-10-28T18:05:38.8859802Z",
+      "metadata": {
+        "access": [
+          {
+            "inheritance": "None",
+            "inherited": true,
+            "propagation": "None",
+            "rights": "FullControl",
+            "sid": "S-1-5-21-1207901905-1500652706-889822281-1005",
+            "type": "Allow"
+          }
+        ],
+        "attributes": "Archive",
+        "bytes": 303,
+        "directory": false,
+        "group_sid": "S-1-5-21-1207901905-1500652706-889822281-513",
+        "last_write_utc": "2026-10-28T18:05:38.8973148Z",
+        "owner_sid": "S-1-5-21-1207901905-1500652706-889822281-1005",
+        "present": true,
+        "protected": false,
+        "zone_id": null
+      },
+      "started_at_utc": "2026-10-28T16:36:56.8889999Z",
+      "updated_at_utc": "2026-10-28T18:05:38.8883484Z"
+    },
+    "task": {
+      "last_result": 1,
+      "last_run_utc": "2026-10-28T18:11:54.0000000Z",
+      "missed_runs": 0,
+      "state": "Ready"
+    },
+    "task_events": {
+      "error_type": "System.Exception",
+      "rows": [],
+      "state": "UNAVAILABLE"
+    }
+  },
+  "child": {
+    "active_job_processes_at_observation": 0,
+    "diagnostic_job_terminated": false,
+    "exit_code": 1,
+    "exited_naturally": true,
+    "explicit_product_task_restart": false,
+    "job_assigned_before_agent_dispatch": true,
+    "job_quiescent": true,
+    "observation_limit_ms": 10000,
+    "pid": 9960,
+    "started_utc": "2026-10-28T18:24:11.0662494Z",
+    "stderr": {
+      "bytes": 579,
+      "categories": [
+        "PermissionDenied"
+      ],
+      "codes": [],
+      "error_ids": [
+        "System.Security.AccessControl.PrivilegeNotHeldException"
+      ],
+      "inspected_prefix_bytes": 579,
+      "locations": [
+        {
+          "column": 3,
+          "line": 140
+        }
+      ]
+    },
+    "stdout": {
+      "bytes": 0,
+      "categories": [],
+      "codes": [],
+      "error_ids": [],
+      "inspected_prefix_bytes": 0,
+      "locations": []
+    }
+  },
+  "credential_origin": "https://commander.haralabs.com.br",
+  "device_id": "HARA-DEVICE-a544f7b1-3ee1-49f7-aa55-f559376d5d12",
+  "diagnostic_task_exit": 0,
+  "finished_utc": "2026-10-28T18:24:13.5964596Z",
+  "installed_files_replaced": false,
+  "pairing_performed": false,
+  "policy_changed": false,
+  "private_log_directory": "C:\\Users\\CommanderQA\\AppData\\Local\\Temp\\hara-commander-connect-94f23a78d76d456ba805c21a6f158fa2",
+  "product_runtime_certified": false,
+  "product_task_changed": false,
+  "raw_logs_exported": false,
+  "schema": "hara.commander.windows-startup-diagnostic.v1",
+  "stage": "COMPLETE",
+  "started_utc": "2026-10-28T18:24:04.7994362Z",
+  "state": "DIAGNOSTIC_COMPLETE"
+}

@@ -1,0 +1,62 @@
+{
+  "artifacts": {
+    "agent/linux.py": {
+      "bytes": 265620,
+      "sha256": "df8b2d09c5447f8d405200538a841e669a8f165e9043701d6c8efcbfe5a34d38"
+    },
+    "agent/windows.ps1": {
+      "bytes": 173345,
+      "sha256": "d3a4173829186e2488c2b686f5ac3ecca62c896387f55dcdfdbcdd155253ae24"
+    },
+    "install/linux.sh": {
+      "bytes": 72524,
+      "sha256": "80732c941725e06f317ef42e878a0498d30f28bf890dd07d9a0b6a90f0cd0581"
+    },
+    "install/windows.ps1": {
+      "bytes": 77495,
+      "sha256": "2f734ab8066b46cb82fc4fc9fb25244472bc829c16043cfe5f2771ae4e6d04b4"
+    }
+  },
+  "controller_pins": {
+    "linux/commander_connect.py": "a696a233e81b1b89b536fd4097af7b571762c953e54266cba49349308db74c1d",
+    "windows/Connect-Commander.ps1": "2c2233afa8f9eba4544ca735198922dc9424657fe40108c30445339734fb04da"
+  },
+  "embedded_controllers_unchanged": true,
+  "existing_signed_release_modified": false,
+  "input_artifacts": {
+    "agent/linux.py": {
+      "bytes": 265620,
+      "sha256": "ad92b9100b9b4599fc73815a5ba44ffb665ce5c1d0973c03923f1d8d45b1d03d"
+    },
+    "agent/windows.ps1": {
+      "bytes": 173345,
+      "sha256": "d3a4173829186e2488c2b686f5ac3ecca62c896387f55dcdfdbcdd155253ae24"
+    },
+    "install/linux.sh": {
+      "bytes": 72524,
+      "sha256": "f9489f8c4647644c72ef507bd7a6dc50a11306b0e9f7858e6e424e696e4bb272"
+    },
+    "install/windows.ps1": {
+      "bytes": 77495,
+      "sha256": "2f734ab8066b46cb82fc4fc9fb25244472bc829c16043cfe5f2771ae4e6d04b4"
+    }
+  },
+  "installation_performed": false,
+  "linux_version_only_transform": true,
+  "manifest_sha256": "efe39839596883875358cfc27cd7ec62c0d38acc3c03708df56034a82d35d7b4",
+  "native_acceptance": false,
+  "private_keys_read": false,
+  "production_mutated": false,
+  "public_jwk_sha256": "4e68608fa891f1b7a1e89c75936a089daeab0ba862a764f9bb31eca849cdfb9b",
+  "schema": "hara.commander.private-0359-build.v1",
+  "signature_created": false,
+  "state": "UNSIGNED_PRIVATE_QA_CANDIDATE_BUILT",
+  "unsigned": true,
+  "version": "0.3.59",
+  "version_only_transform": false,
+  "version_replacement_counts": {
+    "agent/linux.py": 1,
+    "install/linux.sh": 8
+  },
+  "windows_reviewed_source_admitted_unchanged": true
+}

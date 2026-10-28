@@ -1,0 +1,92 @@
+{
+  "schema": "hara.commander.principal-inventory-observation.v1",
+  "observed_utc": "2026-10-28 19:13:01 UTC",
+  "read_only": true,
+  "computer_count": 9,
+  "computers": [
+    {
+      "device_id": "HARA-DEVICE-55e4939c-e1df-4d02-b8cf-3c2c853a8dc1",
+      "computer": "observer",
+      "platform": "LINUX",
+      "architecture": "aarch64",
+      "agent_version": "0.3.56",
+      "state": "ONLINE",
+      "last_seen_at_utc": "2026-10-28T19:11:27.518Z"
+    },
+    {
+      "device_id": "HARA-DEVICE-fa52063a-f963-44f5-a138-1c8ac34a6c11",
+      "computer": "storage",
+      "platform": "LINUX",
+      "architecture": "x86_64",
+      "agent_version": "0.3.56",
+      "state": "ONLINE",
+      "last_seen_at_utc": "2026-10-28T19:12:29.347Z"
+    },
+    {
+      "device_id": "HARA-DEVICE-ad55f2aa-9a83-46e1-a6ab-f78d422950fe",
+      "computer": "services",
+      "platform": "LINUX",
+      "architecture": "x86_64",
+      "agent_version": "0.3.56",
+      "state": "ONLINE",
+      "last_seen_at_utc": "2026-10-28T19:11:00.096Z"
+    },
+    {
+      "device_id": "HARA-DEVICE-f275d879-b7f9-4c77-a08f-6408ff3471c0",
+      "computer": "ninja-blue",
+      "platform": "LINUX",
+      "architecture": "x86_64",
+      "agent_version": "0.3.56",
+      "state": "ONLINE",
+      "last_seen_at_utc": "2026-10-28T19:11:31.679Z"
+    },
+    {
+      "device_id": "HARA-DEVICE-11bbcaed-a0d5-4540-9d5a-40b84f1bdf74",
+      "computer": "sentinela-c",
+      "platform": "LINUX",
+      "architecture": "x86_64",
+      "agent_version": "0.3.56",
+      "state": "ONLINE",
+      "last_seen_at_utc": "2026-10-28T19:11:24.303Z"
+    },
+    {
+      "device_id": "HARA-DEVICE-f1d9ecb6-f1e9-4867-9398-8ed10b785c5a",
+      "computer": "sentinela-b",
+      "platform": "LINUX",
+      "architecture": "x86_64",
+      "agent_version": "0.3.56",
+      "state": "ONLINE",
+      "last_seen_at_utc": "2026-10-28T19:12:19.815Z"
+    },
+    {
+      "device_id": "HARA-DEVICE-1cb60bbf-5c30-43ab-8e05-5b414b190749",
+      "computer": "sentinela-a",
+      "platform": "LINUX",
+      "architecture": "x86_64",
+      "agent_version": "0.3.56",
+      "state": "ONLINE",
+      "last_seen_at_utc": "2026-10-28T19:12:20.046Z"
+    },
+    {
+      "device_id": "HARA-DEVICE-e1aeceb4-0a90-411e-badc-90716260f5e0",
+      "computer": "sentinela-d",
+      "platform": "LINUX",
+      "architecture": "x86_64",
+      "agent_version": "0.3.56",
+      "state": "ONLINE",
+      "last_seen_at_utc": "2026-10-28T19:11:38.799Z"
+    },
+    {
+      "device_id": "HARA-DEVICE-e032ffff-f2d2-43ad-b2a8-f5385a900f62",
+      "computer": "nucleo-a",
+      "platform": "LINUX",
+      "architecture": "x86_64",
+      "agent_version": "0.3.56",
+      "state": "ONLINE",
+      "last_seen_at_utc": "2026-10-28T19:11:23.130Z"
+    }
+  ],
+  "qa_windows_present": false,
+  "qa_linux_present": false,
+  "qa_binding_mutated": false
+}

@@ -1,0 +1,35 @@
+{
+  "artifacts": {
+    "agent/linux.py": {
+      "bytes": 265620,
+      "sha256": "c63cf76c3953e029f650227ec25cc167a95f93f145ef3c41f0379d07cc1b007d"
+    },
+    "agent/windows.ps1": {
+      "bytes": 173192,
+      "sha256": "bcc6538243573ce35f8ad54cb40bbe9d87c194913a54fc81241e94f5b7018f1d"
+    },
+    "install/linux.sh": {
+      "bytes": 72524,
+      "sha256": "1e900f9d9accb11635cb2d5e8a2a7a1ad12b83fae644afde696c7f42a4f44bcd"
+    },
+    "install/windows.ps1": {
+      "bytes": 77495,
+      "sha256": "27c856bb2b8ce8a100d8b258c8de544d99eb076ae8a0c6494110b17574ccfbc2"
+    }
+  },
+  "ast_equal_except": [
+    "module_docstring",
+    "VERSION",
+    "MANIFEST_SHA256",
+    "ARTIFACT_SHA256"
+  ],
+  "manifest_sha256": "0c48cf879e5a8e564bb6554299c940a6414da64baf3477861450c6ee18be88dd",
+  "previous_signer_sha256": "f4f5e2d56140445e3a124b96fce47fe6d4eb783e16ea592e5168469088668137",
+  "private_key_accessed": false,
+  "private_key_custody_guards_unchanged": true,
+  "public_key_trust_pin_unchanged": true,
+  "schema": "hara.commander.private-0358-signer-source-review.v1",
+  "signature_created": false,
+  "signer_sha256": "5d8b7182046f2de8767ef974d19e3f6fa9077d93d7932a67749016a80b09e47c",
+  "state": "PINNED_SIGNER_SOURCE_REVIEWED"
+}

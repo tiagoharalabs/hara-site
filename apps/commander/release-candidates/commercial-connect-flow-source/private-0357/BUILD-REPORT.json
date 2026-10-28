@@ -1,0 +1,62 @@
+{
+  "artifacts": {
+    "agent/linux.py": {
+      "bytes": 265620,
+      "sha256": "79c7a7ac51432158ea503dbaf3830d41f1e30deb8585513a7d0e504aed9fbe13"
+    },
+    "agent/windows.ps1": {
+      "bytes": 172687,
+      "sha256": "3552947e632ba16eb0a1384b8e6b0d3a84d507bbe156ff1bb4db360c212895b7"
+    },
+    "install/linux.sh": {
+      "bytes": 72524,
+      "sha256": "2b11dd4cb5219d64692d9df764544752c04f4cb2518742d5c54a3f631178cbed"
+    },
+    "install/windows.ps1": {
+      "bytes": 76549,
+      "sha256": "cc6234d0d51e853d9b1a897d496038ceba8b9164d318a70d98f62a7bae3c07ff"
+    }
+  },
+  "controller_pins": {
+    "linux/commander_connect.py": "a696a233e81b1b89b536fd4097af7b571762c953e54266cba49349308db74c1d",
+    "windows/Connect-Commander.ps1": "2c2233afa8f9eba4544ca735198922dc9424657fe40108c30445339734fb04da"
+  },
+  "embedded_controllers_unchanged": true,
+  "existing_signed_release_modified": false,
+  "input_artifacts": {
+    "agent/linux.py": {
+      "bytes": 265620,
+      "sha256": "ad92b9100b9b4599fc73815a5ba44ffb665ce5c1d0973c03923f1d8d45b1d03d"
+    },
+    "agent/windows.ps1": {
+      "bytes": 172687,
+      "sha256": "a44e2f7c7ce75cf2cff0e60886fce60bd999b9e4cea22e5baa24619d9ee27620"
+    },
+    "install/linux.sh": {
+      "bytes": 72524,
+      "sha256": "f9489f8c4647644c72ef507bd7a6dc50a11306b0e9f7858e6e424e696e4bb272"
+    },
+    "install/windows.ps1": {
+      "bytes": 76549,
+      "sha256": "68f0a76958e14f8f2830b6eb68d748bbad41e662b27b381dbf3a69e78bca03fd"
+    }
+  },
+  "installation_performed": false,
+  "manifest_sha256": "d1a9361f5edec6c926d6febc7990e9b0c00df28f5131c6ffe1146ebe348554d0",
+  "native_acceptance": false,
+  "private_keys_read": false,
+  "production_mutated": false,
+  "public_jwk_sha256": "4e68608fa891f1b7a1e89c75936a089daeab0ba862a764f9bb31eca849cdfb9b",
+  "schema": "hara.commander.private-0357-build.v1",
+  "signature_created": false,
+  "state": "UNSIGNED_PRIVATE_QA_CANDIDATE_BUILT",
+  "unsigned": true,
+  "version": "0.3.57",
+  "version_only_transform": true,
+  "version_replacement_counts": {
+    "agent/linux.py": 1,
+    "agent/windows.ps1": 1,
+    "install/linux.sh": 8,
+    "install/windows.ps1": 5
+  }
+}

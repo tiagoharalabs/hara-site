@@ -1,0 +1,27 @@
+--- frozen-source
++++ private-0358/windows-agent.patch
+@@ -11,7 +11,7 @@
+ $OperationsDb = Join-Path $Root "operations.sqlite3"
+ $AgentTaskName = "HARA Commander Agent"
+ $SessionMaxHours = 12
+-$AgentVersion = "0.3.56"
++$AgentVersion = "0.3.58"
+ $SloProfile = "INTERNAL_BETA_V1"
+ $SloMinSuccessPercent = 99.0
+ $SloP50MaxMs = 1000
+@@ -137,7 +137,14 @@
+     $rule=New-Object Security.AccessControl.FileSystemAccessRule($sid,'FullControl',$inherit,[Security.AccessControl.PropagationFlags]::None,[Security.AccessControl.AccessControlType]::Allow)
+     $acl.SetAccessRule($rule)
+   }
+-  Set-Acl -LiteralPath $folder -AclObject $acl
++  # Persist only the DACL. Reapplying owner/group from Get-Acl can demand
++  # SeRestorePrivilege on an existing enrollment directory in a limited session.
++  # The intended protected QA/SYSTEM access rules above remain unchanged.
++  $accessOnly=New-Object Security.AccessControl.DirectorySecurity
++  $accessOnly.SetSecurityDescriptorSddlForm(
++    $acl.GetSecurityDescriptorSddlForm([Security.AccessControl.AccessControlSections]::Access),
++    [Security.AccessControl.AccessControlSections]::Access)
++  [IO.Directory]::SetAccessControl($folder,$accessOnly)
+   return $context
+ }
+ 

@@ -1,0 +1,55 @@
+{
+  "schema": "hara.commander.windows-empty-claims-regression.v1",
+  "state": "PASS_NATIVE_EMPTY_CLAIMS_REGRESSION",
+  "started_utc": "2026-10-28T19:03:20.4620346Z",
+  "native_powershell_binding_and_json": true,
+  "process_constructor_mocked": true,
+  "database_mocked": true,
+  "network_calls": 0,
+  "product_files_changed": false,
+  "cases": [
+    {
+      "state": "PASS",
+      "name": "legacy_empty_executor_becomes_null_claim_and_is_rejected"
+    },
+    {
+      "state": "PASS",
+      "name": "candidate_empty_executor_preserves_empty_array"
+    },
+    {
+      "state": "PASS",
+      "name": "candidate_empty_heartbeat_preserves_empty_array"
+    },
+    {
+      "state": "PASS",
+      "name": "candidate_empty_alerts_preserves_empty_array"
+    },
+    {
+      "state": "PASS",
+      "name": "candidate_preserves_1_real_claims"
+    },
+    {
+      "state": "PASS",
+      "name": "candidate_preserves_2_real_claims"
+    },
+    {
+      "state": "PASS",
+      "name": "candidate_preserves_and_rejects_malformed_null_claim"
+    },
+    {
+      "state": "PASS",
+      "name": "invalid_fingerprint_still_rejected"
+    },
+    {
+      "state": "PASS",
+      "name": "missing_call_id_still_rejected"
+    },
+    {
+      "state": "PASS",
+      "name": "oversized_request_id_still_rejected"
+    }
+  ],
+  "passed": 10,
+  "finished_utc": "2026-10-28T19:03:21.4753867Z",
+  "diagnostic_task_exit": 0
+}

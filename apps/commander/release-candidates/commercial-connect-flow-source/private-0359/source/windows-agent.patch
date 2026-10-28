@@ -1,0 +1,23 @@
+--- frozen-0358
++++ private-0359/windows-agent.patch
+@@ -11,7 +11,7 @@
+ $OperationsDb = Join-Path $Root "operations.sqlite3"
+ $AgentTaskName = "HARA Commander Agent"
+ $SessionMaxHours = 12
+-$AgentVersion = "0.3.58"
++$AgentVersion = "0.3.59"
+ $SloProfile = "INTERNAL_BETA_V1"
+ $SloMinSuccessPercent = 99.0
+ $SloP50MaxMs = 1000
+@@ -2856,7 +2856,10 @@
+   $State.children.Remove($Role);return $true
+ }
+ function Start-WindowsRelayChild($State,$Cfg,[string]$Role,[double]$Now) {
+-  $seeds=if($Role -ceq 'executor'){@($State.abandoned.Values)}else{@()}
++  # An empty if-output becomes null at the next function boundary.
++  # Keep an actual array so the handshake carries [] instead of [null].
++  [object[]]$seeds=@()
++  if($Role -ceq 'executor'){$seeds=@($State.abandoned.Values)}
+   $wakeName=if($State.eventV2Wake){[string]$State.eventV2Wake.name}else{$null}
+   $process=Start-WindowsRelayProcess $Role $Cfg $seeds $State.agentPath $wakeName
+   $State.children[$Role]=@{process=$process;deadline=$Now+35.0;ready=$false;networkBackoff=$false;call=$null;fenced=$false}

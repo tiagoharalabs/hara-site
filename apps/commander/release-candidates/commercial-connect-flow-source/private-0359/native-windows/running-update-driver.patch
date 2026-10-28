@@ -1,0 +1,216 @@
+--- frozen0358
++++ 0359
+@@ -1,4 +1,4 @@
+-# One controlled same-signed-.58 update with an already-running QA Agent.
++# One controlled signed .58 to .59 update with an already-running QA Agent.
+ # interactive, limited Windows PowerShell 5.1 session. No pairing action allowed.
+ [CmdletBinding()]
+ param([Parameter(Mandatory=$true)][string]$NativeReceiptPath)
+@@ -6,25 +6,27 @@
+ $nuSid='S-1-5-21-1207901905-1500652706-889822281-1005'
+ $nuDevice='HARA-DEVICE-a544f7b1-3ee1-49f7-aa55-f559376d5d12'
+ $nuOrigin='https://commander.haralabs.com.br'
+-$nuRelease='https://192.168.10.23:18445/releases/0.3.58'
++$nuRelease='https://192.168.10.23:18446/releases/0.3.59'
+ $nuController='C:\Users\CommanderQA\Desktop\HARA Commander Conexao QA\Connect-Commander.ps1'
+ $nuControllerSha='2c2233afa8f9eba4544ca735198922dc9424657fe40108c30445339734fb04da'
+ $nuOldAgentSha='bcc6538243573ce35f8ad54cb40bbe9d87c194913a54fc81241e94f5b7018f1d'
+ $nuLegacyRollbackSha='a44e2f7c7ce75cf2cff0e60886fce60bd999b9e4cea22e5baa24619d9ee27620'
+-$nuTargetAgentSha='bcc6538243573ce35f8ad54cb40bbe9d87c194913a54fc81241e94f5b7018f1d'
+-$nuTargetInstallerSha='27c856bb2b8ce8a100d8b258c8de544d99eb076ae8a0c6494110b17574ccfbc2'
+-$nuManifestSha='0c48cf879e5a8e564bb6554299c940a6414da64baf3477861450c6ee18be88dd'
++$nuTargetAgentSha='d3a4173829186e2488c2b686f5ac3ecca62c896387f55dcdfdbcdd155253ae24'
++$nuTargetInstallerSha='2f734ab8066b46cb82fc4fc9fb25244472bc829c16043cfe5f2771ae4e6d04b4'
++$nuManifestSha='efe39839596883875358cfc27cd7ec62c0d38acc3c03708df56034a82d35d7b4'
++$nuSignatureSha='888f8674ae48e511eac9b4cc8ec1858110576af6970a6e6a7db19b585ef15ba3'
++$nuDistributionDeadline=[DateTimeOffset]::Parse('2026-10-28T19:35:00Z')
+ $nuResultsRoot='C:\ProgramData\HARA-QA\windows-install-0356-20261028\results'
+ $nuContext=$null;$nuBefore=$null;$nuPrivate=$null;$nuGuard=$null;$nuOriginalFunctions=@{}
+ $script:NUUpdateInvocations=0;$script:NUPairingBlocked=0;$script:NUUpdaterStarted=$null
+ $script:NUSignedReleaseVerified=$false;$script:NUChild=$null;$script:NURecoveryStarted=$null
+ $nuReport=[ordered]@{
+-  schema='hara.commander.windows-private-0358-running-update.v1';started_utc=[DateTime]::UtcNow.ToString('o');
++  schema='hara.commander.windows-private-0359-running-update.v1';started_utc=[DateTime]::UtcNow.ToString('o');
+   state='HOLD';stage='IDENTITY';device_id=$nuDevice;credential_origin=$nuOrigin;
+   artifact_release_base=$nuRelease;artifact_source='EXPLICIT_PRIVATE_SIGNED_RELEASE';
+   expected_agent_sha256=$nuTargetAgentSha;expected_installer_sha256=$nuTargetInstallerSha;
+   expected_manifest_sha256=$nuManifestSha;public_distribution_changed=$false;
+-  pairing_permitted=$false;device_token_exposed=$false;optional_rollback_performed=$false;update_path='EXPLICIT_SAME_SIGNED_VERSION_RUNNING_UPDATE';automatic_upgrade_claimed=$false
++  pairing_permitted=$false;device_token_exposed=$false;optional_rollback_performed=$false;update_path='EXPLICIT_SIGNED_0358_TO_0359_RUNNING_UPDATE';automatic_upgrade_claimed=$false
+ }
+ function Need-NU([bool]$Condition,[string]$Code){if(-not $Condition){throw $Code}}
+ function Code-NU($Failure){
+@@ -94,7 +96,7 @@
+     $heartbeat=[DateTimeOffset]::Parse($runtime.heartbeat_utc)
+     $value.runtime_recent=($heartbeat -ge [DateTimeOffset]::UtcNow.AddSeconds(-90) -and $heartbeat -le [DateTimeOffset]::UtcNow.AddSeconds(5) -and $runtime.version -ceq $current.Version)
+     if($value.device_matches -and $value.config_bytes_preserved -and $value.approval_mode_preserved -and $value.task_running -and $value.task_definition_preserved -and $value.policy_preserved -and $value.commander_environment_preserved -and $value.authenticated_binding -and $value.runtime_recent){
+-      if($current.Version -ceq '0.3.58' -and $current.AgentSha -ceq $nuTargetAgentSha){$value.state='TARGET_INSTALLED_AND_CONNECTED'}
++      if($current.Version -ceq '0.3.59' -and $current.AgentSha -ceq $nuTargetAgentSha){$value.state='TARGET_INSTALLED_AND_CONNECTED'}
+     }
+   }catch{$value.error_code=Code-NU $_}
+   return [pscustomobject]$value
+@@ -103,7 +105,7 @@
+ function Import-NUAgentFunctions([byte[]]$Bytes,[string[]]$Names){
+   $tokens=$null;$errors=$null
+   $ast=[Management.Automation.Language.Parser]::ParseInput([Text.Encoding]::UTF8.GetString($Bytes),[ref]$tokens,[ref]$errors)
+-  Need-NU ($errors.Count -eq 0) 'VERIFIED_0358_AGENT_PARSE_FAILED'
++  Need-NU ($errors.Count -eq 0) 'VERIFIED_0359_AGENT_PARSE_FAILED'
+   foreach($name in $Names){
+     $nodes=@($ast.FindAll({param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst]},$true)|Where-Object {$_.Name -ceq $name})
+     Need-NU ($nodes.Count -eq 1) 'AGENT_FUNCTION_EXTRACTION_AMBIGUOUS'
+@@ -155,7 +157,7 @@
+     }
+   }
+ }
+-function WorkerSnapshot-NU {
++function WorkerSnapshot-NU([switch]$ObserveBefore) {
+   $all=@(Get-CimInstance -ClassName Win32_Process -Filter "Name = 'powershell.exe'" -OperationTimeoutSec 5)
+   $matched=@($all|Where-Object {([string]$_.CommandLine).Contains($nuContext.AgentPath)})
+   $main=@($matched|Where-Object {-not ([string]$_.CommandLine).Contains('--relay-worker')})
+@@ -172,7 +174,11 @@
+       $result.workers[$role]=@{pid=[int]$row.ProcessId;created_utc=$row.CreationDate.ToUniversalTime().ToString('o')}
+     }
+   }
++  if($ObserveBefore){
++    Need-NU ($result.workers.Count -ge 2 -and $result.workers.Count -le 3 -and $result.workers.ContainsKey('heartbeat') -and $result.workers.ContainsKey('alerts')) 'EXPECTED_KNOWN_BEFORE_WORKER_STATE_REQUIRED'
++  }else{
+   Need-NU ($result.workers.Count -eq 3 -and $result.workers.ContainsKey('heartbeat') -and $result.workers.ContainsKey('executor') -and $result.workers.ContainsKey('alerts')) 'THREE_RELAY_WORKERS_REQUIRED'
++  }
+   return [pscustomobject]$result
+ }
+ function RecoveryOutbox-NU([byte[]]$AgentBytes){
+@@ -185,10 +191,11 @@
+   Assert-CCOwnedFile $database $nuSid
+   $blocked=@([HaraWinSqlite]::QueryReadOnly($database,"SELECT 1 AS n FROM recovery_meta WHERE key='access_denied'",@()))
+   $counts=@([HaraWinSqlite]::QueryReadOnly($database,'SELECT state,count(*) AS n FROM recovery_events GROUP BY state',@()))
++  $blockedEvents=@([HaraWinSqlite]::QueryReadOnly($database,"SELECT event_id,worker,health,at_utc,created_ms,attempts,next_ms,server_event_id FROM recovery_events WHERE state='BLOCKED_AUTH' ORDER BY ordinal DESC LIMIT 4",@()))
+   $floor=[long]([DateTimeOffset]$script:NURecoveryStarted).ToUnixTimeMilliseconds()
+   $recent=@([HaraWinSqlite]::QueryReadOnly($database,"SELECT worker,health,state,at_utc FROM recovery_events WHERE created_ms>=? ORDER BY ordinal DESC LIMIT 24",@($floor)))
+   $bad=@($recent|Where-Object {[string]$_.health -cin @('STALLED','DEGRADED')})
+-  return [pscustomobject]@{access_blocked=($blocked.Count -gt 0);counts=$counts;new_health_events=$recent;new_stalled_or_degraded=($bad.Count -gt 0);read_only=$true}
++  return [pscustomobject]@{access_blocked=($blocked.Count -gt 0);counts=$counts;blocked_auth_events=$blockedEvents;new_health_events=$recent;new_stalled_or_degraded=($bad.Count -gt 0);read_only=$true}
+ }
+ function Confirm-NUWorkers([byte[]]$AgentBytes){
+   $clock=[Diagnostics.Stopwatch]::StartNew();$first=$null
+@@ -205,8 +212,7 @@
+     Need-NU ([string](Get-CCTask $nuContext).State -ceq 'Running') 'PRODUCT_TASK_STOPPED_DURING_ACCEPTANCE'
+   }
+   $outbox=RecoveryOutbox-NU $AgentBytes
+-  Need-NU (-not $outbox.access_blocked -and -not $outbox.new_stalled_or_degraded) 'RECOVERY_OUTBOX_HEALTH_HOLD'
+-  return [pscustomobject]@{state='PASS_THREE_STABLE_WORKERS_AND_OUTBOX';stable_seconds=[int]$stable.Elapsed.TotalSeconds;snapshot=$first;outbox=$outbox;functional_executor_command='PENDING_ROOT_COMMANDER_PROBE';alerts_network_ack=$(if(@($outbox.counts|Where-Object {[string]$_.state -ceq 'PERSISTED' -and [long]$_.n -gt 0}).Count){'PERSISTED_EVENTS_OBSERVED'}else{'NO_PENDING_EVENT_REQUIRED'})}
++  return [pscustomobject]@{state='THREE_STABLE_WORKERS_OBSERVED';stable_seconds=[int]$stable.Elapsed.TotalSeconds;snapshot=$first;outbox=$outbox;functional_executor_command='PENDING_ROOT_COMMANDER_PROBE';alerts_network_ack='NOT_TESTED';historical_persisted_count=@($outbox.counts|Where-Object {[string]$_.state -ceq 'PERSISTED'})}
+ }
+ 
+ try{
+@@ -228,6 +234,7 @@
+   $nuPolicyBefore=Policy-NU;$nuPolicyBeforeJson=$nuPolicyBefore|ConvertTo-Json -Compress
+   Need-NU ($nuPolicyBefore.CurrentUser -ceq 'RemoteSigned' -and $nuPolicyBefore.effective -ceq 'RemoteSigned' -and $nuPolicyBefore.Process -ceq 'Undefined') 'EXPECTED_EXECUTION_POLICY_REQUIRED'
+   $nuEnvironmentBefore=Environment-NU
++  Need-NU ([DateTimeOffset]::UtcNow -lt $nuDistributionDeadline.AddMinutes(-4)) 'PRIVATE_DISTRIBUTION_WINDOW_TOO_SHORT'
+   Checkpoint-NU 'PREIMAGE'
+   $nuBefore=Get-CCInstalledState $nuContext
+   Need-NU ($nuBefore.ConfigPresent -and $nuBefore.DeviceId -ceq $nuDevice -and $nuBefore.Origin -ceq $nuOrigin) 'EXPECTED_EXISTING_DEVICE_REQUIRED'
+@@ -245,20 +252,21 @@
+   function script:Get-CCPublicBytes([string]$Uri,[int]$Maximum=2097152){
+     Need-NU ($Uri -cin @(($nuRelease+'/release/agent-manifest.json'),($nuRelease+'/release/agent-manifest.sig.json'),($nuRelease+'/agent/windows.ps1'),($nuRelease+'/install/windows.ps1'))) 'UNEXPECTED_RELEASE_DOWNLOAD_URI'
+     $bytes=& ($nuOriginalFunctions['Get-CCPublicBytes']) $Uri $Maximum
+-    if($Uri -ceq ($nuRelease+'/release/agent-manifest.json')){Need-NU ((Get-CCSha $bytes) -ceq $nuManifestSha) 'EXPECTED_0358_MANIFEST_HASH_REQUIRED'}
++    if($Uri -ceq ($nuRelease+'/release/agent-manifest.json')){Need-NU ((Get-CCSha $bytes) -ceq $nuManifestSha) 'EXPECTED_0359_MANIFEST_HASH_REQUIRED'}
++    if($Uri -ceq ($nuRelease+'/release/agent-manifest.sig.json')){Need-NU ((Get-CCSha $bytes) -ceq $nuSignatureSha) 'EXPECTED_0359_SIGNATURE_HASH_REQUIRED'}
+     return ,$bytes
+   }
+   function script:Get-CCRelease($Context,[string]$Origin){
+     Need-NU ($Origin -ceq $nuOrigin -and $Context.QaReleaseBase -ceq $nuRelease) 'CREDENTIAL_AND_RELEASE_SCOPE_MISMATCH'
+     $release=& ($nuOriginalFunctions['Get-CCRelease']) $Context $Origin
+-    Need-NU ($release.Version -ceq '0.3.58' -and $release.BaseUrl -ceq $nuRelease -and $release.AgentSha -ceq $nuTargetAgentSha -and $release.InstallerSha -ceq $nuTargetInstallerSha -and $release.AgentBytes.Length -eq 173192) 'EXPECTED_SIGNED_0358_RELEASE_REQUIRED'
++    Need-NU ($release.Version -ceq '0.3.59' -and $release.BaseUrl -ceq $nuRelease -and $release.AgentSha -ceq $nuTargetAgentSha -and $release.InstallerSha -ceq $nuTargetInstallerSha -and $release.AgentBytes.Length -eq 173345) 'EXPECTED_SIGNED_0359_RELEASE_REQUIRED'
+     $script:NUSignedReleaseVerified=$true
+     return $release
+   }
+   function script:Ensure-CCRuntime($Context,$State){
+     # The signed update owns its own task restart/rollback. This QA observer
+     # deliberately never starts a stopped task, including on failure recovery.
+-    $floor=if($State.Version -ceq '0.3.58' -and $script:NUUpdaterStarted){[DateTimeOffset]$script:NUUpdaterStarted}else{[DateTimeOffset]::UtcNow.AddSeconds(-90)}
++    $floor=if($State.Version -ceq '0.3.59' -and $script:NUUpdaterStarted){[DateTimeOffset]$script:NUUpdaterStarted}else{[DateTimeOffset]::UtcNow.AddSeconds(-90)}
+     $clock=[Diagnostics.Stopwatch]::StartNew()
+     while($clock.Elapsed.TotalSeconds -lt 90){
+       Need-NU ([string](Get-CCTask $Context).State -ceq 'Running') 'READONLY_RUNTIME_TASK_NOT_RUNNING'
+@@ -285,15 +293,16 @@
+     Need-NU ([Convert]::ToBase64String([IO.File]::ReadAllBytes($Context.ConfigPath)) -ceq [Convert]::ToBase64String($nuConfigBefore)) 'PREUPDATE_CONFIGURATION_CHANGED'
+     $dispatchState=Get-CCInstalledState $Context
+     Need-NU ($dispatchState.Version -ceq '0.3.58' -and $dispatchState.AgentSha -ceq $nuOldAgentSha -and $dispatchState.TaskState -ceq 'Running') 'PREUPDATE_INSTALLED_STATE_CHANGED'
+-    Need-NU ($Release.Version -ceq '0.3.58' -and $Release.AgentSha -ceq $nuTargetAgentSha -and $Release.InstallerSha -ceq $nuTargetInstallerSha) 'UPGRADE_TARGET_PIN_MISMATCH'
++    Need-NU ($Release.Version -ceq '0.3.59' -and $Release.AgentSha -ceq $nuTargetAgentSha -and $Release.InstallerSha -ceq $nuTargetInstallerSha) 'UPGRADE_TARGET_PIN_MISMATCH'
+     Need-NU ((Get-CCFileSha ($Context.AgentPath+'.rollback')) -ceq $nuLegacyRollbackSha -and (Get-CCFileSha $nuLegacyRollbackPrivate) -ceq $nuLegacyRollbackSha) 'LEGACY_ROLLBACK_PREIMAGE_CHANGED'
++    Need-NU ([DateTimeOffset]::UtcNow -lt $nuDistributionDeadline.AddMinutes(-3)) 'PRIVATE_DISTRIBUTION_WINDOW_TOO_SHORT'
+     $script:NUUpdateInvocations++
+-    $installerPath=Join-Path $nuPrivate 'verified-update-0358.ps1'
++    $installerPath=Join-Path $nuPrivate 'verified-update-0359.ps1'
+     [IO.File]::WriteAllBytes($installerPath,$Release.InstallerBytes)
+-    Need-NU ((Get-CCFileSha $installerPath) -ceq $nuTargetInstallerSha) 'STAGED_0358_INSTALLER_MISMATCH'
++    Need-NU ((Get-CCFileSha $installerPath) -ceq $nuTargetInstallerSha) 'STAGED_0359_INSTALLER_MISMATCH'
+     $tokens=$null;$errors=$null
+     [Management.Automation.Language.Parser]::ParseFile($installerPath,[ref]$tokens,[ref]$errors)|Out-Null
+-    Need-NU ($errors.Count -eq 0) 'STAGED_0358_INSTALLER_SYNTAX_INVALID'
++    Need-NU ($errors.Count -eq 0) 'STAGED_0359_INSTALLER_SYNTAX_INVALID'
+     $process=New-Object Diagnostics.Process
+     $process.StartInfo.FileName=$Context.PowerShellExe
+     $process.StartInfo.Arguments='-NoLogo -NoProfile -NonInteractive -File "'+$installerPath+'" -Action update'
+@@ -330,6 +339,10 @@
+     }finally{
+       # Do not kill a signed updater halfway through its transaction. The root
+       # operator monitors the scheduled task and these bounded progress receipts.
++      if($script:NUChild){
++        while(-not $process.HasExited){[void]$process.WaitForExit(1000)}
++        if($stdoutCopy){[void]$stdoutCopy.Wait(5000)};if($stderrCopy){[void]$stderrCopy.Wait(5000)}
++      }
+       if($stdoutFile){$stdoutFile.Dispose()};if($stderrFile){$stderrFile.Dispose()}
+       $script:NUChild=$null;$process.Dispose()
+     }
+@@ -353,11 +366,14 @@
+   Need-NU ((Get-CCFileSha $nuLegacyRollbackPrivate) -ceq $nuLegacyRollbackSha) 'PRIVATE_LEGACY_ROLLBACK_COPY_FAILED'
+   $nuReport.legacy_0356_rollback_preserved_private=$true
+   $nuReport.legacy_rollback_sha256=$nuLegacyRollbackSha
+-  Checkpoint-NU 'SIGNED_SAME_VERSION_UPDATE_WHILE_RUNNING'
++  $nuReport.before.relay_snapshot=WorkerSnapshot-NU -ObserveBefore
++  $script:NURecoveryStarted=[DateTime]::UtcNow
++  $nuReport.before.outbox=RecoveryOutbox-NU $nuReleaseData.AgentBytes
++  Checkpoint-NU 'SIGNED_0358_TO_0359_UPDATE_WHILE_RUNNING'
+   Invoke-CCInstaller $nuContext $nuBefore $nuReleaseData 'update'
+   $nuUpdated=Get-CCInstalledState $nuContext
+   Assert-CCEnrollmentPreserved $nuBefore $nuUpdated
+-  Need-NU ($nuUpdated.Version -ceq '0.3.58' -and $nuUpdated.AgentSha -ceq $nuTargetAgentSha -and $nuUpdated.TaskState -ceq 'Running') 'EXPECTED_TARGET_RUNNING_UPDATE_REQUIRED'
++  Need-NU ($nuUpdated.Version -ceq '0.3.59' -and $nuUpdated.AgentSha -ceq $nuTargetAgentSha -and $nuUpdated.TaskState -ceq 'Running') 'EXPECTED_TARGET_RUNNING_UPDATE_REQUIRED'
+   Need-NU ((Export-ScheduledTask -TaskName $nuContext.TaskName -TaskPath '\') -ceq $nuTaskXmlBefore -and (Policy-NU|ConvertTo-Json -Compress) -ceq $nuPolicyBeforeJson -and (Environment-NU) -ceq $nuEnvironmentBefore) 'RUNNING_UPDATE_PRESERVATION_FAILED'
+   Need-NU ((Get-CCFileSha ($nuContext.AgentPath+'.rollback')) -ceq $nuOldAgentSha -and (Get-CCFileSha $nuLegacyRollbackPrivate) -ceq $nuLegacyRollbackSha) 'RUNNING_UPDATE_ROLLBACK_PREIMAGES_REQUIRED'
+   $nuReport.installer_completed_running_task_restart=$true
+@@ -368,6 +384,7 @@
+   Need-NU ((Test-CCCredential $nuUpdated) -ceq 'VALID') 'UPDATED_AGENT_AUTH_UNCONFIRMED'
+   Checkpoint-NU 'RELAY_WORKER_HEALTH_ACCEPTANCE'
+   $nuReport.relay_health=Confirm-NUWorkers $nuReleaseData.AgentBytes
++  Need-NU (-not $nuReport.relay_health.outbox.new_stalled_or_degraded) 'NEW_RELAY_HEALTH_FAILURE_AFTER_UPDATE'
+   $nuEnrollmentAclAfter=DirectoryAcl-NU $nuEnrollmentFolder
+   $nuReport.actual_enrollment_acl=[ordered]@{owner_preserved=($nuEnrollmentAclAfter.owner -ceq $nuEnrollmentAclBefore.owner);group_preserved=($nuEnrollmentAclAfter.group -ceq $nuEnrollmentAclBefore.group);protected=$nuEnrollmentAclAfter.protected;exact_dacl_preserved=($nuEnrollmentAclAfter.dacl_base64 -ceq $nuEnrollmentAclBefore.dacl_base64 -and $nuEnrollmentAclAfter.flags -eq $nuEnrollmentAclBefore.flags)}
+   Need-NU ($nuReport.actual_enrollment_acl.owner_preserved -and $nuReport.actual_enrollment_acl.group_preserved -and $nuReport.actual_enrollment_acl.protected -and $nuReport.actual_enrollment_acl.exact_dacl_preserved) 'ACTUAL_ENROLLMENT_DIRECTORY_PERMISSIONS_CHANGED'
+@@ -387,7 +404,13 @@
+   $nuRuntimeFloor=[DateTimeOffset]$script:NURecoveryStarted
+   Need-NU ($nuHeartbeat -ge $nuRuntimeFloor -and $nuHeartbeat -ge $nuStarted -and $nuStarted -ge $nuRuntimeFloor -and $nuReport.after.runtime.started_utc -cne $nuRuntimeBefore.started_utc) 'NEW_RUNTIME_START_OR_HEARTBEAT_UNCONFIRMED'
+   $nuReport.event_v2_runtime=[ordered]@{before=$nuRuntimeBefore.event_evidence;after=$nuReport.after.runtime.event_evidence;comparison=$(if($nuRuntimeBefore.event_evidence.state -ceq 'OBSERVED' -and $nuReport.after.runtime.event_evidence.state -ceq 'OBSERVED'){if(($nuRuntimeBefore.event_evidence.fields|ConvertTo-Json -Compress) -ceq ($nuReport.after.runtime.event_evidence.fields|ConvertTo-Json -Compress)){'UNCHANGED'}else{'CHANGED'}}else{'NOT_OBSERVED'})}
+-  $nuReport.state='PASS_PRIVATE_SIGNED_0358_RUNNING_UPDATE';$nuReport.stage='COMPLETE'
++  $nuReport.running_update_acceptance='PASS_SIGNED_0358_TO_0359_RUNNING_UPDATE'
++  $nuReport.auth_outbox_gate=[ordered]@{access_blocked_before=$nuReport.before.outbox.access_blocked;access_blocked_after=$nuReport.relay_health.outbox.access_blocked;flag_changed_by_driver=$false;alerts_delivery_confirmed=$false;follow_up='ROOT_SERVER_AUTH_DIAGNOSTIC'}
++  if($nuReport.relay_health.outbox.access_blocked){
++    $nuReport.state='HOLD_RECOVERY_OUTBOX_AUTH';$nuReport.stage='COMPLETE_WITH_SEPARATE_AUTH_HOLD';$nuReport.error_code='RECOVERY_OUTBOX_AUTH_BLOCKED'
++  }else{
++    $nuReport.state='PASS_PRIVATE_SIGNED_0359_RUNNING_UPDATE';$nuReport.stage='COMPLETE'
++  }
+ }catch{
+   $nuReport.error_code=Code-NU $_;$nuReport.error_type=$_.Exception.GetType().FullName
+   if($nuPrivate){
+@@ -411,5 +434,5 @@
+   }
+ }
+ $nuJson
+-if($nuReport.state -ceq 'PASS_PRIVATE_SIGNED_0358_RUNNING_UPDATE'){exit 0}
++if($nuReport.state -ceq 'PASS_PRIVATE_SIGNED_0359_RUNNING_UPDATE'){exit 0}
+ exit 2

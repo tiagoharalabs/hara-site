@@ -1,0 +1,48 @@
+{
+  "schema": "hara.commander.public-catalog-observation.v1",
+  "at_utc": "2026-10-28T19:13:39.994467+00:00",
+  "read_only": true,
+  "public_distribution_mutated": false,
+  "results": [
+    {
+      "origin": "https://commander.haralabs.com.br",
+      "path": "/release/agent-manifest.json",
+      "http_status": 200,
+      "sha256": "7e42f25404e414b74b375ccb47b7ed8ba7d8c572dc45db994d89012207f08f7c",
+      "bytes": 765,
+      "agent_version": "0.3.41",
+      "schema": "hara.commander-agent-release.v1"
+    },
+    {
+      "origin": "https://commander.haralabs.com.br",
+      "path": "/release/agent-manifest.sig.json",
+      "http_status": 200,
+      "sha256": "b755f0fd5ebf81be4c8e5cb38522684f66829e069be2ed6303eb0b7bccc26bd1",
+      "bytes": 555,
+      "schema": "hara.commander-release-signature.v1",
+      "kid": "commander-release-v1",
+      "alg": "RS256",
+      "manifest_sha256": "7e42f25404e414b74b375ccb47b7ed8ba7d8c572dc45db994d89012207f08f7c"
+    },
+    {
+      "origin": "https://hara-commander-dev-v2.tiago-sartori.workers.dev",
+      "path": "/release/agent-manifest.json",
+      "http_status": 200,
+      "sha256": "e1c7c23de1b4313093e2d8c52be1ec52f6419f72d5ef59d675c7e5a279b1a13d",
+      "bytes": 765,
+      "agent_version": "0.3.54",
+      "schema": "hara.commander-agent-release.v1"
+    },
+    {
+      "origin": "https://hara-commander-dev-v2.tiago-sartori.workers.dev",
+      "path": "/release/agent-manifest.sig.json",
+      "http_status": 200,
+      "sha256": "530627e5f1fe39d2582f8312fbafb32f219b9cdbdcec8777b5725aaefa73c4e8",
+      "bytes": 725,
+      "schema": "hara.commander-release-signature.v1",
+      "kid": "commander-release-v2",
+      "alg": "RS256",
+      "manifest_sha256": "e1c7c23de1b4313093e2d8c52be1ec52f6419f72d5ef59d675c7e5a279b1a13d"
+    }
+  ]
+}

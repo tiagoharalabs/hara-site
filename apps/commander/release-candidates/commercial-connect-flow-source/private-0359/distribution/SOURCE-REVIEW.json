@@ -1,0 +1,33 @@
+{
+  "actual_server_started": false,
+  "allowed_changes": [
+    "version/path/unit/tag0358_to0359",
+    "port18445_to18446",
+    "hard_deadline18:50_to19:35Z",
+    "four_artifact_pins",
+    "manifest_pin",
+    "real_signature_pin",
+    "server_source_pin"
+  ],
+  "ast_and_py_compile": "PASS",
+  "control_sha256": "42965e8269ca4268750c24b892a4f17717b59c34811eedd1ee7abb0cc3009f8a",
+  "exact_derivation_from_reviewed_0358": true,
+  "firewall_cleanup_guards_unchanged": true,
+  "hard_deadline_utc": "2026-10-28T19:35:00+00:00",
+  "maximum_seconds": 2700,
+  "native_https_verified": false,
+  "new_windows_trust_lifetime_requires_separate_receipt": true,
+  "private_tls_key_read_by_review": false,
+  "release_url": "https://192.168.10.23:18446/releases/0.3.59",
+  "schema": "hara.commander.private-0359-distribution-source-review.v1",
+  "server_sha256": "f958a1894d52cbc7ef780a0d04a8c154afae2f32c969157e603b4687b84c1216",
+  "signature_sha256": "888f8674ae48e511eac9b4cc8ec1858110576af6970a6e6a7db19b585ef15ba3",
+  "source_interface": "virbr96",
+  "source_ips": [
+    "192.168.252.113",
+    "192.168.252.130"
+  ],
+  "state": "SOURCE_DERIVATION_AND_PINS_VERIFIED",
+  "tls_certificate_unchanged": true,
+  "unit_tag": "hara-connect-qa-0359-20261028"
+}

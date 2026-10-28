@@ -1,0 +1,19 @@
+{
+  "builder_sha256": "6e5ee5839070f8af9451638df4e28424a4e210c4cf9369f2a2874fa145e317c6",
+  "custody_guard_functions_unchanged": [
+    "check_parents",
+    "read_pinned",
+    "identity",
+    "validate_output_path",
+    "write_new",
+    "fsync_directory",
+    "version_only",
+    "controller_blocks"
+  ],
+  "frozen_embedded_controllers_unchanged": true,
+  "linux_agent_native_input_required": true,
+  "linux_installer_transform_pin_verified": true,
+  "native_full_build_performed": false,
+  "state": "BUILDER_SOURCE_ADMISSION_CHECKS_PASS",
+  "windows_inputs_exact": true
+}

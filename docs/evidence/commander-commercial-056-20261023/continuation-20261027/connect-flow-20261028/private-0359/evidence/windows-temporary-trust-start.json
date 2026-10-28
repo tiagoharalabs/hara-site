@@ -1,0 +1,11 @@
+{
+  "state": "ADMIN_QA_TLS_READY",
+  "store": "LocalMachine\\Root",
+  "certificate_preexisting": false,
+  "thumbprint": "91455FF01AE18E0F3721E3D56B5382A1F4145129",
+  "der_sha256": "893aeec40a123d5fd74fd312fa1ed90e4c9881e10a562cdc126026c3d848f29e",
+  "automatic_cleanup_task": "HARA-QA059-TemporaryTLS-Cleanup-20261028",
+  "cleanup_deadline_utc": "2026-10-28T19:35:00Z",
+  "installer_identity": "CommanderQA",
+  "product_task_changed": false
+}

@@ -1,0 +1,47 @@
+--- frozen-0358
++++ private-0359/windows-installer.patch
+@@ -16,7 +16,7 @@
+ $ReleaseSigningN = "p9ylK_Yf48aEfkps9ZVm6u5Uk3haKCF1ltQmZUrXHLqrbiXf4L-3OdqpYcv7VGktbXKVfccIR2-b8lfNPKT-OpemqcgkJ9Cb-gvjxdPxoLOWxTVasKr8ttUirM08LVzL7BF3Mwadl2SEQXSHC0ayH1Jtj3-57Z8XNZ4NvWuUswBhYrNtXpe8-a86HSy2r0pEMWZalqJE1mD1nGnODYWLpsLPkTX4rUBky5zBX11Rkf2_Op3jpo5nwWVPf2AEJSq-yogQQI3jopJRydnrDySxFpI7TgN1SAL1nEcNRkh-rOjchuqyHpQAN2DSDpQvrFDxANDLMhxrlwmE6MU4PAn46ICuKgyqAYULlVhYhjZpPUZpLHvwG3rjYbD022qYbBDdamJ79FWcoDxmr85mwiDQ4WDEn8cgF_5G2pmq6Wq3ss2O1cQJB_QgkID3uBeywonGs0ikoMtxmIvSi1HVGkBVC0Ay726K9wwpT_xhiwVT_OpAnNYgNdqWcc-cU7n-Zt43"
+ $ReleaseSigningE = "AQAB"
+ function Get-ReleaseBaseUrl {
+-  $value=if($env:HARA_COMMANDER_RELEASE_URL){$env:HARA_COMMANDER_RELEASE_URL.TrimEnd("/")}else{$BaseUrl.TrimEnd("/")+"/releases/0.3.58"}
++  $value=if($env:HARA_COMMANDER_RELEASE_URL){$env:HARA_COMMANDER_RELEASE_URL.TrimEnd("/")}else{$BaseUrl.TrimEnd("/")+"/releases/0.3.59"}
+   $uri=[Uri]$value
+   if($uri.Scheme -cne "https" -or $uri.UserInfo -or $uri.Query -or $uri.Fragment){throw "RELEASE_ORIGIN_INVALID"}
+   return $value
+@@ -171,7 +171,7 @@
+           $null -eq $row.bytes -or $row.bytes -is [bool] -or ($row.bytes -isnot [int] -and $row.bytes -isnot [long]) -or
+           [long]$row.bytes -le 0 -or [long]$row.bytes -gt 2097152) { throw "AGENT_RELEASE_MANIFEST_INVALID" }
+     }
+-    if ([string]$manifest.agent_version -cne "0.3.58") { throw "INSTALLER_AGENT_VERSION_MISMATCH" }
++    if ([string]$manifest.agent_version -cne "0.3.59") { throw "INSTALLER_AGENT_VERSION_MISMATCH" }
+     $entry=$manifest.files[1]
+     return [PSCustomObject]@{ Version=[string]$manifest.agent_version; Sha256=[string]$entry.sha256; Bytes=[long]$entry.bytes }
+ 
+@@ -244,7 +244,7 @@
+   try {
+     $headers = @{ Accept="application/json"; Authorization=("Bearer " + $token) }
+     if ($Kind -eq "heartbeat") {
+-      $payload = @{ device_id=[string]$cfg.device_id; architecture=[string]$cfg.architecture; agent_version="0.3.58"; approval_mode=$(if ($cfg.approval_mode) {[string]$cfg.approval_mode} else {"ASK_EVERY_ACTION"}) } | ConvertTo-Json -Compress
++      $payload = @{ device_id=[string]$cfg.device_id; architecture=[string]$cfg.architecture; agent_version="0.3.59"; approval_mode=$(if ($cfg.approval_mode) {[string]$cfg.approval_mode} else {"ASK_EVERY_ACTION"}) } | ConvertTo-Json -Compress
+       $result = Invoke-RestMethod -Uri "$base/api/device/heartbeat" -Method Post -ContentType "application/json" -Headers $headers -Body $payload -TimeoutSec 15 -MaximumRedirection 0
+       if (-not $result.ok -or [string]$result.device_id -ne [string]$cfg.device_id) { throw "REMOTE_HEARTBEAT_INVALID" }
+       return $result
+@@ -1204,7 +1204,7 @@
+ 
+ $DeviceName = $env:COMPUTERNAME
+ $Architecture = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant()
+-$Payload = @{ pairing_token=$PairingToken; device_name=$DeviceName; platform="WINDOWS"; architecture=$Architecture; agent_version="0.3.58"; approval_mode=$ApprovalMode } | ConvertTo-Json -Compress
++$Payload = @{ pairing_token=$PairingToken; device_name=$DeviceName; platform="WINDOWS"; architecture=$Architecture; agent_version="0.3.59"; approval_mode=$ApprovalMode } | ConvertTo-Json -Compress
+ $Enroll = Invoke-RestMethod -Uri "$BaseUrl/api/device/enroll" -Method Post -ContentType "application/json" -Headers @{ Accept="application/json" } -Body $Payload -TimeoutSec 30 -MaximumRedirection 0
+ $PairingToken = $null
+ $Payload = $null
+@@ -1219,7 +1219,7 @@
+ try {
+   New-Item -ItemType Directory -Path $Root -Force | Out-Null
+   $EncryptedToken = ConvertTo-SecureString $DeviceTokenForRollback -AsPlainText -Force | ConvertFrom-SecureString
+-  $ConfigObject = @{ base_url=$BaseUrl; device_id=$EnrollDeviceId; encrypted_device_token=$EncryptedToken; architecture=$Architecture; agent_version="0.3.58"; approval_mode=$ApprovalMode }
++  $ConfigObject = @{ base_url=$BaseUrl; device_id=$EnrollDeviceId; encrypted_device_token=$EncryptedToken; architecture=$Architecture; agent_version="0.3.59"; approval_mode=$ApprovalMode }
+   $ConfigObject | ConvertTo-Json | Set-Content -Path $Config -Encoding UTF8
+ 
+   $Identity = [Security.Principal.WindowsIdentity]::GetCurrent().Name

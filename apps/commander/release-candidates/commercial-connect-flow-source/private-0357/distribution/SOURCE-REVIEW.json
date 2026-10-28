@@ -1,0 +1,31 @@
+{
+  "existing_0356_distribution_modified": false,
+  "files": {
+    "connect_qa_release_control.py": {
+      "bytes": 10766,
+      "sha256": "edf93f8398840a3904e9295f14f91aa9b1c62b2fd8bae80265cd3cdc5671262b"
+    },
+    "serve_connect_qa_0357.py": {
+      "bytes": 9474,
+      "sha256": "067f154bc0feed86ccbaf55683ac5317156c7fd7571d947e66f87c02640a49ba"
+    }
+  },
+  "firewall_mutated": false,
+  "hard_deadline_utc": "2026-10-28T18:40:00+00:00",
+  "listen": "192.168.10.23:18444",
+  "manifest_sha256": "d1a9361f5edec6c926d6febc7990e9b0c00df28f5131c6ffe1146ebe348554d0",
+  "native_cleanup_verified": false,
+  "network_calls": 0,
+  "private_keys_read": false,
+  "public_tls_pem_sha256": "c15308e100ba014d463b20cc56568e2183c4c50e2b2b672af38a0926d1c879c1",
+  "runtime_max_seconds": 2700,
+  "schema": "hara.commander.private-0357-distribution-source-review.v1",
+  "server_started": false,
+  "signature_sha256": "5637d5861c49c170af55a8d86f8051df78785c39f4a17b06a41b5c8ed25ddef7",
+  "source_ips": [
+    "192.168.252.113",
+    "192.168.252.130"
+  ],
+  "state": "SYNTAX_AND_FIXED_CONTRACT_REVIEWED_NOT_STARTED",
+  "sums_sha256": "c32206a9f0cf604de58cf9cb7afe04da82ca52941a725d6cf6fa7c592d26e4da"
+}

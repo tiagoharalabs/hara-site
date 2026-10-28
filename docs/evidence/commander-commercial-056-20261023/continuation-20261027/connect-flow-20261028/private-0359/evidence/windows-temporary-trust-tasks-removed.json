@@ -1,0 +1,11 @@
+{
+  "removed": [
+    "HARA-QA059-TemporaryTLS-Cleanup-20261028",
+    "HARA-QA056-TemporaryTLS-Cleanup-R3-20261028"
+  ],
+  "at_utc": "2026-10-28T19:12:51.2371277Z",
+  "product_task_state": "Running",
+  "product_task_changed": false,
+  "state": "OWNED_CLEANUP_TASKS_REMOVED",
+  "certificate_absent": true
+}

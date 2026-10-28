@@ -1,0 +1,16 @@
+{
+  "schema": "hara.commander.private-native-driver-artifacts.v1",
+  "target_version": "0.3.57",
+  "native_parser": "PENDING",
+  "native_upgrade": "PENDING",
+  "files": {
+    "Invoke-Private0357Upgrade.ps1": {
+      "sha256": "fa0f7c579a00b0b1fbd5c45452d2024fe685c6f7b1fffe78ab8f202d50fe0516",
+      "bytes": 19661
+    },
+    "README.md": {
+      "sha256": "7fef7cad1fe4e6c98870faef5b26a556e61dcbf18902fa80358dce0989926753",
+      "bytes": 3726
+    }
+  }
+}

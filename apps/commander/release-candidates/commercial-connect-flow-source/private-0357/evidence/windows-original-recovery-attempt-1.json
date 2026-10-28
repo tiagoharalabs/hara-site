@@ -1,0 +1,39 @@
+{
+  "state": "HOLD",
+  "at_utc": "2026-10-28T18:11:48.9293831Z",
+  "action": "RESTORE_VERIFIED_ORIGINAL_RUNTIME",
+  "task_before": "Ready",
+  "diagnostic": {
+    "installer-update-stderr.private.bin": {
+      "markers": [],
+      "error_id": [
+        "AGENT_UPDATE_START_FAILED"
+      ],
+      "bytes": 421,
+      "script_line": [
+        ":1116 char:9"
+      ],
+      "codes": [
+        "AGENT_UPDATE_START_FAILED"
+      ]
+    },
+    "installer-update-stdout.private.bin": {
+      "markers": [
+        "HARA_COMMANDER_AGENT_INTEGRITY=PASS",
+        "HARA_COMMANDER_AGENT_SELF_TEST=PASS",
+        "HARA_COMMANDER_AGENT_UPDATE_ROLLBACK=STARTUP_ATTESTATION_FAILED"
+      ],
+      "error_id": [],
+      "bytes": 136,
+      "script_line": [],
+      "codes": [
+        "HARA_COMMANDER_AGENT_INTEGRITY",
+        "HARA_COMMANDER_AGENT_SELF_TEST",
+        "HARA_COMMANDER_AGENT_UPDATE_ROLLBACK"
+      ]
+    }
+  },
+  "error_type": "System.Management.Automation.RuntimeException",
+  "error_code": "FRESH_RUNTIME_HEARTBEAT_NOT_CONFIRMED",
+  "finished_utc": "2026-10-28T18:12:40.3948084Z"
+}

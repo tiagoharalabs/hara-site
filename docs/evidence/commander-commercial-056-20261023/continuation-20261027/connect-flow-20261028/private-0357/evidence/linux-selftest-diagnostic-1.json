@@ -1,0 +1,25 @@
+{
+  "schema": "hara.commander.linux-0357-selftest-diagnostic.v1",
+  "state": "DIAGNOSTIC_COMPLETED",
+  "started_utc": "2026-10-28T18:18:44.841740+00:00",
+  "finished_utc": "2026-10-28T18:18:45.537944+00:00",
+  "original_agent_sha256": "79c7a7ac51432158ea503dbaf3830d41f1e30deb8585513a7d0e504aed9fbe13",
+  "diagnostic_sha256": "0ce406b94b1b4c6e1069b1b461df3cf7e036757bef331af06439f7d5123b6926",
+  "original_assertion_preserved": true,
+  "installation_performed": false,
+  "system_configuration_changed_by_driver": false,
+  "child_exit_code": 0,
+  "marker_count": 1,
+  "markers": [
+    {
+      "exit_code": 7,
+      "process_exit_code": 7,
+      "state": "EXITED"
+    }
+  ],
+  "stdout_bytes": 693,
+  "stderr_bytes": 0,
+  "diagnostic_scan_truncated": false,
+  "error_type": "",
+  "error_lines": []
+}

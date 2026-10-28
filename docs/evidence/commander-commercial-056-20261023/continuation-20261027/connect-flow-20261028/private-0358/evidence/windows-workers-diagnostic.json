@@ -1,0 +1,214 @@
+{
+  "schema": "hara.commander.windows-worker-readonly-diagnostic.v1",
+  "state": "READONLY_DIAGNOSTIC_COMPLETE",
+  "started_utc": "2026-10-28T18:51:33.2753270Z",
+  "product_files_changed": false,
+  "product_task_changed": false,
+  "worker_started_or_stopped": false,
+  "raw_command_lines_exported": false,
+  "raw_worker_stderr_available": false,
+  "snapshots": [
+    {
+      "at_utc": "2026-10-28T18:51:36.3622036Z",
+      "processes": [
+        {
+          "pid": 1132,
+          "parent_pid": 1504,
+          "created_utc": "2026-10-28T18:35:43.1964160Z",
+          "session_id": 1,
+          "role": "SUPERVISOR",
+          "strict_worker_match": false,
+          "owner_sid": "S-1-5-21-1207901905-1500652706-889822281-1005"
+        },
+        {
+          "pid": 3504,
+          "parent_pid": 1132,
+          "created_utc": "2026-10-28T18:35:46.4573580Z",
+          "session_id": 1,
+          "role": "heartbeat",
+          "strict_worker_match": true,
+          "parent_argument": 1132,
+          "owner_sid": "S-1-5-21-1207901905-1500652706-889822281-1005"
+        },
+        {
+          "pid": 2500,
+          "parent_pid": 1132,
+          "created_utc": "2026-10-28T18:35:46.5127780Z",
+          "session_id": 1,
+          "role": "alerts",
+          "strict_worker_match": true,
+          "parent_argument": 1132,
+          "owner_sid": "S-1-5-21-1207901905-1500652706-889822281-1005"
+        }
+      ],
+      "task": {
+        "last_run_utc": "2026-10-28T18:35:43.0000000Z",
+        "last_result": 267009,
+        "state": "Running"
+      },
+      "runtime": {
+        "updated_at_utc": "2026-10-28T18:50:54.7320607Z",
+        "started_at_utc": "2026-10-28T18:35:45.2924361Z",
+        "agent_version": "0.3.58",
+        "last_runtime_error_at_utc": "",
+        "last_successful_heartbeat_at_utc": "2026-10-28T18:50:54.7298724Z"
+      }
+    },
+    {
+      "at_utc": "2026-10-28T18:51:41.6697436Z",
+      "processes": [
+        {
+          "pid": 1132,
+          "parent_pid": 1504,
+          "created_utc": "2026-10-28T18:35:43.1964160Z",
+          "session_id": 1,
+          "role": "SUPERVISOR",
+          "strict_worker_match": false,
+          "owner_sid": "S-1-5-21-1207901905-1500652706-889822281-1005"
+        },
+        {
+          "pid": 3504,
+          "parent_pid": 1132,
+          "created_utc": "2026-10-28T18:35:46.4573580Z",
+          "session_id": 1,
+          "role": "heartbeat",
+          "strict_worker_match": true,
+          "parent_argument": 1132,
+          "owner_sid": "S-1-5-21-1207901905-1500652706-889822281-1005"
+        },
+        {
+          "pid": 2500,
+          "parent_pid": 1132,
+          "created_utc": "2026-10-28T18:35:46.5127780Z",
+          "session_id": 1,
+          "role": "alerts",
+          "strict_worker_match": true,
+          "parent_argument": 1132,
+          "owner_sid": "S-1-5-21-1207901905-1500652706-889822281-1005"
+        }
+      ],
+      "task": {
+        "last_run_utc": "2026-10-28T18:35:43.0000000Z",
+        "last_result": 267009,
+        "state": "Running"
+      },
+      "runtime": {
+        "updated_at_utc": "2026-10-28T18:50:54.7320607Z",
+        "started_at_utc": "2026-10-28T18:35:45.2924361Z",
+        "agent_version": "0.3.58",
+        "last_runtime_error_at_utc": "",
+        "last_successful_heartbeat_at_utc": "2026-10-28T18:50:54.7298724Z"
+      }
+    },
+    {
+      "at_utc": "2026-10-28T18:51:46.9475856Z",
+      "processes": [
+        {
+          "pid": 1132,
+          "parent_pid": 1504,
+          "created_utc": "2026-10-28T18:35:43.1964160Z",
+          "session_id": 1,
+          "role": "SUPERVISOR",
+          "strict_worker_match": false,
+          "owner_sid": "S-1-5-21-1207901905-1500652706-889822281-1005"
+        },
+        {
+          "pid": 3504,
+          "parent_pid": 1132,
+          "created_utc": "2026-10-28T18:35:46.4573580Z",
+          "session_id": 1,
+          "role": "heartbeat",
+          "strict_worker_match": true,
+          "parent_argument": 1132,
+          "owner_sid": "S-1-5-21-1207901905-1500652706-889822281-1005"
+        },
+        {
+          "pid": 2500,
+          "parent_pid": 1132,
+          "created_utc": "2026-10-28T18:35:46.5127780Z",
+          "session_id": 1,
+          "role": "alerts",
+          "strict_worker_match": true,
+          "parent_argument": 1132,
+          "owner_sid": "S-1-5-21-1207901905-1500652706-889822281-1005"
+        }
+      ],
+      "task": {
+        "last_run_utc": "2026-10-28T18:35:43.0000000Z",
+        "last_result": 267009,
+        "state": "Running"
+      },
+      "runtime": {
+        "updated_at_utc": "2026-10-28T18:50:54.7320607Z",
+        "started_at_utc": "2026-10-28T18:35:45.2924361Z",
+        "agent_version": "0.3.58",
+        "last_runtime_error_at_utc": "",
+        "last_successful_heartbeat_at_utc": "2026-10-28T18:50:54.7298724Z"
+      }
+    }
+  ],
+  "outbox": {
+    "access_blocked": true,
+    "counts": [
+      {
+        "state": "BLOCKED_AUTH",
+        "n": 1
+      },
+      {
+        "state": "PENDING",
+        "n": 27
+      }
+    ],
+    "new_health_events": [
+      {
+        "worker": "executor",
+        "health": "DEGRADED",
+        "state": "PENDING",
+        "at_utc": "2026-10-28T18:35:57.309Z"
+      },
+      {
+        "worker": "executor",
+        "health": "STALLED",
+        "state": "PENDING",
+        "at_utc": "2026-10-28T18:35:57.266Z"
+      },
+      {
+        "worker": "executor",
+        "health": "RECOVERING",
+        "state": "PENDING",
+        "at_utc": "2026-10-28T18:35:52.355Z"
+      },
+      {
+        "worker": "executor",
+        "health": "STALLED",
+        "state": "PENDING",
+        "at_utc": "2026-10-28T18:35:52.220Z"
+      },
+      {
+        "worker": "executor",
+        "health": "RECOVERING",
+        "state": "PENDING",
+        "at_utc": "2026-10-28T18:35:50.292Z"
+      },
+      {
+        "worker": "executor",
+        "health": "STALLED",
+        "state": "PENDING",
+        "at_utc": "2026-10-28T18:35:50.034Z"
+      }
+    ],
+    "new_stalled_or_degraded": true,
+    "read_only": true
+  },
+  "outbox_error": {
+    "code": "READONLY_OUTBOX_OBSERVATION_FAILED",
+    "type": "SetValueInvocationException"
+  },
+  "preservation": {
+    "config": true,
+    "agent": true,
+    "task_definition": true
+  },
+  "finished_utc": "2026-10-28T18:51:52.6751285Z",
+  "diagnostic_task_exit": 0
+}
