@@ -1,0 +1,92 @@
+{
+  "schema": "hara.commander.launch-preflight.v1",
+  "observed_at_local": "2026-10-13",
+  "timezone": "America/Sao_Paulo",
+  "scope": "documentation_and_external_readonly_checks_only",
+  "product": "H.A.R.A. Commander",
+  "product_mcp": "https://commander.haralabs.com.br/api/mcp",
+  "internal_mcp_distinct": true,
+  "commerce_inside_plugin_prohibited": true,
+  "zip": {
+    "location": "nucleo-a:~/hara-commander-publication-preflight-20261013/artifacts/hara-commander-submission-candidate-20261013.zip",
+    "sha256": "0e9be2f9edb0ec5cd42e600ce61c0e746b50176619addbabd2e7f02e4092b900",
+    "byte_size": 149539,
+    "files": 6,
+    "positive": 5,
+    "negative": 3,
+    "default_prompts": 3,
+    "offline_builder": "PASS",
+    "offline_validator_v5": "PASS",
+    "official_tool_scan": "NOT_RUN",
+    "submitted": "NO",
+    "approved": "NO"
+  },
+  "public_endpoint_preflight": {
+    "gate": "PUBLIC_ENDPOINTS_7_OF_7_PASS",
+    "probe_sha256": "c6f9ba928ce61dbc4448d458e6d6a0ef6f12e9f794020b71a4440ef94e9ec335",
+    "report_sha256": "07893677c4920b2d060fdca52f17594bb89519c2cb45c80be00334aacf58102b",
+    "checks": {
+      "product_mcp": 401,
+      "oauth_resource": 200,
+      "identity_discovery": 200,
+      "website": 200,
+      "support": 200,
+      "privacy": 200,
+      "terms": 200
+    },
+    "authentication_e2e_retested_in_this_round": false,
+    "secrets_used": false
+  },
+  "owned_plugins": {
+    "product_plugin_id": "plugin_asdk_app_6ac9741d1cf881918d3d6f9d7e21c476",
+    "scope": "USER",
+    "discoverability": "PRIVATE",
+    "current_version": "1.0.0",
+    "current_approval_state": "NOT_PUBLIC_DIRECTORY",
+    "private_developer_surface_tool_count_observed": 31
+  },
+  "billing": {
+    "code_present": true,
+    "signed_webhook_and_idempotency_implemented": true,
+    "production_test_customer_checkout": "NOT_RUN",
+    "production_secrets_configured": false,
+    "production_standard_active": false,
+    "production_scale_active": false,
+    "test_account_connected_in_chat": false,
+    "test_wizard_state_from_issue": "READY_FOR_INTERACTIVE_APPLY",
+    "planned_reference_price_brl_per_month": 80,
+    "planned_reference_price_approved_by_owner": false,
+    "consent_for_live_charges": false
+  },
+  "product_e2e": {
+    "founder_internal_entitlement": "ACTIVE_PROVEN_HISTORICAL",
+    "founder_product_mcp_first_readonly_e2e": "PASS_HISTORICAL",
+    "external_reviewer_oauth_login": "PENDING",
+    "cross_tenant_negative_matrix": "SOURCE_PASS_LIVE_ACCEPTANCE_PENDING",
+    "windows_agent_live": "0.3.53_ONLINE_NOT_RC_ACCEPTED",
+    "public_tools_independent_operation_review": "P0_OPEN",
+    "external_security_review": "PENDING"
+  },
+  "no_action": {
+    "stripe_api_mutations": true,
+    "product_backend_deployment": true,
+    "agent_install_or_upgrade": true,
+    "openai_submission": true,
+    "private_plugin_update": true,
+    "services_mcp_runtime": true
+  },
+  "owners": {
+    "openai_product": "https://github.com/tiagoharalabs/hara-platform/issues/851",
+    "product_current": "https://github.com/tiagoharalabs/hara-site/issues/310",
+    "billing": "https://github.com/tiagoharalabs/hara-site/issues/296",
+    "windows": "https://github.com/tiagoharalabs/hara-site/issues/240",
+    "security": "https://github.com/tiagoharalabs/hara-site/issues/189"
+  },
+  "manual_gates": [
+    "Stripe TEST account verified and connected; prices/quota approved",
+    "OpenAI organization verified and domain challenge generated",
+    "Reviewer OAuth fixture without MFA and fixed selected test device",
+    "Official Scan Tools; review generic functions.invoke surface",
+    "Reviewer video and 5/3 cases run; OpenAI Submit and approval"
+  ]
+}
