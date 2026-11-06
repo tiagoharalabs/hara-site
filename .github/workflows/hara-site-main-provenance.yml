@@ -87,6 +87,12 @@ jobs:
           python3 scripts/validate_hara_wordmark.py
           node --check apps/commander/public/app.js
 
+      - name: Validate Portuguese and English interface
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          node scripts/test_site_i18n.mjs
+
       - name: Enforce public repository sanitization
         shell: bash
         run: |
