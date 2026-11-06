@@ -1,5 +1,6 @@
 (()=>{
   const root=document.documentElement;
+  const t=(text)=>window.HARA_I18N?.t(text)||text;
   const header=document.querySelector('.site-header');
   const btn=document.querySelector('.menu-button');
   const menu=document.querySelector('.mobile-menu');
@@ -15,7 +16,7 @@
     const on=currentNeon();
     if(neonBtn){
       neonBtn.setAttribute('aria-pressed',String(on));
-      neonBtn.setAttribute('aria-label',on?'Desativar Neon':'Ativar Neon');
+      neonBtn.setAttribute('aria-label',on?t('Desativar Neon'):t('Ativar Neon'));
       neonBtn.title=on?'Neon ON':'Neon OFF';
     }
   };
@@ -23,8 +24,8 @@
     const dark=currentTheme()==='dark';
     if(themeBtn){
       themeBtn.setAttribute('aria-pressed',String(dark));
-      themeBtn.setAttribute('aria-label',dark?'Ativar modo claro':'Ativar modo escuro');
-      themeBtn.title=dark?'Modo claro':'Modo escuro';
+      themeBtn.setAttribute('aria-label',dark?t('Ativar modo claro'):t('Ativar modo escuro'));
+      themeBtn.title=dark?t('Modo claro'):t('Modo escuro');
     }
     if(themeMeta) themeMeta.setAttribute('content',dark?'#061721':'#eef8fd');
     root.style.colorScheme=dark?'dark':'light';
@@ -32,6 +33,7 @@
   syncThemeUI();
   if(!root.dataset.neon) root.dataset.neon='off';
   syncNeonUI();
+  window.addEventListener("hara:languagechange",()=>{syncThemeUI();syncNeonUI();});
 
   themeBtn?.addEventListener('click',()=>{
     const next=currentTheme()==='dark'?'light':'dark';
