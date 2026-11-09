@@ -10,7 +10,7 @@
   const selector = ["[data-i18n]", ...attributes.map(name => `[data-i18n-${name}]`)].join(",");
   const originalLinks = new WeakMap();
   const siteHosts = new Set([location.hostname, "haralabs.com.br", "www.haralabs.com.br"]);
-  const sitePaths = new Set(["/", "/404", "/404/", "/arquitetura/", "/commander/", "/contato/", "/empresa/", "/legal/", "/legal/privacidade/", "/legal/termos/", "/observabilidade/", "/privacy/", "/produtos/", "/seguranca/", "/solucoes/", "/support/", "/terms/"]);
+  const sitePaths = new Set(["/", "/404", "/404/", "/arquitetura/", "/commander/", "/commander/termos/", "/contato/", "/empresa/", "/legal/", "/legal/privacidade/", "/legal/termos/", "/observabilidade/", "/privacy/", "/produtos/", "/seguranca/", "/solucoes/", "/support/", "/terms/"]);
 
   function normalize(value) {
     const candidate = String(value || "").trim().toLowerCase();
