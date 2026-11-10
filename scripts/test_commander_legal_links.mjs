@@ -35,6 +35,7 @@ for (const key of ['cmd-general-terms','cmd-legal-product','cmd-legal-open','cmd
 }
 const previewPath='assets/images/hara-commander-product-preview-20261110.webp';
 assert.ok(fs.existsSync(path.join(root,'public',previewPath)),'PRODUCT_SCREENSHOT_ASSET');
+assert.doesNotMatch(css,/commander-product-mark/,'NO_ORPHANED_MASCOT_STYLES');
 for(const page of [home,commander]){
   assert.match(page,/class="commander-product-preview"/,'REAL_PRODUCT_PREVIEW');
   assert.match(page,/src="\/assets\/images\/hara-commander-product-preview-20261110.webp"/,'SCREENSHOT_SOURCE');
