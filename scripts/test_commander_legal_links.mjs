@@ -20,7 +20,7 @@ assert.match(home, /href="\/commander\/"[^>]*><span[^>]*data-i18n="s307"/, 'HOME
 assert.match(products, /href="\/commander\/"[^>]*><span[^>]*data-i18n="cmd-back-product"/, 'PORTFOLIO_PRODUCT_LINK');
 assert.match(commander, /<title>Hara Commander \| HARA Labs<\/title>/, 'CLEAN_PRODUCT_TITLE');
 assert.doesNotMatch(home, /Conhecer o produto/, 'CONSISTENT_PRODUCT_CTA');
-assert.match(legal, /href="\/legal\/termos\/"[\s\S]*?href="\/legal\/privacidade\/"[\s\S]*?href="\/commander\/termos\/", 'GENERAL_AND_PRODUCT_SCOPE');
+assert.match(legal, /href="\/legal\/termos\/"[\s\S]*?href="\/legal\/privacidade\/"[\s\S]*?href="\/commander\/termos\/"/, 'GENERAL_AND_PRODUCT_SCOPE');
 assert.match(specific, /href="\/legal\/termos\/"/, 'SPECIFIC_LINKS_GENERAL');
 assert.match(general, /href="\/commander\/termos\/"/, 'GENERAL_LINKS_SPECIFIC');
 assert.match(privacy, /href="\/commander\/termos\/"/, 'PRIVACY_LINKS_SPECIFIC');
