@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy"
+    "deploy": "wrangler deploy",
+    "test": "node scripts/test_site_i18n.mjs && node scripts/test_commander_legal_links.mjs"
   },
   "devDependencies": {
     "wrangler": "^4.0.0"
