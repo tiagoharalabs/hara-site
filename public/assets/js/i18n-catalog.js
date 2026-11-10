@@ -736,7 +736,7 @@ window.HARA_I18N_CATALOG = {
     "cmd-privacy-scope": "Esta política também se aplica ao Hara Commander. Para regras de uso, consulte",
     "cmd-legal-docs-nav": "Documentos relacionados",
     "cmd-preview-open": "Ampliar imagem comercial do produto",
-    "cmd-preview-alt": "Imagem comercial ilustrativa do Hara Commander mostrando o painel Computers e os estados dos dispositivos.",
+    "cmd-preview-alt": "Demonstração ilustrativa do Hara Commander com usuário Commander QA e seis computadores fictícios.",
     "cmd-preview-dialog": "Imagem ampliada do Hara Commander",
     "cmd-preview-close": "Fechar imagem"
   },
@@ -1546,7 +1546,7 @@ window.HARA_I18N_CATALOG = {
     "cmd-privacy-scope": "This policy also applies to Hara Commander. For use conditions, see",
     "cmd-legal-docs-nav": "Related documents",
     "cmd-preview-open": "Enlarge product marketing image",
-    "cmd-preview-alt": "Illustrative Hara Commander marketing image showing the Computers panel and device status.",
+    "cmd-preview-alt": "Illustrative Hara Commander demo with Commander QA and six fictional computers.",
     "cmd-preview-dialog": "Enlarged Hara Commander image",
     "cmd-preview-close": "Close image"
   }
