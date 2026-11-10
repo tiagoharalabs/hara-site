@@ -33,13 +33,20 @@ for (const page of [commander, specific, general, privacy, legal]) {
 for (const key of ['cmd-general-terms','cmd-legal-product','cmd-legal-open','cmd-specific-scope','cmd-privacy-scope','cmd-legal-docs-nav']) {
   assert.ok(catalog.pt[key] && catalog.en[key], 'BILINGUAL_' + key);
 }
-const previewPath='assets/images/hara-commander-product-preview-20261110.webp';
+const previewPath='assets/images/hara-commander-commercial-hero-20261110.webp';
 assert.ok(fs.existsSync(path.join(root,'public',previewPath)),'PRODUCT_SCREENSHOT_ASSET');
 assert.doesNotMatch(css,/commander-product-mark/,'NO_ORPHANED_MASCOT_STYLES');
 for(const page of [home,commander]){
   assert.match(page,/class="commander-product-preview"/,'REAL_PRODUCT_PREVIEW');
-  assert.match(page,/src="\/assets\/images\/hara-commander-product-preview-20261110.webp"/,'SCREENSHOT_SOURCE');
+  assert.match(page,/src="\/assets\/images\/hara-commander-commercial-hero-20261110.webp"/,'COMMERCIAL_HERO_SOURCE');
   assert.doesNotMatch(page,/class="commander-product-mark"/,'NO_OLD_MASCOT_CARD');
 }
-for(const key of ['cmd-preview-open','cmd-preview-alt'])assert.ok(catalog.pt[key]&&catalog.en[key],'BILINGUAL_PREVIEW_'+key);
+for(const key of ['cmd-preview-open','cmd-preview-alt','cmd-preview-close','cmd-preview-dialog'])assert.ok(catalog.pt[key]&&catalog.en[key],'BILINGUAL_PREVIEW_'+key);
+for(const page of [home,commander]){
+  assert.match(page,/href="#commander-preview-full"/,'IN_PAGE_PREVIEW');
+  assert.match(page,/id="commander-preview-full"/,'PREVIEW_OVERLAY');
+  assert.doesNotMatch(page,/target="_blank"[^>]*href="[^"]*\.webp"/,'NO_RAW_IMAGE_TAB');
+  assert.match(page,/favicon-32\.png\?v=20261110-hero2/,'FAVICON_LINK');
+}
+assert.doesNotMatch(css,/\.commander-demo-grid \}/,'NO_MALFORMED_CSS');
 console.log('HARA_SITE_LEGAL_NAVIGATION=PASS; COMMANDER_LINKS=PASS; TERMS_DISTINCT=PASS; PT_EN=PASS');
