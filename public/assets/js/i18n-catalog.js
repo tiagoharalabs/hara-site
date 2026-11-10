@@ -735,8 +735,10 @@ window.HARA_I18N_CATALOG = {
     "cmd-specific-scope": "As condições do produto complementam estes Termos gerais; não são uma cópia deste documento.",
     "cmd-privacy-scope": "Esta política também se aplica ao Hara Commander. Para regras de uso, consulte",
     "cmd-legal-docs-nav": "Documentos relacionados",
-    "cmd-preview-open": "Ampliar captura da interface",
-    "cmd-preview-alt": "Tela de computadores do Hara Commander, com navegação, dispositivos e estados de conexão."
+    "cmd-preview-open": "Ampliar imagem comercial do produto",
+    "cmd-preview-alt": "Imagem comercial ilustrativa do Hara Commander mostrando o painel Computers e os estados dos dispositivos.",
+    "cmd-preview-dialog": "Imagem ampliada do Hara Commander",
+    "cmd-preview-close": "Fechar imagem"
   },
   "en": {
     "language-selector": "Language",
@@ -1543,7 +1545,9 @@ window.HARA_I18N_CATALOG = {
     "cmd-specific-scope": "Product terms complement these general terms; they are not a duplicate of this document.",
     "cmd-privacy-scope": "This policy also applies to Hara Commander. For use conditions, see",
     "cmd-legal-docs-nav": "Related documents",
-    "cmd-preview-open": "Open full-size product screenshot",
-    "cmd-preview-alt": "Hara Commander Computers screen, showing navigation, devices and connection statuses."
+    "cmd-preview-open": "Enlarge product marketing image",
+    "cmd-preview-alt": "Illustrative Hara Commander marketing image showing the Computers panel and device status.",
+    "cmd-preview-dialog": "Enlarged Hara Commander image",
+    "cmd-preview-close": "Close image"
   }
 };
