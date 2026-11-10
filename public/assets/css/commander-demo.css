@@ -18,3 +18,7 @@
 .commander-preview-close:hover,.commander-preview-close:focus-visible{outline:2px solid #f1c752;outline-offset:2px}
 @media(max-width:760px){.commander-demo-grid{grid-template-columns:1fr}.commander-product-preview{max-width:520px}.commander-product-preview a{border-radius:16px}.commander-preview-overlay img{max-width:95vw;max-height:85vh}}
 @media print{.commander-preview-overlay{display:none!important}}
+
+/* Calm commercial presentation, fictional QA fixture. */
+.commander-product-preview a{border-radius:18px;border-color:rgba(100,129,145,.28);box-shadow:0 16px 40px rgba(0,0,0,.14)}
+.commander-product-preview a:hover,.commander-product-preview a:focus-visible{box-shadow:0 18px 44px rgba(0,0,0,.18)}

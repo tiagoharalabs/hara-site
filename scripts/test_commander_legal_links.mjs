@@ -33,12 +33,12 @@ for (const page of [commander, specific, general, privacy, legal]) {
 for (const key of ['cmd-general-terms','cmd-legal-product','cmd-legal-open','cmd-specific-scope','cmd-privacy-scope','cmd-legal-docs-nav']) {
   assert.ok(catalog.pt[key] && catalog.en[key], 'BILINGUAL_' + key);
 }
-const previewPath='assets/images/hara-commander-commercial-hero-20261110.webp';
+const previewPath='assets/images/hara-commander-qa-demo-20261110.webp';
 assert.ok(fs.existsSync(path.join(root,'public',previewPath)),'PRODUCT_SCREENSHOT_ASSET');
 assert.doesNotMatch(css,/commander-product-mark/,'NO_ORPHANED_MASCOT_STYLES');
 for(const page of [home,commander]){
   assert.match(page,/class="commander-product-preview"/,'REAL_PRODUCT_PREVIEW');
-  assert.match(page,/src="\/assets\/images\/hara-commander-commercial-hero-20261110.webp"/,'COMMERCIAL_HERO_SOURCE');
+  assert.match(page,/src="\/assets\/images\/hara-commander-qa-demo-20261110.webp"/,'COMMERCIAL_HERO_SOURCE');
   assert.doesNotMatch(page,/class="commander-product-mark"/,'NO_OLD_MASCOT_CARD');
 }
 for(const key of ['cmd-preview-open','cmd-preview-alt','cmd-preview-close','cmd-preview-dialog'])assert.ok(catalog.pt[key]&&catalog.en[key],'BILINGUAL_PREVIEW_'+key);
