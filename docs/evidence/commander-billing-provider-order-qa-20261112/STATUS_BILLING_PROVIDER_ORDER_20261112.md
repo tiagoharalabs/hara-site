@@ -35,3 +35,19 @@ O bug demonstrado numa fonte histórica não foi tomado como diagnóstico da rev
 **Limites:** nenhum `deploy`, cobrança real, mudança de assinatura, upload de secret, modificação de D1 PROD, instalação de Agent ou alteração do pacote submetido à OpenAI.
 
 **Issue de acompanhamento:** `tiagoharalabs/hara-site#296` (comentários 6837312767 e 6837909054).
+
+## Diagnóstico adicional de quota e execução MCP (D1 DEV, 12/11/2026)
+
+Consulta agregada somente de leitura em `hara-commander-product-dev`, filtrada ao tenant sandbox `HARA-TENANT-DEMO-0001`:
+
+- `commander_devices`: 162 registros no estado cadastral `ACTIVE`, mas última telemetria `last_seen_at_utc=2026-10-13T19:54:05.420Z`. O estado `ACTIVE` não é evidência de presença `ONLINE`.
+- `commander_device_selections`: 161 seleções históricas.
+- `commander_device_calls`: 184 chamadas, sendo 182 `COMPLETED` com resultado, 1 `CANCELLED` e 1 `EXPIRED`; última criação `2026-10-10T00:08:04.715Z`.
+- Chamadas criadas desde `2026-11-09T00:00:00Z` (janela da ativação de pagamento sandbox): **0**.
+- `commander_device_usage_totals`: 0 linhas para esse tenant; `commander_device_metering_events`: 0 linhas.
+
+**Conclusão do gate:** `PAID_SUBSCRIPTION_TO_QUOTA_MCP_RECEIPT=UNPROVEN`. Não há execução posterior ao pagamento para provar quota e recibo, embora checkout/webhook/entitlement em D1 sejam reais. Não confundir os 182 resultados históricos com uma execução paga.
+
+**Próximo testemunho mínimo, sem afetar terceiros:** o OWNER legítimo do tenant de QA acessa o portal DEV, seleciona um Agent realmente online, executa um `device.ping`/`device.info` permitido e verifica o recibo, tenant, período e contador no serviço de quota. Confirmar que o perfil/entitlement corresponde a STANDARD e que o comando não saiu do tenant. Se a frota de demonstração ainda estiver inativa, usar novo dispositivo de teste descartável; não reativar registros históricos nem criar uma assinatura real.
+
+**Proveniência:** somente agregados e timestamps foram consultados; nenhum `payload_json`, `credential_hash`, identificação pessoal ou segredo de cliente foi lido, persistido ou publicado.
