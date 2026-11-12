@@ -1,0 +1,39 @@
+{
+  "schema": "hara.commander-billing-provider-order-qa.v1",
+  "observation_date": "2026-11-12",
+  "base_commit": "5f75599ad104f2e7179630e9da048b5e483fe96e",
+  "source_branch": "local/commander-billing-provider-order-qa-20261112",
+  "modified_test": "apps/commander/scripts/billing_sqlite_webhook_e2e.mjs",
+  "new_regression": "BILLING_SQLITE_SAME_SUBSCRIPTION_OUT_OF_ORDER_PROVIDER_AUTHORITATIVE",
+  "regression_status": "PASS",
+  "commands": {
+    "billing_sqlite_webhook_e2e": "PASS_EXIT_0",
+    "validate_billing_v1": "PASS_EXIT_0",
+    "billing_v1_selftest": "PASS_EXIT_0",
+    "workerd_billing_checkout": "PASS_EXIT_0"
+  },
+  "dev_readback": {
+    "stripe_webhook_events_processed": 4,
+    "stripe_connection": "ACTIVE",
+    "standard_entitlement": "ACTIVE",
+    "invalid_hmac_event_persisted": false
+  },
+  "prod_readback": {
+    "stripe_webhook_endpoint": "DISABLED",
+    "stripe_webhook_secret_name": "MISSING",
+    "stripe_scale_price_name": "MISSING",
+    "release_state": "NO_GO"
+  },
+  "work_performed": {
+    "local_test_patch": true,
+    "cloudflare_deploy": false,
+    "stripe_live_write": false,
+    "customer_charge": false,
+    "secrets_exposed": false
+  },
+  "unproven": [
+    "hosted_worker_exact_source",
+    "sandbox_quota_mcp_execution_receipt",
+    "live_billing_end_to_end"
+  ]
+}
