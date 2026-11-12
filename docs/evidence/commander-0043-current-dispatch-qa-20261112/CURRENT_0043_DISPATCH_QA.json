@@ -1,0 +1,156 @@
+{
+  "agent_contacted": false,
+  "branch": "local/commander-0043-current-dispatch-qa-20261112",
+  "cases": [
+    {
+      "name": "valid 0043 authorization claims once and redacts payload",
+      "state": "PASS"
+    },
+    {
+      "name": "historical NULL authorization denied",
+      "state": "PASS"
+    },
+    {
+      "name": "expired call deadline denied",
+      "state": "PASS"
+    },
+    {
+      "name": "revoked binding denied",
+      "state": "PASS"
+    },
+    {
+      "name": "revoked entitlement denied",
+      "state": "PASS"
+    },
+    {
+      "name": "grant removal denied",
+      "state": "PASS"
+    },
+    {
+      "name": "suspended tenant denied",
+      "state": "PASS"
+    },
+    {
+      "name": "revoked device denied",
+      "state": "PASS"
+    },
+    {
+      "name": "agent version drift denied",
+      "state": "PASS"
+    },
+    {
+      "name": "approval mode drift denied",
+      "state": "PASS"
+    },
+    {
+      "name": "plan disabled denied",
+      "state": "PASS"
+    },
+    {
+      "name": "stored tool changed denied",
+      "state": "PASS"
+    },
+    {
+      "name": "malformed context denied",
+      "state": "PASS"
+    },
+    {
+      "name": "disabled subject denied",
+      "state": "PASS"
+    },
+    {
+      "name": "user tenant pivot denied",
+      "state": "PASS"
+    },
+    {
+      "name": "OIDC issuer drift denied",
+      "state": "PASS"
+    },
+    {
+      "name": "OIDC external subject drift denied",
+      "state": "PASS"
+    },
+    {
+      "name": "expired entitlement denied",
+      "state": "PASS"
+    },
+    {
+      "name": "entitlement subject mismatch denied",
+      "state": "PASS"
+    },
+    {
+      "name": "incorrect plan meter denied",
+      "state": "PASS"
+    },
+    {
+      "name": "invalid plan quota denied",
+      "state": "PASS"
+    },
+    {
+      "name": "unlimited STANDARD-like plan remains authorized",
+      "state": "PASS"
+    },
+    {
+      "name": "concurrent claims cannot release same payload twice",
+      "state": "PASS"
+    },
+    {
+      "name": "revocation during async boundary prevents payload release",
+      "state": "PASS"
+    },
+    {
+      "name": "quota protection exception scrubs unreturned EXECUTING payload",
+      "state": "PASS"
+    },
+    {
+      "name": "scrub D1 failure is reported as UNPROVEN rather than safe",
+      "state": "PASS"
+    },
+    {
+      "name": "concurrent terminal state cannot be overwritten by late scrub",
+      "state": "PASS"
+    },
+    {
+      "name": "malformed queued payload is scrubbed without delivery",
+      "state": "PASS"
+    },
+    {
+      "name": "D1 revalidation error after claim is scrubbed and never dispatched",
+      "state": "PASS"
+    }
+  ],
+  "claim_function_sha256": "1a8cca66c212623d6afcb9c60eaf8c82e7629478ae3d97bb05c52ac7d11b18b2",
+  "cloudflare_provider_contacted": false,
+  "commercial_release": "HOLD_LEDGER_RECOVERY_COMPATIBILITY_UNPROVEN",
+  "migration_0043_sha256": "7e4d484161461deec1e7235d4ed6f725bf1c32ecc7901ba1b0c9885ffb0f28d3",
+  "new_test_names": [
+    "OIDC external subject drift denied",
+    "OIDC issuer drift denied",
+    "disabled subject denied",
+    "entitlement subject mismatch denied",
+    "expired entitlement denied",
+    "incorrect plan meter denied",
+    "invalid plan quota denied",
+    "unlimited STANDARD-like plan remains authorized",
+    "user tenant pivot denied"
+  ],
+  "new_tests": 9,
+  "observed_date": "2026-11-12",
+  "open_gates": [
+    "hosted_exact_worker_qa",
+    "active_durable_object_generations",
+    "two_full_quiescence_windows",
+    "consistent_d1_do_outbox_snapshot",
+    "forward_only_recovery_and_commercial_queue_consumer"
+  ],
+  "production_mutated": false,
+  "schema": "hara.commander-0043-current-dispatch-source-qa.v1",
+  "source_base": "9725e2129502f086ec6251821e294d2f4c4babec",
+  "sql_authorization_fence_exercised": true,
+  "sqlite_21_to_22": true,
+  "state": "CURRENT_WORKER_0043_DISPATCH_29_OF_29_PASS",
+  "temporary_databases_closed": 29,
+  "test_sha256": "25253b2b7d72231d24a13b5b3a7c88362fcfde915b3a2a280f742f05d5cc7306",
+  "total_tests": 29,
+  "worker_sha256": "9d7b5f192509f482e1cd79362a567b8e832a19adf149705d4e5df731d0197260"
+}
