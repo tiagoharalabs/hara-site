@@ -35,5 +35,21 @@
     "hosted_worker_exact_source",
     "sandbox_quota_mcp_execution_receipt",
     "live_billing_end_to_end"
-  ]
+  ],
+  "dev_mcp_readback": {
+    "tenant": "HARA-TENANT-DEMO-0001",
+    "registered_devices_active": 162,
+    "device_selections": 161,
+    "device_calls_total": 184,
+    "device_calls_completed": 182,
+    "device_calls_cancelled": 1,
+    "device_calls_expired": 1,
+    "latest_device_call_created_utc": "2026-10-10T00:08:04.715Z",
+    "latest_device_seen_utc": "2026-10-13T19:54:05.420Z",
+    "calls_since_2026_11_09": 0,
+    "usage_total_rows": 0,
+    "metering_event_rows": 0,
+    "paid_subscription_to_quota_mcp_receipt": "UNPROVEN",
+    "scope": "D1_DEV_READ_ONLY"
+  }
 }
