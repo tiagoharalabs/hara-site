@@ -1,0 +1,109 @@
+diff --git a/apps/commander/scripts/test_approval_async_queue_claim_0043_candidate_20261112.mjs b/apps/commander/scripts/test_approval_async_queue_claim_0043_candidate_20261112.mjs
+index 9843c8d..754009c 100644
+--- a/apps/commander/scripts/test_approval_async_queue_claim_0043_candidate_20261112.mjs
++++ b/apps/commander/scripts/test_approval_async_queue_claim_0043_candidate_20261112.mjs
+@@ -27,7 +27,7 @@ sql.exec("CREATE TABLE identity_bindings(identity_binding_id TEXT,issuer TEXT,ex
+ 
+ class D1 {prepare(query){return {bind:(...args)=>({first:async()=>sql.prepare(query).get(...args)||null,all:async()=>({results:sql.prepare(query).all(...args)}),run:async()=>({meta:{changes:sql.prepare(query).run(...args).changes}})})};}}
+ const env={PRODUCT_DB:new D1()};
+-let clock=Date.parse("2026-10-31T23:59:00.000Z"),event=false,notification=async()=>({attempted:false,delivered:0}),fastWaits=0;
++let clock=Date.parse("2026-10-31T23:59:00.000Z"),event=false,notification=async()=>({attempted:false,delivered:0}),fastWaits=0,revokeAtUsage=false,lateMutator=null;
+ const nowIso=(seconds=0)=>new Date(clock+seconds*1000).toISOString();
+ const deviceId="device-49",context={ok:true,tenant_id:"tenant",subject_id:"owner",grants:["execute","read"],identity_binding_id:"QA_BINDING_0043",issuer:"https://qa.async.invalid/",oidc_subject:"QA_OIDC_0043",entitlement_id:"QA_ENTITLEMENT_0043",plan_code:"QA_PLAN_0043"};
+ sql.prepare("INSERT INTO commander_devices VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)").run(deviceId,"tenant","owner","Windows","WINDOWS","x64","0.3.49","ASK_EVERY_ACTION","EVENT_V2","ACTIVE",nowIso(),null,nowIso());
+@@ -41,7 +41,7 @@ sql.exec("INSERT INTO tenants VALUES('tenant','ACTIVE');"+
+ const bindings={Date:class extends Date {static now(){return clock;}},
+  cleanId:x=>String(x),cleanDeviceName:x=>String(x),MCP_TOOL_GRANTS:{"hara.process.run":"execute","hara.files.write":"execute","hara.device.info":"read"},mcpProductContext:async()=>context,mcpBootstrapHints:()=>({}),
+  canonicalDeviceToolPayload,captureCallAuthorization,callAuthorizationFence,protectClaimedDeviceCallUsage:async()=>{},boundedJson:x=>JSON.stringify(x),deviceCallStoredContentMatches:async(a,b)=>a===b||a==="HARA_REDACTED_SHA256:"+createHash("sha256").update(b).digest("hex"),chooseCustomerTargetDevice,
+- asyncApprovalProfile,asyncApprovalDevice,deviceOnline:()=>true,quotaFunctionIdForTool:()=> "process.run",resolveCallUsageMode:async()=>"UNMETERED",mcpPeriodKey:()=> "2026-10",nowIso,
++ asyncApprovalProfile,asyncApprovalDevice,deviceOnline:()=>true,quotaFunctionIdForTool:()=> "process.run",resolveCallUsageMode:async()=>{if(revokeAtUsage){await Promise.resolve();sql.prepare("UPDATE entitlements SET state='REVOKED' WHERE entitlement_id=?").run(context.entitlement_id);}if(lateMutator){await Promise.resolve();lateMutator();}return "UNMETERED";},mcpPeriodKey:()=> "2026-10",nowIso,
+  DEVICE_CALL_TTL_SECONDS:50,DEVICE_ONLINE_GRACE_SECONDS:240,DEVICE_CALL_ACTIVE_QUEUE_LIMIT:16,eventV2Enabled:()=>event,notifyDeviceEventChannel:(...x)=>notification(...x),scheduler:{wait:async()=>{fastWaits++;}},EVENT_V2_TERMINAL_FAST_PATH_WAIT_MS:500,deviceCallRetryAfterMs:()=>100,crypto:webcrypto,
+  resolveDeviceCredential:async()=>sql.prepare("SELECT * FROM commander_devices WHERE device_id=?").get(deviceId),redactedDeviceCallContent:async x=>"HARA_REDACTED_SHA256:"+createHash("sha256").update(x).digest("hex")
+ };
+@@ -69,6 +69,34 @@ await test("legacy active mutable blocks900 profile while reads remain allowed",
+ await test("failed notification CAS cancels only unclaimed call",async()=>{reset();event=true;notification=async()=>({attempted:true,delivered:0});await assert.rejects(enqueue(env,body("notify-fail")),/DEVICE_OFFLINE/);assert.equal(sql.prepare("SELECT state FROM commander_device_calls").get().state,"CANCELLED");});
+ await test("notification failure after concurrent claim preserves accepted executing call",async()=>{reset();event=true;notification=async()=>{await claim(env,{});return {attempted:true,delivered:0};};const c=await enqueue(env,body("notify-claimed"));assert.equal(c.state,"EXECUTING");assert.equal(callRow(c.call_id).state,"EXECUTING");});
+ await test("async enqueue skips terminal fastpath wait",async()=>{reset();event=true;notification=async()=>({attempted:true,delivered:1});fastWaits=0;await enqueue(env,body("immediate"));assert.equal(fastWaits,0);});
++await test("0043 final enqueue denies entitlement revoked during usage await",async()=>{
++ reset();revokeAtUsage=true;
++ try {
++   await assert.rejects(enqueue(env,body("late-entitlement-revoke")),/DEVICE_CALL_(?:ENQUEUE_CONFLICT|AUTHORIZATION_REVOKED)/);
++   assert.equal(sql.prepare("SELECT COUNT(*) n FROM commander_device_calls").get().n,0);
++ } finally {
++   revokeAtUsage=false;
++   sql.prepare("UPDATE entitlements SET state='ACTIVE' WHERE entitlement_id=?").run(context.entitlement_id);
++ }
++});
++for(const [kind,alter,restore] of [
++  ["identity binding", "UPDATE identity_bindings SET state='REVOKED'", "UPDATE identity_bindings SET state='ACTIVE'"],
++  ["subject", "UPDATE users SET state='SUSPENDED'", "UPDATE users SET state='ACTIVE'"],
++  ["plan", "UPDATE plans SET state='DISABLED'", "UPDATE plans SET state='ACTIVE'"],
++  ["grant", "DELETE FROM plan_grants", "INSERT INTO plan_grants VALUES('QA_PLAN_0043','execute'),('QA_PLAN_0043','read')"],
++  ["expiry", "UPDATE entitlements SET valid_until_utc='2020-01-01T00:00:00Z'", "UPDATE entitlements SET valid_until_utc=NULL"],
++  ["OIDC issuer", "UPDATE identity_bindings SET issuer='https://invalid.synthetic/'", "UPDATE identity_bindings SET issuer='https://qa.async.invalid/'"],
++]){
++  await test("0043 enqueuing after late "+kind+" revocation fails closed",async()=>{
++    reset();lateMutator=()=>sql.exec(alter);
++    try {
++      await assert.rejects(enqueue(env,body("late-revoke-"+kind)),/DEVICE_CALL_(?:ENQUEUE_CONFLICT|AUTHORIZATION_REVOKED)/);
++      assert.equal(sql.prepare("SELECT COUNT(*) n FROM commander_device_calls").get().n,0);
++    } finally {
++      lateMutator=null;sql.exec(restore);
++    }
++  });
++}
+ bindings.MCP_TOOL_GRANTS["hara.process.output"]="read";
+ Object.assign(bindings,{isFileToolsTool,CALL_ROW_FIELDS,isApprovalCallHandle,acceptedCallStatus,readScopedCall,publicAcceptedCallStatus,isDeviceMutationTool,isDeviceProcessTool,agentPurposeToolReady:()=>true,customerMcpDevicePayload:(_t,a)=>{const {computer,...rest}=a;return canonicalDeviceToolPayload(_t,rest);},customerMcpRequestId:async(_i,_t,_a,id)=>id,legacyInvokePayload:()=>null,isRedactedDeviceCallContent:x=>String(x).startsWith("HARA_REDACTED_SHA256:"),projectCustomerToolResult:(_t,x)=>x});
+ let dispatched=0;
+@@ -80,4 +108,4 @@ await test("public execute returns accepted UNKNOWN pending handle immediately",
+ await test("public call status is cloud only and never reenqueues",async()=>{const p=await execute(env,{issuer:"issuer",subject:"owner"},"hara.process.output",{computer:"Windows",session_id:pending.result.session_id},"poll-new-month","polltransport");assert.equal(p.state,"PENDING");assert.equal(dispatched,1);assert.equal(sql.prepare("SELECT COUNT(*) n FROM commander_device_calls").get().n,1);});
+ await test("public handle rejects wrong computer and missing original grant",async()=>{await assert.rejects(execute(env,{issuer:"issuer",subject:"owner"},"hara.process.output",{computer:"Foreign",session_id:pending.result.session_id},"poll","transport"),/DEVICE_CALL_NOT_FOUND/);context.grants=["read"];await assert.rejects(execute(env,{issuer:"issuer",subject:"owner"},"hara.process.output",{session_id:pending.result.session_id},"poll","transport"),/GRANT_MISSING/);context.grants=["read","execute"];assert.equal(dispatched,1);});
+ await test("public handle stays readable after device revocation and without Agent contact",async()=>{sql.prepare("UPDATE commander_devices SET state='REVOKED',revoked_at_utc=? WHERE device_id=?").run(nowIso(),deviceId);const p=await execute(env,{issuer:"issuer",subject:"owner"},"hara.process.output",{computer:"Windows",session_id:pending.result.session_id},"poll","transport");assert.equal(p.state,"PENDING");assert.equal(dispatched,1);});
+-console.log(JSON.stringify({state:"PASS",tests,worker_sha256:createHash("sha256").update(worker).digest("hex"),sqlite:true,production_functions:["resolveCustomerTargetDevice","enqueueDeviceCall","claimNextDeviceCall"],production_mutation:false}));
++console.log(JSON.stringify({state:"PASS",tests,worker_sha256:createHash("sha256").update(worker).digest("hex"),sqlite:true,production_functions:["resolveCustomerTargetDevice","enqueueDeviceCall","claimNextDeviceCall"],production_mutation:false}));
+\ No newline at end of file
+diff --git a/apps/commander/scripts/test_p0_dispatch_authorization_0043_undelivered_20261112.mjs b/apps/commander/scripts/test_p0_dispatch_authorization_0043_undelivered_20261112.mjs
+index 84b49e1..65f4e6f 100644
+--- a/apps/commander/scripts/test_p0_dispatch_authorization_0043_undelivered_20261112.mjs
++++ b/apps/commander/scripts/test_p0_dispatch_authorization_0043_undelivered_20261112.mjs
+@@ -9,7 +9,7 @@ import {asyncApprovalDevice} from "../src/approval-async-relay.mjs";
+ 
+ const sha=s=>createHash("sha256").update(s).digest("hex");
+ const worker=readFileSync(new URL("../src/worker.js",import.meta.url),"utf8");
+-const WORKER_SHA="9d7b5f192509f482e1cd79362a567b8e832a19adf149705d4e5df731d0197260";
++const WORKER_SHA="c9f4c48e553de133598982018a3fbc19f6fcf9165dfd9ddf1609620da61e8dbc";
+ assert.equal(sha(worker),WORKER_SHA);
+ const migration=readFileSync(new URL("../migrations/0043_device_call_authorization.sql",import.meta.url),"utf8");
+ const M43_SHA="7e4d484161461deec1e7235d4ed6f725bf1c32ecc7901ba1b0c9885ffb0f28d3";
+diff --git a/apps/commander/src/worker.js b/apps/commander/src/worker.js
+index 02e8cf0..02ba7b4 100644
+--- a/apps/commander/src/worker.js
++++ b/apps/commander/src/worker.js
+@@ -3657,6 +3657,16 @@ async function enqueueDeviceCall(env, body) {
+                AND b.expires_at_utc > ?
+                AND b.units_issued + ? <= b.units_allocated
+           )
++        )
++        -- Revalidate 0043 authorization inside the atomic INSERT.
++        -- The earlier context and quota checks may await a revocation.
++        AND EXISTS (
++          SELECT 1 FROM (
++            SELECT ? AS call_id, ? AS request_id, ? AS tenant_id,
++                   ? AS subject_id, ? AS device_id, ? AS tool_id,
++                   ? AS authorization_context_json
++          ) auth_call
++          WHERE ${callAuthorizationFence("auth_call")}
+         )`
+   ).bind(
+     callId, requestId, context.tenant_id, context.subject_id, toolId, payloadJson,
+@@ -3666,7 +3676,9 @@ async function enqueueDeviceCall(env, body) {
+     deviceId, context.tenant_id, eventV2Cutoff, onlineCutoff,
+     createdAt, DEVICE_CALL_ACTIVE_QUEUE_LIMIT,
+     approvalProfile.approval_timeout_seconds,createdAt,
+-    usageMode, usagePeriodKey, createdAt, usageUnits
++    usageMode, usagePeriodKey, createdAt, usageUnits,
++    callId, requestId, context.tenant_id, context.subject_id,
++    deviceId, toolId, authorizationContextJson
+   ).run();
+ 
+   if (!inserted.meta?.changes) {
