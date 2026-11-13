@@ -1,0 +1,44 @@
+{
+  "configurations": {
+    "apps/commander/wrangler.dev.jsonc": {
+      "configuration_file_sha256": "885357f280445ee9a192897395c6cbd265b1aac211e4fa5221f6e6ed3075fa8a",
+      "consumer_count": 0,
+      "consumers": [],
+      "name": "hara-commander-dev-v2",
+      "producer_count": 0
+    },
+    "apps/commander/wrangler.jsonc": {
+      "configuration_file_sha256": "6b009fde3b76b8d73ae5069dc898d073cf01f9c3284defbcbc0b74a56784b3eb",
+      "consumer_count": 0,
+      "consumers": [],
+      "name": "hara-commander",
+      "producer_count": 0
+    },
+    "apps/commander/wrangler.r163-queue-qa.jsonc": {
+      "configuration_file_sha256": "3ea720906dd90620062decb00662fc19ed38dcf3dacbb616330da957e7f52e80",
+      "consumer_count": 2,
+      "consumers": [
+        {
+          "dead_letter_queue_configured": true,
+          "max_batch_size": 1,
+          "max_retries": 2
+        },
+        {
+          "dead_letter_queue_configured": false,
+          "max_batch_size": 1,
+          "max_retries": 2
+        }
+      ],
+      "name": "hara-commander-r163-canary-20261024",
+      "producer_count": 1
+    }
+  },
+  "patch_bytes": 3351,
+  "patch_sha256": "2af913daf6ee8858bec6c4629fd44c635918d6a7e1ffb7e8ca480ca1c75201b4",
+  "product_source_unchanged": true,
+  "production_authorized": false,
+  "provider_queried": false,
+  "schema": "hara.commander-queue-ack-bindings-source-manifest.v1",
+  "scope": "VERSIONED_SOURCE_MANIFEST_NOT_HOSTED_RUNTIME_READBACK",
+  "state": "SOURCE_PROD_DEV_QUEUE_NOT_BOUND_QA_R163_DLQ_EXISTS"
+}
