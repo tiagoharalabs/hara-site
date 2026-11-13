@@ -1,0 +1,16 @@
+{
+  "cloudflare_receipt_sha256": "5f627378495af1bed7b44ce34139e88cc5066981ba532c94ebe798856c90279c",
+  "commercial_consumer_0043_qualified": false,
+  "dev_worker_queue_bound": false,
+  "global_do_quiescence_proven": false,
+  "hosted_qa_backlog_zero": true,
+  "hosted_qa_consumer_count": 3,
+  "p0_exact_queue_dlq_present": false,
+  "p0_integrated_queue_dlq_present": false,
+  "production_promotion_authorized": false,
+  "production_worker_queue_bound": false,
+  "provider_mutations": 0,
+  "r163_native_queue_dlq_present": true,
+  "schema": "hara.commander-hosted-queues-independent-readback.v1",
+  "state": "HOSTED_QA_QUEUES_GET_VERIFIED_P0_DLQ_MISSING_COMMERCIAL_HOLD"
+}
