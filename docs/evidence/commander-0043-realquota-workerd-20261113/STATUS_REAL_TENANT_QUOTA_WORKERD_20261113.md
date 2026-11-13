@@ -51,3 +51,7 @@ Não realizar `migration 0043` em D1 PROD, não promover Worker comercial, não 
 ## Regressões históricas reexecutadas na mesma fonte
 
 Para evitar validar apenas a nova integração DO, reexecutei também as três suítes originais, ainda sobre o Worker candidato SHA-256 `f14550bb...`: **8/8** de expiração com adaptador sintético, **26/26** de aprovação/enqueue e **29/29** de claim/autorização/scrub. Todas PASS. O recibo `CARRYFORWARD_0043_REGRESSIONS.json` (SHA-256 `7e09f21bb762f3916f8ff1bda59b3c8df73ed2e6beb1e7813a0cf91303874375`) preserva os hashes de cada script e saída; não se afirma que as suítes representem casos únicos sem sobreposição. Nenhum runtime hospedado foi acionado.
+
+## Readback Cloudflare após o teste local
+
+A leitura autenticada somente de leitura, registrada em `POSTQA_PROVIDER_READONLY_20261113.json`, confirmou Worker comercial `12fe1bb3-4c8c-4a37-9793-54bb4525556e` a 100%, D1 PROD `commander_device_calls` com **21 colunas** e D1 QA 0043 com **22 colunas**. Não houve mutações. O SHA da fonte candidata permanece distinto da implantação comercial; isso **não** é aceite hosted QA.
