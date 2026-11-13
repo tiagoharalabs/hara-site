@@ -1,0 +1,78 @@
+{
+  "captured_at_utc": "2026-11-13T19:23:15.574012+00:00",
+  "commercial_0043_consumer_qualified": false,
+  "commercial_worker_traffic_percent": 100,
+  "commercial_worker_version": "12fe1bb3-4c8c-4a37-9793-54bb4525556e",
+  "consumer_results": [
+    {
+      "backlog_bytes": 0,
+      "backlog_count": 0,
+      "batch_size": 1,
+      "consumer_kind": "worker",
+      "consumer_worker": "hara-commander-p0-exact-qa-20261113",
+      "dead_letter_queue_configured": false,
+      "max_retries": 2,
+      "queue_ids_logged": false,
+      "queue_role": "p0_exact"
+    },
+    {
+      "backlog_bytes": 0,
+      "backlog_count": 0,
+      "batch_size": 1,
+      "consumer_kind": "worker",
+      "consumer_worker": "hara-commander-p0-integrated-qa-20261112",
+      "dead_letter_queue_configured": false,
+      "max_retries": 2,
+      "queue_ids_logged": false,
+      "queue_role": "p0_integrated"
+    },
+    {
+      "backlog_bytes": 0,
+      "backlog_count": 0,
+      "batch_size": 1,
+      "consumer_kind": "worker",
+      "consumer_worker": "hara-commander-r163-canary-20261024",
+      "dead_letter_queue_configured": true,
+      "max_retries": 2,
+      "queue_ids_logged": false,
+      "queue_role": "r163_recovery"
+    }
+  ],
+  "consumer_tokens_logged": false,
+  "dev_queue_binding_present": false,
+  "global_do_quiescence_proven": false,
+  "legacy_bridge_qa_modified": false,
+  "native_deliver_retry_e2e_proven": false,
+  "p0_exact_qa_dlq_present": false,
+  "p0_integrated_qa_dlq_present": false,
+  "p0_qa_queues_empty_at_readback": true,
+  "production_promotion_authorized": false,
+  "production_queue_binding_present": false,
+  "provider_method": "GET_ONLY",
+  "provider_mutations": 0,
+  "queue_ids_logged": false,
+  "queues_in_first_page": 4,
+  "r163_qa_dlq_present": true,
+  "schema": "hara.commander-cloudflare-queue-topology-readonly.v1",
+  "secrets_logged": false,
+  "state": "CLOUDFLARE_QA_QUEUE_TOPOLOGY_READONLY_PASS_COMMERCIAL_HOLD",
+  "worker_queue_binding_results": {
+    "hara-commander": {
+      "queue_binding_count": 0,
+      "queue_binding_names": [],
+      "secret_values_observed": false
+    },
+    "hara-commander-dev-v2": {
+      "queue_binding_count": 0,
+      "queue_binding_names": [],
+      "secret_values_observed": false
+    },
+    "hara-commander-r163-canary-20261024": {
+      "queue_binding_count": 1,
+      "queue_binding_names": [
+        "RECOVERY_DELIVERY_QUEUE"
+      ],
+      "secret_values_observed": false
+    }
+  }
+}
