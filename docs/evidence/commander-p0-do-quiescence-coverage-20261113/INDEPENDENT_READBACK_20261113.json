@@ -1,0 +1,40 @@
+{
+  "app_filetools_activation_authorized": false,
+  "commercial_d1_0043": false,
+  "commercial_persisted_objects": 72,
+  "commercial_version": "12fe1bb3-4c8c-4a37-9793-54bb4525556e",
+  "commercial_workload_quiescence_proven": false,
+  "historical_global_quiescence_proven": false,
+  "historical_hosted_local_fence_proven": true,
+  "hosted_commercial_queue_consumer_proven": false,
+  "independent_at_utc": "2026-11-13T16:49:36.409345+00:00",
+  "migration_0043_sha256": "7e4d484161461deec1e7235d4ed6f725bf1c32ecc7901ba1b0c9885ffb0f28d3",
+  "missing": [
+    "STORED_OBJECT_CENSUS_NOT_ACTIVE_INSTANCE_REGISTRY",
+    "PER_INSTANCE_COMMERCIAL_CODE_GENERATION_NOT_WITNESSED",
+    "TWO_COMPLETE_TIMED_GLOBAL_WINDOWS_NOT_WITNESSED",
+    "COMMERCIAL_WSS_ALARM_RPC_QUEUE_DRAIN_NOT_WITNESSED",
+    "D1_DO_QUOTA_OUTBOX_SNAPSHOT_EPOCH_NOT_WITNESSED",
+    "COMMERCIAL_QUEUE_CONSUMER_AND_FORWARD_RECOVERY_NOT_WITNESSED"
+  ],
+  "namespaces_paginated": 6,
+  "negative_mutations_rejected": 56,
+  "old_worker_rollback_authorized": false,
+  "production_promotion_authorized": false,
+  "provider_mutations": 0,
+  "qa_cron_disabled": true,
+  "qa_d1_0043": true,
+  "qa_persisted_objects": 4,
+  "schema": "hara.commander-p0-do-quiescence-independent-readback.v1",
+  "secret_values_in_receipt": false,
+  "source_and_receipt_sha256": {
+    "gate_source": "99bfa42d0f5c73fbab6f7c60388fd3046e0c079372bcdfeb679a3709504d01c9",
+    "negative_matrix": "314f927efdcf65c896d8ec4558a70fe8d949c2f75e1a04793e4333bab5a2dd0b",
+    "negative_test_source": "1532c747024898471753c244d01630fd63658e52dff76d94526a9cb386d3c347",
+    "provider_readback": "68c6922ae055a676181cc6d58b588d8f42287946df4ffec64a76cbd826b31885",
+    "provider_readonly_source": "edc072b0608c4a02f4ed7db89c169a8f1c59f73f7e72d02f95df9c30b8954c68",
+    "scoped_hold": "eb09caa512be42648bc0a6f93b8983182461800e2d3a6dac24d19f12782220ab"
+  },
+  "state": "DO_CENSUS_SCOPE_AND_56_NEGATIVES_PASS_COMMERCIAL_HOLD",
+  "worker_source_sha256": "9d7b5f192509f482e1cd79362a567b8e832a19adf149705d4e5df731d0197260"
+}
