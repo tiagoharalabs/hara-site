@@ -1,0 +1,100 @@
+{
+  "cloudflare_mutations": 0,
+  "commercial_traffic_percent": 100,
+  "commercial_version": "12fe1bb3-4c8c-4a37-9793-54bb4525556e",
+  "cron_qa_schedules": 0,
+  "d1_call_columns": {
+    "commercial": 21,
+    "isolated_qa": 22
+  },
+  "full_live_instance_inventory_proven": false,
+  "namespaces": [
+    {
+      "class": "DeviceChannel",
+      "not_stored": 0,
+      "objects": 7,
+      "pages": 2,
+      "pagination_complete": true,
+      "per_instance_active_state_proven": false,
+      "per_instance_generation_proven": false,
+      "scope": "commercial",
+      "stored": 7,
+      "unknown": 0
+    },
+    {
+      "class": "SecurityRateLimit",
+      "not_stored": 0,
+      "objects": 63,
+      "pages": 2,
+      "pagination_complete": true,
+      "per_instance_active_state_proven": false,
+      "per_instance_generation_proven": false,
+      "scope": "commercial",
+      "stored": 63,
+      "unknown": 0
+    },
+    {
+      "class": "TenantQuota",
+      "not_stored": 0,
+      "objects": 2,
+      "pages": 2,
+      "pagination_complete": true,
+      "per_instance_active_state_proven": false,
+      "per_instance_generation_proven": false,
+      "scope": "commercial",
+      "stored": 2,
+      "unknown": 0
+    },
+    {
+      "class": "DeviceChannel",
+      "not_stored": 0,
+      "objects": 1,
+      "pages": 2,
+      "pagination_complete": true,
+      "per_instance_active_state_proven": false,
+      "per_instance_generation_proven": false,
+      "scope": "isolated_qa",
+      "stored": 1,
+      "unknown": 0
+    },
+    {
+      "class": "SecurityRateLimit",
+      "not_stored": 0,
+      "objects": 1,
+      "pages": 2,
+      "pagination_complete": true,
+      "per_instance_active_state_proven": false,
+      "per_instance_generation_proven": false,
+      "scope": "isolated_qa",
+      "stored": 1,
+      "unknown": 0
+    },
+    {
+      "class": "TenantQuota",
+      "not_stored": 0,
+      "objects": 2,
+      "pages": 2,
+      "pagination_complete": true,
+      "per_instance_active_state_proven": false,
+      "per_instance_generation_proven": false,
+      "scope": "isolated_qa",
+      "stored": 2,
+      "unknown": 0
+    }
+  ],
+  "observed_at_utc": "2026-11-13T16:44:29.830444+00:00",
+  "old_worker_rollback_authorized": false,
+  "opaque_cursors_logged": false,
+  "per_instance_code_epoch_proven": false,
+  "production_promotion_authorized": false,
+  "raw_object_ids_logged": false,
+  "schema": "hara.commander-p0-do-provider-readonly-20261113.v1",
+  "secrets_logged": false,
+  "state": "DO_STORED_CENSUS_AND_0043_QA_READONLY_PASS_GLOBAL_HOLD",
+  "stored_scope_totals": {
+    "commercial": 72,
+    "isolated_qa": 4
+  },
+  "stripe_mutations": 0,
+  "two_global_quiescence_windows_proven": false
+}

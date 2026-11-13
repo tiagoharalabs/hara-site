@@ -1,0 +1,34 @@
+{
+  "schema": "hara.commander-p0-do-coverage-evaluation.v1",
+  "state": "QA_LOCAL_FENCE_AND_STORED_CENSUS_PASS_GLOBAL_HOLD",
+  "census": {
+    "namespaces": 6,
+    "objects_with_known_storage_scope": {
+      "commercial": 72,
+      "isolated_qa": 4
+    }
+  },
+  "qa_fence": {
+    "effect_counter_unchanged": true,
+    "fenced_fixture": "alpha_only",
+    "hosted": true,
+    "nonce_replay_denied": true,
+    "provider_native_alarm_and_wss_tested": true,
+    "two_local_observations": 2
+  },
+  "missing": [
+    "STORED_OBJECT_CENSUS_NOT_ACTIVE_INSTANCE_REGISTRY",
+    "PER_INSTANCE_COMMERCIAL_CODE_GENERATION_NOT_WITNESSED",
+    "TWO_COMPLETE_TIMED_GLOBAL_WINDOWS_NOT_WITNESSED",
+    "COMMERCIAL_WSS_ALARM_RPC_QUEUE_DRAIN_NOT_WITNESSED",
+    "D1_DO_QUOTA_OUTBOX_SNAPSHOT_EPOCH_NOT_WITNESSED",
+    "COMMERCIAL_QUEUE_CONSUMER_AND_FORWARD_RECOVERY_NOT_WITNESSED"
+  ],
+  "commercial_migration_0043_authorized": false,
+  "commercial_worker_deploy_authorized": false,
+  "credentials_in_output": false,
+  "filetools_activation_authorized": false,
+  "old_worker_rollback_allowed": false,
+  "provider_mutation_performed": false,
+  "raw_object_ids_in_output": false
+}
