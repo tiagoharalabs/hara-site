@@ -1,0 +1,12 @@
+--- a/apps/commander/scripts/observe_0043_expiry_qa_20261113.py
++++ b/apps/commander/scripts/observe_0043_expiry_qa_20261113.py
+@@ -60,7 +60,8 @@
+  marker=raw.get("payload_json")
+  safe_call={
+   "state":raw.get("state"),
+-  "content_redacted":isinstance(marker,str) and marker.startswith("HARA_REDACTED_SHA256:") and len(marker)==len("HARA_REDACTED_SHA256:")+64,
++  "content_redacted":isinstance(marker,str) and marker.startswith("HARA_REDACTED_SHA256:") and
++    bool(__import__("re").fullmatch(r"[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]",marker[len("HARA_REDACTED_SHA256:"):])),
+   "reconciliation_required":meta is not None and meta.get("usage",{}).get("reconciliation_required") is True,
+   "execution_started":meta is not None and meta.get("usage",{}).get("execution_started") is True,
+   "manual_reconciliation_required":meta is not None and meta.get("manual_reconciliation_required") is True
