@@ -1,0 +1,77 @@
+{
+  "agent_contacted": false,
+  "cleanup": {
+    "close_errors": [],
+    "qa_key_deleted": true,
+    "qa_public_ingress_closed": true,
+    "qa_worker_exists": true
+  },
+  "commercial_baseline_preserved": true,
+  "commercial_migration_performed": false,
+  "commercial_promotion_authorized": false,
+  "customer_data_used": false,
+  "failure_reason_category": null,
+  "global_DO_inventory_proven": false,
+  "observed_at_utc": "2026-11-13T18:02:37.757208+00:00",
+  "original_migration_0043_sha256": "7e4d484161461deec1e7235d4ed6f725bf1c32ecc7901ba1b0c9885ffb0f28d3",
+  "original_worker_bundle_sha256": "049240c088942fe732ab25db37d8620a84cc6801008611967c09cc242fb36657",
+  "original_worker_source_sha256": "9d7b5f192509f482e1cd79362a567b8e832a19adf149705d4e5df731d0197260",
+  "qa_entry_source_sha256": "60fde610cbe2158a6bedf53e9a4c29c0274e1eb8c541ba93bd095671a34d75f5",
+  "qa_epoch": "QA_PREFENCE_WSS_EPOCH_20261113",
+  "qa_name": "hara-commander-p0-prefence-wss-qa-20261113",
+  "qa_scope": "ISOLATED_QA_PREFENCE_WSS_20261113",
+  "qa_worker_mutations": 2,
+  "qa_wss_client_sha256": "33039bdc86a4c49b0ebe1faaefdbcf6d2fc73df089788af5a99fda354ab84cfa",
+  "schema": "hara.commander-p0-exact-wss-prefence-hosted.v1",
+  "sequence": [
+    {
+      "phase": "PREPARED",
+      "source_sha256": "9d7b5f192509f482e1cd79362a567b8e832a19adf149705d4e5df731d0197260"
+    },
+    {
+      "deployment_id": "7000f080-01b5-4833-ac77-e7c599fd9474",
+      "phase": "FORWARD",
+      "version_id": "47625a21-9eb0-4d22-9597-238bb75aad1f"
+    },
+    {
+      "phase": "WSS_PRE_PROBE",
+      "probe_ack": true
+    },
+    {
+      "before": {
+        "fenced": false,
+        "scheduled_alarm": false,
+        "source_generation": "HARA_CANDIDATE_P0_FENCE_20261112",
+        "websockets": 1
+      },
+      "client_exit": 0,
+      "fence_result_code": "DO_CUTOVER_FENCED",
+      "phase": "WSS_PREFENCE",
+      "post_fence": {
+        "epoch": "QA_PREFENCE_WSS_EPOCH_20261113",
+        "fenced": true,
+        "local_drained": true,
+        "scheduled_alarm": false,
+        "source_generation": "HARA_CANDIDATE_P0_FENCE_20261112",
+        "websockets": 0
+      },
+      "wss_result": {
+        "close_code": 1012,
+        "close_reason": "DO_CUTOVER_FENCED",
+        "probe_ack": true,
+        "state": "QA_WSS_EXISTING_CONNECTION_FENCED_1012"
+      }
+    },
+    {
+      "deployment_id": "8c65a456-f069-4535-b4ef-7909809c3e78",
+      "phase": "CONTAINMENT",
+      "post_containment_http": 503,
+      "qa_fence_persistent": true,
+      "same_qa_do_namespace": true,
+      "version_id": "b2841d77-b68d-4609-982b-c810f0abe339"
+    }
+  ],
+  "state": "CLOUDFLARE_EXACT_DO_PREFENCE_WSS_1012_PASS",
+  "stripe_mutations": 0,
+  "two_global_quiescence_windows_proven": false
+}
