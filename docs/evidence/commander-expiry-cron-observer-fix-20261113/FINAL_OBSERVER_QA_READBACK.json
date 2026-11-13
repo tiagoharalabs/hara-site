@@ -1,0 +1,20 @@
+{
+  "at_utc": "2026-11-13T23:05:14.168004+00:00",
+  "baseline_document_sha256": "57d1eead61446b2ee78cb44e91e526087190d5615a1d973e259fcc2b999feeef",
+  "cloudflare_provider_mutations": 0,
+  "commercial_worker_modified": false,
+  "corrected_contract_sha256": "a89447e7d0bcdc8ef3b5f53a83d7d4ceb24fe675dcea2d87c02ff8adfb3b16ba",
+  "hosted_previous_native_cron_receipts": 0,
+  "original_observer_sha256": "28d3d0eca5ca8f79c04c6be789acd87e35456dd490d40bb3e5837d50aae5daee",
+  "patch_sha256": "730d53ce0534f9201bf487a7c861d43229d2f5c88c118a8695ffb4ad4a47d57c",
+  "prechange_root": "00438dbfbb21f901ca31ca857fdfc5286767d724",
+  "previous_cron_provider_disabled": true,
+  "prior_audit_sha256": "7544be78a49f0cbce78be70839a9e60471f4d20e06523a65a07a6aa92d5b536e",
+  "production_cutover_authorized": false,
+  "python_patch_syntax_valid": true,
+  "qa_runtime_modified": false,
+  "regressions_passed": 26,
+  "schema": "hara.commander-expiry-cron-observer-final-audit.v1",
+  "state": "QA_OBSERVER_BASE64URL_PATCH_SYNTAX_AND_26_CASES_PASS_HOSTED_HOLD",
+  "test_sha256": "8236e8324076fc800e5e97bf4ac2a99ccde8fd8785694d1f39dd9e23455f3ec3"
+}
