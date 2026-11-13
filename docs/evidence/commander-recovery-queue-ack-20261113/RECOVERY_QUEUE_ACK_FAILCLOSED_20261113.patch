@@ -1,0 +1,56 @@
+diff --git a/apps/commander/scripts/test_recovery_fanout_r163.mjs b/apps/commander/scripts/test_recovery_fanout_r163.mjs
+index bf209ea..31842be 100644
+--- a/apps/commander/scripts/test_recovery_fanout_r163.mjs
++++ b/apps/commander/scripts/test_recovery_fanout_r163.mjs
+@@ -252,6 +252,34 @@ test('scan-only mode explicitly DISABLED delivery remains compatible',async t=>{
+  assert.equal(r.delivery_state,'DISABLED');
+  assert.equal(f.jobs().filter(j=>j.kind==='DELIVER').length,0);
+ });
++test('DELIVER queued before feature disabled must retry and never ACK without receipt',async t=>{
++ const f=fixture(t);f.env.COMMANDER_RECOVERY_DELIVERY_ENABLED='true';
++ f.addDevice(1,{seen:-1000});f.addEvent(1);
++ await f.produce({scan:false});
++ const job=f.jobs().find(x=>x.kind==='DELIVER');assert.ok(job);
++ f.env.COMMANDER_RECOVERY_DELIVERY_ENABLED='false';
++ const first=await f.consume(job);
++ assert.equal(first.result.state,'RETRY');
++ assert.equal(first.calls.ack,0);
++ assert.deepEqual(first.calls.retry,[{delaySeconds:60}]);
++ assert.equal(f.metrics.fetches.length,0);
++ assert.equal(f.db.prepare('SELECT COUNT(*) AS n FROM recovery_delivery_outbox').get().n,0);
++ f.env.COMMANDER_RECOVERY_DELIVERY_ENABLED='true';
++ const resumed=await f.consume(job);
++ assert.equal(resumed.calls.ack,1);
++ assert.equal(resumed.calls.retry.length,0);
++ assert.equal(f.db.prepare('SELECT state FROM recovery_delivery_outbox').get().state,'DELIVERED');
++ assert.equal(f.recipient.prepare('SELECT COUNT(*) AS n FROM receipt').get().n,1);
++});
++test('DELIVER synthetic queued while delivery stays disabled is retried fail closed',async t=>{
++ const f=fixture(t);f.addDevice(1,{seen:-1000});f.addEvent(1);
++ const r=await f.consume(delivery([eventId(1)]));
++ assert.equal(r.calls.ack,0);
++ assert.deepEqual(r.calls.retry,[{delaySeconds:60}]);
++ assert.equal(r.result.state,'RETRY');
++ assert.equal(r.result.result.state,'DISABLED');
++ assert.equal(f.metrics.fetches.length,0);
++});
+ test('DELIVER producer queues only configured tenant targets and due non-terminal events',async t=>{
+  const f=fixture(t);f.env.COMMANDER_RECOVERY_DELIVERY_ENABLED='true';
+  f.addDevice(1,{seen:-1000});f.addDevice(2,{tenant:'TENANT-B',seen:-1000});
+diff --git a/apps/commander/src/recovery-fanout.mjs b/apps/commander/src/recovery-fanout.mjs
+index a0d9a9b..4550bfa 100644
+--- a/apps/commander/src/recovery-fanout.mjs
++++ b/apps/commander/src/recovery-fanout.mjs
+@@ -88,7 +88,11 @@ export async function consumeRecoveryWork(batch,env,{nowMs=Date.now(),fetchImpl=
+  try{
+   const result=body.kind==='SCAN'?await detectOfflineRecoveryDevices(env,body.device_ids,nowMs):
+    await dispatchRecoveryDeliveries(env,{eventIds:body.event_ids,nowMs,fetchImpl,timeoutMs,exclusiveDeviceLeases:true});
+-  if(result.state?.startsWith('HOLD_')||result.held||result.pending||result.exhausted){
++  // A queued DELIVER message may outlive its enabled config. Treat any
++  // non-COMPLETE delivery result (including DISABLED or unknown) as unproven,
++  // never a successful durable ACK. The native Queue retry/DLQ owns recovery.
++  if((body.kind==='DELIVER' && result?.state!=='COMPLETE')||
++     result.state?.startsWith('HOLD_')||result.held||result.pending||result.exhausted){
+    message.retry({delaySeconds});return {state:'RETRY',result};
+   }
+   message.ack();return {state:'ACKNOWLEDGED',result};
