@@ -1,0 +1,45 @@
+diff --git a/apps/commander/scripts/test_recovery_fanout_r163.mjs b/apps/commander/scripts/test_recovery_fanout_r163.mjs
+index bf209ea..94b4fd7 100644
+--- a/apps/commander/scripts/test_recovery_fanout_r163.mjs
++++ b/apps/commander/scripts/test_recovery_fanout_r163.mjs
+@@ -275,6 +275,23 @@ test('20k real native events become 2000 bounded unique DELIVER jobs',async t=>{
+  assert.ok(f.metrics.batches.every(batch=>batch.length<=100));assert.equal(f.metrics.fetches.length,0);
+  console.log('R163_REAL_SQLITE_20K_DELIVER_JOBS='+jobs.length);
+ });
++test('DELIVER consumer disabled after enqueue must RETRY and not ACK undelivered receipt',async t=>{
++ const f=fixture(t);f.env.COMMANDER_RECOVERY_DELIVERY_ENABLED='true';
++ f.addDevice(1,{seen:-1000});f.addEvent(1);
++ await f.produce({scan:false});
++ const job=f.jobs().find(x=>x.kind==='DELIVER');assert.ok(job);
++ f.env.COMMANDER_RECOVERY_DELIVERY_ENABLED='false';
++ const attempt=await f.consume(job);
++ assert.equal(attempt.result.state,'RETRY');
++ assert.equal(attempt.calls.ack,0);
++ assert.deepEqual(attempt.calls.retry,[{delaySeconds:60}]);
++ assert.equal(f.metrics.fetches.length,0);
++ assert.equal(f.db.prepare('SELECT COUNT(*) AS n FROM recovery_delivery_outbox').get().n,0);
++ f.env.COMMANDER_RECOVERY_DELIVERY_ENABLED='true';
++ const resumed=await f.consume(job);
++ assert.equal(resumed.calls.ack,1);
++ assert.equal(f.db.prepare('SELECT state FROM recovery_delivery_outbox').get().state,'DELIVERED');
++});
+ test('DELIVER consumer persists independently verified receipt, then duplicate delivery causes no HTTP',async t=>{
+  const f=fixture(t);f.env.COMMANDER_RECOVERY_DELIVERY_ENABLED='true';
+  f.addDevice(1,{seen:-1000});f.addEvent(1);f.addEvent(2);
+diff --git a/apps/commander/src/recovery-fanout.mjs b/apps/commander/src/recovery-fanout.mjs
+index a0d9a9b..953c96c 100644
+--- a/apps/commander/src/recovery-fanout.mjs
++++ b/apps/commander/src/recovery-fanout.mjs
+@@ -88,7 +88,11 @@ export async function consumeRecoveryWork(batch,env,{nowMs=Date.now(),fetchImpl=
+  try{
+   const result=body.kind==='SCAN'?await detectOfflineRecoveryDevices(env,body.device_ids,nowMs):
+    await dispatchRecoveryDeliveries(env,{eventIds:body.event_ids,nowMs,fetchImpl,timeoutMs,exclusiveDeviceLeases:true});
+-  if(result.state?.startsWith('HOLD_')||result.held||result.pending||result.exhausted){
++  // A DELIVER job is not complete if the delivery feature was turned off
++  // between queue admission and consumption. Do not ACK/drop its receipt.
++  // SCAN summaries from recordOfflineCandidates intentionally have no state.
++  if((result.state!==undefined&&result.state!=='COMPLETE')
++      ||result.held||result.pending||result.exhausted){
+    message.retry({delaySeconds});return {state:'RETRY',result};
+   }
+   message.ack();return {state:'ACKNOWLEDGED',result};
