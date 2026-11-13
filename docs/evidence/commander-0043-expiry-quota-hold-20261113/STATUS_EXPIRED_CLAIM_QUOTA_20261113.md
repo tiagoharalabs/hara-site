@@ -66,3 +66,7 @@ A quota DO usada nos testes foi **sintética**, mas o código de reconciliação
 ## 6. Patch íntegro para revisão GitHub Web
 
 O diff **exato** da correção e das regressões em relação à baseline pré-mudança `9fa0d7b9ac691e7efa884d361d7996c9c5dc8af0` foi preservado em `SOURCE_EXPIRED_CLOUD_QUOTA_HOLD_20261113.patch`, SHA-256 `7226e9d84e23b7383c24a845aa12d91abe06498ef6390aa7c8de7d3c93da4d4b`. Ele contém três caminhos: Worker corrigido, teste novo e atualização de pin da suíte de claim. O patch deve ser revisado sobre a linhagem exata do produto; não faz merge nem deploy por si só.
+
+## 7. Readback Cloudflare depois da QA local
+
+Nova consulta autenticada somente de leitura confirmou a **mesma** versão do Worker comercial `12fe1bb3-4c8c-4a37-9793-54bb4525556e` em 100% do tráfego, D1 PROD com **21 colunas** em `commander_device_calls` e D1 QA migrado com **22 colunas**. Nenhuma mutation foi executada. O recibo separado `POSTCHANGE_PROD_READONLY_20261113.json` registra esses campos, sem secrets. Essa observação **não** demonstra que a fonte candidata SHA `f14550bb...` esteja hospedada, nem fecha os gates globais.
