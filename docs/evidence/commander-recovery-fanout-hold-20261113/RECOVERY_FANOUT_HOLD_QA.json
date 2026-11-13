@@ -1,0 +1,36 @@
+{
+  "agent_dispatched": false,
+  "backend_cutover_authorized": false,
+  "base_commit": "53a8a81fd2dc26960d3b6ae253abbfe12961763a",
+  "before_patch_regression_was_red": true,
+  "branch": "local/commander-recovery-fanout-hold-fix-20261113",
+  "commercial_migration_0043_applied": false,
+  "delivery_failure_promoted_to_hold": true,
+  "global_DO_quiescence_proven": false,
+  "new_regression_cases": [
+    "producer HOLD: broken delivery configuration never reports COMPLETE",
+    "producer HOLD with SCAN work is not mistaken for full reconciliation",
+    "scan-only mode explicitly DISABLED delivery remains compatible"
+  ],
+  "patched_source_sha256": "bc32ea1e5e9473f5955b173e7079ce560c5666a109e3bfd07d8dde4071bf7b07",
+  "production_deployment": false,
+  "production_mutated": false,
+  "provider_called": false,
+  "regression_tests_failed": 0,
+  "regression_tests_passed": 84,
+  "regression_tests_total": 84,
+  "scan_only_mode_preserved": true,
+  "schema": "hara.commander-recovery-fanout-hold-candidate-qa.v1",
+  "source_and_tests_sha256": {
+    "apps/commander/scripts/test_recovery_fanout_r163.mjs": "6546693c509c36f5d424cabfc7a161082a0dceed6981783babeca21078fee2d5",
+    "apps/commander/scripts/test_recovery_queue_budget_r163.mjs": "2156466d80f01575a500265bc9341477942728c39dce2dad1c5017ca85476f1e",
+    "apps/commander/scripts/test_recovery_queue_dlq_r163.mjs": "9c2003e8418b290962d7b7ab49a9dc7a7db7c7023cc2f1b0081b4f9e2a9e3f68",
+    "apps/commander/src/recovery-fanout.mjs": "bc32ea1e5e9473f5955b173e7079ce560c5666a109e3bfd07d8dde4071bf7b07"
+  },
+  "state": "RECOVERY_FANOUT_INCOMPLETE_DELIVERY_HOLD_84_TESTS_AND_WORKER_BUILD_PASS",
+  "temporary_dependency_symlink_removed": true,
+  "test_log_sha256": "b83b116d748fee2a97a2de1a912852adbbe2fdba4987036b0e5cac13d9355293",
+  "worker_dryrun_bundle_bytes": 1906601,
+  "worker_dryrun_bundle_sha256": "792e6b73dbdf6cc75d62ce280bd62534487b39edb23cd90ef99757c3a901a576",
+  "worker_entry_original_sha256": "9d7b5f192509f482e1cd79362a567b8e832a19adf149705d4e5df731d0197260"
+}
