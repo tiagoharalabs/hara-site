@@ -1,0 +1,57 @@
+diff --git a/apps/commander/scripts/test_recovery_fanout_r163.mjs b/apps/commander/scripts/test_recovery_fanout_r163.mjs
+index 7f969ea..bf209ea 100644
+--- a/apps/commander/scripts/test_recovery_fanout_r163.mjs
++++ b/apps/commander/scripts/test_recovery_fanout_r163.mjs
+@@ -226,6 +226,32 @@ test('delivery fanout remains independently OFF without contacting a recipient',
+  await f.consume(delivery([eventId(1)]));assert.equal(f.metrics.fetches.length,0);
+  assert.equal(f.db.prepare('SELECT count(*) AS n FROM recovery_delivery_outbox').get().n,0);
+ });
++test('producer HOLD: broken delivery configuration never reports COMPLETE',async t=>{
++ const f=fixture(t);f.env.COMMANDER_RECOVERY_DELIVERY_ENABLED='true';
++ f.env.COMMANDER_RECOVERY_DELIVERY_ALLOWED_ORIGINS='not-json';
++ const r=await f.produce({scan:false});
++ assert.equal(r.delivery_state,'HOLD_RECOVERY_TARGET_CONFIG');
++ assert.equal(r.state,'HOLD_RECOVERY_DELIVERY_ENUMERATION');
++ assert.equal(r.jobs,0);assert.equal(f.metrics.batches.length,0);
++ assert.equal(f.metrics.fetches.length,0);
++});
++test('producer HOLD with SCAN work is not mistaken for full reconciliation',async t=>{
++ const f=fixture(t);f.env.COMMANDER_RECOVERY_DELIVERY_ENABLED='true';
++ f.env.COMMANDER_RECOVERY_DELIVERY_TARGETS='[]';
++ f.addDevice(1);
++ const r=await f.produce();
++ assert.equal(r.delivery_state,'HOLD_RECOVERY_TARGET_CONFIG');
++ assert.equal(r.state,'HOLD_RECOVERY_DELIVERY_ENUMERATION');
++ assert.ok(f.jobs().some(j=>j.kind==='SCAN'));
++ assert.equal(f.jobs().filter(j=>j.kind==='DELIVER').length,0);
++});
++test('scan-only mode explicitly DISABLED delivery remains compatible',async t=>{
++ const f=fixture(t);f.addDevice(1);
++ const r=await f.produce();
++ assert.equal(r.state,'COMPLETE');
++ assert.equal(r.delivery_state,'DISABLED');
++ assert.equal(f.jobs().filter(j=>j.kind==='DELIVER').length,0);
++});
+ test('DELIVER producer queues only configured tenant targets and due non-terminal events',async t=>{
+  const f=fixture(t);f.env.COMMANDER_RECOVERY_DELIVERY_ENABLED='true';
+  f.addDevice(1,{seen:-1000});f.addDevice(2,{tenant:'TENANT-B',seen:-1000});
+diff --git a/apps/commander/src/recovery-fanout.mjs b/apps/commander/src/recovery-fanout.mjs
+index b66c268..a0d9a9b 100644
+--- a/apps/commander/src/recovery-fanout.mjs
++++ b/apps/commander/src/recovery-fanout.mjs
+@@ -56,7 +56,14 @@ export async function enqueueRecoveryWork(env,{nowMs=Date.now(),maxDevices=20000
+  while(result.delivery_events<maxEvents){
+   const limit=Math.min(500,maxEvents-result.delivery_events);
+   const page=await listRecoveryDeliveryCandidates(env,{nowMs,limit,after});
+-  if(page.state!=='COMPLETE'){result.delivery_state=page.state;break;}
++  if(page.state!=='COMPLETE'){
++   // Scan-only operation is legitimate when delivery is explicitly disabled.
++   // Any other incomplete enumeration MUST NOT be acknowledged as COMPLETE:
++   // the caller/cron/operations telemetry must observe a blocking state.
++   result.delivery_state=page.state;
++   if(page.state!=='DISABLED')result.state='HOLD_RECOVERY_DELIVERY_ENUMERATION';
++   break;
++  }
+   for(const row of page.rows){
+    eventIds.push(row.event_id);result.delivery_events++;
+    if(eventIds.length===10){await add({schema:SCHEMA,kind:'DELIVER',event_ids:eventIds});eventIds=[];}
