@@ -1,0 +1,118 @@
+{
+  "agent_contacted": false,
+  "base_commit": "dcfe17937a314431a71c2634a0b8fed0ac61187d",
+  "global_quiescence_proven": false,
+  "migration_0043_source_sha256": "7e4d484161461deec1e7235d4ed6f725bf1c32ecc7901ba1b0c9885ffb0f28d3",
+  "observed": {
+    "cases": [
+      {
+        "classes": 3,
+        "known_instances": 4,
+        "name": "actual three DO classes expose their native witness method",
+        "state": "PASS"
+      },
+      {
+        "first_uncertain_protected": true,
+        "name": "two reserved quota units acquire protected reconciliation holds",
+        "state": "PASS"
+      },
+      {
+        "name": "rate limit may mutate prior to its own fence",
+        "state": "PASS"
+      },
+      {
+        "name": "fencing only one real DO does not close the QA manifest",
+        "one_fenced": true,
+        "state": "PASS",
+        "three_unfenced": true
+      },
+      {
+        "name": "all four known QA actor instances accept a pinned epoch",
+        "scoped_fenced_instances": 4,
+        "state": "PASS"
+      },
+      {
+        "name": "late hold stays monotonic, without quota release or settlement",
+        "protected_rows": 2,
+        "protected_units": 2,
+        "state": "PASS"
+      },
+      {
+        "name": "rate and channel deny effects after individual fences",
+        "state": "PASS"
+      },
+      {
+        "known_actors": 4,
+        "name": "two scoped windows use distinct nonces and actual wall-clock separation",
+        "sample_interval_ms": 267,
+        "state": "PASS"
+      },
+      {
+        "name": "corrupted DO witnesses or actor rosters fail closed",
+        "negatives_rejected": 22,
+        "state": "PASS"
+      },
+      {
+        "global_claim_denied": true,
+        "name": "an unregistered DO can remain mutable despite four known fences",
+        "state": "PASS",
+        "unregistered_object_mutable": true
+      },
+      {
+        "name": "four fenced actors persist after workerd runtime restart",
+        "persisted_known_fences": 4,
+        "protected_units": 2,
+        "state": "PASS"
+      }
+    ],
+    "commercial_active_inventory_proven": false,
+    "commercial_cutover_authorized": false,
+    "known_qa_actors": 4,
+    "local_runtime_restart_proven": true,
+    "observer_scope": "LOCAL_WORKERD_KNOWN_SYNTHETIC_MANIFEST_ONLY",
+    "production_mutated": false,
+    "provider_called": false,
+    "schema": "hara.commander-qa-real-do-known-manifest.v1",
+    "scoped_witness": {
+      "agent_dispatched": false,
+      "all_live_commercial_instances_proven": false,
+      "commercial_cutover_authorized": false,
+      "commercial_queue_consumer_proven": false,
+      "global_two_quiescence_windows_proven": false,
+      "hosted_cloudflare_qa_run": false,
+      "known_actor_manifest_complete": true,
+      "known_qa_instances": 4,
+      "production_mutated": false,
+      "quota_protected_units": 2,
+      "samples": 2,
+      "schema": "hara.commander-qa-known-do-manifest-witness.v1",
+      "source_worker_sha256": "9d7b5f192509f482e1cd79362a567b8e832a19adf149705d4e5df731d0197260",
+      "state": "KNOWN_QA_DO_MANIFEST_TWO_OBSERVATIONS_PASS_GLOBAL_HOLD",
+      "unique_nonces": 8,
+      "unregistered_DO_instances_excluded": true,
+      "websocket_drained_in_known_channel": true
+    },
+    "source_worker_sha256": "9d7b5f192509f482e1cd79362a567b8e832a19adf149705d4e5df731d0197260",
+    "state": "REAL_PRODUCT_DO_KNOWN_MANIFEST_WORKERD_PASS_GLOBAL_HOLD",
+    "time_gap_ms": 267,
+    "two_global_quiescence_windows_proven": false,
+    "unregistered_qa_actor_observed": true
+  },
+  "prod_migration_applied": false,
+  "production_mutated": false,
+  "production_promotion_authorized": false,
+  "provider_called": false,
+  "schema": "hara.commander-real-product-do-manifest-runtime-qa.v1",
+  "source_sha256": {
+    "apps/commander/qa/p0-manifest-runtime/manifest-gate.mjs": "8a8a1328ad594c12f2632f408da13ae671a7a49afa4186ab6249edee29713f5a",
+    "apps/commander/scripts/test_p0_real_do_manifest_20261113.mjs": "f3d8feffdad0a044cea6cd074a11709ee6631b49f3c14e2ec38d1b200d1c41aa",
+    "apps/commander/src/device-channel.mjs": "038025cdb9ca76fd992b828e2bdcbe623447014102f1d421469698d9380b6779",
+    "apps/commander/src/security-rate-limit-do.mjs": "d2a610d7fa32c8687c057c1015658d550aa0d5a0ddf4358994c7c4da1ef7dd33",
+    "apps/commander/src/worker.js": "9d7b5f192509f482e1cd79362a567b8e832a19adf149705d4e5df731d0197260"
+  },
+  "state": "REAL_PRODUCT_DO_KNOWN_MANIFEST_WORKERD_PASS_GLOBAL_HOLD",
+  "temporary_storage_removed": true,
+  "worker_bundle_bytes": 1903112,
+  "worker_bundle_sha256": "3029246a00c3f85c54c0f03ebbd1c0622c2e22476a56de48f6926050b26d9b29",
+  "wrangler_config_sha256": "bc4532a7d62e51a7b147c0c755c71fc8e59763688f0098235fac88501e4fefde"
+}
