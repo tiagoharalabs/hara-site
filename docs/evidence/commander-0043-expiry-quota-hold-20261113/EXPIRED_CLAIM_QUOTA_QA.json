@@ -1,0 +1,71 @@
+{
+  "agent_dispatched": false,
+  "before_patch_case": {
+    "case": "CLAIMED_CLOUD_QUOTA_EXPIRED_REQUIRES_HOLD_BEFORE_REDACTION",
+    "expected_hold_calls": 1,
+    "observed_hold_calls": 0,
+    "observed_state": "FAIL"
+  },
+  "branch": "local/commander-0043-expiry-quota-hold-20261113",
+  "claim_authorization_cases": 29,
+  "claim_cleanup_idempotent_on_repeat": true,
+  "claim_quota_hold_before_redaction": true,
+  "cloudflare_called": false,
+  "commercial_ledger_recovery_approved": false,
+  "enqueue_approval_cases": 26,
+  "global_do_quiescence_proven": false,
+  "hold_failure_no_false_redaction": true,
+  "hosted_qa_pass": false,
+  "metadata_d1_failure_no_false_redaction": true,
+  "migration_0043_original_sha256": "7e4d484161461deec1e7235d4ed6f725bf1c32ecc7901ba1b0c9885ffb0f28d3",
+  "new_case_names": [
+    "ASYNC_900_PROFILE_STILL_PRESERVES_EXISTING_QUOTA_HOLD",
+    "CLAIMED_CLOUD_QUOTA_EXPIRED_REQUIRES_HOLD_BEFORE_REDACTION",
+    "EXPIRY_MAINTENANCE_MARKS_AND_HOLDS_CLAIMED_CLOUD_QUOTA",
+    "FAILED_QUOTA_HOLD_MUST_NOT_SCRUB_UNCERTAIN_CLAIM",
+    "METADATA_D1_WRITE_ERROR_PREVENTS_REDACTION",
+    "REPEATED_MAINTENANCE_DOES_NOT_RELEASE_OR_DISPATCH",
+    "UNCLAIMED_EXPIRED_PENDING_NO_EXECUTION_HOLD",
+    "UNMETERED_EXPIRED_CALL_CAN_REDACT_WITHOUT_CLOUD_QUOTA"
+  ],
+  "new_expiry_cases": 8,
+  "no_automatic_quota_release_on_unknown_outcome": true,
+  "observed_at_utc": "2026-11-13T20:32:17.831506+00:00",
+  "overlap_between_suites_not_assessed": true,
+  "prechange_baseline_commit": "9fa0d7b9ac691e7efa884d361d7996c9c5dc8af0",
+  "production_migration_0043_applied": false,
+  "production_mutated": false,
+  "production_promotion_authorized": false,
+  "quota_stub_synthetic": true,
+  "real_quota_do_exercised": false,
+  "schema": "hara.commander-0043-expired-cloud-quota-local-qa.v1",
+  "state": "EXPIRED_CLAIM_QUOTA_HOLD_8_PLUS_26_PLUS_29_PASS",
+  "stripe_called": false,
+  "test_runs": [
+    {
+      "cases_passed": 8,
+      "name": "test_0043_expired_claim_quota_hold_20261113.mjs",
+      "source_sha256": "4015792ba61676ff5781e946644df5c544c675e5ee7a4df78892a4e6cb7fb507",
+      "stdout_sha256": "92846ea38b09a0166348414f57af0de22fb82427b5703e542c788cf77b2c224d",
+      "type": "expired_claim_cloud_quota"
+    },
+    {
+      "cases_passed": 26,
+      "name": "test_approval_async_queue_claim_0043_candidate_20261112.mjs",
+      "source_sha256": "1e490405298e7807dfba28aa6c35bfcd53497dae7992acc2f16bedb1ad12db02",
+      "stdout_sha256": "6fa360d22e2608c81fbc34484e87f46500aa08b9260b194e50bd75def372ad1d",
+      "type": "enqueue_approval_0043"
+    },
+    {
+      "cases_passed": 29,
+      "name": "test_p0_dispatch_authorization_0043_undelivered_20261112.mjs",
+      "source_sha256": "ab6baae0c6ca4540c2b2a86f42ba76f2487edc0ea4ad19796c1d6ec2df937c27",
+      "stdout_sha256": "fe7eabcd51d1c893536d07606f7cf75549cacace1c3f09693c1b8eee33a6a6d4",
+      "type": "claim_authorization_0043"
+    }
+  ],
+  "worker_dryrun_bundle_bytes": 1907387,
+  "worker_dryrun_bundle_sha256": "703727dc4d3504b7609725d09694037039d7602ed45b089bc77c9a88736e282d",
+  "worker_source_after_sha256": "f14550bb603cb53f8d40df8ba7d96b998a8a4baf68d0eda2f5a8a197de4d4682",
+  "worker_source_before_sha256": "c9f4c48e553de133598982018a3fbc19f6fcf9165dfd9ddf1609620da61e8dbc"
+}
