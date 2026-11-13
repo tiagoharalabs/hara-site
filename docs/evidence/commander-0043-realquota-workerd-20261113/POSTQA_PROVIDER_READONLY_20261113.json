@@ -1,0 +1,30 @@
+{
+  "schema": "hara.commander-0043-realquota-postqa-cloudflare-readback.v1",
+  "date": "2026-11-13",
+  "state": "REAL_QUOTA_WORKERD_QA_PROD_UNCHANGED_READBACK_PASS",
+  "operation": "CLOUDFLARE_READ_ONLY",
+  "candidate_worker_sha256": "f14550bb603cb53f8d40df8ba7d96b998a8a4baf68d0eda2f5a8a197de4d4682",
+  "commercial_deployment": {
+    "worker": "hara-commander",
+    "version_id": "12fe1bb3-4c8c-4a37-9793-54bb4525556e",
+    "traffic_percent": 100,
+    "candidate_deployed": false
+  },
+  "d1_schema": {
+    "commercial_database": "hara-commander-product-prod",
+    "commercial_device_call_columns": 21,
+    "qa_database": "hara-commander-p0-ledger-qa-20261112",
+    "qa_device_call_columns": 22
+  },
+  "mutation": {
+    "cloudflare": 0,
+    "production_d1": 0,
+    "qa_d1": 0,
+    "agents": 0,
+    "stripe_live": 0,
+    "app_publication": 0
+  },
+  "production_cutover_authorized": false,
+  "global_ledger_compatibility_proven": false,
+  "hosted_candidate_worker_qa_proven": false
+}
