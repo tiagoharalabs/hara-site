@@ -1,0 +1,38 @@
+{
+  "agent_dispatched": false,
+  "backend_cutover_authorized": false,
+  "base_commit": "21fef323082e631167ca06612375ee4eb31ba887",
+  "before_patch_regression_was_red": true,
+  "branch": "local/commander-recovery-consumer-ack-fix-20261113",
+  "commercial_migration_0043_applied": false,
+  "consumer_disabled_delivery_does_not_ack": true,
+  "delivery_failure_promoted_to_hold": true,
+  "global_DO_quiescence_proven": false,
+  "new_regression_cases": [
+    "producer HOLD: broken delivery configuration never reports COMPLETE",
+    "producer HOLD with SCAN work is not mistaken for full reconciliation",
+    "scan-only mode explicitly DISABLED delivery remains compatible",
+    "DELIVER consumer disabled after enqueue must RETRY and not ACK undelivered receipt"
+  ],
+  "patched_source_sha256": "c906934d3bedba1dddf2eee3d475e1cc16b4ebbdd016ea9bccc823c7b22b523e",
+  "production_deployment": false,
+  "production_mutated": false,
+  "provider_called": false,
+  "regression_tests_failed": 0,
+  "regression_tests_passed": 85,
+  "regression_tests_total": 85,
+  "scan_only_mode_preserved": true,
+  "schema": "hara.commander-recovery-fanout-hold-candidate-qa.v1",
+  "source_and_tests_sha256": {
+    "apps/commander/scripts/test_recovery_fanout_r163.mjs": "12c3c105cfc81700f339f1d861e5820a7e3774dacd419a0afc204fc41c9fef3b",
+    "apps/commander/scripts/test_recovery_queue_budget_r163.mjs": "2156466d80f01575a500265bc9341477942728c39dce2dad1c5017ca85476f1e",
+    "apps/commander/scripts/test_recovery_queue_dlq_r163.mjs": "9c2003e8418b290962d7b7ab49a9dc7a7db7c7023cc2f1b0081b4f9e2a9e3f68",
+    "apps/commander/src/recovery-fanout.mjs": "c906934d3bedba1dddf2eee3d475e1cc16b4ebbdd016ea9bccc823c7b22b523e"
+  },
+  "state": "RECOVERY_CONSUMER_DISABLED_DELIVERY_ACK_RETRY_85_TESTS_BUILD_PASS",
+  "temporary_dependency_symlink_removed": true,
+  "test_log_sha256": "da151e2738e041fb98c2c258dd4b510e6fd0594346be88cb2235221a2b99eaf6",
+  "worker_dryrun_bundle_bytes": 1906622,
+  "worker_dryrun_bundle_sha256": "e9718ffb838d92fc4b0beb7abefafd04812f8d69c87db7a5ed1146d9c222c3de",
+  "worker_entry_original_sha256": "9d7b5f192509f482e1cd79362a567b8e832a19adf149705d4e5df731d0197260"
+}
