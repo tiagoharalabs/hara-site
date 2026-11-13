@@ -1,0 +1,33 @@
+{
+  "agent_called": false,
+  "cloudflare_called": false,
+  "migration_0043_sha256": "7e4d484161461deec1e7235d4ed6f725bf1c32ecc7901ba1b0c9885ffb0f28d3",
+  "overlap_not_assessed": true,
+  "production_mutated": false,
+  "schema": "hara.commander-0043-realquota-carryforward.v1",
+  "state": "0043_REALQUOTA_CARRYFORWARD_8_26_29_PASS",
+  "suites": [
+    {
+      "cases": 8,
+      "file_sha256": "4015792ba61676ff5781e946644df5c544c675e5ee7a4df78892a4e6cb7fb507",
+      "scope": "expired_quota_synthetic_regression",
+      "state": "PASS",
+      "stdout_sha256": "92846ea38b09a0166348414f57af0de22fb82427b5703e542c788cf77b2c224d"
+    },
+    {
+      "cases": 26,
+      "file_sha256": "1e490405298e7807dfba28aa6c35bfcd53497dae7992acc2f16bedb1ad12db02",
+      "scope": "enqueue_async_approval",
+      "state": "PASS",
+      "stdout_sha256": "6fa360d22e2608c81fbc34484e87f46500aa08b9260b194e50bd75def372ad1d"
+    },
+    {
+      "cases": 29,
+      "file_sha256": "ab6baae0c6ca4540c2b2a86f42ba76f2487edc0ea4ad19796c1d6ec2df937c27",
+      "scope": "claim_authorization_0043",
+      "state": "PASS",
+      "stdout_sha256": "fe7eabcd51d1c893536d07606f7cf75549cacace1c3f09693c1b8eee33a6a6d4"
+    }
+  ],
+  "worker_source_sha256": "f14550bb603cb53f8d40df8ba7d96b998a8a4baf68d0eda2f5a8a197de4d4682"
+}
