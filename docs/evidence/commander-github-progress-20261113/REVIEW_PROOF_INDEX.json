@@ -1,0 +1,72 @@
+{
+  "checkpoint_date": "2026-11-13",
+  "commercial_d1_migration_0043_applied": false,
+  "commercial_ledger_recovery_compatible": false,
+  "commercial_queue_consumer_verified": false,
+  "commercial_release_gate": "LEDGER_RECOVERY_COMPATIBILITY_UNPROVEN",
+  "evidence": [
+    {
+      "production_release_authorized": false,
+      "proof_id": "exact_source_hosted_do_0043",
+      "receipt_path": "docs/evidence/commander-p0-exact-hosted-20261113/INDEPENDENT_EXACT_HOSTED_AUDIT.json",
+      "receipt_sha256": "44b7a5ef22281ac8ccc822df61ca80a60732c2c2391ffac7d5260188e298876b",
+      "result": "EXACT_CANDIDATE_HOSTED_DO_0043_QA_PASS_PARTIAL_WSS_HOLD",
+      "scope": "isolated_qa_or_readonly",
+      "source_branch": "local/commander-p0-exact-hosted-20261113"
+    },
+    {
+      "production_release_authorized": false,
+      "proof_id": "wss_prefence_1012",
+      "receipt_path": "docs/evidence/commander-p0-prefence-wss-hosted-20261113/INDEPENDENT_PREFENCE_WSS_READBACK.json",
+      "receipt_sha256": "4b61afc56a98a40cab6fec809796baee097ac34807fa0573aeaaaf54c29f79a8",
+      "result": "EXACT_FORWARD_PREFENCE_WSS_1012_HOSTED_INDEPENDENT_PASS",
+      "scope": "isolated_qa_or_readonly",
+      "source_branch": "local/commander-p0-prefence-wss-hosted-20261113"
+    },
+    {
+      "production_release_authorized": false,
+      "proof_id": "do_manifest_known_set",
+      "receipt_path": "docs/evidence/commander-p0-real-do-manifest-20261113/INDEPENDENT_DO_MANIFEST_READBACK.json",
+      "receipt_sha256": "477a852e2234d468c45e20bde362ce54684b4fafdbe75d4461b0990435de72cc",
+      "result": "REAL_PRODUCT_DO_MANIFEST_11_AND_22_NEGATIVES_PASS_GLOBAL_HOLD",
+      "scope": "isolated_qa_or_readonly",
+      "source_branch": "local/commander-do-manifest-runtime-qa-20261113"
+    },
+    {
+      "production_release_authorized": false,
+      "proof_id": "all_commercial_blockers",
+      "receipt_path": "docs/evidence/commander-all-impediments-20261112/ALL_BLOCKERS_INDEPENDENT_READBACK.json",
+      "receipt_sha256": "e62ce47645c47d5622210fa476e469fac3502e716812f5458bfd9a4ea411b6ea",
+      "result": "ALL_KNOWN_BLOCKERS_INDEPENDENT_QA_PASS_RELEASE_HOLD",
+      "scope": "isolated_qa_or_readonly",
+      "source_branch": "local/commander-all-impediments-20261112"
+    }
+  ],
+  "exhaustive_active_do_registry_proven": false,
+  "github_prs_already_available": [
+    329,
+    330,
+    331,
+    332,
+    333
+  ],
+  "global_quiescence_two_windows_proven": false,
+  "hosted_proof_count": 4,
+  "legacy_to_bridge_wss_cutover_proven": false,
+  "main_merge_requested": false,
+  "next_core_gate": "LEGACY_TO_FORWARD_SAFE_BRIDGE_ACTIVE_DO_REGISTRY_DRAIN_LEDGER_FORWARD_ONLY",
+  "paid_demo_post_payment_mcp_receipt_verified": false,
+  "production_mutation_performed_by_this_index": false,
+  "production_worker_last_verified_version": "12fe1bb3-4c8c-4a37-9793-54bb4525556e",
+  "public_branch_review_only": true,
+  "public_openai_app_published": false,
+  "qa_forward_wss_1012_proven": true,
+  "repo": "tiagoharalabs/hara-site",
+  "schema": "hara.commander-github-review-proof-index.v1",
+  "secrets_customer_ids_do_ids_cursor_material_included": false,
+  "source_candidate_hosted_bundle_sha256": "049240c088942fe732ab25db37d8620a84cc6801008611967c09cc242fb36657",
+  "source_worker_candidate_sha256": "9d7b5f192509f482e1cd79362a567b8e832a19adf149705d4e5df731d0197260",
+  "state": "PROOFS_RECONCILED_GITHUB_DRAFT_ONLY_PRODUCTION_HOLD",
+  "stripe_live_checkout_enabled": false,
+  "stripe_live_webhook_enabled": false
+}
