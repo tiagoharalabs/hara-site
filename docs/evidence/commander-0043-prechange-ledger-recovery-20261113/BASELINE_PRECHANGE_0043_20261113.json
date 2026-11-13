@@ -1,0 +1,51 @@
+{
+  "schema": "hara.commander-0043-prechange-evidence.v1",
+  "observed_date": "2026-11-13",
+  "state": "BASELINE_READBACK_PASS_REMEDIATION_NOT_STARTED",
+  "branch": "local/commander-0043-prechange-ledger-recovery-20261113",
+  "base_commit": "e4b9b9e9fc134059b55922afc822e7f38e1f6970",
+  "storage_working_mirror_base": "e4b9b9e9fc134059b55922afc822e7f38e1f6970",
+  "storage_canonical_main": "e739605a8abdcb617b63f5e7f97690229366cccb",
+  "source_sha256": {
+    "apps/commander/src/worker.js": "c9f4c48e553de133598982018a3fbc19f6fcf9165dfd9ddf1609620da61e8dbc",
+    "apps/commander/migrations/0043_device_call_authorization.sql": "7e4d484161461deec1e7235d4ed6f725bf1c32ecc7901ba1b0c9885ffb0f28d3",
+    "apps/commander/src/undelivered-claim-repair.mjs": "83b1616f44803014ffe1caccb051aff3c338dc9bd17133cdf8396325dd541cc4",
+    "apps/commander/src/device-channel.mjs": "038025cdb9ca76fd992b828e2bdcbe623447014102f1d421469698d9380b6779",
+    "apps/commander/src/recovery-fanout.mjs": "c906934d3bedba1dddf2eee3d475e1cc16b4ebbdd016ea9bccc823c7b22b523e"
+  },
+  "provider_readback": {
+    "cloudflare_commercial_worker": "hara-commander",
+    "version_id": "12fe1bb3-4c8c-4a37-9793-54bb4525556e",
+    "percentage": 100,
+    "deployment_created_at_utc": "2026-11-09T23:23:21.720943Z",
+    "source_sha_parity_proven": false,
+    "mutations": 0
+  },
+  "existing_qa_scope": {
+    "original_migration_0043_source_intact": true,
+    "recovery_cron_hosted_test_historical": true,
+    "queue_qa_consumer_not_commercial": true,
+    "do_stored_object_census_is_not_live_registry": true,
+    "do_global_quiescence_proven": false
+  },
+  "remediation_authority": "QA_AND_SOURCE_ONLY",
+  "allowed": [
+    "read_only_cloudflare",
+    "synthetic_qa",
+    "local_git_commit",
+    "storage_working_mirror_push",
+    "github_draft_documentation"
+  ],
+  "blocked": [
+    "production_migration_0043",
+    "production_worker_deploy",
+    "rollback_legacy_worker",
+    "quota_release_uncertain",
+    "real_agent_dispatch",
+    "stripe_live",
+    "openai_app_publication"
+  ],
+  "production_cutover_gate": "LEDGER_RECOVERY_COMPATIBILITY_UNPROVEN",
+  "production_mutated": false,
+  "secrets_exposed": false
+}
