@@ -1,0 +1,68 @@
+{
+  "base_worker_sha256": "f14550bb603cb53f8d40df8ba7d96b998a8a4baf68d0eda2f5a8a197de4d4682",
+  "cases": [
+    {
+      "held_units": 1,
+      "hold_before_redaction": true,
+      "name": "claimed_expired_quota_real_DO_hold_and_redact",
+      "quota_do_real": true,
+      "state": "PASS"
+    },
+    {
+      "async_profile_900": true,
+      "name": "claimed_expired_async_profile_900_remains_protected",
+      "state": "PASS"
+    },
+    {
+      "failure_fail_closed": true,
+      "name": "real_quota_RPC_failure_prevents_scrub",
+      "recovery_did_not_release_reservation": true,
+      "state": "PASS"
+    },
+    {
+      "binding_mismatch_denied": true,
+      "name": "real_quota_subject_mismatch_fails_closed",
+      "quota_consumed_unchanged": true,
+      "state": "PASS"
+    },
+    {
+      "D1_failure_detected": true,
+      "hold_persisted": true,
+      "name": "real_quota_hold_survives_D1_metadata_write_error",
+      "state": "PASS"
+    },
+    {
+      "expiring_execution_protected": true,
+      "idempotent": true,
+      "name": "real_quota_cleanup_EXECUTING_to_EXPIRED_preserves_hold",
+      "state": "PASS"
+    },
+    {
+      "hold_idempotent_after_restart": true,
+      "name": "real_quota_protected_reservation_survives_workerd_restart",
+      "persisted_actors": 1,
+      "quota_units_held": 1,
+      "state": "PASS"
+    }
+  ],
+  "commercial_cutover_authorized": false,
+  "date_utc": "2026-11-13T21:25:14.104435+00:00",
+  "global_quiescence_proven": false,
+  "migration_0043_sha256": "7e4d484161461deec1e7235d4ed6f725bf1c32ecc7901ba1b0c9885ffb0f28d3",
+  "persisted_sqlite_do_after_workerd_restart": true,
+  "prechange_commit": "37429bdcafa3945acc72977023684c7087598e34",
+  "production_0043_migration_applied": false,
+  "production_mutated": false,
+  "real_agent_dispatched": false,
+  "real_cloudflare_provider_called": false,
+  "real_tenant_quota_rpc_exercised": true,
+  "runner_source_sha256": "b38707e351d10a6a320c5165f3624ff97a96c4ed9cb75a4ac55532e7c1dc5f76",
+  "schema": "hara.commander-0043-expiry-realquota-workerd-qa.v1",
+  "state": "0043_EXPIRY_REAL_TENANT_QUOTA_WORKERD_PASS_GLOBAL_HOLD",
+  "temporary_isolated_storage_removed": true,
+  "test_case_count": 7,
+  "test_source_sha256": "ba40b45e31270417a95c41ff6221ca5b736d2c81d1a4b11187726f8310c8f922",
+  "worker_bundle_bytes": 1903988,
+  "worker_bundle_sha256": "34e4897ac2e9b2d7fb96b390d88ff4fabc9057eba05315635756b3509a4c113d",
+  "wrangler_config_sha256": "88eb1667f8384f38f0bb50f11387dc0266103c9a72a780cd0933456b6fc788e6"
+}

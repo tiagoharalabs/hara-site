@@ -1,0 +1,23 @@
+{
+  "schema": "hara.commander-real-quota-prechange.v1",
+  "date": "2026-11-13",
+  "state": "PRECHANGE_RECORDED_REAL_QUOTA_QA",
+  "base_commit": "44e2d611fdd23cc605aa00ccb648aae9b1a2c133",
+  "branch": "local/commander-0043-real-quota-prechange-20261113",
+  "worker_sha256": "f14550bb603cb53f8d40df8ba7d96b998a8a4baf68d0eda2f5a8a197de4d4682",
+  "migration_0043_sha256": "7e4d484161461deec1e7235d4ed6f725bf1c32ecc7901ba1b0c9885ffb0f28d3",
+  "previous_qa": {
+    "expired_cases_passed": 8,
+    "enqueue_cases_passed": 26,
+    "claim_cases_passed": 29,
+    "quota_do_real_exercised": false
+  },
+  "target_test": {
+    "real_tenant_quota_in_workerd": true,
+    "sqlite_0043_isolated": true,
+    "production_cloudflare_contact": false
+  },
+  "production_mutated": false,
+  "production_promotion_authorized": false,
+  "release_gate": "LEDGER_RECOVERY_COMPATIBILITY_UNPROVEN"
+}
