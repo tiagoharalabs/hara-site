@@ -1,0 +1,22 @@
+{
+  "base_commit": "6f3d62bf76835690ff06d074277b2f7cce891526",
+  "claim_cases": 29,
+  "commercial_0043_migration_approved": false,
+  "enqueue_approval_cases": 26,
+  "global_DO_quiescence_proven": false,
+  "historical_legacy_test_preserved": true,
+  "late_revocation_cases": 7,
+  "migration_0043_sha256": "7e4d484161461deec1e7235d4ed6f725bf1c32ecc7901ba1b0c9885ffb0f28d3",
+  "production_mutated": false,
+  "production_promotion_authorized": false,
+  "provider_called": false,
+  "qa_receipt_sha256": "64618c6f9851e30bce70877eee7511f130d4dcd5b4bce897fe1561fa2a901542",
+  "real_agent_contacted": false,
+  "schema": "hara.commander-0043-atomic-enqueue-independent-readback.v1",
+  "source_guard_at_atomic_insert": true,
+  "source_sha256": "c9f4c48e553de133598982018a3fbc19f6fcf9165dfd9ddf1609620da61e8dbc",
+  "state": "ATOMIC_0043_ENQUEUE_AUTHORIZATION_INDEPENDENT_PASS",
+  "test_before_patch_missing_rejection_proven": true,
+  "test_suites_approved": 2,
+  "worker_bundle_dryrun_pass": true
+}
