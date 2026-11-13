@@ -1,0 +1,70 @@
+{
+  "bundle_bytes": 1903988,
+  "candidate_parent": "44e2d611fdd23cc605aa00ccb648aae9b1a2c133",
+  "cloudflare_calls": 0,
+  "commercial_cutover_authorized": false,
+  "ephemeral_storage_deleted": true,
+  "global_quiescence_proven": false,
+  "migration_0043_sha256": "7e4d484161461deec1e7235d4ed6f725bf1c32ecc7901ba1b0c9885ffb0f28d3",
+  "observed": {
+    "actual_tenantquota_worker_rpc": true,
+    "agent_dispatched": false,
+    "case_count": 5,
+    "cases": [
+      {
+        "execution_started": true,
+        "name": "real TenantQuota reserves and starts a synthetic call",
+        "quota_reserved": 1,
+        "state": "PASS"
+      },
+      {
+        "expired": 1,
+        "name": "real cleanup EXPIRED calls real DO hold before redaction",
+        "protected": 1,
+        "quota_reserved": 1,
+        "redacted": 1,
+        "state": "PASS"
+      },
+      {
+        "automatic_release_blocked": true,
+        "idempotent_hold": true,
+        "name": "real quota DO refuses premature automatic settlement of unknown effect",
+        "state": "PASS"
+      },
+      {
+        "duplicate_cleanup_effects": 0,
+        "name": "repeating cleanup does not reexecute or release",
+        "state": "PASS"
+      },
+      {
+        "name": "actual workerd restart preserves protected reservation",
+        "persisted_protected_units": 1,
+        "settle_still_blocked": true,
+        "state": "PASS"
+      }
+    ],
+    "cloudflare_hosted_proven": false,
+    "commercial_cutover_authorized": false,
+    "customer_data_used": false,
+    "global_quiescence_proven": false,
+    "migration_0043_sha256": "7e4d484161461deec1e7235d4ed6f725bf1c32ecc7901ba1b0c9885ffb0f28d3",
+    "production_mutated": false,
+    "protected_quota_units": 1,
+    "provider_called": false,
+    "real_settleCallUsage": true,
+    "real_worker_cleanup": true,
+    "schema": "hara.commander-0043-real-tenant-quota-expiry-workerd.v1",
+    "state": "REAL_TENANT_QUOTA_EXPIRED_CLAIM_HOLD_WORKERD_PASS",
+    "worker_sha256": "f14550bb603cb53f8d40df8ba7d96b998a8a4baf68d0eda2f5a8a197de4d4682",
+    "workerd_restart_preserved": true
+  },
+  "prechange_commit": "15306dc6de16f80f09dcfc4c7939ed8f7f9f2586",
+  "prod_0043_migration_applied": false,
+  "production_mutations": 0,
+  "real_agent_dispatches": 0,
+  "real_worker_bundle_sha256": "34e4897ac2e9b2d7fb96b390d88ff4fabc9057eba05315635756b3509a4c113d",
+  "schema": "hara.commander-0043-real-quota-workerd-qa.v1",
+  "source_sha256": "f14550bb603cb53f8d40df8ba7d96b998a8a4baf68d0eda2f5a8a197de4d4682",
+  "state": "REAL_TENANT_QUOTA_EXPIRED_CLAIM_HOLD_WORKERD_PASS",
+  "test_source_sha256": "384a667ce1523a40001d1627eee011d4a3efc7a20b2df9826ec29fb4bd3f0b54"
+}

@@ -1,0 +1,19 @@
+{
+  "automatic_release_blocked": true,
+  "cloudflare_hosted_proven": false,
+  "commercial_cutover_authorized": false,
+  "five_cases_covered": true,
+  "global_quiescence_proven": false,
+  "migration_sha256": "7e4d484161461deec1e7235d4ed6f725bf1c32ecc7901ba1b0c9885ffb0f28d3",
+  "original_qa_receipt_sha256": "645efdf4f4e60ca8cd7cfdd5d9fa16fcd077eebd742860a00674b1013b015ca9",
+  "prechange_commit": "15306dc6de16f80f09dcfc4c7939ed8f7f9f2586",
+  "production_migration_performed": false,
+  "production_mutations": 0,
+  "real_do_class": "TenantQuota",
+  "real_quota_rpc_exercised": true,
+  "schema": "hara.commander-0043-real-quota-workerd-independent-readback.v1",
+  "source_sha256": "f14550bb603cb53f8d40df8ba7d96b998a8a4baf68d0eda2f5a8a197de4d4682",
+  "state": "REAL_TENANT_QUOTA_EXPIRY_INDEPENDENT_PASS_HOSTED_HOLD",
+  "test_source_sha256": "384a667ce1523a40001d1627eee011d4a3efc7a20b2df9826ec29fb4bd3f0b54",
+  "uncertain_reservation_survived_restart": true
+}
