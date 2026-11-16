@@ -1,0 +1,52 @@
+{
+  "schema": "hara.commander.filesystem-edit-mode-source-qa.v1",
+  "observed_date": "2026-11-15",
+  "authority": "HARA_SERVICES",
+  "interface": "H.A.R.A. Commander Primary",
+  "scope": "SOURCE_ONLY_NO_RUNTIME_INSTALL",
+  "agent_version": "0.3.83",
+  "installed_original_sha256": "a0784dc783b1675773f7ab05a21f07d01f48fd3f8b97906971ef90eb7018c733",
+  "original_reproduced_mode": "0755_to_0664",
+  "candidate_sha256": "d047a6454e85f3658015e1f489d00b60a1be08e431fa215e9c77b3e2f3eb5f27",
+  "patch_sha256": "8783eb732731ee30e70a9b25014453988c4a4fef4bd6a93c4c17cc7f5dfc71d2",
+  "source_syntax_check": "PASS",
+  "test_results": {
+    "agent_namespace": {
+      "state": "PASS",
+      "cases_executed": 8,
+      "cases_skipped": 1,
+      "skipped": [
+        "nonprimary_group_preserved:GID_UNMAPPED"
+      ]
+    },
+    "host_native": {
+      "state": "PASS",
+      "cases_executed": 8,
+      "cases_skipped": 0
+    },
+    "candidate_builtin_self_test": {
+      "state": "PASS",
+      "mcp_tools_count": 41
+    }
+  },
+  "checks": [
+    "baseline_actual_mode_loss_reproduced",
+    "mode_0600_preserved",
+    "mode_0644_preserved",
+    "mode_0755_preserved",
+    "preimage_and_rollback_pass",
+    "wrong_cas_rejected",
+    "symlink_rejected",
+    "ambiguous_match_rejected",
+    "special_mode_rejected"
+  ],
+  "rollout_state": "HOLD_NOT_SIGNED_NOT_INSTALLED",
+  "limitations": [
+    "nonprimary_group_preservation_not_proven_by_tests",
+    "xattr_acl_selinux_not_qualified",
+    "filesystem.write_rewrite_not_changed",
+    "multi-host_release_and_canary_pending"
+  ],
+  "privacy": "No live enrollment, private key, token, or runtime data included",
+  "patch_context_lines": 0
+}

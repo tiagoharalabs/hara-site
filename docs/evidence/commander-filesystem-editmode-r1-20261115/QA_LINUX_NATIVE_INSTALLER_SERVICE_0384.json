@@ -1,0 +1,73 @@
+{
+  "schema": "hara.commander-private-qa-linux-0384-native-acceptance.v1",
+  "observed_date": "2026-11-16",
+  "owner": "hara-site#342",
+  "interface": "H.A.R.A. Commander Primary",
+  "source_predecessor_commit": "0eb50631ae5530b6cbb7c01106e2ef825715d4a2",
+  "state": "LINUX_NATIVE_0384_USER_SERVICE_AND_INSTALLER_NEGATIVE_PASS",
+  "guest": {
+    "os": "Ubuntu 24.04.5 LTS",
+    "kernel": "6.8.0-147-generic",
+    "name": "hara-commander-linux-qa0384-20261116",
+    "network_interfaces": 0,
+    "vcpus": 2,
+    "memory_mib": 4096,
+    "transient": true,
+    "autostart": false,
+    "host_running_after_qa": false,
+    "base_disk_bytes": 3119185920,
+    "base_disk_mtime_epoch": 1792045537,
+    "base_modified": false,
+    "overlay_qemu_img_check_errors": 0
+  },
+  "bootstrap": {
+    "guest_qga_version": "8.2.2",
+    "virtio_console_module_loaded": true,
+    "liburing2_sha256": "c2aef62accee92a06263c3ad4ef46132c13e409b54296c44792a20491830a7b0",
+    "qga_package_sha256": "62abf54bf34fed34dc65cbd973b4b6b6f4685fef30fbaa3fb3e8865e957fda75",
+    "cloudinit_v4_iso_sha256": "c8e173cc3dd78192c67215af268669487fcf7d3465647e8b5e318d30fb645e3a"
+  },
+  "signed_candidate": {
+    "version": "0.3.84",
+    "agent_sha256": "2177b4d6e049e5886a1df6a42c38ca0a1838e4e7406536882e81eaa2c8c2d509",
+    "previous_agent_sha256": "a0784dc783b1675773f7ab05a21f07d01f48fd3f8b97906971ef90eb7018c733",
+    "installer_sha256": "e9a203ae3fdda1d6cc55e857bc0cf471a1e5d738a0b9ccab9526aef692b03476",
+    "manifest_sha256": "b0350ec8dc9f2b995742cf07df91df8ad5aaa324a9948b16753f178cef2820fe"
+  },
+  "positive_checks": [
+    "HARA_QA_QGA_SERVICE_ACTIVE",
+    "HARA_QA_SIGNED_AND_BASELINE_SHA_PASS",
+    "HARA_QA_0383_USER_SERVICE_START_PASS",
+    "HARA_QA_0383_USER_SERVICE_STOP_PASS",
+    "HARA_QA_0384_NATIVE_USER_SERVICE_START_PASS",
+    "HARA_QA_0383_NATIVE_USER_SERVICE_ROLLBACK_PASS",
+    "HARA_QA_MANUAL_SERVICE_NOT_ENABLED_PASS",
+    "HARA_QA_LINUX_V4_END"
+  ],
+  "official_installer_negative": {
+    "action": "update",
+    "unpaired_qa_user": true,
+    "exit_code": 5,
+    "error_code": "DEVICE_NOT_ENROLLED",
+    "actual_installer_executed": true,
+    "device_env_created": false,
+    "product_agent_created": false,
+    "expected_fail_closed": true,
+    "first_attempt_rc126": "QA ISO permissions 0400; fixed by staging identical signed installer bytes under QA user's HOME"
+  },
+  "native_readback": "HARA_LINUX_NATIVE_0384_SERVICE_AND_OFFLINE_INSTALLER_READBACK_PASS",
+  "qa_sources": {
+    "guest_lifecycle_sha256": "8480dd1187fde07a2d2ce5687f9dae1ed669457356c97a0534c98ee0c1e0f6d1",
+    "cloudinit_user_data_sha256": "43fab883ea0343366c1e6a1d49a8b603eafbfc1edb8e9c7e8cdb0aaffa3519e1",
+    "native_qga_verifier_sha256": "386a0c2efe7a879595f9424c237b696ee56a7bac04b407b8afef7f463f667bd3"
+  },
+  "limits": {
+    "production_agent_modified": false,
+    "baseline_mcp_modified": false,
+    "live_identity_pairing_tested": false,
+    "official_positive_install_e2e": false,
+    "windows_product_task_lifecycle_tested": false,
+    "public_release_published": false,
+    "github_branch_published": false
+  }
+}

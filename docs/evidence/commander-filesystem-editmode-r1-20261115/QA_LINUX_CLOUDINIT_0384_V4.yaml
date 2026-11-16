@@ -1,0 +1,11 @@
+#cloud-config
+hostname: hara-commander-0384-qa
+manage_etc_hosts: false
+ssh_pwauth: false
+users:
+  - default
+  - name: haraqa
+    shell: /bin/bash
+    lock_passwd: true
+runcmd:
+  - [ /bin/bash, -c, "mkdir -p /mnt/hara-qa-cidata && (mountpoint -q /mnt/hara-qa-cidata || mount -o ro /dev/disk/by-label/cidata /mnt/hara-qa-cidata) && /bin/bash /mnt/hara-qa-cidata/qa-run.sh" ]

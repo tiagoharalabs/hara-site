@@ -1,0 +1,59 @@
+{
+  "authority": "HARA_SERVICES",
+  "checks": [
+    "RSA3072_SIGNATURE_AND_FOUR_SHA_PASS",
+    "OFFLINE_NO_CAPABILITIES_PASS",
+    "ORIGINAL_0383_BASELINE_PASS",
+    "NEGATIVE_TAMPER_FAIL_CLOSED",
+    "ISOLATED_CANDIDATE_0384_SELFTEST_41_PASS",
+    "R2_MODES_XATTR_FAILURE_CASES_PASS",
+    "POSIX_ACL_EXACT_PASS",
+    "OFFLINE_FILE_SWAP_AND_ROLLBACK_PASS"
+  ],
+  "checks_passed": 8,
+  "command_sha256": "c9ec65d418666f39d7a6404223e8427a0896ecad6445d75c740dd64662d5cdbc",
+  "commander_run_id": "HARA-PROC-c58497b8daba4428bb614d01ac4879d4",
+  "conclusion": "QA host kernel and Ubuntu userspace, not installer/real-enrollment E2E; do not mark production GO.",
+  "container_image": "ubuntu:22.04",
+  "container_image_digest": "sha256:e8df6c74f650ad385efe2e20103eca9b0ad50690fb3c63d49fa00762412bbf55",
+  "container_security": {
+    "cap_eff_zero": true,
+    "cpu_limit": 1,
+    "ephemeral": true,
+    "memory_limit": "768m",
+    "mounts": "only_signed_public_qa_files_test_scripts_and_read_only_os_runtime",
+    "network": "none",
+    "no_new_privileges": true,
+    "pids_limit": 80,
+    "read_only_root": true,
+    "uid_gid": "1000:1000"
+  },
+  "evidence_created_at_utc": "2026-11-16T01:19:47.300962+00:00",
+  "execution_interface": "H.A.R.A. Commander Primary",
+  "original_agent_sha256": "a0784dc783b1675773f7ab05a21f07d01f48fd3f8b97906971ef90eb7018c733",
+  "owner": "hara-site#342",
+  "postcheck": {
+    "private_key_transferred": false,
+    "qa_containers_remaining": 0,
+    "signed_payload_sha_unchanged": true
+  },
+  "process_exit_code": 0,
+  "runner_sha256": "57338cf060c34b211e8e69e74171ebba59f796ef45bef48cdf4018708f56c409",
+  "schema": "hara.commander-private-0384-offline-canary.v1",
+  "scope": {
+    "actual_installer_install": false,
+    "device_pairing": false,
+    "isolated_userspace_file_swap_and_restore": true,
+    "native_windows_acceptance": false,
+    "production_mutated": false,
+    "public_release_approval": false,
+    "stable_main_or_github_branch_modified": false,
+    "systemd_user_service": false
+  },
+  "signed_agent_sha256": "2177b4d6e049e5886a1df6a42c38ca0a1838e4e7406536882e81eaa2c8c2d509",
+  "signed_manifest_sha256": "b0350ec8dc9f2b995742cf07df91df8ad5aaa324a9948b16753f178cef2820fe",
+  "signed_signature_sha256": "e0bc91232b7cb9f5344a1cd000dcb7e9a6be1e6b6c634c911626414bee31fe15",
+  "source_commit_precheck": "64d6bd64ade0f24764aa4322d6d41450b118c47f",
+  "state": "OFFLINE_CONTAINER_CANARY_PASS",
+  "target_computer": "sentinela-c"
+}

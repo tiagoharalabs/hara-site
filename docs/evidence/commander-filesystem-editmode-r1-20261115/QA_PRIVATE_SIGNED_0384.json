@@ -1,0 +1,74 @@
+{
+  "artifacts": {
+    "agent/linux.py": {
+      "bytes": 368306,
+      "sha256": "2177b4d6e049e5886a1df6a42c38ca0a1838e4e7406536882e81eaa2c8c2d509"
+    },
+    "agent/windows.ps1": {
+      "bytes": 282547,
+      "sha256": "5b331dfbb9be9c36bb8b54194dea73a85e79789273965d288ab64b47b907aff0"
+    },
+    "install/linux.sh": {
+      "bytes": 122808,
+      "sha256": "e9a203ae3fdda1d6cc55e857bc0cf471a1e5d738a0b9ccab9526aef692b03476"
+    },
+    "install/windows.ps1": {
+      "bytes": 84579,
+      "sha256": "6208f5ab9f7d71b7c91472cb9f9ce3c3c70305213bfea515e24ddddbeac937c6"
+    }
+  },
+  "builder": "apps/commander/scripts/build_release_manifest.py --draft",
+  "builder_result": "UNSIGNED_DRAFT_REQUIRES_ADMISSION",
+  "created_at_utc": "2026-11-16T00:53:40.240140+00:00",
+  "four_source_review_proposed_sha256": "0fcb3182f2293b68f4181b266a9594284423197ccce21d72c0e655ea335868a3",
+  "limits": [
+    "Private signing is not commercial source admission",
+    "No Windows native QA VM verified",
+    "No native canary/rollback E2E",
+    "No public release promotion",
+    "H.A.R.A. Commander Baseline unchanged"
+  ],
+  "negative_tests": [
+    "TAMPERED_ARTIFACT_SIGNER_VERIFY_RC2",
+    "SIGNED_ORIGINAL_UNCHANGED"
+  ],
+  "owner": "hara-site#342",
+  "pre_sign_tests": [
+    "LINUX_AGENT_COMPILE_PASS",
+    "LINUX_AGENT_SELFTEST_41_PASS",
+    "LINUX_INSTALL_BASH_SYNTAX_PASS",
+    "FOUR_VERSION_BINDINGS_PASS",
+    "MANUAL_START_GATES_PASS"
+  ],
+  "private_signer_sha256": "5b309795cf817f2a80c57f6a75cca0fdc1b6b2cbe6913bb281234b6565abb698",
+  "release": {
+    "agent_installed": false,
+    "human_release_approval": false,
+    "private_key_exported": false,
+    "public_deployed": false,
+    "rollback_canary": false,
+    "windows_native_acceptance": false
+  },
+  "release_version": "0.3.84",
+  "schema": "hara.commander-editmode-0384-private-qa-release.v1",
+  "signature": {
+    "algorithm": "RS256",
+    "bits": 3072,
+    "kid": "commander-release-v2",
+    "manifest_sha256": "b0350ec8dc9f2b995742cf07df91df8ad5aaa324a9948b16753f178cef2820fe",
+    "public_jwk_sha256": "4e68608fa891f1b7a1e89c75936a089daeab0ba862a764f9bb31eca849cdfb9b",
+    "signature_file_sha256": "e0bc91232b7cb9f5344a1cd000dcb7e9a6be1e6b6c634c911626414bee31fe15",
+    "verify_result": "PASS"
+  },
+  "source_git_branch": "local/commander-editmode-source-integrated-r2-20261115",
+  "source_integrated_agent_sha256": "4d1de56697329b2936778351a4988092e355d8a0d8a6f6cf17cce57880275733",
+  "source_precommit": "6501d5ae1a47b0e0b2577547790eb0f133f2c616",
+  "source_review_status": "SOURCE_ADAPTATION_PROPOSED_NOT_COMMERCIAL_ADMISSION",
+  "state": "PRIVATE_QA_SIGNED_AND_INDEPENDENTLY_CUSTODIED_NOT_ADMITTED",
+  "storage_independent_verification": {
+    "artifacts": 4,
+    "files": 9,
+    "private_key_transferred": false,
+    "state": "STORAGE_INDEPENDENT_RSA3072_AND_NINE_FILE_READBACK_PASS"
+  }
+}

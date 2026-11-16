@@ -1,0 +1,2 @@
+instance-id: hara-commander-0384-qa-20261116-linux-e2e-v4
+local-hostname: hara-commander-0384-qa

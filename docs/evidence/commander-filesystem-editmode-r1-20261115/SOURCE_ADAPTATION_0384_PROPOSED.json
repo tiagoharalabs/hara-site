@@ -1,0 +1,38 @@
+{
+  "artifacts": {
+    "agent/linux.py": {
+      "classification": "commercial-candidate",
+      "review_reference": "hara-site#342 SOURCE_ONLY version adaptation from 6501d5ae1a47b0e0b2577547790eb0f133f2c616",
+      "sha256": "2177b4d6e049e5886a1df6a42c38ca0a1838e4e7406536882e81eaa2c8c2d509",
+      "source_commit": "6501d5ae1a47b0e0b2577547790eb0f133f2c616"
+    },
+    "agent/windows.ps1": {
+      "classification": "commercial-candidate",
+      "review_reference": "hara-site#342 SOURCE_ONLY version adaptation from 6501d5ae1a47b0e0b2577547790eb0f133f2c616",
+      "sha256": "5b331dfbb9be9c36bb8b54194dea73a85e79789273965d288ab64b47b907aff0",
+      "source_commit": "6501d5ae1a47b0e0b2577547790eb0f133f2c616"
+    },
+    "install/linux.sh": {
+      "classification": "commercial-candidate",
+      "review_reference": "hara-site#342 SOURCE_ONLY version adaptation from 6501d5ae1a47b0e0b2577547790eb0f133f2c616",
+      "sha256": "e9a203ae3fdda1d6cc55e857bc0cf471a1e5d738a0b9ccab9526aef692b03476",
+      "source_commit": "6501d5ae1a47b0e0b2577547790eb0f133f2c616"
+    },
+    "install/windows.ps1": {
+      "classification": "commercial-candidate",
+      "review_reference": "hara-site#342 SOURCE_ONLY version adaptation from 6501d5ae1a47b0e0b2577547790eb0f133f2c616",
+      "sha256": "6208f5ab9f7d71b7c91472cb9f9ce3c3c70305213bfea515e24ddddbeac937c6",
+      "source_commit": "6501d5ae1a47b0e0b2577547790eb0f133f2c616"
+    }
+  },
+  "executed_actions": [
+    "private_copy",
+    "version_literal_scope_4_files"
+  ],
+  "interpretation": "Only a proposed source adaptation; not approved as reviewed commercial release",
+  "production_modified": false,
+  "schema": "hara.commander-commercial-source-review.v1",
+  "source_commit": "6501d5ae1a47b0e0b2577547790eb0f133f2c616",
+  "status": "SOURCE_ADAPTATION_PROPOSED",
+  "version": "0.3.84"
+}

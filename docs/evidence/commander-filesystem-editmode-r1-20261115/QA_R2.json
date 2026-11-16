@@ -1,0 +1,73 @@
+{
+  "schema": "hara.commander.filesystem-edit-mode-source-qa.v2",
+  "date": "2026-11-15",
+  "owner": "hara-site#342",
+  "state": "SOURCE_QA_PASS_NOT_PRODUCT_RELEASE",
+  "authority": "HARA_SERVICES",
+  "interface": "H.A.R.A. Commander Primary",
+  "original_agent": {
+    "version": "0.3.83",
+    "sha256": "a0784dc783b1675773f7ab05a21f07d01f48fd3f8b97906971ef90eb7018c733"
+  },
+  "r1_ancestor_commit": "df11e6296e1d9347a866054b12d688683386c6ce",
+  "candidate_r2_sha256": "4d1de56697329b2936778351a4988092e355d8a0d8a6f6cf17cce57880275733",
+  "patch_r2_sha256": "abbac2a26f4696e02217194ad43ce2ec03b441ac198ddd6c8ba8512fb1bc2082",
+  "test_r2_sha256": "926b00663444a02e512572ada6045793c24cb940e170469e4689db5c5702bcfa",
+  "test_acl_r2_sha256": "26167f3e5daa939e719b588e441998d3e08477712b48b760dbcc59bfbac60c7f",
+  "tests": {
+    "agent_namespace": {
+      "regression_checks_reported": 14,
+      "positive_checks": 13,
+      "not_executed": [
+        "NONPRIMARY_GID_NOT_TESTED_NONROOT"
+      ],
+      "state": "PASS_WITH_ONE_SCOPED_NONEXECUTION"
+    },
+    "services_native_root": {
+      "regression_checks_reported": 14,
+      "positive_checks": 14,
+      "nonprimary_gid_check": "PASS",
+      "state": "PASS"
+    },
+    "posix_acl_agent_namespace": {
+      "state": "PASS_POSIX_ACL_EXACT",
+      "mode": "0o750",
+      "xattr_count": 1
+    },
+    "posix_acl_services_root": {
+      "state": "PASS_POSIX_ACL_EXACT",
+      "mode": "0o750",
+      "xattr_count": 1
+    },
+    "isolated_builtin_selftest": {
+      "state": "PASS",
+      "mcp_tools": 41
+    },
+    "patch_roundtrip": {
+      "state": "PASS",
+      "reconstructed_candidate_sha256": "4d1de56697329b2936778351a4988092e355d8a0d8a6f6cf17cce57880275733"
+    }
+  },
+  "protection": [
+    "SHA_CAS",
+    "SYMLINK_DENY",
+    "AMBIGUOUS_MATCH_DENY",
+    "SPECIAL_MODE_DENY",
+    "POSIX_MODE_UID_GID_PRESERVATION",
+    "BOUNDED_XATTR_SNAPSHOT_AND_COMPARE",
+    "XATTR_CHANGE_RACE_DENY",
+    "XATTR_COPY_ERROR_FAIL_CLOSED",
+    "REPLACE_ERROR_PREIMAGE_INTACT",
+    "PREIMAGE_AND_ROLLBACK"
+  ],
+  "limits": [
+    "No signing or product release",
+    "No installed Agent changed",
+    "Non-POSIX extended-security-xattrs not exhaustively qualified",
+    "No claim of concurrent adversarial atomic isolation",
+    "The filesystem.write rewrite path remains separate",
+    "No multi-host canary/install/rollback"
+  ],
+  "product_runtime_modified": false,
+  "github_code_published": false
+}

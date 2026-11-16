@@ -1,0 +1,85 @@
+{
+  "attempted_ps1_file_execution": {
+    "exit_code": 1,
+    "policy_changed": false,
+    "state": "DENIED_EXPECTED_BY_RESTRICTED_POLICY"
+  },
+  "conclusion": "Native Windows file/RSA/parser QA PASS; official installer, pairing and service recovery remain HOLD.",
+  "created_at_utc": "2026-11-16T01:59:13.404019+00:00",
+  "direct_windows_native_commands": [
+    {
+      "execution_policy": "Restricted",
+      "id": "WINDOWS_QA_POLICY_RESTRICTED_PRESERVED",
+      "state": "PASS"
+    },
+    {
+      "exit_code": 0,
+      "id": "WINDOWS_NATIVE_FOUR_SHA_AND_MANIFEST_PASS",
+      "state": "PASS"
+    },
+    {
+      "exit_code": 0,
+      "id": "WINDOWS_NATIVE_RSA3072_POSITIVE_NEGATIVE_PASS",
+      "state": "PASS"
+    },
+    {
+      "exit_code": 0,
+      "id": "WINDOWS_NATIVE_TWO_PARSERS_AND_MANUAL_START_PASS",
+      "state": "PASS"
+    },
+    {
+      "exit_code": 0,
+      "id": "WINDOWS_NATIVE_TEMP_FILE_UPDATE_AND_ROLLBACK_PASS",
+      "state": "PASS"
+    }
+  ],
+  "guest": "TRANSIENT_VM_SHUT_DOWN_POST_QA_NO_AUTOSTART",
+  "guest_os": "Microsoft Windows 11",
+  "guest_powershell": "5.1.26100.9711",
+  "interface": "H.A.R.A. Commander Primary",
+  "native_qga_executor_sha256": "da11426e634210c19078d89fe0238784e6ba6c617264994f4b1a3dc18738aa15",
+  "original_windows_agent_sha256": "4e61b014125e180c54ad5d8c256679af80dd910255912b5086feb5946d89ca4e",
+  "owner": "hara-site#342",
+  "powershell_script_files_parsed": 2,
+  "qa_iso_files_verified_after_extraction": 11,
+  "qa_iso_sha256": "8ff25162bd3fdb322b3986a2ddd3dabdbb90a42d7d7b0388a192ce8557a6b573",
+  "qa_target": "nucleo-a/libvirt/hara-commander-win11-qa0384-20261115",
+  "qga_version": "110.2.3",
+  "release_acceptance": {
+    "commercial_approval": false,
+    "github_branch_code_published": false,
+    "official_installer_e2e": false,
+    "pairing_tested": false,
+    "production_agent_installed": false,
+    "signed_private_qa": true,
+    "system_service_lifecycle_tested": false
+  },
+  "rsa3072_cryptographic_acceptance": true,
+  "schema": "hara.commander-private-0384-windows-native-qa.v1",
+  "secure_cleanup": {
+    "guest_network_was_enabled": false,
+    "guest_temp_files_removed": true,
+    "vm_running_after_qa": false
+  },
+  "signed_manifest_sha256": "b0350ec8dc9f2b995742cf07df91df8ad5aaa324a9948b16753f178cef2820fe",
+  "signed_signature_sha256": "e0bc91232b7cb9f5344a1cd000dcb7e9a6be1e6b6c634c911626414bee31fe15",
+  "signed_windows_agent_sha256": "5b331dfbb9be9c36bb8b54194dea73a85e79789273965d288ab64b47b907aff0",
+  "source_branch": "local/commander-editmode-source-integrated-r2-20261115",
+  "source_commit_before_qa_report": "e0c992b2d0aa16aa19f812f84258403f1aefbfea",
+  "source_iso_test_file_sha256": "780c1ddcaf12a698634325c23e605a128425e34eb188aab21732bf9e479ac859",
+  "state": "WINDOWS_NATIVE_OFFLINE_QA_PASS_INSTALLER_E2E_PENDING",
+  "tampered_signature_rejected": true,
+  "vm_isolation": {
+    "base_image_qemu_check_errors": 0,
+    "boot_disk": "QCOW2_OVERLAY_PRIVATE",
+    "image_original_backing": null,
+    "memory_mib": 8192,
+    "network_interfaces": 0,
+    "qa_overlay_approx_bytes": 31128879104,
+    "source_image_original_stat": "2065:111149058:35398678528:1792711716:644",
+    "source_image_size_bytes": 35398678528,
+    "source_recovered_image_modified": false,
+    "vcpus": 4
+  },
+  "windows_temporary_file_update_rollback": true
+}

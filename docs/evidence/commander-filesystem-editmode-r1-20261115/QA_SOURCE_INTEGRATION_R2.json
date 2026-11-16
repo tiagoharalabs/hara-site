@@ -1,0 +1,56 @@
+{
+  "schema": "hara.commander.source-integration-r2.v1",
+  "date": "2026-11-15",
+  "authority": "HARA_SERVICES",
+  "interface": "H.A.R.A. Commander Primary",
+  "owner": "hara-site#342",
+  "state": "SOURCE_INTEGRATION_R2_QA_PASS_NOT_PRODUCT_RELEASE",
+  "parent_ref": "refs/heads/local/commander-expiry-cron-observer-fix-20261113",
+  "parent_commit": "e5176b3c5bfa60a1528109d736bb1e15ee8fa997",
+  "original_code_path": "apps/commander/public/agent/linux.py",
+  "original_sha256": "a0784dc783b1675773f7ab05a21f07d01f48fd3f8b97906971ef90eb7018c733",
+  "integrated_sha256": "4d1de56697329b2936778351a4988092e355d8a0d8a6f6cf17cce57880275733",
+  "exact_patch_sha256": "abbac2a26f4696e02217194ad43ce2ec03b441ac198ddd6c8ba8512fb1bc2082",
+  "test_script": "apps/commander/scripts/validate_filesystem_edit_r2_source.py",
+  "test_script_sha256": "9a9aca12e7debb865657bc6d679f9f84b245fc899e767ad32dd4db5cd69a5478",
+  "evidence_dir": "docs/evidence/commander-filesystem-editmode-r1-20261115",
+  "outcomes": {
+    "agent_namespace": {
+      "state": "SOURCE_INTEGRATION_R2_QA_PASS",
+      "regression_checks": 14,
+      "gid_positive": "NOT_TESTED_NAMESPACE",
+      "acl": "PASS_POSIX_ACL_EXACT",
+      "selftest_mcp_tool_count": 41
+    },
+    "native_services_root": {
+      "state": "SOURCE_INTEGRATION_R2_QA_PASS",
+      "regression_checks": 14,
+      "gid_positive": "PASS",
+      "acl": "PASS_POSIX_ACL_EXACT",
+      "selftest_mcp_tool_count": 41
+    },
+    "patch_reconstruction": "MATCHES_INTEGRATED_SHA_EXACTLY",
+    "compile": "PASS",
+    "diff_check": "PASS"
+  },
+  "runtime": {
+    "installed_agent_version": "0.3.83",
+    "installed_agent_original_sha256": "a0784dc783b1675773f7ab05a21f07d01f48fd3f8b97906971ef90eb7018c733",
+    "changed": false,
+    "restarted": false
+  },
+  "release": {
+    "state": "HOLD",
+    "signed": false,
+    "promoted": false,
+    "canary": false,
+    "rollback_production_tested": false,
+    "requires_version_bump": true
+  },
+  "limitations": [
+    "No hosted commercial release",
+    "Non-POSIX security attributes not exhaustively validated",
+    "No multi-host canary or production mutation",
+    "Git local custodian is not GitHub code publication"
+  ]
+}

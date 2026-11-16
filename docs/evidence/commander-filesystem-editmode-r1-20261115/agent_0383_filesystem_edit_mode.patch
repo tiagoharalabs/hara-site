@@ -1,0 +1,36 @@
+--- a/agent.original.py
++++ b/agent.original.py
+@@ -2338 +2338,29 @@
+-    tmp=path.with_name("."+path.name+".hara-tmp-"+str(os.getpid())); tmp.write_text(updated,encoding="utf-8"); os.replace(tmp,path)
++    before=path.lstat()
++    mode_before=stat.S_IMODE(before.st_mode)
++    if mode_before & 0o7000:
++        _discard_preimage(preimage); raise ValueError("FILE_SPECIAL_MODE_DENIED")
++    if before.st_uid!=os.geteuid():
++        _discard_preimage(preimage); raise ValueError("FILE_OWNER_PRESERVATION_DENIED")
++    tmp=path.with_name("."+path.name+".hara-tmp-"+uuid.uuid4().hex)
++    try:
++        fd=os.open(str(tmp),os.O_WRONLY|os.O_CREAT|os.O_EXCL|getattr(os,"O_NOFOLLOW",0),0o600)
++        with os.fdopen(fd,"w",encoding="utf-8") as out:
++            out.write(updated); out.flush(); os.fsync(out.fileno())
++        current_tmp=tmp.lstat()
++        if current_tmp.st_gid!=before.st_gid:
++            os.chown(tmp,-1,before.st_gid)
++        os.chmod(tmp,mode_before)
++        candidate=tmp.lstat()
++        if (candidate.st_uid,candidate.st_gid,stat.S_IMODE(candidate.st_mode))!=(before.st_uid,before.st_gid,mode_before):
++            raise ValueError("FILE_IDENTITY_PRESERVATION_FAILED")
++        _assert_path_matches_preimage(path,preimage)
++        live=path.lstat()
++        if (live.st_uid,live.st_gid,stat.S_IMODE(live.st_mode))!=(before.st_uid,before.st_gid,mode_before):
++            raise ValueError("FILE_IDENTITY_CHANGED")
++        os.replace(tmp,path)
++    finally:
++        tmp.unlink(missing_ok=True)
++    after=path.lstat()
++    if (after.st_uid,after.st_gid,stat.S_IMODE(after.st_mode))!=(before.st_uid,before.st_gid,mode_before):
++        raise ValueError("FILE_POST_IDENTITY_MISMATCH")
++
+@@ -2340 +2368 @@
+-    return {"path":str(path),"replacements":count if replace_all else 1,"size_bytes":current_bytes,"previous_sha256":previous_sha,"sha256":current_sha,"precondition_checked":expected is not None,"preimage_id":preimage.get("preimage_id"),"preimage_sha256":preimage.get("sha256")}
++    return {"path":str(path),"replacements":count if replace_all else 1,"size_bytes":current_bytes,"previous_sha256":previous_sha,"sha256":current_sha,"precondition_checked":expected is not None,"preimage_id":preimage.get("preimage_id"),"preimage_sha256":preimage.get("sha256"),"mode_before":oct(mode_before),"mode_after":oct(stat.S_IMODE(after.st_mode)),"mode_preserved":True,"owner_uid":after.st_uid,"group_gid":after.st_gid}
