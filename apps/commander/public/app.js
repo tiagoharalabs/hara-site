@@ -9,15 +9,15 @@
   const appViews = new Set(["dashboard", "devices", "usage", "plans", "connections", "security"]);
   const publicViews = new Set(["landing", "login", "signup", ...appViews]);
   const viewTitles = Object.freeze({
-    landing: "H.A.R.A. Commander",
-    login: "Entrar · H.A.R.A. Commander",
-    signup: "Criar conta · H.A.R.A. Commander",
-    dashboard: "Visão geral · H.A.R.A. Commander",
-    devices: "Computadores · H.A.R.A. Commander",
-    usage: "Uso & limite · H.A.R.A. Commander",
-    plans: "Plano · H.A.R.A. Commander",
-    connections: "Conexões · H.A.R.A. Commander",
-    security: "Segurança · H.A.R.A. Commander",
+    landing: "HARA Commander",
+    login: "Entrar · HARA Commander",
+    signup: "Criar conta · HARA Commander",
+    dashboard: "Visão geral · HARA Commander",
+    devices: "Computadores · HARA Commander",
+    usage: "Uso & limite · HARA Commander",
+    plans: "Plano · HARA Commander",
+    connections: "Conexões · HARA Commander",
+    security: "Segurança · HARA Commander",
   });
   const params = new URLSearchParams(location.search);
   const root = document.documentElement;
@@ -145,7 +145,7 @@
 
       document.querySelectorAll(".auth-note").forEach((node) => {
         node.textContent = authProviderConfigured
-          ? "A autenticação acontece no HARA Identity. O H.A.R.A. não recebe nem armazena sua senha."
+          ? "A autenticação acontece no HARA Identity. O HARA não recebe nem armazena sua senha."
           : "O provedor de identidade está temporariamente indisponível.";
       });
     } catch (_error) {

@@ -1,0 +1,72 @@
+/* Explicit translation wrappers retain the existing inline layout. */
+.i18n-text { display: contents !important; }
+.nav-shell { gap: 16px; }
+.language-switch {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--line, #c9e3f1);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--navy, #0b2d49);
+}
+.language-switch button {
+  min-height: 34px;
+  padding: 6px 9px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.language-switch button[aria-pressed="true"] {
+  background: #e9b128;
+  color: #08283e;
+  font-weight: 800;
+}
+.language-switch button:hover { border-color: #e9b128; }
+.language-switch button:focus-visible { outline: 3px solid #39a2df; outline-offset: 3px; }
+.language-switch button:disabled { cursor: default; opacity: .55; }
+html[data-theme="dark"] .language-switch { background: #0d293b; border-color: #244b61; color: #dbeef7; }
+.language-announcement {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+@media (min-width: 1101px) and (max-width: 1280px) {
+  .nav-shell { gap: 9px; }
+  .main-nav a { padding-inline: 7px; }
+}
+@media (max-width: 800px) {
+  .nav-shell { gap: 10px; }
+  .nav-shell .nav-cta { display: none; }
+  .nav-shell .brand { margin-right: auto; }
+}
+@media (max-width: 600px) {
+  .nav-shell {
+    display: grid;
+    grid-template-columns: 42px 42px minmax(0, 1fr) 42px;
+    gap: 8px;
+    height: auto;
+    padding-block: 10px;
+  }
+  .nav-shell .brand { grid-column: 1 / -1; justify-self: start; margin-right: 0; }
+  .nav-shell .theme-toggle { grid-column: 1; grid-row: 2; }
+  .nav-shell .neon-toggle { grid-column: 2; grid-row: 2; }
+  .nav-shell .language-switch { grid-column: 3; grid-row: 2; justify-self: start; }
+  .nav-shell .menu-button { grid-column: 4; grid-row: 2; }
+  .language-switch button { padding-inline: 6px; font-size: 11px; }
+}
